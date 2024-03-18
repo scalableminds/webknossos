@@ -163,6 +163,7 @@ jobs:
               PR_URL="$CIRCLE_PULL_REQUEST"
               PR_NUMBER=$(echo $PR_URL | awk -F'/' '{print $NF}')
               SHOULD_AUTODEPLOY=$(curl "https://api.github.com/repos/scalableminds/webknossos/pulls/${PR_NUMBER}" | jq -e '.labels | .[] | select(.name == "autodeploy")')
+              echo "SHOULD_AUTODEPLOY=$SHOULD_AUTODEPLOY"
                 if [ "SHOULD_AUTODEPLOY" == "true" ]; then
                     curl -X POST -H "X-Auth-Token: $RELEASE_API_TOKEN" "https://kubernetix.scm.io/hooks/install/webknossos/dev/${CIRCLE_BRANCH}?user=CI+%28nightly%29"
                     echo "\nInstalled to $NORMALIZED_BRANCH.webknossos.xyz"
@@ -176,7 +177,10 @@ jobs:
                     gh auth status
 
                     CURRENT_BODY = $(gh pr view $PR_NUMBER --json body | jq -r '.body')
+                    echo "CURRENT_BODY=$CURRENT_BODY"
                     UPDATED_BODY = $(echo $CURRENT_BODY | sed "s|https://___.webknossos.xyz|https://$NORMALIZED_BRANCH.webknossos.xyz|g")
+                    echo "UPDATED_BODY=$UPDATED_BODY"
+
                     gh pr edit $PR_NUMBER --body $UPDATED_BODY
                 fi
             fi

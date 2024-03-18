@@ -163,26 +163,27 @@ jobs:
               PR_URL="$CIRCLE_PULL_REQUEST"
               PR_NUMBER=$(echo $PR_URL | awk -F'/' '{print $NF}')
               SHOULD_AUTODEPLOY=$(curl "https://api.github.com/repos/scalableminds/webknossos/pulls/${PR_NUMBER}" | jq -e '.labels | .[] | select(.name == "autodeploy")')
-              echo "SHOULD_AUTODEPLOY=$SHOULD_AUTODEPLOY"
-                if [ "SHOULD_AUTODEPLOY" == "true" ]; then
-                    curl -X POST -H "X-Auth-Token: $RELEASE_API_TOKEN" "https://kubernetix.scm.io/hooks/install/webknossos/dev/${CIRCLE_BRANCH}?user=CI+%28nightly%29"
-                    echo "\nInstalled to $NORMALIZED_BRANCH.webknossos.xyz"
+              if [ "$?" -eq "0" ]
+                then
+                  echo "Starting autodeploy"
+                  curl -X POST -H "X-Auth-Token: $RELEASE_API_TOKEN" "https://kubernetix.scm.io/hooks/install/webknossos/dev/${CIRCLE_BRANCH}?user=CI+%28nightly%29"
+                  echo "\nInstalled to $NORMALIZED_BRANCH.webknossos.xyz"
 
-                    # Install gh client
-                    sudo mkdir -p -m 755 /etc/apt/keyrings && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
-                    && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
-                    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-                    && sudo apt update \
-                    && sudo apt install gh -y
-                    gh auth status
+                  # Install gh client
+                  sudo mkdir -p -m 755 /etc/apt/keyrings && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+                  && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+                  && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+                  && sudo apt update \
+                  && sudo apt install gh -y
+                  gh auth status
 
-                    CURRENT_BODY = $(gh pr view $PR_NUMBER --json body | jq -r '.body')
-                    echo "CURRENT_BODY=$CURRENT_BODY"
-                    UPDATED_BODY = $(echo $CURRENT_BODY | sed "s|https://___.webknossos.xyz|https://$NORMALIZED_BRANCH.webknossos.xyz|g")
-                    echo "UPDATED_BODY=$UPDATED_BODY"
+                  CURRENT_BODY = $(gh pr view $PR_NUMBER --json body | jq -r '.body')
+                  echo "CURRENT_BODY=$CURRENT_BODY"
+                  UPDATED_BODY = $(echo $CURRENT_BODY | sed "s|https://___.webknossos.xyz|https://$NORMALIZED_BRANCH.webknossos.xyz|g")
+                  echo "UPDATED_BODY=$UPDATED_BODY"
 
-                    gh pr edit $PR_NUMBER --body $UPDATED_BODY
-                fi
+                  gh pr edit $PR_NUMBER --body $UPDATED_BODY
+              fi
             fi
       - run:
           name: Send Slack notification (master only)

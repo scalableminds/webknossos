@@ -131,6 +131,7 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok(Json.obj("dataSource" -> Json.toJson(dataSourceOpt), "report" -> reportMutable.mkString("\n")))
     }
 
+  // Note: This route is used by external applications, keep stable
   def exploreAndAddRemoteDataset(): Action[ExploreAndAddRemoteDatasetParameters] =
     sil.SecuredAction.async(validateJson[ExploreAndAddRemoteDatasetParameters]) { implicit request =>
       val reportMutable = ListBuffer[String]()

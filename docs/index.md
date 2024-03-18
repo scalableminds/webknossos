@@ -31,7 +31,7 @@ Create a free account on [https://webknossos.org/](https://webknossos.org/) and 
 - [3D Mesh Visualization](./mesh_visualization.md)
 - [Integrated Synapse and Connectome Viewer](./connectome_viewer.md)
 - [Python library with documentation for API access and integration in custom analysis workflows](https://docs.webknossos.org/webknossos-py/index.html)
-- [Frontend API for user scripting](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
+- [Frontend API for user scripting](https://webknossos.org/assets/docs/frontend-api/index.html)
 - Developed as an open-source project with [automated testing](https://circleci.com/gh/scalableminds/webknossos)
 - [Deployable with Docker for production and development](https://hub.docker.com/r/scalableminds/webknossos/)
 

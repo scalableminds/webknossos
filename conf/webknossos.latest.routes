@@ -284,6 +284,7 @@ GET           /jobs/:id/export                                                  
 
 GET           /aiModels/:id                                                                     controllers.AiModelController.readModelInfo(id: String)
 POST          /aiModels/runTraining                                                             controllers.AiModelController.runTraining
+GET           /aiModels                                                                         controllers.AiModelController.list
 
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()

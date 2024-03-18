@@ -36,13 +36,24 @@ class AiModelController @Inject()(
     extends Controller
     with FoxImplicits {
 
-  def readModelInfo(aiModelId: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def readModelInfo(aiModelId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
+        _ <- userService.assertIsSuperUser(request.identity)
         aiModelIdValidated <- ObjectId.fromString(aiModelId)
         aiModel <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
         jsResult <- aiModelService.publicWrites(aiModel)
       } yield Ok(jsResult)
+    }
+  }
+
+  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    {
+      for {
+        _ <- userService.assertIsSuperUser(request.identity)
+        aiModels <- aiModelDAO.findAll
+        jsResults <- Fox.serialCombined(aiModels)(aiModelService.publicWrites)
+      } yield Ok(Json.toJson(jsResults))
     }
   }
 

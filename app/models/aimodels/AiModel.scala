@@ -13,7 +13,7 @@ import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.ObjectId
-import utils.sql.{SQLDAO, SqlClient}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -82,6 +82,16 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         Instant.fromSql(r.modified),
         r.isdeleted
       )
+
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
+    q"_organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId)"
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[AiModel]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[AimodelsRow])
+      parsed <- parseAll(r)
+    } yield parsed
 
   def insertOne(a: AiModel): Fox[Unit] = {
     val insertModelQuery =

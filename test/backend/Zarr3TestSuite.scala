@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader.Zarr3ArrayHeaderFormat
 import org.scalatestplus.play.PlaySpec
 import play.api.libs.json.Json
+import spire.math.Number
 
 class Zarr3TestSuite extends PlaySpec {
 
@@ -32,9 +33,9 @@ class Zarr3TestSuite extends PlaySpec {
       "read correct basic header data" in {
         val header = Zarr3ArrayHeaderFormat.reads(zarr3json).get
         assert(header.shape.sameElements(Seq(64, 64, 64)))
-        assert(header.data_type.left.get == "uint8")
+        assert(header.data_type.left.getOrElse("notUint8") == "uint8")
         assert(header.zarr_format == 3)
-        assert(header.fill_value.right.get.intValue() == 0)
+        assert(header.fill_value.getOrElse(Number(1)).intValue() == 0)
         assert(header.dimension_names.get.sameElements(Seq("x", "y", "z")))
       }
 

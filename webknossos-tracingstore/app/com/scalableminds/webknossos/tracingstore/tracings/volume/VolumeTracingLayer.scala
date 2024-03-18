@@ -96,6 +96,8 @@ case class VolumeTracingLayer(
 
   private lazy val volumeResolutions: List[Vec3Int] = tracing.resolutions.map(vec3IntFromProto).toList
 
+  override def bucketProviderCacheKey: String = s"$name-withFallbackData=$includeFallbackDataIfAvailable"
+
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = DataLayer.bucketLength
 
   val dataFormat: DataFormat.Value = DataFormat.tracing

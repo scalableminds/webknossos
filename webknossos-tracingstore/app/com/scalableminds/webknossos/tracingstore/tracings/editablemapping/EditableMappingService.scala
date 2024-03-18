@@ -223,6 +223,16 @@ class EditableMappingService @Inject()(
       (info, _) <- getInfoAndActualVersion(editableMappingId, version, remoteFallbackLayer, userToken)
     } yield info
 
+  def getBaseMappingName(editableMappingId: String): Fox[Option[String]] =
+    for {
+      desiredVersion <- getClosestMaterializableVersionOrZero(editableMappingId, None)
+      infoBox <- getClosestMaterialized(editableMappingId, desiredVersion).futureBox
+    } yield
+      infoBox match {
+        case Full(info) => Some(info.value.baseMappingName)
+        case _          => None
+      }
+
   def getInfoAndActualVersion(editableMappingId: String,
                               requestedVersion: Option[Long] = None,
                               remoteFallbackLayer: RemoteFallbackLayer,

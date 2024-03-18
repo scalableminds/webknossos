@@ -14,6 +14,7 @@ import models.annotation.{
   AnnotationDAO,
   AnnotationInformationProvider,
   AnnotationLayerDAO,
+  TracingDataSourceTemporaryStore,
   TracingStoreService
 }
 import models.dataset.{DatasetDAO, DatasetService}
@@ -28,19 +29,21 @@ import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteTracingStoreController @Inject()(
-    tracingStoreService: TracingStoreService,
-    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    timeSpanService: TimeSpanService,
-    datasetService: DatasetService,
-    organizationDAO: OrganizationDAO,
-    userDAO: UserDAO,
-    annotationInformationProvider: AnnotationInformationProvider,
-    analyticsService: AnalyticsService,
-    datasetDAO: DatasetDAO,
-    annotationDAO: AnnotationDAO,
-    annotationLayerDAO: AnnotationLayerDAO,
-    wkConf: WkConf)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStoreService,
+                                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                                               timeSpanService: TimeSpanService,
+                                               datasetService: DatasetService,
+                                               organizationDAO: OrganizationDAO,
+                                               userDAO: UserDAO,
+                                               annotationInformationProvider: AnnotationInformationProvider,
+                                               analyticsService: AnalyticsService,
+                                               datasetDAO: DatasetDAO,
+                                               annotationDAO: AnnotationDAO,
+                                               annotationLayerDAO: AnnotationLayerDAO,
+                                               wkConf: WkConf,
+                                               tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(
+    implicit ec: ExecutionContext,
+    playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -86,11 +89,15 @@ class WKRemoteTracingStoreController @Inject()(
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
-        for {
-          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
-          dataset <- datasetDAO.findOne(annotation._dataset)
-          dataSource <- datasetService.dataSourceFor(dataset)
-        } yield Ok(Json.toJson(dataSource))
+        tracingDataSourceTemporaryStore.find(tracingId) match {
+          case Some(dataSource) => Fox.successful(Ok(Json.toJson(dataSource)))
+          case None =>
+            for {
+              annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+              dataset <- datasetDAO.findOne(annotation._dataset)
+              dataSource <- datasetService.dataSourceFor(dataset)
+            } yield Ok(Json.toJson(dataSource))
+        }
       }
     }
 

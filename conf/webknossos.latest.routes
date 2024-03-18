@@ -281,11 +281,13 @@ POST          /jobs/:id/attachVoxelyticsWorkflow                                
 GET           /jobs/:id/export                                                                  controllers.JobsController.redirectToExport(id: String)
 
 # AI Models
-
 GET           /aiModels/:id                                                                     controllers.AiModelController.readAiModelInfo(id: String)
 PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: String)
 POST          /aiModels/runTraining                                                             controllers.AiModelController.runTraining
-GET           /aiModels                                                                         controllers.AiModelController.list
+POST          /aiModels/inferences/runInference                                                 controllers.AiModelController.runInference
+GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: String)
+GET           /aiModels/inferences                                                              controllers.AiModelController.listAiInferences
+GET           /aiModels                                                                         controllers.AiModelController.listAiModels
 
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()

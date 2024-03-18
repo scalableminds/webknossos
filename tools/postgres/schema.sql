@@ -561,14 +561,15 @@ CREATE TABLE webknossos.aiModel_trainingAnnotations(
   PRIMARY KEY(_aiModel,_annotation)
 );
 
-CREATE TABLE webknossos.aiModelInferences(
+CREATE TABLE webknossos.aiInferences(
   _id CHAR(24) PRIMARY KEY,
+  _organization CHAR(24) NOT NULL,
   _aiModel CHAR(24) NOT NULL,
   _dataset CHAR(24),
   _annotation CHAR(24) NOT NULL,
   _inferenceJob CHAR(24) NOT NULL,
   newSegmentationLayerName VARCHAR(256) NOT NULL,
-  maskAnnotationLayerName VARCHAR(256) NOT NULL,
+  maskAnnotationLayerName VARCHAR(256),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
@@ -711,7 +712,7 @@ CREATE VIEW webknossos.folders_ as SELECT * FROM webknossos.folders WHERE NOT is
 CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHERE NOT isDeleted;
 CREATE VIEW webknossos.maintenances_ as SELECT * FROM webknossos.maintenances WHERE NOT isDeleted;
 CREATE VIEW webknossos.aiModels_ as SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
-CREATE VIEW webknossos.aiModelInferences_ as SELECT * FROM webknossos.aiModelInferences WHERE NOT isDeleted;
+CREATE VIEW webknossos.aiInferences_ as SELECT * FROM webknossos.aiInferences WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT

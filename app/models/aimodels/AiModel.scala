@@ -19,7 +19,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class AiModel(_id: ObjectId,
-                   _organization: ObjectId, // TODO drop this, is redundant to user?
+                   _organization: ObjectId,
                    _dataStore: String,
                    _user: ObjectId,
                    _trainingJob: Option[ObjectId],
@@ -51,8 +51,8 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         "dataStore" -> dataStoreJs,
         "user" -> userJs,
         "comment" -> aiModel.comment,
-        "created" -> aiModel.created,
-        "trainingJob" -> trainingJobJsOpt
+        "trainingJob" -> trainingJobJsOpt,
+        "created" -> aiModel.created
       )
 }
 
@@ -129,7 +129,8 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def updateOne(a: AiModel): Fox[Unit] =
     for {
-      _ <- run(q"UPDATE webknossos.aiModels SET name = ${a.name}, comment = ${a.comment} WHERE _id = ${a._id}".asUpdate)
+      _ <- run(
+        q"UPDATE webknossos.aiModels SET name = ${a.name}, comment = ${a.comment}, modified = ${a.modified} WHERE _id = ${a._id}".asUpdate)
     } yield ()
 
 }

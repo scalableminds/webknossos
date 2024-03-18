@@ -41,6 +41,7 @@ import {
   getActiveTreeGroup,
   getTree,
   enforceSkeletonTracing,
+  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBuildInfo, importVolumeTracing, clearCache } from "admin/admin_rest_api";
 import {
@@ -84,12 +85,9 @@ import InputComponent from "oxalis/view/components/input_component";
 import { Model } from "oxalis/singletons";
 import type {
   OxalisState,
-  SkeletonTracing,
-  Tracing,
   Tree,
   TreeMap,
   TreeGroup,
-  UserConfiguration,
   MutableTreeMap,
   UserBoundingBox,
 } from "oxalis/store";
@@ -110,12 +108,7 @@ type TreeOrTreeGroup = {
   id: number;
   type: string;
 };
-type StateProps = {
-  annotation: Tracing;
-  skeletonTracing: SkeletonTracing | null | undefined;
-  userConfiguration: UserConfiguration;
-  allowUpdate: boolean;
-};
+type StateProps = ReturnType<typeof mapStateToProps>;
 type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type Props = DispatchProps & StateProps;
 type State = {
@@ -559,7 +552,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     Store.dispatch(toggleInactiveTreesAction());
   }
 
-  handleNmlDownload = async () => {
+  handleNmlDownload = async (applyTransforms: boolean) => {
     const { skeletonTracing } = this.props;
 
     if (!skeletonTracing) {
@@ -572,7 +565,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
     const state = Store.getState();
-    const nml = serializeToNml(state, this.props.annotation, skeletonTracing, buildInfo);
+    const nml = serializeToNml(
+      state,
+      this.props.annotation,
+      skeletonTracing,
+      buildInfo,
+      applyTransforms,
+    );
     this.setState({
       isDownloading: false,
     });
@@ -737,11 +736,20 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         },
         {
           key: "handleNmlDownload",
-          onClick: this.handleNmlDownload,
-          title: "Download visible trees as NML",
+          onClick: () => this.handleNmlDownload(false),
           icon: <DownloadOutlined />,
           label: "Download Visible Trees",
+          title: "Download Visible Trees as NML",
         },
+        this.props.isSkeletonLayerTransformed
+          ? {
+              key: "handleNmlDownloadTransformed",
+              onClick: () => this.handleNmlDownload(true),
+              icon: <DownloadOutlined />,
+              label: "Download Visible Trees (Transformed)",
+              title: "The currently active transformation will be applied to each node.",
+            }
+          : null,
         {
           key: "importNml",
           onClick: this.props.showDropzoneModal,
@@ -983,6 +991,7 @@ const mapStateToProps = (state: OxalisState) => ({
   allowUpdate: state.tracing.restrictions.allowUpdate,
   skeletonTracing: state.tracing.skeleton,
   userConfiguration: state.userConfiguration,
+  isSkeletonLayerTransformed: isSkeletonLayerTransformed(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

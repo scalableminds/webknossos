@@ -26,7 +26,7 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorWithoutTimeTrackingAction,
 } from "oxalis/model/actions/view_mode_actions";
-import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletontracing_accessor";
 import { voxelToNm } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import PlaneView from "oxalis/view/plane_view";
@@ -128,7 +128,7 @@ class TDController extends React.PureComponent<Props> {
       // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
       // Thus we do it manually whenever the active node changes.
       getActiveNode(this.props.tracing.skeleton).map((activeNode) =>
-        this.setTargetAndFixPosition(activeNode.position),
+        this.setTargetAndFixPosition(getNodePosition(activeNode, Store.getState())),
       );
     }
   }

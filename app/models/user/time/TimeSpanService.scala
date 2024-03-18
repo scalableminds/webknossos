@@ -13,7 +13,7 @@ import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
 import net.liftweb.common.{Box, Full}
-import thirdparty.BrainTracing
+import org.apache.pekko.actor.{ActorSelection, ActorSystem}
 import utils.{ObjectId, WkConf}
 
 import scala.collection.mutable
@@ -23,16 +23,19 @@ import scala.concurrent.duration._
 class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 userService: UserService,
                                 taskDAO: TaskDAO,
-                                brainTracing: BrainTracing,
                                 annotationService: AnnotationService,
                                 organizationService: OrganizationService,
                                 projectDAO: ProjectDAO,
                                 organizationDAO: OrganizationDAO,
                                 timeSpanDAO: TimeSpanDAO,
                                 defaultMails: DefaultMails,
-                                conf: WkConf)(implicit ec: ExecutionContext)
+                                conf: WkConf,
+                                actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
+
+  private lazy val Mailer: ActorSelection =
+    actorSystem.actorSelection("/user/mailActor")
 
   def logUserInteraction(timestamp: Instant, user: User, annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[Unit] =
@@ -144,7 +147,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       mailRecipient <- organizationService.overTimeMailRecipient(organization)(GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time.toMillis < timeLimit) {
-        brainTracing.Mailer ! Send(defaultMails
+        Mailer ! Send(defaultMails
           .overLimitMail(user, project.name, task._id.toString, annotation.id, List(mailRecipient, projectOwnerEmail)))
       }
     }

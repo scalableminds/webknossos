@@ -1,13 +1,14 @@
-import { call, take, takeEvery, takeLatest } from "typed-redux-saga";
+import { call, put, take, takeEvery, takeLatest } from "typed-redux-saga";
 import { sum } from "lodash";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-
 import { sleep } from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
 import {
   getEnabledLayers,
+  getLayerByName,
+  getMaybeSegmentIndexAvailability,
   getResolutionInfo,
   getTransformsForLayer,
   invertAndTranspose,
@@ -17,6 +18,11 @@ import { getCurrentResolution } from "../accessors/flycam_accessor";
 import { getViewportExtents } from "../accessors/view_mode_accessor";
 import { V3 } from "libs/mjs";
 import { Identity4x4 } from "oxalis/constants";
+import { hasSegmentIndex } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import {
+  type EnsureSegmentIndexIsLoadedAction,
+  setLayerHasSegmentIndexAction,
+} from "../actions/dataset_actions";
 
 export function* watchMaximumRenderableLayers(): Saga<void> {
   function* warnMaybe(): Saga<void> {
@@ -149,3 +155,32 @@ export function* watchZ1Downsampling(): Saga<void> {
     maybeShowWarning,
   );
 }
+
+export function* ensureSegmentIndexIsLoaded(): Saga<void> {
+  function* maybeFetchHasSegmentIndex(action: EnsureSegmentIndexIsLoadedAction): Saga<void> {
+    const { layerName } = action;
+    const dataset = yield* select((state) => state.dataset);
+    if (layerName == null) return;
+    const segmentationLayer = yield* call(getLayerByName, dataset, layerName);
+    const maybeIsSegmentIndexAvailable = yield* call(
+      getMaybeSegmentIndexAvailability,
+      dataset,
+      layerName,
+    );
+    if (maybeIsSegmentIndexAvailable == null && segmentationLayer != null) {
+      const tracing = yield* select((state) => state.tracing);
+      const updatedIsSegmentIndexAvailable = yield* call(
+        hasSegmentIndex,
+        segmentationLayer,
+        dataset,
+        tracing,
+      );
+      yield* put(
+        setLayerHasSegmentIndexAction(segmentationLayer.name, updatedIsSegmentIndexAvailable),
+      );
+    }
+  }
+  yield* takeEvery("ENSURE_SEGMENT_INDEX_IS_LOADED", maybeFetchHasSegmentIndex);
+}
+
+export default [watchMaximumRenderableLayers, watchZ1Downsampling, ensureSegmentIndexIsLoaded];

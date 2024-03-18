@@ -43,8 +43,8 @@ import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_h
 import {
   getMappingInfo,
   getResolutionInfoOfVisibleSegmentationLayer,
+  getMaybeSegmentIndexAvailability,
   getVisibleSegmentationLayer,
-  hasFallbackLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAdditionalCoordinatesAsString,
@@ -121,6 +121,7 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { DataNode } from "antd/lib/tree";
+import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -140,7 +141,8 @@ type StateProps = {
   isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
   flycam: Flycam;
-  hasVolumeTracing: boolean;
+  hasVolumeTracing: boolean | undefined;
+  isSegmentIndexAvailable: boolean | undefined;
   segments: SegmentMap | null | undefined;
   segmentGroups: Array<SegmentGroup>;
   selectedIds: { segments: number[]; group: number | null };
@@ -176,6 +178,11 @@ const mapStateToProps = (state: OxalisState): StateProps => {
       ? getMeshesForCurrentAdditionalCoordinates(state, visibleSegmentationLayer?.name)
       : undefined;
 
+  const isSegmentIndexAvailable = getMaybeSegmentIndexAvailability(
+    state.dataset,
+    visibleSegmentationLayer?.name,
+  );
+
   return {
     activeCellId: activeVolumeTracing?.activeCellId,
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
@@ -185,6 +192,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     mappingInfo,
     flycam: state.flycam,
     hasVolumeTracing: state.tracing.volumes.length > 0,
+    isSegmentIndexAvailable,
     segments,
     segmentGroups,
     selectedIds: getCleanedSelectedSegmentsOrGroup(state),
@@ -412,6 +420,8 @@ class SegmentsView extends React.Component<Props, State> {
     ) {
       this.pollJobData();
     }
+
+    Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -1111,15 +1121,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getShowSegmentStatistics = (id: number): ItemType => {
-    const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    if (
-      visibleSegmentationLayer == null ||
-      visibleSegmentationLayer.fallbackLayer != null ||
-      !this.props.activeVolumeTracing?.hasSegmentIndex
-    ) {
-      // In this case there is a fallback layer or an ND annotation.
-      return null;
-    }
+    if (!this.props.isSegmentIndexAvailable) return null;
     return {
       key: "segmentStatistics",
       label: (
@@ -1543,21 +1545,14 @@ class SegmentsView extends React.Component<Props, State> {
   getSegmentStatisticsModal = (groupId: number) => {
     const segments = this.getSegmentsOfGroupRecursively(groupId);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    const hasNoFallbackLayer =
-      visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
-    if (hasNoFallbackLayer && this.props.hasVolumeTracing && segments != null) {
-      const state = Store.getState();
-      const tracingId = this.props.activeVolumeTracing?.tracingId;
-      if (tracingId == null) return null;
-      const tracingStoreUrl = state.tracing.tracingStore.url;
+    if (visibleSegmentationLayer != null && segments != null && segments.length > 0) {
       return this.state.activeStatisticsModalGroupId === groupId ? (
         <SegmentStatisticsModal
           onCancel={() => {
             this.setState({ activeStatisticsModalGroupId: null });
           }}
           visibleSegmentationLayer={visibleSegmentationLayer}
-          tracingId={tracingId}
-          tracingStoreUrl={tracingStoreUrl}
+          tracingId={this.props.activeVolumeTracing?.tracingId}
           relevantSegments={segments}
           parentGroup={groupId}
           groupTree={this.state.searchableTreeItemList}

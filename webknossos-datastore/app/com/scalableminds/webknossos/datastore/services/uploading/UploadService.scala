@@ -74,7 +74,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     with DirectoryConstants
     with FoxImplicits
     with BoxImplicits
-      with WKWDataFormatHelper
+    with WKWDataFormatHelper
     with LazyLogging {
 
   /* Redis stores different information for each upload, with different prefixes in the keys:

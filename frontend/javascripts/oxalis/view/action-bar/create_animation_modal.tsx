@@ -82,7 +82,10 @@ export function CreateAnimationModalWrapper(props: Props) {
 
   // early stop if no color layer exists
   const colorLayers = getColorLayers(dataset);
-  if (colorLayers.length === 0) return null;
+  if (colorLayers.length === 0) {
+    console.warn("WK can not create animations for datasets without color layers.");
+    return null;
+  }
 
   return <CreateAnimationModal {...props} />;
 }
@@ -342,7 +345,7 @@ function CreateAnimationModal(props: Props) {
               >
                 Include the currently selected 3D meshes
                 <Tooltip
-                  title="When enabled, all (pre-computed) meshes currently visible in WEBKNOSSOS will be included in the animation."
+                  title="When enabled, all meshes currently visible in WEBKNOSSOS will be included in the animation."
                   placement="right"
                 >
                   <InfoCircleOutlined style={{ marginLeft: 10 }} />

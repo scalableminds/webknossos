@@ -9,7 +9,7 @@ A picture is worth a thousand words. In this spirit, you can use WEBKNOSSOS to c
 Creating an animation is easy:
 
 1. Open any dataset or annotation that you want to use for your animation. 
-2. Optionally, load any [pre-computed 3D meshes](./mesh_visualization.md#pre-computed-mesh-generation) for any segments that you wish to highlight.
+2. Optionally, load some [3D meshes](./mesh_visualization.md#pre-computed-mesh-generation) for any segments that you wish to highlight.
 3. For larger datasets, use the bounding box tool to create a bounding box around your area of interest. Smaller datasets can be used in their entirety.
 4. From the `Menu` dropdown in navbar at the top of the screen, select "Create Animation".
 5. Configure the animation options as desired, i.e. camera movement or resolution.

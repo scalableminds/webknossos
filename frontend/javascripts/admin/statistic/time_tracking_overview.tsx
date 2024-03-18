@@ -1,4 +1,4 @@
-import { getActiveUser, getProjects, getTeams } from "admin/admin_rest_api";
+import { getProjects, getTeams } from "admin/admin_rest_api";
 import { Card, Select, Spin, Table, Button, DatePicker, type TimeRangePickerProps } from "antd";
 import Request from "libs/request";
 import { useFetch } from "libs/react_helpers";
@@ -14,6 +14,8 @@ import ProjectAndAnnotationTypeDropdown from "./project_and_annotation_type_drop
 import { isUserAdminOrTeamManager } from "libs/utils";
 import messages from "messages";
 import Toast from "libs/toast";
+import { useSelector } from "react-redux";
+import { OxalisState } from "oxalis/store";
 
 export enum AnnotationTypeFilterEnum {
   ONLY_ANNOTATIONS_KEY = "Explorational",
@@ -53,28 +55,19 @@ function TimeTrackingOverview() {
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
   const [isFetching, setIsFetching] = useState(false);
-  const mayUserAccessView = useFetch(
-    async () => {
-      const activeUser = await getActiveUser();
-      return isUserAdminOrTeamManager(activeUser);
-    },
-    false,
-    [],
+  const mayUserAccessView = useSelector(
+    (state: OxalisState) => {
+      const activeUser = state.activeUser;
+      return activeUser != null && isUserAdminOrTeamManager(activeUser);
+    }
   );
-  const [allTeams, allProjects, allTimeEntries] = useFetch(
+  const [allTeams, allProjects] = useFetch(
     async () => {
       if (!mayUserAccessView) return [[], [], []];
       setIsFetching(true);
       const [allTeams, allProjects] = await Promise.all([getTeams(), getProjects()]);
-      const timeEntriesURL = getTimeEntryUrl(
-        startDate.valueOf(),
-        endDate.valueOf(),
-        allTeams.map((team) => team.id),
-        allProjects.map((projects) => projects.id),
-      );
-      const allTimeEntries: TimeEntry[] = await Request.receiveJSON(timeEntriesURL);
       setIsFetching(false);
-      return [allTeams, allProjects, allTimeEntries];
+      return [allTeams, allProjects];
     },
     [[], [], []],
     [mayUserAccessView],
@@ -115,15 +108,16 @@ function TimeTrackingOverview() {
       setIsFetching(false);
       return filteredEntries;
     },
-    allTimeEntries,
+    [],
     [
       selectedTeams,
       selectedTypes,
       selectedProjectIds,
       startDate,
       endDate,
-      allTimeEntries,
       mayUserAccessView,
+      allTeams,
+      allProjects
     ],
   );
   const filterStyle = { marginInline: 10 };

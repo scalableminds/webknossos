@@ -70,7 +70,7 @@ function compressTimeLogs(logs) {
       previousDuration != null &&
       previousLog != null &&
       Math.abs(timeLog.timestamp - (previousLog.timestamp + previousDuration.asMilliseconds())) <
-        1000 &&
+      1000 &&
       timeLog.task_id === previousLog.task_id
     ) {
       const newDuration = previousDuration.add(dayjs.duration(timeLog.time));
@@ -133,17 +133,12 @@ class TimeLineView extends React.PureComponent<Props, State> {
         selectedProjectIds = params.projectsOrType.split(",");
       }
     }
-    this.setState(
-      {
-        initialUserId: _.has(params, "user") ? params.user : null,
-        dateRange,
-        annotationType,
-        selectedProjectIds,
-      },
-      () => {
-        this.handleDateChange(dateRange);
-      },
-    );
+    this.setState({
+      initialUserId: _.has(params, "user") ? params.user : null,
+      annotationType,
+      selectedProjectIds,
+    });
+    this.handleDateChange(dateRange);
   }
 
   async componentDidMount() {
@@ -151,7 +146,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.parseQueryParams();
     if (isAdminOrTeamManger) {
       await this.fetchData();
-      await this.fetchTimeTrackingData();
     } else {
       this.fetchDataFromLoggedInUser();
     }
@@ -160,7 +154,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
   async componentDidUpdate(_prevProps: Props, prevState: State) {
     if (
       prevState.annotationType !== this.state.annotationType ||
-      prevState.selectedProjectIds !== this.state.selectedProjectIds
+      prevState.selectedProjectIds !== this.state.selectedProjectIds ||
+      prevState.dateRange !== this.state.dateRange ||
+      prevState.user !== this.state.user
     ) {
       await this.fetchTimeTrackingData();
     }
@@ -170,16 +166,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.setState({
       isFetchingUsers: true,
     });
-    const users = await getEditableUsers();
     const currentUser =
       this.state.initialUserId != null && isUserAdminOrTeamManager(this.props.activeUser)
-        ? await getUser(this.state.initialUserId).catch((err) => {
-            Toast.error("User not found.");
-            console.error(err.messages[0].error); // TODO is there a more stable way?
-            return null;
-          })
+        ? await getUser(this.state.initialUserId)
         : this.props.activeUser;
-    const allProjects = await getProjects();
+    const [users, allProjects] = await Promise.all([getEditableUsers(), getProjects()]);
     this.setState({
       user: currentUser,
       users,
@@ -242,8 +233,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.setState(
       {
         user: this.props.activeUser,
-      },
-      this.fetchTimeTrackingData,
+      }
     );
   };
 
@@ -251,8 +241,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.setState(
       (prevState) => ({
         user: prevState.users.find((u) => u.id === userId),
-      }),
-      this.fetchTimeTrackingData,
+      })
     );
   };
 
@@ -267,12 +256,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const dateRange: DateRange = dates[0].isSame(dates[1], "minute")
       ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
       : dates;
-    this.setState(
-      {
-        dateRange,
-      },
-      this.fetchTimeTrackingData,
-    );
+    this.setState({
+      dateRange,
+    });
   };
 
   getTooltipForEntry(annotationOrTaskLabel: string, start: Date, end: Date) {

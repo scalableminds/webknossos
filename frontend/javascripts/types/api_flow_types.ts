@@ -538,10 +538,10 @@ export type APITimeTracking = {
   timestamp: number;
   annotation: string;
   _id: string;
-  task_id: string | null | undefined;
-  project_name: string | null | undefined;
-  tasktype_id: string | null | undefined;
-  tasktype_summary: string | null | undefined;
+  task_id: string | undefined;
+  project_name: string | undefined;
+  tasktype_id: string | undefined;
+  tasktype_summary: string | undefined;
 };
 export type APIProjectProgressReport = {
   readonly projectName: string;

@@ -827,3 +827,16 @@ export function getEffectiveIntensityRange(
 
   return layerConfiguration.intensityRange || defaultIntensityRange;
 }
+
+// Note that `hasSegmentIndex` needs to be loaded first (otherwise, the returned
+// value will be undefined). Dispatch an ensureSegmentIndexIsLoadedAction to make
+// sure this info is fetched.
+export function getMaybeSegmentIndexAvailability(
+  dataset: APIDataset,
+  layerName: string | null | undefined,
+) {
+  if (layerName == null) {
+    return false;
+  }
+  return dataset.dataSource.dataLayers.find((layer) => layer.name === layerName)?.hasSegmentIndex;
+}

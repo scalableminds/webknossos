@@ -76,6 +76,7 @@ type APIDataLayerBase = {
   readonly dataFormat?: "wkw" | "zarr";
   readonly additionalAxes: Array<AdditionalAxis> | null;
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
+  readonly hasSegmentIndex?: boolean;
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";

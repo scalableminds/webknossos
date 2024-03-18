@@ -408,17 +408,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- Json.parse(new String(Files.readAllBytes(attributesFiles.head))).validate[N5Metadata]
     } yield true
 
-  /*
-  private def getN5MultilayerLayerDirectories(baseDir: Path): Box[List[Path]] =
-    for {
-      baseDirectories <- PathUtils.listDirectories(baseDir, silent = false)
-      directories <- if (baseDirectories.length == 1) { // Layers wrapped in another directory
-        PathUtils.listDirectories(baseDirectories.head, silent = false)
-      } else {
-        Full(baseDirectories)
-      }
-    } yield directories*/
-
   private def looksLikeN5Multilayer(dataSourceDir: Path): Box[Boolean] =
     for {
       _ <- containsMatchingFile(List(FILENAME_ATTRIBUTES_JSON), dataSourceDir, 1) // root attributes.json

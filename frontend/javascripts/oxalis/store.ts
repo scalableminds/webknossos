@@ -68,7 +68,6 @@ import defaultState from "oxalis/default_state";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
-import { SaveQueueType } from "./model/actions/save_actions";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
@@ -436,7 +435,11 @@ export type ProgressInfo = {
   readonly processedActionCount: number;
   readonly totalActionCount: number;
 };
-export type IsBusyInfo = Record<SaveQueueType, boolean>;
+export type IsBusyInfo = {
+  readonly skeleton: boolean;
+  readonly volumes: Record<string, boolean>;
+  readonly mappings: Record<string, boolean>;
+};
 export type SaveState = {
   readonly isBusyInfo: IsBusyInfo;
   readonly queue: {

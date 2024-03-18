@@ -5,12 +5,16 @@ type SetLayerTransformsAction = ReturnType<typeof setLayerTransformsAction>;
 export type EnsureLayerMappingsAreLoadedAction = ReturnType<
   typeof ensureLayerMappingsAreLoadedAction
 >;
+type SetLayerHasSegmentIndexAction = ReturnType<typeof setLayerHasSegmentIndexAction>;
+export type EnsureSegmentIndexIsLoadedAction = ReturnType<typeof ensureSegmentIndexIsLoadedAction>;
 
 export type DatasetAction =
   | SetDatasetAction
   | SetLayerMappingsAction
   | SetLayerTransformsAction
-  | EnsureLayerMappingsAreLoadedAction;
+  | EnsureLayerMappingsAreLoadedAction
+  | SetLayerHasSegmentIndexAction
+  | EnsureSegmentIndexIsLoadedAction;
 
 export const setDatasetAction = (dataset: APIDataset) =>
   ({
@@ -43,5 +47,18 @@ export const setLayerTransformsAction = (
 export const ensureLayerMappingsAreLoadedAction = (layerName?: string) =>
   ({
     type: "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
+    layerName,
+  }) as const;
+
+export const setLayerHasSegmentIndexAction = (layerName: string, hasSegmentIndex: boolean) =>
+  ({
+    type: "SET_LAYER_HAS_SEGMENT_INDEX",
+    layerName,
+    hasSegmentIndex,
+  }) as const;
+
+export const ensureSegmentIndexIsLoadedAction = (layerName: string | null | undefined) =>
+  ({
+    type: "ENSURE_SEGMENT_INDEX_IS_LOADED",
     layerName,
   }) as const;

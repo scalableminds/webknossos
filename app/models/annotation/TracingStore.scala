@@ -29,7 +29,10 @@ object TracingStore {
     TracingStore(name, url, publicUrl, "")
 }
 
-class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(implicit ec: ExecutionContext)
+class TracingStoreService @Inject()(
+    tracingStoreDAO: TracingStoreDAO,
+    rpc: RPC,
+    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Results {
@@ -54,7 +57,7 @@ class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(
   def clientFor(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[WKRemoteTracingStoreClient] =
     for {
       tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
-    } yield new WKRemoteTracingStoreClient(tracingStore, dataset, rpc)
+    } yield new WKRemoteTracingStoreClient(tracingStore, dataset, rpc, tracingDataSourceTemporaryStore)
 }
 
 class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

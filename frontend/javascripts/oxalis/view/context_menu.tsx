@@ -1,8 +1,8 @@
 import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps, Modal } from "antd";
-import { connect } from "react-redux";
-import React, { createContext, MouseEvent, useContext, useState } from "react";
+import { connect, useSelector } from "react-redux";
+import React, { createContext, MouseEvent, useContext, useEffect, useState } from "react";
 import type {
   APIConnectomeFile,
   APIDataset,
@@ -72,14 +72,17 @@ import {
   getVisibleSegmentationLayer,
   getMappingInfo,
   getResolutionInfo,
-  hasFallbackLayer,
+  getMaybeSegmentIndexAvailability,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   loadAgglomerateSkeletonAtPosition,
   loadSynapsesOfAgglomerateAtPosition,
 } from "oxalis/controller/combinations/segmentation_handlers";
 import { isBoundingBoxUsableForMinCut } from "oxalis/model/sagas/min_cut_saga";
-import { withMappingActivationConfirmation } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import {
+  getVolumeRequestUrl,
+  withMappingActivationConfirmation,
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   clickSegmentAction,
@@ -113,7 +116,10 @@ import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
-import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
+import {
+  ensureLayerMappingsAreLoadedAction,
+  ensureSegmentIndexIsLoadedAction,
+} from "oxalis/model/actions/dataset_actions";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -1201,38 +1207,58 @@ function ContextMenuInner(propsWithInputRef: Props) {
   } = props;
 
   const segmentIdAtPosition = globalPosition != null ? getSegmentIdForPosition(globalPosition) : 0;
-  const hasNoFallbackLayer =
-    visibleSegmentationLayer != null && !hasFallbackLayer(visibleSegmentationLayer);
-  const [segmentVolume, boundingBoxInfo] = useFetch(
+
+  // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
+  // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
+  // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
+  // Thus the segment id is always unambiguous / clearly defined.
+  const clickedSegmentOrMeshId =
+    maybeClickedMeshId != null ? maybeClickedMeshId : segmentIdAtPosition;
+  const wasSegmentOrMeshClicked = clickedSegmentOrMeshId > 0;
+
+  const { dataset, tracing, flycam } = useSelector((state: OxalisState) => state);
+  useEffect(() => {
+    Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
+  }, [visibleSegmentationLayer]);
+  const isSegmentIndexAvailable = useSelector((state: OxalisState) =>
+    getMaybeSegmentIndexAvailability(state.dataset, visibleSegmentationLayer?.name),
+  );
+  const mappingName: string | null | undefined = useSelector((state: OxalisState) => {
+    if (volumeTracing?.mappingName != null) return volumeTracing?.mappingName;
+    const mappingInfo = getMappingInfo(
+      state.temporaryConfiguration.activeMappingByLayer,
+      visibleSegmentationLayer?.name,
+    );
+    return mappingInfo.mappingName;
+  });
+  const isLoadingMessage = "loading";
+  const isLoadingVolumeAndBB = [isLoadingMessage, isLoadingMessage];
+  const [segmentVolumeLabel, boundingBoxInfoLabel] = useFetch(
     async () => {
-      if (
-        contextMenuPosition == null ||
-        volumeTracing == null ||
-        !hasNoFallbackLayer ||
-        !volumeTracing.hasSegmentIndex
-      ) {
-        return [];
-      } else {
-        const state = Store.getState();
-        const tracingId = volumeTracing.tracingId;
-        const tracingStoreUrl = state.tracing.tracingStore.url;
-        const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
-        const layersFinestResolution = magInfo.getFinestResolution();
-        const datasetScale = state.dataset.dataSource.scale;
-        const additionalCoordinates = state.flycam.additionalCoordinates;
+      // The value that is returned if the context menu is closed is shown if it's still loading
+      if (contextMenuPosition == null || !wasSegmentOrMeshClicked) return isLoadingVolumeAndBB;
+      if (visibleSegmentationLayer == null || !isSegmentIndexAvailable) return [];
+      const tracingId = volumeTracing?.tracingId;
+      const additionalCoordinates = flycam.additionalCoordinates;
+      const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
+      const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
+      const layersFinestResolution = magInfo.getFinestResolution();
+      const datasetScale = dataset.dataSource.scale;
+
+      try {
         const [segmentSize] = await getSegmentVolumes(
-          tracingStoreUrl,
-          tracingId,
+          requestUrl,
           layersFinestResolution,
-          [segmentIdAtPosition],
+          [clickedSegmentOrMeshId],
           additionalCoordinates,
+          mappingName,
         );
         const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
-          tracingStoreUrl,
-          tracingId,
+          requestUrl,
           layersFinestResolution,
-          [segmentIdAtPosition],
+          [clickedSegmentOrMeshId],
           additionalCoordinates,
+          mappingName,
         );
         const boundingBoxInMag1 = getBoundingBoxInMag1(
           boundingBoxInRequestedMag,
@@ -1245,23 +1271,20 @@ function ContextMenuInner(propsWithInputRef: Props) {
           formatNumberToVolume(volumeInNm3),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
         ];
+      } catch (_error) {
+        const notFetchedMessage = "could not be fetched";
+        return [notFetchedMessage, notFetchedMessage];
       }
     },
-    ["loading", "loading"],
+    isLoadingVolumeAndBB,
     // Update segment infos when opening the context menu, in case the annotation was saved since the context menu was last opened.
     // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
-    [contextMenuPosition, segmentIdAtPosition, lastTimeSegmentInfoShouldBeFetched],
+    [contextMenuPosition, clickedSegmentOrMeshId, lastTimeSegmentInfoShouldBeFetched],
   );
 
   if (contextMenuPosition == null || maybeViewport == null) {
     return <></>;
   }
-
-  // Currently either segmentIdAtPosition or maybeClickedMeshId is set, but not both.
-  // segmentIdAtPosition is only set if a segment is hovered in one of the xy, xz, or yz viewports.
-  // maybeClickedMeshId is only set, when a mesh is hovered in the 3d viewport.
-  // Thus the segment id is always unambiguous / clearly defined.
-  const isHoveredSegmentOrMesh = segmentIdAtPosition > 0 || maybeClickedMeshId != null;
 
   const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
   const activeNodeId = skeletonTracing?.activeNodeId;
@@ -1351,8 +1374,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     </Tooltip>
   );
 
-  const areSegmentStatisticsAvailable =
-    hasNoFallbackLayer && volumeTracing?.hasSegmentIndex && isHoveredSegmentOrMesh;
+  const areSegmentStatisticsAvailable = wasSegmentOrMeshClicked && isSegmentIndexAvailable;
 
   if (areSegmentStatisticsAvailable) {
     infoRows.push(
@@ -1360,8 +1382,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
         "volumeInfo",
         <>
           <i className="fas fa-expand-alt segment-context-icon" />
-          Volume: {segmentVolume}
-          {copyIconWithTooltip(segmentVolume as string, "Copy volume")}
+          Volume: {segmentVolumeLabel}
+          {copyIconWithTooltip(segmentVolumeLabel as string, "Copy volume")}
           {refreshButton}
         </>,
       ),
@@ -1376,8 +1398,11 @@ function ContextMenuInner(propsWithInputRef: Props) {
           <i className="fas fa-dice-d6 segment-context-icon" />
           <>Bounding Box: </>
           <div style={{ marginLeft: 22, marginTop: -5 }}>
-            {boundingBoxInfo}
-            {copyIconWithTooltip(boundingBoxInfo as string, "Copy BBox top left point and extent")}
+            {boundingBoxInfoLabel}
+            {copyIconWithTooltip(
+              boundingBoxInfoLabel as string,
+              "Copy BBox top left point and extent",
+            )}
             {refreshButton}
           </div>
         </>,
@@ -1400,14 +1425,14 @@ function ContextMenuInner(propsWithInputRef: Props) {
     );
   }
 
-  if (isHoveredSegmentOrMesh) {
-    const segmentId = maybeClickedMeshId ? maybeClickedMeshId : segmentIdAtPosition;
+  if (wasSegmentOrMeshClicked) {
     infoRows.push(
       getInfoMenuItem(
         "copy-cell",
         <>
           <div className="cell-context-icon" />
-          Segment ID: {`${segmentId}`} {copyIconWithTooltip(segmentId, "Copy Segment ID")}
+          Segment ID: {`${clickedSegmentOrMeshId}`}{" "}
+          {copyIconWithTooltip(clickedSegmentOrMeshId, "Copy Segment ID")}
         </>,
       ),
     );

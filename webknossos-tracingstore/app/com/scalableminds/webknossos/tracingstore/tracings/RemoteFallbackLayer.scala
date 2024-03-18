@@ -5,7 +5,9 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceId}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataKey
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 
@@ -16,6 +18,10 @@ case class RemoteFallbackLayer(organizationName: String,
                                layerName: String,
                                elementClass: ElementClassProto)
 
+object RemoteFallbackLayer extends ProtoGeometryImplicits {
+  def fromDataLayerAndDataSource(dataLayer: DataLayerLike, dataSource: DataSourceId): RemoteFallbackLayer =
+    RemoteFallbackLayer(dataSource.team, dataSource.name, dataLayer.name, dataLayer.elementClass)
+}
 trait FallbackDataHelper {
   def remoteDatastoreClient: TSRemoteDatastoreClient
   def remoteWebknossosClient: TSRemoteWebknossosClient

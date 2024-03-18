@@ -177,9 +177,9 @@ jobs:
                   && sudo apt install gh -y
                   gh auth status
 
-                  CURRENT_BODY = $(gh pr view $PR_NUMBER --json body | jq -r '.body')
+                  CURRENT_BODY=$(gh pr view $PR_NUMBER --json body | jq -r '.body')
                   echo "CURRENT_BODY=$CURRENT_BODY"
-                  UPDATED_BODY = $(echo $CURRENT_BODY | sed "s|https://___.webknossos.xyz|https://$NORMALIZED_BRANCH.webknossos.xyz|g")
+                  UPDATED_BODY=$(echo $CURRENT_BODY | sed "s|https://___.webknossos.xyz|https://$NORMALIZED_BRANCH.webknossos.xyz|g")
                   echo "UPDATED_BODY=$UPDATED_BODY"
 
                   gh pr edit $PR_NUMBER --body $UPDATED_BODY

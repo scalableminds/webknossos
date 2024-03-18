@@ -182,7 +182,7 @@ jobs:
                   UPDATED_BODY=$(echo $CURRENT_BODY | sed "s|https://___.webknossos.xyz|https://$NORMALIZED_BRANCH.webknossos.xyz|g")
                   echo "UPDATED_BODY=$UPDATED_BODY"
 
-                  gh pr edit $PR_NUMBER --body $UPDATED_BODY
+                  echo $UPDATED_BODY | gh pr edit $PR_NUMBER -F -
               fi
             fi
       - run:

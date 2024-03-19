@@ -48,16 +48,18 @@ Note that skeleton-specific mouse actions are usually only available when the sk
 | Right-Click Drag (3D View)            | Rotate 3D View                              |
 | Left Click                            | Create New Node                             |
 | Left Click                            | Select Node (Mark as Active Node) under cursor  |
-| Left Drag                             | Move node under cursor                |
-| Right Click (on node)                 | Bring up the context-menu with further actions                |
+| Left Drag                             | Move node under cursor                      |
+| Right Click (on node)                 | Bring up the context-menu with further actions  |
+| SHIFT + ALT + Left Click              | Merge Two Nodes and Combine Trees           |
+| SHIFT + CTRL + Left Click             | Delete Edge / Split Trees                   |
 | C                                     | Create New Tree                             |
-| CTRL + .                              | Navigate to the next Node (Mark as Active)|
-| CTRL + ,                              | Navigate to previous Node (Mark as Active) |
+| CTRL + .                              | Navigate to the next Node (Mark as Active)  |
+| CTRL + ,                              | Navigate to previous Node (Mark as Active)  |
 | CTRL + Left Click / CTRL + Arrow Keys | Move the Active Node                        |
-| Del                           | Delete Node / Split Trees                           |
-| B                             | Mark Node as New Branchpoint                        |
-| J                             | Jump To Last Branchpoint                            |
-| S                             | Center Camera on Active Node                        |
+| Del                                   | Delete Node / Split Trees                   |
+| B                                     | Mark Node as New Branchpoint                |
+| J                                     | Jump To Last Branchpoint                    |
+| S                                     | Center Camera on Active Node                |
 
 
 Note that you can enable *Classic Controls* which will behave slightly different and more explicit for the mouse actions:
@@ -66,15 +68,13 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | ----------------------------- | -------------                       |
 | Right Click                   | Create New Node                     |
 | SHIFT + Left Click            | Select Node (Mark as Active Node)   |
-| SHIFT + Left Click            | Select Node (Mark as Active Node)   |
-| SHIFT + ALT + Left Click      | Merge Two Nodes and Combine Trees   |
-| SHIFT + CTRL + Left Click     | Delete Edge / Split Trees           |
 
 
 ### Flight / Oblique Mode
 
 | Key Binding                   | Operation                                  |
 | ----------------------------- | ------------------------------------------ |
+| Left Click                    | Select Node (Mark as Active Node) under cursor |
 | Left Mouse Drag or Arrow Keys | Rotation                                   |
 | SPACE                         | Move Forward                               |
 | CTRL + SPACE                  | Move Backward                              |
@@ -86,8 +86,10 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | S                             | Center Active Node                         |
 | F                             | Forward Without Recording Waypoints        |
 | D                             | Backward Without Recording Waypoints       |
+| Del                           | Delete Node / Split Trees                  |
 | SHIFT + SPACE                 | Delete Active Node, Recenter Previous Node |
-
+| SHIFT + ALT + Left Click      | Merge Two Nodes and Combine Trees          |
+| SHIFT + CTRL + Left Click     | Delete Edge / Split Trees                  |
 
 ## Volume Mode
 

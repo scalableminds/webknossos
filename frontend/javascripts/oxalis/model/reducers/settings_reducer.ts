@@ -250,7 +250,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_MAPPING": {
-      const { mappingName, mapping, mappingKeys, mappingColors, mappingType, layerName } = action;
+      const { mappingName, mapping, mappingColors, mappingType, layerName } = action;
 
       // Editable mappings cannot be disabled or switched for now
       if (!isMappingActivationAllowed(state, mappingName, layerName)) return state;
@@ -265,10 +265,9 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
         {
           mappingName,
           mapping,
-          mappingKeys,
           mappingColors,
           mappingType,
-          mappingSize: mappingKeys != null ? mappingKeys.length : 0,
+          mappingSize: mapping != null ? mapping.size : 0,
           hideUnmappedIds,
           mappingStatus:
             mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,

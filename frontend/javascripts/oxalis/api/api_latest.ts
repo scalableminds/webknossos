@@ -1518,9 +1518,6 @@ class DataApi {
     }
     const mappingProperties = {
       mapping: _.clone(mapping),
-      // Object.keys is sorted for numerical keys according to the spec:
-      // http://www.ecma-international.org/ecma-262/6.0/#sec-ordinary-object-internal-methods-and-internal-slots-ownpropertykeys
-      mappingKeys: Object.keys(mapping).map((x) => parseInt(x, 10)),
       mappingColors,
       hideUnmappedIds,
       showLoadingIndicator,

@@ -566,12 +566,14 @@ function LoggedInAvatar({
     activeOrganization != null
       ? activeOrganization.displayName || activeOrganization.name
       : organizationName;
-  const [val, onChange] = useState("");
+  const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
-  const filteredOrganizations = switchableOrganizations.filter((org) => {
-    return val === "" || org.displayName.includes(val) || org.name.includes(val);
-  });
+  const filteredOrganizations = Utils.filterWithSearchQueryAND(
+    switchableOrganizations,
+    ["displayName", "name"],
+    organizationFilter,
+  );
   const onEnterOrganization = () => {
     if (filteredOrganizations.length > 0) {
       switchTo(filteredOrganizations[0]);
@@ -595,7 +597,7 @@ function LoggedInAvatar({
             key: "input",
             label: (
               <OrganizationFilterInput
-                onChange={onChange}
+                onChange={onChangeOrganizationFilter}
                 isVisible={openKeys.includes("switch-organization")}
                 onPressEnter={onEnterOrganization}
               />

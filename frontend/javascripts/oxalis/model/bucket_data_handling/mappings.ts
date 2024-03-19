@@ -65,6 +65,8 @@ class Mappings {
     mappingKeys: Array<number> | null | undefined,
   ): Promise<void> {
     if (mapping == null || mappingKeys == null) return;
+    console.log("Mapping Texture", performance.now());
+    console.log("Mapping size", mappingKeys.length);
     console.time("Time to create mapping texture");
     const mappingSize = mappingKeys.length;
     // The typed arrays need to be padded with 0s so that their length is a multiple of MAPPING_TEXTURE_WIDTH
@@ -100,6 +102,7 @@ class Mappings {
     );
     message.destroy(MAPPING_MESSAGE_KEY);
     Store.dispatch(setMappingEnabledAction(this.layerName, true));
+    console.timeEnd("MappingActivation");
   }
 
   getMappingTextures() {

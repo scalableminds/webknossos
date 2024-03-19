@@ -890,7 +890,7 @@ export async function getTracingForAnnotationType(
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
   const version = extractVersion(versions, tracingId, typ);
-  const tracingType = typ.toLowerCase();
+  const tracingType = typ.toLowerCase() as "skeleton" | "volume";
   const possibleVersionString = version != null ? `&version=${version}` : "";
   const tracingArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
@@ -2293,27 +2293,14 @@ export function getAgglomerateSkeleton(
   );
 }
 
-export function getAgglomerateMapping(
-  dataStoreUrl: string,
-  datasetId: APIDatasetId,
-  layerName: string,
-  mappingId: string,
-): Promise<Array<number>> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForAllSegments?token=${token}`,
-    ),
-  );
-}
-
 export async function getAgglomeratesForSegmentsFromDatastore(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
   mappingId: string,
-  segmentIds: number[],
+  segmentIds: Array<number | bigint>,
 ): Promise<Record<number, number>> {
-  const segmentIdBuffer = serializeProtoListOfLong({ items: segmentIds });
+  const segmentIdBuffer = serializeProtoListOfLong(segmentIds);
   const listArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
@@ -2327,13 +2314,13 @@ export async function getAgglomeratesForSegmentsFromDatastore(
     ),
   );
 
-  return _.zipObject(segmentIds, parseProtoListOfLong(listArrayBuffer).items);
+  return _.zipObject(segmentIds, parseProtoListOfLong(listArrayBuffer));
 }
 
 export function getAgglomeratesForSegmentsFromTracingstore(
   tracingStoreUrl: string,
   tracingId: string,
-  segmentIds: number[],
+  segmentIds: Array<number | bigint>,
 ): Promise<Record<number, number>> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(

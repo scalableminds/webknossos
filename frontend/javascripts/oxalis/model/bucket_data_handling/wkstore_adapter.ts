@@ -5,7 +5,6 @@ import { doWithToken } from "admin/admin_rest_api";
 import {
   isSegmentationLayer,
   getByteCountFromLayer,
-  getMappingInfo,
   getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
@@ -20,7 +19,7 @@ import type { DataLayerType, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
 import WebworkerPool from "libs/webworker_pool";
 import type { BucketAddress, Vector3 } from "oxalis/constants";
-import constants, { MappingStatusEnum } from "oxalis/constants";
+import constants from "oxalis/constants";
 import window from "libs/window";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import { ResolutionInfo } from "../helpers/resolution_info";
@@ -169,17 +168,8 @@ export async function requestFromStore(
   const state = Store.getState();
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
   const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
-  const activeMapping = getMappingInfo(
-    state.temporaryConfiguration.activeMappingByLayer,
-    layerInfo.name,
-  );
+  // Mappings are applied in the frontend
   const applyAgglomerates = null;
-  // isSegmentation &&
-  // activeMapping != null && // Start to request mapped data during mapping activation phase already
-  // activeMapping.mappingStatus !== MappingStatusEnum.DISABLED &&
-  // activeMapping.mappingType === "HDF5"
-  //   ? activeMapping.mappingName
-  //   : null;
   const resolutionInfo = getResolutionInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null

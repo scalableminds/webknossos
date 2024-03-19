@@ -36,11 +36,7 @@ import {
   getActiveSegmentationTracing,
   getSegmentsForLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import {
-  getLayerByName,
-  getMappingInfo,
-  getResolutionInfo,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   NeighborInfo,
   getAgglomeratesForSegments,
@@ -56,7 +52,6 @@ import {
 } from "oxalis/model/actions/segmentation_actions";
 import { V3 } from "libs/mjs";
 import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
-import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { Tree, VolumeTracing } from "oxalis/store";
 import _ from "lodash";
 import { type AdditionalCoordinate } from "types/api_flow_types";

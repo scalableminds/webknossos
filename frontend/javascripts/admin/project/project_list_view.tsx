@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Spin, Button, Input, Modal, Tooltip } from "antd";
+import { Table, Spin, Button, Input, Tooltip, App } from "antd";
 import {
   DeleteOutlined,
   DownloadOutlined,
@@ -24,8 +24,8 @@ import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
   getProjectsWithStatus,
   getProjectsForTaskType,
-  increaseProjectTaskInstances,
-  deleteProject,
+  increaseProjectTaskInstances as increaseProjectTaskInstancesAPI,
+  deleteProject as deleteProjectAPI,
   pauseProject,
   resumeProject,
   downloadAnnotation,
@@ -39,8 +39,10 @@ import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import FormattedDate from "components/formatted_date";
+import { useEffect, useState } from "react";
 const { Column } = Table;
 const { Search } = Input;
+
 type OwnProps = {
   initialSearchValue?: string;
   taskTypeId?: string;
@@ -50,152 +52,124 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps;
 
-type State = {
-  isLoading: boolean;
-  projects: Array<APIProjectWithStatus>;
-  searchQuery: string;
-  isTransferTasksVisible: boolean;
-  selectedProject: APIProjectWithStatus | null | undefined;
-  taskTypeName: string | null | undefined;
-};
-const persistence = new Persistence<Pick<State, "searchQuery">>(
+const persistence = new Persistence<{searchQuery: string}>(
   {
     searchQuery: PropTypes.string,
   },
   "projectList",
 );
 
-class ProjectListView extends React.PureComponent<Props, State> {
-  state: State = {
-    isLoading: true,
-    projects: [],
-    searchQuery: "",
-    isTransferTasksVisible: false,
-    selectedProject: null,
-    taskTypeName: "",
-  };
+function ProjectListView({initialSearchValue, taskTypeId, activeUser}: Props) {
+  
+  const {modal} = App.useApp()
 
-  componentDidMount() {
-    this.setState(persistence.load() as { searchQuery: string });
+    const [isLoading, setIsLoading]= useState(true)
+    const [projects, setProjects]= useState<APIProjectWithStatus[]>([])
+    const [searchQuery, setSearchQuery]= useState("")
+    const [isTransferTasksVisible, setIsTransferTasksVisible]= useState(false)
+    const [selectedProject, setSelectedProject]= useState<APIProjectWithStatus | undefined>(undefined)
+    const [taskTypeName, setTaskTypeName]= useState<string|undefined>("")
 
-    if (this.props.initialSearchValue != null && this.props.initialSearchValue !== "") {
+  useEffect(()=> {
+    const { searchQuery } = persistence.load()
+    setSearchQuery(searchQuery || "");
+    
+    if (initialSearchValue != null && initialSearchValue !== "") {
       // Only override the persisted value if the provided initialSearchValue is not empty
-      this.setState({
-        searchQuery: this.props.initialSearchValue,
-      });
+        setSearchQuery(initialSearchValue);
     }
 
-    this.fetchData();
-  }
+    fetchData();
+  }, [initialSearchValue])
 
-  componentDidUpdate(prevProps: Props) {
-    persistence.persist(this.state);
+  useEffect(()=> {
+    persistence.persist({searchQuery});
+  }, [searchQuery])
 
-    if (prevProps.taskTypeId !== this.props.taskTypeId) {
-      this.fetchData();
-    }
-  }
+  useEffect(()=> {
+    fetchData();
+  }, [taskTypeId])
 
-  async fetchData(): Promise<void> {
+  async function fetchData(): Promise<void> {
     let projects;
     let taskTypeName;
     let taskType;
 
-    if (this.props.taskTypeId) {
+    if (taskTypeId) {
       [projects, taskType] = await Promise.all([
-        getProjectsForTaskType(this.props.taskTypeId),
-        getTaskType(this.props.taskTypeId || ""),
+        getProjectsForTaskType(taskTypeId),
+        getTaskType(taskTypeId || ""),
       ]);
       taskTypeName = taskType.summary;
     } else {
       projects = await getProjectsWithStatus();
     }
 
-    this.setState({
-      isLoading: false,
-      projects: projects.filter((p) => p.owner != null),
-      taskTypeName,
-    });
+      setIsLoading( false)
+      setProjects( projects.filter((p) => p.owner != null))
+      setTaskTypeName(taskTypeName)
   }
 
-  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    this.setState({
-      searchQuery: event.target.value,
-    });
+ function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
+      setSearchQuery(event.target.value)
   };
 
-  deleteProject = (project: APIProjectWithStatus) => {
-    Modal.confirm({
+  function deleteProject(project: APIProjectWithStatus) {
+    modal.confirm({
       title: messages["project.delete"],
       onOk: async () => {
-        this.setState({
-          isLoading: true,
-        });
+          setIsLoading(true)
 
         try {
-          await deleteProject(project.id);
-          this.setState((prevState) => ({
-            projects: prevState.projects.filter((p) => p.id !== project.id),
-          }));
+          await deleteProjectAPI(project.id);
+            setProjects(projects.filter((p) => p.id !== project.id))
         } catch (error) {
           handleGenericError(error as Error);
         } finally {
-          this.setState({
-            isLoading: false,
-          });
+          setIsLoading(false)
         }
       },
     });
   };
 
-  mergeProjectWithUpdated = (
+  function mergeProjectWithUpdated(
     oldProject: APIProjectWithStatus,
     updatedProject: APIProject,
-  ): APIProjectWithStatus => ({ ...oldProject, ...updatedProject });
+  ): APIProjectWithStatus {return { ...oldProject, ...updatedProject }};
 
-  pauseResumeProject = async (
+  async function pauseResumeProject(
     project: APIProjectWithStatus,
     APICall: (arg0: string) => Promise<APIProject>,
-  ) => {
+  ) {
     const updatedProject = await APICall(project.id);
-    this.setState((prevState) => ({
-      projects: prevState.projects.map((p) =>
-        p.id === project.id ? this.mergeProjectWithUpdated(p, updatedProject) : p,
+      setProjects(projects.map((p) =>
+        p.id === project.id ? mergeProjectWithUpdated(p, updatedProject) : p,
       ),
-    }));
-  };
+    )};
 
-  increaseProjectTaskInstances = async (project: APIProjectWithStatus) => {
-    Modal.confirm({
+    async function increaseProjectTaskInstances(project: APIProjectWithStatus) {
+    modal.confirm({
       title: messages["project.increase_instances"],
       onOk: async () => {
         try {
-          this.setState({
-            isLoading: true,
-          });
-          const updatedProject = await increaseProjectTaskInstances(project.id);
-          this.setState((prevState) => ({
-            projects: prevState.projects.map((p) => (p.id === project.id ? updatedProject : p)),
-          }));
+          setIsLoading(true)
+          const updatedProject = await increaseProjectTaskInstancesAPI(project.id);
+            setProjects(projects.map((p) => (p.id === project.id ? updatedProject : p)))
         } catch (error) {
           handleGenericError(error as Error);
         } finally {
-          this.setState({
-            isLoading: false,
-          });
+          setIsLoading(false)
         }
       },
     });
   };
 
-  showActiveUsersModal = async (project: APIProjectWithStatus) => {
-    this.setState({
-      selectedProject: project,
-      isTransferTasksVisible: true,
-    });
+  function showActiveUsersModal(project: APIProjectWithStatus) {
+      setSelectedProject(project)
+      setIsTransferTasksVisible(true)
   };
 
-  maybeShowNoFallbackDataInfo = async (projectId: string) => {
+  async function maybeShowNoFallbackDataInfo(projectId: string) {
     const tasks = await getTasks({
       project: projectId,
     });
@@ -207,15 +181,13 @@ class ProjectListView extends React.PureComponent<Props, State> {
     }
   };
 
-  onTaskTransferComplete = () => {
-    this.setState({
-      isTransferTasksVisible: false,
-    });
-    this.fetchData();
+  function onTaskTransferComplete() {
+    setIsTransferTasksVisible(false)
+    fetchData();
   };
 
-  renderPlaceholder() {
-    return this.state.isLoading ? null : (
+  function renderPlaceholder() {
+    return isLoading ? null : (
       <React.Fragment>
         {"There are no projects yet or no projects matching your filters. "}
         <Link to="/projects/create">Add a new project</Link>
@@ -224,7 +196,6 @@ class ProjectListView extends React.PureComponent<Props, State> {
     );
   }
 
-  render() {
     const greaterThanZeroFilters = [
       {
         text: "0",
@@ -238,16 +209,18 @@ class ProjectListView extends React.PureComponent<Props, State> {
 
     const typeHint: Array<APIProjectWithStatus> = [];
     const filteredProjects = Utils.filterWithSearchQueryAND(
-      this.state.projects,
+      
+      projects,
       ["name", "team", "priority", "owner", "pendingInstances", "tracingTime"],
-      this.state.searchQuery,
+      
+      searchQuery,
     );
 
     return (
       <div className="container TestProjectListView">
         <div>
           <div className="pull-right">
-            {this.props.taskTypeId ? null : (
+            {taskTypeId ? null : (
               <Link to="/projects/create">
                 <Button icon={<PlusOutlined />} style={{ marginRight: 20 }} type="primary">
                   Add Project
@@ -258,13 +231,16 @@ class ProjectListView extends React.PureComponent<Props, State> {
               style={{
                 width: 200,
               }}
-              onChange={this.handleSearch}
-              value={this.state.searchQuery}
+              onChange={handleSearch}
+              value={
+                searchQuery}
             />
           </div>
           <h3>
-            {this.state.taskTypeName
-              ? `Projects for task type ${this.state.taskTypeName}`
+            {
+            taskTypeName
+              ? `Projects for task type ${
+                taskTypeName}`
               : "Projects"}
           </h3>
           <div
@@ -273,7 +249,8 @@ class ProjectListView extends React.PureComponent<Props, State> {
               margin: "20px 0px",
             }}
           />
-          <Spin spinning={this.state.isLoading} size="large">
+          <Spin spinning={
+            isLoading} size="large">
             <Table
               dataSource={filteredProjects}
               rowKey="id"
@@ -285,7 +262,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 marginBottom: 30,
               }}
               locale={{
-                emptyText: this.renderPlaceholder(),
+                emptyText: renderPlaceholder(),
               }}
               scroll={{
                 x: "max-content",
@@ -422,7 +399,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                     {project.paused ? (
                       <div>
                         <a
-                          onClick={_.partial(this.pauseResumeProject, project, resumeProject)}
+                          onClick={_.partial(pauseResumeProject, project, resumeProject)}
                           title="Resume Project"
                         >
                           <PlayCircleOutlined className="icon-margin-right" />
@@ -433,7 +410,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                     ) : (
                       <div>
                         <a
-                          onClick={_.partial(this.pauseResumeProject, project, pauseProject)}
+                          onClick={_.partial(pauseResumeProject, project, pauseProject)}
                           title="Pause Tasks"
                         >
                           <PauseCircleOutlined className="icon-margin-right" />
@@ -448,7 +425,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                     </Link>
                     <br />
                     <a
-                      onClick={_.partial(this.increaseProjectTaskInstances, project)}
+                      onClick={_.partial(increaseProjectTaskInstances, project)}
                       title="Increase Task instances"
                     >
                       <PlusSquareOutlined className="icon-margin-right" />
@@ -458,7 +435,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                     <AsyncLink
                       href="#"
                       onClick={async () => {
-                        this.maybeShowNoFallbackDataInfo(project.id);
+                        maybeShowNoFallbackDataInfo(project.id);
                         await downloadAnnotation(project.id, "CompoundProject");
                       }}
                       title="Download all Finished Annotations"
@@ -467,13 +444,13 @@ class ProjectListView extends React.PureComponent<Props, State> {
                       Download
                     </AsyncLink>
                     <br />
-                    <a onClick={_.partial(this.showActiveUsersModal, project)}>
+                    <a onClick={_.partial(showActiveUsersModal, project)}>
                       <TeamOutlined className="icon-margin-right" />
                       Show active users
                     </a>
                     <br />
-                    {project.owner.email === this.props.activeUser.email ? (
-                      <a onClick={_.partial(this.deleteProject, project)}>
+                    {project.owner.email === activeUser.email ? (
+                      <a onClick={_.partial(deleteProject, project)}>
                         <DeleteOutlined className="icon-margin-right" />
                         Delete
                       </a>
@@ -483,17 +460,18 @@ class ProjectListView extends React.PureComponent<Props, State> {
               />
             </Table>
           </Spin>
-          {this.state.isTransferTasksVisible ? (
+          {
+          isTransferTasksVisible ? (
             <TransferAllTasksModal
-              project={this.state.selectedProject}
-              onCancel={this.onTaskTransferComplete}
-              onComplete={this.onTaskTransferComplete}
+              project={
+                selectedProject}
+              onCancel={onTaskTransferComplete}
+              onComplete={onTaskTransferComplete}
             />
           ) : null}
         </div>
       </div>
     );
-  }
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({

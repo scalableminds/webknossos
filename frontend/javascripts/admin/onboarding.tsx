@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Form, Modal, Input, Button, Row, Col, Steps, Card, AutoComplete, Alert } from "antd";
 import {
   CloudUploadOutlined,
@@ -215,50 +215,42 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
   );
 }
 
-type InviteUsersModalState = {
-  inviteesString: string;
-};
+export function InviteUsersModal({
+  organizationName,
+  isOpen,
+  handleVisibleChange,
+  destroy,
+  currentUserCount = 1,
+  maxUserCountPerOrganization = maxInludedUsersInBasicPlan, // default for Basic Plan,
+}: {
+  organizationName: string;
+  isOpen?: boolean;
+  handleVisibleChange?: (...args: Array<any>) => any;
+  destroy?: (...args: Array<any>) => any;
+  currentUserCount?: number;
+  maxUserCountPerOrganization?: number;
+}) {
+  const [inviteesString, setInviteesString] = useState("");
 
-export class InviteUsersModal extends React.Component<
-  {
-    isOpen?: boolean;
-    handleVisibleChange?: (...args: Array<any>) => any;
-    destroy?: (...args: Array<any>) => any;
-    organizationName: string;
-    currentUserCount: number;
-    maxUserCountPerOrganization: number;
-  },
-  InviteUsersModalState
-> {
-  state: InviteUsersModalState = {
-    inviteesString: "",
-  };
-
-  static defaultProps = {
-    currentUserCount: 1,
-    maxUserCountPerOrganization: maxInludedUsersInBasicPlan, // default for Basic Plan
-  };
-
-  extractEmailAddresses(): string[] {
-    return this.state.inviteesString
+  function extractEmailAddresses(): string[] {
+    return inviteesString
       .split(/[,\s]+/)
       .map((a) => a.trim())
       .filter((lines) => lines.includes("@"));
   }
 
-  sendInvite = async () => {
-    const addresses = this.extractEmailAddresses();
+  async function sendInvite() {
+    const addresses = extractEmailAddresses();
 
     await sendInvitesForOrganization(addresses, true);
     Toast.success("An invitation was sent to the provided email addresses.");
-    this.setState({
-      inviteesString: "",
-    });
-    if (this.props.handleVisibleChange != null) this.props.handleVisibleChange(false);
-    if (this.props.destroy != null) this.props.destroy();
-  };
 
-  getContent(isInvitesDisabled: boolean) {
+    setInviteesString("");
+    if (handleVisibleChange != null) handleVisibleChange(false);
+    if (destroy != null) destroy();
+  }
+
+  function getContent(isInvitesDisabled: boolean) {
     const exceedingUserLimitAlert = isInvitesDisabled ? (
       <Alert
         showIcon
@@ -266,7 +258,7 @@ export class InviteUsersModal extends React.Component<
         description="Inviting more users will exceed your organization's user limit. Consider upgrading your WEBKNOSSOS plan."
         style={{ marginBottom: 10 }}
         action={
-          <Link to={`/organizations/${this.props.organizationName}`}>
+          <Link to={`/organizations/${organizationName}`}>
             <Button size="small" type="primary">
               Upgrade Now
             </Button>
@@ -294,46 +286,41 @@ export class InviteUsersModal extends React.Component<
             minRows: 6,
           }}
           onChange={(evt) => {
-            this.setState({
-              inviteesString: evt.target.value,
-            });
+              setInviteesString(evt.target.value)
           }}
           placeholder={"jane@example.com\njoe@example.com"}
-          value={this.state.inviteesString}
+          defaultValue={inviteesString}
         />
       </React.Fragment>
     );
   }
 
-  render() {
-    const isInvitesDisabled =
-      this.props.currentUserCount + this.extractEmailAddresses().length >
-      this.props.maxUserCountPerOrganization;
+  const isInvitesDisabled =
+    currentUserCount + extractEmailAddresses().length > maxUserCountPerOrganization;
 
-    return (
-      <Modal
-        open={this.props.isOpen == null ? true : this.props.isOpen}
-        title={
-          <>
-            <UserAddOutlined /> Invite Users
-          </>
-        }
-        width={600}
-        footer={
-          <Button onClick={this.sendInvite} type="primary" disabled={isInvitesDisabled}>
-            Send Invite Emails
-          </Button>
-        }
-        onCancel={() => {
-          if (this.props.handleVisibleChange != null) this.props.handleVisibleChange(false);
-          if (this.props.destroy != null) this.props.destroy();
-        }}
-        closable
-      >
-        {this.getContent(isInvitesDisabled)}
-      </Modal>
-    );
-  }
+  return (
+    <Modal
+      open={isOpen == null ? true : isOpen}
+      title={
+        <>
+          <UserAddOutlined /> Invite Users
+        </>
+      }
+      width={600}
+      footer={
+        <Button onClick={sendInvite} type="primary" disabled={isInvitesDisabled}>
+          Send Invite Emails
+        </Button>
+      }
+      onCancel={() => {
+        if (handleVisibleChange != null) handleVisibleChange(false);
+        if (destroy != null) destroy();
+      }}
+      closable
+    >
+      {getContent(isInvitesDisabled)}
+    </Modal>
+  );
 }
 
 const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) => {

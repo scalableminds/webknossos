@@ -58,12 +58,12 @@ const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.TDView]: 3,
 };
 export function handleMergeTrees(
-  planeView: PlaneView | ArbitraryView,
+  view: PlaneView | ArbitraryView,
   position: Point2,
   plane: Viewport,
   isTouch: boolean,
 ) {
-  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
+  const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
 
   // otherwise we have hit the background and do nothing
@@ -74,12 +74,12 @@ export function handleMergeTrees(
   }
 }
 export function handleDeleteEdge(
-  planeView: PlaneView | ArbitraryView,
+  view: PlaneView | ArbitraryView,
   position: Point2,
   plane: Viewport,
   isTouch: boolean,
 ) {
-  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
+  const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
 
   // otherwise we have hit the background and do nothing
@@ -90,12 +90,12 @@ export function handleDeleteEdge(
   }
 }
 export function handleSelectNode(
-  planeView: PlaneView | ArbitraryView,
+  view: PlaneView | ArbitraryView,
   position: Point2,
   plane: Viewport,
   isTouch: boolean,
 ): boolean {
-  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
+  const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {

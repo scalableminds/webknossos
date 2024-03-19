@@ -90,14 +90,14 @@ class ArbitraryController extends React.PureComponent<Props> {
       this.input.mouseController = new InputMouse(
         arbitraryViewportId,
         {
-          leftClick: (pos: Point2, plane: string, event: MouseEvent, isTouch: boolean) => {
+          leftClick: (pos: Point2, viewport: string, event: MouseEvent, isTouch: boolean) => {
             SkeletonTool.onLeftClick(
               this.arbitraryView,
               pos,
               event.shiftKey,
               event.altKey,
               event.ctrlKey || event.metaKey,
-              plane as Viewport,
+              viewport as Viewport,
               isTouch,
               false,
             );
@@ -132,7 +132,7 @@ class ArbitraryController extends React.PureComponent<Props> {
             }
           },
         },
-        "arbitraryViewport",
+        ArbitraryViewport,
       );
     });
   }

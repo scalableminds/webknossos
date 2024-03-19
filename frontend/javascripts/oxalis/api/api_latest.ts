@@ -1497,7 +1497,7 @@ class DataApi {
    */
   setMapping(
     layerName: string,
-    mapping: Mapping,
+    mapping: Mapping | Record<number, number>,
     options: {
       colors?: Array<number>;
       hideUnmappedIds?: boolean;
@@ -1517,7 +1517,10 @@ class DataApi {
       sendAnalyticsEvent("setMapping called with custom colors");
     }
     const mappingProperties = {
-      mapping: _.clone(mapping),
+      mapping:
+        mapping instanceof Map
+          ? new Map(mapping)
+          : new Map(Object.entries(mapping).map(([key, value]) => [parseInt(key, 10), value])),
       mappingColors,
       hideUnmappedIds,
       showLoadingIndicator,

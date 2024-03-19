@@ -555,7 +555,7 @@ class DataApi {
    *
    * api.setMapping("segmentation", mapping);
    */
-  setMapping(layerName: string, mapping: Mapping) {
+  setMapping(layerName: string, mapping: Mapping | Record<number, number>) {
     const segmentationLayer = this.model.getLayerByName(layerName);
     const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
 
@@ -564,7 +564,10 @@ class DataApi {
     }
 
     const mappingProperties = {
-      mapping: _.clone(mapping),
+      mapping:
+        mapping instanceof Map
+          ? new Map(mapping)
+          : new Map(Object.entries(mapping).map(([key, value]) => [parseInt(key, 10), value])),
     };
     Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
   }

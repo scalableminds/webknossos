@@ -71,7 +71,7 @@ function compressTimeLogs(logs) {
       previousDuration != null &&
       previousLog != null &&
       Math.abs(timeLog.timestamp - (previousLog.timestamp + previousDuration.asMilliseconds())) <
-      1000 &&
+        1000 &&
       timeLog.task_id === previousLog.task_id
     ) {
       const newDuration = previousDuration.add(dayjs.duration(timeLog.time));

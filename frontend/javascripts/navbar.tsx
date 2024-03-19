@@ -8,7 +8,10 @@ import {
   Popover,
   type SubMenuProps,
   Tag,
+  Input,
+  InputRef,
 } from "antd";
+import _ from "lodash";
 import {
   SwapOutlined,
   TeamOutlined,
@@ -23,7 +26,7 @@ import { useHistory, Link } from "react-router-dom";
 
 import classnames from "classnames";
 import { connect } from "react-redux";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Toast from "libs/toast";
 import type { APIOrganization, APIUser, APIUserCompact, APIUserTheme } from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
@@ -59,6 +62,11 @@ import { getSystemColorTheme } from "theme";
 const { Header } = Layout;
 
 const HELP_MENU_KEY = "helpMenu";
+// At most, 30 organizations are rendered in the dropdown.
+const MAX_RENDERED_ORGANIZATION = 30;
+// A search input is shown when more than 30 switchable organizations
+// exist.
+const ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT = 10;
 
 type OwnProps = {
   isAuthenticated: boolean;
@@ -498,6 +506,29 @@ export const switchTo = async (org: APIOrganization) => {
   await switchToOrganization(org.name);
 };
 
+function OrganizationFilterInput({
+  onChange,
+  isVisible,
+  onPressEnter,
+}: { onChange: (val: string) => void; isVisible: boolean; onPressEnter: () => void }) {
+  const ref = useRef<InputRef>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesnt understand that ref.current is accessed?
+  useEffect(() => {
+    if (ref?.current && isVisible) {
+      setTimeout(() => {
+        // Without the timeout, the focus doesn't work unfortunately.
+        ref.current?.input?.focus();
+      }, 100);
+    }
+  }, [ref.current, isVisible]);
+  const onChangeImpl = (evt: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(evt.target.value);
+  };
+
+  return <Input onChange={onChangeImpl} ref={ref} onPressEnter={onPressEnter} />;
+}
+
 function LoggedInAvatar({
   activeUser,
   handleLogout,
@@ -510,11 +541,42 @@ function LoggedInAvatar({
   const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
   const activeOrganization = usersOrganizations.find((org) => org.name === organizationName);
-  const switchableOrganizations = usersOrganizations.filter((org) => org.name !== organizationName);
+  const switchableOrganizations = usersOrganizations
+    .filter((org) => org.name !== organizationName)
+    // todo: remove again
+    .concat(
+      _.range(300).map(
+        (idx) =>
+          ({
+            id: idx,
+            name: `organization_${idx}`,
+            additionalInformation: "",
+            displayName: `Organization ${idx}`,
+            pricingPlan: "",
+            enableAutoVerify: true,
+            newUserMailingList: "",
+            paidUntil: 0,
+            includedUsers: 0,
+            includedStorageBytes: 0,
+            usedStorageBytes: 0,
+          }) as any as APIOrganization,
+      ),
+    );
   const orgDisplayName =
     activeOrganization != null
       ? activeOrganization.displayName || activeOrganization.name
       : organizationName;
+  const [val, onChange] = useState("");
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
+
+  const filteredOrganizations = switchableOrganizations.filter((org) => {
+    return val === "" || org.displayName.includes(val) || org.name.includes(val);
+  });
+  const onEnterOrganization = () => {
+    if (filteredOrganizations.length > 0) {
+      switchTo(filteredOrganizations[0]);
+    }
+  };
 
   const setSelectedTheme = async (newTheme: APIUserTheme) => {
     if (newTheme === "auto") newTheme = getSystemColorTheme();
@@ -525,6 +587,22 @@ function LoggedInAvatar({
       Store.dispatch(setActiveUserAction(newUser));
     }
   };
+
+  const maybeOrganizationFilterInput =
+    switchableOrganizations.length > ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT
+      ? [
+          {
+            key: "input",
+            label: (
+              <OrganizationFilterInput
+                onChange={onChange}
+                isVisible={openKeys.includes("switch-organization")}
+                onPressEnter={onEnterOrganization}
+              />
+            ),
+          },
+        ]
+      : [];
 
   const isMultiMember = switchableOrganizations.length > 0;
   return (
@@ -540,6 +618,8 @@ function LoggedInAvatar({
       subMenuCloseDelay={subMenuCloseDelay}
       triggerSubMenuAction="click"
       className="right-navbar"
+      onOpenChange={setOpenKeys}
+      openKeys={openKeys}
       items={[
         {
           key: "loggedMenu",
@@ -570,11 +650,14 @@ function LoggedInAvatar({
               ? {
                   key: "switch-organization",
                   label: "Switch Organization",
-                  children: switchableOrganizations.map((org) => ({
-                    key: org.name,
-                    onClick: () => switchTo(org),
-                    label: org.displayName || org.name,
-                  })),
+                  children: [
+                    ...maybeOrganizationFilterInput,
+                    ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
+                      key: org.name,
+                      onClick: () => switchTo(org),
+                      label: org.displayName || org.name,
+                    })),
+                  ],
                 }
               : null,
             {

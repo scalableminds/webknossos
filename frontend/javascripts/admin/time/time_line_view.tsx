@@ -453,8 +453,8 @@ class TimeLineView extends React.PureComponent<Props, State> {
                 <Col span={8}>
                   <ul>
                     <li style={paddingBottom}>Total Time:</li>
-                    <li style={paddingBottom}>Number of Tasks:</li>
-                    <li>Average Time per Task:</li>
+                    <li style={paddingBottom}>Number of Tasks / Annotations:</li>
+                    <li>Average Time per Task / Annotation:</li>
                   </ul>
                 </Col>
                 <Col span={16}>

@@ -1,11 +1,15 @@
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Spin, Button, Input, Modal, Alert, Tag } from "antd";
+import { Table, Spin, Button, Input, Alert, Tag, App } from "antd";
 import { DeleteOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
-import { getEditableTeams, deleteTeam, getEditableUsers } from "admin/admin_rest_api";
+import {
+  getEditableTeams,
+  deleteTeam as deleteTeamAPI,
+  getEditableUsers,
+} from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import LinkButton from "components/link_button";
 import CreateTeamModal from "admin/team/create_team_modal_view";
@@ -14,12 +18,11 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import { stringToColor } from "libs/format_utils";
 import EditTeamModalView from "./edit_team_modal_view";
-import { EmptyObject } from "types/globals";
+import { useEffect, useState } from "react";
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APITeam[] = [];
 
-type Props = EmptyObject;
 type State = {
   isLoading: boolean;
   teams: APITeam[];
@@ -107,215 +110,176 @@ const persistence = new Persistence<Pick<State, "searchQuery">>(
   "teamList",
 );
 
-class TeamListView extends React.PureComponent<Props, State> {
-  state: State = {
-    isLoading: true,
-    teams: [],
-    users: [],
-    searchQuery: "",
-    isTeamCreationModalVisible: false,
-    isTeamEditModalVisible: false,
-    selectedTeam: null,
-  };
+function TeamListView() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [teams, setTeams] = useState<APITeam[]>([]);
+  const [users, setUsers] = useState<APIUser[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isTeamCreationModalVisible, setIsTeamCreationModalVisible] = useState(false);
+  const [isTeamEditModalVisible, setIsTeamEditModalVisible] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState<APITeam | null>(null);
 
-  componentDidMount() {
-    // @ts-ignore
-    this.setState(persistence.load());
-    this.fetchData();
-  }
+  const { modal } = App.useApp();
 
-  componentDidUpdate() {
-    persistence.persist(this.state);
-  }
+  useEffect(() => {
+    const { searchQuery } = persistence.load();
+    setSearchQuery(searchQuery || "");
+    fetchData();
+  }, []);
 
-  async fetchData(): Promise<void> {
+  useEffect(() => {
+    persistence.persist({ searchQuery });
+  }, [searchQuery]);
+
+  async function fetchData(): Promise<void> {
     const [teams, users] = await Promise.all([getEditableTeams(), getEditableUsers()]);
-    this.setState({
-      isLoading: false,
-      teams,
-      users,
-    });
+
+    setUsers(users);
+    setTeams(teams);
+    setIsLoading(false);
   }
 
-  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    this.setState({
-      searchQuery: event.target.value,
-    });
-  };
+  function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
+    setSearchQuery(event.target.value);
+  }
 
-  deleteTeam = (team: APITeam) => {
-    Modal.confirm({
+  function deleteTeam(team: APITeam) {
+    modal.confirm({
       title: messages["team.delete"],
       onOk: async () => {
         try {
-          this.setState({
-            isLoading: true,
-          });
-          await deleteTeam(team.id);
-          this.setState((prevState) => ({
-            teams: prevState.teams.filter((t) => t.id !== team.id),
-          }));
+          setIsLoading(true);
+          await deleteTeamAPI(team.id);
+          setTeams(teams.filter((t: APITeam) => t.id !== team.id));
         } catch (error) {
           handleGenericError(error as Error);
         } finally {
-          this.setState({
-            isLoading: false,
-          });
+          setIsLoading(false);
         }
       },
     });
-  };
+  }
 
-  createTeam = (newTeam: APITeam) => {
-    this.setState((prevState) => ({
-      isTeamCreationModalVisible: false,
-      teams: prevState.teams.concat([newTeam]),
-    }));
-  };
+  function createTeam(newTeam: APITeam) {
+    setIsTeamCreationModalVisible(false);
+    setTeams([...teams, newTeam]);
+  }
 
-  renderPlaceholder() {
+  function renderPlaceholder() {
     const teamMessage = (
       <React.Fragment>
         {"You can "}
-        <a
-          onClick={() =>
-            this.setState({
-              isTeamCreationModalVisible: true,
-            })
-          }
-        >
-          add a team
-        </a>
+        <a onClick={() => setIsTeamCreationModalVisible(true)}>add a team</a>
         {" to control access to specific datasets and manage which users can be assigned to tasks."}
       </React.Fragment>
     );
-    return this.state.isLoading ? null : (
+    return isLoading ? null : (
       <Alert message="Add more teams" description={teamMessage} type="info" showIcon />
     );
   }
 
-  render() {
-    const marginRight = {
-      marginRight: 20,
-    };
-    return (
-      <div className="container">
-        <div
-          style={{
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTag: number; }' is not assignable to... Remove this comment to see the full error message
-            marginTag: 20,
-          }}
-        >
-          <div className="pull-right">
-            <Button
-              icon={<PlusOutlined className="icon-margin-right" />}
-              style={marginRight}
-              type="primary"
-              onClick={() =>
-                this.setState({
-                  isTeamCreationModalVisible: true,
-                })
-              }
-            >
-              Add Team
-            </Button>
-            <Search
-              style={{
-                width: 200,
-              }}
-              onChange={this.handleSearch}
-              value={this.state.searchQuery}
-            />
-          </div>
-          <h3>Teams</h3>
-          <div
-            className="clearfix"
+  const marginRight = {
+    marginRight: 20,
+  };
+  return (
+    <div className="container">
+      <div
+        style={{
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTag: number; }' is not assignable to... Remove this comment to see the full error message
+          marginTag: 20,
+        }}
+      >
+        <div className="pull-right">
+          <Button
+            icon={<PlusOutlined className="icon-margin-right" />}
+            style={marginRight}
+            type="primary"
+            onClick={() => setIsTeamCreationModalVisible(true)}
+          >
+            Add Team
+          </Button>
+          <Search
             style={{
-              margin: "20px 0px",
+              width: 200,
             }}
-          />
-
-          <Spin spinning={this.state.isLoading} size="large">
-            {this.state.teams.length <= 1 ? this.renderPlaceholder() : null}
-            <Table
-              dataSource={Utils.filterWithSearchQueryAND(
-                this.state.teams,
-                ["name"],
-                this.state.searchQuery,
-              )}
-              rowKey="id"
-              pagination={{
-                defaultPageSize: 50,
-              }}
-              expandable={{
-                expandedRowRender: (team) => renderUsersForTeam(team, this.state.users),
-                rowExpandable: (_team) => true,
-              }}
-              style={{
-                marginTop: 30,
-                marginBottom: 30,
-              }}
-            >
-              <Column
-                title="Name"
-                dataIndex="name"
-                key="name"
-                sorter={Utils.localeCompareBy(typeHint, (team) => team.name)}
-              />
-              <Column
-                title="Actions"
-                key="actions"
-                render={(__, team: APITeam) => (
-                  <span>
-                    <div>
-                      <LinkButton
-                        onClick={() =>
-                          this.setState({
-                            isTeamEditModalVisible: true,
-                            selectedTeam: team,
-                          })
-                        }
-                      >
-                        <UserOutlined className="icon-margin-right" />
-                        Add / Remove Users
-                      </LinkButton>
-                    </div>
-                    <div>
-                      <LinkButton onClick={_.partial(this.deleteTeam, team)}>
-                        <DeleteOutlined className="icon-margin-right" />
-                        Delete
-                      </LinkButton>
-                    </div>
-                  </span>
-                )}
-              />
-            </Table>
-          </Spin>
-          <CreateTeamModal
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ teams: never[]; isVisible: boolean; onOk: ... Remove this comment to see the full error message
-            teams={this.state.teams}
-            isOpen={this.state.isTeamCreationModalVisible}
-            onOk={this.createTeam}
-            onCancel={() =>
-              this.setState({
-                isTeamCreationModalVisible: false,
-              })
-            }
-          />
-          <EditTeamModalView
-            isOpen={this.state.isTeamEditModalVisible}
-            onCancel={() =>
-              this.setState({
-                isTeamEditModalVisible: false,
-                selectedTeam: null,
-              })
-            }
-            team={this.state.selectedTeam}
+            onChange={handleSearch}
+            value={searchQuery}
           />
         </div>
+        <h3>Teams</h3>
+        <div
+          className="clearfix"
+          style={{
+            margin: "20px 0px",
+          }}
+        />
+
+        <Spin spinning={isLoading} size="large">
+          {teams.length <= 1 ? renderPlaceholder() : null}
+          <Table
+            dataSource={Utils.filterWithSearchQueryAND(teams, ["name"], searchQuery)}
+            rowKey="id"
+            pagination={{
+              defaultPageSize: 50,
+            }}
+            expandable={{
+              expandedRowRender: (team) => renderUsersForTeam(team, users),
+              rowExpandable: (_team) => true,
+            }}
+            style={{
+              marginTop: 30,
+              marginBottom: 30,
+            }}
+          >
+            <Column
+              title="Name"
+              dataIndex="name"
+              key="name"
+              sorter={Utils.localeCompareBy(typeHint, (team) => team.name)}
+            />
+            <Column
+              title="Actions"
+              key="actions"
+              render={(__, team: APITeam) => (
+                <span>
+                  <div>
+                    <LinkButton
+                      onClick={() => {
+                        setSelectedTeam(team);
+                        setIsTeamEditModalVisible(true);
+                      }}
+                    >
+                      <UserOutlined className="icon-margin-right" />
+                      Add / Remove Users
+                    </LinkButton>
+                  </div>
+                  <div>
+                    <LinkButton onClick={_.partial(deleteTeam, team)}>
+                      <DeleteOutlined className="icon-margin-right" />
+                      Delete
+                    </LinkButton>
+                  </div>
+                </span>
+              )}
+            />
+          </Table>
+        </Spin>
+        <CreateTeamModal
+          isOpen={isTeamCreationModalVisible}
+          onOk={createTeam}
+          onCancel={() => setIsTeamCreationModalVisible(false)}
+        />
+        <EditTeamModalView
+          isOpen={isTeamEditModalVisible}
+          onCancel={() => {
+            setIsTeamEditModalVisible(false);
+            setSelectedTeam(null);
+          }}
+          team={selectedTeam}
+        />
       </div>
-    );
-  }
+    </div>
+  );
 }
 
 export default TeamListView;

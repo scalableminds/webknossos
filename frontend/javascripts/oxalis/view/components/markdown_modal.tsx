@@ -73,7 +73,7 @@ export function MarkdownModal({
       <Row gutter={16}>
         <Col span={12}>
           <TextArea
-            value={source}
+            defaultValue={source}
             placeholder={placeholderText}
             onChange={onChange}
             rows={5}

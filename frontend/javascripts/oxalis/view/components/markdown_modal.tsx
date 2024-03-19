@@ -29,13 +29,16 @@ export function MarkdownModal({
   onOk,
   onChange,
   label,
+  placeholder,
 }: {
   source: string;
   label: string;
   isOpen?: boolean;
+  placeholder?: string;
   onOk: () => void;
   onChange: React.ChangeEventHandler<HTMLTextAreaElement>;
 }) {
+  const placeholderText = placeholder ? placeholder : `Add ${label}`;
   return (
     <Modal
       key="comment-markdown-modal"
@@ -71,7 +74,7 @@ export function MarkdownModal({
         <Col span={12}>
           <TextArea
             value={source}
-            placeholder={`Add ${label}`}
+            placeholder={placeholderText}
             onChange={onChange}
             rows={5}
             autoSize={{

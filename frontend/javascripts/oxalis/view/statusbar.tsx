@@ -187,7 +187,6 @@ function ShortcutsInfo() {
         isAltPressed,
       );
     }
-    console.log("actionDescriptor", actionDescriptor);
 
     return (
       <React.Fragment>

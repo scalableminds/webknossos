@@ -339,7 +339,7 @@ export function maybeGetNodeIdFromPosition(
   // render the clicked viewport with picking enabled
   // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
   const pickingNode = skeleton.startPicking(isTouch);
-  let pickingScene = new THREE.Scene();
+  const pickingScene = new THREE.Scene();
   pickingScene.add(pickingNode);
   const camera = planeView.getCameraForPlane(plane);
 

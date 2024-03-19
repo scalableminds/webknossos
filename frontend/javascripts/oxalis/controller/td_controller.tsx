@@ -220,7 +220,7 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        const ctrlOrMetaPressed = event.shiftKey || event.metaKey;
+        const ctrlOrMetaPressed = event.ctrlKey || event.metaKey;
         if (!event.shiftKey && !ctrlOrMetaPressed) {
           // No modifiers were pressed. No mesh related action is necessary.
           return;

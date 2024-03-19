@@ -1,11 +1,8 @@
-import { getProjects, getTeams } from "admin/admin_rest_api";
+import { getProjects, getTeams, getTimeEntries } from "admin/admin_rest_api";
 import { Card, Select, Spin, Table, Button, DatePicker, type TimeRangePickerProps } from "antd";
-import Request from "libs/request";
 import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
 import React, { useEffect, useState } from "react";
-import dayjs from "dayjs";
-import type { Dayjs } from "dayjs";
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
@@ -18,8 +15,12 @@ import messages from "messages";
 import Toast from "libs/toast";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
+import dayjs, { Dayjs } from "dayjs";
 const { Column } = Table;
 const { RangePicker } = DatePicker;
+import customParseFormat from "dayjs/plugin/customParseFormat";
+
+dayjs.extend(customParseFormat);
 
 const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
 
@@ -34,19 +35,6 @@ type TimeEntry = {
 };
 
 function TimeTrackingOverview() {
-  const getTimeEntryUrl = (
-    startMs: number,
-    endMs: number,
-    teamIds: string[],
-    projectIds: string[],
-  ) => {
-    // Omit project parameter in request if annotation data is requested
-    const projectsParam = projectIds.length > 0 ? `&projectIds=${projectIds.join(",")}` : "";
-    return `api/time/overview?start=${startMs}&end=${endMs}&annotationTypes=${selectedTypes}&teamIds=${teamIds.join(
-      ",",
-    )}${projectsParam}`;
-  };
-
   const currentTime = dayjs();
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
@@ -90,13 +78,13 @@ function TimeTrackingOverview() {
       if (projectFilterNeeded && selectedProjectIds.length === 0)
         // If timespans for all tasks should be shown, all project ids need to be passed in the request.
         filteredProjects = allProjects.map((project) => project.id);
-      const timeEntriesURL = getTimeEntryUrl(
+      const filteredEntries: TimeEntry[] = await getTimeEntries(
         startDate.valueOf(),
         endDate.valueOf(),
         filteredTeams,
+        selectedTypes,
         filteredProjects,
       );
-      const filteredEntries: TimeEntry[] = await Request.receiveJSON(timeEntriesURL);
       setIsFetching(false);
       return filteredEntries;
     },

@@ -98,6 +98,7 @@ import { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { doWithToken } from "./api/token";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { ArbitraryObject } from "types/globals";
+import { AnnotationTypeFilterEnum } from "./statistic/project_and_annotation_type_dropdown";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -1971,6 +1972,22 @@ export async function getTimeTrackingForUser(
   const { timelogs } = timeTrackingData;
   assertResponseLimit(timelogs);
   return timelogs;
+}
+
+export async function getTimeEntries(
+  startMs: number,
+  endMs: number,
+  teamIds: string[],
+  selectedTypes: AnnotationTypeFilterEnum,
+  projectIds: string[],
+) {
+  // Omit project parameter in request if annotation data is requested
+  const projectsParam = projectIds.length > 0 ? `&projectIds=${projectIds.join(",")}` : "";
+  return await Request.receiveJSON(
+    `api/time/overview?start=${startMs}&end=${endMs}&annotationTypes=${selectedTypes}&teamIds=${teamIds.join(
+      ",",
+    )}${projectsParam}`,
+  );
 }
 
 export async function getProjectProgressReport(

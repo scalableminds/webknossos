@@ -2017,8 +2017,15 @@ export async function switchToOrganization(organizationName: string): Promise<vo
   location.reload();
 }
 
-export function getUsersOrganizations(): Promise<Array<APIOrganization>> {
-  return Request.receiveJSON("/api/organizations");
+export async function getUsersOrganizations(): Promise<Array<APIOrganization>> {
+  const organizations: APIOrganization[] = await Request.receiveJSON("/api/organizations");
+  const scmOrganization = organizations.find((org) => org.name === "scalable_minds");
+  if (scmOrganization == null) {
+    return organizations;
+  }
+  // Move scalableminds organization to the front so it appears in the organization switcher
+  // at the top.
+  return [scmOrganization, ...organizations.filter((org) => org.id !== scmOrganization.id)];
 }
 
 export function getOrganizationByInvite(inviteToken: string): Promise<APIOrganization> {

@@ -62,9 +62,9 @@ import { getSystemColorTheme } from "theme";
 const { Header } = Layout;
 
 const HELP_MENU_KEY = "helpMenu";
-// At most, 30 organizations are rendered in the dropdown.
-const MAX_RENDERED_ORGANIZATION = 30;
-// A search input is shown when more than 30 switchable organizations
+// At most, 20 organizations are rendered in the dropdown.
+const MAX_RENDERED_ORGANIZATION = 20;
+// A search input is shown when more than 10 switchable organizations
 // exist.
 const ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT = 10;
 
@@ -526,7 +526,14 @@ function OrganizationFilterInput({
     onChange(evt.target.value);
   };
 
-  return <Input onChange={onChangeImpl} ref={ref} onPressEnter={onPressEnter} />;
+  return (
+    <Input
+      placeholder="Filter organizations..."
+      onChange={onChangeImpl}
+      ref={ref}
+      onPressEnter={onPressEnter}
+    />
+  );
 }
 
 function LoggedInAvatar({

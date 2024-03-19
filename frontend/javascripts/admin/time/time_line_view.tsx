@@ -71,7 +71,7 @@ function compressTimeLogs(logs) {
       previousDuration != null &&
       previousLog != null &&
       Math.abs(timeLog.timestamp - (previousLog.timestamp + previousDuration.asMilliseconds())) <
-        1000 &&
+      1000 &&
       timeLog.task_id === previousLog.task_id
     ) {
       const newDuration = previousDuration.add(dayjs.duration(timeLog.time));
@@ -431,6 +431,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
                   }}
                   value={dateRange}
                   // @ts-expect-error ts-migrate(2322) FIXME: Type '(dates: DateRange) => Promise<void>' is not ... Remove this comment to see the full error message
+                  // TODO maybe also apply fix here
                   onChange={this.handleDateChange}
                 />
               </FormItem>

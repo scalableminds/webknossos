@@ -15,12 +15,9 @@ import messages from "messages";
 import Toast from "libs/toast";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
-import dayjs, { Dayjs } from "dayjs";
+import dayjs, { Dayjs } from "antd/node_modules/dayjs";
 const { Column } = Table;
 const { RangePicker } = DatePicker;
-import customParseFormat from "dayjs/plugin/customParseFormat";
-
-dayjs.extend(customParseFormat);
 
 const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
 
@@ -161,7 +158,6 @@ function TimeTrackingOverview() {
         style={filterStyle}
         value={[startDate, endDate]}
         presets={rangePresets}
-        // TODO fix type error. see time_line_view: type error is commented out.
         onChange={(dates: null | (Dayjs | null)[]) => {
           if (dates == null || dates[0] == null || dates[1] == null) return;
           if (Math.abs(dates[0].diff(dates[1], "days")) > 3 * 31) {
@@ -221,7 +217,7 @@ function TimeTrackingOverview() {
       </Button>
     </Card>
   ) : (
-    "Sorry, you are not allowed to see this view."
+    <>Sorry, you are not allowed to see this view.</>
   );
 }
 

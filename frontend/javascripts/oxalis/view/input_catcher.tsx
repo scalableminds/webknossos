@@ -1,7 +1,7 @@
 import _ from "lodash";
 import * as React from "react";
 import type { Rect, Viewport } from "oxalis/constants";
-import { ArbitraryViewport } from "oxalis/constants";
+import { AnnotationToolEnum, ArbitraryViewport, OrthoViews } from "oxalis/constants";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import Scalebar from "oxalis/view/scalebar";
 import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
@@ -138,12 +138,10 @@ function InputCatcher({
   const isControlPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
 
-  const adaptedTool = adaptActiveToolToShortcuts(
-    activeTool,
-    isShiftPressed,
-    isControlPressed,
-    isAltPressed,
-  );
+  const adaptedTool =
+    viewportID !== OrthoViews.TDView
+      ? adaptActiveToolToShortcuts(activeTool, isShiftPressed, isControlPressed, isAltPressed)
+      : AnnotationToolEnum.MOVE;
 
   return (
     <div

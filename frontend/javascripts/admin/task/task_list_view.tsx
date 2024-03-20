@@ -46,6 +46,7 @@ type State = {
   searchQuery: string;
   selectedUserIdForAssignment: string | null;
   isAnonymousTaskLinkModalOpen: boolean;
+  areRowsExpanded: boolean;
 };
 const typeHint: Array<APITask> = [];
 const persistence = new Persistence<Pick<State, "searchQuery">>(
@@ -63,6 +64,7 @@ class TaskListView extends React.PureComponent<Props, State> {
     searchQuery: "",
     selectedUserIdForAssignment: null,
     isAnonymousTaskLinkModalOpen: Utils.hasUrlParam("showAnonymousLinks"),
+    areRowsExpanded: false,
   };
 
   componentDidMount() {
@@ -98,6 +100,10 @@ class TaskListView extends React.PureComponent<Props, State> {
       });
     }
   }
+
+  expandMe = () => {
+    this.setState({ areRowsExpanded: !this.state.areRowsExpanded });
+  };
 
   handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
@@ -472,6 +478,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               width={200}
               sorter={Utils.compareBy(typeHint, (task) => task.created)}
               render={(created) => <FormattedDate timestamp={created} />}
+              defaultSortOrder={"descend"}
             />
             <Column
               title="Action"

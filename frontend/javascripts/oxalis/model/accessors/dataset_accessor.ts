@@ -655,7 +655,6 @@ export function is2dDataset(dataset: APIDataset): boolean {
 const dummyMapping = {
   mappingName: null,
   mapping: null,
-  mappingKeys: null,
   mappingColors: null,
   hideUnmappedIds: false,
   mappingStatus: MappingStatusEnum.DISABLED,

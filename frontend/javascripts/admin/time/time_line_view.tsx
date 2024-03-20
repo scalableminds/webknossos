@@ -8,18 +8,13 @@ import antddayjs from "antd/node_modules/dayjs";
 import FormattedDate from "components/formatted_date";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
 import { isUserAdminOrTeamManager } from "libs/utils";
-import {
-  getEditableUsers,
-  getProjects,
-  getTimeTrackingForUser,
-  getUser,
-} from "admin/admin_rest_api";
+import { getEditableUsers, getTimeTrackingForUser, getUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import TimeTrackingChart from "./time_line_chart_view";
 
-import type { APIUser, APITimeTracking, APIProject } from "types/api_flow_types";
+import type { APIUser, APITimeTracking } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import * as Utils from "libs/utils";
@@ -53,7 +48,6 @@ type State = {
   isFetchingUsers: boolean;
   initialUserId: string | null;
   selectedProjectIds: string[];
-  allProjects: APIProject[];
   annotationType: AnnotationTypeFilterEnum;
 };
 
@@ -105,7 +99,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
     isFetchingUsers: false,
     initialUserId: null,
     selectedProjectIds: [],
-    allProjects: [],
     annotationType: AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY,
   };
 
@@ -172,11 +165,10 @@ class TimeLineView extends React.PureComponent<Props, State> {
       this.state.initialUserId != null && isUserAdminOrTeamManager(this.props.activeUser)
         ? await getUser(this.state.initialUserId)
         : this.props.activeUser;
-    const [users, allProjects] = await Promise.all([getEditableUsers(), getProjects()]);
+    const users = await getEditableUsers();
     this.setState({
       user: currentUser,
       users,
-      allProjects: allProjects,
       isFetchingUsers: false,
     });
   }

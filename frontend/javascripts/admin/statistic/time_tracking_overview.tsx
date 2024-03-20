@@ -40,14 +40,14 @@ function TimeTrackingOverview() {
     const activeUser = state.activeUser;
     return activeUser != null && isUserAdminOrTeamManager(activeUser);
   });
-  const [allTeams, allProjects] = useFetch(
+  const [allTeams, numberOfAllProjects] = useFetch(
     async () => {
       setIsFetching(true);
       const [allTeams, allProjects] = await Promise.all([getTeams(), getProjects()]);
       setIsFetching(false);
-      return [allTeams, allProjects];
+      return [allTeams, allProjects.length];
     },
-    [[], []],
+    [[], 0],
     [],
   );
 
@@ -58,35 +58,27 @@ function TimeTrackingOverview() {
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
   const [projectOrTypeQueryParam, setProjectOrTypeQueryParam] = useState("");
   useEffect(() => {
-    if (selectedProjectIds.length > 0 && selectedProjectIds.length < allProjects.length) {
+    if (selectedProjectIds.length > 0 && selectedProjectIds.length < numberOfAllProjects) {
       setProjectOrTypeQueryParam(selectedProjectIds.join(","));
     } else {
       setProjectOrTypeQueryParam(selectedTypes);
     }
-  }, [selectedProjectIds, selectedTypes, allProjects.length]);
+  }, [selectedProjectIds, selectedTypes, numberOfAllProjects]);
   const filteredTimeEntries = useFetch(
     async () => {
       setIsFetching(true);
-      const filteredTeams =
-        selectedTeams.length === 0 ? allTeams.map((team) => team.id) : selectedTeams;
-      if (filteredTeams.length === 0) return;
-      const projectFilterNeeded = selectedTypes === AnnotationTypeFilterEnum.ONLY_TASKS_KEY;
-      let filteredProjects = selectedProjectIds;
-      if (projectFilterNeeded && selectedProjectIds.length === 0)
-        // If timespans for all tasks should be shown, all project ids need to be passed in the request.
-        filteredProjects = allProjects.map((project) => project.id);
       const filteredEntries: TimeEntry[] = await getTimeEntries(
         startDate.valueOf(),
         endDate.valueOf(),
-        filteredTeams,
+        selectedTeams,
         selectedTypes,
-        filteredProjects,
+        selectedProjectIds,
       );
       setIsFetching(false);
       return filteredEntries;
     },
     [],
-    [selectedTeams, selectedTypes, selectedProjectIds, startDate, endDate, allTeams, allProjects],
+    [selectedTeams, selectedTypes, selectedProjectIds, startDate, endDate],
   );
   const filterStyle = { marginInline: 10 };
 

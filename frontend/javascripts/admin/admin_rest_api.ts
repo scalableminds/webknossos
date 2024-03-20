@@ -1981,7 +1981,7 @@ export async function getTimeEntries(
   selectedTypes: AnnotationTypeFilterEnum,
   projectIds: string[],
 ) {
-  // Omit project parameter in request if annotation data is requested
+  // Omit empty parameters in request
   const projectsParam = projectIds.length > 0 ? `&projectIds=${projectIds.join(",")}` : "";
   const teamsParam = teamIds.length > 0 ? `&teamIds=${teamIds.join(",")}` : "";
   return await Request.receiveJSON(

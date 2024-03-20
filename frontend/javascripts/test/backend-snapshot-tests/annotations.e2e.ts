@@ -50,6 +50,12 @@ test("getAnnotationInformation() for public annotation while logged out", async 
   });
   setCurrToken(tokenUserA);
 });
+test("getReadableAnnotations()", async (t) => {
+  const annotations = await api.getReadableAnnotations(false, 0);
+  t.snapshot(replaceVolatileValues(annotations), {
+    id: "annotations-listReadable",
+  });
+});
 test.serial("finishAnnotation() and reOpenAnnotation() for task", async (t) => {
   const annotationId = "78135c192faeb34c0081c05d";
   const finishedAnnotation = await api.finishAnnotation(annotationId, APIAnnotationTypeEnum.Task);
@@ -237,11 +243,5 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   t.snapshot(replaceVolatileValues(tracings[0]), {
     id: "annotations-complexUpdateActions",
-  });
-});
-test("getReadableAnnotations()", async (t) => {
-  const annotations = await api.getReadableAnnotations(false, 0);
-  t.snapshot(annotations, {
-    id: "annotations-listReadable",
   });
 });

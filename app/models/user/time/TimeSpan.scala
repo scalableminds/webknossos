@@ -73,10 +73,10 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                             start: Instant,
                             end: Instant,
                             annotationTypes: List[AnnotationType],
-                            projectIdsOpt: Option[List[ObjectId]]): Fox[JsValue] =
+                            projectIds: List[ObjectId]): Fox[JsValue] =
     if (annotationTypes.isEmpty) Fox.successful(Json.arr())
     else {
-      val projectQuery = projectIdsFilterQuery(projectIdsOpt)
+      val projectQuery = projectIdsFilterQuery(projectIds)
       for {
         tuples <- run(q"""SELECT ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
                         FROM webknossos.timespans_ ts
@@ -123,22 +123,18 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     Json.toJson(tuples.map(formatTimespanTuple))
   }
 
-  private def projectIdsFilterQuery(projectIdsOpt: Option[List[ObjectId]]): SqlToken =
-    projectIdsOpt match {
-      case None => q"TRUE" // Query did not filter by project, include all
-      case Some(projectIds) if projectIds.isEmpty =>
-        q"FALSE" // Query did filter by project, but list was empty, return nothing
-      case Some(projectIds) => q"p._id IN ${SqlToken.tupleFromList(projectIds)}"
-    }
+  private def projectIdsFilterQuery(projectIds: List[ObjectId]): SqlToken =
+    if (projectIds.isEmpty) q"TRUE" // Query did not filter by project, include all
+    else q"p._id IN ${SqlToken.tupleFromList(projectIds)}"
 
   def timeSummedSearch(start: Instant,
                        end: Instant,
                        users: List[ObjectId],
                        annotationTypes: List[AnnotationType],
-                       projectIdsOpt: Option[List[ObjectId]]): Fox[List[JsObject]] =
+                       projectIds: List[ObjectId]): Fox[List[JsObject]] =
     if (users.isEmpty || annotationTypes.isEmpty) Fox.successful(List.empty)
     else {
-      val projectQuery = projectIdsFilterQuery(projectIdsOpt)
+      val projectQuery = projectIdsFilterQuery(projectIds)
       val query =
         q"""
           SELECT u._id, u.firstName, u.lastName, mu.email, SUM(ts.time)

@@ -1983,10 +1983,9 @@ export async function getTimeEntries(
 ) {
   // Omit project parameter in request if annotation data is requested
   const projectsParam = projectIds.length > 0 ? `&projectIds=${projectIds.join(",")}` : "";
+  const teamsParam = teamIds.length > 0 ? `&teamIds=${teamIds.join(",")}` : "";
   return await Request.receiveJSON(
-    `api/time/overview?start=${startMs}&end=${endMs}&annotationTypes=${selectedTypes}&teamIds=${teamIds.join(
-      ",",
-    )}${projectsParam}`,
+    `api/time/overview?start=${startMs}&end=${endMs}&annotationTypes=${selectedTypes}${teamsParam}${projectsParam}`,
   );
 }
 

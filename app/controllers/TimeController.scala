@@ -56,7 +56,7 @@ class TimeController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.fromString(userId)
-        projectIdsValidated <- Fox.runOptional(projectIds)(parseObjectIds)
+        projectIdsValidated <- parseObjectIds(projectIds)
         annotationTypesValidated <- parseAnnotationTypes(annotationTypes) ?~> "invalidAnnotationType"
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
@@ -73,7 +73,7 @@ class TimeController @Inject()(userService: UserService,
   def timeOverview(start: Long,
                    end: Long,
                    annotationTypes: String,
-                   teamIds: String,
+                   teamIds: Option[String],
                    projectIds: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -83,11 +83,10 @@ class TimeController @Inject()(userService: UserService,
         _ <- bool2Fox(annotationTypesValidated.nonEmpty) ?~> "annotationTypesEmpty"
         _ <- bool2Fox(annotationTypesValidated.forall(typ =>
           typ == AnnotationType.Explorational || typ == AnnotationType.Task)) ?~> "unsupportedAnnotationType"
-        _ <- bool2Fox(teamIdsValidated.nonEmpty) ?~> "teamListEmpty"
-        projectIdsValidated <- Fox.runOptional(projectIds)(parseObjectIds)
-        usersByTeams <- userDAO.findAllByTeams(teamIdsValidated)
+        projectIdsValidated <- parseObjectIds(projectIds)
+        usersByTeams <- if (teamIdsValidated.isEmpty) userDAO.findAll else userDAO.findAllByTeams(teamIdsValidated)
         admins <- userDAO.findAdminsByOrg(request.identity._organization)
-        usersFiltered = (usersByTeams ++ admins).distinct.filter(!_.isUnlisted)
+        usersFiltered = (usersByTeams ++ admins).distinct
         usersWithTimesJs <- timeSpanDAO.timeSummedSearch(Instant(start),
                                                          Instant(end),
                                                          usersFiltered.map(_._id),
@@ -96,9 +95,20 @@ class TimeController @Inject()(userService: UserService,
       } yield Ok(Json.toJson(usersWithTimesJs))
     }
 
-  private def parseObjectIds(idsStr: String): Fox[List[ObjectId]] =
-    Fox.serialCombined(idsStr.split(",").toList)(id => ObjectId.fromString(id))
+  private def parseCommaSeparated[T](commaSeparatedStrOpt: Option[String])(parseEntry: String => Fox[T]): Fox[List[T]] =
+    commaSeparatedStrOpt match {
+      case None                                                 => Fox.successful(List.empty)
+      case Some(commaSeparatedStr) if commaSeparatedStr.isEmpty => Fox.successful(List.empty)
+      case Some(commaSeparatedStr) =>
+        Fox.serialCombined(commaSeparatedStr.split(",").toList)(entry => parseEntry(entry))
+    }
+
+  private def parseObjectIds(idsStrOpt: Option[String]): Fox[List[ObjectId]] =
+    parseCommaSeparated(idsStrOpt)(ObjectId.fromString)
 
   private def parseAnnotationTypes(typesStr: String): Fox[List[AnnotationType]] =
-    Fox.serialCombined(typesStr.split(",").toList)(typ => AnnotationType.fromString(typ))
+    parseCommaSeparated(Some(typesStr)) { typ: String =>
+      AnnotationType.fromString(typ)
+    }
+
 }

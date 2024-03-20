@@ -204,12 +204,12 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                 : "<no user>";
               return (
                 <tr key={`${annotation.id}-tr`}>
-                  <td>{userString}</td>
-                  <td>{this.getViewOrOpenLabel(annotation)}</td>
-                  <td>
+                  <td className="task-annotation-view">{userString}</td>
+                  <td className="task-annotation-view">{this.getViewOrOpenLabel(annotation)}</td>
+                  <td className="task-annotation-view">
                     <FormattedDate timestamp={annotation.modified} />
                   </td>
-                  <td>
+                  <td className="task-annotation-view">
                     <span>
                       <CheckCircleOutlined className="icon-margin-right" />
                       {`${annotation.state === "Finished" ? "Finished" : "In Progress"}`}

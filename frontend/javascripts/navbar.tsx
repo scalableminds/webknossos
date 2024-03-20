@@ -659,6 +659,7 @@ function LoggedInAvatar({
               ? {
                   key: "switch-organization",
                   label: "Switch Organization",
+                  popupClassName: "organization-switch-menu",
                   children: [
                     ...maybeOrganizationFilterInput,
                     ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({

@@ -4,6 +4,7 @@ import ReactDOMServer from "react-dom/server";
 import { connect } from "react-redux";
 import _ from "lodash";
 import dayjs from "dayjs";
+import antddayjs from "antd/node_modules/dayjs";
 import FormattedDate from "components/formatted_date";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
 import { isUserAdminOrTeamManager } from "libs/utils";
@@ -242,13 +243,19 @@ class TimeLineView extends React.PureComponent<Props, State> {
     }));
   };
 
-  handleDateChange = async (dates: DateRange) => {
+  getDayJsObject = (antdDate: antddayjs.Dayjs) => {
+    return dayjs(antdDate.valueOf());
+  };
+
+  handleDateChange = async (antdDates: [antddayjs.Dayjs | null, antddayjs.Dayjs | null]) => {
+    if (antdDates[0] == null || antdDates[1] == null) return;
     // to ease the load on the server restrict date range selection to three month
-    if (Math.abs(dates[0].diff(dates[1], "days")) > 3 * 31) {
+    if (Math.abs(antdDates[0].diff(antdDates[1], "days")) > 3 * 31) {
       Toast.error(messages["timetracking.date_range_too_long"]);
       return;
     }
 
+    const dates: DateRange = [this.getDayJsObject(antdDates[0]), this.getDayJsObject(antdDates[1])];
     // Force an interval of at least one minute.
     const dateRange: DateRange = dates[0].isSame(dates[1], "minute")
       ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
@@ -430,8 +437,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
                     width: "100%",
                   }}
                   value={dateRange}
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '(dates: DateRange) => Promise<void>' is not ... Remove this comment to see the full error message
-                  // TODO maybe also apply fix here
                   onChange={this.handleDateChange}
                 />
               </FormItem>

@@ -1,4 +1,4 @@
-@( username: String, brainDBresult: Option[String], uri: String, autoActivate: Boolean )
+@( username: String, uri: String, autoActivate: Boolean )
 
 @emailBaseTemplate() {
   <p>Hi,</p>
@@ -10,12 +10,6 @@
     } else {
     Please, remember to activate and verify new user accounts and assign them to a team within your organization. Visit  <a href="@{uri}/users">@{uri}/users</a> to activate the account.
     }
-  </p>
-
-  <p>
-  @if(brainDBresult.isDefined) {
-    Result when trying to register the new user on braintracing.org: @brainDBresult.get
-  }
   </p>
 
   <p>With best regards,<br />your WEBKNOSSOS team</p>

@@ -3,18 +3,19 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import _ from "lodash";
 import {
-  ComputeQuickSelectForRectAction,
-  ComputeSAMForSkeletonAction,
-  MaybePrefetchEmbeddingAction,
+  type ComputeQuickSelectForRectAction,
+  type ComputeSAMForSkeletonAction,
+  type MaybePrefetchEmbeddingAction,
   finishAnnotationStrokeAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { Saga, select } from "oxalis/model/sagas/effect-generators";
+import { type Saga, select } from "oxalis/model/sagas/effect-generators";
 import { all, call, put, takeEvery, takeLatest } from "typed-redux-saga";
 
-import { AnnotationToolEnum, BoundingBoxType, OrthoView, Vector3 } from "oxalis/constants";
+import type { BoundingBoxType, OrthoView, Vector3 } from "oxalis/constants";
+import { AnnotationToolEnum } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import type { Node, VolumeTracing } from "oxalis/store";
-import { Tree } from "oxalis/store";
+import type { Tree } from "oxalis/store";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 import { getActiveSegmentationTracingLayer } from "../accessors/volumetracing_accessor";
 import { setBusyBlockingInfoAction, setQuickSelectStateAction } from "../actions/ui_actions";
@@ -22,7 +23,7 @@ import BoundingBox from "../bucket_data_handling/bounding_box";
 import performQuickSelectHeuristic, { prepareQuickSelect } from "./quick_select_heuristic_saga";
 import performQuickSelectML, {
   EMBEDDING_SIZE,
-  SAMNodeSelect,
+  type SAMNodeSelect,
   getInferenceSession,
   prefetchEmbedding,
 } from "./quick_select_ml_saga";
@@ -32,6 +33,8 @@ import {
   getSkeletonQuickSelectModalContent,
 } from "./skeleton_quick_select_info_components";
 import { performVolumeInterpolation } from "./volume/volume_interpolation_saga";
+import { getActiveSegmentationTracing } from "../accessors/volumetracing_accessor";
+import { ensureMaybeActiveMappingIsLocked } from "./saga_helpers";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);
@@ -44,8 +47,8 @@ function prepareSkeletonSAMInput(
   activeViewport: OrthoView,
   predictionFinishedCallback: () => void,
 ): SAMNodeSelect {
-  const [firstDim, secondDim, thirdDim] = dimensions;
-  const nodePositions = nodes.map((node) => node.position);
+  const [firstDim, secondDim, _thirdDim] = dimensions;
+  const nodePositions = nodes.map((node) => node.untransformedPosition);
   const sum = nodePositions.reduce((currentSum: Vector3, position: Vector3) => {
     return currentSum.map((sum, index) => sum + position[index]) as Vector3;
   });
@@ -207,7 +210,7 @@ function* performSkeletonQuickSelectSAM(action: ComputeSAMForSkeletonAction) {
   const { labeledZoomStep, firstDim, secondDim, thirdDim, labeledResolution, volumeTracing } =
     preparation;
 
-  const getNodesThirdDimSlice = (node: Node) => node.position[thirdDim];
+  const getNodesThirdDimSlice = (node: Node) => node.untransformedPosition[thirdDim];
   const nodePositionsGroupedBySlice = _.groupBy(
     _.sortBy([...tree.nodes.values()], getNodesThirdDimSlice),
     getNodesThirdDimSlice,
@@ -256,6 +259,19 @@ export default function* listenToQuickSelect(): Saga<void> {
     function* guard(action: ComputeQuickSelectForRectAction | ComputeSAMForSkeletonAction) {
       try {
         if (action.type === "COMPUTE_QUICK_SELECT_FOR_RECT") {
+          const volumeTracing: VolumeTracing | null | undefined = yield* select(
+            getActiveSegmentationTracing,
+          );
+          if (volumeTracing) {
+            // As changes to the volume layer will be applied, the potentially existing mapping should be locked to ensure a consistent state.
+            const { isMappingLockedIfNeeded } = yield* call(
+              ensureMaybeActiveMappingIsLocked,
+              volumeTracing,
+            );
+            if (!isMappingLockedIfNeeded) {
+              return;
+            }
+          }
           yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
 
           yield* put(setQuickSelectStateAction("active"));

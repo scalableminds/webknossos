@@ -46,6 +46,13 @@ export function useFolderQuery(folderId: string | null) {
     {
       refetchOnWindowFocus: false,
       enabled: folderId != null,
+      // Avoid default retry delay with exponential back-off
+      // to shorten the delay after which webKnossos will switch
+      // to the root folder.
+      // This is relevant for the case where the current folder
+      // does not exist, anymore (e.g., was deleted by somebody
+      // else).
+      retryDelay: 500,
     },
   );
 }
@@ -113,9 +120,14 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
    * - ask the user if they want to update the list IF something changes
    * - do nothing (since the cache is up to date)
    *
-   * We do this by disabling the main query by default (and enabling it when
-   * necessary). Also the main query reads its result from the prefetched
+   * We do this by disabling the main query by default and setting the data
+   * manually. The main query will read its result from the prefetched
    * data (if available).
+   *
+   * **Note** that invalidateQueries() calls won't have a direct, visible effect
+   * due to the above mechanism IF the query data is already rendered.
+   * Therefore, queryClient.setQueryData() or datasetsInFolderQuery.refetch()
+   * should be used instead in these scenarios.
    */
 
   const queryClient = useQueryClient();
@@ -147,6 +159,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
     },
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether further dependencies are necessary.
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     if (queryData.data == null || queryData.data.length === 0) {

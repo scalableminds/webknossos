@@ -127,7 +127,7 @@ async function inferFromEmbedding(
   const shouldDetectRectangle = nodePositions == null;
   const ort = await import("onnxruntime-web");
 
-  let ortSession;
+  let ortSession: InferenceSession;
   try {
     ortSession = await getInferenceSession();
   } catch (exception) {
@@ -346,7 +346,7 @@ export default function* performQuickSelect(
     additionalCoordinates || [],
     colorLayer.elementClass === "uint8" ? null : intensityRange,
   );
-  let embedding;
+  let embedding: Float32Array;
   try {
     embedding = yield embeddingPromise;
   } catch (exception) {
@@ -363,7 +363,7 @@ export default function* performQuickSelect(
     return;
   }
 
-  let mask = yield* call(
+  const mask = yield* call(
     inferFromEmbedding,
     embedding,
     embeddingBoxInTargetMag,

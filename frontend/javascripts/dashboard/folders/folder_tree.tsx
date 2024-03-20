@@ -35,6 +35,7 @@ export function FolderTreeSidebar({
 
   const { data: folderHierarchy, isLoading } = context.queries.folderHierarchyQuery;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether further dependencies are necessary.
   useEffect(() => {
     const newTreeData = folderHierarchy?.tree || [];
     const itemById = folderHierarchy?.itemById || {};
@@ -57,6 +58,7 @@ export function FolderTreeSidebar({
     setExpandedKeys(newExpandedKeys);
   }, [folderHierarchy]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation on what dependencies are needed.
   useEffect(() => {
     if (context.activeFolderId == null && !context.globalSearchQuery) {
       // No search is active and no folder is selected. For example, this can happen
@@ -223,7 +225,7 @@ export function generateSettingsForFolder(
         key: "create",
         disabled: !isEditable,
         onClick: createFolder,
-        icon: <PlusOutlined />,
+        icon: <PlusOutlined className="icon-margin-right" />,
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
             {newFolderText}
@@ -234,7 +236,7 @@ export function generateSettingsForFolder(
         key: "edit",
         disabled: !isEditable,
         onClick: editFolder,
-        icon: <EditOutlined />,
+        icon: <EditOutlined className="icon-margin-right" />,
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
             Edit Folder
@@ -245,7 +247,7 @@ export function generateSettingsForFolder(
         key: "delete",
         onClick: deleteFolder,
         disabled: !isEditable,
-        icon: <DeleteOutlined />,
+        icon: <DeleteOutlined className="icon-margin-right" />,
         label: <span>Delete Folder</span>,
       },
     ],

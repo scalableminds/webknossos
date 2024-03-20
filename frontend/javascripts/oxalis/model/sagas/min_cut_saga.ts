@@ -176,7 +176,10 @@ function removeOutgoingEdge(edgeBuffer: Uint16Array, idx: number, neighborIdx: n
 
 export function isBoundingBoxUsableForMinCut(boundingBoxObj: BoundingBoxType, nodes: Array<Node>) {
   const bbox = new BoundingBox(boundingBoxObj);
-  return bbox.containsPoint(nodes[0].position) && bbox.containsPoint(nodes[1].position);
+  return (
+    bbox.containsPoint(nodes[0].untransformedPosition) &&
+    bbox.containsPoint(nodes[1].untransformedPosition)
+  );
 }
 
 type L = (x: number, y: number, z: number) => number;
@@ -233,10 +236,18 @@ function* performMinCut(action: Action): Saga<void> {
     boundingBoxObj = boundingBoxes[0].boundingBox;
   } else {
     const newBBox = {
-      min: V3.floor(V3.sub(V3.min(nodes[0].position, nodes[1].position), DEFAULT_PADDING)),
+      min: V3.floor(
+        V3.sub(
+          V3.min(nodes[0].untransformedPosition, nodes[1].untransformedPosition),
+          DEFAULT_PADDING,
+        ),
+      ),
       max: V3.floor(
         V3.add(
-          V3.add(V3.max(nodes[0].position, nodes[1].position), DEFAULT_PADDING), // Add [1, 1, 1], since BoundingBox.max is exclusive
+          V3.add(
+            V3.max(nodes[0].untransformedPosition, nodes[1].untransformedPosition),
+            DEFAULT_PADDING,
+          ), // Add [1, 1, 1], since BoundingBox.max is exclusive
           [1, 1, 1],
         ),
       ),
@@ -244,9 +255,11 @@ function* performMinCut(action: Action): Saga<void> {
     yield* put(
       addUserBoundingBoxAction({
         boundingBox: newBBox,
-        name: `Bounding box used for splitting cell (seedA=(${nodes[0].position.join(
+        name: `Bounding box used for splitting cell (seedA=(${nodes[0].untransformedPosition.join(
           ",",
-        )}), seedB=(${nodes[1].position.join(",")}), timestamp=${new Date().getTime()})`,
+        )}), seedB=(${nodes[1].untransformedPosition.join(
+          ",",
+        )}), timestamp=${new Date().getTime()})`,
         color: Utils.getRandomColor(),
         isVisible: true,
       }),
@@ -415,8 +428,8 @@ function* tryMinCutAtMag(
 ): Saga<void> {
   const targetMagString = `${targetMag.join(",")}`;
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(targetMag);
-  const globalSeedA = V3.fromMag1ToMag(nodes[0].position, targetMag);
-  const globalSeedB = V3.fromMag1ToMag(nodes[1].position, targetMag);
+  const globalSeedA = V3.fromMag1ToMag(nodes[0].untransformedPosition, targetMag);
+  const globalSeedB = V3.fromMag1ToMag(nodes[1].untransformedPosition, targetMag);
   const minDistToSeed = Math.min(V3.length(V3.sub(globalSeedA, globalSeedB)) / 2, MIN_DIST_TO_SEED);
   console.log("Setting minDistToSeed to ", minDistToSeed);
   const seedA = V3.sub(globalSeedA, boundingBoxTarget.min);

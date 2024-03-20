@@ -345,7 +345,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       const validFormValues = _.omitBy(defaultValues, _.isNull);
 
       // The task type is not needed for the form and leads to antd errors if it contains null values
-      // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
+      // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
       const { type, ...neededFormValues } = validFormValues;
       form.setFieldsValue(neededFormValues);
     }

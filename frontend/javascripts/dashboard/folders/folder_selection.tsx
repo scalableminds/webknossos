@@ -47,7 +47,7 @@ export default function FolderSelection({
     } else {
       setTreeData([]);
     }
-  }, [hierarchy]);
+  }, [hierarchy, disableNotEditableFolders]);
 
   return (
     <TreeSelect

@@ -135,6 +135,8 @@ const defaultState: OxalisState = {
       url: "http://localhost:9000",
       isScratch: false,
       allowsUpload: true,
+      jobsEnabled: false,
+      jobsSupportedByAvailableWorkers: [],
     },
     owningOrganization: "Connectomics department",
     description: null,
@@ -143,9 +145,9 @@ const defaultState: OxalisState = {
     allowedTeamsCumulative: [],
     logoUrl: null,
     lastUsedByUser: 0,
-    jobsEnabled: false,
     sortingKey: 123,
     publication: null,
+    usedStorageBytes: null,
   },
   tracing: {
     ...initialAnnotationInfo,
@@ -175,8 +177,8 @@ const defaultState: OxalisState = {
     },
     isBusyInfo: {
       skeleton: false,
-      volume: false,
-      mapping: false,
+      volumes: {},
+      mappings: {},
     },
     lastSaveTimestamp: {
       skeleton: 0,

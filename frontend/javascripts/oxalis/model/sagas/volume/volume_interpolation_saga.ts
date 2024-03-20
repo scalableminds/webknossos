@@ -3,22 +3,21 @@ import distanceTransform from "distance-transform";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
-import ndarray, { NdArray } from "ndarray";
+import ndarray, { type NdArray } from "ndarray";
 import {
   ContourModeEnum,
   InterpolationModeEnum,
-  OrthoView,
+  type OrthoView,
   OrthoViews,
   ToolsWithInterpolationCapabilities,
-  TypedArrayWithoutBigInt,
-  Vector3,
+  type TypedArrayWithoutBigInt,
+  type Vector3,
 } from "oxalis/constants";
-import { Model, api } from "oxalis/singletons";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getFlooredPosition,
   getActiveMagIndexForLayer,
+  getFlooredPosition,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   enforceActiveVolumeTracing,
@@ -35,12 +34,14 @@ import {
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
-import { OxalisState, VolumeTracing } from "oxalis/store";
+import type { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type { APISegmentationLayer } from "types/api_flow_types";
+import { Model, api } from "oxalis/singletons";
+import type { OxalisState, VolumeTracing } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import { APISegmentationLayer } from "types/api_flow_types";
+import { ensureMaybeActiveMappingIsLocked } from "../saga_helpers";
 
 /*
  * This saga is capable of doing segment interpolation between two slices.
@@ -164,10 +165,11 @@ const isEqual = cwise({
 const isEqualFromBigUint64: (
   output: NdArray<TypedArrayWithoutBigInt>,
   a: NdArray<BigUint64Array>,
-  b: BigInt,
+  b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  body: function body(output: number, a: BigInt, b: BigInt) {
+  // biome-ignore lint/correctness/noUnusedVariables: output is needed for the assignment
+  body: function body(output: number, a: bigint, b: bigint) {
     output = a === b ? 1 : 0;
   },
 });
@@ -209,6 +211,7 @@ const absMax = cwise({
 
 const assign = cwise({
   args: ["array", "array"],
+  // biome-ignore lint/correctness/noUnusedVariables: a is needed for the assignment
   body: function body(a: number, b: number) {
     a = b;
   },
@@ -219,7 +222,7 @@ export function copyNdArray(
   arr: ndarray.NdArray,
 ): ndarray.NdArray {
   const { shape } = arr;
-  let stride;
+  let stride: number[];
 
   if (arr.shape.length === 3) {
     stride = [1, shape[0], shape[0] * shape[1]];
@@ -333,8 +336,8 @@ export function* performVolumeInterpolation(
 
   // These two variables will be initialized with binary masks (representing whether
   // a voxel contains the active segment id).
-  let firstSlice;
-  let lastSlice;
+  let firstSlice: NdArray<TypedArrayWithoutBigInt>;
+  let lastSlice: NdArray<TypedArrayWithoutBigInt>;
 
   const isBigUint64 = inputNd.data instanceof BigUint64Array;
   if (isBigUint64) {
@@ -378,6 +381,11 @@ export function* performVolumeInterpolation(
     Toast.warning(
       `Could not interpolate segment, because id ${activeCellId} was not found in source/target slice.`,
     );
+    return;
+  }
+  // As the interpolation will be applied, the potentially existing mapping should be locked to ensure a consistent state.
+  const { isMappingLockedIfNeeded } = yield* call(ensureMaybeActiveMappingIsLocked, volumeTracing);
+  if (!isMappingLockedIfNeeded) {
     return;
   }
 

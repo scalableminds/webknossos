@@ -1,5 +1,7 @@
 package com.scalableminds.util.io
 
+import com.scalableminds.util.tools.Fox.{box2Fox, future2Fox}
+
 import java.io._
 import java.nio.file.{Files, Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
@@ -163,6 +165,63 @@ object ZipIO extends LazyLogging {
 
   def withUnziped[A](file: File)(f: (Path, InputStream) => A): Box[List[A]] =
     tryo(new java.util.zip.ZipFile(file)).flatMap(withUnziped(_)((name, is) => Full(f(name, is))))
+
+  def withUnzipedAsync[A](file: File)(f: (Path, InputStream) => Fox[A])(implicit ec: ExecutionContext): Fox[List[A]] =
+    for {
+      zip <- tryo(new java.util.zip.ZipFile(file)).toFox
+      resultList <- withUnzipedAsync(zip)((name, is) => f(name, is))
+    } yield resultList
+
+  def withUnzipedAsync[A](zip: ZipFile,
+                          includeHiddenFiles: Boolean = false,
+                          hiddenFilesWhitelist: List[String] = List(),
+                          truncateCommonPrefix: Boolean = false,
+                          excludeFromPrefix: Option[List[String]] = None)(f: (Path, InputStream) => Fox[A])(
+      implicit ec: ExecutionContext): Fox[List[A]] = {
+
+    val zipEntries = zip.entries.asScala.filter { e: ZipEntry =>
+      !e.isDirectory && (includeHiddenFiles || !isFileHidden(e) || hiddenFilesWhitelist.contains(
+        Paths.get(e.getName).getFileName.toString))
+    }.toList
+
+    val commonPrefix = if (truncateCommonPrefix) {
+      val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Paths.get(e.getName)))
+      val strippedPrefix =
+        PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixNotFixed, excludeFromPrefix.getOrElse(List.empty))
+      PathUtils.removeSingleFileNameFromPrefix(strippedPrefix, zipEntries.map(_.getName))
+    } else {
+      Paths.get("")
+    }
+
+    val resultFox = zipEntries.foldLeft[Fox[List[A]]](Fox.successful(List.empty)) { (results, entry) =>
+      results.futureBox.map {
+        case Full(rs) =>
+          val input: InputStream = zip.getInputStream(entry)
+          val path = commonPrefix.relativize(Paths.get(entry.getName))
+          val innerResultFox: Fox[List[A]] = f(path, input).futureBox.map {
+            case Full(result) =>
+              input.close()
+              Full(rs :+ result)
+            case Empty =>
+              input.close()
+              Empty
+            case failure: Failure =>
+              input.close()
+              failure
+          }
+          innerResultFox
+        case e =>
+          e.toFox
+      }.toFox.flatten
+    }
+
+    for {
+      result <- resultFox.futureBox.map { resultBox =>
+        zip.close() // close even if result is not success
+        resultBox
+      }
+    } yield result
+  }
 
   def withUnziped[A](zip: ZipFile,
                      includeHiddenFiles: Boolean = false,

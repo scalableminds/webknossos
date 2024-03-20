@@ -651,7 +651,7 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (state) => state.datasetConfiguration.colorLayerOrder,
         (colorLayerOrder) => {
-          let changedLayerOrder =
+          const changedLayerOrder =
             colorLayerOrder.length !== oldLayerOrder.length ||
             colorLayerOrder.some((layerName, index) => layerName !== oldLayerOrder[index]);
           if (changedLayerOrder) {
@@ -818,7 +818,6 @@ class PlaneMaterialFactory {
 
             this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
             const hasTransform = !_.isEqual(affineMatrix, Identity4x4);
-            console.log(`${name}_has_transform`, hasTransform);
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
             };

@@ -2,6 +2,7 @@ import { Tag, Tooltip } from "antd";
 import UserLocalStorage from "libs/user_local_storage";
 import React, { MouseEventHandler, useEffect } from "react";
 import { stringToColor } from "libs/format_utils";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 type LabelProps = {
   tag: string;
   kind: string;
@@ -38,7 +39,7 @@ export function CategorizationSearch({
   setTags,
   localStorageSavingKey,
 }: FilterProps) {
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     // restore the search query tags from the last session
     const searchTagString = UserLocalStorage.getItem(localStorageSavingKey);
 
@@ -50,11 +51,11 @@ export function CategorizationSearch({
         // pass
       }
     }
-  }, []);
+  });
   useEffect(() => {
     // store newest the search query tags
     UserLocalStorage.setItem(localStorageSavingKey, JSON.stringify(searchTags));
-  }, [searchTags]);
+  }, [searchTags, localStorageSavingKey]);
 
   function removeTag(tag: string) {
     if (searchTags.includes(tag)) {

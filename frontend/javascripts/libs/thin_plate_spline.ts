@@ -154,7 +154,7 @@ export default class TPS3D {
     invert: boolean = false,
   ): [Vector3[], number[], number[], number[]] {
     if (invert) {
-      let tmp = sourcePoints;
+      const tmp = sourcePoints;
       sourcePoints = targetPoints;
       targetPoints = tmp;
     }

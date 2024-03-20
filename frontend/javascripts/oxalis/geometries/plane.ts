@@ -74,7 +74,7 @@ class Plane {
     for (let i = 0; i <= 1; i++) {
       crosshairGeometries.push(new THREE.BufferGeometry());
 
-      // prettier-ignore
+      // biome-ignore format: don't format array
       const crosshairVertices = new Float32Array([
         (-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0,
         -25 * i, -25 * (1 - i), 0,

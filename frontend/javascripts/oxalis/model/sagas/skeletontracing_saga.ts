@@ -49,6 +49,7 @@ import {
   findTreeByName,
   getTreeNameForAgglomerateSkeleton,
   getTreesWithType,
+  getNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -101,19 +102,24 @@ function* centerActiveNode(action: Action): Saga<void> {
     }
   }
 
-  getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
-    (activeNode) => {
-      if ("suppressAnimation" in action && action.suppressAnimation) {
-        Store.dispatch(setPositionAction(activeNode.position));
-        Store.dispatch(setRotationAction(activeNode.rotation));
-      } else {
-        api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
-      }
-      if (activeNode.additionalCoordinates) {
-        Store.dispatch(setAdditionalCoordinatesAction(activeNode.additionalCoordinates));
-      }
-    },
+  const activeNode = Utils.toNullable(
+    getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))),
   );
+
+  if (activeNode != null) {
+    const activeNodePosition = yield* select((state: OxalisState) =>
+      getNodePosition(activeNode, state),
+    );
+    if ("suppressAnimation" in action && action.suppressAnimation) {
+      Store.dispatch(setPositionAction(activeNodePosition));
+      Store.dispatch(setRotationAction(activeNode.rotation));
+    } else {
+      api.tracing.centerPositionAnimated(activeNodePosition, false, activeNode.rotation);
+    }
+    if (activeNode.additionalCoordinates) {
+      Store.dispatch(setAdditionalCoordinatesAction(activeNode.additionalCoordinates));
+    }
+  }
 }
 
 function* watchBranchPointDeletion(): Saga<void> {

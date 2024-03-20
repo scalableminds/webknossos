@@ -357,16 +357,13 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAdminsByOrg(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      _ = logger.info(accessQuery.debugInfo)
-      query = q"""SELECT $columns
+      r <- run(q"""SELECT $columns
                          FROM $existingCollectionName
                          where $accessQuery
                          AND isAdmin
                          AND NOT isDeactivated
                          AND _organization = $organizationId
-                         ORDER BY _id"""
-      _ = logger.info(query.debugInfo)
-      r <- run(query.as[UsersRow])
+                         ORDER BY _id""".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 

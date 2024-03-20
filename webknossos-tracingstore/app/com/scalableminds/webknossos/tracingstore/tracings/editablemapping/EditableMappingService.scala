@@ -16,17 +16,19 @@ import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataR
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.{
-  BinaryDataService,
   AdHocMeshRequest,
   AdHocMeshService,
-  AdHocMeshingServiceHolder
+  AdHocMeshServiceHolder,
+  BinaryDataService
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{
+  FallbackDataHelper,
   KeyValueStoreImplicits,
+  RemoteFallbackLayer,
   TracingDataStore,
   VersionedKeyValuePair
 }
-import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
@@ -43,7 +45,7 @@ import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 case class FallbackDataKey(
     remoteFallbackLayer: RemoteFallbackLayer,
-    dataRequests: List[WebKnossosDataRequest],
+    dataRequests: List[WebknossosDataRequest],
     userToken: Option[String]
 )
 
@@ -87,9 +89,9 @@ object NodeWithPosition {
 
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
-    val adHocMeshingServiceHolder: AdHocMeshingServiceHolder,
+    val adHocMeshServiceHolder: AdHocMeshServiceHolder,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
-    val remoteWebKnossosClient: TSRemoteWebKnossosClient
+    val remoteWebknossosClient: TSRemoteWebknossosClient
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
     with FallbackDataHelper
@@ -102,8 +104,8 @@ class EditableMappingService @Inject()(
   private def generateId: String = UUID.randomUUID.toString
 
   val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
-  adHocMeshingServiceHolder.tracingStoreAdHocMeshingConfig = (binaryDataService, 30 seconds, 1)
-  private val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.tracingStoreAdHocMeshingService
+  adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
+  private val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
 
   private lazy val materializedInfoCache: AlfuCache[(String, Long), EditableMappingInfo] = AlfuCache(maxCapacity = 100)
 
@@ -220,6 +222,16 @@ class EditableMappingService @Inject()(
     for {
       (info, _) <- getInfoAndActualVersion(editableMappingId, version, remoteFallbackLayer, userToken)
     } yield info
+
+  def getBaseMappingName(editableMappingId: String): Fox[Option[String]] =
+    for {
+      desiredVersion <- getClosestMaterializableVersionOrZero(editableMappingId, None)
+      infoBox <- getClosestMaterialized(editableMappingId, desiredVersion).futureBox
+    } yield
+      infoBox match {
+        case Full(info) => Some(info.value.baseMappingName)
+        case _          => None
+      }
 
   def getInfoAndActualVersion(editableMappingId: String,
                               requestedVersion: Option[Long] = None,
@@ -531,13 +543,12 @@ class EditableMappingService @Inject()(
         dataLayer = segmentationLayer,
         cuboid = request.cuboid(segmentationLayer),
         segmentId = request.segmentId,
-        subsamplingStrides = request.subsamplingStrides,
         scale = request.scale,
         mapping = None,
         mappingType = None,
         findNeighbors = request.findNeighbors
       )
-      result <- adHocMeshingService.requestAdHocMeshViaActor(adHocMeshRequest)
+      result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
 
   def agglomerateGraphKey(mappingId: String, agglomerateId: Long): String =

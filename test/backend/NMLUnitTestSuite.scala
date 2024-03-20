@@ -7,13 +7,14 @@ import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
 import models.annotation.nml.{NmlParser, NmlWriter}
 import models.annotation.UploadedVolumeLayer
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, Empty, Full}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatestplus.play.PlaySpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
 import play.api.test.FakeRequest
 
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 class NMLUnitTestSuite extends PlaySpec {
@@ -45,7 +46,12 @@ class NMLUnitTestSuite extends PlaySpec {
     val os = new ByteArrayOutputStream()
     Await.result(nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global), Duration.Inf)
     val array = os.toByteArray
-    NmlParser.parse("", new ByteArrayInputStream(array), None, isTaskUpload = true)
+    NmlParser.parse("",
+                    new ByteArrayInputStream(array),
+                    None,
+                    isTaskUpload = true,
+                    None,
+                    (a: String, b: String) => None)
   }
 
   def isParseSuccessful(

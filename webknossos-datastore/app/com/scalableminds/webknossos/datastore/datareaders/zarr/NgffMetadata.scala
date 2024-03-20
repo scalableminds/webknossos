@@ -113,7 +113,16 @@ object NgffOmeroMetadata {
   implicit val jsonFormat: OFormat[NgffOmeroMetadata] = Json.format[NgffOmeroMetadata]
 }
 
-case class NgffChannelAttributes(color: Option[String], label: Option[String])
+case class NgffChannelWindow(min: Double, max: Double, start: Double, end: Double)
+object NgffChannelWindow {
+  implicit val jsonFormat: OFormat[NgffChannelWindow] = Json.format[NgffChannelWindow]
+}
+
+case class NgffChannelAttributes(color: Option[String],
+                                 label: Option[String],
+                                 window: Option[NgffChannelWindow],
+                                 inverted: Option[Boolean],
+                                 active: Option[Boolean])
 object NgffChannelAttributes {
   implicit val jsonFormat: OFormat[NgffChannelAttributes] = Json.format[NgffChannelAttributes]
 }

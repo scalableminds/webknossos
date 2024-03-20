@@ -497,7 +497,8 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
           </div>
           <MarkdownModal
             label="Annotation Description"
-            source={annotationDescription}
+            placeholder="[No description]"
+            source={this.props.annotation.description}
             isOpen={this.state.isMarkdownModalOpen}
             onOk={() => this.setState({ isMarkdownModalOpen: false })}
             onChange={this.setAnnotationDescription}

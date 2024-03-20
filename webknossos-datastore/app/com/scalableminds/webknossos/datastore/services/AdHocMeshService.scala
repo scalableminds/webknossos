@@ -28,7 +28,6 @@ case class AdHocMeshRequest(dataSource: Option[DataSource],
                             dataLayer: SegmentationLayer,
                             cuboid: Cuboid,
                             segmentId: Long,
-                            subsamplingStrides: Vec3Int,
                             scale: Vec3Double,
                             mapping: Option[String] = None,
                             mappingType: Option[String] = None,
@@ -47,7 +46,7 @@ class AdHocMeshActor(val service: AdHocMeshService, val timeout: FiniteDuration)
     case request: AdHocMeshRequest =>
       sender() ! Await.result(service.requestAdHocMesh(request).futureBox, timeout)
     case _ =>
-      sender() ! Failure("Unexpected message sent to AdHocMeshingActor.")
+      sender() ! Failure("Unexpected message sent to AdHocMeshActor.")
   }
 }
 
@@ -116,8 +115,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
                   request.dataLayer,
                   request.mapping,
                   request.cuboid,
-                  DataServiceRequestSettings(halfByte = false, request.mapping, None),
-                  request.subsamplingStrides
+                  DataServiceRequestSettings(halfByte = false, request.mapping, None)
                 )
                 agglomerateService.applyAgglomerate(dataRequest)(data)
               }.getOrElse(Full(data))
@@ -171,23 +169,16 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
     }
 
     val cuboid = request.cuboid
-    val subsamplingStrides =
-      Vec3Double(request.subsamplingStrides.x, request.subsamplingStrides.y, request.subsamplingStrides.z)
 
     val dataRequest = DataServiceDataRequest(
       request.dataSource.orNull,
       request.dataLayer,
       request.mapping,
       cuboid,
-      DataServiceRequestSettings.default.copy(additionalCoordinates = request.additionalCoordinates),
-      request.subsamplingStrides
+      DataServiceRequestSettings.default.copy(additionalCoordinates = request.additionalCoordinates)
     )
 
-    val dataDimensions = Vec3Int(
-      math.ceil(cuboid.width / subsamplingStrides.x).toInt,
-      math.ceil(cuboid.height / subsamplingStrides.y).toInt,
-      math.ceil(cuboid.depth / subsamplingStrides.z).toInt
-    )
+    val dataDimensions = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)
 
     val offset = Vec3Double(cuboid.topLeft.voxelXInMag, cuboid.topLeft.voxelYInMag, cuboid.topLeft.voxelZInMag)
     val scale = Vec3Double(cuboid.topLeft.mag) * request.scale
@@ -216,14 +207,8 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
                                       math.min(dataDimensions.y - y, 33),
                                       math.min(dataDimensions.z - z, 33))
         if (subVolumeContainsSegmentId(mappedData, dataDimensions, boundingBox, mappedSegmentId)) {
-          MarchingCubes.marchingCubes[T](mappedData,
-                                         dataDimensions,
-                                         boundingBox,
-                                         mappedSegmentId,
-                                         subsamplingStrides,
-                                         offset,
-                                         scale,
-                                         vertexBuffer)
+          MarchingCubes
+            .marchingCubes[T](mappedData, dataDimensions, boundingBox, mappedSegmentId, offset, scale, vertexBuffer)
         }
       }
       (vertexBuffer.flatMap(_.toList.map(_.toFloat)).toArray, neighbors)

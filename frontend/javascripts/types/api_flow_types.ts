@@ -75,6 +75,7 @@ type APIDataLayerBase = {
   readonly dataFormat?: "wkw" | "zarr";
   readonly additionalAxes: Array<AdditionalAxis> | null;
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
+  readonly hasSegmentIndex?: boolean;
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
@@ -89,6 +90,10 @@ export type APISegmentationLayer = APIDataLayerBase & {
   readonly tracingId?: string;
 };
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
+
+// Only used in rare cases to generalize over actual data layers and
+// a skeleton layer.
+export type APISkeletonLayer = { category: "skeleton" };
 
 export type LayerLink = {
   datasetId: APIDatasetId;
@@ -773,6 +778,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   resolutions?: Array<Point3>;
   mappingName?: string | null | undefined;
   mappingIsEditable?: boolean;
+  mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;

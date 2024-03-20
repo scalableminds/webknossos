@@ -30,6 +30,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceLike => DataSource,
   SegmentationLayerLike => SegmentationLayer
 }
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
@@ -103,10 +104,11 @@ class AnnotationService @Inject()(
     dataStoreDAO: DataStoreDAO,
     projectDAO: ProjectDAO,
     organizationDAO: OrganizationDAO,
-    annotationRestrictionDefults: AnnotationRestrictionDefaults,
+    annotationRestrictionDefaults: AnnotationRestrictionDefaults,
     nmlWriter: NmlWriter,
     temporaryFileCreator: TemporaryFileCreator,
     conf: WkConf,
+    rpc: RPC
 )(implicit ec: ExecutionContext, val materializer: Materializer)
     extends BoxImplicits
     with FoxImplicits
@@ -136,6 +138,7 @@ class AnnotationService @Inject()(
   private def createVolumeTracing(
       dataSource: DataSource,
       datasetOrganizationName: String,
+      datasetDataStore: DataStore,
       fallbackLayer: Option[SegmentationLayer],
       boundingBox: Option[BoundingBox] = None,
       startPosition: Option[Vec3Int] = None,
@@ -149,6 +152,12 @@ class AnnotationService @Inject()(
       fallbackLayer.map(_.additionalAxes).getOrElse(dataSource.additionalAxesUnion)
     for {
       _ <- bool2Fox(resolutionsRestricted.nonEmpty) ?~> "annotation.volume.resolutionRestrictionsTooTight"
+      remoteDatastoreClient = new WKRemoteDataStoreClient(datasetDataStore, rpc)
+      fallbackLayerHasSegmentIndex <- fallbackLayer match {
+        case Some(layer) =>
+          remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationName, dataSource.id.name, layer.name)
+        case None => Fox.successful(false)
+      }
     } yield
       VolumeTracing(
         None,
@@ -166,7 +175,7 @@ class AnnotationService @Inject()(
         organizationName = Some(datasetOrganizationName),
         mappingName = mappingName,
         resolutions = resolutionsRestricted.map(vec3IntToProto),
-        hasSegmentIndex = Some(fallbackLayer.isEmpty),
+        hasSegmentIndex = Some(fallbackLayer.isEmpty || fallbackLayerHasSegmentIndex),
         additionalAxes = AdditionalAxis.toProto(additionalCoordinates)
       )
   }
@@ -233,9 +242,9 @@ class AnnotationService @Inject()(
           fallbackLayer.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
       } yield fallbackLayer
 
-    def createAndSaveAnnotationLayer(
-        annotationLayerParameters: AnnotationLayerParameters,
-        oldPrecedenceLayerProperties: Option[RedundantTracingProperties]): Fox[AnnotationLayer] =
+    def createAndSaveAnnotationLayer(annotationLayerParameters: AnnotationLayerParameters,
+                                     oldPrecedenceLayerProperties: Option[RedundantTracingProperties],
+                                     dataStore: DataStore): Fox[AnnotationLayer] =
       for {
         client <- tracingStoreService.clientFor(dataset)
         tracingIdAndName <- annotationLayerParameters.typ match {
@@ -269,6 +278,7 @@ class AnnotationService @Inject()(
               volumeTracing <- createVolumeTracing(
                 dataSource,
                 datasetOrganizationName,
+                dataStore,
                 fallbackLayer,
                 resolutionRestrictions =
                   annotationLayerParameters.resolutionRestrictions.getOrElse(ResolutionRestrictions.empty),
@@ -283,7 +293,7 @@ class AnnotationService @Inject()(
                   editPositionAdditionalCoordinates = p.editPositionAdditionalCoordinates
                 )
               }.getOrElse(volumeTracing)
-              volumeTracingId <- client.saveVolumeTracing(volumeTracingAdapted)
+              volumeTracingId <- client.saveVolumeTracing(volumeTracingAdapted, dataSource = Some(dataSource))
               name = annotationLayerParameters.name
                 .orElse(autoFallbackLayerName)
                 .getOrElse(AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))
@@ -346,9 +356,10 @@ class AnnotationService @Inject()(
         All of this is skipped if existingAnnotationLayers is empty.
        */
       oldPrecedenceLayer <- fetchOldPrecedenceLayer
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "dataStore.notFoundForDataset"
       precedenceProperties = oldPrecedenceLayer.map(extractPrecedenceProperties)
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters)(p =>
-        createAndSaveAnnotationLayer(p, precedenceProperties))
+        createAndSaveAnnotationLayer(p, precedenceProperties, dataStore))
     } yield newAnnotationLayers
   }
 
@@ -555,7 +566,7 @@ class AnnotationService @Inject()(
       dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> Messages("dataset.notFound",
                                                                                                    datasetName)
       dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
-
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)
       fallbackLayer = if (volumeShowFallbackLayer) {
         dataSource.dataLayers.flatMap {
           case layer: SegmentationLayer => Some(layer)
@@ -567,6 +578,7 @@ class AnnotationService @Inject()(
       volumeTracing <- createVolumeTracing(
         dataSource,
         organization.name,
+        dataStore,
         fallbackLayer = fallbackLayer,
         boundingBox = boundingBox.flatMap { box =>
           if (box.isEmpty) None else Some(box)
@@ -875,7 +887,7 @@ class AnnotationService @Inject()(
       userJson <- userJsonForAnnotation(annotation._user)
       settings <- settingsFor(annotation)
       restrictionsJs <- AnnotationRestrictions.writeAsJson(
-        restrictionsOpt.getOrElse(annotationRestrictionDefults.defaultsFor(annotation)),
+        restrictionsOpt.getOrElse(annotationRestrictionDefaults.defaultsFor(annotation)),
         requestingUser)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "datastore.notFound"
       dataStoreJs <- dataStoreService.publicWrites(dataStore)

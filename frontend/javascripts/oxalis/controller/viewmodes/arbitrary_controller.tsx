@@ -3,7 +3,12 @@ import type { ModifierKeys } from "libs/input";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import type { Matrix4x4 } from "libs/mjs";
 import { V3 } from "libs/mjs";
-import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getActiveNode,
+  getMaxNodeId,
+  getNodePosition,
+  untransformNodePosition,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import { getRotation, getPosition, getMoveOffset3d } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -229,14 +234,19 @@ class ArbitraryController extends React.PureComponent<Props> {
       },
       // Recenter active node
       s: () => {
-        const skeletonTracing = Store.getState().tracing.skeleton;
+        const state = Store.getState();
+        const skeletonTracing = state.tracing.skeleton;
 
         if (!skeletonTracing) {
           return;
         }
 
         getActiveNode(skeletonTracing).map((activeNode) =>
-          api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation),
+          api.tracing.centerPositionAnimated(
+            getNodePosition(activeNode, state),
+            false,
+            activeNode.rotation,
+          ),
         );
       },
       ".": () => this.nextNode(true),
@@ -388,12 +398,18 @@ class ArbitraryController extends React.PureComponent<Props> {
     if (!Store.getState().temporaryConfiguration.flightmodeRecording) {
       return;
     }
-
-    const position = getPosition(Store.getState().flycam);
-    const rotation = getRotation(Store.getState().flycam);
-    const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
+    const state = Store.getState();
+    const position = getPosition(state.flycam);
+    const rotation = getRotation(state.flycam);
+    const additionalCoordinates = state.flycam.additionalCoordinates;
     Store.dispatch(
-      createNodeAction(position, additionalCoordinates, rotation, constants.ARBITRARY_VIEW, 0),
+      createNodeAction(
+        untransformNodePosition(position, state),
+        additionalCoordinates,
+        rotation,
+        constants.ARBITRARY_VIEW,
+        0,
+      ),
     );
   }
 

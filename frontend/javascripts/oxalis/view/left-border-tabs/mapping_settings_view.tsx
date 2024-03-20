@@ -1,4 +1,4 @@
-import { Select } from "antd";
+import { Select, Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import debounceRender from "react-debounce-render";
@@ -25,6 +25,7 @@ import * as Utils from "libs/utils";
 import {
   getEditableMappingForVolumeTracingId,
   hasEditableMapping,
+  isMappingLocked,
 } from "oxalis/model/accessors/volumetracing_accessor";
 
 const { Option, OptGroup } = Select;
@@ -43,6 +44,7 @@ type StateProps = {
   mappingType: MappingType;
   mappingColors: Array<number> | null | undefined;
   editableMapping: EditableMapping | null | undefined;
+  isMappingLocked: boolean;
   isMergerModeEnabled: boolean;
   allowUpdate: boolean;
   isEditableMappingActive: boolean;
@@ -173,6 +175,12 @@ class MappingSettingsView extends React.Component<Props, State> {
       (shouldMappingBeEnabled || this.props.isMergerModeEnabled) &&
       this.props.mapping &&
       this.props.hideUnmappedIds != null;
+    const isDisabled = this.props.isEditableMappingActive || this.props.isMappingLocked;
+    const disabledMessage = this.props.isEditableMappingActive
+      ? "The mapping has been edited through proofreading actions and can no longer be disabled or changed."
+      : this.props.mapping
+        ? "This mapping has been locked to this annotation, because the segmentation was modified while it was active. It can no longer be disabled or changed."
+        : "The segmentation was modified while no mapping was active. To ensure a consistent state, mappings can no longer be enabled.";
     return (
       <React.Fragment>
         {
@@ -180,20 +188,24 @@ class MappingSettingsView extends React.Component<Props, State> {
          to avoid conflicts in the logic of the UI. */
           !this.props.isMergerModeEnabled ? (
             <React.Fragment>
-              <div
-                style={{
-                  marginBottom: 6,
-                }}
-              >
-                <SwitchSetting
-                  onChange={this.handleSetMappingEnabled}
-                  value={shouldMappingBeEnabled}
-                  label="ID Mapping"
-                  // Assume that the mappings are being loaded if they are null
-                  loading={shouldMappingBeEnabled && this.props.segmentationLayer?.mappings == null}
-                  disabled={this.props.isEditableMappingActive}
-                />
-              </div>
+              <Tooltip title={isDisabled ? disabledMessage : null}>
+                <div
+                  style={{
+                    marginBottom: 6,
+                  }}
+                >
+                  <SwitchSetting
+                    onChange={this.handleSetMappingEnabled}
+                    value={shouldMappingBeEnabled}
+                    label="ID Mapping"
+                    // Assume that the mappings are being loaded if they are null
+                    loading={
+                      shouldMappingBeEnabled && this.props.segmentationLayer?.mappings == null
+                    }
+                    disabled={isDisabled}
+                  />
+                </div>
+              </Tooltip>
 
               {/*
                 Show mapping-select even when the mapping is disabled but the UI was used before
@@ -210,7 +222,7 @@ class MappingSettingsView extends React.Component<Props, State> {
                   {...selectValueProp}
                   onChange={this.handleChangeMapping}
                   notFoundContent="No mappings found."
-                  disabled={this.props.isEditableMappingActive}
+                  disabled={isDisabled}
                 >
                   {renderCategoryOptions(availableMappings, "JSON")}
                   {renderCategoryOptions(availableAgglomerates, "HDF5")}
@@ -262,6 +274,7 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     allowUpdate: state.tracing.restrictions.allowUpdate,
     editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
+    isMappingLocked: isMappingLocked(state, ownProps.layerName),
   };
 }
 

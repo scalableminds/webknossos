@@ -10,14 +10,14 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrCoordinatesP
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
+import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
-  TSRemoteWebKnossosClient,
+  TSRemoteWebknossosClient,
   TracingStoreAccessTokenService
 }
 import play.api.i18n.Messages
@@ -31,7 +31,7 @@ class VolumeTracingZarrStreamingController @Inject()(
     accessTokenService: TracingStoreAccessTokenService,
     editableMappingService: EditableMappingService,
     remoteDataStoreClient: TSRemoteDatastoreClient,
-    remoteWebKnossosClient: TSRemoteWebKnossosClient)(implicit ec: ExecutionContext)
+    remoteWebknossosClient: TSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends ExtendedController
     with ProtoGeometryImplicits
     with FoxImplicits {
@@ -152,7 +152,7 @@ class VolumeTracingZarrStreamingController @Inject()(
         tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
         existingMags = tracing.resolutions.map(vec3IntFromProto)
-        dataSource <- remoteWebKnossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
+        dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadata.fromNameScaleAndMags(tracingId,
                                                           dataSourceScale = dataSource.scale,
                                                           mags = existingMags.toList)
@@ -193,7 +193,7 @@ class VolumeTracingZarrStreamingController @Inject()(
             (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> NOT_FOUND
             _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> NOT_FOUND
             cubeSize = DataLayer.bucketLength
-            wkRequest = WebKnossosDataRequest(
+            wkRequest = WebknossosDataRequest(
               position = Vec3Int(x, y, z) * cubeSize * magParsed,
               mag = magParsed,
               cubeSize = cubeSize,
@@ -229,7 +229,7 @@ class VolumeTracingZarrStreamingController @Inject()(
     if (missingBucketIndices.nonEmpty) {
       for {
         remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId) ?~> "No data at coordinates, no fallback layer defined"
-        request = WebKnossosDataRequest(
+        request = WebknossosDataRequest(
           position = position * mag * cubeSize,
           mag = mag,
           cubeSize = cubeSize,

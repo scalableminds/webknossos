@@ -229,6 +229,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     userBoundingBoxes,
     mappingName: tracing.mappingName,
     mappingIsEditable: tracing.mappingIsEditable,
+    mappingIsLocked: tracing.mappingIsLocked,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
   };
@@ -391,18 +392,27 @@ function VolumeTracingReducer(
 
     case "SET_MAPPING_NAME": {
       // Editable mappings cannot be disabled or switched for now
-      if (volumeTracing.mappingIsEditable) return state;
+      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) return state;
 
       const { mappingName, mappingType } = action;
       return setMappingNameReducer(state, volumeTracing, mappingName, mappingType);
     }
 
     case "SET_MAPPING_IS_EDITABLE": {
-      // Editable mappings cannot be disabled or switched for now
-      if (volumeTracing.mappingIsEditable) return state;
+      // Editable mappings cannot be disabled or switched for now.
+      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) return state;
 
+      // An editable mapping is always locked.
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingIsEditable: true,
+        mappingIsLocked: true,
+      });
+    }
+    case "SET_MAPPING_IS_LOCKED": {
+      if (volumeTracing.mappingIsLocked) return state;
+
+      return updateVolumeTracing(state, volumeTracing.tracingId, {
+        mappingIsLocked: true,
       });
     }
 

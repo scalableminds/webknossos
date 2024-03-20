@@ -382,7 +382,11 @@ export enum BLEND_MODES {
 }
 
 export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-export const IdentityTransform = { type: "affine", affineMatrix: Identity4x4 } as const;
+export const IdentityTransform = {
+  type: "affine",
+  affineMatrix: Identity4x4,
+  affineMatrixInv: Identity4x4,
+} as const;
 export const EMPTY_OBJECT = {} as const;
 
 const isMac = (() => {

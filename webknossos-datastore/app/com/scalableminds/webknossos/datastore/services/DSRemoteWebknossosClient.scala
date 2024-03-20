@@ -31,17 +31,17 @@ object TracingStoreInfo {
   implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
-trait RemoteWebKnossosClient {
+trait RemoteWebknossosClient {
   def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer]
 }
 
-class DSRemoteWebKnossosClient @Inject()(
+class DSRemoteWebknossosClient @Inject()(
     rpc: RPC,
     config: DataStoreConfig,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
 )(implicit val ec: ExecutionContext)
-    extends RemoteWebKnossosClient
+    extends RemoteWebknossosClient
     with IntervalScheduler
     with LazyLogging
     with FoxImplicits {
@@ -51,19 +51,19 @@ class DSRemoteWebKnossosClient @Inject()(
   private val dataStoreUri: String = config.Http.uri
   private val reportUsedStorageEnabled: Boolean = config.Datastore.ReportUsedStorage.enabled
 
-  private val webKnossosUri: String = config.Datastore.WebKnossos.uri
+  private val webknossosUri: String = config.Datastore.WebKnossos.uri
 
   protected lazy val tickerInterval: FiniteDuration = config.Datastore.WebKnossos.pingInterval
 
   def tick(): Unit = reportStatus()
 
   private def reportStatus(): Fox[_] =
-    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/status")
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/status")
       .addQueryString("key" -> dataStoreKey)
       .patch(DataStoreStatus(ok = true, dataStoreUri, Some(reportUsedStorageEnabled)))
 
   def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] =
-    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/datasource")
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
@@ -73,7 +73,7 @@ class DSRemoteWebKnossosClient @Inject()(
                    viaAddRoute: Boolean,
                    userToken: Option[String]): Fox[Unit] =
     for {
-      _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
+      _ <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("dataSetName" -> dataSourceId.name)
         .addQueryString("needsConversion" -> needsConversion.toString)
@@ -84,7 +84,7 @@ class DSRemoteWebKnossosClient @Inject()(
     } yield ()
 
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] =
-    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/datasources")
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryString("key" -> dataStoreKey)
       .silent
       .put(dataSources)
@@ -92,23 +92,23 @@ class DSRemoteWebKnossosClient @Inject()(
   def reserveDataSourceUpload(info: ReserveUploadInformation, userTokenOpt: Option[String]): Fox[Unit] =
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "reserveUpload.noUserToken"
-      _ <- rpc(s"$webKnossosUri/api/datastores/$dataStoreName/reserveUpload")
+      _ <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("token" -> userToken)
         .post(info)
     } yield ()
 
   def deleteDataSource(id: DataSourceId): Fox[_] =
-    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/deleteDataset").addQueryString("key" -> dataStoreKey).post(id)
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset").addQueryString("key" -> dataStoreKey).post(id)
 
   def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
-    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/jobExportProperties")
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/jobExportProperties")
       .addQueryString("jobId" -> jobId)
       .addQueryString("key" -> dataStoreKey)
       .getWithJsonResponse[JobExportProperties]
 
   override def requestUserAccess(userToken: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
-    rpc(s"$webKnossosUri/api/datastores/$dataStoreName/validateUserAccess")
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/validateUserAccess")
       .addQueryString("key" -> dataStoreKey)
       .addQueryStringOptional("token", userToken)
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
@@ -119,7 +119,7 @@ class DSRemoteWebKnossosClient @Inject()(
       "tracingStore",
       _ =>
         for {
-          tracingStoreInfo <- rpc(s"$webKnossosUri/api/tracingstore")
+          tracingStoreInfo <- rpc(s"$webknossosUri/api/tracingstore")
             .addQueryString("key" -> dataStoreKey)
             .getWithJsonResponse[TracingStoreInfo]
         } yield tracingStoreInfo.url
@@ -134,7 +134,7 @@ class DSRemoteWebKnossosClient @Inject()(
     annotationSourceCache.getOrLoad(
       (accessToken, userToken),
       _ =>
-        rpc(s"$webKnossosUri/api/annotations/source/$accessToken")
+        rpc(s"$webknossosUri/api/annotations/source/$accessToken")
           .addQueryString("key" -> dataStoreKey)
           .addQueryStringOptional("userToken", userToken)
           .getWithJsonResponse[AnnotationSource]
@@ -147,7 +147,7 @@ class DSRemoteWebKnossosClient @Inject()(
     credentialCache.getOrLoad(
       credentialId,
       _ =>
-        rpc(s"$webKnossosUri/api/datastores/$dataStoreName/findCredential")
+        rpc(s"$webknossosUri/api/datastores/$dataStoreName/findCredential")
           .addQueryString("credentialId" -> credentialId)
           .addQueryString("key" -> dataStoreKey)
           .silent

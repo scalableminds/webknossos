@@ -2,10 +2,20 @@ import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { M4x4 } from "libs/mjs";
 import TPS3D from "libs/thin_plate_spline";
 import { Matrix4x4 } from "mjs";
-import { Vector3 } from "oxalis/constants";
+import { Vector3, Vector4 } from "oxalis/constants";
+
+export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {
+  return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];
+}
 
 export type Transform =
-  | { type: "affine"; affineMatrix: Matrix4x4 }
+  | {
+      type: "affine";
+      affineMatrix: Matrix4x4;
+      // Store the inverse directly to avoid potential loss of quality
+      // due to later inversions
+      affineMatrixInv: Matrix4x4;
+    }
   | {
       type: "thin_plate_spline";
       affineMatrix: Matrix4x4;
@@ -16,12 +26,20 @@ export type Transform =
       scaledTps: TPS3D;
     };
 
+export function createAffineTransformFromMatrix(
+  nestedMatrix: [Vector4, Vector4, Vector4, Vector4],
+): Transform {
+  const affineMatrix = nestedToFlatMatrix(nestedMatrix);
+  return { type: "affine", affineMatrix, affineMatrixInv: M4x4.inverse(affineMatrix) };
+}
+
 export function createAffineTransform(source: Vector3[], target: Vector3[]): Transform {
   const affineMatrix = estimateAffineMatrix4x4(source, target);
 
   return {
     type: "affine",
     affineMatrix,
+    affineMatrixInv: M4x4.inverse(affineMatrix),
   };
 }
 
@@ -46,7 +64,8 @@ export function invertTransform(transforms: Transform): Transform {
   if (transforms.type === "affine") {
     return {
       type: "affine",
-      affineMatrix: M4x4.inverse(transforms.affineMatrix),
+      affineMatrix: transforms.affineMatrixInv,
+      affineMatrixInv: transforms.affineMatrix,
     };
   }
 
@@ -72,6 +91,7 @@ export function chainTransforms(transformsA: Transform | null, transformsB: Tran
     return {
       type: "affine",
       affineMatrix: M4x4.mul(transformsA.affineMatrix, transformsB.affineMatrix),
+      affineMatrixInv: M4x4.mul(transformsB.affineMatrixInv, transformsA.affineMatrixInv),
     };
   }
 

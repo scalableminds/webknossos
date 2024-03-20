@@ -158,7 +158,7 @@ const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree
 });
 
 const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): MutableNode => ({
-  position: synapsePosition,
+  untransformedPosition: synapsePosition,
   radius: Constants.DEFAULT_NODE_RADIUS,
   rotation: [0, 0, 0],
   viewport: 0,

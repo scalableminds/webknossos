@@ -49,25 +49,22 @@ ${aLines.join("\n")}
 }
 
 export function generateCalculateTpsOffsetFunction(name: string) {
-  return _.template(
-    `
-    void calculateTpsOffsetFor<%= name %>(vec3 worldCoordUVW, vec3 transWorldCoord) {
-      vec3 originalWorldCoord = transDim(vec3(transWorldCoord.x, transWorldCoord.y, worldCoordUVW.z));
-
+  return `
+    vec3 calculateTpsOffsetFor${name}(vec3 originalWorldCoord) {
       float x = originalWorldCoord.x * datasetScale.x;
       float y = originalWorldCoord.y * datasetScale.y;
       float z = originalWorldCoord.z * datasetScale.z;
 
-      vec3 a[4] = TPS_a_<%= name %>;
+      vec3 a[4] = TPS_a_${name};
       vec3 linear_part = a[0] + x * a[1] + y * a[2] + z * a[3];
       vec3 bending_part = vec3(0.0);
 
-      for (int cpIdx = 0; cpIdx < TPS_CPS_LENGTH_<%= name %>; cpIdx++) {
+      for (int cpIdx = 0; cpIdx < TPS_CPS_LENGTH_${name}; cpIdx++) {
         // Calculate distance to each control point
         float dist = sqrt(
-          pow(x - TPS_cps_<%= name %>[cpIdx].x, 2.0) +
-          pow(y - TPS_cps_<%= name %>[cpIdx].y, 2.0) +
-          pow(z - TPS_cps_<%= name %>[cpIdx].z, 2.0)
+          pow(x - TPS_cps_${name}[cpIdx].x, 2.0) +
+          pow(y - TPS_cps_${name}[cpIdx].y, 2.0) +
+          pow(z - TPS_cps_${name}[cpIdx].z, 2.0)
         );
 
         if (dist != 0.0) {
@@ -75,11 +72,11 @@ export function generateCalculateTpsOffsetFunction(name: string) {
         } else {
           dist = 0.;
         }
-        bending_part += dist * TPS_W_<%= name %>[cpIdx];
+        bending_part += dist * TPS_W_${name}[cpIdx];
       }
 
-      tpsOffsetXYZ_<%= name %> = (linear_part + bending_part) /  datasetScale;
+      vec3 offset = (linear_part + bending_part) /  datasetScale;
+      return offset;
     }
-  `,
-  )({ name });
+  `;
 }

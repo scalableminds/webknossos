@@ -29,6 +29,8 @@ function SkeletonQuickSelectModal({ skeletonSAMProgressPercentage }: Props) {
       closable={false}
       okButtonProps={{ disabled: !isFinished }}
       width={700}
+      keyboard={false}
+      maskClosable={false}
       onOk={hideModal}
       zIndex={3000} // This should be displayed above the Toast created via showFollowupInterpolationToast.
       okText={okText}

@@ -20,6 +20,7 @@ import com.scalableminds.webknossos.datastore.models.{
   datasource
 }
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, CachedHdf5File, Hdf5FileCache}
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.MessagesProvider
 
@@ -106,8 +107,9 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
         _ <- Fox.successful(())
         topLeftStart = buckets(bucketLocalOffset)(1)
         topLeftEnd = buckets(bucketLocalOffset)(2)
+        bucketEntriesDtype <- tryo(segmentIndex.reader.string().getAttr("/", "dtype_bucket_entries")).toFox
         _ <- Fox
-          .bool2Fox(segmentIndex.reader.string().getAttr("/", "dtype_bucket_entries") == "uint16") ?~> "value for dtype_bucket_entries in segment index file is not supported, only uint16 is supported"
+          .bool2Fox(bucketEntriesDtype == "uint16") ?~> "value for dtype_bucket_entries in segment index file is not supported, only uint16 is supported"
         topLefts = segmentIndex.reader
           .uint16()
           .readMatrixBlockWithOffset("top_lefts", (topLeftEnd - topLeftStart).toInt, 3, topLeftStart, 0)

@@ -18,7 +18,7 @@ import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 import { AsyncLink } from "components/async_clickables";
-import type { APIProjectWithStatus, APIProject, APIUser, APIUserBase } from "types/api_flow_types";
+import { type APIProjectWithStatus, type APIProject, type APIUser, type APIUserBase, TracingTypeEnum } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
@@ -174,7 +174,7 @@ function ProjectListView({initialSearchValue, taskTypeId, activeUser}: Props) {
       project: projectId,
     });
 
-    if (tasks.some((task) => task.type.tracingType !== "skeleton")) {
+    if (tasks.some((task) => task.type.tracingType !==TracingTypeEnum.skeleton)) {
       Toast.info(messages["project.no_fallback_data_included"], {
         timeout: 12000,
       });

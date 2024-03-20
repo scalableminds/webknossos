@@ -305,7 +305,7 @@ export function createTaskType(
   });
 }
 
-export function updateTaskType(taskTypeId: string, taskType: APITaskType): Promise<void> {
+export function updateTaskType(taskTypeId: string, taskType: Utils.NestedOmit<APITaskType, "settings.resolutionRestrictions">): Promise<void> {
   return Request.sendJSONReceiveJSON(`/api/taskTypes/${taskTypeId}`, {
     method: "PUT",
     data: taskType,

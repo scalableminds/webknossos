@@ -200,8 +200,8 @@ test("getDataValue() should return the mapping value if available", async (t) =>
   const { cube } = t.context;
   await cube._labelVoxelInResolution_DEPRECATED([0, 0, 0], null, 42, 0, null);
   await cube._labelVoxelInResolution_DEPRECATED([1, 1, 1], null, 43, 0, null);
-  const mapping = [];
-  mapping[42] = 1;
+  const mapping = new Map();
+  mapping.set(42, 1);
   t.is(cube.getDataValue([0, 0, 0], null, mapping), 1);
   t.is(cube.getDataValue([1, 1, 1], null, mapping), 43);
 });

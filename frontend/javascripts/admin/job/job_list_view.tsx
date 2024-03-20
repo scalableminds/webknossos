@@ -58,7 +58,6 @@ export const TOOLTIP_MESSAGES_AND_ICONS = {
 const refreshInterval = 5000;
 const { Column } = Table;
 const { Search } = Input;
-const typeHint: APIJob[] = [];
 
 type State = {
   isLoading: boolean;
@@ -364,21 +363,21 @@ function JobListView() {
             title="Job Id"
             dataIndex="id"
             key="id"
-            sorter={Utils.localeCompareBy(typeHint, (job) => job.id)}
+            sorter={Utils.localeCompareBy<APIJob>((job) => job.id)}
           />
           <Column title="Description" key="datasetName" render={renderDescription} />
           <Column
             title="Created at"
             key="createdAt"
             render={(job) => <FormattedDate timestamp={job.createdAt} />}
-            sorter={Utils.compareBy(typeHint, (job) => job.createdAt)}
+            sorter={Utils.compareBy<APIJob>((job) => job.createdAt)}
             defaultSortOrder="descend"
           />
           <Column
             title="State"
             key="state"
             render={renderState}
-            sorter={Utils.localeCompareBy(typeHint, (job) => job.state)}
+            sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
           />
           <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
         </Table>

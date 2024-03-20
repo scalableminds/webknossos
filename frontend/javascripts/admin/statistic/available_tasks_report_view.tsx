@@ -9,7 +9,6 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import { EmptyObject } from "types/globals";
 
 const { Column } = Table;
-const typeHint: APIAvailableTasksReport[] = [];
 type State = {
   data: Array<APIAvailableTasksReport>;
   isLoading: boolean;
@@ -95,14 +94,14 @@ class AvailableTasksReportView extends React.PureComponent<EmptyObject, State> {
             <Column
               title="User"
               dataIndex="user"
-              sorter={Utils.localeCompareBy(typeHint, (task) => task.user)}
+              sorter={Utils.localeCompareBy<APIAvailableTasksReport>((task) => task.user)}
               width={200}
             />
             <Column
               title="# Available Tasks"
               dataIndex="totalAvailableTasks"
               defaultSortOrder="ascend"
-              sorter={Utils.compareBy(typeHint, (task) => task.totalAvailableTasks)}
+              sorter={Utils.compareBy<APIAvailableTasksReport>((task) => task.totalAvailableTasks)}
               width={150}
             />
             <Column

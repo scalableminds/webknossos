@@ -45,9 +45,7 @@ function ExperienceModalView({
   const [domainToEdit, setDomainToEdit] = useState<string | null | undefined>(initialDomainToEdit);
 
   function sortEntries(entries: TableEntry[]): TableEntry[] {
-    return entries.sort(
-      Utils.localeCompareBy([] as TableEntry[], (entry) => entry.domain.toLowerCase()),
-    );
+    return entries.sort(Utils.localeCompareBy((entry) => entry.domain.toLowerCase()));
   }
 
   function getTableEntries(users: APIUser[]): TableEntry[] {
@@ -117,7 +115,7 @@ function ExperienceModalView({
       });
       const orderedExperiences = {};
       Object.keys(newExperiences)
-        .sort(Utils.localeCompareBy([] as string[], (domain) => domain.toLowerCase()))
+        .sort(Utils.localeCompareBy((domain) => domain.toLowerCase()))
         .forEach((key) => {
           // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
           orderedExperiences[key] = newExperiences[key];

@@ -48,8 +48,6 @@ import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view"
 const { Column } = Table;
 const { Search } = Input;
 
-const typeHint: APIUser[] = [];
-
 type StateProps = {
   activeUser: APIUser;
   activeOrganization: APIOrganization;
@@ -199,7 +197,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
             <Col span={6}>{`${user.lastName}, ${user.firstName} (${user.email}) `}</Col>
             <Col span={4}>
               <LinkButton onClick={() => activateUser(user)}>
-                <UserAddOutlined className="icon-margin-right"/>
+                <UserAddOutlined className="icon-margin-right" />
                 Activate User
               </LinkButton>
             </Col>
@@ -213,7 +211,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
         message={newInactiveUsersHeader}
         description={newInactiveUsersList}
         type="info"
-        icon={<UserOutlined className="icon-margin-right"/>}
+        icon={<UserOutlined className="icon-margin-right" />}
         showIcon
         style={{
           marginTop: 20,
@@ -279,7 +277,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
 
   function onSelectUserRow(userId: string) {
     const indexOfUser = selectedUserIds.indexOf(userId);
-    
+
     if (indexOfUser >= 0) {
       setSelectedUserIds(selectedUserIds.splice(indexOfUser, 1));
     } else {
@@ -411,21 +409,21 @@ function UserListView({ activeUser, activeOrganization }: Props) {
             dataIndex="lastName"
             key="lastName"
             width={200}
-            sorter={Utils.localeCompareBy(typeHint, (user) => user.lastName)}
+            sorter={Utils.localeCompareBy<APIUser>((user) => user.lastName)}
           />
           <Column
             title="First Name"
             dataIndex="firstName"
             key="firstName"
             width={200}
-            sorter={Utils.localeCompareBy(typeHint, (user) => user.firstName)}
+            sorter={Utils.localeCompareBy<APIUser>((user) => user.firstName)}
           />
           <Column
             title="Email"
             dataIndex="email"
             key="email"
             width={320}
-            sorter={Utils.localeCompareBy(typeHint, (user) => user.email)}
+            sorter={Utils.localeCompareBy<APIUser>((user) => user.email)}
             render={(__, user: APIUser) =>
               activeUser.isAdmin ? (
                 <EditableTextLabel
@@ -597,7 +595,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
             render={(__, user: APIUser) => (
               <span>
                 <Link to={`/users/${user.id}/details`}>
-                  <UserOutlined className="icon-margin-right"/>
+                  <UserOutlined className="icon-margin-right" />
                   Show Annotations
                 </Link>
                 <br />
@@ -611,7 +609,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
                           deactivateUser(user);
                         }}
                       >
-                        <UserDeleteOutlined className="icon-margin-right"/>
+                        <UserDeleteOutlined className="icon-margin-right" />
                         Deactivate User
                       </LinkButton>
                     ) : null
@@ -622,7 +620,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
                         activateUser(user);
                       }}
                     >
-                      <UserAddOutlined className="icon-margin-right"/>
+                      <UserAddOutlined className="icon-margin-right" />
                       Activate User
                     </LinkButton>
                   )

@@ -106,7 +106,6 @@ function TaskTypeListView({ initialSearchValue }: Props) {
   const marginRight = {
     marginRight: 20,
   };
-  const typeHint: Array<APITaskType> = [];
   return (
     <div className="container">
       <div className="pull-right">
@@ -161,7 +160,7 @@ function TaskTypeListView({ initialSearchValue }: Props) {
             dataIndex="id"
             key="id"
             width={120}
-            sorter={Utils.localeCompareBy(typeHint, (taskType) => taskType.id)}
+            sorter={Utils.localeCompareBy<APITaskType>((taskType) => taskType.id)}
             className="monospace-id"
           />
           <Column
@@ -169,20 +168,20 @@ function TaskTypeListView({ initialSearchValue }: Props) {
             dataIndex="teamName"
             key="team"
             width={230}
-            sorter={Utils.localeCompareBy(typeHint, (taskType) => taskType.teamName)}
+            sorter={Utils.localeCompareBy<APITaskType>((taskType) => taskType.teamName)}
           />
           <Column
             title="Summary"
             dataIndex="summary"
             key="summary"
             width={230}
-            sorter={Utils.localeCompareBy(typeHint, (taskType) => taskType.summary)}
+            sorter={Utils.localeCompareBy<APITaskType>((taskType) => taskType.summary)}
           />
           <Column
             title="Description"
             dataIndex="description"
             key="description"
-            sorter={Utils.localeCompareBy(typeHint, (taskType) => taskType.description)}
+            sorter={Utils.localeCompareBy<APITaskType>((taskType) => taskType.description)}
             render={(description) => (
               <div className="task-type-description short">
                 <Markdown

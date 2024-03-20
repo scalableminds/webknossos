@@ -19,19 +19,9 @@ import messages from "messages";
 import { stringToColor } from "libs/format_utils";
 import EditTeamModalView from "./edit_team_modal_view";
 import { useEffect, useState } from "react";
+
 const { Column } = Table;
 const { Search } = Input;
-const typeHint: APITeam[] = [];
-
-type State = {
-  isLoading: boolean;
-  teams: APITeam[];
-  users: APIUser[];
-  searchQuery: string;
-  isTeamCreationModalVisible: boolean;
-  isTeamEditModalVisible: boolean;
-  selectedTeam: APITeam | null;
-};
 
 export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
   //used by user list page
@@ -103,7 +93,7 @@ function renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
   ));
 }
 
-const persistence = new Persistence<Pick<State, "searchQuery">>(
+const persistence = new Persistence<Pick<{ searchQuery: string }, "searchQuery">>(
   {
     searchQuery: PropTypes.string,
   },
@@ -235,7 +225,7 @@ function TeamListView() {
               title="Name"
               dataIndex="name"
               key="name"
-              sorter={Utils.localeCompareBy(typeHint, (team) => team.name)}
+              sorter={Utils.localeCompareBy<APITeam>((team) => team.name)}
             />
             <Column
               title="Actions"

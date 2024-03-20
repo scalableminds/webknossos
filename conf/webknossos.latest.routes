@@ -237,7 +237,7 @@ GET           /statistics/webknossos                                            
 GET           /statistics/users                                                                 controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 
 # Organizations
-GET           /organizations                                                                    controllers.OrganizationController.list()
+GET           /organizations                                                                    controllers.OrganizationController.list(compact: Option[Boolean])
 POST          /organizations                                                                    controllers.OrganizationController.create()
 GET           /organizations/byInvite/:inviteToken                                              controllers.OrganizationController.getByInvite(inviteToken: String)
 GET           /organizations/default                                                            controllers.OrganizationController.getDefault()

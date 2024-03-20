@@ -26,6 +26,7 @@ import type {
   APIMeshFile,
   APIAvailableTasksReport,
   APIOrganization,
+  APIOrganizationCompact,
   APIProject,
   APIProjectCreator,
   APIProjectProgressReport,
@@ -2024,8 +2025,10 @@ export async function switchToOrganization(organizationName: string): Promise<vo
   location.reload();
 }
 
-export async function getUsersOrganizations(): Promise<Array<APIOrganization>> {
-  const organizations: APIOrganization[] = await Request.receiveJSON("/api/organizations");
+export async function getUsersOrganizations(): Promise<Array<APIOrganizationCompact>> {
+  const organizations: APIOrganizationCompact[] = await Request.receiveJSON(
+    "/api/organizations?compact=true",
+  );
   const scmOrganization = organizations.find((org) => org.name === "scalable_minds");
   if (scmOrganization == null) {
     return organizations;

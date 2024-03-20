@@ -36,6 +36,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Only display UI elements to launch background jobs if the (worker) backend actually supports them. [#7591](https://github.com/scalableminds/webknossos/pull/7591)
 - If the current dataset folder in the dashboard cannot be found (e.g., because somebody else deleted it), the page navigates to the root folder automatically. [#7669](https://github.com/scalableminds/webknossos/pull/7669)
 - Voxelytics logs are now stored by organization name, rather than id, in Loki. This is in preparation of the unification of these two concepts. [#7687](https://github.com/scalableminds/webknossos/pull/7687)
+- Using a segment index file with a different data type than uint16 will now result in an error. [#7698](https://github.com/scalableminds/webknossos/pull/7698)
 - Improved performance of JSON mappings in preparation of frontend HDF5 mappings. [#7706](https://github.com/scalableminds/webknossos/pull/7706)
 
 ### Fixed
@@ -56,6 +57,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where the annotation list would show teams the annotation is shared with multiple times. [#7659](https://github.com/scalableminds/webknossos/pull/7659)
 - Fixed incorrect menu position that could occur sometimes when clicking the ... button next to a segment. [#7680](https://github.com/scalableminds/webknossos/pull/7680)
 - Fixed an error in the Loki integration to support Loki 2.9+. [#7684](https://github.com/scalableminds/webknossos/pull/7684)
+- Fixed inconsistent style of antd components and odd behavior of dataset/annotation description Markdown input. [#7700](https://github.com/scalableminds/webknossos/pull/7700)
 
 ### Removed
 - Removed the integration with BrainTracing user databases. [#7693](https://github.com/scalableminds/webknossos/pull/7693)

@@ -23,7 +23,8 @@ class TimeController @Inject()(userService: UserService,
     extends Controller
     with FoxImplicits {
 
-  //all users with working hours > 0
+  // Note: This route is used by external applications, keep stable
+  // all users with working hours > 0
   def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -33,7 +34,8 @@ class TimeController @Inject()(userService: UserService,
       } yield Ok(js)
     }
 
-  //list user with working hours > 0 (only one user is also possible)
+  // Note: This route is used by external applications, keep stable
+  // list user with working hours > 0 (only one user is also possible)
   def getWorkingHoursOfUsers(userString: String,
                              year: Int,
                              month: Int,

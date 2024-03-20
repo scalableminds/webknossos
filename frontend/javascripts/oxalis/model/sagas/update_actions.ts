@@ -216,20 +216,28 @@ export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: n
     },
   } as const;
 }
+
+export type UpdateActionNode = Omit<Node, "untransformedPosition"> & {
+  position: Node["untransformedPosition"];
+  treeId: number;
+};
+
 export function createNode(treeId: number, node: Node) {
+  const { untransformedPosition, ...restNode } = node;
   return {
     name: "createNode",
-    value: Object.assign({}, node, {
-      treeId,
-    }),
+    value: { ...restNode, position: untransformedPosition, treeId } as UpdateActionNode,
   } as const;
 }
 export function updateNode(treeId: number, node: Node) {
+  const { untransformedPosition, ...restNode } = node;
   return {
     name: "updateNode",
-    value: Object.assign({}, node, {
+    value: {
+      ...restNode,
+      position: untransformedPosition,
       treeId,
-    }),
+    } as UpdateActionNode,
   } as const;
 }
 export function deleteNode(treeId: number, nodeId: number) {
@@ -416,11 +424,12 @@ export function serverCreateTracing(timestamp: number) {
 }
 export function updateMappingName(
   mappingName: string | null | undefined,
-  isEditable: boolean | undefined,
+  isEditable: boolean | null | undefined,
+  isLocked: boolean | undefined,
 ) {
   return {
     name: "updateMappingName",
-    value: { mappingName, isEditable },
+    value: { mappingName, isEditable, isLocked },
   } as const;
 }
 export function splitAgglomerate(

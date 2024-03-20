@@ -2,7 +2,7 @@ FROM eclipse-temurin:21
 ARG VERSION_NODE="18.x"
 
 RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \
-  && apt-get -y install libblosc1 libbrotli1 postgresql-client git nodejs \
+  && apt-get -y install libblosc1 libbrotli1 postgresql-client libdraco4 git nodejs \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /webknossos

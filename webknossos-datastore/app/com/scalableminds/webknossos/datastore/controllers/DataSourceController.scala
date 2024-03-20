@@ -1,14 +1,21 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
+import com.scalableminds.webknossos.datastore.helpers.{
+  GetMultipleSegmentIndexParameters,
+  GetSegmentIndexParameters,
+  SegmentIndexData,
+  SegmentStatisticsParameters
+}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   InboxDataSource,
   InboxDataSourceLike,
   UnusableInboxDataSource
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.uploading.{
   CancelUploadInformation,
@@ -28,22 +35,26 @@ import java.io.File
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
 import play.api.libs.Files
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,
     dataSourceService: DataSourceService,
-    remoteWebKnossosClient: DSRemoteWebKnossosClient,
+    remoteWebknossosClient: DSRemoteWebknossosClient,
     accessTokenService: DataStoreAccessTokenService,
-    binaryDataServiceHolder: BinaryDataServiceHolder,
+    val binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
+    segmentIndexFileService: SegmentIndexFileService,
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DatasetErrorLoggingService,
     uploadService: UploadService,
-    composeService: ComposeService
+    composeService: ComposeService,
+    val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
+    val dsRemoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller
+    with MeshMappingHelper
     with FoxImplicits {
 
   override def allowRemoteOrigin: Boolean = true
@@ -85,7 +96,7 @@ class DataSourceController @Inject()(
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
-            (remoteWebKnossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataset.upload.validation.failed")
+            (remoteWebknossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataset.upload.validation.failed")
               .flatMap(_ => uploadService.reserveUpload(request.body))
           } else Fox.successful(())
         } yield Ok
@@ -153,7 +164,7 @@ class DataSourceController @Inject()(
                                                       urlOrHeaderToken(token, request)) {
             for {
               (dataSourceId, datasetSizeBytes) <- uploadService.finishUpload(request.body)
-              _ <- remoteWebKnossosClient.reportUpload(
+              _ <- remoteWebknossosClient.reportUpload(
                 dataSourceId,
                 datasetSizeBytes,
                 request.body.needsConversion.getOrElse(false),
@@ -175,7 +186,7 @@ class DataSourceController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId),
                                           urlOrHeaderToken(token, request)) {
           for {
-            _ <- remoteWebKnossosClient.deleteDataSource(dataSourceId) ?~> "dataset.delete.webknossos.failed"
+            _ <- remoteWebknossosClient.deleteDataSource(dataSourceId) ?~> "dataset.delete.webknossos.failed"
             _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
           } yield Ok
         }
@@ -353,7 +364,7 @@ class DataSourceController @Inject()(
         for {
           _ <- bool2Fox(dataSourceRepository.find(DataSourceId(datasetName, organizationName)).isEmpty) ?~> Messages(
             "dataSource.alreadyPresent")
-          _ <- remoteWebKnossosClient.reserveDataSourceUpload(
+          _ <- remoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(
               uploadId = "",
               name = datasetName,
@@ -367,7 +378,7 @@ class DataSourceController @Inject()(
           ) ?~> "dataset.upload.validation.failed"
           _ <- dataSourceService.updateDataSource(request.body.copy(id = DataSourceId(datasetName, organizationName)),
                                                   expectExisting = false)
-          _ <- remoteWebKnossosClient.reportUpload(
+          _ <- remoteWebknossosClient.reportUpload(
             DataSourceId(datasetName, organizationName),
             0L,
             needsConversion = false,
@@ -551,6 +562,139 @@ class DataSourceController @Inject()(
               .connectomeFilePath(organizationName, datasetName, dataLayerName, request.body.connectomeFile))
           synapseTypes <- connectomeFileService.typesForSynapses(meshFilePath, request.body.synapseIds)
         } yield Ok(Json.toJson(synapseTypes))
+      }
+    }
+
+  def checkSegmentIndexFile(token: Option[String],
+                            organizationName: String,
+                            dataSetName: String,
+                            dataLayerName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationName)),
+                                        urlOrHeaderToken(token, request)) {
+        val segmentIndexFileOpt =
+          segmentIndexFileService.getSegmentIndexFile(organizationName, dataSetName, dataLayerName).toOption
+        Future.successful(Ok(Json.toJson(segmentIndexFileOpt.isDefined)))
+      }
+    }
+
+  /**
+    * Query the segment index file for a single segment
+    * @return List of bucketPositions as positions (not indices) of 32³ buckets in mag
+    */
+  def getSegmentIndex(token: Option[String],
+                      organizationName: String,
+                      datasetName: String,
+                      dataLayerName: String,
+                      segmentId: String): Action[GetSegmentIndexParameters] =
+    Action.async(validateJson[GetSegmentIndexParameters]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
+            organizationName,
+            datasetName,
+            dataLayerName,
+            request.body.mappingName,
+            request.body.editableMappingTracingId,
+            segmentId.toLong,
+            mappingNameForMeshFile = None,
+            urlOrHeaderToken(token, request)
+          )
+          fileMag <- segmentIndexFileService.readFileMag(organizationName, datasetName, dataLayerName)
+          topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
+            segmentIndexFileService.readSegmentIndex(organizationName, datasetName, dataLayerName, sId))
+          topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
+          bucketPositions = segmentIndexFileService.topLeftsToDistinctBucketPositions(topLefts,
+                                                                                      request.body.mag,
+                                                                                      fileMag)
+          bucketPositionsForCubeSize = bucketPositions
+            .map(_.scale(DataLayer.bucketLength)) // bucket positions raw are indices of 32³ buckets
+            .map(_ / request.body.cubeSize)
+            .distinct // divide by requested cube size to map them to larger buckets, select unique
+            .map(_ * request.body.cubeSize) // return positions, not indices
+        } yield Ok(Json.toJson(bucketPositionsForCubeSize))
+      }
+    }
+
+  /**
+    * Query the segment index file for multiple segments
+    * @return List of bucketPositions as indices of 32³ buckets
+    */
+  def querySegmentIndex(token: Option[String],
+                        organizationName: String,
+                        datasetName: String,
+                        dataLayerName: String): Action[GetMultipleSegmentIndexParameters] =
+    Action.async(validateJson[GetMultipleSegmentIndexParameters]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          segmentIdsAndBucketPositions <- Fox.serialCombined(request.body.segmentIds) { segmentOrAgglomerateId =>
+            for {
+              segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
+                organizationName,
+                datasetName,
+                dataLayerName,
+                request.body.mappingName,
+                request.body.editableMappingTracingId,
+                segmentOrAgglomerateId,
+                mappingNameForMeshFile = None,
+                urlOrHeaderToken(token, request)
+              )
+              fileMag <- segmentIndexFileService.readFileMag(organizationName, datasetName, dataLayerName)
+              topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
+                segmentIndexFileService.readSegmentIndex(organizationName, datasetName, dataLayerName, sId))
+              topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
+              bucketPositions = segmentIndexFileService.topLeftsToDistinctBucketPositions(topLefts,
+                                                                                          request.body.mag,
+                                                                                          fileMag)
+            } yield SegmentIndexData(segmentOrAgglomerateId, bucketPositions.toSeq)
+          }
+        } yield Ok(Json.toJson(segmentIdsAndBucketPositions))
+      }
+    }
+
+  def getSegmentVolume(token: Option[String],
+                       organizationName: String,
+                       datasetName: String,
+                       dataLayerName: String): Action[SegmentStatisticsParameters] =
+    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          _ <- segmentIndexFileService.assertSegmentIndexFileExists(organizationName, datasetName, dataLayerName)
+          volumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            segmentIndexFileService.getSegmentVolume(
+              organizationName,
+              datasetName,
+              dataLayerName,
+              segmentId,
+              request.body.mag,
+              request.body.mappingName
+            )
+          }
+        } yield Ok(Json.toJson(volumes))
+      }
+    }
+
+  def getSegmentBoundingBox(token: Option[String],
+                            organizationName: String,
+                            datasetName: String,
+                            dataLayerName: String): Action[SegmentStatisticsParameters] =
+    Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          _ <- segmentIndexFileService.assertSegmentIndexFileExists(organizationName, datasetName, dataLayerName)
+          boxes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
+            segmentIndexFileService.getSegmentBoundingBox(organizationName,
+                                                          datasetName,
+                                                          dataLayerName,
+                                                          segmentId,
+                                                          request.body.mag,
+                                                          request.body.mappingName)
+          }
+        } yield Ok(Json.toJson(boxes))
       }
     }
 

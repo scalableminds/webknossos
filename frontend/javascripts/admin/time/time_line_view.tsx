@@ -243,10 +243,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
     }));
   };
 
-  getDayJsObject = (antdDate: antddayjs.Dayjs) => {
-    return dayjs(antdDate.valueOf());
-  };
-
   handleDateChange = async (antdDates: [antddayjs.Dayjs | null, antddayjs.Dayjs | null]) => {
     if (antdDates[0] == null || antdDates[1] == null) return;
     // to ease the load on the server restrict date range selection to three month
@@ -309,6 +305,10 @@ class TimeLineView extends React.PureComponent<Props, State> {
     );
     return ReactDOMServer.renderToStaticMarkup(tooltip);
   }
+
+  getDayJsObject = (antdDate: antddayjs.Dayjs) => {
+    return dayjs(antdDate.valueOf());
+  };
 
   render() {
     const columns: Array<ColumnDefinition> = [

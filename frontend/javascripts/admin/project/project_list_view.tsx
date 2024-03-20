@@ -15,7 +15,7 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-import * as React from "react";
+import React, { useEffect, useState } from "react";
 import _ from "lodash";
 import { AsyncLink } from "components/async_clickables";
 import {
@@ -45,7 +45,7 @@ import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import FormattedDate from "components/formatted_date";
-import { useEffect, useState } from "react";
+
 const { Column } = Table;
 const { Search } = Input;
 

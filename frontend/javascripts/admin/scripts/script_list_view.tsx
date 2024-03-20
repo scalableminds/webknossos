@@ -33,7 +33,7 @@ function ScriptListView() {
 
   useEffect(() => {
     const { searchQuery } = persistence.load();
-    setSearchQuery(searchQuery);
+    setSearchQuery(searchQuery || "");
     fetchData();
   }, []);
 

@@ -1,5 +1,5 @@
 import { Modal, Table, Spin } from "antd";
-import * as React from "react";
+import React, { useState } from "react";
 import _ from "lodash";
 import type { APIUser, APIProject, APIActiveUser } from "types/api_flow_types";
 import {
@@ -12,7 +12,6 @@ import Toast from "libs/toast";
 import UserSelectionComponent from "admin/user/user_selection_component";
 import messages from "messages";
 import { useFetch } from "libs/react_helpers";
-import { useState } from "react";
 
 type Props = {
   project: APIProject | null | undefined;

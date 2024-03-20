@@ -302,7 +302,7 @@ type FormValues = {
   nmlFiles?: UploadFile[];
   dataSet?: string;
   projectName?: string;
-  neededExperience?:  APITask["neededExperience"]
+  neededExperience?: APITask["neededExperience"];
 };
 
 function TaskCreateFormView({ taskId, history }: Props) {
@@ -372,12 +372,10 @@ function TaskCreateFormView({ taskId, history }: Props) {
 
     if (taskId != null) {
       // either update an existing task
-      const newTask = {...formValues, boundingBox}
+      const newTask = { ...formValues, boundingBox };
       const confirmedTask = await updateTask(taskId, newTask);
       history.push(`/tasks/${confirmedTask.id}`);
-
     } else {
-
       setIsUploading(true);
       // or create a new one either from the form values or with an NML file
       let taskResponses: TaskCreationResponse[] = [];
@@ -391,22 +389,20 @@ function TaskCreateFormView({ taskId, history }: Props) {
           const nmlFiles = formValues.nmlFiles.map((wrapperFile) => wrapperFile.originFileObj);
           for (let i = 0; i < nmlFiles.length; i += NUM_TASKS_PER_BATCH) {
             const batchOfNmls = nmlFiles.slice(i, i + NUM_TASKS_PER_BATCH);
-            
-            const newTask = {...formValues, nmlFiles: batchOfNmls, boundingBox}
+
+            const newTask = { ...formValues, nmlFiles: batchOfNmls, boundingBox };
             const response = await createTaskFromNML(newTask);
-            
+
             taskResponses = taskResponses.concat(response.tasks);
             warnings = warnings.concat(response.warnings);
           }
-
         } else {
-
           if (specificationType !== SpecificationEnum.BaseAnnotation) {
             // Ensure that the base annotation field is null, if the specification mode
             // does not include that field.
             formValues.baseAnnotation = undefined;
           }
-          const newTask = {...formValues, boundingBox};
+          const newTask = { ...formValues, boundingBox };
           const response = await createTasks([newTask]);
 
           taskResponses = taskResponses.concat(response.tasks);

@@ -18,7 +18,11 @@ import type { Node, VolumeTracing } from "oxalis/store";
 import type { Tree } from "oxalis/store";
 import { enforceSkeletonTracing } from "../accessors/skeletontracing_accessor";
 import { getActiveSegmentationTracingLayer } from "../accessors/volumetracing_accessor";
-import { setBusyBlockingInfoAction, setQuickSelectStateAction } from "../actions/ui_actions";
+import {
+  setBusyBlockingInfoAction,
+  setQuickSelectStateAction,
+  setSkeletonSAMProgressPercentageAction,
+} from "../actions/ui_actions";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 import performQuickSelectHeuristic, { prepareQuickSelect } from "./quick_select_heuristic_saga";
 import performQuickSelectML, {
@@ -27,14 +31,11 @@ import performQuickSelectML, {
   getInferenceSession,
   prefetchEmbedding,
 } from "./quick_select_ml_saga";
-import {
-  showAndGetSkeletonQuickSelectInfoComponents,
-  showFollowupInterpolationToast,
-  getSkeletonQuickSelectModalContent,
-} from "./skeleton_quick_select_info_components";
 import { performVolumeInterpolation } from "./volume/volume_interpolation_saga";
 import { getActiveSegmentationTracing } from "../accessors/volumetracing_accessor";
 import { ensureMaybeActiveMappingIsLocked } from "./saga_helpers";
+import { showFollowupInterpolationToast } from "oxalis/view/skeleton_quick_select_modal";
+import { sleep } from "libs/utils";
 
 function* shouldUseHeuristic() {
   const useHeuristic = yield* select((state) => state.userConfiguration.quickSelect.useHeuristic);
@@ -45,7 +46,7 @@ function prepareSkeletonSAMInput(
   nodes: Node[],
   dimensions: Vector3,
   activeViewport: OrthoView,
-  predictionFinishedCallback: () => void,
+  predictionFinishedCallback: () => Saga<void>,
 ): SAMNodeSelect {
   const [firstDim, secondDim, _thirdDim] = dimensions;
   const nodePositions = nodes.map((node) => node.untransformedPosition);
@@ -120,7 +121,7 @@ type QuickSelectPreparationParameter = {
   thirdDim: number;
   volumeTracing: VolumeTracing;
   activeViewport: OrthoView;
-  predictionFinishedCallback: () => void;
+  predictionFinishedCallback: () => Saga<void>;
 };
 
 function prepareSkeletonSAMPredictions(
@@ -177,15 +178,13 @@ function prepareSkeletonSAMPredictions(
 function getPredictionFinishedCallback() {
   let counter = 0;
   let maximum = 1;
-  let updateModal = (_a: React.ReactNode) => {};
-  const setUpdateModal = (update: typeof updateModal) => (updateModal = update);
   const setPredictionCount = (count: number) => (maximum = count);
-  const predictionFinishedCallback = () => {
+  function* predictionFinishedCallback(): Saga<void> {
     counter++;
-    const newModalContent = getSkeletonQuickSelectModalContent((counter / maximum) * 100);
-    updateModal(newModalContent);
-  };
-  return { predictionFinishedCallback, setPredictionCount, setUpdateModal };
+    const updatedSkeletonSAMProgressPercentage = (counter / maximum) * 100;
+    yield* put(setSkeletonSAMProgressPercentageAction(updatedSkeletonSAMProgressPercentage));
+  }
+  return { predictionFinishedCallback, setPredictionCount };
 }
 
 function* performSkeletonQuickSelectSAM(action: ComputeSAMForSkeletonAction) {
@@ -216,8 +215,7 @@ function* performSkeletonQuickSelectSAM(action: ComputeSAMForSkeletonAction) {
     getNodesThirdDimSlice,
   ) as Record<number, Node[]>;
 
-  const { predictionFinishedCallback, setPredictionCount, setUpdateModal } =
-    getPredictionFinishedCallback();
+  const { predictionFinishedCallback, setPredictionCount } = getPredictionFinishedCallback();
   const options = {
     labeledZoomStep,
     labeledResolution,
@@ -234,19 +232,17 @@ function* performSkeletonQuickSelectSAM(action: ComputeSAMForSkeletonAction) {
     options,
   );
   setPredictionCount(samPredictions.length);
-  const modal = showAndGetSkeletonQuickSelectInfoComponents();
-  setUpdateModal((newContent: React.ReactNode) => modal.update({ content: newContent }));
+  yield* put(setSkeletonSAMProgressPercentageAction(0));
 
   yield* all(samPredictions);
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   yield* put(setBusyBlockingInfoAction(false));
-  modal.update({
-    okButtonProps: { disabled: false },
-    okText: "Proceed with correcting the selections",
-  });
-  const shouldPerformInterpolation = yield* call(showFollowupInterpolationToast);
+  const { shouldPerformInterpolation } = yield* call(showFollowupInterpolationToast);
   if (shouldPerformInterpolation) {
     yield* put(setBusyBlockingInfoAction(true, "Interpolating between SAM predictions ..."));
+    // Wait for the UI to start the busy animation as else the interpolation might start right away blocking the UI without and visual indication.
+    // TODO: Find a better solution that does not depend on pc performance.
+    yield* call(sleep, 500);
     yield* all(interpolationSagas);
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
     yield* put(setBusyBlockingInfoAction(false));
@@ -258,20 +254,20 @@ export default function* listenToQuickSelect(): Saga<void> {
     ["COMPUTE_QUICK_SELECT_FOR_RECT", "COMPUTE_SAM_FOR_SKELETON"],
     function* guard(action: ComputeQuickSelectForRectAction | ComputeSAMForSkeletonAction) {
       try {
-        if (action.type === "COMPUTE_QUICK_SELECT_FOR_RECT") {
-          const volumeTracing: VolumeTracing | null | undefined = yield* select(
-            getActiveSegmentationTracing,
+        const volumeTracing: VolumeTracing | null | undefined = yield* select(
+          getActiveSegmentationTracing,
+        );
+        if (volumeTracing) {
+          // As changes to the volume layer will be applied, the potentially existing mapping should be locked to ensure a consistent state.
+          const { isMappingLockedIfNeeded } = yield* call(
+            ensureMaybeActiveMappingIsLocked,
+            volumeTracing,
           );
-          if (volumeTracing) {
-            // As changes to the volume layer will be applied, the potentially existing mapping should be locked to ensure a consistent state.
-            const { isMappingLockedIfNeeded } = yield* call(
-              ensureMaybeActiveMappingIsLocked,
-              volumeTracing,
-            );
-            if (!isMappingLockedIfNeeded) {
-              return;
-            }
+          if (!isMappingLockedIfNeeded) {
+            return;
           }
+        }
+        if (action.type === "COMPUTE_QUICK_SELECT_FOR_RECT") {
           yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
 
           yield* put(setQuickSelectStateAction("active"));

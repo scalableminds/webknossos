@@ -583,7 +583,7 @@ function getNodeContextMenuOptions({
             ? {
                 key: "annotate-nodes-with-sam",
                 onClick: () => {
-                  computeSAMForSkeletonAction(clickedTree.treeId, viewport);
+                  Store.dispatch(computeSAMForSkeletonAction(clickedTree.treeId, viewport));
                 },
                 label: "Annotate Nodes with SAM",
               }

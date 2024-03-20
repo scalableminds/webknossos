@@ -8,7 +8,11 @@ import Constants, {
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
 } from "oxalis/constants";
-import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
+import type {
+  APIAllowedMode,
+  APIAnnotationType,
+  APIAnnotationVisibility,
+} from "types/api_flow_types";
 import constants from "oxalis/constants";
 import { getSystemColorTheme } from "theme";
 
@@ -252,6 +256,7 @@ const defaultState: OxalisState = {
       isMeasuring: false,
     },
     navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT,
+    skeletonSAMProgressPercentage: null,
   },
   localSegmentationData: {},
 };

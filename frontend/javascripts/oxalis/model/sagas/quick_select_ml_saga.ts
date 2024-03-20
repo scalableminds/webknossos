@@ -30,7 +30,7 @@ export type SAMNodeSelect = {
   nodePositions: Vector3[];
   bounds: BoundingBoxType;
   viewport: OrthoView;
-  predictionFinishedCallback: () => void;
+  predictionFinishedCallback: () => Saga<void>;
 };
 const MAXIMUM_CACHE_SIZE = 5;
 // Sorted from most recently to least recently used.
@@ -311,7 +311,7 @@ export default function* performQuickSelect(
   const isSamNodeSelect = "nodePositions" in action;
   const closeVolumeUndoBatchAfterPrediction = !isSamNodeSelect;
   const predictionFinishedCallback =
-    "predictionFinishedCallback" in action ? action.predictionFinishedCallback : () => {};
+    "predictionFinishedCallback" in action ? action.predictionFinishedCallback : null;
 
   // Effectively, zero the first and second dimension in the mag.
   const depthSummand = V3.scale3(labeledResolution, Dimensions.transDim([0, 0, 1], activeViewport));
@@ -381,8 +381,9 @@ export default function* performQuickSelect(
   );
 
   sendAnalyticsEvent("used_quick_select_with_ai");
-  predictionFinishedCallback();
-  // TODO: Bug: The progress bar is not updated properly!
+  if (predictionFinishedCallback) {
+    yield* predictionFinishedCallback();
+  }
   yield* finalizeQuickSelect(
     quickSelectGeometry,
     volumeTracing,

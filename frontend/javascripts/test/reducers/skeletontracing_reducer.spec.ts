@@ -126,7 +126,7 @@ test("SkeletonTracing should add a new node", (t) => {
   t.is(newSkeletonTracing.activeNodeId, 1);
   t.deepEqual(newSkeletonTracing.trees[1].edges.size(), 0);
   deepEqualObjectContaining(t, newSkeletonTracing.trees[1].nodes.get(1), {
-    position,
+    untransformedPosition: position,
     rotation,
     viewport,
     resolution,
@@ -291,7 +291,7 @@ test("SkeletonTracing should delete nodes and split the tree", (t) => {
   const createDummyNode = (id: number): Node => ({
     bitDepth: 8,
     id,
-    position: [0, 0, 0],
+    untransformedPosition: [0, 0, 0],
     additionalCoordinates: null,
     radius: 10,
     resolution: 10,
@@ -447,7 +447,7 @@ test("SkeletonTracing should delete an edge and split the tree", (t) => {
   const createDummyNode = (id: number): Node => ({
     bitDepth: 8,
     id,
-    position: [0, 0, 0],
+    untransformedPosition: [0, 0, 0],
     additionalCoordinates: null,
     radius: 10,
     resolution: 10,

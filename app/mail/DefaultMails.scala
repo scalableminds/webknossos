@@ -2,7 +2,6 @@ package mail
 
 import models.organization.Organization
 import models.user.User
-import play.api.i18n.{Messages, MessagesProvider}
 import utils.WkConf
 import views._
 
@@ -18,7 +17,6 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   def registerAdminNotifierMail(name: String,
                                 email: String,
-                                brainDBResult: Option[String],
                                 organization: Organization,
                                 autoActivate: Boolean,
                                 recipient: String): Mail =
@@ -26,7 +24,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       from = defaultSender,
       subject =
         s"WEBKNOSSOS | A new user ($name, $email) registered on $uri for ${organization.displayName} (${organization.name})",
-      bodyHtml = html.mail.notifyAdminNewUser(name, brainDBResult, uri, autoActivate).body,
+      bodyHtml = html.mail.notifyAdminNewUser(name, uri, autoActivate).body,
       recipients = List(recipient)
     )
 
@@ -42,12 +40,11 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = recipients
     )
 
-  def newUserMail(name: String, recipient: String, brainDBresult: Option[String], enableAutoVerify: Boolean)(
-      implicit mp: MessagesProvider): Mail =
+  def newUserMail(name: String, recipient: String, enableAutoVerify: Boolean): Mail =
     Mail(
       from = defaultSender,
       subject = "Welcome to WEBKNOSSOS",
-      bodyHtml = html.mail.newUser(name, brainDBresult.map(Messages(_)), enableAutoVerify).body,
+      bodyHtml = html.mail.newUser(name, enableAutoVerify).body,
       recipients = List(recipient)
     )
 
@@ -121,14 +118,6 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
-  def upgradePricingPlanToPowerMail(user: User, userEmail: String): Mail =
-    Mail(
-      from = defaultSender,
-      subject = "WEBKNOSSOS Plan Upgrade Request",
-      bodyHtml = html.mail.upgradePricingPlanToPower(user.name).body,
-      recipients = List(userEmail)
-    )
-
   def upgradePricingPlanUsersMail(user: User, userEmail: String, requestedUsers: Int): Mail =
     Mail(
       from = defaultSender,
@@ -145,10 +134,7 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
-  def upgradePricingPlanRequestMail(user: User,
-                                    userEmail: String,
-                                    organizationDisplayName: String,
-                                    messageBody: String): Mail =
+  def upgradePricingPlanRequestMail(user: User, organizationDisplayName: String, messageBody: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Request to upgrade WEBKNOSSOS plan",
@@ -164,7 +150,7 @@ class DefaultMails @Inject()(conf: WkConf) {
                                jobDescription: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"${jobTitle} is ready",
+      subject = s"$jobTitle is ready",
       bodyHtml = html.mail.jobSuccessfulGeneric(user.name, datasetName, jobLink, jobTitle, jobDescription).body,
       recipients = List(userEmail)
     )
@@ -184,7 +170,7 @@ class DefaultMails @Inject()(conf: WkConf) {
                                     jobTitle: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"Your ${jobTitle} is ready",
+      subject = s"Your $jobTitle is ready",
       bodyHtml = html.mail.jobSuccessfulSegmentation(user.name, datasetName, jobLink, jobTitle).body,
       recipients = List(userEmail)
     )

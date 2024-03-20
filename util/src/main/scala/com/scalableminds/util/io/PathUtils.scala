@@ -196,4 +196,24 @@ trait PathUtils extends LazyLogging {
     FileUtils.moveDirectory(tmpPath.toFile, dst.toFile)
   }
 
+  def recurseSubdirsUntil(path: Path, condition: Path => Boolean, maxDepth: Int = 10): Box[Path] = {
+    def recurse(p: Path, depth: Int): Box[Path] =
+      if (depth > maxDepth) {
+        Failure("Max depth reached")
+      } else if (condition(p)) {
+        Full(p)
+      } else {
+        val subdirs = listDirectories(p, silent = true)
+        subdirs.flatMap { dirs =>
+          dirs.foldLeft(Failure("No matching subdir found"): Box[Path]) { (acc, dir) =>
+            acc match {
+              case Full(_) => acc
+              case _       => recurse(dir, depth + 1)
+            }
+          }
+        }
+      }
+    recurse(path, 0)
+  }
+
 }

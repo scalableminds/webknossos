@@ -28,7 +28,12 @@ import classnames from "classnames";
 import { connect } from "react-redux";
 import React, { useState, useEffect, useRef } from "react";
 import Toast from "libs/toast";
-import type { APIOrganization, APIUser, APIUserCompact, APIUserTheme } from "types/api_flow_types";
+import type {
+  APIOrganizationCompact,
+  APIUser,
+  APIUserCompact,
+  APIUserTheme,
+} from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import {
   getBuildInfo,
@@ -491,7 +496,7 @@ function NotificationIcon({
   );
 }
 
-export const switchTo = async (org: APIOrganization) => {
+export const switchTo = async (org: APIOrganizationCompact) => {
   Toast.info(`Switching to ${org.displayName || org.name}`);
 
   // If the user is currently at the datasets tab, the active folder is encoded
@@ -557,16 +562,8 @@ function LoggedInAvatar({
           ({
             id: idx,
             name: `organization_${idx}`,
-            additionalInformation: "",
             displayName: `Organization ${idx}`,
-            pricingPlan: "",
-            enableAutoVerify: true,
-            newUserMailingList: "",
-            paidUntil: 0,
-            includedUsers: 0,
-            includedStorageBytes: 0,
-            usedStorageBytes: 0,
-          }) as any as APIOrganization,
+          }) as any as APIOrganizationCompact,
       ),
     );
   const orgDisplayName =

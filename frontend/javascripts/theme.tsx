@@ -47,6 +47,7 @@ export function getAntdTheme(userTheme: Theme) {
     colorPrimary: ColorWKBlue,
     colorLink: ColorWKBlue,
     colorLinkHover: ColorWKLinkHover,
+    colorInfo: ColorWKBlue,
     blue: ColorWKBlue,
     borderRadius: 4,
     fontFamily:

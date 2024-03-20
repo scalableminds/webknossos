@@ -83,7 +83,7 @@ export type MutableEdge = {
 export type Edge = Readonly<MutableEdge>;
 export type MutableNode = {
   id: number;
-  position: Vector3;
+  untransformedPosition: Vector3;
   additionalCoordinates: AdditionalCoordinate[] | null;
   rotation: Vector3;
   bitDepth: number;
@@ -318,6 +318,11 @@ export type DatasetConfiguration = {
   // that name (or id) should be rendered without any transforms.
   // This means, that all other layers should be transformed so that
   // they still correlated with each other.
+  // If nativelyRenderedLayerName is null, all layers are rendered
+  // as their transforms property signal it.
+  // Currently, the skeleton layer does not have transforms as a stored
+  // property. So, to render the skeleton layer natively, nativelyRenderedLayerName
+  // can be set to null.
   readonly nativelyRenderedLayerName: string | null;
 };
 
@@ -619,5 +624,7 @@ const store = createStore<OxalisState>(
 export function startSagas(rootSaga: Saga<any[]>) {
   sagaMiddleware.run(rootSaga);
 }
+
+export type StoreType = typeof store;
 
 export default store;

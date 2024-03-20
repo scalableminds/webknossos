@@ -188,8 +188,8 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
         );
       }
       if (node1 != null && node2 != null) {
-        sourcePoints.push(node1.position);
-        targetPoints.push(node2.position);
+        sourcePoints.push(node1.untransformedPosition);
+        targetPoints.push(node2.untransformedPosition);
       }
     }
   }

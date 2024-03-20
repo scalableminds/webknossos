@@ -216,20 +216,28 @@ export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: n
     },
   } as const;
 }
+
+export type UpdateActionNode = Omit<Node, "untransformedPosition"> & {
+  position: Node["untransformedPosition"];
+  treeId: number;
+};
+
 export function createNode(treeId: number, node: Node) {
+  const { untransformedPosition, ...restNode } = node;
   return {
     name: "createNode",
-    value: Object.assign({}, node, {
-      treeId,
-    }),
+    value: { ...restNode, position: untransformedPosition, treeId } as UpdateActionNode,
   } as const;
 }
 export function updateNode(treeId: number, node: Node) {
+  const { untransformedPosition, ...restNode } = node;
   return {
     name: "updateNode",
-    value: Object.assign({}, node, {
+    value: {
+      ...restNode,
+      position: untransformedPosition,
       treeId,
-    }),
+    } as UpdateActionNode,
   } as const;
 }
 export function deleteNode(treeId: number, nodeId: number) {

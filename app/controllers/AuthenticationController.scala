@@ -23,7 +23,7 @@ import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import play.api.data.Form
 import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
-import play.api.i18n.{Messages, MessagesProvider}
+import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
 import security.{
@@ -35,7 +35,6 @@ import security.{
   WkEnv,
   WkSilhouetteEnvironment
 }
-import thirdparty.BrainTracing
 import utils.{ObjectId, WkConf}
 
 import java.net.URLEncoder
@@ -53,7 +52,6 @@ class AuthenticationController @Inject()(
     organizationService: OrganizationService,
     inviteService: InviteService,
     inviteDAO: InviteDAO,
-    brainTracing: BrainTracing,
     mailchimpClient: MailchimpClient,
     organizationDAO: OrganizationDAO,
     analyticsService: AnalyticsService,
@@ -111,8 +109,7 @@ class AuthenticationController @Inject()(
                                 lastName,
                                 autoActivate,
                                 Option(signUpData.password),
-                                inviteBox,
-                                registerBrainDB = true)
+                                inviteBox)
               } yield Ok
             }
           } yield {
@@ -130,8 +127,7 @@ class AuthenticationController @Inject()(
                          autoActivate: Boolean,
                          password: Option[String],
                          inviteBox: Box[Invite] = Empty,
-                         registerBrainDB: Boolean = false,
-                         isEmailVerified: Boolean = false)(implicit mp: MessagesProvider): Fox[User] = {
+                         isEmailVerified: Boolean = false): Fox[User] = {
     val passwordInfo: PasswordInfo = userService.getPasswordInfo(password)
     for {
       user <- userService.insert(organization._id,
@@ -147,20 +143,14 @@ class AuthenticationController @Inject()(
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
         inviteService.deactivateUsedInvite(i)(GlobalAccessContext)))
-      brainDBResult <- Fox.runIf(registerBrainDB)(brainTracing.registerIfNeeded(user, password.getOrElse("")))
       newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)(GlobalAccessContext)
       _ = if (conf.Features.isWkorgInstance) {
         mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
       } else {
-        Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult.flatten, autoActivate))
+        Mailer ! Send(defaultMails.newUserMail(user.name, email, autoActivate))
       }
       _ = Mailer ! Send(
-        defaultMails.registerAdminNotifierMail(user.name,
-                                               email,
-                                               brainDBResult.flatten,
-                                               organization,
-                                               autoActivate,
-                                               newUserEmailRecipient))
+        defaultMails.registerAdminNotifierMail(user.name, email, organization, autoActivate, newUserEmailRecipient))
     } yield {
       user
     }
@@ -359,14 +349,16 @@ class AuthenticationController @Inject()(
       _ <- Fox.runIf(!requestingMultiUser.isSuperUser)(
         organizationService
           .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
-      _ <- userService.joinOrganization(request.identity, organization._id, autoActivate = invite.autoActivate)
+      _ <- userService.joinOrganization(request.identity,
+                                        organization._id,
+                                        autoActivate = invite.autoActivate,
+                                        isAdmin = false)
       _ = analyticsService.track(JoinOrganizationEvent(request.identity, organization))
       userEmail <- userService.emailFor(request.identity)
       newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)
       _ = Mailer ! Send(
         defaultMails.registerAdminNotifierMail(request.identity.name,
                                                userEmail,
-                                               None,
                                                organization,
                                                invite.autoActivate,
                                                newUserEmailRecipient))
@@ -675,8 +667,7 @@ class AuthenticationController @Inject()(
                      lastName,
                      request.body.autoActivate.getOrElse(false),
                      request.body.password,
-                     Empty,
-                     registerBrainDB = true).map(u => Ok(u._id.toString))
+                     Empty).map(u => Ok(u._id.toString))
         } else {
           Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
         }
@@ -734,7 +725,7 @@ object InviteParameters {
 
 trait AuthForms {
 
-  val passwordMinLength = 8
+  private val passwordMinLength = 8
 
   // Sign up
   case class SignUpData(organization: String,

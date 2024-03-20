@@ -1090,7 +1090,7 @@ export type RenderAnimationOptions = {
   meshes: ({
     layerName: string;
     hasFallbackLayer: boolean;
-    adhoc_mag: Vector3;
+    adhocMag: Vector3;
   } & MeshInformation)[];
   boundingBox: BoundingBoxObject;
   isViewMode: boolean;

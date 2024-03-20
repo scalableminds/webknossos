@@ -37,6 +37,7 @@ import {
 import { BoundingBoxType, ControlModeEnum, Vector3 } from "oxalis/constants";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { BoundingBoxSelection, LayerSelection } from "./starting_job_modals";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 
 type Props = {
   isOpen: boolean;
@@ -177,29 +178,29 @@ function CreateAnimationModal(props: Props) {
     )!.boundingBox;
 
     // Submit currently visible pre-computed & ad-hoc meshes
-    const axis = "";
+    const axis = getAdditionalCoordinatesAsString([]);
     const layerNames = Object.keys(state.localSegmentationData);
     const { preferredQualityForMeshAdHocComputation } = state.temporaryConfiguration;
 
     const meshes: RenderAnimationOptions["meshes"] = layerNames.flatMap((layerName) => {
       const meshInfos = state.localSegmentationData[layerName]?.meshes?.[axis] || {};
 
+      const layer = getLayerByName(state.dataset, layerName) as APISegmentationLayer;
+      const hasAFallbackLayer = hasFallbackLayer(layer);
+      const fullLayerName = layer.fallbackLayerInfo?.name || layerName;
+
+      const adhocMagIndex = getResolutionInfo(layer.resolutions).getClosestExistingIndex(
+        preferredQualityForMeshAdHocComputation,
+      );
+      const adhocMag = layer.resolutions[adhocMagIndex];
+
       return Object.values(meshInfos)
         .filter((meshInfo: MeshInformation) => meshInfo.isVisible)
         .flatMap((meshInfo: MeshInformation) => {
-          const layer = getLayerByName(state.dataset, layerName) as APISegmentationLayer;
-          const hasAFallbackLayer = hasFallbackLayer(layer);
-          const fullLayerName = layer.fallbackLayerInfo?.name || layerName;
-
-          const adhoc_mag_index = getResolutionInfo(layer.resolutions).getClosestExistingIndex(
-            preferredQualityForMeshAdHocComputation,
-          );
-          const adhoc_mag = layer.resolutions[adhoc_mag_index];
-
           return {
             layerName: fullLayerName,
             hasFallbackLayer: hasAFallbackLayer,
-            adhoc_mag,
+            adhocMag,
             ...meshInfo,
           };
         });

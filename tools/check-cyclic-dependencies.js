@@ -14,11 +14,6 @@ const KNOWN_CYCLES = [
   ["oxalis/model/accessors/flycam_accessor.ts", "oxalis/model/reducers/flycam_reducer.ts"],
   ["admin/organization/upgrade_plan_modal.tsx", "admin/organization/organization_cards.tsx"],
   ["admin/team/edit_team_modal_view.tsx", "admin/team/team_list_view.tsx"],
-  [
-    "oxalis/geometries/materials/plane_material_factory.ts",
-    "oxalis/shaders/main_data_shaders.glsl.ts",
-    "oxalis/geometries/plane.ts",
-  ],
 ];
 
 madge("frontend/javascripts/main.tsx", {

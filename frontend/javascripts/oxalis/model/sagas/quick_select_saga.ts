@@ -241,7 +241,7 @@ function* performSkeletonQuickSelectSAM(action: ComputeSAMForSkeletonAction) {
   if (shouldPerformInterpolation) {
     yield* put(setBusyBlockingInfoAction(true, "Interpolating between SAM predictions ..."));
     // Wait for the UI to start the busy animation as else the interpolation might start right away blocking the UI without and visual indication.
-    // TODO: Find a better solution that does not depend on pc performance.
+    // This solution depends on the performance of the wk client and thus is not ideal but acceptable for now.
     yield* call(sleep, 500);
     yield* all(interpolationSagas);
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));

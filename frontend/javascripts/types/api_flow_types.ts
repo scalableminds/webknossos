@@ -22,6 +22,7 @@ import type {
   TreeType,
 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { EmptyObject } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -74,6 +75,7 @@ type APIDataLayerBase = {
   readonly dataFormat?: "wkw" | "zarr";
   readonly additionalAxes: Array<AdditionalAxis> | null;
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
+  readonly hasSegmentIndex?: boolean;
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
@@ -88,6 +90,10 @@ export type APISegmentationLayer = APIDataLayerBase & {
   readonly tracingId?: string;
 };
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
+
+// Only used in rare cases to generalize over actual data layers and
+// a skeleton layer.
+export type APISkeletonLayer = { category: "skeleton" };
 
 export type LayerLink = {
   datasetId: APIDatasetId;
@@ -122,6 +128,8 @@ export type APIDataStore = {
   readonly url: string;
   readonly isScratch: boolean;
   readonly allowsUpload: boolean;
+  readonly jobsEnabled: boolean;
+  readonly jobsSupportedByAvailableWorkers: APIJobType[];
 };
 export type APITracingStore = {
   readonly name: string;
@@ -159,6 +167,7 @@ export type APIDatasetDetails = {
   readonly brainRegion?: string;
   readonly acquisition?: string;
 };
+
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
   folderId: string;
@@ -173,11 +182,11 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   displayName: string | null | undefined;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
-  jobsEnabled: boolean;
   sortingKey: number;
   owningOrganization: string;
   publication: null | undefined;
   tags: Array<string>;
+  usedStorageBytes: number | null;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {
@@ -436,7 +445,7 @@ export type AnnotationLayerDescriptor = {
   name?: string | null | undefined;
   tracingId: string;
   typ: "Skeleton" | "Volume";
-  stats: TracingStats | {};
+  stats: TracingStats | EmptyObject;
 };
 export type EditableLayerProperties = Partial<{
   name: string | null | undefined;
@@ -451,7 +460,7 @@ export type APIAnnotationInfo = {
   readonly name: string;
   // Not used by the front-end anymore, but the
   // backend still serves this for backward-compatibility reasons.
-  readonly stats?: SkeletonTracingStats | {};
+  readonly stats?: SkeletonTracingStats | EmptyObject;
   readonly state: string;
   readonly tags: Array<string>;
   readonly typ: APIAnnotationType;
@@ -634,15 +643,15 @@ export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | 
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
 export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
 export enum APIJobType {
-  "CONVERT_TO_WKW" = "convert_to_wkw",
-  "EXPORT_TIFF" = "export_tiff",
-  "RENDER_ANIMATION" = "render_animation",
-  "COMPUTE_MESH_FILE" = "compute_mesh_file",
-  "COMPUTE_SEGMENT_INDEX_FILE" = "compute_segment_index_file",
-  "FIND_LARGEST_SEGMENT_ID" = "find_largest_segment_id",
-  "INFER_NUCLEI" = "infer_nuclei",
-  "INFER_NEURONS" = "infer_neurons",
-  "MATERIALIZE_VOLUME_ANNOTATION" = "materialize_volume_annotation",
+  CONVERT_TO_WKW = "convert_to_wkw",
+  EXPORT_TIFF = "export_tiff",
+  RENDER_ANIMATION = "render_animation",
+  COMPUTE_MESH_FILE = "compute_mesh_file",
+  COMPUTE_SEGMENT_INDEX_FILE = "compute_segment_index_file",
+  FIND_LARGEST_SEGMENT_ID = "find_largest_segment_id",
+  INFER_NUCLEI = "infer_nuclei",
+  INFER_NEURONS = "infer_neurons",
+  MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
 }
 
 export type APIJob = {
@@ -769,6 +778,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   resolutions?: Array<Point3>;
   mappingName?: string | null | undefined;
   mappingIsEditable?: boolean;
+  mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
@@ -920,7 +930,7 @@ export type VoxelyticsTaskInfo = {
 
 export type VoxelyticsWorkflowReport = {
   config: {
-    config: {} | null;
+    config: EmptyObject | null;
     git_hash: string | null;
     global_parameters:
       | {
@@ -929,7 +939,7 @@ export type VoxelyticsWorkflowReport = {
           artifacts_path: string | null;
           skip_checksums: boolean;
         }
-      | {};
+      | EmptyObject;
     paths: Array<string>;
     schema_version: number;
     tasks: Record<string, VoxelyticsTaskConfig>;

@@ -250,7 +250,7 @@ class VoxelyticsController @Inject()(
         _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
         organization <- organizationDAO.findOne(request.identity._organization)
         logEntries = request.body
-        _ <- lokiClient.bulkInsertBatched(logEntries, organization._id)
+        _ <- lokiClient.bulkInsertBatched(logEntries, organization.name)
       } yield Ok
     }
 
@@ -271,6 +271,7 @@ class VoxelyticsController @Inject()(
           logEntries <- lokiClient.queryLogsBatched(
             runName,
             organization._id,
+            organization.name,
             taskName,
             minLevel.flatMap(VoxelyticsLogLevel.fromString).getOrElse(VoxelyticsLogLevel.INFO),
             Instant(startTimestamp),

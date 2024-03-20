@@ -6,7 +6,7 @@ import type {
   Vector3,
   ShowContextMenuFunction,
 } from "oxalis/constants";
-import { OUTER_CSS_BORDER, OrthoViews } from "oxalis/constants";
+import { OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import _ from "lodash";
 import { enforce, values } from "libs/utils";
@@ -16,6 +16,8 @@ import {
   getActiveNode,
   getNodeAndTree,
   getNodeAndTreeOrNull,
+  getNodePosition,
+  untransformNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getInputCatcherRect,
@@ -197,10 +199,10 @@ export function moveNode(
         op(vector[1] * zoomFactor * scaleFactor[1]),
         op(vector[2] * zoomFactor * scaleFactor[2]),
       ];
-      const [x, y, z] = activeNode.position;
+      const [x, y, z] = getNodePosition(activeNode, state);
       Store.dispatch(
         setNodePositionAction(
-          [x + delta[0], y + delta[1], z + delta[2]],
+          untransformNodePosition([x + delta[0], y + delta[1], z + delta[2]], state),
           activeNode.id,
           activeTree.treeId,
         ),
@@ -213,7 +215,11 @@ export function finishNodeMovement(nodeId: number) {
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
     getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, node]) => {
       Store.dispatch(
-        setNodePositionAction(V3.round(node.position, [0, 0, 0]), node.id, activeTree.treeId),
+        setNodePositionAction(
+          V3.round(node.untransformedPosition, [0, 0, 0]),
+          node.id,
+          activeTree.treeId,
+        ),
       );
     }),
   );
@@ -228,15 +234,16 @@ export function setWaypoint(
   const activeNodeMaybe = getActiveNode(skeletonTracing);
   const rotation = getRotationOrtho(activeViewport);
   // set the new trace direction
-  activeNodeMaybe.map((activeNode) =>
-    Store.dispatch(
+  activeNodeMaybe.map((activeNode) => {
+    const activeNodePosition = getNodePosition(activeNode, Store.getState());
+    return Store.dispatch(
       setDirectionAction([
-        position[0] - activeNode.position[0],
-        position[1] - activeNode.position[1],
-        position[2] - activeNode.position[2],
+        position[0] - activeNodePosition[0],
+        position[1] - activeNodePosition[1],
+        position[2] - activeNodePosition[2],
       ]),
-    ),
-  );
+    );
+  });
   const state = Store.getState();
   // Create a new tree automatically if the corresponding setting is true and allowed
   const createNewTree =
@@ -276,7 +283,7 @@ function addNode(
 
   Store.dispatch(
     createNodeAction(
-      position,
+      untransformNodePosition(position, state),
       state.flycam.additionalCoordinates,
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
@@ -293,12 +300,10 @@ function addNode(
   if (center) {
     // we created a new node, so get a new reference from the current store state
     const newState = Store.getState();
-    enforce(getActiveNode)(newState.tracing.skeleton).map(
-      (
-        newActiveNode, // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
-      ) =>
-        // This is important because otherwise the user cannot continue to trace until the animation is over
-        api.tracing.centerPositionAnimated(newActiveNode.position, true),
+    enforce(getActiveNode)(newState.tracing.skeleton).map((newActiveNode) =>
+      // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
+      // This is important because otherwise the user cannot continue to trace until the animation is over
+      api.tracing.centerPositionAnimated(getNodePosition(newActiveNode, state), true),
     );
   }
 
@@ -345,9 +350,7 @@ export function maybeGetNodeIdFromPosition(
   height = Math.round(height);
   const buffer = renderToTexture(plane, pickingScene, camera, true);
   // Beware of the fact that new browsers yield float numbers for the mouse position
-  // Subtract the CSS border as the renderer viewport is smaller than the inputcatcher
-  const borderWidth = OUTER_CSS_BORDER;
-  const [x, y] = [Math.round(position.x) - borderWidth, Math.round(position.y) - borderWidth];
+  const [x, y] = [Math.round(position.x), Math.round(position.y)];
   // compute the index of the pixel under the cursor,
   // while inverting along the y-axis, because WebGL has its origin bottom-left :/
   const index = (x + (height - y) * width) * 4;

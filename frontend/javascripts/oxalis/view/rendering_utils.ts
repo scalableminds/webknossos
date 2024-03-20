@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { saveAs } from "file-saver";
 import Store from "oxalis/store";
-import { OUTER_CSS_BORDER, OrthoView } from "oxalis/constants";
+import { OrthoView } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
   OrthoViewColors,
@@ -121,10 +121,7 @@ export async function downloadScreenshot() {
         ? (ctx: CanvasRenderingContext2D) => {
             const scalebarDistanceToRightBorder = constants.SCALEBAR_OFFSET;
             const scalebarDistanceToTopBorder =
-              ctx.canvas.height +
-              OUTER_CSS_BORDER -
-              constants.SCALEBAR_OFFSET -
-              constants.SCALEBAR_HEIGHT;
+              ctx.canvas.height + constants.SCALEBAR_OFFSET - constants.SCALEBAR_HEIGHT;
             const logoHeight = constants.SCALEBAR_HEIGHT;
             const logoWidth = (logoHeight / logo.height) * logo.width;
             ctx.drawImage(
@@ -155,9 +152,9 @@ export async function downloadScreenshot() {
       buffer,
       width,
       height,
-      true,
       canvas,
       drawImageIntoCanvasCallback,
+      true,
     );
     if (blob != null) {
       const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;

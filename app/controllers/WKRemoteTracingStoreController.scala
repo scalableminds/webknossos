@@ -14,6 +14,7 @@ import models.annotation.{
   AnnotationDAO,
   AnnotationInformationProvider,
   AnnotationLayerDAO,
+  TracingDataSourceTemporaryStore,
   TracingStoreService
 }
 import models.dataset.{DatasetDAO, DatasetService}
@@ -24,21 +25,25 @@ import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteTracingStoreController @Inject()(
-    tracingStoreService: TracingStoreService,
-    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    timeSpanService: TimeSpanService,
-    datasetService: DatasetService,
-    organizationDAO: OrganizationDAO,
-    userDAO: UserDAO,
-    annotationInformationProvider: AnnotationInformationProvider,
-    analyticsService: AnalyticsService,
-    datasetDAO: DatasetDAO,
-    annotationDAO: AnnotationDAO,
-    annotationLayerDAO: AnnotationLayerDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStoreService,
+                                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                                               timeSpanService: TimeSpanService,
+                                               datasetService: DatasetService,
+                                               organizationDAO: OrganizationDAO,
+                                               userDAO: UserDAO,
+                                               annotationInformationProvider: AnnotationInformationProvider,
+                                               analyticsService: AnalyticsService,
+                                               datasetDAO: DatasetDAO,
+                                               annotationDAO: AnnotationDAO,
+                                               annotationLayerDAO: AnnotationLayerDAO,
+                                               wkConf: WkConf,
+                                               tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(
+    implicit ec: ExecutionContext,
+    playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -58,7 +63,9 @@ class WKRemoteTracingStoreController @Inject()(
             annotationLayerDAO.updateStatistics(annotation._id, report.tracingId, statistics)
           }
           userBox <- bearerTokenService.userForTokenOpt(report.userToken).futureBox
-          _ <- Fox.runOptional(userBox)(user => timeSpanService.logUserInteraction(report.timestamps, user, annotation))
+          trackTime = (report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges)
+          _ <- Fox.runOptional(userBox)(user =>
+            Fox.runIf(trackTime)(timeSpanService.logUserInteraction(report.timestamps, user, annotation)))
           _ <- Fox.runOptional(userBox)(user =>
             Fox.runIf(user._id != annotation._user)(annotationDAO.addContributor(annotation._id, user._id)))
           _ = userBox.map { user =>
@@ -82,11 +89,15 @@ class WKRemoteTracingStoreController @Inject()(
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
-        for {
-          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
-          dataset <- datasetDAO.findOne(annotation._dataset)
-          dataSource <- datasetService.dataSourceFor(dataset)
-        } yield Ok(Json.toJson(dataSource))
+        tracingDataSourceTemporaryStore.find(tracingId) match {
+          case Some(dataSource) => Fox.successful(Ok(Json.toJson(dataSource)))
+          case None =>
+            for {
+              annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+              dataset <- datasetDAO.findOne(annotation._dataset)
+              dataSource <- datasetService.dataSourceFor(dataset)
+            } yield Ok(Json.toJson(dataSource))
+        }
       }
     }
 

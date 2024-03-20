@@ -115,7 +115,7 @@ function DatasetView(props: Props) {
     if (features().jobsEnabled) {
       getJobs().then((newJobs) => setJobs(newJobs));
     }
-  }, []);
+  }, [setSearchQuery]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -395,8 +395,8 @@ function GlobalSearchHeader({
             activeFolderId == null
               ? "everywhere"
               : context.searchRecursively
-              ? "folder-with-subfolders"
-              : "folder"
+                ? "folder-with-subfolders"
+                : "folder"
           }
         />
       </div>

@@ -30,7 +30,7 @@ export default function ColorLayerOrderingTable({
     document.body.classList.remove("is-dragging");
     if (oldIndex !== newIndex && onChange && colorLayerNames) {
       const movedElement = colorLayerNames[oldIndex];
-      let newColorLayerNames = colorLayerNames.filter((_, index) => index !== oldIndex);
+      const newColorLayerNames = colorLayerNames.filter((_, index) => index !== oldIndex);
       newColorLayerNames.splice(newIndex, 0, movedElement);
       onChange(newColorLayerNames);
     }

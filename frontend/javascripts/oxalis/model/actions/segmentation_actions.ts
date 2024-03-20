@@ -27,7 +27,7 @@ export const loadAdHocMeshAction = (
     seedAdditionalCoordinates,
     extraInfo,
     layerName,
-  } as const);
+  }) as const;
 
 export const loadPrecomputedMeshAction = (
   segmentId: number,
@@ -43,4 +43,4 @@ export const loadPrecomputedMeshAction = (
     seedAdditionalCoordinates,
     meshFileName,
     layerName,
-  } as const);
+  }) as const;

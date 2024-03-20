@@ -13,7 +13,6 @@ import type {
 } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
-  OUTER_CSS_BORDER,
   OrthoViews,
   OrthoViewValuesWithoutTDView,
 } from "oxalis/constants";
@@ -86,11 +85,8 @@ export function getInputCatcherAspectRatio(state: OxalisState, viewport: Viewpor
 // Returns the ratio between VIEWPORT_WIDTH and the actual extent of the viewport for width and height
 export function getViewportScale(state: OxalisState, viewport: Viewport): [number, number] {
   const { width, height } = getInputCatcherRect(state, viewport);
-  // For the orthogonal views the CSS border width was subtracted before, so we'll need to
-  // add it back again to get an accurate scale
-  const borderWidth = viewport === ArbitraryViewport ? 0 : OUTER_CSS_BORDER;
-  const xScale = (width + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
-  const yScale = (height + 2 * borderWidth) / constants.VIEWPORT_WIDTH;
+  const xScale = width / constants.VIEWPORT_WIDTH;
+  const yScale = height / constants.VIEWPORT_WIDTH;
   return [xScale, yScale];
 }
 

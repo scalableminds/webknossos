@@ -66,7 +66,7 @@ test("UrlManager should parse csv url hash without optional values", (t) => {
     rotation: [40.45, 13.65, 0.8] as Vector3,
     activeNode: 2,
   };
-  // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
+  // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
   const { rotation, ...stateWithoutRotation } = state;
   location.hash = `#${[
     ...state.position,
@@ -75,7 +75,7 @@ test("UrlManager should parse csv url hash without optional values", (t) => {
     state.activeNode,
   ].join(",")}`;
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutRotation as Partial<UrlManagerState>);
-  // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
+  // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
   const { activeNode, ...stateWithoutActiveNode } = state;
   location.hash = `#${[
     ...state.position,
@@ -172,11 +172,11 @@ test("UrlManager should parse incomplete json url hash", (t) => {
     rotation: [40.45, 13.65, 0.8] as Vector3,
     activeNode: 2,
   };
-  // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
+  // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
   const { rotation, ...stateWithoutRotation } = state;
   location.hash = `#${encodeUrlHash(JSON.stringify(stateWithoutRotation))}`;
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutRotation);
-  // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
+  // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
   const { activeNode, ...stateWithoutActiveNode } = state;
   location.hash = `#${encodeUrlHash(JSON.stringify(stateWithoutActiveNode))}`;
   t.deepEqual(UrlManager.parseUrlHash(), stateWithoutActiveNode);

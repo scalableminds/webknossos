@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import Request from "libs/request";
 import * as Utils from "libs/utils";
 import { APIUser } from "types/api_flow_types";
+import { EmptyObject } from "types/globals";
 
 const { Column } = Table;
 
@@ -35,12 +36,12 @@ type State = {
 type GoogleCharts = {
   chartWrapper: {
     getChart: () => {
-      getSelection: Function;
+      getSelection: () => Array<any>;
     };
   }; // https://developers.google.com/chart/interactive/docs/drawing_charts#chartwrapper
 };
 
-class StatisticView extends React.PureComponent<{}, State> {
+class StatisticView extends React.PureComponent<EmptyObject, State> {
   state: State = {
     isAchievementsLoading: true,
     isTimeEntriesLoading: true,

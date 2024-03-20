@@ -16,17 +16,19 @@ import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataR
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.services.{
-  BinaryDataService,
   AdHocMeshRequest,
   AdHocMeshService,
-  AdHocMeshingServiceHolder
+  AdHocMeshServiceHolder,
+  BinaryDataService
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{
+  FallbackDataHelper,
   KeyValueStoreImplicits,
+  RemoteFallbackLayer,
   TracingDataStore,
   VersionedKeyValuePair
 }
-import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebKnossosClient}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
@@ -43,7 +45,7 @@ import scala.jdk.CollectionConverters.CollectionHasAsScala
 
 case class FallbackDataKey(
     remoteFallbackLayer: RemoteFallbackLayer,
-    dataRequests: List[WebKnossosDataRequest],
+    dataRequests: List[WebknossosDataRequest],
     userToken: Option[String]
 )
 
@@ -59,6 +61,12 @@ object MinCutParameters {
   implicit val jsonFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
 }
 
+case class NeighborsParameters(segmentPosition: Vec3Int, mag: Vec3Int, agglomerateId: Long, editableMappingId: String)
+
+object NeighborsParameters {
+  implicit val jsonFormat: OFormat[NeighborsParameters] = Json.format[NeighborsParameters]
+}
+
 case class EdgeWithPositions(
     segmentId1: Long,
     segmentId2: Long,
@@ -70,11 +78,20 @@ object EdgeWithPositions {
   implicit val jsonFormat: OFormat[EdgeWithPositions] = Json.format[EdgeWithPositions]
 }
 
+case class NodeWithPosition(
+    segmentId: Long,
+    position: Vec3Int
+)
+
+object NodeWithPosition {
+  implicit val jsonFormat: OFormat[NodeWithPosition] = Json.format[NodeWithPosition]
+}
+
 class EditableMappingService @Inject()(
     val tracingDataStore: TracingDataStore,
-    val adHocMeshingServiceHolder: AdHocMeshingServiceHolder,
+    val adHocMeshServiceHolder: AdHocMeshServiceHolder,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
-    val remoteWebKnossosClient: TSRemoteWebKnossosClient
+    val remoteWebknossosClient: TSRemoteWebknossosClient
 )(implicit ec: ExecutionContext)
     extends KeyValueStoreImplicits
     with FallbackDataHelper
@@ -87,8 +104,8 @@ class EditableMappingService @Inject()(
   private def generateId: String = UUID.randomUUID.toString
 
   val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
-  adHocMeshingServiceHolder.tracingStoreAdHocMeshingConfig = (binaryDataService, 30 seconds, 1)
-  private val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.tracingStoreAdHocMeshingService
+  adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
+  private val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
 
   private lazy val materializedInfoCache: AlfuCache[(String, Long), EditableMappingInfo] = AlfuCache(maxCapacity = 100)
 
@@ -206,6 +223,16 @@ class EditableMappingService @Inject()(
       (info, _) <- getInfoAndActualVersion(editableMappingId, version, remoteFallbackLayer, userToken)
     } yield info
 
+  def getBaseMappingName(editableMappingId: String): Fox[Option[String]] =
+    for {
+      desiredVersion <- getClosestMaterializableVersionOrZero(editableMappingId, None)
+      infoBox <- getClosestMaterialized(editableMappingId, desiredVersion).futureBox
+    } yield
+      infoBox match {
+        case Full(info) => Some(info.value.baseMappingName)
+        case _          => None
+      }
+
   def getInfoAndActualVersion(editableMappingId: String,
                               requestedVersion: Option[Long] = None,
                               remoteFallbackLayer: RemoteFallbackLayer,
@@ -246,7 +273,7 @@ class EditableMappingService @Inject()(
             remoteDatastoreClient,
             this,
             tracingDataStore,
-            relyOnAgglomerateIds = true
+            relyOnAgglomerateIds = pendingUpdates.length <= 1
           )
 
           updated <- updater.applyUpdatesAndSave(closestMaterializedWithVersion.value, pendingUpdates)
@@ -516,13 +543,12 @@ class EditableMappingService @Inject()(
         dataLayer = segmentationLayer,
         cuboid = request.cuboid(segmentationLayer),
         segmentId = request.segmentId,
-        subsamplingStrides = request.subsamplingStrides,
         scale = request.scale,
         mapping = None,
         mappingType = None,
         findNeighbors = request.findNeighbors
       )
-      result <- adHocMeshingService.requestAdHocMeshViaActor(adHocMeshRequest)
+      result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
 
   def agglomerateGraphKey(mappingId: String, agglomerateId: Long): String =
@@ -635,6 +661,43 @@ class EditableMappingService @Inject()(
           position2
         )
     }
+
+  private def annotateNodesWithPositions(nodes: Seq[Long], agglomerateGraph: AgglomerateGraph): Seq[NodeWithPosition] =
+    nodes.map { segmentId =>
+      val index = agglomerateGraph.segments.indexOf(segmentId)
+      val position = agglomerateGraph.positions(index)
+      NodeWithPosition(
+        segmentId,
+        position
+      )
+    }
+
+  def agglomerateGraphNeighbors(parameters: NeighborsParameters,
+                                remoteFallbackLayer: RemoteFallbackLayer,
+                                userToken: Option[String]): Fox[(Long, Seq[NodeWithPosition])] =
+    for {
+      segmentId <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition, parameters.mag, userToken)
+      // called here to ensure updates are applied
+      mapping <- getInfo(parameters.editableMappingId, version = None, remoteFallbackLayer, userToken)
+      agglomerateGraph <- getAgglomerateGraphForIdWithFallback(mapping,
+                                                               parameters.editableMappingId,
+                                                               None,
+                                                               parameters.agglomerateId,
+                                                               remoteFallbackLayer,
+                                                               userToken)
+      neighborNodes = neighbors(agglomerateGraph, segmentId)
+      nodesWithPositions = annotateNodesWithPositions(neighborNodes, agglomerateGraph)
+    } yield (segmentId, nodesWithPositions)
+
+  private def neighbors(agglomerateGraph: AgglomerateGraph, segmentId: Long): Seq[Long] = {
+    val relevantEdges = agglomerateGraph.edges.filter { edge =>
+      edge.source == segmentId || edge.target == segmentId
+    }
+    val neighborNodes = relevantEdges.map { edge =>
+      if (edge.source == segmentId) edge.target else edge.source
+    }
+    neighborNodes
+  }
 
   def merge(editableMappingIds: List[String],
             remoteFallbackLayer: RemoteFallbackLayer,

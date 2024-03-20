@@ -165,7 +165,6 @@ body {
   line-height: normal;
 }
 
-
 button.narrow {
   // undo/redo + toolbar buttons
   padding: 0 10px;
@@ -324,8 +323,8 @@ button.narrow {
   top: 100px;
   width: 400px;
   height: 250px;
-  background: var(--ant-modal-content-bg);
-  border-radius: 4px;
+  background: var(--ant-color-bg-container);
+  border-radius: var(--ant-border-radius);
   margin: 0 auto;
 }
 .dataset-upload-dropzone {
@@ -641,16 +640,10 @@ button.narrow {
       background-repeat: no-repeat;
       background-size: cover;
     }
-
   }
 }
 
 .ai-job-title {
   text-align: center;
   display: inherit;
-}
-
-.segments-stats-info-alert {
-  margin-bottom: 10px;
-  margin-top: -14px; // wanted margin - modal padding = 10-24
 }

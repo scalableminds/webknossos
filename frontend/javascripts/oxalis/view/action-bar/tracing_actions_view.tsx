@@ -133,7 +133,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
     autoSaveLayouts,
     setAutoSaveLayouts,
     saveCurrentLayout,
-    // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
+    // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
     setCurrentLayout,
   } = props;
 

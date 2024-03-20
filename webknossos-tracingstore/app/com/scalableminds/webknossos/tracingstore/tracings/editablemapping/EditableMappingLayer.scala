@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebKnossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
@@ -41,7 +41,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         requestedVersion = None,
         remoteFallbackLayer = remoteFallbackLayer,
         userToken = layer.token)
-      dataRequest: WebKnossosDataRequest = WebKnossosDataRequest(
+      dataRequest: WebknossosDataRequest = WebknossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
         cubeSize = layer.lengthOfUnderlyingCubes(bucket.mag),

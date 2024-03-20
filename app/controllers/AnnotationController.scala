@@ -75,6 +75,7 @@ class AnnotationController @Inject()(
     analyticsService: AnalyticsService,
     slackNotificationService: SlackNotificationService,
     mailchimpClient: MailchimpClient,
+    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore,
     conf: WkConf,
     rpc: RPC,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -391,7 +392,7 @@ class AnnotationController @Inject()(
     var processedCount = 0
     for {
       tracingStore <- tracingStoreDAO.findFirst(GlobalAccessContext) ?~> "tracingStore.notFound"
-      client = new WKRemoteTracingStoreClient(tracingStore, null, rpc)
+      client = new WKRemoteTracingStoreClient(tracingStore, null, rpc, tracingDataSourceTemporaryStore)
       batchCount = annotationLayerBatch.length
       results <- Fox.serialSequenceBox(annotationLayerBatch) { annotationLayer =>
         processedCount += 1

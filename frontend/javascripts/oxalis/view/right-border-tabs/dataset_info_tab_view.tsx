@@ -244,10 +244,7 @@ export function AnnotationStats({
           {"segmentCount" in stats ? (
             <Tooltip
               placement="left"
-              title={`${stats.segmentCount} ${pluralize(
-                "Segment",
-                stats.segmentCount,
-              )} – Only segments that were manually registered (either brushed or
+              title={`${stats.segmentCount} ${pluralize("Segment", stats.segmentCount)} – Only segments that were manually registered (either brushed or
                                       interacted with) are counted in this statistic. Segmentation layers
                                       created from automated workflows (also known as fallback layers) are not
                                       considered currently.`}
@@ -291,7 +288,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
-    let organization = await getOrganization(this.props.dataset.owningOrganization);
+    const organization = await getOrganization(this.props.dataset.owningOrganization);
     this.setState({
       owningOrganizationDisplayName: organization.displayName,
     });
@@ -500,7 +497,8 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
           </div>
           <MarkdownModal
             label="Annotation Description"
-            source={annotationDescription}
+            placeholder="[No description]"
+            source={this.props.annotation.description}
             isOpen={this.state.isMarkdownModalOpen}
             onOk={() => this.setState({ isMarkdownModalOpen: false })}
             onChange={this.setAnnotationDescription}

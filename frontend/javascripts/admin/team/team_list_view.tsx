@@ -14,11 +14,12 @@ import * as Utils from "libs/utils";
 import messages from "messages";
 import { stringToColor } from "libs/format_utils";
 import EditTeamModalView from "./edit_team_modal_view";
+import { EmptyObject } from "types/globals";
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APITeam[] = [];
 
-type Props = {};
+type Props = EmptyObject;
 type State = {
   isLoading: boolean;
   teams: APITeam[];

@@ -34,7 +34,7 @@ class BinaryDataController @Inject()(
     binaryDataServiceHolder: BinaryDataServiceHolder,
     mappingService: MappingService,
     slackNotificationService: DSSlackNotificationService,
-    adHocMeshingServiceHolder: AdHocMeshingServiceHolder,
+    adHocMeshServiceHolder: AdHocMeshServiceHolder,
     findDataService: FindDataService,
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -43,16 +43,16 @@ class BinaryDataController @Inject()(
   override def allowRemoteOrigin: Boolean = true
 
   val binaryDataService: BinaryDataService = binaryDataServiceHolder.binaryDataService
-  adHocMeshingServiceHolder.dataStoreAdHocMeshingConfig =
+  adHocMeshServiceHolder.dataStoreAdHocMeshConfig =
     (binaryDataService, mappingService, config.Datastore.AdHocMesh.timeout, config.Datastore.AdHocMesh.actorPoolSize)
-  val adHocMeshingService: AdHocMeshService = adHocMeshingServiceHolder.dataStoreAdHocMeshingService
+  val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
-  def requestViaWebKnossos(
+  def requestViaWebknossos(
       token: Option[String],
       organizationName: String,
       datasetName: String,
       dataLayerName: String
-  ): Action[List[WebKnossosDataRequest]] = Action.async(validateJson[List[WebKnossosDataRequest]]) { implicit request =>
+  ): Action[List[WebknossosDataRequest]] = Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                       urlOrHeaderToken(token, request)) {
       logTime(slackNotificationService.noticeSlowRequest) {
@@ -261,7 +261,6 @@ class BinaryDataController @Inject()(
             segmentationLayer,
             request.body.cuboid(dataLayer),
             request.body.segmentId,
-            request.body.subsamplingStrides,
             request.body.scale,
             request.body.mapping,
             request.body.mappingType,
@@ -271,7 +270,7 @@ class BinaryDataController @Inject()(
           // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
-          (vertices, neighbors) <- adHocMeshingService.requestAdHocMeshViaActor(adHocMeshRequest)
+          (vertices, neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
         } yield {
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)

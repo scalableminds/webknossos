@@ -59,7 +59,7 @@ function NmlDropArea({
         <InboxOutlined
           style={{
             fontSize: 180,
-            color: "var(color-primary)",
+            color: "var(--ant-color-primary)",
           }}
         />
       </div>
@@ -67,7 +67,7 @@ function NmlDropArea({
         <h5>Drop NML or zip files here{isClickAllowed ? " or click to select files" : null}...</h5>
       ) : (
         <h5>
-          Drop NML or zip files here to <b>create a new tracing</b>.
+          Drop NML or zip files here to <b>create a new annotation</b>.
         </h5>
       )}
     </div>

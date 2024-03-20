@@ -35,6 +35,7 @@ import {
   getTree,
   getTreesWithType,
   getNodeAndTree,
+  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
 import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
@@ -575,6 +576,10 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
       switch (action.type) {
         case "CREATE_NODE": {
+          if (isSkeletonLayerTransformed(state)) {
+            // Don't create nodes if the skeleton layer is rendered with transforms.
+            return state;
+          }
           const {
             position,
             rotation,
@@ -704,6 +709,10 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "SET_NODE_POSITION": {
+          if (isSkeletonLayerTransformed(state)) {
+            // Don't move node if the skeleton layer is rendered with transforms.
+            return state;
+          }
           const { position, nodeId, treeId } = action;
           return getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT)
             .map(([tree, node]) => {
@@ -711,7 +720,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               const newDiffableMap = diffableMap.set(
                 node.id,
                 update(node, {
-                  position: {
+                  untransformedPosition: {
                     // Don't round here, since this would make the continuous
                     // movement of a node weird.
                     $set: position,

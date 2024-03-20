@@ -372,7 +372,7 @@ export function getVisibleSegments(state: OxalisState): {
 // a callback function that updates the selectedIds in store if segments are stored
 // there that are not visible in the segments view tab.
 // The returned segment and group ids are all visible in the segments view tab.
-export function getSelectedIds(state: OxalisState): [
+function _getSelectedIds(state: OxalisState): [
   {
     segments: number[];
     group: number | null;
@@ -420,6 +420,8 @@ export function getSelectedIds(state: OxalisState): [
   }
   return [selectedIds, maybeSetSelectedSegmentsOrGroupsAction];
 }
+
+export const getSelectedIds = reuseInstanceOnEquality(_getSelectedIds);
 
 export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | undefined {
   const layer = getVisibleSegmentationLayer(state);
@@ -525,10 +527,10 @@ export function getMappingInfoForVolumeTracing(
   return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
 }
 
-export function hasEditableMapping(
+function getVolumeTracingForLayerName(
   state: OxalisState,
   layerName?: string | null | undefined,
-): boolean {
+): VolumeTracing | null | undefined {
   if (layerName != null) {
     // This needs to be checked before calling getRequestedOrDefaultSegmentationTracingLayer,
     // as the function will throw an error if layerName is given but a corresponding tracing layer
@@ -536,14 +538,34 @@ export function hasEditableMapping(
     const layer = getSegmentationLayerByName(state.dataset, layerName);
     const tracing = getTracingForSegmentationLayer(state, layer);
 
-    if (tracing == null) return false;
+    if (tracing == null) return null;
   }
 
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 
+  return volumeTracing;
+}
+
+export function hasEditableMapping(
+  state: OxalisState,
+  layerName?: string | null | undefined,
+): boolean {
+  const volumeTracing = getVolumeTracingForLayerName(state, layerName);
+
   if (volumeTracing == null) return false;
 
   return !!volumeTracing.mappingIsEditable;
+}
+
+export function isMappingLocked(
+  state: OxalisState,
+  layerName?: string | null | undefined,
+): boolean {
+  const volumeTracing = getVolumeTracingForLayerName(state, layerName);
+
+  if (volumeTracing == null) return false;
+
+  return !!volumeTracing.mappingIsLocked;
 }
 
 export function isMappingActivationAllowed(
@@ -552,8 +574,9 @@ export function isMappingActivationAllowed(
   layerName?: string | null | undefined,
 ): boolean {
   const isEditableMappingActive = hasEditableMapping(state, layerName);
+  const isActiveMappingLocked = isMappingLocked(state, layerName);
 
-  if (!isEditableMappingActive) return true;
+  if (!isEditableMappingActive && !isActiveMappingLocked) return true;
 
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 
@@ -690,7 +713,7 @@ export function hasConnectomeFile(state: OxalisState) {
   return CONNECTOME_STATES.YES;
 }
 
-export type AgglomerateState = typeof AGGLOMERATE_STATES[keyof typeof AGGLOMERATE_STATES];
+export type AgglomerateState = (typeof AGGLOMERATE_STATES)[keyof typeof AGGLOMERATE_STATES];
 
 export function hasAgglomerateMapping(state: OxalisState) {
   const segmentation = getVisibleSegmentationLayer(state);

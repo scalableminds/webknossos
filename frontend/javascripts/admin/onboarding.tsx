@@ -286,7 +286,7 @@ export function InviteUsersModal({
             minRows: 6,
           }}
           onChange={(evt) => {
-              setInviteesString(evt.target.value)
+            setInviteesString(evt.target.value);
           }}
           placeholder={"jane@example.com\njoe@example.com"}
           defaultValue={inviteesString}

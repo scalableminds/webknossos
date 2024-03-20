@@ -84,7 +84,7 @@ export function CreateAnimationModalWrapper(props: Props) {
   // early stop if no color layer exists
   const colorLayers = getColorLayers(dataset);
   if (colorLayers.length === 0) {
-    console.warn("WK can not create animations for datasets without color layers.");
+    Toast.warning("WK can not create animations for datasets without color layers.");
     return null;
   }
 

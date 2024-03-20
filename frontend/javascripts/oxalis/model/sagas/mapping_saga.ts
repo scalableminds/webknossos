@@ -1,20 +1,30 @@
 import _ from "lodash";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { all, call, takeEvery, takeLatest, take, put, fork, actionChannel } from "typed-redux-saga";
+import {
+  all,
+  call,
+  takeEvery,
+  takeLatest,
+  take,
+  throttle,
+  put,
+  actionChannel,
+} from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { message } from "antd";
 import type {
   OptionalMappingProperties,
   SetMappingAction,
-  SetMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
-import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import { setMappingAction } from "oxalis/model/actions/settings_actions";
 import {
   fetchMapping,
   getMappingsForDatasetLayer,
   getAgglomeratesForDatasetLayer,
+  getAgglomeratesForSegmentsFromDatastore,
+  getAgglomeratesForSegmentsFromTracingstore,
 } from "admin/admin_rest_api";
-import type { APIMapping } from "types/api_flow_types";
+import type { APIDataLayer, APIMapping } from "types/api_flow_types";
 import {
   EnsureLayerMappingsAreLoadedAction,
   setLayerMappingsAction,
@@ -24,35 +34,30 @@ import {
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import type { ActiveMappingInfo, Mapping } from "oxalis/store";
+import type { Mapping, MappingType } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
-import { api } from "oxalis/singletons";
-import { MappingStatusEnum } from "oxalis/constants";
-import { isMappingActivationAllowed } from "oxalis/model/accessors/volumetracing_accessor";
+import { Model } from "oxalis/singletons";
+import {
+  isMappingActivationAllowed,
+  hasEditableMapping,
+  getEditableMappingForVolumeTracingId,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
 import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
+import { FlycamActions } from "../actions/flycam_actions";
 type APIMappings = Record<string, APIMapping>;
 
-const isAgglomerate = (mapping: ActiveMappingInfo) => {
-  if (!mapping) {
-    return false;
-  }
-
-  return mapping.mappingType === "HDF5";
-};
-
 export default function* watchActivatedMappings(): Saga<void> {
-  const oldActiveMappingByLayer = yield* select(
-    (state) => state.temporaryConfiguration.activeMappingByLayer,
-  );
+  const previousMappingProperties = {
+    mapping: {},
+    mappingKeys: [],
+  };
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
-  const mappingChangeActionChannel = yield* actionChannel(["SET_MAPPING_ENABLED"]);
   yield* take("WK_READY");
-  yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
-  yield* takeEvery(mappingChangeActionChannel, maybeReloadData, oldActiveMappingByLayer);
+  yield* takeLatest(setMappingActionChannel, handleSetMapping, previousMappingProperties);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
     function* handler(action: EnsureLayerMappingsAreLoadedAction) {
@@ -63,35 +68,23 @@ export default function* watchActivatedMappings(): Saga<void> {
       }
     },
   );
-}
-
-function* maybeReloadData(
-  oldActiveMappingByLayer: Record<string, ActiveMappingInfo>,
-  action: SetMappingAction | SetMappingEnabledAction,
-): Saga<void> {
-  const { layerName } = action;
-  const oldMapping = getMappingInfo(oldActiveMappingByLayer, layerName);
-  const activeMappingByLayer = yield* select(
-    (state) => state.temporaryConfiguration.activeMappingByLayer,
-  );
-  const mapping = getMappingInfo(activeMappingByLayer, layerName);
-  const isAgglomerateMappingInvolved = isAgglomerate(oldMapping) || isAgglomerate(mapping);
-  const hasChanged = oldMapping !== mapping;
-  const shouldReload = isAgglomerateMappingInvolved && hasChanged;
-
-  if (shouldReload) {
-    yield* call([api.data, api.data.reloadBuckets], layerName);
-  }
-
-  // If an agglomerate mapping is being activated, the data reload is the last step
-  // of the mapping activation. For JSON mappings, the last step of the mapping activation
-  // is the texture creation in mappings.js
-  if (isAgglomerate(mapping) && mapping.mappingStatus === MappingStatusEnum.ACTIVATING) {
-    yield* put(setMappingEnabledAction(layerName, true));
-    message.destroy(MAPPING_MESSAGE_KEY);
-  }
-
-  oldActiveMappingByLayer = activeMappingByLayer;
+  yield throttle(500, FlycamActions, function* handler() {
+    const layerName = yield* select((state) => getVisibleSegmentationLayer(state)?.name);
+    const dataset = yield* select((state) => state.dataset);
+    const layerInfo = getLayerByName(dataset, layerName);
+    const mappingInfo = yield* select((state) =>
+      getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+    );
+    const { mappingName, mappingType } = mappingInfo;
+    yield* call(
+      handleSetHdf5Mapping,
+      layerName,
+      layerInfo,
+      mappingName,
+      mappingType,
+      previousMappingProperties,
+    );
+  });
 }
 
 function* loadLayerMappings(layerName: string, updateInStore: boolean): Saga<[string[], string[]]> {
@@ -125,10 +118,8 @@ function* loadLayerMappings(layerName: string, updateInStore: boolean): Saga<[st
   return [jsonMappings, serverHdf5Mappings];
 }
 
-function* handleSetMapping(
-  oldActiveMappingByLayer: Record<string, ActiveMappingInfo>,
-  action: SetMappingAction,
-): Saga<void> {
+function* handleSetMapping(previousMappingProperties, action: SetMappingAction): Saga<void> {
+  console.log("MappingActivation", performance.now());
   const {
     layerName,
     mappingName,
@@ -157,6 +148,8 @@ function* handleSetMapping(
     }
     return;
   }
+  console.time("MappingActivation");
+  console.time("MappingSaga");
 
   if (showLoadingIndicator) {
     message.loading({
@@ -203,15 +196,107 @@ function* handleSetMapping(
     return;
   }
 
-  // Call maybeReloadData only after it was checked whether the activated mapping is valid, otherwise there would
-  // be a race between the maybeReloadData and handleSetMapping sagas
-  yield* fork(maybeReloadData, oldActiveMappingByLayer, action);
-
-  if (mappingType !== "JSON") {
-    // Only JSON mappings need to be fetched, HDF5 mappings are applied by the server
-    return;
+  if (mappingType === "JSON") {
+    yield* call(handleSetJsonMapping, layerName, layerInfo, mappingName, mappingType);
+  } else if (mappingType === "HDF5") {
+    yield* call(
+      handleSetHdf5Mapping,
+      layerName,
+      layerInfo,
+      mappingName,
+      mappingType,
+      previousMappingProperties,
+    );
   }
+}
 
+function* handleSetHdf5Mapping(
+  layerName: string,
+  layerInfo: APIDataLayer,
+  mappingName: string,
+  mappingType: MappingType,
+  previousMappingProperties,
+): Saga<void> {
+  yield* call(
+    updateHdf5Mapping,
+    layerName,
+    layerInfo,
+    mappingName,
+    mappingType,
+    previousMappingProperties,
+  );
+}
+
+function* updateHdf5Mapping(
+  layerName: string,
+  layerInfo: APIDataLayer,
+  mappingName: string,
+  mappingType: MappingType,
+  previousMappingProperties: { mapping: Record<number, number>; mappingKeys: Array<number> },
+): Saga<void> {
+  const dataset = yield* select((state) => state.dataset);
+  const annotation = yield* select((state) => state.tracing);
+  // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+  const mappingLayerName =
+    "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
+      ? layerInfo.fallbackLayer
+      : layerName;
+
+  const isEditableMappingActive = yield* select((state) => hasEditableMapping(state, layerName));
+  const editableMapping = yield* select((state) =>
+    getEditableMappingForVolumeTracingId(state, layerName),
+  );
+
+  const cube = Model.getCubeByLayerName(layerName);
+  const valueSet = cube.getValueSetForAllBuckets();
+
+  const { mapping: previousMapping, mappingKeys: previousMappingKeys } = previousMappingProperties;
+  const newValues = new Set([...valueSet].filter((i) => !previousMappingKeys.includes(i)));
+
+  if (newValues.size === 0) return;
+
+  const remainingValues = new Set(previousMappingKeys.filter((i) => valueSet.has(i)));
+  const newUniqueSegmentIds = Array.from(newValues).sort((a, b) => a - b);
+
+  const newMapping =
+    isEditableMappingActive && editableMapping != null
+      ? yield* call(
+          getAgglomeratesForSegmentsFromTracingstore,
+          annotation.tracingStore.url,
+          editableMapping.tracingId,
+          newUniqueSegmentIds,
+        )
+      : yield* call(
+          getAgglomeratesForSegmentsFromDatastore,
+          dataset.dataStore.url,
+          dataset,
+          mappingLayerName,
+          mappingName,
+          newUniqueSegmentIds,
+        );
+
+  const remainingMapping = Object.fromEntries(
+    Object.entries(previousMapping).filter(([key, _]) => remainingValues.has(parseInt(key))),
+  );
+  const mapping = { ...remainingMapping, ...newMapping };
+
+  const mappingProperties = {
+    mapping,
+    mappingKeys: Array.from(valueSet).sort((a, b) => a - b),
+  };
+
+  previousMappingProperties = mappingProperties;
+
+  console.timeEnd("MappingSaga");
+  yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
+}
+
+function* handleSetJsonMapping(
+  layerName: string,
+  layerInfo: APIDataLayer,
+  mappingName: string,
+  mappingType: MappingType,
+): Saga<void> {
   const fetchedMappings: APIMappings = {};
   try {
     yield* call(fetchMappings, layerName, mappingName, fetchedMappings);
@@ -253,7 +338,7 @@ function* handleSetMapping(
       { sticky: true },
     );
   }
-
+  console.timeEnd("MappingSaga");
   yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
 }
 

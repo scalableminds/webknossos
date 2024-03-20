@@ -5,7 +5,7 @@ import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
-import { areBoundingBoxesOverlappingOrTouching, castForArrayType } from "libs/utils";
+import { areBoundingBoxesOverlappingOrTouching, castForArrayType, union } from "libs/utils";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
@@ -371,6 +371,17 @@ class DataCube {
 
     this.buckets = notCollectedBuckets;
     this.bucketIterator = notCollectedBuckets.length;
+  }
+
+  getValueSetForAllBuckets(): Set<number> | Set<bigint> {
+    console.time("getValueSets");
+    const valueSets = this.buckets
+      .filter((bucket) => bucket.state === "LOADED")
+      .map((bucket) => bucket.getValueSet());
+    // @ts-ignore The buckets of a single layer all have the same element class, so they are all number or all bigint
+    const valueSet = union(valueSets);
+    console.timeEnd("getValueSets");
+    return valueSet;
   }
 
   collectBucket(bucket: DataBucket): void {

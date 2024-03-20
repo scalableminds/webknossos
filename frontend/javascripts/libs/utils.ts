@@ -120,6 +120,18 @@ export function unique<T>(array: Array<T>): Array<T> {
   return [...new Set(array)];
 }
 
+export function union<T>(iterables: Array<Iterable<T>>): Set<T> {
+  const set: Set<T> = new Set();
+
+  for (const iterable of iterables) {
+    for (const item of iterable) {
+      set.add(item);
+    }
+  }
+
+  return set;
+}
+
 export function enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => B {
   return (nullableA: A | null | undefined) => {
     if (nullableA == null) {

@@ -270,14 +270,13 @@ export const getSegmentationId: ShaderModule = {
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    vec4[2] getSegmentationId_<%= segmentationName %>(vec3 worldPositionUVW) {
-      vec4[2] volume_color;
+    void getSegmentationId_<%= segmentationName %>(vec3 worldPositionUVW, out vec4[2] segmentation_id, out vec4[2] mapped_id) {
       vec3 transformedCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
       if (isOutsideOfBoundingBox(transformedCoordUVW)) {
-        return volume_color;
+        return;
       }
 
-      volume_color =
+      segmentation_id =
         getSegmentIdOrFallback(
           <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
           <%= segmentationName %>_data_texture_width,
@@ -292,10 +291,13 @@ export const getSegmentationId: ShaderModule = {
       // a cell id with the hovered cell passed via uniforms, for example).
 
       <% if (textureLayerInfos[segmentationName].packingDegree === 4) { %>
-        volume_color[1] = vec4(volume_color[1].r, 0.0, 0.0, 0.0);
+        segmentation_id[1] = vec4(segmentation_id[1].r, 0.0, 0.0, 0.0);
       <% } else if (textureLayerInfos[segmentationName].packingDegree === 2) { %>
-        volume_color[1] = vec4(volume_color[1].r, volume_color[1].g, 0.0, 0.0);
+        segmentation_id[1] = vec4(segmentation_id[1].r, segmentation_id[1].g, 0.0, 0.0);
       <% } %>
+
+      mapped_id[0] = segmentation_id[0];
+      mapped_id[1] = segmentation_id[1];
 
       if (isMappingEnabled) {
         // Note that currently only the lower 32 bits of the segmentation
@@ -304,22 +306,24 @@ export const getSegmentationId: ShaderModule = {
         float index = binarySearchIndex(
           segmentation_mapping_lookup_texture,
           mappingSize,
-          volume_color[1]
+          segmentation_id[1]
         );
         if (index != -1.0) {
-          volume_color[1] = getRgbaAtIndex(
+          mapped_id[1] = getRgbaAtIndex(
             segmentation_mapping_texture,
             <%= mappingTextureWidth %>,
             index
           );
         } else if (hideUnmappedIds) {
-          volume_color[1] = vec4(0.0);
+          mapped_id[1] = vec4(0.0);
         }
       }
 
-      volume_color[0] *= 255.0;
-      volume_color[1] *= 255.0;
-      return volume_color;
+      segmentation_id[0] *= 255.0;
+      segmentation_id[1] *= 255.0;
+      mapped_id[0] *= 255.0;
+      mapped_id[1] *= 255.0;
+      return;
     }
 <% }) %>
   `,

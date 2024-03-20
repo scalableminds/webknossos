@@ -9,8 +9,10 @@ import { createTasks } from "admin/admin_rest_api";
 import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
 import Messages from "messages";
 import Toast from "libs/toast";
+
 const FormItem = Form.Item;
 const { TextArea } = Input;
+
 export const NUM_TASKS_PER_BATCH = 100;
 export type NewTask = {
   readonly boundingBox: BoundingBoxObject | null | undefined;
@@ -34,28 +36,31 @@ export type NewTask = {
     | null
     | undefined;
 };
+
 export type TaskCreationResponse = {
   status: number;
   success?: APITask;
   error?: string;
 };
+
 export type TaskCreationResponseContainer = {
-  tasks: Array<TaskCreationResponse>;
-  warnings: Array<string>;
+  tasks: TaskCreationResponse[];
+  warnings: string[];
 };
-export const normFile = (
-  e:
-    | Array<File>
+
+export function normalizeFileEvent(
+  event:
+    | File[]
     | {
-        fileList: Array<File>;
+        fileList: File[];
       },
-) => {
-  if (Array.isArray(e)) {
-    return e;
+) {
+  if (Array.isArray(event)) {
+    return event;
   }
 
-  return e?.fileList;
-};
+  return event?.fileList;
+}
 
 function TaskCreateBulkView() {
   const [isUploading, setIsUploading] = useState<boolean>(false);
@@ -165,7 +170,7 @@ function TaskCreateBulkView() {
     };
   }
 
-  async function readCSVFile(csvFile: File): Promise<Array<NewTask>> {
+  async function readCSVFile(csvFile: File): Promise<NewTask[]> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
 
@@ -202,11 +207,11 @@ function TaskCreateBulkView() {
     }
   };
 
-  function getInvalidTaskIndices(tasks: Array<NewTask>): Array<number> {
+  function getInvalidTaskIndices(tasks: NewTask[]): number[] {
     // returns the index / line number of an invalidly parsed task
     // returned indicies start at 1 for easier matching by non-CS people
     const isValidTasks = tasks.map(isValidTask);
-    const invalidTasks: Array<number> = [];
+    const invalidTasks: number[] = [];
     return isValidTasks.reduce((result, isValid: boolean, i: number) => {
       if (!isValid) {
         result.push(i + 1);
@@ -216,7 +221,7 @@ function TaskCreateBulkView() {
     }, invalidTasks);
   }
 
-  async function batchUpload(tasks: Array<NewTask>) {
+  async function batchUpload(tasks: NewTask[]) {
     // upload the tasks in batches to save the server from dying
     setIsUploading(true);
     setTasksCount(tasks.length);
@@ -313,7 +318,7 @@ function TaskCreateBulkView() {
               hasFeedback
               name="csvFile"
               valuePropName="fileList"
-              getValueFromEvent={normFile}
+              getValueFromEvent={normalizeFileEvent}
             >
               <Upload.Dragger
                 accept=".csv,.txt"

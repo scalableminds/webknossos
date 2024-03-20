@@ -241,7 +241,7 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
 });
 test("getReadableAnnotations()", async (t) => {
   const annotations = await api.getReadableAnnotations(false, 0);
-  t.snapshot(replaceVolatileValues(annotations), {
+  t.snapshot(annotations, {
     id: "annotations-listReadable",
   });
 });

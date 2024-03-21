@@ -232,6 +232,14 @@ void main() {
           // Workaround for 16-bit color layers
           color_value = vec3(color_value.g * 256.0 + color_value.r);
         <% } %>
+
+        vec3 is_color_out_of_bounds = vec3(
+          color_value.r < <%= name %>_min || color_value.r > <%= name %>_max ? 1.0 : 0.0,
+          color_value.g < <%= name %>_min || color_value.g > <%= name %>_max ? 1.0 : 0.0,
+          color_value.b < <%= name %>_min || color_value.b > <%= name %>_max ? 1.0 : 0.0
+        );
+        bool is_color_out_of_bounds_any = bool(is_color_out_of_bounds.x + is_color_out_of_bounds.y + is_color_out_of_bounds.z > 0.0);
+
         // Keep the color in bounds of min and max
         color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
         // Scale the color value according to the histogram settings.
@@ -253,7 +261,7 @@ void main() {
         // Calculating the cover color for the current layer in case blendMode == 1.0.
         vec4 additive_color = blendLayersAdditive(data_color, layer_color);
         // Calculating the cover color for the current layer in case blendMode == 0.0.
-        vec4 cover_color = blendLayersCover(data_color, layer_color, used_fallback);
+        vec4 cover_color = blendLayersCover(data_color, layer_color, used_fallback, is_color_out_of_bounds_any);
         // Choose color depending on blendMode.
         data_color = mix(cover_color, additive_color, float(blendMode == 1.0));
       }

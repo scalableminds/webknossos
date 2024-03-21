@@ -14,11 +14,12 @@ export const getBlendLayersAdditive: ShaderModule = {
 export const getBlendLayersCover: ShaderModule = {
   code: `
     // Applying alpha blending to merge the layers where the top most layer has priority.
-    // See https://en.wikipedia.org/wiki/Alpha_compositing#Alpha_blending for details.
+    // See https://en.wikipedia.org/wiki/Alpha_compositing#Alpha_blending for details. 
     vec4 blendLayersCover(
       vec4 current_color,
       vec4 layer_color,
-      bool used_fallback_color
+      bool used_fallback_color,
+      bool is_color_out_of_bounds_any
     ) {
       float mixed_alpha_factor = (1.0 - current_color.a) * layer_color.a;
       float mixed_alpha = mixed_alpha_factor + current_color.a;
@@ -27,6 +28,8 @@ export const getBlendLayersCover: ShaderModule = {
       float is_mixed_alpha_zero = float(mixed_alpha == 0.0);
       vec4 cover_color = vec4(cover_color_rgb / (mixed_alpha + is_mixed_alpha_zero), mixed_alpha);
       cover_color = mix(cover_color, vec4(0.0), is_mixed_alpha_zero);
+      // TODO: here also mix with whether outside of bounds
+      cover_color = mix(cover_color, vec4(0.0), float(is_color_out_of_bounds_any));
       // Do not overwrite current_color if the fallback color has been used.
       float is_current_color_valid = float(!used_fallback_color);
       cover_color = mix(current_color, cover_color, is_current_color_valid);

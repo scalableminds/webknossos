@@ -63,18 +63,6 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
                 paddingRight: 24,
               }}
             >
-              8
-            </td>
-            <td>
-              Replace the color of the current active tree and its mapped segments with a new one.
-            </td>
-          </tr>
-          <tr>
-            <td
-              style={{
-                paddingRight: 24,
-              }}
-            >
               9
             </td>
             <td>Enable / disable displaying the segmentation.</td>

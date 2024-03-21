@@ -120,8 +120,7 @@ const initialState = update(defaultState, {
 
 const dummyActiveMapping: ActiveMappingInfo = {
   mappingName: "dummy-mapping-name",
-  mapping: {},
-  mappingKeys: [],
+  mapping: new Map(),
   mappingColors: [],
   hideUnmappedIds: false,
   mappingStatus: "ENABLED",

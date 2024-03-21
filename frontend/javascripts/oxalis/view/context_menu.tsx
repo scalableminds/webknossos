@@ -62,6 +62,8 @@ import {
 import {
   getNodeAndTree,
   getNodeAndTreeOrNull,
+  getNodePosition,
+  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getSegmentIdForPosition,
@@ -493,7 +495,10 @@ function getNodeContextMenuOptions({
                 disabled: !isProofreadingActive,
                 onClick: () =>
                   Store.dispatch(
-                    cutAgglomerateFromNeighborsAction(clickedNode.position, clickedTree),
+                    cutAgglomerateFromNeighborsAction(
+                      clickedNode.untransformedPosition,
+                      clickedTree,
+                    ),
                   ),
                 label: (
                   <Tooltip
@@ -856,6 +861,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             key: "create-node",
             onClick: () => setWaypoint(globalPosition, viewport, false),
             label: "Create Node here",
+            disabled: isSkeletonLayerTransformed(state),
           },
           {
             key: "create-node-with-tree",
@@ -1303,24 +1309,34 @@ function ContextMenuInner(propsWithInputRef: Props) {
   nodeContextMenuTree = nodeContextMenuTree as Tree | null;
   nodeContextMenuNode = nodeContextMenuNode as MutableNode | null;
 
+  const clickedNodesPosition =
+    nodeContextMenuNode != null ? getNodePosition(nodeContextMenuNode, Store.getState()) : null;
+
   const positionToMeasureDistanceTo =
-    nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
+    nodeContextMenuNode != null ? clickedNodesPosition : globalPosition;
   const activeNode =
     activeNodeId != null && skeletonTracing != null
       ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
       : null;
+
+  const getActiveNodePosition = () => {
+    if (activeNode == null) {
+      throw new Error("getActiveNodePosition was called even though activeNode is null.");
+    }
+    return getNodePosition(activeNode, Store.getState());
+  };
   const distanceToSelection =
     activeNode != null && positionToMeasureDistanceTo != null
       ? [
           formatNumberToLength(
-            V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
+            V3.scaledDist(getActiveNodePosition(), positionToMeasureDistanceTo, datasetScale),
           ),
-          formatLengthAsVx(V3.length(V3.sub(activeNode.position, positionToMeasureDistanceTo))),
+          formatLengthAsVx(V3.length(V3.sub(getActiveNodePosition(), positionToMeasureDistanceTo))),
         ]
       : null;
   const nodePositionAsString =
-    nodeContextMenuNode != null
-      ? positionToString(nodeContextMenuNode.position, nodeContextMenuNode.additionalCoordinates)
+    nodeContextMenuNode != null && clickedNodesPosition != null
+      ? positionToString(clickedNodesPosition, nodeContextMenuNode.additionalCoordinates)
       : "";
   const infoRows = [];
 

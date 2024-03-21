@@ -83,7 +83,7 @@ export type MutableEdge = {
 export type Edge = Readonly<MutableEdge>;
 export type MutableNode = {
   id: number;
-  position: Vector3;
+  untransformedPosition: Vector3;
   additionalCoordinates: AdditionalCoordinate[] | null;
   rotation: Vector3;
   bitDepth: number;
@@ -318,6 +318,11 @@ export type DatasetConfiguration = {
   // that name (or id) should be rendered without any transforms.
   // This means, that all other layers should be transformed so that
   // they still correlated with each other.
+  // If nativelyRenderedLayerName is null, all layers are rendered
+  // as their transforms property signal it.
+  // Currently, the skeleton layer does not have transforms as a stored
+  // property. So, to render the skeleton layer natively, nativelyRenderedLayerName
+  // can be set to null.
   readonly nativelyRenderedLayerName: string | null;
 };
 
@@ -384,12 +389,11 @@ export type RecommendedConfiguration = Partial<
 // A histogram value of undefined indicates that the histogram hasn't been fetched yet
 // whereas a value of null indicates that the histogram couldn't be fetched
 export type HistogramDataForAllLayers = Record<string, APIHistogramData | null>;
-export type Mapping = Record<number, number>;
+export type Mapping = Map<number, number>;
 export type MappingType = "JSON" | "HDF5";
 export type ActiveMappingInfo = {
   readonly mappingName: string | null | undefined;
   readonly mapping: Mapping | null | undefined;
-  readonly mappingKeys: number[] | null | undefined;
   readonly mappingColors: number[] | null | undefined;
   readonly hideUnmappedIds: boolean;
   readonly mappingStatus: MappingStatus;
@@ -619,5 +623,7 @@ const store = createStore<OxalisState>(
 export function startSagas(rootSaga: Saga<any[]>) {
   sagaMiddleware.run(rootSaga);
 }
+
+export type StoreType = typeof store;
 
 export default store;

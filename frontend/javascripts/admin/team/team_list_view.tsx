@@ -173,101 +173,94 @@ function TeamListView() {
   };
   return (
     <div className="container">
-      <div
-        style={{
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ marginTag: number; }' is not assignable to... Remove this comment to see the full error message
-          marginTag: 20,
-        }}
-      >
-        <div className="pull-right">
-          <Button
-            icon={<PlusOutlined className="icon-margin-right" />}
-            style={marginRight}
-            type="primary"
-            onClick={() => setIsTeamCreationModalVisible(true)}
-          >
-            Add Team
-          </Button>
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </div>
-        <h3>Teams</h3>
-        <div
-          className="clearfix"
+      <div className="pull-right">
+        <Button
+          icon={<PlusOutlined className="icon-margin-right" />}
+          style={marginRight}
+          type="primary"
+          onClick={() => setIsTeamCreationModalVisible(true)}
+        >
+          Add Team
+        </Button>
+        <Search
           style={{
-            margin: "20px 0px",
+            width: 200,
           }}
-        />
-
-        <Spin spinning={isLoading} size="large">
-          {teams.length <= 1 ? renderPlaceholder() : null}
-          <Table
-            dataSource={Utils.filterWithSearchQueryAND(teams, ["name"], searchQuery)}
-            rowKey="id"
-            pagination={{
-              defaultPageSize: 50,
-            }}
-            expandable={{
-              expandedRowRender: (team) => renderUsersForTeam(team, users),
-              rowExpandable: (_team) => true,
-            }}
-            style={{
-              marginTop: 30,
-              marginBottom: 30,
-            }}
-          >
-            <Column
-              title="Name"
-              dataIndex="name"
-              key="name"
-              sorter={Utils.localeCompareBy<APITeam>((team) => team.name)}
-            />
-            <Column
-              title="Actions"
-              key="actions"
-              render={(__, team: APITeam) => (
-                <span>
-                  <div>
-                    <LinkButton
-                      onClick={() => {
-                        setSelectedTeam(team);
-                        setIsTeamEditModalVisible(true);
-                      }}
-                    >
-                      <UserOutlined className="icon-margin-right" />
-                      Add / Remove Users
-                    </LinkButton>
-                  </div>
-                  <div>
-                    <LinkButton onClick={_.partial(deleteTeam, team)}>
-                      <DeleteOutlined className="icon-margin-right" />
-                      Delete
-                    </LinkButton>
-                  </div>
-                </span>
-              )}
-            />
-          </Table>
-        </Spin>
-        <CreateTeamModal
-          isOpen={isTeamCreationModalVisible}
-          onOk={createTeam}
-          onCancel={() => setIsTeamCreationModalVisible(false)}
-        />
-        <EditTeamModalView
-          isOpen={isTeamEditModalVisible}
-          onCancel={() => {
-            setIsTeamEditModalVisible(false);
-            setSelectedTeam(null);
-          }}
-          team={selectedTeam}
+          onChange={handleSearch}
+          value={searchQuery}
         />
       </div>
+      <h3>Teams</h3>
+      <div
+        className="clearfix"
+        style={{
+          margin: "20px 0px",
+        }}
+      />
+
+      <Spin spinning={isLoading} size="large">
+        {teams.length <= 1 ? renderPlaceholder() : null}
+        <Table
+          dataSource={Utils.filterWithSearchQueryAND(teams, ["name"], searchQuery)}
+          rowKey="id"
+          pagination={{
+            defaultPageSize: 50,
+          }}
+          expandable={{
+            expandedRowRender: (team) => renderUsersForTeam(team, users),
+            rowExpandable: (_team) => true,
+          }}
+          style={{
+            marginTop: 30,
+            marginBottom: 30,
+          }}
+        >
+          <Column
+            title="Name"
+            dataIndex="name"
+            key="name"
+            sorter={Utils.localeCompareBy<APITeam>((team) => team.name)}
+          />
+          <Column
+            title="Actions"
+            key="actions"
+            render={(__, team: APITeam) => (
+              <span>
+                <div>
+                  <LinkButton
+                    onClick={() => {
+                      setSelectedTeam(team);
+                      setIsTeamEditModalVisible(true);
+                    }}
+                  >
+                    <UserOutlined className="icon-margin-right" />
+                    Add / Remove Users
+                  </LinkButton>
+                </div>
+                <div>
+                  <LinkButton onClick={_.partial(deleteTeam, team)}>
+                    <DeleteOutlined className="icon-margin-right" />
+                    Delete
+                  </LinkButton>
+                </div>
+              </span>
+            )}
+          />
+        </Table>
+      </Spin>
+      <CreateTeamModal
+        isOpen={isTeamCreationModalVisible}
+        onOk={createTeam}
+        onCancel={() => setIsTeamCreationModalVisible(false)}
+      />
+      <EditTeamModalView
+        isOpen={isTeamEditModalVisible}
+        onCancel={() => {
+          setIsTeamEditModalVisible(false);
+          setSelectedTeam(null);
+        }}
+        team={selectedTeam}
+      />
     </div>
   );
 }

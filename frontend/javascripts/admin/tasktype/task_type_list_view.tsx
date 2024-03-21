@@ -35,12 +35,7 @@ type Props = {
   initialSearchValue?: string;
 };
 
-type State = {
-  isLoading: boolean;
-  tasktypes: APITaskType[];
-  searchQuery: string;
-};
-const persistence = new Persistence<Pick<State, "searchQuery">>(
+const persistence = new Persistence<{ searchQuery: string }>(
   {
     searchQuery: PropTypes.string,
   },

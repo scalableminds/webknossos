@@ -599,32 +599,29 @@ function UserListView({ activeUser, activeOrganization }: Props) {
                   Show Annotations
                 </Link>
                 <br />
-                {
-                  // eslint-disable-next-line no-nested-ternary
-                  user.isActive ? (
-                    activeUser.isAdmin ? (
-                      <LinkButton
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          deactivateUser(user);
-                        }}
-                      >
-                        <UserDeleteOutlined className="icon-margin-right" />
-                        Deactivate User
-                      </LinkButton>
-                    ) : null
-                  ) : (
+                {user.isActive ? (
+                  activeUser.isAdmin ? (
                     <LinkButton
                       onClick={(event) => {
                         event.stopPropagation();
-                        activateUser(user);
+                        deactivateUser(user);
                       }}
                     >
-                      <UserAddOutlined className="icon-margin-right" />
-                      Activate User
+                      <UserDeleteOutlined className="icon-margin-right" />
+                      Deactivate User
                     </LinkButton>
-                  )
-                }
+                  ) : null
+                ) : (
+                  <LinkButton
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      activateUser(user);
+                    }}
+                  >
+                    <UserAddOutlined className="icon-margin-right" />
+                    Activate User
+                  </LinkButton>
+                )}
               </span>
             )}
           />

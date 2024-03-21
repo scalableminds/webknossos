@@ -50,7 +50,7 @@ test("getAnnotationInformation() for public annotation while logged out", async 
   });
   setCurrToken(tokenUserA);
 });
-test("getReadableAnnotations()", async (t) => {
+test.serial("getReadableAnnotations()", async (t) => {
   const annotations = await api.getReadableAnnotations(false, 0);
   t.snapshot(replaceVolatileValues(annotations), {
     id: "annotations-listReadable",

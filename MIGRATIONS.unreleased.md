@@ -19,6 +19,7 @@ UPDATE webknossos.annotations_ SET state = 'Finished' WHERE _id IN  (SELECT DIST
 - Email verification is disabled by default. To enable it, set `webKnossos.user.emailVerification.activated` to `true` in your `application.conf`. [#7620](https://github.com/scalableminds/webknossos/pull/7620) [#7621](https://github.com/scalableminds/webknossos/pull/7621)
 - New dependency draco/libdraco-dev needs to be installed when deploying without docker and for local development.
 - Config block `braintracing` is now unused and can be removed. [#7693](https://github.com/scalableminds/webknossos/pull/7693)
+- Changed some internal APIs to use spelling dataset instead of dataSet. This requires all connected datastores to be the latest version. [#7690](https://github.com/scalableminds/webknossos/pull/7690)
 
 ### Postgres Evolutions:
 

@@ -627,14 +627,14 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationName/:dataSetName/createExplorative/:type"
+                path="/datasets/:organizationName/:datasetName/createExplorative/:type"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
                     pushToHistory={false}
                     redirectTo={async () => {
                       if (
                         !match.params.organizationName ||
-                        !match.params.dataSetName ||
+                        !match.params.datasetName ||
                         !match.params.type
                       ) {
                         // Typehint for TS
@@ -643,7 +643,7 @@ class ReactRouter extends React.Component<Props> {
 
                       const dataset = {
                         owningOrganization: match.params.organizationName,
-                        name: match.params.dataSetName,
+                        name: match.params.datasetName,
                       };
                       const type =
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;

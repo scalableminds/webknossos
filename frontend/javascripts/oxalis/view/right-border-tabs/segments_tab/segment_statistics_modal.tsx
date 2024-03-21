@@ -110,7 +110,7 @@ export function SegmentStatisticsModal({
   const { dataset, tracing, temporaryConfiguration } = useSelector((state: OxalisState) => state);
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestResolution();
-  const dataSetScale = dataset.dataSource.scale;
+  const datasetScale = dataset.dataSource.scale;
   // Omit checking that all prerequisites for segment stats (such as a segment index) are
   // met right here because that should happen before opening the modal.
   const requestUrl = getVolumeRequestUrl(
@@ -173,7 +173,7 @@ export function SegmentStatisticsModal({
             );
             const currentSegmentSizeInVx = segmentSizes[i];
             const volumeInNm3 = voxelToNm3(
-              dataSetScale,
+              datasetScale,
               layersFinestResolution,
               currentSegmentSizeInVx,
             );

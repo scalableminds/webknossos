@@ -66,7 +66,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   def fetchStorageReport(organizationName: String, datasetName: Option[String]): Fox[List[DirectoryStorageReport]] =
     rpc(s"${dataStore.url}/data/datasets/measureUsedStorage/${urlEncode(organizationName)}")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-      .addQueryStringOptional("dataSetName", datasetName)
+      .addQueryStringOptional("datasetName", datasetName)
       .silent
       .getWithJsonResponse[List[DirectoryStorageReport]]
 

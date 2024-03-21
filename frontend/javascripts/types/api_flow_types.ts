@@ -91,6 +91,10 @@ export type APISegmentationLayer = APIDataLayerBase & {
 };
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
 
+// Only used in rare cases to generalize over actual data layers and
+// a skeleton layer.
+export type APISkeletonLayer = { category: "skeleton" };
+
 export type LayerLink = {
   datasetId: APIDatasetId;
   sourceName: string;

@@ -174,7 +174,6 @@ export const setMappingEnabledAction = (layerName: string, isMappingEnabled: boo
 
 export type OptionalMappingProperties = {
   mapping?: Mapping;
-  mappingKeys?: Array<number>;
   mappingColors?: Array<number>;
   hideUnmappedIds?: boolean;
   showLoadingIndicator?: boolean;
@@ -183,13 +182,7 @@ export const setMappingAction = (
   layerName: string,
   mappingName: string | null | undefined,
   mappingType: MappingType = "JSON",
-  {
-    mapping,
-    mappingKeys,
-    mappingColors,
-    hideUnmappedIds,
-    showLoadingIndicator,
-  }: OptionalMappingProperties = {},
+  { mapping, mappingColors, hideUnmappedIds, showLoadingIndicator }: OptionalMappingProperties = {},
 ) =>
   ({
     type: "SET_MAPPING",
@@ -197,7 +190,6 @@ export const setMappingAction = (
     mappingName,
     mappingType,
     mapping,
-    mappingKeys,
     mappingColors,
     hideUnmappedIds,
     showLoadingIndicator,

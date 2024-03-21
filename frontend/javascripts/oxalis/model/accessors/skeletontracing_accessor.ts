@@ -15,12 +15,18 @@ import type {
   TreeGroup,
   TreeGroupTypeFlat,
   Node,
+  OxalisState,
 } from "oxalis/store";
 import {
   findGroup,
   MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import type { TreeType } from "oxalis/constants";
+import type { TreeType, Vector3 } from "oxalis/constants";
+import {
+  getTransformsForSkeletonLayer,
+  getTransformsForSkeletonLayerOrNull,
+} from "./dataset_accessor";
+import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 
 export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
   if (tracing.skeleton != null) {
@@ -192,6 +198,36 @@ export function getNodeAndTreeOrNull(
       node: null,
     });
 }
+
+export function isSkeletonLayerTransformed(state: OxalisState) {
+  return (
+    getTransformsForSkeletonLayerOrNull(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ) != null
+  );
+}
+
+export function getNodePosition(node: Node, state: OxalisState): Vector3 {
+  return transformNodePosition(node.untransformedPosition, state);
+}
+
+export function transformNodePosition(position: Vector3, state: OxalisState): Vector3 {
+  const dataset = state.dataset;
+  const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
+
+  const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+  return transformPointUnscaled(currentTransforms)(position);
+}
+
+export function untransformNodePosition(position: Vector3, state: OxalisState): Vector3 {
+  const dataset = state.dataset;
+  const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
+
+  const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+  return transformPointUnscaled(invertTransform(currentTransforms))(position);
+}
+
 export function getMaxNodeIdInTree(tree: Tree): Maybe<number> {
   const maxNodeId = _.reduce(
     Array.from(tree.nodes.keys()),

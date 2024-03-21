@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat.FILENAME_HEADER_WKW
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header.FILENAME_ATTRIBUTES_JSON
-import com.scalableminds.webknossos.datastore.datareaders.n5.N5Metadata
+import com.scalableminds.webknossos.datastore.datareaders.n5.{N5Header, N5Metadata}
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader.FILENAME_INFO
 import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILENAME_DOT_ZATTRS
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
@@ -240,7 +240,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         uploadedDataSourceType = guessTypeOfUploadedDataSource(unpackToDir)
         _ <- uploadedDataSourceType match {
           case UploadedDataSourceType.ZARR | UploadedDataSourceType.NEUROGLANCER_PRECOMPUTED |
-              UploadedDataSourceType.N5 =>
+              UploadedDataSourceType.N5_MULTISCALES | UploadedDataSourceType.N5_ARRAY =>
             exploreLocalDatasource(unpackToDir, dataSourceId, uploadedDataSourceType)
           case UploadedDataSourceType.EXPLORED => Fox.successful(())
           case UploadedDataSourceType.ZARR_MULTILAYER | UploadedDataSourceType.NEUROGLANCER_MULTILAYER |
@@ -376,8 +376,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       UploadedDataSourceType.NEUROGLANCER_MULTILAYER
     } else if (looksLikeN5Multilayer(dataSourceDir).openOr(false)) {
       UploadedDataSourceType.N5_MULTILAYER
-    } else if (looksLikeN5Layer(dataSourceDir).openOr(false)) {
-      UploadedDataSourceType.N5
+    } else if (looksLikeN5MultiscalesLayer(dataSourceDir).openOr(false)) {
+      UploadedDataSourceType.N5_MULTISCALES
+    } else if (looksLikeN5Array(dataSourceDir).openOr(false)) {
+      UploadedDataSourceType.N5_ARRAY
     } else {
       UploadedDataSourceType.WKW
     }
@@ -396,12 +398,13 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def looksLikeNeuroglancerPrecomputed(dataSourceDir: Path, maxDepth: Int): Box[Boolean] =
     containsMatchingFile(List(FILENAME_INFO), dataSourceDir, maxDepth)
 
-  private def looksLikeN5Layer(dataSourceDir: Path): Box[Boolean] =
+  private def looksLikeN5MultiscalesLayer(dataSourceDir: Path): Box[Boolean] =
     for {
       attributesFiles <- PathUtils.listFilesRecursive(dataSourceDir,
                                                       silent = false,
                                                       maxDepth = 1,
                                                       filters = p => p.getFileName.toString == FILENAME_ATTRIBUTES_JSON)
+      _ <- bool2Box(attributesFiles.nonEmpty)
       _ <- Json.parse(new String(Files.readAllBytes(attributesFiles.head))).validate[N5Metadata]
     } yield true
 
@@ -409,8 +412,28 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     for {
       _ <- containsMatchingFile(List(FILENAME_ATTRIBUTES_JSON), dataSourceDir, 1) // root attributes.json
       directories <- PathUtils.listDirectories(dataSourceDir, silent = false)
-      detectedLayerBoxes = directories.map(looksLikeN5Layer)
+      detectedLayerBoxes = directories.map(looksLikeN5MultiscalesLayer)
       _ <- bool2Box(detectedLayerBoxes.forall(_.openOr(false)))
+    } yield true
+
+  private def looksLikeN5Array(dataSourceDir: Path): Box[Boolean] =
+    // Expected structure:
+    // dataSourceDir
+    //  - attributes.json (Root attributes, only contains N5 version)
+    //  - dataset
+    //     - scale dir
+    //        - directories 0 to n
+    //        - attributes.json (N5Header, dimension, compression,...)
+    for {
+      _ <- containsMatchingFile(List(FILENAME_ATTRIBUTES_JSON), dataSourceDir, 1) // root attributes.json
+      datasetDir <- PathUtils.listDirectories(dataSourceDir, silent = false).map(_.headOption)
+      scaleDirs <- datasetDir.map(PathUtils.listDirectories(_, silent = false)).getOrElse(Full(Seq.empty))
+      _ <- bool2Box(scaleDirs.length == 1) // Must be 1, otherwise it is a multiscale dataset
+      attributesFiles <- PathUtils.listFilesRecursive(scaleDirs.head,
+                                                      silent = false,
+                                                      maxDepth = 1,
+                                                      filters = p => p.getFileName.toString == FILENAME_ATTRIBUTES_JSON)
+      _ <- Json.parse(new String(Files.readAllBytes(attributesFiles.head))).validate[N5Header]
     } yield true
 
   private def looksLikeExploredDataSource(dataSourceDir: Path): Box[Boolean] =
@@ -541,5 +564,6 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 }
 
 object UploadedDataSourceType extends Enumeration {
-  val ZARR, EXPLORED, ZARR_MULTILAYER, WKW, NEUROGLANCER_PRECOMPUTED, NEUROGLANCER_MULTILAYER, N5, N5_MULTILAYER = Value
+  val ZARR, EXPLORED, ZARR_MULTILAYER, WKW, NEUROGLANCER_PRECOMPUTED, NEUROGLANCER_MULTILAYER, N5_MULTISCALES,
+  N5_MULTILAYER, N5_ARRAY = Value
 }

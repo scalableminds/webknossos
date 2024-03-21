@@ -217,7 +217,7 @@ function CreateAnimationModal(props: Props) {
     const isViewMode = state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     const animationOptions: RenderAnimationOptions = {
-      colorLayerName: selectedColorLayerName,
+      layerName: selectedColorLayerName,
       meshes,
       intensityMin,
       intensityMax,

@@ -1090,7 +1090,7 @@ export enum MOVIE_RESOLUTIONS {
 }
 
 export type RenderAnimationOptions = {
-  colorLayerName: string;
+  layerName: string;
   meshes: ({
     layerName: string;
     hasFallbackLayer: boolean;

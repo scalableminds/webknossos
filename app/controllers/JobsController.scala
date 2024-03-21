@@ -31,7 +31,7 @@ object CameraPositionSetting extends ExtendedEnumeration {
 }
 
 case class AnimationJobOptions(
-    colorLayerName: String,
+    layerName: String,
     boundingBox: BoundingBox,
     includeWatermark: Boolean,
     isViewMode: Boolean,
@@ -379,7 +379,7 @@ class JobsController @Inject()(
           _ <- Fox.runIf(userOrganization.pricingPlan == PricingPlan.Basic) {
             bool2Fox(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
-          colorLayerName = animationJobOptions.colorLayerName
+          colorLayerName = animationJobOptions.layerName
           _ <- datasetService.assertValidLayerName(colorLayerName)
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${datasetName}__$colorLayerName.mp4"
           command = JobCommand.render_animation
@@ -389,7 +389,7 @@ class JobsController @Inject()(
             "export_file_name" -> exportFileName,
             "user_auth_token" -> userAuthToken.id,
             "is_view_mode" -> animationJobOptions.isViewMode,
-            "color_layer_name" -> animationJobOptions.colorLayerName,
+            "layer_name" -> animationJobOptions.layerName,
             "bounding_box" -> animationJobOptions.boundingBox.toLiteral,
             "include_watermark" -> animationJobOptions.includeWatermark,
             "meshes" -> animationJobOptions.meshes,

@@ -157,6 +157,12 @@ class DataSourceService @Inject()(
       Check(
         dataSource.dataLayers.map(_.name).distinct.length == dataSource.dataLayers.length,
         "Layer names must be unique. At least two layers have the same name."
+      ),
+      Check(
+        dataSource.dataLayers.map(_.name).forall { layerName =>
+          layerName.matches("[A-Za-z0-9_\\-\\.]*") && !layerName.startsWith(".")
+        },
+        "Layer names must contain only letters, numbers, underscores, hyphens and dots."
       )
     ).flatten
 

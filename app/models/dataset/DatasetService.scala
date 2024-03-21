@@ -52,9 +52,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(name.length >= 3) ?~> "dataset.name.invalid.lessThanThreeCharacters"
     } yield ()
 
-  def assertValidLayerName(name: String): Fox[Unit] =
+  // Less strict variant than what is checked in validateDataSource,
+  // since some existing layer names don’t fulfill the new strict criteria
+  // but we don’t want to disable features for those.
+  def assertValidLayerNameLax(name: String): Fox[Unit] =
     for {
-      _ <- bool2Fox(name.matches("[A-Za-z0-9_\\-\\.]*")) ?~> "dataset.layer.name.invalid.characters"
+      _ <- bool2Fox(!name.contains("/")) ?~> "dataset.layer.name.invalid.characters"
       _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 

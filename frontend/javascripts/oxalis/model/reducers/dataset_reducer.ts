@@ -43,7 +43,6 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
           activeMappingByLayer: createDictWithKeysAndValue(segmentationLayerNames, () => ({
             mappingName: null,
             mapping: null,
-            mappingKeys: null,
             mappingColors: null,
             hideUnmappedIds: false,
             mappingStatus: MappingStatusEnum.DISABLED,

@@ -20,7 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - If storage scan is enabled, the measured used storage is now displayed in the dashboard’s dataset detail view. [#7677](https://github.com/scalableminds/webknossos/pull/7677)
 - Prepared support to download full stl meshes via the HTTP api. [#7587](https://github.com/scalableminds/webknossos/pull/7587)
 - You can now place segment index files with your on-disk segmentation layers, which makes segment stats available when viewing these segmentations, and also when working on volume annotations based on these segmentation layers. [#7437](https://github.com/scalableminds/webknossos/pull/7437)
-- Added an action to delete erronous, unimported datasets directly from the dashboard. [#7448](https://github.com/scalableminds/webknossos/pull/7448)
+- Added an action to delete erroneous, unimported datasets directly from the dashboard. [#7448](https://github.com/scalableminds/webknossos/pull/7448)
 - Added support for `window`, `active`, `inverted` keys from the `omero` info in the NGFF metadata. [7685](https://github.com/scalableminds/webknossos/pull/7685)
 - Added getSegment function to JavaScript API. Also, createSegmentGroup returns the id of the new group now. [#7694](https://github.com/scalableminds/webknossos/pull/7694)
 - Added support for importing N5 datasets without multiscales metadata. [#7664](https://github.com/scalableminds/webknossos/pull/7664)
@@ -37,6 +37,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - If the current dataset folder in the dashboard cannot be found (e.g., because somebody else deleted it), the page navigates to the root folder automatically. [#7669](https://github.com/scalableminds/webknossos/pull/7669)
 - Voxelytics logs are now stored by organization name, rather than id, in Loki. This is in preparation of the unification of these two concepts. [#7687](https://github.com/scalableminds/webknossos/pull/7687)
 - Using a segment index file with a different data type than uint16 will now result in an error. [#7698](https://github.com/scalableminds/webknossos/pull/7698)
+- Improved performance of JSON mappings in preparation of frontend HDF5 mappings. [#7706](https://github.com/scalableminds/webknossos/pull/7706)
 - Changed some internal APIs to use spelling dataset instead of dataSet. This requires all connected datastores to be the latest version. [#7690](https://github.com/scalableminds/webknossos/pull/7690)
 
 ### Fixed

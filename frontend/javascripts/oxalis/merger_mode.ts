@@ -26,7 +26,7 @@ import { type AdditionalCoordinate } from "types/api_flow_types";
 
 type MergerModeState = {
   treeIdToRepresentativeSegmentId: Record<number, number | null | undefined>;
-  idMapping: Record<number, number>;
+  idMapping: Map<number, number>;
   nodesPerSegment: Record<number, number>;
   nodes: Array<NodeWithTreeId>;
   // A properly initialized merger mode should always
@@ -48,7 +48,7 @@ function mapSegmentToRepresentative(
   mergerModeState: MergerModeState,
 ) {
   const representative = getRepresentativeForTree(treeId, segId, mergerModeState);
-  mergerModeState.idMapping[segId] = representative;
+  mergerModeState.idMapping.set(segId, representative);
 }
 
 function getRepresentativeForTree(treeId: number, segId: number, mergerModeState: MergerModeState) {
@@ -66,7 +66,7 @@ function getRepresentativeForTree(treeId: number, segId: number, mergerModeState
 
 function deleteIdMappingOfSegment(segId: number, treeId: number, mergerModeState: MergerModeState) {
   // Remove segment from color mapping
-  delete mergerModeState.idMapping[segId];
+  mergerModeState.idMapping.delete(segId);
   delete mergerModeState.treeIdToRepresentativeSegmentId[treeId];
 }
 
@@ -420,9 +420,9 @@ function resetState(mergerModeState: Partial<MergerModeState> = {}) {
   const state = Store.getState();
   const visibleLayer = getVisibleSegmentationLayer(state);
   const segmentationLayerName = visibleLayer != null ? visibleLayer.name : null;
-  const defaults = {
+  const defaults: MergerModeState = {
     treeIdToRepresentativeSegmentId: {},
-    idMapping: {},
+    idMapping: new Map(),
     nodesPerSegment: {},
     nodes: getAllNodesWithTreeId(),
     segmentationLayerName,

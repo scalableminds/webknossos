@@ -52,9 +52,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(name.length >= 3) ?~> "dataset.name.invalid.lessThanThreeCharacters"
     } yield ()
 
-  // Less strict variant than what is checked in validateDataSource,
+  // Less strict variant than what we want for https://github.com/scalableminds/webknossos/issues/7711
   // since some existing layer names don’t fulfill the new strict criteria
-  // but we don’t want to disable features for those.
+  // but we don’t want to disable features for those now
   def assertValidLayerNameLax(name: String): Fox[Unit] =
     for {
       _ <- bool2Fox(!name.contains("/")) ?~> "dataset.layer.name.invalid.characters"

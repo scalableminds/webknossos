@@ -60,6 +60,7 @@ import {
   getFlatTreeGroups,
   getTreeGroupsMap,
   mapGroups,
+  getNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getActiveCellId,
@@ -160,6 +161,7 @@ import type {
   OxalisState,
   SegmentGroup,
   Segment,
+  MutableNode,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import type { ToastStyle } from "libs/toast";
@@ -1006,9 +1008,9 @@ class TracingApi {
    */
   centerNode = (nodeId?: number): void => {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    getNodeAndTree(skeletonTracing, nodeId).map(([, node]) =>
-      Store.dispatch(setPositionAction(node.position)),
-    );
+    getNodeAndTree(skeletonTracing, nodeId).map(([, node]) => {
+      return Store.dispatch(setPositionAction(getNodePosition(node, Store.getState())));
+    });
   };
 
   /**
@@ -1052,23 +1054,26 @@ class TracingApi {
    * Measures the length of the given tree and returns the length in nanometer and in voxels.
    */
   measureTreeLength(treeId: number): [number, number] {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const state = Store.getState();
+    const skeletonTracing = assertSkeleton(state.tracing);
     const tree = skeletonTracing.trees[treeId];
 
     if (!tree) {
       throw new Error(`Tree with id ${treeId} not found.`);
     }
 
-    const datasetScale = Store.getState().dataset.dataSource.scale;
+    const datasetScale = state.dataset.dataSource.scale;
     // Pre-allocate vectors
     let lengthNmAcc = 0;
     let lengthVxAcc = 0;
 
+    const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
+
     for (const edge of tree.edges.all()) {
       const sourceNode = tree.nodes.get(edge.source);
       const targetNode = tree.nodes.get(edge.target);
-      lengthNmAcc += V3.scaledDist(sourceNode.position, targetNode.position, datasetScale);
-      lengthVxAcc += V3.length(V3.sub(sourceNode.position, targetNode.position));
+      lengthNmAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), datasetScale);
+      lengthVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
     }
 
     return [lengthNmAcc, lengthVxAcc];
@@ -1145,14 +1150,17 @@ class TracingApi {
     });
     priorityQueue.queue([sourceNodeId, 0]);
 
+    const state = Store.getState();
+    const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
+
     while (priorityQueue.length > 0) {
       const [nextNodeId, distance] = priorityQueue.dequeue();
-      const nextNodePosition = sourceTree.nodes.get(nextNodeId).position;
+      const nextNodePosition = getPos(sourceTree.nodes.get(nextNodeId));
 
       // Calculate the distance to all neighbours and update the distances.
       for (const { source, target } of sourceTree.edges.getEdgesForNode(nextNodeId)) {
         const neighbourNodeId = source === nextNodeId ? target : source;
-        const neighbourPosition = sourceTree.nodes.get(neighbourNodeId).position;
+        const neighbourPosition = getPos(sourceTree.nodes.get(neighbourNodeId));
         const neighbourDistance =
           distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScale);
 
@@ -1489,7 +1497,7 @@ class DataApi {
    */
   setMapping(
     layerName: string,
-    mapping: Mapping,
+    mapping: Mapping | Record<number, number>,
     options: {
       colors?: Array<number>;
       hideUnmappedIds?: boolean;
@@ -1509,10 +1517,10 @@ class DataApi {
       sendAnalyticsEvent("setMapping called with custom colors");
     }
     const mappingProperties = {
-      mapping: _.clone(mapping),
-      // Object.keys is sorted for numerical keys according to the spec:
-      // http://www.ecma-international.org/ecma-262/6.0/#sec-ordinary-object-internal-methods-and-internal-slots-ownpropertykeys
-      mappingKeys: Object.keys(mapping).map((x) => parseInt(x, 10)),
+      mapping:
+        mapping instanceof Map
+          ? new Map(mapping)
+          : new Map(Object.entries(mapping).map(([key, value]) => [parseInt(key, 10), value])),
       mappingColors,
       hideUnmappedIds,
       showLoadingIndicator,
@@ -2625,11 +2633,7 @@ class UtilsApi {
    */
   registerOverwrite<S, A>(
     actionName: string,
-    overwriteFunction: (
-      store: S,
-      next: (action: A) => void,
-      originalAction: A,
-    ) => void | Promise<void>,
+    overwriteFunction: (store: S, next: (action: A) => void, originalAction: A) => A | Promise<A>,
   ) {
     return overwriteAction(actionName, overwriteFunction);
   }

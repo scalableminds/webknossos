@@ -25,6 +25,7 @@ import {
   APIAnnotationTypeEnum,
   APIDataLayer,
   APIDataset,
+  APISkeletonLayer,
   APIJobType,
   EditableLayerProperties,
 } from "types/api_flow_types";
@@ -206,7 +207,7 @@ function DummyDragHandle({ layerType }: { layerType: string }) {
   );
 }
 
-function TransformationIcon({ layer }: { layer: APIDataLayer }) {
+function TransformationIcon({ layer }: { layer: APIDataLayer | APISkeletonLayer }) {
   const dispatch = useDispatch();
   const transform = useSelector((state: OxalisState) =>
     getTransformsForLayerOrNull(
@@ -233,7 +234,12 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
 
   const toggleLayerTransforms = () => {
     const state = Store.getState();
-    if (state.datasetConfiguration.nativelyRenderedLayerName === layer.name) {
+    const { nativelyRenderedLayerName } = state.datasetConfiguration;
+    if (
+      layer.category === "skeleton"
+        ? nativelyRenderedLayerName == null
+        : nativelyRenderedLayerName === layer.name
+    ) {
       return;
     }
     // Transform current position using the inverse transform
@@ -257,7 +263,12 @@ function TransformationIcon({ layer }: { layer: APIDataLayer }) {
       // Only consider XY for now to determine the zoom change (by slicing from 0 to 2)
       V3.abs(V3.divide3(V3.sub(newPosition, newSecondPosition), referenceOffset)).slice(0, 2),
     );
-    dispatch(updateDatasetSettingAction("nativelyRenderedLayerName", layer.name));
+    dispatch(
+      updateDatasetSettingAction(
+        "nativelyRenderedLayerName",
+        layer.category === "skeleton" ? null : layer.name,
+      ),
+    );
     dispatch(setPositionAction(newPosition));
     dispatch(setZoomStepAction(state.flycam.zoomStep * scaleChange));
   };
@@ -381,12 +392,14 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
   );
 
   getDeleteAnnotationLayerButton = (readableName: string, layer?: APIDataLayer) => (
-    <Tooltip title="Delete this annotation layer.">
-      <i
-        onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
-        className="fas fa-trash icon-margin-right"
-      />
-    </Tooltip>
+    <div className="flex-item">
+      <Tooltip title="Delete this annotation layer.">
+        <i
+          onClick={() => this.deleteAnnotationLayerIfConfirmed(readableName, layer)}
+          className="fas fa-trash icon-margin-right"
+        />
+      </Tooltip>
+    </div>
   );
 
   getDeleteAnnotationLayerDropdownOption = (readableName: string, layer?: APIDataLayer) => (
@@ -1162,7 +1175,15 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               {readableName}
             </span>
           </div>
-          {!isOnlyAnnotationLayer ? this.getDeleteAnnotationLayerButton(readableName) : null}
+          <div
+            className="flex-container"
+            style={{
+              paddingRight: 1,
+            }}
+          >
+            <TransformationIcon layer={{ category: "skeleton" }} />
+            {!isOnlyAnnotationLayer ? this.getDeleteAnnotationLayerButton(readableName) : null}
+          </div>
         </div>
         {showSkeletons ? (
           <div

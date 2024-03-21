@@ -1,8 +1,7 @@
-import { Alert, Modal, Button, Row, Col } from "antd";
+import { Alert, Modal, Button, Row, Col, Input } from "antd";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import * as React from "react";
-import TextArea from "antd/lib/input/TextArea";
 
 function getFirstLine(comment: string) {
   const newLineIndex = comment.indexOf("\n");
@@ -29,13 +28,16 @@ export function MarkdownModal({
   onOk,
   onChange,
   label,
+  placeholder,
 }: {
   source: string;
   label: string;
   isOpen?: boolean;
+  placeholder?: string;
   onOk: () => void;
   onChange: React.ChangeEventHandler<HTMLTextAreaElement>;
 }) {
+  const placeholderText = placeholder ? placeholder : `Add ${label}`;
   return (
     <Modal
       key="comment-markdown-modal"
@@ -69,9 +71,9 @@ export function MarkdownModal({
       />
       <Row gutter={16}>
         <Col span={12}>
-          <TextArea
-            value={source}
-            placeholder={`Add ${label}`}
+          <Input.TextArea
+            defaultValue={source}
+            placeholder={placeholderText}
             onChange={onChange}
             rows={5}
             autoSize={{

@@ -139,7 +139,7 @@ export function createNode(
   const position = V3.trunc(positionFloat);
   // Create the new node
   const node: Node = {
-    position,
+    untransformedPosition: position,
     additionalCoordinates,
     radius,
     rotation,
@@ -807,7 +807,7 @@ export function toggleTreeGroupReducer(
 function serverNodeToMutableNode(n: ServerNode): MutableNode {
   return {
     id: n.id,
-    position: Utils.point3ToVector3(n.position),
+    untransformedPosition: Utils.point3ToVector3(n.position),
     additionalCoordinates: n.additionalCoordinates,
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,

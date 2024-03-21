@@ -15,12 +15,13 @@ import utils.ObjectId
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.time.Instant
+import models.aimodels.AiModelCategory.AiModelCategory
 
 case class RunTrainingParameters(trainingAnnotationIds: List[ObjectId],
                                  trainingAnnotationColorLayerNames: List[String],
                                  name: String,
                                  comment: Option[String],
-                                 dataStoreName: String,
+                                 aiModelCategory: Option[AiModelCategory],
                                  workflowYaml: Option[String])
 
 object RunTrainingParameters {
@@ -103,7 +104,10 @@ class AiModelController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         _ <- bool2Fox(request.body.trainingAnnotationIds.nonEmpty) ?~> "aiModel.training.zeroAnnotations"
-        dataStore <- dataStoreDAO.findOneByName(request.body.dataStoreName) ?~> "dataStore.notFound"
+        firstAnnotationId <- request.body.trainingAnnotationIds.headOption.toFox
+        annotation <- annotationDAO.findOne(firstAnnotationId)
+        dataset <- datasetDAO.findOne(annotation._dataset)
+        dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         trainingAnnotations <- Fox.serialCombined(request.body.trainingAnnotationIds)(annotationDAO.findOne)
         jobCommand = JobCommand.train_model
         commandArgs = Json.obj("training_annotations" -> trainingAnnotations.map(_._id).mkString(","))
@@ -112,7 +116,7 @@ class AiModelController @Inject()(
         newAiModel = AiModel(
           _id = ObjectId.generate,
           _organization = request.identity._organization,
-          _dataStore = request.body.dataStoreName,
+          _dataStore = dataStore.name,
           _user = request.identity._id,
           _trainingJob = Some(newTrainingJob._id),
           _trainingAnnotations = trainingAnnotations.map(_._id),

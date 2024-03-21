@@ -27,7 +27,7 @@ class Cube {
   cube: THREE.Line;
   min: Vector3;
   max: Vector3;
-  showCrossSections: boolean;
+  readonly showCrossSections: boolean;
   initialized: boolean;
   visible: boolean;
   lineWidth: number;
@@ -52,15 +52,23 @@ class Cube {
       PLANE_XZ: new THREE.Line(new THREE.BufferGeometry(), this.getLineMaterial()),
       PLANE_YZ: new THREE.Line(new THREE.BufferGeometry(), this.getLineMaterial()),
     };
+    console.log("would set visible to false in", this);
+    this.setVisibility(false);
+    // for (const planeId of OrthoViewValuesWithoutTDView) {
+    //   this.crossSections[planeId].visible = false;
+    // }
+    // this.cube.visible = false;
 
     if (this.min != null && this.max != null) {
       this.setCorners(this.min, this.max);
     }
 
-    listenToStoreProperty(
-      (state) => getPosition(state.flycam),
-      (position) => this.updatePositionForCrossSections(position),
-    );
+    if (this.showCrossSections) {
+      listenToStoreProperty(
+        (state) => getPosition(state.flycam),
+        (position) => this.updatePositionForCrossSections(position),
+      );
+    }
   }
 
   getLineMaterial() {

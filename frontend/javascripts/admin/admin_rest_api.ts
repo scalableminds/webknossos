@@ -1392,16 +1392,6 @@ export function startMaterializingVolumeAnnotationJob(
   );
 }
 
-export function getDatasetDatasource(
-  dataset: APIMaybeUnimportedDataset,
-): Promise<APIDataSourceWithMessages> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}?token=${token}`,
-    ),
-  );
-}
-
 export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSource> {
   return doWithToken((token) =>
     Request.receiveJSON(

@@ -67,9 +67,11 @@ export function renderToTexture(
       );
       camera = camera.clone();
       if (isArbitraryMode) {
-        // camera.far = state.userConfiguration.clippingDistanceArbitrary;
-        camera.near = ARBITRARY_CAM_DISTANCE - state.userConfiguration.clippingDistanceArbitrary;
+        camera.far = state.userConfiguration.clippingDistanceArbitrary;
       } else {
+        // The near value is already set in the camera (done in the CameraController).
+        // The far value has to be set, since in normal rendering the far clipping is
+        // achieved by offsetting the plane instead of setting the far property.
         camera.far = state.userConfiguration.clippingDistance;
       }
       camera.updateProjectionMatrix();

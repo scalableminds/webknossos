@@ -71,7 +71,7 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
       form.setFieldsValue(fieldValues);
       handleSearchFormFinish(false);
     }
-  }, [initialFieldValues]);
+  }, [initialFieldValues, form.setFieldsValue]);
 
   useEffect(() => {
     persistence.persist({ fieldValues: fieldValues });

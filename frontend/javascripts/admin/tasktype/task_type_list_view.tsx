@@ -56,7 +56,7 @@ function TaskTypeListView({ initialSearchValue }: Props) {
       setSearchQuery(initialSearchValue);
     }
     fetchData();
-  }, []);
+  }, [initialSearchValue]);
 
   useEffect(() => {
     persistence.persist({ searchQuery });

@@ -6,6 +6,7 @@ import { withRouter } from "react-router-dom";
 import React, { useEffect, useState } from "react";
 import _ from "lodash";
 import {
+  APITaskType,
   TracingType,
   TracingTypeEnum,
   type APIAllowedMode,
@@ -153,7 +154,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
       settings.resolutionRestrictions = { min: undefined, max: undefined };
     }
 
-    const newTaskType = {
+    const newTaskType: Omit<APITaskType, "id" | "teamName"> = {
       ...rest,
       teamId,
       settings,
@@ -161,10 +162,8 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
     };
 
     if (taskTypeId) {
-      const updatedTaskType = _.omit({ id: taskTypeId, teamName, ...newTaskType }, [
-        "settings",
-        "resolutionRestrictions",
-      ]);
+      const { resolutionRestrictions: _resolutionRestrictions, ...settings } = newTaskType.settings;
+      const updatedTaskType = { ...newTaskType, id: taskTypeId, teamName, settings };
       await updateTaskType(taskTypeId, updatedTaskType);
     } else {
       await createTaskType(newTaskType);

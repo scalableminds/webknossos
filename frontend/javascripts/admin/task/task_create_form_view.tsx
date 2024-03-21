@@ -24,12 +24,13 @@ import _ from "lodash";
 import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
 import {
+  NewTask,
   type TaskCreationResponse,
   type TaskCreationResponseContainer,
 } from "admin/task/task_create_bulk_view";
 import { normalizeFileEvent, NUM_TASKS_PER_BATCH } from "admin/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
-import type { Vector6 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 import {
   createTaskFromNML,
   createTasks,
@@ -47,6 +48,7 @@ import messages from "messages";
 import { saveAs } from "file-saver";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import { AsyncButton } from "components/async_clickables";
+import { useAppProps } from "antd/es/app/context";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -119,8 +121,10 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
   saveAs(blob, filename);
 }
 
-export function handleTaskCreationResponse(response: TaskCreationResponseContainer) {
-  const { modal } = App.useApp();
+export function handleTaskCreationResponse(
+  modal: useAppProps["modal"],
+  response: TaskCreationResponseContainer,
+) {
   const { tasks, warnings } = response;
 
   const successfulTasks: APITask[] = [];
@@ -292,21 +296,23 @@ type Props = {
 };
 
 type FormValues = {
-  baseAnnotation?: string;
-  boundingBox?: Vector6;
-  taskTypeId?: string;
-  scriptId?: string;
-  pendingInstances?: number;
-  editPosition: number[];
-  editRotation: number[];
-  nmlFiles?: UploadFile[];
-  dataSet?: string;
-  projectName?: string;
-  neededExperience?: APITask["neededExperience"];
+  baseAnnotation: NewTask["baseAnnotation"];
+  boundingBox: Vector6 | null;
+  taskTypeId: string;
+  scriptId: string | null;
+  pendingInstances: number;
+  editPosition: Vector3;
+  editRotation: Vector3;
+  nmlFiles: UploadFile[];
+  dataSet: string;
+  projectName: string;
+  neededExperience: NewTask["neededExperience"];
 };
 
 function TaskCreateFormView({ taskId, history }: Props) {
+  const { modal } = App.useApp();
   const [form] = Form.useForm<FormValues>();
+
   const [datasets, setDatasets] = useState<APIDataset[]>([]);
   const [taskTypes, setTaskTypes] = useState<APITaskType[]>([]);
   const [projects, setProjects] = useState<APIProject[]>([]);
@@ -372,7 +378,7 @@ function TaskCreateFormView({ taskId, history }: Props) {
 
     if (taskId != null) {
       // either update an existing task
-      const newTask = { ...formValues, boundingBox };
+      const newTask = { ..._.omit(formValues, "nmlFiles", "baseAnnotation"), boundingBox };
       const confirmedTask = await updateTask(taskId, newTask);
       history.push(`/tasks/${confirmedTask.id}`);
     } else {
@@ -386,30 +392,38 @@ function TaskCreateFormView({ taskId, history }: Props) {
           // Workaround: Antd replaces file objects in the formValues with a wrapper file
           // The original file object is contained in the originFileObj property
           // This is most likely not intentional and may change in a future Antd version
-          const nmlFiles = formValues.nmlFiles.map((wrapperFile) => wrapperFile.originFileObj);
+          const nmlFiles = formValues.nmlFiles.map(
+            (wrapperFile) => wrapperFile.originFileObj as File,
+          );
           for (let i = 0; i < nmlFiles.length; i += NUM_TASKS_PER_BATCH) {
             const batchOfNmls = nmlFiles.slice(i, i + NUM_TASKS_PER_BATCH);
 
-            const newTask = { ...formValues, nmlFiles: batchOfNmls, boundingBox };
+            const newTask = {
+              ..._.omit(formValues, "baseAnnotation"),
+              nmlFiles: batchOfNmls,
+              boundingBox,
+            };
             const response = await createTaskFromNML(newTask);
 
             taskResponses = taskResponses.concat(response.tasks);
             warnings = warnings.concat(response.warnings);
           }
         } else {
-          if (specificationType !== SpecificationEnum.BaseAnnotation) {
-            // Ensure that the base annotation field is null, if the specification mode
-            // does not include that field.
-            formValues.baseAnnotation = undefined;
-          }
-          const newTask = { ...formValues, boundingBox };
+          // Ensure that the base annotation field is null, if the specification mode
+          // does not include that field.
+          const baseAnnotation =
+            specificationType !== SpecificationEnum.BaseAnnotation
+              ? null
+              : formValues.baseAnnotation;
+
+          const newTask = { ..._.omit(formValues, "nmlFiles"), boundingBox, baseAnnotation };
           const response = await createTasks([newTask]);
 
           taskResponses = taskResponses.concat(response.tasks);
           warnings = warnings.concat(response.warnings);
         }
 
-        handleTaskCreationResponse({
+        handleTaskCreationResponse(modal, {
           tasks: taskResponses,
           warnings: _.uniq(warnings),
         });

@@ -59,7 +59,7 @@ function PermissionsAndTeamsModalView({
 
   useEffect(() => {
     // If a single user is selected, pre-select his teams
-    const singleUserMaybe = getSingleUserMaybe();
+    const singleUserMaybe = getSingleUserMaybe(selectedUserIds, users);
 
     if (singleUserMaybe) {
       const newSelectedTeams = _.keyBy(singleUserMaybe.teams, "name");
@@ -71,7 +71,7 @@ function PermissionsAndTeamsModalView({
   }, [selectedUserIds, users]);
 
   function didPermissionsChange() {
-    const singleUserMaybe = getSingleUserMaybe();
+    const singleUserMaybe = getSingleUserMaybe(selectedUserIds, users);
 
     if (!singleUserMaybe) {
       return false;
@@ -90,7 +90,7 @@ function PermissionsAndTeamsModalView({
 
   function handleUpdatePermissionsAndTeams() {
     if (didPermissionsChange()) {
-      const user = getSingleUserMaybe();
+      const user = getSingleUserMaybe(selectedUserIds, users);
 
       if (user) {
         const userName = `${user.firstName} ${user.lastName}`;
@@ -177,7 +177,7 @@ function PermissionsAndTeamsModalView({
     setSelectedTeams(_.omit(selectedTeams, teamName));
   }
 
-  function getSingleUserMaybe(): APIUser | undefined {
+  function getSingleUserMaybe(selectedUserIds: Key[], users: APIUser[]): APIUser | undefined {
     if (selectedUserIds.length === 1) {
       return users.find((_user) => _user.id === selectedUserIds[0]);
     }

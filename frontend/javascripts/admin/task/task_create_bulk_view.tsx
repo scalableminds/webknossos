@@ -1,4 +1,4 @@
-import { Form, Input, Button, Card, Upload, Spin, Progress, Divider } from "antd";
+import { Form, Input, Button, Card, Upload, Spin, Progress, Divider, App } from "antd";
 import React, { useState } from "react";
 import { InboxOutlined } from "@ant-design/icons";
 import _ from "lodash";
@@ -28,7 +28,7 @@ export type NewTask = {
   readonly pendingInstances: number;
   readonly taskTypeId: string;
   readonly csvFile?: File;
-  readonly nmlFiles?: File;
+  readonly nmlFiles?: File[];
   readonly baseAnnotation?:
     | {
         baseId: string;
@@ -63,6 +63,8 @@ export function normalizeFileEvent(
 }
 
 function TaskCreateBulkView() {
+  const { modal } = App.useApp();
+
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [tasksCount, setTasksCount] = useState<number>(0);
   const [tasksProcessed, setTasksProcessed] = useState<number>(0);
@@ -240,7 +242,7 @@ function TaskCreateBulkView() {
         setTasksProcessed(i + NUM_TASKS_PER_BATCH);
       }
 
-      handleTaskCreationResponse({
+      handleTaskCreationResponse(modal, {
         tasks: taskResponses,
         warnings: _.uniq(warnings),
       });

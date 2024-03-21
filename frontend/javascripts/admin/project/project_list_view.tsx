@@ -86,18 +86,18 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
       setSearchQuery(initialSearchValue);
     }
 
-    fetchData();
-  }, [initialSearchValue]);
+    fetchData(taskTypeId);
+  }, [initialSearchValue, taskTypeId]);
 
   useEffect(() => {
     persistence.persist({ searchQuery });
   }, [searchQuery]);
 
   useEffect(() => {
-    fetchData();
+    fetchData(taskTypeId);
   }, [taskTypeId]);
 
-  async function fetchData(): Promise<void> {
+  async function fetchData(taskTypeId?: string): Promise<void> {
     let projects;
     let taskTypeName;
     let taskType;
@@ -192,7 +192,7 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
 
   function onTaskTransferComplete() {
     setIsTransferTasksVisible(false);
-    fetchData();
+    fetchData(taskTypeId);
   }
 
   function renderPlaceholder() {

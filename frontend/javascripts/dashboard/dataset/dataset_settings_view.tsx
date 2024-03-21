@@ -250,6 +250,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
         isJSONFormatValid: IsJSONFormatValidEnum.No,
       };
+      // TODO use readDatasetDatasource instead
       const {
         dataSource: inferredDataSource,
         messages: dataSourceMessages,

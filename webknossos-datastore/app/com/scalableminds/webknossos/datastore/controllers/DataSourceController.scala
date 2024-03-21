@@ -10,11 +10,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentIndexData,
   SegmentStatisticsParameters
 }
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
-  InboxDataSource,
-  InboxDataSourceLike,
-  UnusableInboxDataSource
-}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.uploading.{
@@ -189,35 +185,6 @@ class DataSourceController @Inject()(
             _ <- remoteWebknossosClient.deleteDataSource(dataSourceId) ?~> "dataset.delete.webknossos.failed"
             _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
           } yield Ok
-        }
-      }
-    }
-
-  def suggestDatasourceJson(token: Option[String], organizationName: String, datasetName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      accessTokenService.validateAccessForSyncBlock(
-        UserAccessRequest.writeDataSource(DataSourceId(datasetName, organizationName)),
-        urlOrHeaderToken(token, request)) {
-        for {
-          previousDataSource <- dataSourceRepository.find(DataSourceId(datasetName, organizationName)) ?~ Messages(
-            "dataSource.notFound") ~> NOT_FOUND
-          (dataSource, messages) <- dataSourceService.exploreDataSource(previousDataSource.id,
-                                                                        previousDataSource.toUsable)
-          previousDataSourceJson = previousDataSource match {
-            case usableDataSource: DataSource => Json.toJson(usableDataSource)
-            case unusableDataSource: UnusableInboxDataSource =>
-              unusableDataSource.existingDataSourceProperties match {
-                case Some(existingConfig) => existingConfig
-                case None                 => Json.toJson(unusableDataSource)
-              }
-          }
-        } yield {
-          Ok(
-            Json.obj(
-              "dataSource" -> dataSource,
-              "previousDataSource" -> previousDataSourceJson,
-              "messages" -> messages.map(m => Json.obj(m._1 -> m._2))
-            ))
         }
       }
     }

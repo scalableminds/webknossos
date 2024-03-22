@@ -13,6 +13,7 @@ import {
   Card,
   Tooltip,
   Alert,
+  Tabs,
 } from "antd";
 import {
   startNucleiInferralJob,
@@ -48,6 +49,7 @@ import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import { InfoCircleOutlined } from "@ant-design/icons";
+import { TrainAiModelTab } from "../jobs/train_ai_model";
 
 const { ThinSpace } = Unicode;
 
@@ -395,10 +397,19 @@ export function OutputSegmentationLayerNameFormItem({
 }
 
 export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
-  const centerImageStyle = {
-    margin: "auto",
-    width: 150,
-  };
+  const tabs = [
+    // todop: reorder so that train model tab is the second one
+    {
+      label: "Train a model",
+      key: "trainModel",
+      children: <TrainAiModelTab />,
+    },
+    {
+      label: "Run a model",
+      key: "runModel",
+      children: <RunModelTab aIJobModalState={aIJobModalState} />,
+    },
+  ];
   return aIJobModalState !== "invisible" ? (
     <Modal
       width={667}
@@ -412,75 +423,85 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
       onCancel={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
       footer={null}
     >
-      <Space direction="vertical" size="middle">
-        <Row>Choose a processing job for your dataset:</Row>
-        <Space align="center">
+      <Tabs items={tabs} />
+    </Modal>
+  ) : null;
+}
+
+function RunModelTab({ aIJobModalState }: { aIJobModalState: string }) {
+  const centerImageStyle = {
+    margin: "auto",
+    width: 150,
+  };
+  return (
+    <Space direction="vertical" size="middle">
+      <Row>Choose a processing job for your dataset:</Row>
+      <Space align="center">
+        <Radio.Button
+          className="aIJobSelection"
+          checked={aIJobModalState === "neuron_inferral"}
+          onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
+        >
+          <Card bordered={false}>
+            <Space direction="vertical" size="small">
+              <Row className="ai-job-title">Neuron segmentation</Row>
+              <Row>
+                <img
+                  src={`/assets/images/${jobNameToImagePath.neuron_inferral}`}
+                  alt={"Neuron segmentation example"}
+                  style={centerImageStyle}
+                />
+              </Row>
+            </Space>
+          </Card>
+        </Radio.Button>
+        <Tooltip title="Coming soon">
           <Radio.Button
             className="aIJobSelection"
-            checked={aIJobModalState === "neuron_inferral"}
-            onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
+            disabled
+            checked={aIJobModalState === "nuclei_inferral"}
+            onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
           >
             <Card bordered={false}>
               <Space direction="vertical" size="small">
-                <Row className="ai-job-title">Neuron segmentation</Row>
+                <Row className="ai-job-title">Nuclei detection</Row>
                 <Row>
                   <img
-                    src={`/assets/images/${jobNameToImagePath.neuron_inferral}`}
-                    alt={"Neuron segmentation example"}
+                    src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
+                    alt={"Nuclei detection example"}
                     style={centerImageStyle}
                   />
                 </Row>
               </Space>
             </Card>
           </Radio.Button>
-          <Tooltip title="Coming soon">
-            <Radio.Button
-              className="aIJobSelection"
-              disabled
-              checked={aIJobModalState === "nuclei_inferral"}
-              onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
-            >
-              <Card bordered={false}>
-                <Space direction="vertical" size="small">
-                  <Row className="ai-job-title">Nuclei detection</Row>
-                  <Row>
-                    <img
-                      src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
-                      alt={"Nuclei detection example"}
-                      style={centerImageStyle}
-                    />
-                  </Row>
-                </Space>
-              </Card>
-            </Radio.Button>
-          </Tooltip>
-          <Tooltip title="Coming soon">
-            <Radio.Button
-              className="aIJobSelection"
-              disabled
-              checked={aIJobModalState === "mitochondria_inferral"}
-              onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
-            >
-              <Card bordered={false}>
-                <Space direction="vertical" size="small">
-                  <Row className="ai-job-title">Mitochondria detection</Row>
-                  <Row>
-                    <img
-                      src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
-                      alt={"Mitochondria detection example"}
-                      style={centerImageStyle}
-                    />
-                  </Row>
-                </Space>
-              </Card>
-            </Radio.Button>
-          </Tooltip>
-        </Space>
-        {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
-        {aIJobModalState === "nuclei_inferral" ? <NucleiDetectionForm /> : null}
+        </Tooltip>
+        <Tooltip title="Coming soon">
+          <Radio.Button
+            className="aIJobSelection"
+            disabled
+            checked={aIJobModalState === "mitochondria_inferral"}
+            onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
+          >
+            <Card bordered={false}>
+              <Space direction="vertical" size="small">
+                <Row className="ai-job-title">Mitochondria detection</Row>
+                <Row>
+                  <img
+                    src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
+                    alt={"Mitochondria detection example"}
+                    style={centerImageStyle}
+                  />
+                </Row>
+              </Space>
+            </Card>
+          </Radio.Button>
+        </Tooltip>
       </Space>
-    </Modal>
-  ) : null;
+      {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
+      {aIJobModalState === "nuclei_inferral" ? <NucleiDetectionForm /> : null}
+    </Space>
+  );
 }
 
 function StartJobForm(props: StartJobFormProps) {

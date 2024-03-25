@@ -174,17 +174,17 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         },
         annotation.state === "Finished"
           ? {
-              key: `${annotation.id}-reopen`,
-              onClick: () => this.reOpenAnnotation(annotation),
-              icon: <FolderOpenOutlined />,
-              label: "Reopen",
-            }
+            key: `${annotation.id}-reopen`,
+            onClick: () => this.reOpenAnnotation(annotation),
+            icon: <FolderOpenOutlined />,
+            label: "Reopen",
+          }
           : {
-              key: `${annotation.id}-finish`,
-              onClick: () => this.finishAnnotation(annotation),
-              icon: <CheckCircleOutlined />,
-              label: "Finish",
-            },
+            key: `${annotation.id}-finish`,
+            onClick: () => this.finishAnnotation(annotation),
+            icon: <CheckCircleOutlined />,
+            label: "Finish",
+          },
       ],
     };
   }
@@ -197,7 +197,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
     return (
       <div>
         <table>
-          <tbody className="task-annotation-view">
+          <tbody>
             {this.state.annotations.map((annotation: APIAnnotation) => {
               const userString = annotation.owner
                 ? `${annotation.owner.firstName} ${annotation.owner.lastName} ( ${annotation.owner.email} )`
@@ -205,7 +205,6 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
               return (
                 <tr key={`${annotation.id}-tr`}>
                   <td className="task-annotation-view">{userString}</td>
-                  <td className="task-annotation-view">{this.getViewOrOpenLabel(annotation)}</td>
                   <td className="task-annotation-view">
                     <FormattedDate timestamp={annotation.modified} />
                   </td>
@@ -223,11 +222,12 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                     </span>
                   </td>
                   <td className="nowrap">
-                    <Dropdown menu={this.getDropdownMenu(annotation)} trigger={["click"]}>
+                    <div>{this.getViewOrOpenLabel(annotation)}</div>
+                    <div><Dropdown menu={this.getDropdownMenu(annotation)} trigger={["click"]}>
                       <a className="ant-dropdown-link" href="#">
                         Actions <DownOutlined />
                       </a>
-                    </Dropdown>
+                    </Dropdown></div>
                   </td>
                 </tr>
               );

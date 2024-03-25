@@ -42,13 +42,13 @@ function SkeletonQuickSelectModal({ skeletonSAMProgressPercentage }: Props) {
         WEBKNOSSOS now performs an ML-based automatic quick selection for each slice that contains
         nodes of the selected skeleton. This may take a while. Therefore, please wait until the
         prediction is completed. <br /> <br />
-        After the quick selection is finished, you have the possibility to make corrections for each
+        After the quick selection is complete, you have the option to make corrections for each
         slice. To quickly navigate between the nodes and correct the corresponding annotations, use
-        the keyboard shortcuts <Text code>ctrl + ./,</Text>. Once you have completed your
-        corrections, you can perform a volume interpolation to label the slices without quick
-        selections. To do this, use the button at the bottom of the sticky toast in the top
-        right-hand corner. The toast is displayed as soon as the quick selection is completed. To
-        ignore the interpolation, simply close the toast.
+        the key combinations <Text code>ctrl + ./,</Text>. When you have completed your corrections,
+        you can perform a volume interpolation to label the slices between the quick selections. To
+        do this, use the button at the bottom of the sticky toast in the top right corner. The toast
+        is displayed as soon as the quick selection has been completed. To ignore the interpolation,
+        simply close the toast.
         <Progress
           percent={skeletonSAMProgressPercentage}
           format={(percent?: number) => `${Math.round(percent || 0)}%`}
@@ -71,9 +71,9 @@ export async function showFollowupInterpolationToast(): Promise<{
   return new Promise((resolve) => {
     Toast.info(
       <div style={{ fontSize: 14 }}>
-        Quick Select is done. You can now correct the selections for each slice. After you have
-        finished your corrections, you have the option to perform a volume interpolation to annotate
-        the slices without quick selects themselves.
+        The Skeleton Quick Select is complete. You can now correct the predictions for each slice.
+        After you have finished your corrections, you can perform volume interpolations to annotate
+        the slices without predictions themselves.
         <Button
           onClick={() => {
             Toast.close(TOAST_KEY);

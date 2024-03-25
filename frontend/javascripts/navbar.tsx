@@ -530,11 +530,18 @@ function OrganizationFilterInput({
   const onChangeImpl = (evt: React.ChangeEvent<HTMLInputElement>) => {
     onChange(evt.target.value);
   };
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const consumableKeyCodes = [40, 38, 27]; // up, down, escape
+    if (!consumableKeyCodes.includes(event.keyCode)) {
+      event.stopPropagation();
+    }
+  };
 
   return (
     <Input
       placeholder="Filter organizations..."
       onChange={onChangeImpl}
+      onKeyDown={onKeyDown}
       ref={ref}
       onPressEnter={onPressEnter}
     />

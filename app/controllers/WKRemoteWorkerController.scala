@@ -6,15 +6,19 @@ import models.job.JobCommand.JobCommand
 
 import javax.inject.Inject
 import models.job._
+import models.voxelytics.VoxelyticsDAO
+import net.liftweb.common.{Empty, Failure, Full}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import utils.ObjectId
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService, workerDAO: WorkerDAO)(
-    implicit ec: ExecutionContext,
-    bodyParsers: PlayBodyParsers)
+class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
+                                         jobService: JobService,
+                                         workerDAO: WorkerDAO,
+                                         voxelyticsDAO: VoxelyticsDAO,
+                                         wkConf: WkConf)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def requestJobs(key: String): Action[AnyContent] = Action.async { implicit request =>
@@ -72,6 +76,24 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
         jobAfterChange <- jobDAO.findOne(jobIdParsed)(GlobalAccessContext)
         _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
         _ <- jobService.cleanUpIfFailed(jobAfterChange)
+      } yield Ok
+  }
+
+  def attachVoxelyticsWorkflow(key: String, id: String): Action[String] = Action.async(validateJson[String]) {
+    implicit request =>
+      for {
+        _ <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
+        _ <- bool2Fox(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
+        jobIdParsed <- ObjectId.fromString(id)
+        organizationId <- jobDAO.organizationIdForJobId(jobIdParsed) ?~> "job.notFound"
+        workflowHash = request.body
+        existingWorkflowBox <- voxelyticsDAO.findWorkflowByHashAndOrganization(organizationId, workflowHash).futureBox
+        _ <- existingWorkflowBox match {
+          case Full(_)    => Fox.successful(())
+          case Empty      => voxelyticsDAO.upsertWorkflow(workflowHash, "initializing worker workflow", organizationId)
+          case f: Failure => f.toFox
+        }
+        _ <- jobDAO.updateVoxelyticsWorkflow(jobIdParsed, request.body)
       } yield Ok
   }
 

@@ -277,7 +277,17 @@ POST          /jobs/run/renderAnimation/:organizationName/:datasetName          
 GET           /jobs/:id                                                                         controllers.JobsController.get(id: String)
 PATCH         /jobs/:id/cancel                                                                  controllers.JobsController.cancel(id: String)
 POST          /jobs/:id/status                                                                  controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)
+POST          /jobs/:id/attachVoxelyticsWorkflow                                                controllers.WKRemoteWorkerController.attachVoxelyticsWorkflow(key: String, id: String)
 GET           /jobs/:id/export                                                                  controllers.JobsController.redirectToExport(id: String)
+
+# AI Models
+GET           /aiModels/:id                                                                     controllers.AiModelController.readAiModelInfo(id: String)
+PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: String)
+POST          /aiModels/runTraining                                                             controllers.AiModelController.runTraining
+POST          /aiModels/inferences/runInference                                                 controllers.AiModelController.runInference
+GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: String)
+GET           /aiModels/inferences                                                              controllers.AiModelController.listAiInferences
+GET           /aiModels                                                                         controllers.AiModelController.listAiModels
 
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()

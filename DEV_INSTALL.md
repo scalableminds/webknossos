@@ -30,6 +30,7 @@ For non-localhost deployments, check out the [installation guide in the document
 * [node.js 18](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
+* [cmake](https://cmake.org/download/)
 
 * For some development tasks like refreshing snapshots, Docker 19.03.0+ and Docker Compose 2.+ are required
 
@@ -82,7 +83,7 @@ curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 sudo apt update
-sudo apt install -y nodejs git postgresql postgresql-client unzip zip yarn redis-server build-essential libblosc1 libbrotli1 libdraco-dev
+sudo apt install -y nodejs git postgresql postgresql-client unzip zip yarn redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
 
  # Install sdkman, java, scala and sbt
 curl -s "https://get.sdkman.io" | bash

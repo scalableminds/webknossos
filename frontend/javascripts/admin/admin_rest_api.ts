@@ -305,7 +305,10 @@ export function createTaskType(
   });
 }
 
-export function updateTaskType(taskTypeId: string, taskType: APITaskType): Promise<void> {
+export function updateTaskType(
+  taskTypeId: string,
+  taskType: Utils.NestedOmit<APITaskType, "settings.resolutionRestrictions">,
+): Promise<void> {
   return Request.sendJSONReceiveJSON(`/api/taskTypes/${taskTypeId}`, {
     method: "PUT",
     data: taskType,
@@ -451,7 +454,7 @@ function transformTask(task: APITask): APITask {
   return { ...task, tracingTime, boundingBoxVec6 };
 }
 
-export async function getTasks(queryObject: QueryObject): Promise<Array<APITask>> {
+export async function getTasks(queryObject: QueryObject): Promise<APITask[]> {
   const responses = await Request.sendJSONReceiveJSON("/api/tasks/list", {
     data: queryObject,
   });
@@ -460,7 +463,7 @@ export async function getTasks(queryObject: QueryObject): Promise<Array<APITask>
   return tasks;
 }
 
-export function createTasks(tasks: Array<NewTask>): Promise<TaskCreationResponseContainer> {
+export function createTasks(tasks: NewTask[]): Promise<TaskCreationResponseContainer> {
   return Request.sendJSONReceiveJSON("/api/tasks", {
     data: tasks,
   });

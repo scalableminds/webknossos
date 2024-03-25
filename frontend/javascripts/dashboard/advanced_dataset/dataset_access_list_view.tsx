@@ -8,39 +8,28 @@ import { stringToColor } from "libs/format_utils";
 type Props = {
   dataset: APIDataset;
 };
-type State = {
-  datasetUsers: APIUser[];
-  isLoading: boolean;
-};
-export default class DatasetAccessListView extends React.PureComponent<Props, State> {
-  state: State = {
-    datasetUsers: [],
-    isLoading: false,
-  };
 
-  componentDidMount() {
-    this.fetchData();
-  }
+const DatasetAccessListView = ({ dataset }: Props) => {
+  const [datasetUsers, setDatasetUsers] = React.useState<APIUser[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  async fetchData(): Promise<void> {
+  React.useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function fetchData() {
     try {
-      this.setState({
-        isLoading: true,
-      });
-      const datasetUsers = await getDatasetAccessList(this.props.dataset);
-      this.setState({
-        datasetUsers,
-      });
+      setIsLoading(true);
+      const datasetUsers = await getDatasetAccessList(dataset);
+      setDatasetUsers(datasetUsers);
     } catch (error) {
       handleGenericError(error as Error);
     } finally {
-      this.setState({
-        isLoading: false,
-      });
+      setIsLoading(false);
     }
   }
 
-  renderUserTags(user: APIUser): Array<React.ReactNode> {
+  function renderUserTags(user: APIUser): React.ReactNode[] {
     if (user.isAdmin) {
       return [
         <Tag key={`team_role_${user.id}`} color="red">
@@ -64,11 +53,11 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
     }
   }
 
-  renderTable() {
+  function renderTable() {
     return (
       <div>
         <ul>
-          {this.state.datasetUsers.map((user: APIUser) => (
+          {datasetUsers.map((user: APIUser) => (
             <li key={user.id}>
               <div
                 style={{
@@ -78,7 +67,7 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
               >
                 {user.firstName} {user.lastName}
               </div>
-              {this.renderUserTags(user)}
+              {renderUserTags(user)}
             </li>
           ))}
         </ul>
@@ -86,11 +75,11 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
     );
   }
 
-  render() {
-    return (
-      <Spin size="large" spinning={this.state.isLoading}>
-        {this.renderTable()}
-      </Spin>
-    );
-  }
-}
+  return (
+    <Spin size="large" spinning={isLoading}>
+      {renderTable()}
+    </Spin>
+  );
+};
+
+export default DatasetAccessListView;

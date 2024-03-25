@@ -44,7 +44,6 @@ import messages from "messages";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
-const typeHint: APITaskWithAnnotation[] = [];
 const pageLength: number = 1000;
 
 export type TaskModeState = {
@@ -441,8 +440,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   renderTaskList() {
     const tasks = this.getCurrentTasks().sort(
-      Utils.compareBy(
-        typeHint,
+      Utils.compareBy<APITaskWithAnnotation>(
         (task) => (this.state.showFinishedTasks ? task.annotation.modified : task.created),
         false,
       ),

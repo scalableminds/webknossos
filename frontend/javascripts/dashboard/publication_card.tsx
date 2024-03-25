@@ -196,7 +196,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
           }) as PublicationItem,
       ),
   ];
-  sortedItems.sort(compareBy([] as Array<PublicationItem>, (item) => item.dataset.sortingKey));
+  sortedItems.sort(compareBy<PublicationItem>((item) => item.dataset.sortingKey));
   const [activeItem, setActiveItem] = useState<PublicationItem | null>(sortedItems[0]);
 
   return (

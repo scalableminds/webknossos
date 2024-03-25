@@ -38,8 +38,6 @@ import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import type { MenuProps } from "rc-menu";
 
-const treeTypeHint = [] as Array<Tree>;
-const commentTypeHint = [] as Array<CommentType>;
 const commentTabId = "commentTabId";
 enum SortByEnum {
   NAME = "NAME",
@@ -55,9 +53,8 @@ type SortOptions = {
 
 function getTreeSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<Tree> {
   return sortBy === SortByEnum.ID
-    ? compareBy(treeTypeHint, (tree) => tree.treeId, isSortedAscending)
-    : localeCompareBy(
-        treeTypeHint,
+    ? compareBy<Tree>((tree) => tree.treeId, isSortedAscending)
+    : localeCompareBy<Tree>(
         (tree) => `${tree.name}_${tree.treeId}`,
         isSortedAscending,
         sortBy === SortByEnum.NATURAL,
@@ -66,9 +63,8 @@ function getTreeSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<T
 
 function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<CommentType> {
   return sortBy === SortByEnum.ID
-    ? compareBy([] as Array<CommentType>, (comment) => comment.nodeId, isSortedAscending)
-    : localeCompareBy(
-        commentTypeHint,
+    ? compareBy<CommentType>((comment) => comment.nodeId, isSortedAscending)
+    : localeCompareBy<CommentType>(
         (comment) => `${comment.content}_${comment.nodeId}`,
         isSortedAscending,
         sortBy === SortByEnum.NATURAL,

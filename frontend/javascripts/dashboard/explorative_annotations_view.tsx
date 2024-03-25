@@ -57,7 +57,6 @@ import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_
 
 const { Column } = Table;
 const { Search } = Input;
-const typeHint: APIAnnotationInfo[] = [];
 const pageLength: number = 1000;
 
 type TracingModeState = {
@@ -550,7 +549,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   renderTable() {
     const filteredAndSortedTracings = this._getSearchFilteredTracings().sort(
-      Utils.compareBy(typeHint, (annotation) => annotation.modified, false),
+      Utils.compareBy<APIAnnotationInfo>((annotation) => annotation.modified, false),
     );
     const renderOwner = (owner: APIUser) => {
       if (!this.props.isAdminView && owner.id === this.props.activeUser.id) {
@@ -638,13 +637,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               ) : null}
             </>
           )}
-          sorter={Utils.localeCompareBy(typeHint, (annotation) => annotation.id)}
+          sorter={Utils.localeCompareBy((annotation) => annotation.id)}
         />
         <Column
           title="Name"
           width={280}
           dataIndex="name"
-          sorter={Utils.localeCompareBy(typeHint, (annotation) => annotation.name)}
+          sorter={Utils.localeCompareBy((annotation) => annotation.name)}
           render={(_name: string, tracing: APIAnnotationInfo) =>
             this.renderNameWithDescription(tracing)
           }
@@ -659,10 +658,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             (tracing.owner != null && tracing.owner.id === value.toString()) ||
             tracing.teams.some((team) => team.id === value)
           }
-          sorter={Utils.localeCompareBy(
-            typeHint,
-            (annotation) => annotation.owner?.firstName || "",
-          )}
+          sorter={Utils.localeCompareBy((annotation) => annotation.owner?.firstName || "")}
           render={(owner: APIUser | null, tracing: APIAnnotationInfo) => {
             const ownerName = owner != null ? renderOwner(owner) : null;
             const teamTags = tracing.teams.map((t) => (
@@ -728,7 +724,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Modification Date"
           dataIndex="modified"
           width={200}
-          sorter={Utils.compareBy(typeHint, (annotation) => annotation.modified)}
+          sorter={Utils.compareBy<APIAnnotationInfo>((annotation) => annotation.modified)}
           render={(modified) => <FormattedDate timestamp={modified} />}
         />
         <Column

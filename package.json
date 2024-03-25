@@ -125,6 +125,7 @@
     "@airbrake/browser": "^2.1.7",
     "@ant-design/colors": "^6.0.0",
     "@ant-design/icons": "^4.6.2",
+    "@ant-design/plots": "2.1.15",
     "@fortawesome/fontawesome-free": "^5.15.4",
     "@rehooks/document-title": "^1.0.2",
     "@scalableminds/prop-types": "^15.6.1",
@@ -221,23 +222,14 @@
     "**/rc-tree": "^5.7.12"
   },
   "ava": {
-    "files": [
-      "./public-test/test-bundle/**/*.{js,jsx}"
-    ],
-    "ignoredByWatcher": [
-      "./binaryData/**/*.*"
-    ],
-    "require": [
-      "./frontend/javascripts/test/_ava_polyfill_provider.ts"
-    ],
+    "files": ["./public-test/test-bundle/**/*.{js,jsx}"],
+    "ignoredByWatcher": ["./binaryData/**/*.*"],
+    "require": ["./frontend/javascripts/test/_ava_polyfill_provider.ts"],
     "snapshotDir": "frontend/javascripts/test/snapshots",
     "concurrency": 8
   },
   "c8": {
-    "exclude": [
-      "public-test/test-bundle/test/**/*.*",
-      "frontend/javascripts/test/**/*.*"
-    ],
+    "exclude": ["public-test/test-bundle/test/**/*.*", "frontend/javascripts/test/**/*.*"],
     "reporter": "lcov"
   },
   "madge": {

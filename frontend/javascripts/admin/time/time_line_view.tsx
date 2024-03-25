@@ -12,15 +12,15 @@ import { getEditableUsers, getTimeTrackingForUser, getUser } from "admin/admin_r
 import Toast from "libs/toast";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import TimeTrackingChart from "./time_line_chart_view";
 
 import type { APIUser, APITimeTracking } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
+import type { DateRange, ColumnDefinition } from "./time_line_chart_view";
 import * as Utils from "libs/utils";
 import ProjectAndAnnotationTypeDropdown, {
   AnnotationTypeFilterEnum,
 } from "admin/statistic/project_and_annotation_type_dropdown";
+import { RowContent, TimeTrackingChart } from "./time_line_chart_antd";
 
 const FormItem = Form.Item;
 const { RangePicker } = DatePicker;

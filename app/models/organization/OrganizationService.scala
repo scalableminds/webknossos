@@ -29,6 +29,13 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     extends FoxImplicits
     with LazyLogging {
 
+  def compactWrites(organization: Organization): JsObject =
+    Json.obj(
+      "id" -> organization._id,
+      "name" -> organization.name,
+      "displayName" -> organization.displayName
+    )
+
   def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
 
     val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {

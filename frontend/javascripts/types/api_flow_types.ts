@@ -564,11 +564,13 @@ export type APIAvailableTasksReport = {
   readonly totalAvailableTasks: number;
   readonly availableTasksByProjects: Record<string, number>;
 };
-export type APIOrganization = {
+export type APIOrganizationCompact = {
   readonly id: string;
   readonly name: string;
-  readonly additionalInformation: string;
   readonly displayName: string;
+};
+export type APIOrganization = APIOrganizationCompact & {
+  readonly additionalInformation: string;
   readonly pricingPlan: PricingPlanEnum;
   readonly enableAutoVerify: boolean;
   readonly newUserMailingList: string;

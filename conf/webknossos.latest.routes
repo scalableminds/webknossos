@@ -229,7 +229,7 @@ GET           /projects/:id/usersWithActiveTasks                                
 POST          /projects/:id/transferActiveTasks                                                 controllers.ProjectController.transferActiveTasks(id:String)
 
 # Organizations
-GET           /organizations                                                                    controllers.OrganizationController.list()
+GET           /organizations                                                                    controllers.OrganizationController.list(compact: Option[Boolean])
 POST          /organizations                                                                    controllers.OrganizationController.create()
 GET           /organizations/byInvite/:inviteToken                                              controllers.OrganizationController.getByInvite(inviteToken: String)
 GET           /organizations/default                                                            controllers.OrganizationController.getDefault()

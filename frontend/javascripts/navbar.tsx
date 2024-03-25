@@ -560,19 +560,7 @@ function LoggedInAvatar({
   const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
   const activeOrganization = usersOrganizations.find((org) => org.name === organizationName);
-  const switchableOrganizations = usersOrganizations
-    .filter((org) => org.name !== organizationName)
-    // todo: remove again
-    .concat(
-      _.range(300).map(
-        (idx) =>
-          ({
-            id: idx,
-            name: `organization_${idx}`,
-            displayName: `Organization ${idx}`,
-          }) as any as APIOrganizationCompact,
-      ),
-    );
+  const switchableOrganizations = usersOrganizations.filter((org) => org.name !== organizationName);
   const orgDisplayName =
     activeOrganization != null
       ? activeOrganization.displayName || activeOrganization.name

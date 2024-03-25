@@ -1962,9 +1962,10 @@ export async function getTimeTrackingForUser(
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
   projectIds?: string[] | null,
 ): Promise<Array<APITimeTracking>> {
-  const params = new URLSearchParams();
-  params.append("startDate", startDate.valueOf().toString());
-  params.append("endDate", endDate.valueOf().toString());
+  const params = new URLSearchParams({
+    startDate: startDate.valueOf().toString(),
+    endDate: endDate.valueOf().toString(),
+  });
   if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0)
     params.append("projectIds", projectIds.join(","));
@@ -1981,12 +1982,15 @@ export async function getTimeEntries(
   selectedTypes: AnnotationTypeFilterEnum,
   projectIds: string[],
 ) {
+  const params = new URLSearchParams({
+    start: startMs.toString(),
+    end: endMs.toString(),
+    annotationTypes: selectedTypes,
+  });
   // Omit empty parameters in request
-  const projectsParam = projectIds.length > 0 ? `&projectIds=${projectIds.join(",")}` : "";
-  const teamsParam = teamIds.length > 0 ? `&teamIds=${teamIds.join(",")}` : "";
-  return await Request.receiveJSON(
-    `api/time/overview?start=${startMs}&end=${endMs}&annotationTypes=${selectedTypes}${teamsParam}${projectsParam}`,
-  );
+  if (projectIds.length > 0) params.append("projectIds", projectIds.join(","));
+  if (teamIds.length > 0) params.append("teamIds", teamIds.join(","));
+  return await Request.receiveJSON(`api/time/overview?${params}`);
 }
 
 export async function getProjectProgressReport(

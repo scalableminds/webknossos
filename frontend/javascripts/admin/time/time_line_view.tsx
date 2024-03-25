@@ -1,4 +1,4 @@
-import { Select, Card, Form, Row, Col, Spin, DatePicker } from "antd";
+import { Select, Card, Form, Row, Col, Spin, DatePicker, Space } from "antd";
 import * as React from "react";
 import ReactDOMServer from "react-dom/server";
 import { connect } from "react-redux";
@@ -66,7 +66,7 @@ function compressTimeLogs(logs) {
       previousDuration != null &&
       previousLog != null &&
       Math.abs(timeLog.timestamp - (previousLog.timestamp + previousDuration.asMilliseconds())) <
-        1000 &&
+      1000 &&
       timeLog.task_id === previousLog.task_id
     ) {
       const newDuration = previousDuration.add(dayjs.duration(timeLog.time));
@@ -363,6 +363,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const { firstName, lastName, email } = this.props.activeUser;
     const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
 
+    const listStyle = {
+      display: "inline-block",
+      width: 300
+    };
+
     return (
       <div className="container">
         <h3>Time Tracking</h3>
@@ -447,24 +452,17 @@ class TimeLineView extends React.PureComponent<Props, State> {
             </Col>
             <Col span={12}>
               <Row>
-                <Col span={8}>
+                <Col span={24}>
                   <ul>
-                    <li style={paddingBottom}>Total Time:</li>
-                    <li style={paddingBottom}>Number of Tasks / Annotations:</li>
-                    <li>Average Time per Task / Annotation:</li>
-                  </ul>
-                </Col>
-                <Col span={16}>
-                  <ul>
-                    <li>{formatMilliseconds(this.state.stats.totalTime)}</li>
-                    <li style={paddingBottom}>{this.state.stats.numberTasks}</li>
-                    <li>{formatMilliseconds(this.state.stats.averageTimePerTask)}</li>
+                    <li style={paddingBottom}><div style={listStyle}>Total Time:<Space /></div>{formatMilliseconds(this.state.stats.totalTime)}</li>
+                    <li style={paddingBottom}><div style={listStyle}>Number of Tasks / Annotations:<Space /></div>{this.state.stats.numberTasks}</li>
+                    <li style={paddingBottom}><div style={listStyle}>Average Time per Task / Annotation:<Space /></div>{formatMilliseconds(this.state.stats.averageTimePerTask)}</li>
                   </ul>
                 </Col>
               </Row>
             </Col>
           </Row>
-        </Card>
+        </Card >
 
         <div
           style={{
@@ -495,7 +493,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
             </div>
           )}
         </Spin>
-      </div>
+      </div >
     );
   }
 }

@@ -21,7 +21,7 @@ import {
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
-import { OrthoViews, TreeTypeEnum, type TreeType, type Vector3 } from "oxalis/constants";
+import { TreeTypeEnum, type TreeType, type Vector3 } from "oxalis/constants";
 
 import {
   getGroupByIdWithSubgroups,
@@ -60,8 +60,6 @@ import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
-import features from "features";
-import { computeSAMForSkeletonAction } from "oxalis/model/actions/volumetracing_actions";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 
 const CHECKBOX_STYLE = { marginLeft: 4 };
@@ -96,7 +94,6 @@ type Props = OwnProps & {
   onShuffleAllTreeColors: () => void;
   onSetTreeEdgesVisibility: (treeId: number, edgesAreVisible: boolean) => void;
   onSetTreeType: (treeId: number, type: TreeTypeEnum) => void;
-  onComputeSAMForSkeleton: (treeId: number) => void;
 };
 type State = {
   prevProps: Props | null | undefined;
@@ -581,7 +578,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const styleClass = this.getNodeStyleClassForBackground(node.id);
 
       const createMenu = (): MenuProps => {
-        const isSamSupported = features().segmentAnythingEnabled;
         return {
           items: [
             {
@@ -647,20 +643,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               icon: <HideTreeEdgesIcon />,
               label: "Hide/Show Edges of This Tree",
             },
-            features().segmentAnythingEnabled
-              ? {
-                  key: "predictNodeWithSAM",
-                  onClick: () => {
-                    this.props.onComputeSAMForSkeleton(tree.treeId);
-                  },
-                  disabled: !isSamSupported,
-                  title: isSamSupported
-                    ? "Predict all Nodes with SAM"
-                    : "This feature only works on webknossos.org.",
-                  icon: <span className="fas fa-magic" />,
-                  label: "Predict all Nodes with SAM",
-                }
-              : null,
             isAgglomerateSkeleton
               ? {
                   key: "convertToNormalSkeleton",
@@ -880,9 +862,6 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 
   onSetTreeType(treeId: number, type: TreeType) {
     dispatch(setTreeTypeAction(treeId, type));
-  },
-  onComputeSAMForSkeleton(treeId: number) {
-    dispatch(computeSAMForSkeletonAction(treeId, OrthoViews.PLANE_XY));
   },
 });
 

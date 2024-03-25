@@ -288,7 +288,7 @@ function OverwriteModeSwitch({
 
   if (!visible) {
     // This component's hooks should still be active, even when the component is invisible.
-    // Otherwise, the toggling of the overwrite mode via "CTRL" wouldn't work consistently
+    // Otherwise, the toggling of the overwrite mode via "Ctrl" wouldn't work consistently
     // when being combined with other modifiers, which hide the component.
     return null;
   }

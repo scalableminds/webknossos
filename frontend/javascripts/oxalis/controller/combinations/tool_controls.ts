@@ -100,7 +100,7 @@ export class MoveTool {
           }
 
           case "alt":
-          case "ctrl": {
+          case "ctrlOrMeta": {
             MoveHandlers.zoomPlanes(Utils.clamp(-1, delta, 1), true);
             break;
           }

@@ -20,7 +20,7 @@ import { createNanoEvents, Emitter } from "nanoevents";
 // In most cases the heavy lifting is done by libraries in the background.
 export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 5;
-export type ModifierKeys = "alt" | "shift" | "ctrl";
+export type ModifierKeys = "alt" | "shift" | "ctrlOrMeta";
 type KeyboardKey = string;
 type MouseButton = string;
 type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
@@ -639,7 +639,7 @@ export class InputMouse {
     } else if (event.altKey) {
       modifier = "alt";
     } else if (event.ctrlKey || event.metaKey) {
-      modifier = "ctrl";
+      modifier = "ctrlOrMeta";
     }
 
     this.emitter.emit("scroll", delta, modifier);

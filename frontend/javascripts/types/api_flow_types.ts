@@ -669,6 +669,17 @@ export type APIJob = {
   readonly resultLink: string | null | undefined;
   readonly createdAt: number;
 };
+
+export type AiModel = {
+  id: string;
+  name: string;
+  dataStore: APIDataStore;
+  user: APIUser;
+  comment: string;
+  trainingJob: APIJob;
+  created: number;
+};
+
 // Tracing related datatypes
 export type APIUpdateActionBatch = {
   version: number;

@@ -7,6 +7,7 @@ import type {
   APIJobCeleryState,
   APIJobManualState,
   APIJobState,
+  AiModel,
   RenderAnimationOptions,
 } from "types/api_flow_types";
 import { assertResponseLimit } from "./api_utils";
@@ -305,6 +306,6 @@ export function runTraining(params: RunTrainingParameters) {
   });
 }
 
-export function getAiModels() {
+export function getAiModels(): Promise<AiModel[]> {
   return Request.receiveJSON("/api/aiModels");
 }

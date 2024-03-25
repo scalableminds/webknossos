@@ -70,6 +70,19 @@ const persistence = new Persistence<Pick<State, "searchQuery">>(
   "jobList",
 );
 
+export function JobState({ job }: { job: APIJob }) {
+  const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
+
+  const jobStateNormalized = _.capitalize(job.state.toLowerCase());
+
+  return (
+    <Tooltip title={tooltip}>
+      <span className="icon-margin-right">{icon}</span>
+      {jobStateNormalized}
+    </Tooltip>
+  );
+}
+
 class JobListView extends React.PureComponent<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
   state: State = {
@@ -319,16 +332,7 @@ class JobListView extends React.PureComponent<Props, State> {
   };
 
   renderState = (__: any, job: APIJob) => {
-    const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
-
-    const jobStateNormalized = _.capitalize(job.state.toLowerCase());
-
-    return (
-      <Tooltip title={tooltip}>
-        {icon}
-        {jobStateNormalized}
-      </Tooltip>
-    );
+    return <JobState job={job} />;
   };
 
   render() {

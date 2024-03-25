@@ -68,6 +68,7 @@ import ErrorBoundary from "components/error_boundary";
 import { Store } from "oxalis/singletons";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import { EmptyObject } from "types/globals";
+import AiModelListView from "admin/voxelytics/ai_model_list_view";
 
 const { Content } = Layout;
 
@@ -700,6 +701,12 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/workflows"
                 component={AsyncWorkflowListView}
+                exact
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/models"
+                component={AiModelListView}
                 exact
               />
               <SecuredRouteWithErrorBoundary

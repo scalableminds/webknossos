@@ -23,14 +23,15 @@ export function TrainAiModelTab() {
       // optional workflowYaml
     });
   };
-  const defaultValues = {
-    modelCategory: "em_neurons",
-  };
 
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const colorLayers = getColorLayers(dataset);
   const colorLayer = colorLayers[0];
   const [selectedColorLayerName, setSelectedColorLayerName] = useState<string>(colorLayer.name);
+  const defaultValues = {
+    modelCategory: "em_neurons",
+    imageDataLayer: colorLayer,
+  };
 
   const userBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),

@@ -26,6 +26,7 @@ import {
   AnnotationToolEnum,
   VolumeTools,
   AltOrOptionKey,
+  CtrlOrCmdKey,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
@@ -525,7 +526,7 @@ function getNodeContextMenuOptions({
             label: (
               <>
                 Delete Edge to this Node{" "}
-                {useLegacyBindings ? shortcutBuilder(["Shift", "Ctrl", "leftMouse"]) : null}
+                {useLegacyBindings ? shortcutBuilder(["Shift", CtrlOrCmdKey, "leftMouse"]) : null}
               </>
             ),
           },
@@ -941,7 +942,9 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                         : "Cannot merge because the proofreading tool is not active."
                     }
                   >
-                    <span>Split from active segment {shortcutBuilder(["CTRL", "leftMouse"])}</span>
+                    <span>
+                      Split from active segment {shortcutBuilder([CtrlOrCmdKey, "leftMouse"])}
+                    </span>
                   </Tooltip>
                 ),
               }

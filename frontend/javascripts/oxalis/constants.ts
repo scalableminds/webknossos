@@ -404,3 +404,4 @@ const isMac = (() => {
 })();
 
 export const AltOrOptionKey = isMac ? "⌥" : "Alt";
+export const CtrlOrCmdKey = isMac ? "Cmd" : "Ctrl";

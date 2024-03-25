@@ -174,17 +174,17 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         },
         annotation.state === "Finished"
           ? {
-            key: `${annotation.id}-reopen`,
-            onClick: () => this.reOpenAnnotation(annotation),
-            icon: <FolderOpenOutlined />,
-            label: "Reopen",
-          }
+              key: `${annotation.id}-reopen`,
+              onClick: () => this.reOpenAnnotation(annotation),
+              icon: <FolderOpenOutlined />,
+              label: "Reopen",
+            }
           : {
-            key: `${annotation.id}-finish`,
-            onClick: () => this.finishAnnotation(annotation),
-            icon: <CheckCircleOutlined />,
-            label: "Finish",
-          },
+              key: `${annotation.id}-finish`,
+              onClick: () => this.finishAnnotation(annotation),
+              icon: <CheckCircleOutlined />,
+              label: "Finish",
+            },
       ],
     };
   }
@@ -223,11 +223,13 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                   </td>
                   <td className="nowrap">
                     <div>{this.getViewOrOpenLabel(annotation)}</div>
-                    <div><Dropdown menu={this.getDropdownMenu(annotation)} trigger={["click"]}>
-                      <a className="ant-dropdown-link" href="#">
-                        Actions <DownOutlined />
-                      </a>
-                    </Dropdown></div>
+                    <div>
+                      <Dropdown menu={this.getDropdownMenu(annotation)} trigger={["click"]}>
+                        <a className="ant-dropdown-link" href="#">
+                          Actions <DownOutlined />
+                        </a>
+                      </Dropdown>
+                    </div>
                   </td>
                 </tr>
               );

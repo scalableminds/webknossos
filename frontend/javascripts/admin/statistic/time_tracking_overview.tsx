@@ -16,6 +16,7 @@ import Toast from "libs/toast";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import dayjs, { Dayjs } from "antd/node_modules/dayjs";
+import TimeTrackingDetailView from "./time_tracking_detail_view";
 const { Column } = Table;
 const { RangePicker } = DatePicker;
 
@@ -169,6 +170,16 @@ function TimeTrackingOverview() {
             marginBottom: 30,
           }}
           pagination={false}
+          expandable={{
+            expandedRowRender: (entry) => (
+              <TimeTrackingDetailView
+                userId={entry.user.id}
+                dateRange={[startDate.valueOf(), endDate.valueOf()]}
+                annotationType={selectedTypes}
+                projectIds={selectedProjectIds}
+              />
+            ),
+          }}
         >
           <Column
             title="User"

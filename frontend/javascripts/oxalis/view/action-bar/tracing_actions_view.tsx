@@ -230,14 +230,14 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
       autoSaveLayouts
         ? null
         : {
-          key: "save-layout",
-          style: {
-            display: "inline-block",
+            key: "save-layout",
+            style: {
+              display: "inline-block",
+            },
+            onClick: saveCurrentLayout,
+            title: "Save current layout",
+            icon: <SaveOutlined />,
           },
-          onClick: saveCurrentLayout,
-          title: "Save current layout",
-          icon: <SaveOutlined />,
-        },
       { key: "divider", type: "divider" },
       {
         key: "available-layouts",
@@ -466,86 +466,86 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     } = this.props;
     const copyAnnotationText =
       !restrictions.allowUpdate &&
-        activeUser != null &&
-        annotationOwner?.id === activeUser.id &&
-        othersMayEdit
+      activeUser != null &&
+      annotationOwner?.id === activeUser.id &&
+      othersMayEdit
         ? "Duplicate"
         : "Copy To My Account";
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
     const saveButton = restrictions.allowUpdate
       ? [
-        hasTracing
-          ? [
-            <AsyncButton
-              className="narrow"
-              key="undo-button"
-              title="Undo (Ctrl+Z)"
-              onClick={this.handleUndo}
-              disabled={busyBlockingInfo.isBusy}
-              hideContentWhenLoading
-            >
-              <i className="fas fa-undo" aria-hidden="true" />
-            </AsyncButton>,
-            <AsyncButton
-              className="narrow hide-on-small-screen"
-              key="redo-button"
-              title="Redo (Ctrl+Y)"
-              onClick={this.handleRedo}
-              disabled={busyBlockingInfo.isBusy}
-              hideContentWhenLoading
-            >
-              <i className="fas fa-redo" aria-hidden="true" />
-            </AsyncButton>,
-          ]
-          : null,
-        restrictions.allowSave ? (
-          <SaveButton className="narrow" key="save-button" onClick={this.handleSave} />
-        ) : (
-          [
-            <Tooltip
-              placement="bottom"
-              title="This annotation was opened in sandbox mode. You can edit it, but changes are not saved. Use 'Copy To My Account' to copy the current state to your account."
-              key="sandbox-tooltip"
-            >
-              <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
-                <span className="hide-on-small-screen">Sandbox</span>
-              </Button>
-            </Tooltip>,
-            <AsyncButtonWithAuthentication
-              activeUser={activeUser}
-              authenticationMessage="Please register or login to copy the sandbox tracing to your account."
-              key="copy-sandbox-button"
-              icon={<FileAddOutlined />}
-              onClick={this.handleCopySandboxToAccount}
-              title={copyAnnotationText}
-            >
-              <span className="hide-on-small-screen">Copy To My Account</span>
-            </AsyncButtonWithAuthentication>,
-          ]
-        ),
-      ]
+          hasTracing
+            ? [
+                <AsyncButton
+                  className="narrow"
+                  key="undo-button"
+                  title="Undo (Ctrl+Z)"
+                  onClick={this.handleUndo}
+                  disabled={busyBlockingInfo.isBusy}
+                  hideContentWhenLoading
+                >
+                  <i className="fas fa-undo" aria-hidden="true" />
+                </AsyncButton>,
+                <AsyncButton
+                  className="narrow hide-on-small-screen"
+                  key="redo-button"
+                  title="Redo (Ctrl+Y)"
+                  onClick={this.handleRedo}
+                  disabled={busyBlockingInfo.isBusy}
+                  hideContentWhenLoading
+                >
+                  <i className="fas fa-redo" aria-hidden="true" />
+                </AsyncButton>,
+              ]
+            : null,
+          restrictions.allowSave ? (
+            <SaveButton className="narrow" key="save-button" onClick={this.handleSave} />
+          ) : (
+            [
+              <Tooltip
+                placement="bottom"
+                title="This annotation was opened in sandbox mode. You can edit it, but changes are not saved. Use 'Copy To My Account' to copy the current state to your account."
+                key="sandbox-tooltip"
+              >
+                <Button disabled type="primary" icon={<CodeSandboxOutlined />}>
+                  <span className="hide-on-small-screen">Sandbox</span>
+                </Button>
+              </Tooltip>,
+              <AsyncButtonWithAuthentication
+                activeUser={activeUser}
+                authenticationMessage="Please register or login to copy the sandbox tracing to your account."
+                key="copy-sandbox-button"
+                icon={<FileAddOutlined />}
+                onClick={this.handleCopySandboxToAccount}
+                title={copyAnnotationText}
+              >
+                <span className="hide-on-small-screen">Copy To My Account</span>
+              </AsyncButtonWithAuthentication>,
+            ]
+          ),
+        ]
       : [
-        <ButtonComponent
-          key="read-only-button"
-          danger
-          disabled
-          style={{
-            backgroundColor: "var(--ant-color-warning)",
-          }}
-        >
-          Read only
-        </ButtonComponent>,
-        <AsyncButtonWithAuthentication
-          activeUser={activeUser}
-          authenticationMessage="Please register or login to copy the tracing to your account."
-          key="copy-button"
-          icon={<FileAddOutlined />}
-          onClick={this.handleCopyToAccount}
-          title={copyAnnotationText}
-        >
-          <span className="hide-on-small-screen">{copyAnnotationText}</span>
-        </AsyncButtonWithAuthentication>,
-      ];
+          <ButtonComponent
+            key="read-only-button"
+            danger
+            disabled
+            style={{
+              backgroundColor: "var(--ant-color-warning)",
+            }}
+          >
+            Read only
+          </ButtonComponent>,
+          <AsyncButtonWithAuthentication
+            activeUser={activeUser}
+            authenticationMessage="Please register or login to copy the tracing to your account."
+            key="copy-button"
+            icon={<FileAddOutlined />}
+            onClick={this.handleCopyToAccount}
+            title={copyAnnotationText}
+          >
+            <span className="hide-on-small-screen">{copyAnnotationText}</span>
+          </AsyncButtonWithAuthentication>,
+        ];
     const finishAndNextTaskButton =
       restrictions.allowFinish && task ? (
         <ButtonComponent

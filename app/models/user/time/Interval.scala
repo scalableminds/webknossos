@@ -25,7 +25,7 @@ case class Month(month: Int, year: Int) extends Interval with Ordered[Month] {
   def end: Instant =
     Instant.fromZonedDateTime(asZonedDateTime.`with`(TemporalAdjusters.lastDayOfMonth()).`with`(LocalTime.MAX))
 
-  private def asZonedDateTime: ZonedDateTime = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, ZoneId.systemDefault())
+  private def asZonedDateTime: ZonedDateTime = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
 }
 
 object Month {
@@ -47,7 +47,7 @@ case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
 
   private def asZonedDateTime: ZonedDateTime =
     ZonedDateTime
-      .of(year, 1, 1, 0, 0, 0, 0, ZoneId.systemDefault())
+      .of(year, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
       .`with`(firstInMonth(DayOfWeek.MONDAY))
       .plusWeeks(week - 1)
 }
@@ -69,7 +69,7 @@ case class Day(day: Int, month: Int, year: Int) extends Interval with Ordered[Da
     Instant.fromZonedDateTime(asZonedDateTime.`with`(LocalTime.MAX))
 
   private def asZonedDateTime: ZonedDateTime =
-    ZonedDateTime.of(year, month, day, 0, 0, 0, 0, ZoneId.systemDefault())
+    ZonedDateTime.of(year, month, day, 0, 0, 0, 0, ZoneId.of("UTC"))
 }
 
 object Day {

@@ -1,8 +1,17 @@
 import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
-import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps, Modal } from "antd";
+import {
+  Dropdown,
+  Empty,
+  notification,
+  Tooltip,
+  Popover,
+  Input,
+  type MenuProps,
+  Modal,
+} from "antd";
 import { connect, useSelector } from "react-redux";
-import React, { createContext, MouseEvent, useContext, useEffect, useState } from "react";
+import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type {
   APIConnectomeFile,
   APIDataset,
@@ -19,13 +28,8 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
-import {
-  AnnotationTool,
-  Vector3,
-  OrthoView,
-  AnnotationToolEnum,
-  VolumeTools,
-} from "oxalis/constants";
+import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
+import type { AnnotationTool, Vector3, OrthoView } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
   loadAdHocMeshAction,
@@ -88,6 +92,7 @@ import {
 import { maybeGetSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import {
   clickSegmentAction,
+  computeSAMForSkeletonAction,
   performMinCutAction,
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -106,7 +111,7 @@ import {
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import {
+import type {
   ItemType,
   MenuItemGroupType,
   MenuItemType,
@@ -115,13 +120,14 @@ import {
 import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import {
   ensureLayerMappingsAreLoadedAction,
   ensureSegmentIndexIsLoadedAction,
 } from "oxalis/model/actions/dataset_actions";
+import features from "features";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -412,6 +418,7 @@ function getNodeContextMenuOptions({
   volumeTracing,
   infoRows,
   allowUpdate,
+  viewport,
 }: NodeContextMenuOptionsProps): ItemType[] {
   const state = Store.getState();
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
@@ -572,6 +579,15 @@ function getNodeContextMenuOptions({
                     : null,
                 label: "Extract shortest Path to this Node",
               },
+          features().segmentAnythingEnabled
+            ? {
+                key: "annotate-nodes-with-sam",
+                onClick: () => {
+                  Store.dispatch(computeSAMForSkeletonAction(clickedTree.treeId, viewport));
+                },
+                label: "Annotate Nodes with SAM",
+              }
+            : null,
         ]
       : []),
     ...meshItems,

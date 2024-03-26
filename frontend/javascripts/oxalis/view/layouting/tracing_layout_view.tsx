@@ -38,8 +38,9 @@ import TracingView from "oxalis/view/tracing_view";
 import VersionView from "oxalis/view/version_view";
 import * as React from "react";
 import { connect } from "react-redux";
-import { RouteComponentProps, withRouter } from "react-router-dom";
+import { type RouteComponentProps, withRouter } from "react-router-dom";
 import type { Dispatch } from "redux";
+import SkeletonQuickSelectModal from "oxalis/view/skeleton_quick_select_modal";
 import { APICompoundType } from "types/api_flow_types";
 import DistanceMeasurementTooltip from "oxalis/view/distance_measurement_tooltip";
 import TabTitle from "../components/tab_title_component";
@@ -353,6 +354,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         {status === "loaded" && distanceMeasurementTooltipPosition != null && (
           <DistanceMeasurementTooltip />
         )}
+        {this.props.skeletonSAMProgressPercentage != null && <SkeletonQuickSelectModal />}
 
         <NmlUploadZoneContainer
           onImport={isUpdateTracingAllowed ? importTracingFiles : createNewTracing}
@@ -481,6 +483,7 @@ function mapStateToProps(state: OxalisState) {
       state.uiInformation.measurementToolInfo.lastMeasuredPosition,
     additionalCoordinates: state.flycam.additionalCoordinates,
     UITheme: state.uiInformation.theme,
+    skeletonSAMProgressPercentage: state.uiInformation.skeletonSAMProgressPercentage,
   };
 }
 

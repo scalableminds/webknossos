@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { OrthoView, Vector2, Vector3 } from "oxalis/constants";
+import { BoundingBoxType, OrthoView, Vector2, Vector3 } from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -19,12 +19,18 @@ import Dimensions from "../dimensions";
 import type { InferenceSession } from "onnxruntime-web";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
 
-const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;
+export const EMBEDDING_SIZE = [1024, 1024, 0] as Vector3;
 type CacheEntry = {
   embeddingPromise: Promise<Float32Array>;
   embeddingBoxMag1: BoundingBox;
   mag: Vector3;
   layerName: string;
+};
+export type SAMNodeSelect = {
+  nodePositions: Vector3[];
+  bounds: BoundingBoxType;
+  viewport: OrthoView;
+  predictionFinishedCallback: () => Saga<void>;
 };
 const MAXIMUM_CACHE_SIZE = 5;
 // Sorted from most recently to least recently used.
@@ -103,7 +109,9 @@ let session: Promise<InferenceSession> | null;
 export async function getInferenceSession() {
   const ort = await import("onnxruntime-web");
   if (session == null) {
-    session = ort.InferenceSession.create("/assets/models/vit_l_0b3195_decoder_quantized.onnx");
+    session = ort.InferenceSession.create(
+      "/assets/models/vit_l_0b3195_decoder_quantized_multi_mask.onnx",
+    );
   }
   return session;
 }
@@ -112,11 +120,11 @@ async function inferFromEmbedding(
   embedding: Float32Array,
   embeddingBoxInTargetMag: BoundingBox,
   userBoxInTargetMag: BoundingBox,
+  nodePositions: Vector3[] | null,
   activeViewport: OrthoView,
 ) {
   const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(activeViewport);
-  const topLeft = V3.sub(userBoxInTargetMag.min, embeddingBoxInTargetMag.min);
-  const bottomRight = V3.sub(userBoxInTargetMag.max, embeddingBoxInTargetMag.min);
+  const shouldDetectRectangle = nodePositions == null;
   const ort = await import("onnxruntime-web");
 
   let ortSession: InferenceSession;
@@ -131,29 +139,39 @@ async function inferFromEmbedding(
   // server, there seems to be a different linearization of the 2D image
   // data which is why the code here deals with the YZ plane as a special
   // case.
-  const onnxCoord =
-    activeViewport === "PLANE_YZ"
-      ? new Float32Array([
-          topLeft[secondDim],
-          topLeft[firstDim],
-          bottomRight[secondDim],
-          bottomRight[firstDim],
-        ])
-      : new Float32Array([
-          topLeft[firstDim],
-          topLeft[secondDim],
-          bottomRight[firstDim],
-          bottomRight[secondDim],
-        ]);
+  const maybeAdjustedFirstDim = activeViewport === "PLANE_YZ" ? secondDim : firstDim;
+  const maybeAdjustedSecondDim = activeViewport === "PLANE_YZ" ? firstDim : secondDim;
+  const topLeft = V3.sub(userBoxInTargetMag.min, embeddingBoxInTargetMag.min);
+  const bottomRight = V3.sub(userBoxInTargetMag.max, embeddingBoxInTargetMag.min);
+  let onnxCoord;
+  if (shouldDetectRectangle) {
+    onnxCoord = new Float32Array([
+      topLeft[maybeAdjustedFirstDim],
+      topLeft[maybeAdjustedSecondDim],
+      bottomRight[maybeAdjustedFirstDim],
+      bottomRight[maybeAdjustedSecondDim],
+    ]);
+  } else {
+    const nodePositionsInEmbedding = nodePositions.map((position) => {
+      return [
+        position[maybeAdjustedFirstDim] - embeddingBoxInTargetMag.min[maybeAdjustedFirstDim],
+        position[maybeAdjustedSecondDim] - embeddingBoxInTargetMag.min[maybeAdjustedSecondDim],
+      ];
+    });
+    onnxCoord = new Float32Array([..._.flatten(nodePositionsInEmbedding), 0, 0]);
+  }
+
   // Inspired by https://github.com/facebookresearch/segment-anything/blob/main/notebooks/onnx_model_example.ipynb
-  const onnxLabel = new Float32Array([2, 3]);
+  const onnxLabel = shouldDetectRectangle
+    ? new Float32Array([2, 3])
+    : new Float32Array([...new Array(nodePositions.length).fill(1), -1]);
   const onnxMaskInput = new Float32Array(256 * 256);
   const onnxHasMaskInput = new Float32Array([0]);
   const origImSize = new Float32Array([1024, 1024]);
   const ortInputs = {
     image_embeddings: new ort.Tensor("float32", embedding, [1, 256, 64, 64]),
-    point_coords: new ort.Tensor("float32", onnxCoord, [1, 2, 2]),
-    point_labels: new ort.Tensor("float32", onnxLabel, [1, 2]),
+    point_coords: new ort.Tensor("float32", onnxCoord, [1, Math.round(onnxCoord.length / 2), 2]),
+    point_labels: new ort.Tensor("float32", onnxLabel, [1, onnxLabel.length]),
     mask_input: new ort.Tensor("float32", onnxMaskInput, [1, 1, 256, 256]),
     has_mask_input: new ort.Tensor("float32", onnxHasMaskInput, [1]),
     orig_im_size: new ort.Tensor("float32", origImSize, [2]),
@@ -161,15 +179,29 @@ async function inferFromEmbedding(
 
   // Use intersection-over-union estimates to pick the best mask.
   const { masks, iou_predictions: iouPredictions } = await ortSession.run(ortInputs);
+  const sortedScores: Array<[number, number]> = ([...iouPredictions.data] as number[])
+    .map((score, index) => [score, index] as [number, number])
+    .sort((a, b) => b[0] - a[0]);
+  // Avoid picking prediction 3 as this seems to always select the full user bounding box.
+  const bestMaskIndex = sortedScores[0][1] !== 3 ? sortedScores[0][1] : sortedScores[1][1];
   // @ts-ignore
-  const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
+  // const bestMaskIndex = iouPredictions.data.indexOf(Math.max(...iouPredictions.data));
+  // const bestMaskIndex = 1;
+  console.log("bestIndex", bestMaskIndex);
   const maskData = new Uint8Array(EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]);
   // Fill the mask data with a for loop (slicing/mapping would incur additional
   // data copies).
+  const fullMaskThreshold = userBoxInTargetMag.getVolume() * 0.95;
+  let markedVoxelCount = 0;
   const startOffset = bestMaskIndex * EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1];
   for (let idx = 0; idx < EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]; idx++) {
     maskData[idx] = (masks.data[idx + startOffset] as number) > 0 ? 1 : 0;
+    markedVoxelCount += maskData[idx];
   }
+  console.log("markedVoxelCount", markedVoxelCount);
+  console.log("fullMaskThreshold", fullMaskThreshold);
+  console.log("markedVoxelCount > fullMaskThreshold", markedVoxelCount > fullMaskThreshold);
+  console.log();
 
   const size = embeddingBoxInTargetMag.getSize();
   const userSizeInTargetMag = userBoxInTargetMag.getSize();
@@ -244,7 +276,9 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
   }
 }
 
-export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
+export default function* performQuickSelect(
+  action: ComputeQuickSelectForRectAction | SAMNodeSelect,
+): Saga<void> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (additionalCoordinates && additionalCoordinates.length > 0) {
     Toast.warning(
@@ -268,7 +302,16 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     volumeTracing,
     colorLayer,
   } = preparation;
-  const { startPosition, endPosition, quickSelectGeometry } = action;
+  const { startPosition, endPosition } =
+    "startPosition" in action
+      ? action
+      : { startPosition: action.bounds.min, endPosition: action.bounds.max };
+  const quickSelectGeometry = "type" in action ? action.quickSelectGeometry : null;
+  const nodePositions = "nodePositions" in action ? action.nodePositions : null;
+  const isSamNodeSelect = "nodePositions" in action;
+  const closeVolumeUndoBatchAfterPrediction = !isSamNodeSelect;
+  const predictionFinishedCallback =
+    "predictionFinishedCallback" in action ? action.predictionFinishedCallback : null;
 
   // Effectively, zero the first and second dimension in the mag.
   const depthSummand = V3.scale3(labeledResolution, Dimensions.transDim([0, 0, 1], activeViewport));
@@ -282,7 +325,9 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     (el, idx) => (idx === thirdDim ? el - 1 : el),
     unalignedUserBoxMag1.max,
   );
-  quickSelectGeometry.setCoordinates(unalignedUserBoxMag1.min, inclusiveMaxW);
+  if (quickSelectGeometry) {
+    quickSelectGeometry.setCoordinates(unalignedUserBoxMag1.min, inclusiveMaxW);
+  }
 
   const alignedUserBoxMag1 = unalignedUserBoxMag1.alignWithMag(labeledResolution, "floor");
   const dataset = yield* select((state: OxalisState) => state.dataset);
@@ -323,6 +368,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     embedding,
     embeddingBoxInTargetMag,
     userBoxInTargetMag,
+    nodePositions,
     activeViewport,
   );
   if (!mask) {
@@ -335,6 +381,9 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   );
 
   sendAnalyticsEvent("used_quick_select_with_ai");
+  if (predictionFinishedCallback) {
+    yield* predictionFinishedCallback();
+  }
   yield* finalizeQuickSelect(
     quickSelectGeometry,
     volumeTracing,
@@ -348,5 +397,6 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     mask,
     overwriteMode,
     labeledZoomStep,
+    closeVolumeUndoBatchAfterPrediction,
   );
 }

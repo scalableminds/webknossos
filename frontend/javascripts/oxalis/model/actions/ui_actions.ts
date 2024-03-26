@@ -1,6 +1,6 @@
 import type { AnnotationTool, Vector3 } from "oxalis/constants";
 import type { OxalisState, BorderOpenStatus, Theme } from "oxalis/store";
-import { StartAIJobModalState } from "oxalis/view/action-bar/starting_job_modals";
+import type { StartAIJobModalState } from "oxalis/view/action-bar/starting_job_modals";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
 type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisibilityAction>;
@@ -25,7 +25,10 @@ type HideMeasurementTooltipAction = ReturnType<typeof hideMeasurementTooltipActi
 type SetLastMeasuredPositionAction = ReturnType<typeof setLastMeasuredPositionAction>;
 type SetIsMeasuringAction = ReturnType<typeof setIsMeasuringAction>;
 type SetNavbarHeightAction = ReturnType<typeof setNavbarHeightAction>;
-
+type SetSkeletonSAMProgressPercentageAction = ReturnType<
+  typeof setSkeletonSAMProgressPercentageAction
+>;
+type SetSkeletonSAMModalAction = ReturnType<typeof setSkeletonSAMModalAction>;
 type SetRenderAnimationModalVisibilityAction = ReturnType<
   typeof setRenderAnimationModalVisibilityAction
 >;
@@ -54,7 +57,9 @@ export type UiAction =
   | HideMeasurementTooltipAction
   | SetLastMeasuredPositionAction
   | SetIsMeasuringAction
-  | SetNavbarHeightAction;
+  | SetNavbarHeightAction
+  | SetSkeletonSAMProgressPercentageAction
+  | SetSkeletonSAMModalAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -177,4 +182,15 @@ export const setNavbarHeightAction = (navbarHeight: number) =>
   ({
     type: "SET_NAVBAR_HEIGHT",
     navbarHeight,
+  }) as const;
+export const setSkeletonSAMProgressPercentageAction = (
+  skeletonSAMProgressPercentage: number | null,
+) =>
+  ({
+    type: "SET_SKELETON_SAM_PROGRESS_PERCENTAGE",
+    skeletonSAMProgressPercentage,
+  }) as const;
+export const setSkeletonSAMModalAction = () =>
+  ({
+    type: "SET_SKELETON_SAM_MODAL",
   }) as const;

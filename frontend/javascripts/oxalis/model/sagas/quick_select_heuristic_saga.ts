@@ -23,6 +23,7 @@ import {
 import {
   CancelQuickSelectAction,
   ComputeQuickSelectForRectAction,
+  ComputeSAMForSkeletonAction,
   ConfirmQuickSelectAction,
   FineTuneQuickSelectAction,
   finishAnnotationStrokeAction,
@@ -58,6 +59,7 @@ import {
 import Dimensions, { DimensionIndices } from "../dimensions";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
+import { SAMNodeSelect } from "./quick_select_ml_saga";
 
 const TOAST_KEY = "QUICKSELECT_PREVIEW_MESSAGE";
 
@@ -74,7 +76,11 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
 let wasPreviewModeToastAlreadyShown = false;
 
 export function* prepareQuickSelect(
-  action: ComputeQuickSelectForRectAction | MaybePrefetchEmbeddingAction,
+  action:
+    | ComputeQuickSelectForRectAction
+    | MaybePrefetchEmbeddingAction
+    | SAMNodeSelect
+    | ComputeSAMForSkeletonAction,
 ): Saga<{
   labeledZoomStep: number;
   firstDim: DimensionIndices;
@@ -86,9 +92,10 @@ export function* prepareQuickSelect(
   labeledResolution: Vector3;
   volumeTracing: VolumeTracing;
 } | null> {
-  const activeViewport = yield* select(
-    (state: OxalisState) => state.viewModeData.plane.activeViewport,
-  );
+  const activeViewport =
+    "viewport" in action
+      ? action.viewport
+      : yield* select((state: OxalisState) => state.viewModeData.plane.activeViewport);
   if (activeViewport === "TDView") {
     // Can happen when the user ends the drag action in the 3D viewport
     console.warn("Ignoring quick select when mouse is in 3D viewport");
@@ -500,7 +507,7 @@ function normalizeToUint8(
 }
 
 export function* finalizeQuickSelect(
-  quickSelectGeometry: QuickSelectGeometry,
+  quickSelectGeometry: QuickSelectGeometry | undefined | null,
   volumeTracing: VolumeTracing,
   activeViewport: OrthoView,
   labeledResolution: Vector3,
@@ -512,8 +519,11 @@ export function* finalizeQuickSelect(
   mask: ndarray.NdArray<TypedArrayWithoutBigInt>,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
+  closeVolumeUndoBatchAfterwards: boolean = true,
 ) {
-  quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+  if (quickSelectGeometry) {
+    quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
+  }
   const volumeLayer = yield* call(
     createVolumeLayer,
     volumeTracing,
@@ -543,7 +553,9 @@ export function* finalizeQuickSelect(
     labeledZoomStep,
     activeViewport,
   );
-  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  if (closeVolumeUndoBatchAfterwards) {
+    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  }
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
   yield* put(
     updateSegmentAction(

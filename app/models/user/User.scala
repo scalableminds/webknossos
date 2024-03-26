@@ -276,7 +276,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               ARRAY_REMOVE(ARRAY_AGG(utr.isteammanager :: TEXT), null) AS team_managers
             FROM webknossos.users AS u
             LEFT JOIN webknossos.user_team_roles utr on utr._user = u._id
-            INNER JOIN webknossos.teams t on t._id = utr._team
+            LEFT JOIN webknossos.teams t on t._id = utr._team -- should not cause fanout since there is only one team per team_role
             GROUP BY u._id
           )
           SELECT

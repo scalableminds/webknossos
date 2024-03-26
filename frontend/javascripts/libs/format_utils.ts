@@ -247,6 +247,12 @@ export function formatDurationToMinutesAndSeconds(durationInMillisecons: number)
   const duration = dayjs.duration(durationInMillisecons);
   return duration.format("mm:ss");
 }
+
+export function formatDurationToSeconds(durationInMillisecons: number) {
+  const duration = dayjs.duration(durationInMillisecons);
+  return duration.format("s");
+}
+
 export function formatHash(id: string): string {
   return id.slice(-6);
 }

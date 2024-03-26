@@ -56,16 +56,14 @@ GET           /users                                                            
 GET           /user                                                                             controllers.UserController.current()
 GET           /user/tasks                                                                       controllers.UserController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /user/annotations                                                                 controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET           /user/loggedTime                                                                  controllers.UserController.loggedTime()
 GET           /users/:id                                                                        controllers.UserController.user(id: String)
 PATCH         /users/:id                                                                        controllers.UserController.update(id: String)
 PUT           /users/:id/taskTypeId                                                             controllers.UserController.updateLastTaskTypeId(id: String)
 PUT           /users/:id/novelUserExperienceInfos                                               controllers.UserController.updateNovelUserExperienceInfos(id: String)
 PUT           /users/:id/selectedTheme                                                          controllers.UserController.updateSelectedTheme(id: String)
 GET           /users/:id/tasks                                                                  controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET           /users/:id/loggedTime                                                             controllers.UserController.userLoggedTime(id: String)
-POST          /users/loggedTime                                                                 controllers.UserController.usersLoggedTime
 GET           /users/:id/annotations                                                            controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET           /users/:id/loggedTime                                                             controllers.TimeController.userLoggedTime(id: String)
 
 # Team
 GET           /teams                                                                            controllers.TeamController.list(isEditable: Option[Boolean])
@@ -164,8 +162,6 @@ DELETE        /annotations/:typ/:id                                             
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:typ/:id/download                                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 
-GET           /annotations/:typ/:id/loggedTime                                                  controllers.AnnotationController.loggedTime(typ: String, id: String)
-
 GET           /annotations/source/:accessTokenOrId                                              controllers.AnnotationPrivateLinkController.annotationSource(accessTokenOrId: String, userToken: Option[String])
 
 GET           /annotations/readable                                                             controllers.AnnotationController.listExplorationals(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
@@ -232,10 +228,6 @@ PATCH         /projects/:id/resume                                              
 GET           /projects/:id/usersWithActiveTasks                                                controllers.ProjectController.usersWithActiveTasks(id:String)
 POST          /projects/:id/transferActiveTasks                                                 controllers.ProjectController.transferActiveTasks(id:String)
 
-# Statistics
-GET           /statistics/webknossos                                                            controllers.StatisticsController.webknossos(interval: String, start: Option[Long], end: Option[Long])
-GET           /statistics/users                                                                 controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
-
 # Organizations
 GET           /organizations                                                                    controllers.OrganizationController.list(compact: Option[Boolean])
 POST          /organizations                                                                    controllers.OrganizationController.create()
@@ -256,10 +248,10 @@ GET           /termsOfService                                                   
 POST          /termsOfService/accept                                                            controllers.OrganizationController.acceptTermsOfService(version: Int)
 GET           /termsOfService/acceptanceNeeded                                                  controllers.OrganizationController.termsOfServiceAcceptanceNeeded()
 
-# Timelogging
-GET           /time/allusers/:year/:month                                                       controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
-GET           /time/userlist/:year/:month                                                       controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
-GET           /time/user/:userId                                                                controllers.TimeController.getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long)
+# Time Tracking
+# Note, there is also /users/:id/loggedTime
+GET           /time/user/:userId                                                                controllers.TimeController.timeSpansOfUser(userId: String, startDate: Long, endDate: Long, annotationTypes: String, projectIds: Option[String])
+GET           /time/overview                                                                    controllers.TimeController.timeOverview(start: Long, end: Long, annotationTypes: String, teamIds: Option[String], projectIds: Option[String])
 
 # Long-Running Jobs
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)

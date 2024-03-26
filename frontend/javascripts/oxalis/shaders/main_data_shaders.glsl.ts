@@ -74,7 +74,9 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 
 <% _.each(colorLayerNames, function(name) { %>
   uniform vec3 <%= name %>_color;
+  uniform float <%= name %>_min_lim;
   uniform float <%= name %>_min;
+  uniform float <%= name %>_max_lim;
   uniform float <%= name %>_max;
   uniform float <%= name %>_is_inverted;
 <% }) %>
@@ -234,11 +236,11 @@ void main() {
         <% } %>
 
         vec3 is_color_out_of_bounds = vec3(
-          color_value.r < <%= name %>_min || color_value.r > <%= name %>_max ? 1.0 : 0.0,
-          color_value.g < <%= name %>_min || color_value.g > <%= name %>_max ? 1.0 : 0.0,
-          color_value.b < <%= name %>_min || color_value.b > <%= name %>_max ? 1.0 : 0.0
+          color_value.r < <%= name %>_min_lim || color_value.r > <%= name %>_max_lim ? 1.0 : 0.0,
+          color_value.g < <%= name %>_min_lim || color_value.g > <%= name %>_max_lim ? 1.0 : 0.0,
+          color_value.b < <%= name %>_min_lim || color_value.b > <%= name %>_max_lim ? 1.0 : 0.0
         );
-        bool is_color_out_of_bounds_any = bool(is_color_out_of_bounds.x + is_color_out_of_bounds.y + is_color_out_of_bounds.z > 0.0);
+        float is_any_color_part_out_of_bounds = float(is_color_out_of_bounds.x + is_color_out_of_bounds.y + is_color_out_of_bounds.z > 0.0);
 
         // Keep the color in bounds of min and max
         color_value = clamp(color_value, <%= name %>_min, <%= name %>_max);
@@ -261,7 +263,7 @@ void main() {
         // Calculating the cover color for the current layer in case blendMode == 1.0.
         vec4 additive_color = blendLayersAdditive(data_color, layer_color);
         // Calculating the cover color for the current layer in case blendMode == 0.0.
-        vec4 cover_color = blendLayersCover(data_color, layer_color, used_fallback, is_color_out_of_bounds_any);
+        vec4 cover_color = blendLayersCover(data_color, layer_color, used_fallback, is_any_color_part_out_of_bounds);
         // Choose color depending on blendMode.
         data_color = mix(cover_color, additive_color, float(blendMode == 1.0));
       }

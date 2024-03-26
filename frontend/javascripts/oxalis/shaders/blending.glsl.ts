@@ -19,7 +19,7 @@ export const getBlendLayersCover: ShaderModule = {
       vec4 current_color,
       vec4 layer_color,
       bool used_fallback_color,
-      bool is_color_out_of_bounds_any
+      float is_any_color_part_out_of_bounds
     ) {
       float mixed_alpha_factor = (1.0 - current_color.a) * layer_color.a;
       float mixed_alpha = mixed_alpha_factor + current_color.a;
@@ -29,7 +29,7 @@ export const getBlendLayersCover: ShaderModule = {
       vec4 cover_color = vec4(cover_color_rgb / (mixed_alpha + is_mixed_alpha_zero), mixed_alpha);
       cover_color = mix(cover_color, vec4(0.0), is_mixed_alpha_zero);
       // TODO: here also mix with whether outside of bounds
-      cover_color = mix(cover_color, vec4(0.0), float(is_color_out_of_bounds_any));
+      cover_color = mix(cover_color, vec4(0.0), is_any_color_part_out_of_bounds);
       // Do not overwrite current_color if the fallback color has been used.
       float is_current_color_valid = float(!used_fallback_color);
       cover_color = mix(current_color, cover_color, is_current_color_valid);

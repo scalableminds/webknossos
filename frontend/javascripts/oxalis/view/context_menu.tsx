@@ -906,7 +906,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                   {!isAgglomerateMappingEnabled.value ? (
                     <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
                   ) : null}{" "}
-                  {shortcutBuilder(["SHIFT", "middleMouse"])}
+                  {shortcutBuilder(["Shift", "middleMouse"])}
                 </span>
               </Tooltip>
             ),
@@ -924,7 +924,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                         : "Cannot merge because the proofreading tool is not active."
                     }
                   >
-                    <span>Merge with active segment {shortcutBuilder(["SHIFT", "leftMouse"])}</span>
+                    <span>Merge with active segment {shortcutBuilder(["Shift", "leftMouse"])}</span>
                   </Tooltip>
                 ),
               }

@@ -8,7 +8,7 @@ import antddayjs from "antd/node_modules/dayjs";
 import FormattedDate from "components/formatted_date";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
 import { isUserAdminOrTeamManager } from "libs/utils";
-import { getEditableUsers, getTimeTrackingForUser, getUser } from "admin/admin_rest_api";
+import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -102,7 +102,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
     annotationType: AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY,
   };
 
-  parseQueryParams() {
+  parseQueryParams(callbackFn: () => void) {
     const params = Utils.getUrlParamsObject();
     let dateRange: DateRange = [dayjs().startOf("day"), dayjs().endOf("day")];
     if (params == null) return { initialUserId: null };
@@ -128,22 +128,26 @@ class TimeLineView extends React.PureComponent<Props, State> {
         selectedProjectIds = params.projectsOrType.split(",");
       }
     }
-    this.setState({
-      initialUserId: _.has(params, "user") ? params.user : null,
-      annotationType,
-      selectedProjectIds,
-    });
     this.handleDateChange(dateRange);
+    this.setState(
+      {
+        initialUserId: _.has(params, "user") ? params.user : null,
+        annotationType,
+        selectedProjectIds,
+      },
+      callbackFn,
+    );
   }
 
   async componentDidMount() {
     const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
-    this.parseQueryParams();
-    if (isAdminOrTeamManger) {
-      await this.fetchData();
-    } else {
-      this.fetchDataFromLoggedInUser();
-    }
+    this.parseQueryParams(async () => {
+      if (isAdminOrTeamManger) {
+        await this.fetchData();
+      } else {
+        this.fetchDataFromLoggedInUser();
+      }
+    });
   }
 
   async componentDidUpdate(_prevProps: Props, prevState: State) {
@@ -161,11 +165,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
     this.setState({
       isFetchingUsers: true,
     });
+    const users = await getEditableUsers();
     const currentUser =
       this.state.initialUserId != null && isUserAdminOrTeamManager(this.props.activeUser)
-        ? await getUser(this.state.initialUserId)
+        ? users.find((users) => users.id === this.state.initialUserId)
         : this.props.activeUser;
-    const users = await getEditableUsers();
     this.setState({
       user: currentUser,
       users,

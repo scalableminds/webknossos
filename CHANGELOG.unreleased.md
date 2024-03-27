@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Improved task list to sort tasks by project date, add option to expand all tasks at once and improve styling. [#7709](https://github.com/scalableminds/webknossos/pull/7709)
 - Changed the time-tracking overview to show times spent in annotations and tasks and filter them by teams and projects. In the linked detail view, the tracked times can also be filtered by type (annotations or tasks) and project. [#7524](https://github.com/scalableminds/webknossos/pull/7524)
 - The time tracking api route `/api/users/:id/loggedTime`, which is used by the webknossos-libs client, and groups the times by month, now uses UTC when determining month limits, rather than the server’s local timezone. [#7524](https://github.com/scalableminds/webknossos/pull/7524)
+- Duplicated annotations are opened in a new browser tab. [#7724](https://github.com/scalableminds/webknossos/pull/7724)
 
 ### Fixed
 - Moving from the time tracking overview to its detail view, the selected user was not preselected in the next view. [#7722](https://github.com/scalableminds/webknossos/pull/7722)

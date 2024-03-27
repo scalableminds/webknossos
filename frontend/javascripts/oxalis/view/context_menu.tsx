@@ -470,7 +470,7 @@ function getNodeContextMenuOptions({
             disabled: areInSameTree,
             onClick: () =>
               activeNodeId != null
-                ? Store.dispatch(mergeTreesAction(clickedNodeId, activeNodeId))
+                ? Store.dispatch(mergeTreesAction(activeNodeId, clickedNodeId))
                 : null,
             label: (
               <>

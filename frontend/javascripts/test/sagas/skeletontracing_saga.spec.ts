@@ -297,7 +297,7 @@ test("SkeletonTracingSaga should emit createNode and createTree update actions",
   });
 });
 test("SkeletonTracingSaga should emit first deleteNode and then createNode update actions", (t) => {
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(2, 1);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 2);
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, createTreeAction)
@@ -329,8 +329,8 @@ test("SkeletonTracingSaga should emit first deleteNode and then createNode updat
     name: "createEdge",
     value: {
       treeId: 1,
-      source: 2,
-      target: 1,
+      source: 1,
+      target: 2,
     },
   });
 });
@@ -481,7 +481,7 @@ test("SkeletonTracingSaga should emit an updateTree update actions (branchpoints
   });
 });
 test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
   // create a node in first tree, then create a second tree with three nodes and merge them
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -521,13 +521,13 @@ test("SkeletonTracingSaga should emit update actions on merge tree", (t) => {
     name: "createEdge",
     value: {
       treeId: 2,
-      source: 1,
-      target: 3,
+      source: 3,
+      target: 1,
     },
   });
 });
 test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 3);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(3, 1);
   // create a node in first tree, then create a second tree with three nodes and merge them
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -612,13 +612,13 @@ test("SkeletonTracingSaga should emit update actions on split tree", (t) => {
     name: "deleteEdge",
     value: {
       treeId: 2,
-      source: 1,
-      target: 3,
+      source: 3,
+      target: 1,
     },
   });
 });
 test("compactUpdateActions should detect a tree merge (1/3)", (t) => {
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 4);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(4, 1);
   // Create three nodes in the first tree, then create a second tree with one node and merge them
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -661,15 +661,15 @@ test("compactUpdateActions should detect a tree merge (1/3)", (t) => {
     name: "createEdge",
     value: {
       treeId: 2,
-      source: 1,
-      target: 4,
+      source: 4,
+      target: 1,
     },
   });
   t.is(simplifiedFirstBatch.length, 3);
 });
 test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
   // In this test multiple diffs are performed and concatenated before compactUpdateActions is invoked
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 5);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(5, 1);
   // Create three nodes in the first tree, then create a second tree with one node
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -742,16 +742,16 @@ test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
     name: "createEdge",
     value: {
       treeId: 2,
-      source: 1,
-      target: 5,
+      source: 5,
+      target: 1,
     },
   });
   t.is(simplifiedSecondBatch.length, 5);
 });
 test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
   // In this test multiple merges and diffs are performed and concatenated before compactUpdateActions is invoked
-  const firstMergeTreesAction = SkeletonTracingActions.mergeTreesAction(4, 1);
-  const secondMergeTreesAction = SkeletonTracingActions.mergeTreesAction(6, 1);
+  const firstMergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 4);
+  const secondMergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 6);
   // Create three nodes in the first tree, then create a second tree with one node
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)
@@ -823,8 +823,8 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
     name: "createEdge",
     value: {
       treeId: 1,
-      source: 4,
-      target: 1,
+      source: 1,
+      target: 4,
     },
   });
   t.is(simplifiedFirstBatch.length, 3);
@@ -855,8 +855,8 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
     name: "createEdge",
     value: {
       treeId: 1,
-      source: 6,
-      target: 1,
+      source: 1,
+      target: 6,
     },
   });
   t.is(simplifiedThirdBatch.length, 3);
@@ -1077,7 +1077,7 @@ test("compactUpdateActions should do nothing if it cannot compact", (t) => {
   // the right spot (see code comments for why)
   // This case cannot happen currently as there is no action in webknossos that results in such a diff,
   // it could however exist in the future and this test makes sure things won't break then
-  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(1, 2);
+  const mergeTreesAction = SkeletonTracingActions.mergeTreesAction(2, 1);
   // Create three nodes in the first tree, then create a second tree with one node and merge them
   const testState = ChainReducer<OxalisState, Action>(initialState)
     .apply(SkeletonTracingReducer, createNodeAction)

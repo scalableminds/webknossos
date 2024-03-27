@@ -826,10 +826,6 @@ function* _getChunkLoadingDescriptors(
   let loadingOrder: number[] = [];
 
   const { segmentMeshController } = getSceneController();
-  const currentLODIndex = yield* call({
-    context: segmentMeshController.meshesLODRootGroup,
-    fn: segmentMeshController.meshesLODRootGroup.getCurrentLOD,
-  });
   const version = meshFile.formatVersion;
   const { meshFileName } = meshFile;
   const meshExtraInfo = yield* call(getMeshExtraInfo, segmentationLayer.name, null);
@@ -879,6 +875,13 @@ function* _getChunkLoadingDescriptors(
       availableChunksMap[lodIndex] = chunks?.chunks;
       loadingOrder.push(lodIndex);
     });
+    const currentLODIndex = yield* call(
+      {
+        context: segmentMeshController.meshesLODRootGroup,
+        fn: segmentMeshController.meshesLODRootGroup.getCurrentLOD,
+      },
+      Math.max(...loadingOrder),
+    );
     // Load the chunks closest to the current LOD first.
     loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
   } else {

@@ -651,12 +651,12 @@ export function mergeTrees(
   trees: TreeMap,
   sourceNodeId: number,
   targetNodeId: number,
-): Maybe<[TreeMap, number, number]> {
+): [TreeMap, number, number] | null {
   const sourceTree = findTreeByNodeId(trees, sourceNodeId);
   const targetTree = findTreeByNodeId(trees, targetNodeId); // should be activeTree
 
   if (sourceTree == null || targetTree == null || sourceTree === targetTree) {
-    return Maybe.Nothing();
+    return null;
   }
 
   const newEdge: Edge = {
@@ -688,7 +688,7 @@ export function mergeTrees(
       },
     },
   });
-  return Maybe.Just([newTrees, targetTree.treeId, targetNodeId]);
+  return [newTrees, targetTree.treeId, targetNodeId];
 }
 export function shuffleTreeColor(
   skeletonTracing: SkeletonTracing,

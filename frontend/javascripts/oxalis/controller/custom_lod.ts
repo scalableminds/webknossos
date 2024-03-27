@@ -5,23 +5,33 @@ import { getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
 export default class CustomLOD extends THREE.LOD {
   noLODGroup: THREE.Group;
   lodLevelCount: number;
-  lodThresholds: number[];
+
   constructor() {
     super();
     this.lodLevelCount = 0;
     this.noLODGroup = new THREE.Group();
     this.add(this.noLODGroup);
-    this.lodThresholds = [0.7, 3];
   }
 
-  getCurrentLOD(): number {
+  getCurrentLOD(maxLod?: number): number {
+    // The maxLod parameter indicates which LODs are available if no LOD mesh was added before
+    const maxIndex = maxLod != null ? maxLod : this.lodLevelCount - 1;
     const state = Store.getState();
     const scale = getTDViewZoom(state);
     let currentIndex = 0;
-    while (scale > this.lodThresholds[currentIndex] && currentIndex < this.lodLevelCount - 1) {
+    while (scale > this.getLODThresholdForLevel(currentIndex) && currentIndex < maxIndex) {
       currentIndex++;
     }
     return currentIndex;
+  }
+
+  getLODThresholdForLevel(level: number) {
+    if (level === 0) {
+      return 0.7;
+    }
+
+    // This will return 3 for level 1 and then double for each additional level
+    return 2 ** (level - 1) * 3;
   }
 
   update(_camera: any) {
@@ -41,13 +51,6 @@ export default class CustomLOD extends THREE.LOD {
     while (this.lodLevelCount <= level) {
       this.addLevel(new THREE.Group(), this.lodLevelCount);
       this.lodLevelCount++;
-      // Add a new threshold if the number of thresholds is not sufficient.
-      // A new threshold is only needed if LOD count is greater than the count of thresholds
-      // as the last threshold is also used for all scales greater than itself.
-      // Thus this.lodThresholds.length will always be equal to this.lodLevelCount - 1.
-      if (this.lodLevelCount > this.lodThresholds.length) {
-        this.lodThresholds.push(this.lodThresholds[this.lodThresholds.length - 1] * 2);
-      }
     }
     this.levels[level].object.add(meshGroup);
   }

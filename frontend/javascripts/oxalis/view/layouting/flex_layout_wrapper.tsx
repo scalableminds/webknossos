@@ -347,7 +347,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         return (
           <InputCatcher
             busyBlockingInfo={busyBlockingInfo}
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             viewportID={ArbitraryViews.arbitraryViewport}
           >
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}

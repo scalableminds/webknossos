@@ -75,7 +75,7 @@ export const ArbitraryViewport = "arbitraryViewport";
 export const ArbitraryViews = {
   arbitraryViewport: "arbitraryViewport",
   TDView: "TDView",
-};
+} as const;
 export const ArbitraryViewsToName = {
   arbitraryViewport: "Arbitrary View",
   TDView: "3D",

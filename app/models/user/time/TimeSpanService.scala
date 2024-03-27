@@ -12,8 +12,8 @@ import models.organization.{OrganizationDAO, OrganizationService}
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
-import net.liftweb.common.Full
-import thirdparty.BrainTracing
+import net.liftweb.common.{Box, Full}
+import org.apache.pekko.actor.{ActorSelection, ActorSystem}
 import utils.{ObjectId, WkConf}
 
 import scala.collection.mutable
@@ -23,16 +23,19 @@ import scala.concurrent.duration._
 class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 userService: UserService,
                                 taskDAO: TaskDAO,
-                                brainTracing: BrainTracing,
                                 annotationService: AnnotationService,
                                 organizationService: OrganizationService,
                                 projectDAO: ProjectDAO,
                                 organizationDAO: OrganizationDAO,
                                 timeSpanDAO: TimeSpanDAO,
                                 defaultMails: DefaultMails,
-                                conf: WkConf)(implicit ec: ExecutionContext)
+                                conf: WkConf,
+                                actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
+
+  private lazy val Mailer: ActorSelection =
+    actorSystem.actorSelection("/user/mailActor")
 
   def logUserInteraction(timestamp: Instant, user: User, annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[Unit] =
@@ -42,49 +45,12 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       implicit ctx: DBAccessContext): Fox[Unit] =
     trackTime(timestamps, user._id, annotation)
 
-  def loggedTimeOfUser[T](user: User,
-                          groupingF: TimeSpan => T,
-                          start: Option[Instant] = None,
-                          end: Option[Instant] = None): Fox[Map[T, Duration]] =
-    for {
-      timeTrackingOpt <- timeSpanDAO.findAllByUser(user._id, start, end).futureBox
-    } yield {
-      timeTrackingOpt match {
-        case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
-        case _ =>
-          Map.empty[T, Duration]
-      }
-    }
-
-  def loggedTimeOfAnnotation[T](annotationId: ObjectId,
-                                groupingF: TimeSpan => T,
-                                start: Option[Instant] = None,
-                                end: Option[Instant] = None): Fox[Map[T, Duration]] =
-    for {
-      timeTrackingOpt <- timeSpanDAO.findAllByAnnotation(annotationId, start, end).futureBox
-    } yield {
-      timeTrackingOpt match {
-        case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
-        case _ =>
-          Map.empty[T, Duration]
-      }
-    }
-
-  def loggedTimePerInterval[T](groupingF: TimeSpan => T,
-                               start: Option[Instant] = None,
-                               end: Option[Instant] = None,
-                               organizationId: ObjectId): Fox[Map[T, Duration]] =
-    for {
-      timeTrackingOpt <- timeSpanDAO.findAll(start, end, organizationId).futureBox
-    } yield {
-      timeTrackingOpt match {
-        case Full(timeSpans) =>
-          timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
-        case _ =>
-          Map.empty[T, Duration]
-      }
+  def sumTimespansPerInterval[T](groupingF: TimeSpan => T, timeSpansBox: Box[List[TimeSpan]]): Map[T, Duration] =
+    timeSpansBox match {
+      case Full(timeSpans) =>
+        timeSpans.groupBy(groupingF).view.mapValues(_.foldLeft(0L)(_ + _.time).millis).toMap
+      case _ =>
+        Map.empty[T, Duration]
     }
 
   private val lastUserActivities = mutable.HashMap.empty[ObjectId, TimeSpan]
@@ -104,7 +70,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       var timeSpansToUpdate: List[(TimeSpan, Instant)] = List()
 
       def createNewTimeSpan(timestamp: Instant, _user: ObjectId, annotation: Option[Annotation]) = {
-        val timeSpan = TimeSpan.fromTimestamp(timestamp, _user, annotation.map(_._id))
+        val timeSpan = TimeSpan.fromInstant(timestamp, _user, annotation.map(_._id))
         timeSpansToInsert = timeSpan :: timeSpansToInsert
         timeSpan
       }
@@ -166,7 +132,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       // do nothing, this is not a stored annotation
     }
 
-  def signalOverTime(time: FiniteDuration, annotationOpt: Option[Annotation])(implicit ctx: DBAccessContext): Fox[_] =
+  private def signalOverTime(time: FiniteDuration, annotationOpt: Option[Annotation])(
+      implicit ctx: DBAccessContext): Fox[_] =
     for {
       annotation <- annotationOpt.toFox
       user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
@@ -180,7 +147,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       mailRecipient <- organizationService.overTimeMailRecipient(organization)(GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time.toMillis < timeLimit) {
-        brainTracing.Mailer ! Send(defaultMails
+        Mailer ! Send(defaultMails
           .overLimitMail(user, project.name, task._id.toString, annotation.id, List(mailRecipient, projectOwnerEmail)))
       }
     }

@@ -175,7 +175,7 @@ class DataCube {
     const mapping = this.getMapping();
 
     if (mapping != null && this.isMappingEnabled()) {
-      mappedId = mapping[idToMap];
+      mappedId = mapping.get(idToMap);
     }
 
     if (this.shouldHideUnmappedIds() && mappedId == null) {
@@ -852,7 +852,7 @@ class DataCube {
       const dataValue = Number(data[voxelIndex]);
 
       if (mapping) {
-        const mappedValue = mapping[dataValue];
+        const mappedValue = mapping.get(dataValue);
 
         if (mappedValue != null) {
           return mappedValue;

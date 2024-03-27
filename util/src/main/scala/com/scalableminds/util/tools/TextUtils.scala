@@ -1,6 +1,7 @@
 package com.scalableminds.util.tools
 
 import java.io.{PrintWriter, StringWriter}
+import scala.concurrent.ExecutionContext
 
 object TextUtils {
   private val replacementMap = Map(
@@ -59,4 +60,13 @@ object TextUtils {
     t.printStackTrace(new PrintWriter(sw))
     sw.toString
   }
+
+  def parseCommaSeparated[T](commaSeparatedStrOpt: Option[String])(parseEntry: String => Fox[T])(
+      implicit ec: ExecutionContext): Fox[List[T]] =
+    commaSeparatedStrOpt match {
+      case None                                                 => Fox.successful(List.empty)
+      case Some(commaSeparatedStr) if commaSeparatedStr.isEmpty => Fox.successful(List.empty)
+      case Some(commaSeparatedStr) =>
+        Fox.serialCombined(commaSeparatedStr.split(",").toList)(entry => parseEntry(entry))
+    }
 }

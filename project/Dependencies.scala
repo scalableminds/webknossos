@@ -20,8 +20,6 @@ object Dependencies {
     "org.apache.commons" % "commons-lang3" % "3.12.0",
     // Box/Tryo. import net.liftweb
     "net.liftweb" %% "lift-common" % "3.5.0",
-    // Datetime utils. import org.joda.time
-    "joda-time" % "joda-time" % "2.12.5",
     // ObjectIds. import reactivemongo.api.bson
     "org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10",
     // Protocol buffers. import scalapb

@@ -178,8 +178,8 @@ const defaultState: OxalisState = {
     },
     isBusyInfo: {
       skeleton: false,
-      volume: false,
-      mapping: false,
+      volumes: {},
+      mappings: {},
     },
     lastSaveTimestamp: {
       skeleton: 0,

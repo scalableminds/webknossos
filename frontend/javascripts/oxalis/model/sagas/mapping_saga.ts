@@ -314,14 +314,9 @@ function* handleSetJsonMapping(
   const fetchedMapping = fetchedMappings[mappingName];
   const { hideUnmappedIds, colors: mappingColors } = fetchedMapping;
 
-  const [mappingObject, mappingKeys] = yield* call(
-    buildMappingObject,
-    mappingName,
-    fetchedMappings,
-  );
+  const mapping = yield* call(buildMappingObject, mappingName, fetchedMappings);
   const mappingProperties = {
-    mapping: mappingObject,
-    mappingKeys,
+    mapping,
     mappingColors,
     hideUnmappedIds,
   };
@@ -344,9 +339,9 @@ function* handleSetJsonMapping(
 
 function convertMappingObjectToClasses(existingMapping: Mapping) {
   const classesByRepresentative: Record<number, number[]> = {};
-  for (const unmappedStr of Object.keys(existingMapping)) {
-    const unmapped = Number(unmappedStr);
-    const mapped = existingMapping[unmapped];
+  for (const unmapped of existingMapping.keys()) {
+    // @ts-ignore unmapped is guaranteed to exist in existingMapping as it was obtained using existingMapping.keys()
+    const mapped: number = existingMapping.get(unmapped);
     classesByRepresentative[mapped] = classesByRepresentative[mapped] || [];
     classesByRepresentative[mapped].push(unmapped);
   }
@@ -365,10 +360,10 @@ function* setCustomColors(
   let classIdx = 0;
   for (const aClass of classes) {
     const firstIdEntry = aClass[0];
-    if (firstIdEntry == null) {
-      continue;
-    }
-    const representativeId = mappingProperties.mapping[firstIdEntry];
+    if (firstIdEntry == null) continue;
+
+    const representativeId = mappingProperties.mapping.get(firstIdEntry);
+    if (representativeId == null) continue;
 
     const hueValue = mappingProperties.mappingColors[classIdx];
     const color = jsHsv2rgb(360 * hueValue, 1, 1);
@@ -404,14 +399,8 @@ function* fetchMappings(
   }
 }
 
-function buildMappingObject(
-  mappingName: string,
-  fetchedMappings: APIMappings,
-): [Mapping, Array<number>] {
-  const mappingObject: Mapping = {};
-  // Performance optimization: Object.keys(...) is slow for large objects
-  // keeping track of the keys in a separate array is ~5x faster
-  const mappingKeys = [];
+function buildMappingObject(mappingName: string, fetchedMappings: APIMappings): Mapping {
+  const mappingObject: Mapping = new Map();
 
   for (const currentMappingName of getMappingChain(mappingName, fetchedMappings)) {
     const mapping = fetchedMappings[currentMappingName];
@@ -426,17 +415,15 @@ function buildMappingObject(
         // The class is empty and can be ignored
         continue;
       }
-      const mappedId = mappingObject[minId] || minId;
+      const mappedId = mappingObject.get(minId) || minId;
 
       for (const id of mappingClass) {
-        mappingObject[id] = mappedId;
-        mappingKeys.push(id);
+        mappingObject.set(id, mappedId);
       }
     }
   }
 
-  mappingKeys.sort((a, b) => a - b);
-  return [mappingObject, mappingKeys];
+  return mappingObject;
 }
 
 function getMappingChain(mappingName: string, fetchedMappings: APIMappings): Array<string> {

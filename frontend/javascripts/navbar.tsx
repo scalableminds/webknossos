@@ -8,7 +8,10 @@ import {
   Popover,
   type SubMenuProps,
   Tag,
+  Input,
+  InputRef,
 } from "antd";
+import _ from "lodash";
 import {
   SwapOutlined,
   TeamOutlined,
@@ -23,9 +26,14 @@ import { useHistory, Link } from "react-router-dom";
 
 import classnames from "classnames";
 import { connect } from "react-redux";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Toast from "libs/toast";
-import type { APIOrganization, APIUser, APIUserCompact, APIUserTheme } from "types/api_flow_types";
+import type {
+  APIOrganizationCompact,
+  APIUser,
+  APIUserCompact,
+  APIUserTheme,
+} from "types/api_flow_types";
 import { PortalTarget } from "oxalis/view/layouting/portal_utils";
 import {
   getBuildInfo,
@@ -59,6 +67,11 @@ import { getSystemColorTheme } from "theme";
 const { Header } = Layout;
 
 const HELP_MENU_KEY = "helpMenu";
+// At most, 20 organizations are rendered in the dropdown.
+const MAX_RENDERED_ORGANIZATION = 20;
+// A search input is shown when more than 10 switchable organizations
+// exist.
+const ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT = 10;
 
 type OwnProps = {
   isAuthenticated: boolean;
@@ -261,12 +274,11 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
       collapse,
     ),
     children: [
-      { key: "/statistics", label: <Link to="/statistics">Overview</Link> },
       {
-        key: "/reports/timetracking",
+        key: "/timetracking",
         label: (
-          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Power}>
-            <Link to="/reports/timetracking">Time Tracking</Link>
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/timetracking">Time Tracking Overview</Link>
           </PricingEnforcedSpan>
         ),
       },
@@ -483,7 +495,7 @@ function NotificationIcon({
   );
 }
 
-export const switchTo = async (org: APIOrganization) => {
+export const switchTo = async (org: APIOrganizationCompact) => {
   Toast.info(`Switching to ${org.displayName || org.name}`);
 
   // If the user is currently at the datasets tab, the active folder is encoded
@@ -497,6 +509,43 @@ export const switchTo = async (org: APIOrganization) => {
 
   await switchToOrganization(org.name);
 };
+
+function OrganizationFilterInput({
+  onChange,
+  isVisible,
+  onPressEnter,
+}: { onChange: (val: string) => void; isVisible: boolean; onPressEnter: () => void }) {
+  const ref = useRef<InputRef>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesnt understand that ref.current is accessed?
+  useEffect(() => {
+    if (ref?.current && isVisible) {
+      setTimeout(() => {
+        // Without the timeout, the focus doesn't work unfortunately.
+        ref.current?.input?.focus();
+      }, 100);
+    }
+  }, [ref.current, isVisible]);
+  const onChangeImpl = (evt: React.ChangeEvent<HTMLInputElement>) => {
+    onChange(evt.target.value);
+  };
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    const consumableKeyCodes = [40, 38, 27]; // up, down, escape
+    if (!consumableKeyCodes.includes(event.keyCode)) {
+      event.stopPropagation();
+    }
+  };
+
+  return (
+    <Input
+      placeholder="Filter organizations..."
+      onChange={onChangeImpl}
+      onKeyDown={onKeyDown}
+      ref={ref}
+      onPressEnter={onPressEnter}
+    />
+  );
+}
 
 function LoggedInAvatar({
   activeUser,
@@ -515,6 +564,19 @@ function LoggedInAvatar({
     activeOrganization != null
       ? activeOrganization.displayName || activeOrganization.name
       : organizationName;
+  const [organizationFilter, onChangeOrganizationFilter] = useState("");
+  const [openKeys, setOpenKeys] = useState<string[]>([]);
+
+  const filteredOrganizations = Utils.filterWithSearchQueryAND(
+    switchableOrganizations,
+    ["displayName", "name"],
+    organizationFilter,
+  );
+  const onEnterOrganization = () => {
+    if (filteredOrganizations.length > 0) {
+      switchTo(filteredOrganizations[0]);
+    }
+  };
 
   const setSelectedTheme = async (newTheme: APIUserTheme) => {
     if (newTheme === "auto") newTheme = getSystemColorTheme();
@@ -525,6 +587,22 @@ function LoggedInAvatar({
       Store.dispatch(setActiveUserAction(newUser));
     }
   };
+
+  const maybeOrganizationFilterInput =
+    switchableOrganizations.length > ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT
+      ? [
+          {
+            key: "input",
+            label: (
+              <OrganizationFilterInput
+                onChange={onChangeOrganizationFilter}
+                isVisible={openKeys.includes("switch-organization")}
+                onPressEnter={onEnterOrganization}
+              />
+            ),
+          },
+        ]
+      : [];
 
   const isMultiMember = switchableOrganizations.length > 0;
   return (
@@ -540,6 +618,8 @@ function LoggedInAvatar({
       subMenuCloseDelay={subMenuCloseDelay}
       triggerSubMenuAction="click"
       className="right-navbar"
+      onOpenChange={setOpenKeys}
+      openKeys={openKeys}
       items={[
         {
           key: "loggedMenu",
@@ -570,11 +650,15 @@ function LoggedInAvatar({
               ? {
                   key: "switch-organization",
                   label: "Switch Organization",
-                  children: switchableOrganizations.map((org) => ({
-                    key: org.name,
-                    onClick: () => switchTo(org),
-                    label: org.displayName || org.name,
-                  })),
+                  popupClassName: "organization-switch-menu",
+                  children: [
+                    ...maybeOrganizationFilterInput,
+                    ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
+                      key: org.name,
+                      onClick: () => switchTo(org),
+                      label: org.displayName || org.name,
+                    })),
+                  ],
                 }
               : null,
             {

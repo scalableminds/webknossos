@@ -75,6 +75,7 @@ class AnnotationController @Inject()(
     analyticsService: AnalyticsService,
     slackNotificationService: SlackNotificationService,
     mailchimpClient: MailchimpClient,
+    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore,
     conf: WkConf,
     rpc: RPC,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -148,24 +149,6 @@ class AnnotationController @Inject()(
         result <- merge(annotation.typ.toString, id, mergedTyp, mergedId)(request)
       } yield result
     }
-
-  def loggedTime(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
-      restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
-      _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-      loggedTimeAsMap <- timeSpanService
-        .loggedTimeOfAnnotation(annotation._id, TimeSpan.groupByMonth) ?~> "annotation.timelogging.read.failed"
-    } yield {
-      Ok(
-        Json.arr(
-          loggedTimeAsMap.map {
-            case (month, duration) =>
-              Json.obj("interval" -> month, "durationInSeconds" -> duration.toSeconds)
-          }
-        ))
-    }
-  }
 
   def reset(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
@@ -391,7 +374,7 @@ class AnnotationController @Inject()(
     var processedCount = 0
     for {
       tracingStore <- tracingStoreDAO.findFirst(GlobalAccessContext) ?~> "tracingStore.notFound"
-      client = new WKRemoteTracingStoreClient(tracingStore, null, rpc)
+      client = new WKRemoteTracingStoreClient(tracingStore, null, rpc, tracingDataSourceTemporaryStore)
       batchCount = annotationLayerBatch.length
       results <- Fox.serialSequenceBox(annotationLayerBatch) { annotationLayer =>
         processedCount += 1

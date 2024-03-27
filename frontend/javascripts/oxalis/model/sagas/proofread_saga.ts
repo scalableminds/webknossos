@@ -20,6 +20,7 @@ import {
   findTreeByNodeId,
   getNodeAndTree,
   getTreeNameForAgglomerateSkeleton,
+  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   pushSaveQueueTransaction,
@@ -292,8 +293,14 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
 
-  const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).position;
-  const targetNodePosition = targetTree.nodes.get(targetNodeId).position;
+  // Use untransformedPosition because agglomerate trees should not have
+  // any transforms, anyway.
+  if (yield* select((state) => isSkeletonLayerTransformed(state))) {
+    Toast.error("Proofreading is currently not supported when the skeleton layer is transformed.");
+    return;
+  }
+  const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).untransformedPosition;
+  const targetNodePosition = targetTree.nodes.get(targetNodeId).untransformedPosition;
 
   const idInfos = yield* call(getAgglomerateInfos, preparation.getMappedAndUnmapped, [
     sourceNodePosition,
@@ -436,6 +443,13 @@ function* performMinCut(
     volumeTracingId,
     segmentsInfo,
   );
+
+  // Use untransformedPosition below because agglomerate trees should not have
+  // any transforms, anyway.
+  if (yield* select((state) => isSkeletonLayerTransformed(state))) {
+    Toast.error("Proofreading is currently not supported when the skeleton layer is transformed.");
+    return true;
+  }
 
   for (const edge of edgesToRemove) {
     if (sourceTree) {
@@ -918,9 +932,9 @@ function getDeleteEdgeActionForEdgePositions(
   let firstNodeId;
   let secondNodeId;
   for (const node of sourceTree.nodes.values()) {
-    if (_.isEqual(node.position, edge.position1)) {
+    if (_.isEqual(node.untransformedPosition, edge.position1)) {
       firstNodeId = node.id;
-    } else if (_.isEqual(node.position, edge.position2)) {
+    } else if (_.isEqual(node.untransformedPosition, edge.position2)) {
       secondNodeId = node.id;
     }
     if (firstNodeId && secondNodeId) {

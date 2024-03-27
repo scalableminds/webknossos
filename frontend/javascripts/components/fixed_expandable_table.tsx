@@ -1,4 +1,5 @@
-import { Table, TableProps } from "antd";
+import { Button, Table, TableProps } from "antd";
+import { GetRowKey } from "antd/lib/table/interface";
 import * as React from "react";
 type Props<RecordType extends object = any> = TableProps<RecordType> & {
   children: Array<React.ReactElement<typeof Table.Column> | null>;
@@ -19,9 +20,35 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
     expandedRows: [],
   };
 
+  getAllRowIds(
+    dataSource: readonly any[] | undefined,
+    rowKey: string | number | symbol | GetRowKey<any> | undefined,
+  ) {
+    const canUseRowKey = typeof rowKey === "string";
+    return dataSource != null && canUseRowKey ? dataSource.map((row) => row[rowKey]) : [];
+  }
+
   render() {
     const { expandedRows } = this.state;
     const { children, className, expandable, ...restProps } = this.props;
+    const { dataSource, rowKey } = this.props;
+    const areAllRowsExpanded =
+      dataSource != null && this.state.expandedRows.length === dataSource?.length;
+
+    const columnTitleCollapsed = (
+      <Button
+        className="ant-table-row-expand-icon ant-table-row-expand-icon-collapsed"
+        title="Expand all rows"
+        onClick={() => this.setState({ expandedRows: this.getAllRowIds(dataSource, rowKey) })}
+      />
+    );
+    const columnTitleExpanded = (
+      <Button
+        className="ant-table-row-expand-icon ant-table-row-expand-icon-expanded"
+        title="Collapse all rows"
+        onClick={() => this.setState({ expandedRows: [] })}
+      />
+    );
     // Don't use React.Children.map here, since this adds .$ prefixes
     // to the keys. However, the keys are needed when managing the sorters
     // of the table.
@@ -44,6 +71,7 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
           expandedRows: selectedRows as string[],
         });
       },
+      columnTitle: areAllRowsExpanded ? columnTitleExpanded : columnTitleCollapsed,
     };
     return (
       <Table

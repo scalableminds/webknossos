@@ -50,32 +50,28 @@ class Mappings {
       (state) =>
         getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, this.layerName).mapping,
       (mapping) => {
-        const { mappingKeys } = getMappingInfo(
-          Store.getState().temporaryConfiguration.activeMappingByLayer,
-          this.layerName,
-        );
-        this.updateMappingTextures(mapping, mappingKeys);
+        this.updateMappingTextures(mapping);
       },
       true,
     );
   }
 
-  async updateMappingTextures(
-    mapping: Mapping | null | undefined,
-    mappingKeys: Array<number> | null | undefined,
-  ): Promise<void> {
-    if (mapping == null || mappingKeys == null) return;
-    console.log("Mapping Texture", performance.now());
-    console.log("Mapping size", mappingKeys.length);
+  async updateMappingTextures(mapping: Mapping | null | undefined): Promise<void> {
+    if (mapping == null) return;
     console.time("Time to create mapping texture");
-    const mappingSize = mappingKeys.length;
+    console.log("Mapping Texture", performance.now());
+    console.log("Mapping size", mapping.size);
+    const mappingSize = mapping.size;
     // The typed arrays need to be padded with 0s so that their length is a multiple of MAPPING_TEXTURE_WIDTH
     const paddedLength =
       mappingSize + MAPPING_TEXTURE_WIDTH - (mappingSize % MAPPING_TEXTURE_WIDTH);
     const keys = new Uint32Array(paddedLength);
     const values = new Uint32Array(paddedLength);
+    const mappingKeys = Array.from(mapping.keys());
+    mappingKeys.sort((a, b) => a - b);
     keys.set(mappingKeys);
-    values.set(mappingKeys.map((key) => mapping[key]));
+    // @ts-ignore mappingKeys are guaranteed to exist in mapping as they are mapping.keys()
+    values.set(mappingKeys.map((key) => mapping.get(key)));
     // Instantiate the Uint8Arrays with the array buffer from the Uint32Arrays, so that each 32-bit value is converted
     // to four 8-bit values correctly
     const uint8Keys = new Uint8Array(keys.buffer);

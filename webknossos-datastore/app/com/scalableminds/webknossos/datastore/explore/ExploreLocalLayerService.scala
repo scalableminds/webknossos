@@ -1,7 +1,9 @@
 package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerWithMagLocators,
   DataSource,
@@ -31,7 +33,8 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
         exploreLocalNgffArray(path, dataSourceId),
         exploreLocalZarrArray(path, dataSourceId, layerDirectory),
         exploreLocalNeuroglancerPrecomputed(path, dataSourceId, layerDirectory),
-        exploreLocalN5Multiscales(path, dataSourceId, layerDirectory)
+        exploreLocalN5Multiscales(path, dataSourceId, layerDirectory),
+        exploreLocalN5Array(path, dataSourceId)
       )
       dataSource <- Fox.firstSuccess(explored) ?~> "Could not explore local data source"
     } yield dataSource
@@ -73,6 +76,31 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       layers => layers.map(selectLastDirectory),
       new N5MultiscalesExplorer
     )(path, dataSourceId, layerDirectory)
+
+  private def exploreLocalN5Array(path: Path, dataSourceId: DataSourceId)(
+      implicit ec: ExecutionContext): Fox[DataSourceWithMagLocators] =
+    for {
+      _ <- Fox.successful(())
+      // Go down subdirectories until we find a directory with an attributes.json file that matches N5Header
+      layerPath <- PathUtils
+        .recurseSubdirsUntil(
+          path,
+          (p: Path) =>
+            try {
+              val attributesBytes = Files.readAllBytes(p.resolve(N5Header.FILENAME_ATTRIBUTES_JSON))
+              Json.parse(new String(attributesBytes)).validate[N5Header].isSuccess
+            } catch {
+              case _: Exception => false
+          }
+        )
+        .getOrElse(path)
+      explored <- exploreLocalLayer(
+        layers =>
+          layers.map(l =>
+            l.mapped(magMapping = m => m.copy(path = m.path.map(_.stripPrefix(path.toAbsolutePath.toUri.toString))))),
+        new N5ArrayExplorer
+      )(layerPath, dataSourceId, "")
+    } yield explored
 
   private def selectLastDirectory(l: DataLayerWithMagLocators) =
     l.mapped(magMapping = m => m.copy(path = m.path.map(_.split("/").last)))

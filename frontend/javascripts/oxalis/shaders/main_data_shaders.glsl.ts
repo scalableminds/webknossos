@@ -464,7 +464,9 @@ void main() {
   _.each(layerNamesWithSegmentation, function(name) {
     if (tpsTransformPerLayer[name] != null) {
   %>
-    calculateTpsOffsetFor<%= name %>(worldCoordUVW, transWorldCoord);
+    tpsOffsetXYZ_<%= name %> = calculateTpsOffsetFor<%= name %>(
+      transDim(vec3(transWorldCoord.x, transWorldCoord.y, worldCoordUVW.z))
+    );
   <%
     }
   })

@@ -29,6 +29,7 @@ function getRenderer(): THREE.WebGLRenderer {
       : {}
   ) as THREE.WebGLRenderer;
 
+  renderer.setPixelRatio(window.devicePixelRatio);
   return renderer;
 }
 

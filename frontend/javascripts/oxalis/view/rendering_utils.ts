@@ -121,7 +121,7 @@ export async function downloadScreenshot() {
         ? (ctx: CanvasRenderingContext2D) => {
             const scalebarDistanceToRightBorder = constants.SCALEBAR_OFFSET;
             const scalebarDistanceToTopBorder =
-              ctx.canvas.height + constants.SCALEBAR_OFFSET - constants.SCALEBAR_HEIGHT;
+              ctx.canvas.height - constants.SCALEBAR_OFFSET - constants.SCALEBAR_HEIGHT;
             const logoHeight = constants.SCALEBAR_HEIGHT;
             const logoWidth = (logoHeight / logo.height) * logo.width;
             ctx.drawImage(

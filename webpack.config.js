@@ -198,10 +198,7 @@ module.exports = function (env = {}) {
       hot: false,
       liveReload: false,
       client: {
-        overlay: {
-          warnings: false,
-          errors: true,
-        },
+        overlay: false,
         logging: "error",
       },
     },

@@ -23,6 +23,7 @@ RUN apt-get update \
   nodejs \
   postgresql-client \
   yarn \
+  cmake \
   git \
   libdraco-dev \
   libblosc1 \

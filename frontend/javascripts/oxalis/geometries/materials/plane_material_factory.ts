@@ -264,8 +264,15 @@ class PlaneMaterialFactory {
       this.uniforms[`${name}_color`] = {
         value: DEFAULT_COLOR,
       };
+      this.uniforms[`${name}_min_lim`] = {
+        value: 0.0,
+      };
       this.uniforms[`${name}_min`] = {
         value: 0.0,
+      };
+
+      this.uniforms[`${name}_max_lim`] = {
+        value: 1.0,
       };
       this.uniforms[`${name}_max`] = {
         value: 1.0,
@@ -853,7 +860,8 @@ class PlaneMaterialFactory {
     elementClass: ElementClass,
     isSegmentationLayer: boolean,
   ): void {
-    const { alpha, intensityRange, isDisabled, isInverted, gammaCorrectionValue } = settings;
+    const { alpha, intensityRange, isDisabled, isInverted, gammaCorrectionValue, min, max } =
+      settings;
 
     // In UnsignedByte textures the byte values are scaled to [0, 1], in Float textures they are not
     if (!isSegmentationLayer) {
@@ -861,6 +869,10 @@ class PlaneMaterialFactory {
       if (intensityRange) {
         this.uniforms[`${name}_min`].value = intensityRange[0] / divisor;
         this.uniforms[`${name}_max`].value = intensityRange[1] / divisor;
+      }
+      if (min != null && max != null) {
+        this.uniforms[`${name}_min_lim`].value = min / divisor;
+        this.uniforms[`${name}_max_lim`].value = max / divisor;
       }
       this.uniforms[`${name}_is_inverted`].value = isInverted ? 1.0 : 0;
 

@@ -60,13 +60,12 @@ class TimeController @Inject()(userService: UserService,
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
-        userJs <- userService.compactWrites(user)
         timesByAnnotation <- timeSpanDAO.summedByAnnotationForUser(user._id,
                                                                    Instant(start),
                                                                    Instant(end),
                                                                    annotationTypesValidated,
                                                                    projectIdsValidated)
-      } yield Ok(Json.obj("user" -> userJs, "timesByAnnotation" -> timesByAnnotation))
+      } yield Ok(timesByAnnotation)
   }
 
   def timeSpansOfUser(userId: String,
@@ -82,13 +81,12 @@ class TimeController @Inject()(userService: UserService,
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
-        userJs <- userService.compactWrites(user)
         timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id,
                                                          Instant(start),
                                                          Instant(end),
                                                          annotationTypesValidated,
                                                          projectIdsValidated)
-      } yield Ok(Json.obj("user" -> userJs, "timelogs" -> timeSpansJs))
+      } yield Ok(timeSpansJs)
     }
 
   def timeOverview(start: Long,

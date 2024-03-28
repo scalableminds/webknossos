@@ -69,6 +69,45 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
+  def summedByAnnotationForUser(userId: ObjectId,
+                                start: Instant,
+                                end: Instant,
+                                annotationTypes: List[AnnotationType],
+                                projectIds: List[ObjectId]): Fox[JsValue] =
+    if (annotationTypes.isEmpty) Fox.successful(Json.arr())
+    else {
+      val projectQuery = projectIdsFilterQuery(projectIds)
+      for {
+        tuples <- run(
+          q"""
+          SELECT a._id, t._id, SUM(ts.time), ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
+          FROM webknossos.timespans_ ts
+          JOIN webknossos.annotations_ a on ts._annotation = a._id
+          JOIN webknossos.annotation_layers as al ON al._annotation = a._id
+          LEFT JOIN webknossos.tasks_ t on a._task = t._id
+          LEFT JOIN webknossos.projects_ p on t._project = p._id
+          WHERE ts._user = $userId
+          AND ts.time > 0
+          AND ts.created >= $start
+          AND ts.created < $end
+          AND $projectQuery
+          AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
+          GROUP BY a._id, t._id
+          ORDER BY a._id
+         """.as[(String, Option[String], Long, String)]
+        )
+        parsed = tuples.map { t =>
+          Json.obj(
+            "annotation" -> t._1,
+            "task" -> t._2,
+            "timeMillis" -> t._3,
+            "annotationLayerStats" -> parseArrayLiteral(t._4).map(layerStats =>
+              Json.parse(layerStats).validate[JsObject].getOrElse(Json.obj()))
+          )
+        }
+      } yield Json.toJson(parsed)
+    }
+
   def findAllByUserWithTask(userId: ObjectId,
                             start: Instant,
                             end: Instant,
@@ -98,19 +137,10 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     (Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])]) = {
 
     def formatTimespanTuple(
-        tuple: (Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])) = {
-      def formatDuration(millis: Long): String = {
-        // example: P3Y6M4DT12H30M5S = 3 years + 9 month + 4 days + 12 hours + 30 min + 5 sec
-        // only hours, min and sec are important in this scenario
-        val h = millis / 3600000
-        val m = (millis / 60000) % 60
-        val s = (millis.toDouble / 1000) % 60
-
-        s"PT${h}H${m}M${s}S"
-      }
-
+        tuple: (Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])) =
+      // TODO add user, dataset, +X?
       Json.obj(
-        "time" -> formatDuration(tuple._1),
+        "timeMillis" -> tuple._1,
         "timestamp" -> tuple._2,
         "annotation" -> tuple._3,
         "_id" -> tuple._4,
@@ -119,7 +149,6 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         "tasktype_id" -> tuple._7,
         "tasktype_summary" -> tuple._8
       )
-    }
     Json.toJson(tuples.map(formatTimespanTuple))
   }
 
@@ -127,11 +156,11 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     if (projectIds.isEmpty) q"TRUE" // Query did not filter by project, include all
     else q"p._id IN ${SqlToken.tupleFromList(projectIds)}"
 
-  def timeSummedSearch(start: Instant,
-                       end: Instant,
-                       users: List[ObjectId],
-                       annotationTypes: List[AnnotationType],
-                       projectIds: List[ObjectId]): Fox[List[JsObject]] =
+  def timeOverview(start: Instant,
+                   end: Instant,
+                   users: List[ObjectId],
+                   annotationTypes: List[AnnotationType],
+                   projectIds: List[ObjectId]): Fox[List[JsObject]] =
     if (users.isEmpty || annotationTypes.isEmpty) Fox.successful(List.empty)
     else {
       val projectQuery = projectIdsFilterQuery(projectIds)

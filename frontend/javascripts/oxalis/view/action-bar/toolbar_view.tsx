@@ -98,30 +98,30 @@ const imgStyleForSpaceyIcons = {
 function getSkeletonToolHint(
   activeTool: AnnotationTool,
   isShiftPressed: boolean,
-  isControlPressed: boolean,
+  isControlOrMetaPressed: boolean,
   isAltPressed: boolean,
 ): string | null | undefined {
   if (activeTool !== AnnotationToolEnum.SKELETON) {
     return null;
   }
 
-  if (!isShiftPressed && !isControlPressed && !isAltPressed) {
+  if (!isShiftPressed && !isControlOrMetaPressed && !isAltPressed) {
     return null;
   }
 
-  if (isShiftPressed && !isControlPressed && !isAltPressed) {
+  if (isShiftPressed && !isControlOrMetaPressed && !isAltPressed) {
     return "Click to select a node. Right-click to open a contextmenu.";
   }
 
-  if (!isShiftPressed && isControlPressed && !isAltPressed) {
+  if (!isShiftPressed && isControlOrMetaPressed && !isAltPressed) {
     return "Drag to move the selected node. Right-click to create a new node without selecting it.";
   }
 
-  if (isShiftPressed && !isControlPressed && isAltPressed) {
+  if (isShiftPressed && !isControlOrMetaPressed && isAltPressed) {
     return "Click on a node in another tree to merge the two trees.";
   }
 
-  if (isShiftPressed && isControlPressed && !isAltPressed) {
+  if (isShiftPressed && isControlOrMetaPressed && !isAltPressed) {
     return "Click on a node to delete the edge to the currently active node.";
   }
 
@@ -242,18 +242,18 @@ function ToolRadioButton({
 }
 
 function OverwriteModeSwitch({
-  isControlPressed,
+  isControlOrMetaPressed,
   isShiftPressed,
   visible,
 }: {
-  isControlPressed: boolean;
+  isControlOrMetaPressed: boolean;
   isShiftPressed: boolean;
   visible: boolean;
 }) {
   // Only CTRL should modify the overwrite mode. CTRL + Shift can be used to switch to the
   // erase tool, which should not affect the default overwrite mode.
   const overwriteMode = useSelector((state: OxalisState) => state.userConfiguration.overwriteMode);
-  const previousIsControlPressed = usePrevious(isControlPressed);
+  const previousIsControlOrMetaPressed = usePrevious(isControlOrMetaPressed);
   const previousIsShiftPressed = usePrevious(isShiftPressed);
   // biome-ignore lint/correctness/useExhaustiveDependencies: overwriteMode does not need to be a dependency.
   useEffect(() => {
@@ -270,18 +270,25 @@ function OverwriteModeSwitch({
     // separately in the store. However, this solution works, too.
     const needsModeToggle =
       (!isShiftPressed &&
-        isControlPressed &&
-        previousIsControlPressed === previousIsShiftPressed) ||
-      (isShiftPressed === isControlPressed && !previousIsShiftPressed && previousIsControlPressed);
+        isControlOrMetaPressed &&
+        previousIsControlOrMetaPressed === previousIsShiftPressed) ||
+      (isShiftPressed === isControlOrMetaPressed &&
+        !previousIsShiftPressed &&
+        previousIsControlOrMetaPressed);
 
     if (needsModeToggle) {
       Store.dispatch(updateUserSettingAction("overwriteMode", toggleOverwriteMode(overwriteMode)));
     }
-  }, [isControlPressed, isShiftPressed, previousIsControlPressed, previousIsShiftPressed]);
+  }, [
+    isControlOrMetaPressed,
+    isShiftPressed,
+    previousIsControlOrMetaPressed,
+    previousIsShiftPressed,
+  ]);
 
   if (!visible) {
     // This component's hooks should still be active, even when the component is invisible.
-    // Otherwise, the toggling of the overwrite mode via "CTRL" wouldn't work consistently
+    // Otherwise, the toggling of the overwrite mode via "Ctrl" wouldn't work consistently
     // when being combined with other modifiers, which hide the component.
     return null;
   }
@@ -909,17 +916,17 @@ export default function ToolbarView() {
   }, [activeTool, disabledInfoForCurrentTool, lastForcefulDisabledTool]);
 
   const isShiftPressed = useKeyPress("Shift");
-  const isControlPressed = useKeyPress("Control");
+  const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
   const adaptedActiveTool = adaptActiveToolToShortcuts(
     activeTool,
     isShiftPressed,
-    isControlPressed,
+    isControlOrMetaPressed,
     isAltPressed,
   );
   const skeletonToolHint =
     hasSkeleton && useLegacyBindings
-      ? getSkeletonToolHint(activeTool, isShiftPressed, isControlPressed, isAltPressed)
+      ? getSkeletonToolHint(activeTool, isShiftPressed, isControlOrMetaPressed, isAltPressed)
       : null;
   const previousSkeletonToolHint = usePrevious(skeletonToolHint);
 
@@ -1185,7 +1192,7 @@ export default function ToolbarView() {
         hasSkeleton={hasSkeleton}
         adaptedActiveTool={adaptedActiveTool}
         hasVolume={hasVolume}
-        isControlPressed={isControlPressed}
+        isControlOrMetaPressed={isControlOrMetaPressed}
         isShiftPressed={isShiftPressed}
       />
     </>
@@ -1196,13 +1203,13 @@ function ToolSpecificSettings({
   hasSkeleton,
   adaptedActiveTool,
   hasVolume,
-  isControlPressed,
+  isControlOrMetaPressed,
   isShiftPressed,
 }: {
   hasSkeleton: boolean;
   adaptedActiveTool: AnnotationTool;
   hasVolume: boolean;
-  isControlPressed: boolean;
+  isControlOrMetaPressed: boolean;
   isShiftPressed: boolean;
 }) {
   const showCreateTreeButton = hasSkeleton && adaptedActiveTool === AnnotationToolEnum.SKELETON;
@@ -1268,7 +1275,7 @@ function ToolSpecificSettings({
       ) : null}
 
       <OverwriteModeSwitch
-        isControlPressed={isControlPressed}
+        isControlOrMetaPressed={isControlOrMetaPressed}
         isShiftPressed={isShiftPressed}
         visible={ToolsWithOverwriteCapabilities.includes(adaptedActiveTool)}
       />

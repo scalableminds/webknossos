@@ -20,6 +20,7 @@ import {
   requestDeleteBranchPointAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
+  createTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   setFlightmodeRecordingAction,
@@ -40,11 +41,12 @@ import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { api } from "oxalis/singletons";
-import type { ViewMode, Point2, Vector3 } from "oxalis/constants";
+import type { ViewMode, Point2, Vector3, Viewport } from "oxalis/constants";
 import constants, { ArbitraryViewport } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import { SkeletonTool } from "../combinations/tool_controls";
 
 const arbitraryViewportId = "inputcatcher_arbitraryViewport";
 type Props = {
@@ -90,34 +92,53 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   initMouse(): void {
     Utils.waitForElementWithId(arbitraryViewportId).then(() => {
-      this.input.mouseController = new InputMouse(arbitraryViewportId, {
-        leftDownMove: (delta: Point2) => {
-          if (this.props.viewMode === constants.MODE_ARBITRARY) {
-            Store.dispatch(
-              yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
+      this.input.mouseController = new InputMouse(
+        arbitraryViewportId,
+        {
+          leftClick: (pos: Point2, viewport: string, event: MouseEvent, isTouch: boolean) => {
+            SkeletonTool.onLeftClick(
+              this.arbitraryView,
+              pos,
+              event.shiftKey,
+              event.altKey,
+              event.ctrlKey || event.metaKey,
+              viewport as Viewport,
+              isTouch,
+              false,
             );
-            Store.dispatch(
-              pitchFlycamAction(
-                delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
-                true,
-              ),
-            );
-          } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-            const [scaleX, scaleY] = getViewportScale(Store.getState(), ArbitraryViewport);
-            const fx = Store.getState().flycam.zoomStep / scaleX;
-            const fy = Store.getState().flycam.zoomStep / scaleY;
-            Store.dispatch(moveFlycamAction([delta.x * fx, delta.y * fy, 0]));
-          }
+          },
+          leftDownMove: (delta: Point2) => {
+            if (this.props.viewMode === constants.MODE_ARBITRARY) {
+              Store.dispatch(
+                yawFlycamAction(
+                  delta.x * Store.getState().userConfiguration.mouseRotateValue,
+                  true,
+                ),
+              );
+              Store.dispatch(
+                pitchFlycamAction(
+                  delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
+                  true,
+                ),
+              );
+            } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
+              const [scaleX, scaleY] = getViewportScale(Store.getState(), ArbitraryViewport);
+              const fx = Store.getState().flycam.zoomStep / scaleX;
+              const fy = Store.getState().flycam.zoomStep / scaleY;
+              Store.dispatch(moveFlycamAction([delta.x * fx, delta.y * fy, 0]));
+            }
+          },
+          scroll: this.scroll,
+          pinch: (delta: number) => {
+            if (delta < 0) {
+              Store.dispatch(zoomOutAction());
+            } else {
+              Store.dispatch(zoomInAction());
+            }
+          },
         },
-        scroll: this.scroll,
-        pinch: (delta: number) => {
-          if (delta < 0) {
-            Store.dispatch(zoomOutAction());
-          } else {
-            Store.dispatch(zoomInAction());
-          }
-        },
-      });
+        ArbitraryViewport,
+      );
     });
   }
 
@@ -195,6 +216,16 @@ class ArbitraryController extends React.PureComponent<Props> {
       },
       "2": () => {
         Store.dispatch(toggleInactiveTreesAction());
+      },
+      // Delete active node
+      delete: () => {
+        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
+      },
+      backspace: () => {
+        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
+      },
+      c: () => {
+        Store.dispatch(createTreeAction());
       },
       // Branches
       b: () => this.pushBranch(),

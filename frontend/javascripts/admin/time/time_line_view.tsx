@@ -51,9 +51,7 @@ type State = {
   annotationType: AnnotationTypeFilterEnum;
 };
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'logs' implicitly has an 'any' type.
-function compressTimeLogs(logs) {
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'a' implicitly has an 'any' type.
+export function compressTimeLogs(logs: APITimeTracking[]) {
   logs.sort((a, b) => a.timestamp - b.timestamp);
   const compressedLogs = [];
   let previousLog = null;

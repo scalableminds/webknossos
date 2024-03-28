@@ -1956,6 +1956,27 @@ export function updateUserConfiguration(
   });
 }
 
+export async function getTimeTrackingForUserSummedPerAnnotation(
+  userId: string,
+  startDate: dayjs.Dayjs,
+  endDate: dayjs.Dayjs,
+  annotationTypes: "Explorational" | "Task" | "Task,Explorational",
+  projectIds?: string[] | null,
+): Promise<Array<APITimeTracking>> {
+  const params = new URLSearchParams({
+    start: startDate.valueOf().toString(),
+    end: endDate.valueOf().toString(),
+  });
+  if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
+  if (projectIds != null && projectIds.length > 0)
+    params.append("projectIds", projectIds.join(","));
+  const timeTrackingData = await Request.receiveJSON(
+    `/api/time/user/${userId}/summedByAnnotation?${params}`,
+  );
+  assertResponseLimit(timeTrackingData);
+  return timeTrackingData;
+}
+
 export async function getTimeTrackingForUser(
   userId: string,
   startDate: dayjs.Dayjs,

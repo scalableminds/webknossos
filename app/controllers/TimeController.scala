@@ -10,7 +10,7 @@ import javax.inject.Inject
 import models.user._
 import models.user.time.{Month, TimeSpan, TimeSpanDAO, TimeSpanService}
 import net.liftweb.common.Box
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
 import utils.ObjectId

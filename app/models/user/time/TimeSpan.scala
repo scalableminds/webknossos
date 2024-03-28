@@ -166,7 +166,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       val projectQuery = projectIdsFilterQuery(projectIds)
       val query =
         q"""
-          SELECT u._id, u.firstName, u.lastName, mu.email, SUM(ts.time)
+          SELECT u._id, u.firstName, u.lastName, mu.email, SUM(ts.time), COUNT(a._id)
           FROM webknossos.timespans_ ts
           JOIN webknossos.annotations_ a ON ts._annotation = a._id
           JOIN webknossos.users_ u ON ts._user = u._id
@@ -182,11 +182,11 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           GROUP BY u._id, u.firstName, u.lastName, mu.email
          """
       for {
-        tuples <- run(query.as[(ObjectId, String, String, String, Long)])
+        tuples <- run(query.as[(ObjectId, String, String, String, Long, Int)])
       } yield formatSummedSearchTuples(tuples)
     }
 
-  private def formatSummedSearchTuples(tuples: Seq[(ObjectId, String, String, String, Long)]): List[JsObject] =
+  private def formatSummedSearchTuples(tuples: Seq[(ObjectId, String, String, String, Long, Int)]): List[JsObject] =
     tuples.map { tuple =>
       Json.obj(
         "user" -> Json.obj(
@@ -195,7 +195,8 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           "lastName" -> tuple._3,
           "email" -> tuple._4
         ),
-        "timeMillis" -> tuple._5
+        "timeMillis" -> tuple._5,
+        "annotationCount" -> tuple._6
       )
     }.toList
 

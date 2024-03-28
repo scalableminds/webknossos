@@ -210,6 +210,7 @@ export function getDefaultValueRangeOfLayer(
   const minFloatValue = -3.40282347e38;
   // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
   const maxDoubleValue = 1.79769313486232e308;
+  // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
   const minDoubleValue = -1.79769313486232e308;
   const elementClass = getElementClass(dataset, layerName);
 

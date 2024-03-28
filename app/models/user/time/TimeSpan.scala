@@ -80,7 +80,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       for {
         tuples <- run(
           q"""
-          SELECT a._id, t._id, SUM(ts.time), ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
+          SELECT a._id, t._id, p.name, SUM(ts.time), ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
           FROM webknossos.timespans_ ts
           JOIN webknossos.annotations_ a on ts._annotation = a._id
           JOIN webknossos.annotation_layers as al ON al._annotation = a._id
@@ -92,16 +92,17 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           AND ts.created < $end
           AND $projectQuery
           AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
-          GROUP BY a._id, t._id
+          GROUP BY a._id, t._id, p.name
           ORDER BY a._id
-         """.as[(String, Option[String], Long, String)]
+         """.as[(String, Option[String], Option[String], Long, String)]
         )
         parsed = tuples.map { t =>
           Json.obj(
             "annotation" -> t._1,
             "task" -> t._2,
-            "timeMillis" -> t._3,
-            "annotationLayerStats" -> parseArrayLiteral(t._4).map(layerStats =>
+            "projectName" -> t._3,
+            "timeMillis" -> t._4,
+            "annotationLayerStats" -> parseArrayLiteral(t._5).map(layerStats =>
               Json.parse(layerStats).validate[JsObject].getOrElse(Json.obj()))
           )
         }

@@ -160,7 +160,7 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "SET_SKELETON_SAM_MODAL": {
+    case "HIDE_SKELETON_SAM_MODAL": {
       return updateKey(state, "uiInformation", {
         skeletonSAMProgressPercentage: null,
       });

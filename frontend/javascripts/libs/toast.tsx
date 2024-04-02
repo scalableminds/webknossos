@@ -18,7 +18,10 @@ export type ToastConfig = {
 };
 
 const Toast = {
-  messages(messages: Message[]): void {
+  messages(
+    messages: Message[],
+    notificationAPI?: ReturnType<typeof notification.useNotification>[0],
+  ): void {
     const errorChainObject = messages.find((msg) => typeof msg.chain !== "undefined");
     const errorChainString: string | null | undefined = errorChainObject?.chain;
     messages.forEach((singleMessage) => {
@@ -33,6 +36,7 @@ const Toast = {
             sticky: true,
             key: singleMessage.key,
           },
+          notificationAPI,
           errorChainString,
         );
       }
@@ -79,6 +83,7 @@ const Toast = {
     type: ToastStyle,
     rawMessage: string | React.ReactNode,
     config: ToastConfig,
+    notificationAPI?: ReturnType<typeof notification.useNotification>[0],
     details?: string,
   ): void {
     const message = this.buildContentWithDetails(rawMessage, details);
@@ -110,36 +115,60 @@ const Toast = {
         icon: <CloseCircleOutlined />,
       });
     }
-
-    notification[type](toastConfig);
+    if (notificationAPI) {
+      notificationAPI[type](toastConfig);
+    } else {
+      notification[type](toastConfig);
+    }
   },
 
-  info(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {
-    this.message("info", message, config, details);
+  info(
+    message: React.ReactNode,
+    config: ToastConfig = {},
+
+    toastAPI?: ReturnType<typeof notification.useNotification>[0],
+    details?: string | undefined,
+  ): void {
+    this.message("info", message, config, toastAPI, details);
   },
 
-  warning(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {
-    this.message("warning", message, config, details);
+  warning(
+    message: React.ReactNode,
+    config: ToastConfig = {},
+    toastAPI?: ReturnType<typeof notification.useNotification>[0],
+
+    details?: string | undefined,
+  ): void {
+    this.message("warning", message, config, toastAPI, details);
   },
 
   success(
     message: React.ReactNode = "Success :-)",
     config: ToastConfig = {},
+    toastAPI?: ReturnType<typeof notification.useNotification>[0],
     details?: string | undefined,
   ): void {
-    this.message("success", message, config, details);
+    this.message("success", message, config, toastAPI, details);
   },
 
   error(
     message: React.ReactNode = "Error :-/",
     config: ToastConfig = {},
+    toastAPI?: ReturnType<typeof notification.useNotification>[0],
     details?: string | undefined,
   ): void {
-    this.message("error", message, config, details);
+    this.message("error", message, config, toastAPI, details);
   },
 
   close(key: string) {
     notification.destroy(key);
+  },
+  useToastAPI() {
+    // This method returns a [toastAPI, contextHolder] in case a toast should be rendered independently
+    // from outside the usual rendering hierarchy via e.g. renderIndependently.
+    // In such a case the toastAPI needs to be provided to the Toast.<method> call and the context holder needs
+    // to be rendered as within the new independent component hierarchy. For more info look for uses of `useToastAPI`.
+    return notification.useNotification();
   },
 };
 export default Toast;

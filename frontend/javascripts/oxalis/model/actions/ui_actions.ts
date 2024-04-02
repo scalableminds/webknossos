@@ -28,7 +28,7 @@ type SetNavbarHeightAction = ReturnType<typeof setNavbarHeightAction>;
 type SetSkeletonSAMProgressPercentageAction = ReturnType<
   typeof setSkeletonSAMProgressPercentageAction
 >;
-type SetSkeletonSAMModalAction = ReturnType<typeof setSkeletonSAMModalAction>;
+type HideSkeletonSAMModalAction = ReturnType<typeof hideSkeletonSAMModalAction>;
 type SetRenderAnimationModalVisibilityAction = ReturnType<
   typeof setRenderAnimationModalVisibilityAction
 >;
@@ -59,7 +59,7 @@ export type UiAction =
   | SetIsMeasuringAction
   | SetNavbarHeightAction
   | SetSkeletonSAMProgressPercentageAction
-  | SetSkeletonSAMModalAction;
+  | HideSkeletonSAMModalAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -190,7 +190,7 @@ export const setSkeletonSAMProgressPercentageAction = (
     type: "SET_SKELETON_SAM_PROGRESS_PERCENTAGE",
     skeletonSAMProgressPercentage,
   }) as const;
-export const setSkeletonSAMModalAction = () =>
+export const hideSkeletonSAMModalAction = () =>
   ({
-    type: "SET_SKELETON_SAM_MODAL",
+    type: "HIDE_SKELETON_SAM_MODAL",
   }) as const;

@@ -4,7 +4,10 @@ import React from "react";
 import { Button, Modal, Progress, Spin, Typography } from "antd";
 import { connect, useDispatch } from "react-redux";
 import type { OxalisState } from "oxalis/store";
-import { setSkeletonSAMModalAction } from "oxalis/model/actions/ui_actions";
+import { hideSkeletonSAMModalAction } from "oxalis/model/actions/ui_actions";
+import renderIndependently from "libs/render_independently";
+import messages from "messages";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 const { Text } = Typography;
 
 type Props = {
@@ -13,7 +16,7 @@ type Props = {
 
 function SkeletonQuickSelectModal({ skeletonSAMProgressPercentage }: Props) {
   const dispatch = useDispatch();
-  const hideModal = () => dispatch(setSkeletonSAMModalAction());
+  const hideModal = () => dispatch(hideSkeletonSAMModalAction());
   const isFinished = (skeletonSAMProgressPercentage || 0) >= 100;
   const okText = isFinished ? (
     "Proceed with Proofreading"
@@ -65,10 +68,10 @@ const connector = connect(mapStateToProps);
 export default connector(SkeletonQuickSelectModal);
 
 const TOAST_KEY = "interpolate-between-sam-slices";
-export async function showFollowupInterpolationToast(): Promise<{
-  shouldPerformInterpolation: boolean;
-}> {
-  return new Promise((resolve) => {
+
+function FollowupInterpolationToast(props: { onOk: () => void; onCancel: () => void }) {
+  const [toastAPI, contextHolder] = Toast.useToastAPI();
+  useEffectOnlyOnce(() =>
     Toast.info(
       <div style={{ fontSize: 14 }}>
         The Skeleton Quick Select is complete. You can now correct the predictions for each slice.
@@ -77,7 +80,7 @@ export async function showFollowupInterpolationToast(): Promise<{
         <Button
           onClick={() => {
             Toast.close(TOAST_KEY);
-            resolve({ shouldPerformInterpolation: true });
+            props.onOk();
           }}
           style={{ marginTop: 12, float: "right" }}
         >
@@ -89,9 +92,46 @@ export async function showFollowupInterpolationToast(): Promise<{
         key: TOAST_KEY,
         onClose: () => {
           Toast.close(TOAST_KEY);
-          resolve({ shouldPerformInterpolation: false });
+          props.onCancel();
         },
       },
-    );
+      toastAPI,
+    ),
+  );
+  // Return empty renderable component for "renderIndependently"
+  return <>{contextHolder}</>;
+}
+
+export async function showFollowupInterpolationToast(): Promise<{
+  shouldPerformInterpolation: boolean;
+}> {
+  return new Promise((resolve) => {
+    renderIndependently((destroy) => {
+      const closeToast = (shouldPerformInterpolation: boolean) => {
+        destroy();
+        resolve({ shouldPerformInterpolation });
+      };
+      return (
+        <FollowupInterpolationToast
+          onOk={() => closeToast(true)}
+          onCancel={() => closeToast(false)}
+        />
+      );
+    });
+  });
+}
+
+function InterpolationFinishedToast({ onClose }: { onClose: () => void }) {
+  const [toastAPI, contextHolder] = Toast.useToastAPI();
+  useEffectOnlyOnce(() =>
+    Toast.success(messages["tracing.skeleton_sam_finished_interpolation"], { onClose }, toastAPI),
+  );
+  // Return empty renderable component for "renderIndependently"
+  return <>{contextHolder}</>;
+}
+
+export function showInterpolationFinishedToast() {
+  renderIndependently((destroy) => {
+    return <InterpolationFinishedToast onClose={() => destroy()} />;
   });
 }

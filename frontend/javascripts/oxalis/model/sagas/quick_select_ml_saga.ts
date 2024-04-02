@@ -122,7 +122,7 @@ async function inferFromEmbedding(
   userBoxInTargetMag: BoundingBox,
   nodePositions: Vector3[] | null,
   activeViewport: OrthoView,
-) {
+): Promise<[ndarray.NdArray<Uint8Array>, BoundingBox] | null> {
   const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(activeViewport);
   const shouldDetectRectangle = nodePositions == null;
   const ort = await import("onnxruntime-web");
@@ -193,11 +193,29 @@ async function inferFromEmbedding(
   // data copies).
   const fullMaskThreshold = userBoxInTargetMag.getVolume() * 0.95;
   let markedVoxelCount = 0;
+  let minX = EMBEDDING_SIZE[0],
+    minY = EMBEDDING_SIZE[1];
+  let maxX = 0,
+    maxY = 0;
   const startOffset = bestMaskIndex * EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1];
   for (let idx = 0; idx < EMBEDDING_SIZE[0] * EMBEDDING_SIZE[1]; idx++) {
     maskData[idx] = (masks.data[idx + startOffset] as number) > 0 ? 1 : 0;
-    markedVoxelCount += maskData[idx];
+    if (maskData[idx] > 0) {
+      const x = idx % EMBEDDING_SIZE[0];
+      const y = Math.floor(idx / EMBEDDING_SIZE[1]);
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y);
+      markedVoxelCount++;
+    }
   }
+  // TODO: Check whether the bounding box tracking slowed down the quick select!!!
+  const predictedBounds = new BoundingBox({
+    min: V3.add(embeddingBoxInTargetMag.min, [minX, minY, 0]),
+    max: V3.add(embeddingBoxInTargetMag.min, [maxX, maxY, 0]),
+  });
+  console.log("predicted Area is: ", predictedBounds);
   console.log("markedVoxelCount", markedVoxelCount);
   console.log("fullMaskThreshold", fullMaskThreshold);
   console.log("markedVoxelCount > fullMaskThreshold", markedVoxelCount > fullMaskThreshold);
@@ -220,7 +238,7 @@ async function inferFromEmbedding(
     .lo(topLeft[firstDim], topLeft[secondDim], 0)
     // a.hi(x,y) => a[:x, :y]
     .hi(userSizeInTargetMag[firstDim], userSizeInTargetMag[secondDim], 1);
-  return mask;
+  return [mask, predictedBounds];
 }
 
 export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
@@ -278,7 +296,7 @@ export function* prefetchEmbedding(action: MaybePrefetchEmbeddingAction) {
 
 export default function* performQuickSelect(
   action: ComputeQuickSelectForRectAction | SAMNodeSelect,
-): Saga<void> {
+): Saga<BoundingBox | null> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (additionalCoordinates && additionalCoordinates.length > 0) {
     Toast.warning(
@@ -290,7 +308,7 @@ export default function* performQuickSelect(
 
   const preparation = yield* call(prepareQuickSelect, action);
   if (preparation == null) {
-    return;
+    return null;
   }
   const {
     labeledZoomStep,
@@ -360,10 +378,10 @@ export default function* performQuickSelect(
 
   if (embeddingBoxInTargetMag.getVolume() === 0) {
     Toast.warning("The drawn rectangular had a width or height of zero.");
-    return;
+    return null;
   }
 
-  const mask = yield* call(
+  const maskAndBounds = yield* call(
     inferFromEmbedding,
     embedding,
     embeddingBoxInTargetMag,
@@ -371,10 +389,11 @@ export default function* performQuickSelect(
     nodePositions,
     activeViewport,
   );
-  if (!mask) {
+  if (!maskAndBounds) {
     Toast.error("Could not infer mask. See console for details.");
-    return;
+    return null;
   }
+  const [mask, predictedBounds] = maskAndBounds;
 
   const overwriteMode = yield* select(
     (state: OxalisState) => state.userConfiguration.overwriteMode,
@@ -399,4 +418,5 @@ export default function* performQuickSelect(
     labeledZoomStep,
     closeVolumeUndoBatchAfterPrediction,
   );
+  return predictedBounds;
 }

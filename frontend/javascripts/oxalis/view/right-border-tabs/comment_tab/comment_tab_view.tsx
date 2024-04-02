@@ -16,7 +16,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import update from "immutability-helper";
 import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
-import { Comparator, toNullable, compareBy, localeCompareBy, zipMaybe } from "libs/utils";
+import { toNullable, compareBy, localeCompareBy, zipMaybe } from "libs/utils";
 import { InputKeyboard } from "libs/input";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
@@ -37,6 +37,7 @@ import TreeWithComments from "oxalis/view/right-border-tabs/comment_tab/tree_wit
 import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import type { MenuProps } from "rc-menu";
+import { Comparator } from "types/globals";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {

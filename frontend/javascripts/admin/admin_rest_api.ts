@@ -98,7 +98,7 @@ import { SaveQueueType } from "oxalis/model/actions/save_actions";
 import { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { doWithToken } from "./api/token";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import { ArbitraryObject } from "types/globals";
+import { ArbitraryObject, NestedOmit } from "types/globals";
 import { AnnotationTypeFilterEnum } from "./statistic/project_and_annotation_type_dropdown";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
@@ -308,7 +308,7 @@ export function createTaskType(
 
 export function updateTaskType(
   taskTypeId: string,
-  taskType: Utils.NestedOmit<APITaskType, "settings.resolutionRestrictions">,
+  taskType: NestedOmit<APITaskType, "settings.resolutionRestrictions">,
 ): Promise<void> {
   return Request.sendJSONReceiveJSON(`/api/taskTypes/${taskTypeId}`, {
     method: "PUT",

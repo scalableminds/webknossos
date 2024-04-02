@@ -78,19 +78,19 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
   );
   const [taskTypeName, setTaskTypeName] = useState<string | undefined>("");
 
-  useEffectOnlyOnce(() => {  
-    const { searchQuery } = persistence.load();  
-    setSearchQuery(searchQuery || "");  
-    if (initialSearchValue != null && initialSearchValue !== "") {  
-      // Only override the persisted value if the provided initialSearchValue is not empty  
-      setSearchQuery(initialSearchValue);  
-    }  
-    fetchData(taskTypeId);  
-  });  
-  
-  useEffect(() => {  
-    fetchData(taskTypeId);  
-  }, [taskTypeId]);  
+  useEffectOnlyOnce(() => {
+    const { searchQuery } = persistence.load();
+    setSearchQuery(searchQuery || "");
+    if (initialSearchValue != null && initialSearchValue !== "") {
+      // Only override the persisted value if the provided initialSearchValue is not empty
+      setSearchQuery(initialSearchValue);
+    }
+    fetchData(taskTypeId);
+  });
+
+  useEffect(() => {
+    fetchData(taskTypeId);
+  }, [taskTypeId]);
 
   useEffect(() => {
     persistence.persist({ searchQuery });

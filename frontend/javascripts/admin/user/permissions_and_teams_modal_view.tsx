@@ -1,12 +1,11 @@
 import { Modal, Radio, Col, Row, Checkbox, Divider, RadioChangeEvent, App } from "antd";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import React, { useEffect, useState } from "react";
+import React, { Key, useEffect, useState } from "react";
 import _ from "lodash";
 import type { APIUser, APITeam, APITeamMembership } from "types/api_flow_types";
 import { updateUser, getEditableTeams } from "admin/admin_rest_api";
 import messages from "messages";
 import * as Utils from "libs/utils";
-import { Key } from "antd/lib/table/interface";
 import { useFetch } from "libs/react_helpers";
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;

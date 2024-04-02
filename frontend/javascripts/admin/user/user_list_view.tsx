@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Tag, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip, App } from "antd";
-import { Key } from "antd/lib/table/interface";
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -17,7 +16,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-import React, { useEffect, useState } from "react";
+import React, { Key, useEffect, useState } from "react";
 import _ from "lodash";
 import dayjs from "dayjs";
 import { location } from "libs/window";

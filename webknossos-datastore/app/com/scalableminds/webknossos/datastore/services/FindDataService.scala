@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Math
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest

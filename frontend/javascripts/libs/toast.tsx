@@ -20,7 +20,7 @@ export type ToastConfig = {
 const Toast = {
   messages(
     messages: Message[],
-    notificationAPI?: ReturnType<typeof notification.useNotification>[0],
+    notificationAPI?: ReturnType<typeof notification.useNotification>[0] | null,
   ): void {
     const errorChainObject = messages.find((msg) => typeof msg.chain !== "undefined");
     const errorChainString: string | null | undefined = errorChainObject?.chain;
@@ -83,7 +83,7 @@ const Toast = {
     type: ToastStyle,
     rawMessage: string | React.ReactNode,
     config: ToastConfig,
-    notificationAPI?: ReturnType<typeof notification.useNotification>[0],
+    notificationAPI?: ReturnType<typeof notification.useNotification>[0] | null,
     details?: string,
   ): void {
     const message = this.buildContentWithDetails(rawMessage, details);
@@ -126,7 +126,7 @@ const Toast = {
     message: React.ReactNode,
     config: ToastConfig = {},
 
-    toastAPI?: ReturnType<typeof notification.useNotification>[0],
+    toastAPI?: ReturnType<typeof notification.useNotification>[0] | null,
     details?: string | undefined,
   ): void {
     this.message("info", message, config, toastAPI, details);
@@ -135,7 +135,7 @@ const Toast = {
   warning(
     message: React.ReactNode,
     config: ToastConfig = {},
-    toastAPI?: ReturnType<typeof notification.useNotification>[0],
+    toastAPI?: ReturnType<typeof notification.useNotification>[0] | null,
 
     details?: string | undefined,
   ): void {
@@ -145,7 +145,7 @@ const Toast = {
   success(
     message: React.ReactNode = "Success :-)",
     config: ToastConfig = {},
-    toastAPI?: ReturnType<typeof notification.useNotification>[0],
+    toastAPI?: ReturnType<typeof notification.useNotification>[0] | null,
     details?: string | undefined,
   ): void {
     this.message("success", message, config, toastAPI, details);
@@ -154,7 +154,7 @@ const Toast = {
   error(
     message: React.ReactNode = "Error :-/",
     config: ToastConfig = {},
-    toastAPI?: ReturnType<typeof notification.useNotification>[0],
+    toastAPI?: ReturnType<typeof notification.useNotification>[0] | null,
     details?: string | undefined,
   ): void {
     this.message("error", message, config, toastAPI, details);

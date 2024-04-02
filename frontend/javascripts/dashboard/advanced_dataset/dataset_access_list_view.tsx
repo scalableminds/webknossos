@@ -4,30 +4,30 @@ import type { APIDataset, APIUser } from "types/api_flow_types";
 import { getDatasetAccessList } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
+import { useFetch } from "libs/react_helpers";
 
 type Props = {
   dataset: APIDataset;
 };
 
 const DatasetAccessListView = ({ dataset }: Props) => {
-  const [datasetUsers, setDatasetUsers] = React.useState<APIUser[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
 
-  React.useEffect(() => {
-    fetchData();
-  }, []);
-
-  async function fetchData() {
-    try {
-      setIsLoading(true);
-      const datasetUsers = await getDatasetAccessList(dataset);
-      setDatasetUsers(datasetUsers);
-    } catch (error) {
-      handleGenericError(error as Error);
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  const datasetUsers = useFetch(
+    () => {
+      try {
+        setIsLoading(true);
+        return getDatasetAccessList(dataset);
+      } catch (error) {
+        handleGenericError(error as Error);
+        return Promise.resolve([]);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [],
+    [],
+  );
 
   function renderUserTags(user: APIUser): React.ReactNode[] {
     if (user.isAdmin) {

@@ -212,7 +212,7 @@ function ExperienceModalView({
     };
 
     setTableEntries(sortEntries([...tableEntries, newExperience]));
-    setRemovedDomains(removedDomains.filter((currentDomain) => currentDomain !== domain));
+    setRemovedDomains((removedDomains) => removedDomains.filter((currentDomain) => currentDomain !== domain));
     setDomainToEdit(domain);
   }
 

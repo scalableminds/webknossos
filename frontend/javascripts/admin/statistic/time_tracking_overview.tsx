@@ -189,7 +189,19 @@ function TimeTrackingOverview() {
             sorter={true}
           />
           <Column
-            title="Time"
+            title="No. tasks / annotations"
+            dataIndex="annotationCount"
+            key="numberAnn"
+            sorter={true}
+          />
+          <Column
+            title="Avg. time per task / annotation"
+            key="avgTime"
+            render={(item) => formatMilliseconds(item.timeMillis / item.annotationCount)}
+            sorter={true}
+          />
+          <Column
+            title="Total time"
             dataIndex="timeMillis"
             key="tracingTimes"
             render={(tracingTimeInMs) => formatMilliseconds(tracingTimeInMs)}

@@ -5,6 +5,7 @@ import type {
   Point2,
   Vector3,
   ShowContextMenuFunction,
+  Viewport,
 } from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
@@ -51,6 +52,7 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
 import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
+import ArbitraryView from "oxalis/view/arbitrary_view";
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,
@@ -58,12 +60,12 @@ const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.TDView]: 3,
 };
 export function handleMergeTrees(
-  planeView: PlaneView,
+  view: PlaneView | ArbitraryView,
   position: Point2,
-  plane: OrthoView,
+  plane: Viewport,
   isTouch: boolean,
 ) {
-  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
+  const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
 
   // otherwise we have hit the background and do nothing
@@ -74,12 +76,12 @@ export function handleMergeTrees(
   }
 }
 export function handleDeleteEdge(
-  planeView: PlaneView,
+  view: PlaneView | ArbitraryView,
   position: Point2,
-  plane: OrthoView,
+  plane: Viewport,
   isTouch: boolean,
 ) {
-  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
+  const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
 
   // otherwise we have hit the background and do nothing
@@ -90,12 +92,12 @@ export function handleDeleteEdge(
   }
 }
 export function handleSelectNode(
-  planeView: PlaneView,
+  view: PlaneView | ArbitraryView,
   position: Point2,
-  plane: OrthoView,
+  plane: Viewport,
   isTouch: boolean,
 ): boolean {
-  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
+  const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
@@ -105,7 +107,7 @@ export function handleSelectNode(
 
   return false;
 }
-export function handleCreateNode(_planeView: PlaneView, position: Point2, ctrlPressed: boolean) {
+export function handleCreateNode(position: Point2, ctrlPressed: boolean) {
   const state = Store.getState();
 
   if (isMagRestrictionViolated(state)) {
@@ -319,9 +321,9 @@ export function moveAlongDirection(reverse: boolean = false): void {
   api.tracing.centerPositionAnimated(newPosition, false);
 }
 export function maybeGetNodeIdFromPosition(
-  planeView: PlaneView,
+  planeView: PlaneView | ArbitraryView,
   position: Point2,
-  plane: OrthoView,
+  plane: Viewport,
   isTouch: boolean,
 ): number | null | undefined {
   const SceneController = getSceneController();
@@ -344,7 +346,8 @@ export function maybeGetNodeIdFromPosition(
   const pickingNode = skeleton.startPicking(isTouch);
   const pickingScene = new THREE.Scene();
   pickingScene.add(pickingNode);
-  const camera = planeView.getCameras()[plane];
+  const camera = planeView.getCameraForPlane(plane);
+
   let { width, height } = getInputCatcherRect(Store.getState(), plane);
   width = Math.round(width);
   height = Math.round(height);

@@ -150,24 +150,6 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  def loggedTime(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
-      restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
-      _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-      loggedTimeAsMap <- timeSpanService
-        .loggedTimeOfAnnotation(annotation._id, TimeSpan.groupByMonth) ?~> "annotation.timelogging.read.failed"
-    } yield {
-      Ok(
-        Json.arr(
-          loggedTimeAsMap.map {
-            case (month, duration) =>
-              Json.obj("interval" -> month, "durationInSeconds" -> duration.toSeconds)
-          }
-        ))
-    }
-  }
-
   def reset(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND

@@ -100,28 +100,33 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
     }));
   };
 
-  getDropdownMenu(annotation: APIAnnotation): MenuProps {
+  getViewOrOpenLabel(annotation: APIAnnotation) {
+    const iconClassName = "icon-margin-right";
     let doesAnnotationNotBelongToActiveUser = true;
 
     if (annotation.owner && this.props.activeUser) {
       doesAnnotationNotBelongToActiveUser = annotation.owner.id !== this.props.activeUser.id;
     }
-
     const label =
       annotation.state === "Finished" || doesAnnotationNotBelongToActiveUser ? "View" : "Open";
     const icon =
       annotation.state === "Finished" || doesAnnotationNotBelongToActiveUser ? (
-        <EyeOutlined />
+        <EyeOutlined className={iconClassName} />
       ) : (
-        <PlayCircleOutlined />
+        <PlayCircleOutlined className={iconClassName} />
       );
+
+    return (
+      <a href={`/annotations/Task/${annotation.id}`}>
+        {icon}
+        {label}
+      </a>
+    );
+  }
+
+  getDropdownMenu(annotation: APIAnnotation): MenuProps {
     return {
       items: [
-        {
-          key: `${annotation.id}-view`,
-          icon: icon,
-          label: <a href={`/annotations/Task/${annotation.id}`}>{label}</a>,
-        },
         {
           key: `${annotation.id}-transfer`,
           onClick: () =>
@@ -199,11 +204,11 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                 : "<no user>";
               return (
                 <tr key={`${annotation.id}-tr`}>
-                  <td>{userString}</td>
-                  <td>
+                  <td className="task-annotation-view">{userString}</td>
+                  <td className="task-annotation-view">
                     <FormattedDate timestamp={annotation.modified} />
                   </td>
-                  <td>
+                  <td className="task-annotation-view">
                     <span>
                       <CheckCircleOutlined className="icon-margin-right" />
                       {`${annotation.state === "Finished" ? "Finished" : "In Progress"}`}
@@ -217,11 +222,14 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                     </span>
                   </td>
                   <td className="nowrap">
-                    <Dropdown menu={this.getDropdownMenu(annotation)} trigger={["click"]}>
-                      <a className="ant-dropdown-link" href="#">
-                        Actions <DownOutlined />
-                      </a>
-                    </Dropdown>
+                    <div>{this.getViewOrOpenLabel(annotation)}</div>
+                    <div>
+                      <Dropdown menu={this.getDropdownMenu(annotation)} trigger={["click"]}>
+                        <a className="ant-dropdown-link" href="#">
+                          Actions <DownOutlined />
+                        </a>
+                      </Dropdown>
+                    </div>
                   </td>
                 </tr>
               );

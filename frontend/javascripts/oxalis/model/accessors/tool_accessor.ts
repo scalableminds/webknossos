@@ -376,7 +376,7 @@ export function adaptActiveToolToShortcuts(
     if (activeTool === AnnotationToolEnum.SKELETON) {
       // The "skeleton" tool is not changed right now (since actions such as moving a node
       // don't have a dedicated tool). The only exception is "Alt" which switches to the move tool.
-      if (isAltPressed) {
+      if (isAltPressed && !isControlPressed && !isShiftPressed) {
         return AnnotationToolEnum.MOVE;
       }
 

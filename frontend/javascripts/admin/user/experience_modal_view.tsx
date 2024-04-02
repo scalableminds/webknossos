@@ -150,15 +150,15 @@ function ExperienceModalView({
       return;
     }
 
-    setTableEntries(
-      tableEntries.map((entry, currentIndex) => {
+    setTableEntries((tableEntries) => {
+      return tableEntries.map((entry, currentIndex) => {
         if (currentIndex !== index) {
           return entry;
         }
 
         return { ...entry, value, changed: true };
-      }),
-    );
+      });
+    });
   }
 
   function revertChangesOfEntry(index: number) {

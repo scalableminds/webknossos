@@ -82,7 +82,7 @@ function isMaximumMagnificationSmallerThenMinRule(value: number | undefined, min
 
 function TaskTypeCreateView({ taskTypeId, history }: Props) {
   const [useRecommendedConfiguration, setUseRecommendedConfiguration] = useState(false);
-  const [isFetchingData, setIsFetchingData] = useState(false);
+  const [isFetchingData, setIsFetchingData] = useState(true);
   const [form] = Form.useForm<FormValues>();
 
   const teams = useFetch(

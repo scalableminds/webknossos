@@ -11,7 +11,7 @@ import {
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
+import { InputKeyboard, InputKeyboardNoLoop, InputMouse, MouseBindingMap } from "libs/input";
 import { document } from "libs/window";
 import {
   getPosition,
@@ -303,7 +303,7 @@ class PlaneController extends React.PureComponent<Props> {
     });
   }
 
-  getPlaneMouseControls(planeId: OrthoView): Record<string, any> {
+  getPlaneMouseControls(planeId: OrthoView): MouseBindingMap {
     const moveControls = MoveTool.getMouseControls(
       planeId,
       this.planeView,
@@ -353,7 +353,7 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(areaMeasurementControls),
     );
 
-    const controls: Record<string, any> = {};
+    const controls: MouseBindingMap = {};
 
     for (const controlKey of allControlKeys) {
       controls[controlKey] = this.createToolDependentMouseHandler({

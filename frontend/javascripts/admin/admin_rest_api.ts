@@ -26,6 +26,7 @@ import type {
   APIMeshFile,
   APIAvailableTasksReport,
   APIOrganization,
+  APIOrganizationCompact,
   APIProject,
   APIProjectCreator,
   APIProjectProgressReport,
@@ -98,6 +99,7 @@ import { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { doWithToken } from "./api/token";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { ArbitraryObject } from "types/globals";
+import { AnnotationTypeFilterEnum } from "./statistic/project_and_annotation_type_dropdown";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -246,10 +248,9 @@ export async function revokeAuthToken(): Promise<void> {
   });
 }
 
-export async function getLoggedTimes(
-  userID: string | null | undefined,
-): Promise<Array<APITimeInterval>> {
-  const url = userID != null ? `/api/users/${userID}/loggedTime` : "/api/user/loggedTime";
+// Used only by the webknossos-libs python client, but tested here in the snapshot tests.
+export async function getLoggedTimes(userID: string): Promise<Array<APITimeInterval>> {
+  const url = `/api/users/${userID}/loggedTime`;
   const response: APIUserLoggedTime = await Request.receiveJSON(url);
   return response.loggedTime;
 }
@@ -911,7 +912,7 @@ export async function getTracingForAnnotationType(
   // on the tracing's structure.
   tracing.typ = typ;
 
-  // @ts-ignore Remove dataSetName and organizationName as these should not be used in the front-end, anymore.
+  // @ts-ignore Remove datasetName and organizationName as these should not be used in the front-end, anymore.
   delete tracing.datasetName;
   // @ts-ignore
   delete tracing.organizationName;
@@ -1462,7 +1463,7 @@ export async function getDatasetViewConfiguration(
 ): Promise<DatasetConfiguration> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   const settings = await Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}${sharingTokenSuffix}`,
+    `/api/datasetConfigurations/${dataset.owningOrganization}/${dataset.name}${sharingTokenSuffix}`,
     {
       data: displayedVolumeTracings,
       method: "POST",
@@ -1478,7 +1479,7 @@ export function updateDatasetConfiguration(
   options: RequestOptions = {},
 ): Promise<Record<string, any>> {
   return Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
+    `/api/datasetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
     { ...options, method: "PUT", data: datasetConfig },
   );
 }
@@ -1487,7 +1488,7 @@ export function getDatasetDefaultConfiguration(
   datasetId: APIDatasetId,
 ): Promise<DatasetConfiguration> {
   return Request.receiveJSON(
-    `/api/dataSetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
+    `/api/datasetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
   );
 }
 
@@ -1496,7 +1497,7 @@ export function updateDatasetDefaultConfiguration(
   datasetConfiguration: DatasetConfiguration,
 ): Promise<ArbitraryObject> {
   return Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
+    `/api/datasetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
     {
       method: "PUT",
       data: datasetConfiguration,
@@ -1945,35 +1946,42 @@ export function updateUserConfiguration(
   });
 }
 
-// ### Time Tracking
-export async function getTimeTrackingForUserByMonth(
-  userEmail: string,
-
-  day: dayjs.Dayjs,
-): Promise<Array<APITimeTracking>> {
-  const month = day.format("M");
-  const year = day.format("YYYY");
-  const timeTrackingData = await Request.receiveJSON(
-    `/api/time/userlist/${year}/${month}?email=${userEmail}`,
-  );
-  const { timelogs } = timeTrackingData[0];
-  assertResponseLimit(timelogs);
-  return timelogs;
-}
-
 export async function getTimeTrackingForUser(
   userId: string,
   startDate: dayjs.Dayjs,
   endDate: dayjs.Dayjs,
+  annotationTypes: "Explorational" | "Task" | "Task,Explorational",
+  projectIds?: string[] | null,
 ): Promise<Array<APITimeTracking>> {
-  const timeTrackingData = await Request.receiveJSON(
-    `/api/time/user/${userId}?startDate=${startDate.unix() * 1000}&endDate=${
-      endDate.unix() * 1000
-    }`,
-  );
+  const params = new URLSearchParams({
+    startDate: startDate.valueOf().toString(),
+    endDate: endDate.valueOf().toString(),
+  });
+  if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
+  if (projectIds != null && projectIds.length > 0)
+    params.append("projectIds", projectIds.join(","));
+  const timeTrackingData = await Request.receiveJSON(`/api/time/user/${userId}?${params}`);
   const { timelogs } = timeTrackingData;
   assertResponseLimit(timelogs);
   return timelogs;
+}
+
+export async function getTimeEntries(
+  startMs: number,
+  endMs: number,
+  teamIds: string[],
+  selectedTypes: AnnotationTypeFilterEnum,
+  projectIds: string[],
+) {
+  const params = new URLSearchParams({
+    start: startMs.toString(),
+    end: endMs.toString(),
+    annotationTypes: selectedTypes,
+  });
+  // Omit empty parameters in request
+  if (projectIds.length > 0) params.append("projectIds", projectIds.join(","));
+  if (teamIds.length > 0) params.append("teamIds", teamIds.join(","));
+  return await Request.receiveJSON(`api/time/overview?${params}`);
 }
 
 export async function getProjectProgressReport(
@@ -2014,8 +2022,17 @@ export async function switchToOrganization(organizationName: string): Promise<vo
   location.reload();
 }
 
-export function getUsersOrganizations(): Promise<Array<APIOrganization>> {
-  return Request.receiveJSON("/api/organizations");
+export async function getUsersOrganizations(): Promise<Array<APIOrganizationCompact>> {
+  const organizations: APIOrganizationCompact[] = await Request.receiveJSON(
+    "/api/organizations?compact=true",
+  );
+  const scmOrganization = organizations.find((org) => org.name === "scalable_minds");
+  if (scmOrganization == null) {
+    return organizations;
+  }
+  // Move scalableminds organization to the front so it appears in the organization switcher
+  // at the top.
+  return [scmOrganization, ...organizations.filter((org) => org.id !== scmOrganization.id)];
 }
 
 export function getOrganizationByInvite(inviteToken: string): Promise<APIOrganization> {
@@ -2083,7 +2100,7 @@ export async function isDatasetAccessibleBySwitching(
     );
   } else {
     return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?organizationName=${commandType.owningOrganization}&dataSetName=${commandType.name}`,
+      `/api/auth/accessibleBySwitching?organizationName=${commandType.owningOrganization}&datasetName=${commandType.name}`,
       {
         showErrorToast: false,
       },

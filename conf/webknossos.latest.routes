@@ -27,7 +27,7 @@ GET           /auth/token                                                       
 DELETE        /auth/token                                                                       controllers.AuthenticationController.deleteToken()
 GET           /auth/switch                                                                      controllers.AuthenticationController.switchMultiUser(to: String)
 POST          /auth/switchOrganization/:organizationName                                        controllers.AuthenticationController.switchOrganization(organizationName: String)
-GET           /auth/accessibleBySwitching                                                       controllers.AuthenticationController.accessibleBySwitching(organizationName: Option[String], dataSetName: Option[String], annotationId: Option[String], workflowHash: Option[String])
+GET           /auth/accessibleBySwitching                                                       controllers.AuthenticationController.accessibleBySwitching(organizationName: Option[String], datasetName: Option[String], annotationId: Option[String], workflowHash: Option[String])
 POST          /auth/sendInvites                                                                 controllers.AuthenticationController.sendInvites()
 POST          /auth/startResetPassword                                                          controllers.AuthenticationController.handleStartResetPassword()
 POST          /auth/changePassword                                                              controllers.AuthenticationController.changePassword()
@@ -43,10 +43,10 @@ POST          /auth/createUserInOrganization/:organizationName                  
 # Configurations
 GET           /user/userConfiguration                                                           controllers.ConfigurationController.read()
 PUT           /user/userConfiguration                                                           controllers.ConfigurationController.update()
-POST          /dataSetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.readDatasetViewConfiguration(organizationName: String, datasetName: String, sharingToken: Option[String])
-PUT           /dataSetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.updateDatasetViewConfiguration(organizationName: String, datasetName: String)
-GET           /dataSetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.readDatasetAdminViewConfiguration(organizationName: String, datasetName: String)
-PUT           /dataSetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.updateDatasetAdminViewConfiguration(organizationName: String, datasetName: String)
+POST          /datasetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.readDatasetViewConfiguration(organizationName: String, datasetName: String, sharingToken: Option[String])
+PUT           /datasetConfigurations/:organizationName/:datasetName                             controllers.ConfigurationController.updateDatasetViewConfiguration(organizationName: String, datasetName: String)
+GET           /datasetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.readDatasetAdminViewConfiguration(organizationName: String, datasetName: String)
+PUT           /datasetConfigurations/default/:organizationName/:datasetName                     controllers.ConfigurationController.updateDatasetAdminViewConfiguration(organizationName: String, datasetName: String)
 
 # Users
 POST          /user/tasks/request                                                               controllers.TaskController.request()
@@ -56,16 +56,14 @@ GET           /users                                                            
 GET           /user                                                                             controllers.UserController.current()
 GET           /user/tasks                                                                       controllers.UserController.tasks(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /user/annotations                                                                 controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET           /user/loggedTime                                                                  controllers.UserController.loggedTime()
 GET           /users/:id                                                                        controllers.UserController.user(id: String)
 PATCH         /users/:id                                                                        controllers.UserController.update(id: String)
 PUT           /users/:id/taskTypeId                                                             controllers.UserController.updateLastTaskTypeId(id: String)
 PUT           /users/:id/novelUserExperienceInfos                                               controllers.UserController.updateNovelUserExperienceInfos(id: String)
 PUT           /users/:id/selectedTheme                                                          controllers.UserController.updateSelectedTheme(id: String)
 GET           /users/:id/tasks                                                                  controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
-GET           /users/:id/loggedTime                                                             controllers.UserController.userLoggedTime(id: String)
-POST          /users/loggedTime                                                                 controllers.UserController.usersLoggedTime
 GET           /users/:id/annotations                                                            controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
+GET           /users/:id/loggedTime                                                             controllers.TimeController.userLoggedTime(id: String)
 
 # Team
 GET           /teams                                                                            controllers.TeamController.list(isEditable: Option[Boolean])
@@ -110,7 +108,7 @@ PUT           /datastores/:name/datasource                                      
 PUT           /datastores/:name/datasources                                                     controllers.WKRemoteDataStoreController.updateAll(name: String, key: String)
 PATCH         /datastores/:name/status                                                          controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
 POST          /datastores/:name/reserveUpload                                                   controllers.WKRemoteDataStoreController.reserveDatasetUpload(name: String, key: String, token: String)
-POST          /datastores/:name/reportDatasetUpload                                             controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, dataSetName: String, dataSetSizeBytes: Long, needsConversion: Boolean, viaAddRoute: Boolean)
+POST          /datastores/:name/reportDatasetUpload                                             controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, datasetName: String, datasetSizeBytes: Long, needsConversion: Boolean, viaAddRoute: Boolean)
 POST          /datastores/:name/deleteDataset                                                   controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
 GET           /datastores/:name/jobExportProperties                                             controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: String)
 GET           /datastores/:name/findCredential                                                  controllers.WKRemoteDataStoreController.findCredential(name: String, key: String, credentialId: String)
@@ -163,8 +161,6 @@ PATCH         /annotations/:typ/:id/deleteAnnotationLayer                       
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: String)
 POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:typ/:id/download                                                    controllers.AnnotationIOController.download(typ: String, id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
-
-GET           /annotations/:typ/:id/loggedTime                                                  controllers.AnnotationController.loggedTime(typ: String, id: String)
 
 GET           /annotations/source/:accessTokenOrId                                              controllers.AnnotationPrivateLinkController.annotationSource(accessTokenOrId: String, userToken: Option[String])
 
@@ -232,12 +228,8 @@ PATCH         /projects/:id/resume                                              
 GET           /projects/:id/usersWithActiveTasks                                                controllers.ProjectController.usersWithActiveTasks(id:String)
 POST          /projects/:id/transferActiveTasks                                                 controllers.ProjectController.transferActiveTasks(id:String)
 
-# Statistics
-GET           /statistics/webknossos                                                            controllers.StatisticsController.webknossos(interval: String, start: Option[Long], end: Option[Long])
-GET           /statistics/users                                                                 controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
-
 # Organizations
-GET           /organizations                                                                    controllers.OrganizationController.list()
+GET           /organizations                                                                    controllers.OrganizationController.list(compact: Option[Boolean])
 POST          /organizations                                                                    controllers.OrganizationController.create()
 GET           /organizations/byInvite/:inviteToken                                              controllers.OrganizationController.getByInvite(inviteToken: String)
 GET           /organizations/default                                                            controllers.OrganizationController.getDefault()
@@ -256,10 +248,10 @@ GET           /termsOfService                                                   
 POST          /termsOfService/accept                                                            controllers.OrganizationController.acceptTermsOfService(version: Int)
 GET           /termsOfService/acceptanceNeeded                                                  controllers.OrganizationController.termsOfServiceAcceptanceNeeded()
 
-# Timelogging
-GET           /time/allusers/:year/:month                                                       controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
-GET           /time/userlist/:year/:month                                                       controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
-GET           /time/user/:userId                                                                controllers.TimeController.getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long)
+# Time Tracking
+# Note, there is also /users/:id/loggedTime
+GET           /time/user/:userId                                                                controllers.TimeController.timeSpansOfUser(userId: String, startDate: Long, endDate: Long, annotationTypes: String, projectIds: Option[String])
+GET           /time/overview                                                                    controllers.TimeController.timeOverview(start: Long, end: Long, annotationTypes: String, teamIds: Option[String], projectIds: Option[String])
 
 # Long-Running Jobs
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)

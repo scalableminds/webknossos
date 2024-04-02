@@ -77,7 +77,7 @@ class ZarrStreamingController @Inject()(
             for {
               (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
                 annotationSource.organizationName,
-                annotationSource.dataSetName,
+                annotationSource.datasetName,
                 dataLayerName) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
               dataSourceOmeNgffHeader = NgffMetadata.fromNameScaleAndMags(dataLayerName,
                                                                           dataSource.scale,
@@ -139,7 +139,7 @@ class ZarrStreamingController @Inject()(
         else urlOrHeaderToken(token, request)
         volumeAnnotationLayers = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
         dataSource <- dataSourceRepository
-          .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
+          .findUsable(DataSourceId(annotationSource.datasetName, annotationSource.organizationName))
           .toFox ~> NOT_FOUND
         dataSourceLayers = dataSource.dataLayers
           .filter(dL => !volumeAnnotationLayers.exists(_.name == dL.name))
@@ -186,7 +186,7 @@ class ZarrStreamingController @Inject()(
               .getRawZarrCube(annotationLayer.tracingId, mag, cxyz, annotationSource.tracingStoreUrl, relevantToken)
               .map(Ok(_))
           case None =>
-            rawZarrCube(annotationSource.organizationName, annotationSource.dataSetName, dataLayerName, mag, cxyz)
+            rawZarrCube(annotationSource.organizationName, annotationSource.datasetName, dataLayerName, mag, cxyz)
         }
       } yield result
     }
@@ -263,7 +263,7 @@ class ZarrStreamingController @Inject()(
             .getZArray(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, relevantToken)
             .map(z => Ok(Json.toJson(z)))
         case None =>
-          zArray(annotationSource.organizationName, annotationSource.dataSetName, dataLayerName, mag)
+          zArray(annotationSource.organizationName, annotationSource.datasetName, dataLayerName, mag)
       }
     } yield result
   }
@@ -323,7 +323,7 @@ class ZarrStreamingController @Inject()(
                     )).withHeaders())
           case None =>
             dataLayerMagFolderContents(annotationSource.organizationName,
-                                       annotationSource.dataSetName,
+                                       annotationSource.datasetName,
                                        dataLayerName,
                                        mag)
         }
@@ -376,7 +376,7 @@ class ZarrStreamingController @Inject()(
                       layers
                     )).withHeaders())
           case None =>
-            dataLayerFolderContents(annotationSource.organizationName, annotationSource.dataSetName, dataLayerName)
+            dataLayerFolderContents(annotationSource.organizationName, annotationSource.datasetName, dataLayerName)
         }
       } yield result
     }
@@ -406,7 +406,7 @@ class ZarrStreamingController @Inject()(
       for {
         annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request))
         dataSource <- dataSourceRepository
-          .findUsable(DataSourceId(annotationSource.dataSetName, annotationSource.organizationName))
+          .findUsable(DataSourceId(annotationSource.datasetName, annotationSource.organizationName))
           .toFox ?~> Messages("dataSource.notFound") ~> NOT_FOUND
         annotationLayerNames = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume).map(_.name)
         dataSourceLayerNames = dataSource.dataLayers

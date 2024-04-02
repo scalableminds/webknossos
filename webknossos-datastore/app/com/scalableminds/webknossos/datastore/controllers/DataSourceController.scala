@@ -55,24 +55,18 @@ class DataSourceController @Inject()(
 
   override def allowRemoteOrigin: Boolean = true
 
-  def read(token: Option[String],
-           organizationName: String,
-           datasetName: String,
-           returnFormatLike: Boolean): Action[AnyContent] =
+  def readInboxDataSource(token: Option[String], organizationName: String, datasetName: String): Action[AnyContent] =
     Action.async { implicit request =>
       {
         accessTokenService.validateAccessForSyncBlock(
           UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
           urlOrHeaderToken(token, request)) {
-          val dsOption: Option[InboxDataSource] =
-            dataSourceRepository.find(DataSourceId(datasetName, organizationName))
-          dsOption match {
-            case Some(ds) =>
-              val dslike: InboxDataSourceLike = ds
-              if (returnFormatLike) Ok(Json.toJson(dslike))
-              else Ok(Json.toJson(ds))
-            case _ => Ok
-          }
+          // Read directly from file, not from repository to ensure recent changes are seen
+          val dataSource: InboxDataSource =
+            dataSourceService.dataSourceFromFolder(
+              dataSourceService.dataBaseDir.resolve(organizationName).resolve(datasetName),
+              organizationName)
+          Ok(Json.toJson(dataSource))
         }
       }
     }

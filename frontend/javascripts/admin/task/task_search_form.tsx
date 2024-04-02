@@ -7,6 +7,7 @@ import _ from "lodash";
 import type { APIUser, APIProject, APITaskType } from "types/api_flow_types";
 import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 const FormItem = Form.Item;
 
 export type QueryObject = {
@@ -29,14 +30,8 @@ type Props = {
   isLoading: boolean;
   onDownloadAllTasks: (arg0: QueryObject) => Promise<void>;
 };
-type State = {
-  users: Array<APIUser>;
-  projects: Array<APIProject>;
-  taskTypes: Array<APITaskType>;
-  fieldValues: TaskFormFieldValues;
-  isFetchingData: boolean;
-};
-const persistence = new Persistence<Pick<State, "fieldValues">>(
+
+const persistence = new Persistence<{ fieldValues: TaskFormFieldValues }>(
   {
     fieldValues: PropTypes.shape({
       taskId: PropTypes.string,
@@ -53,14 +48,13 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
   const [users, setUsers] = useState<APIUser[]>([]);
   const [projects, setProjects] = useState<APIProject[]>([]);
   const [taskTypes, setTaskTypes] = useState<APITaskType[]>([]);
-  const [fieldValues, setFieldValues] = useState<TaskFormFieldValues>({});
   const [isFetchingData, setIsFetchingData] = useState(false);
 
   useEffect(() => {
     fetchData();
   }, []);
 
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     // initialize form with default values when navigating from
     // project / taskType list views or when restoring values from persisted state
     const { fieldValues: persistedfieldValues } = persistence.load();
@@ -71,11 +65,7 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
       form.setFieldsValue(fieldValues);
       handleSearchFormFinish(false);
     }
-  }, [initialFieldValues, form.setFieldsValue]);
-
-  useEffect(() => {
-    persistence.persist({ fieldValues: fieldValues });
-  }, [fieldValues]);
+  });
 
   async function fetchData() {
     setIsFetchingData(true);
@@ -88,6 +78,11 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
     setProjects(projects);
     setTaskTypes(taskTypes);
     setIsFetchingData(false);
+  }
+
+  function onFormChange() {
+    const formValues = form.getFieldsValue(true);
+    persistence.persist({ fieldValues: formValues });
   }
 
   function handleFormFinish(
@@ -107,7 +102,6 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
       random: isRandom,
     };
 
-    setFieldValues(formValues);
     onFinishCallback(queryObject);
   }
 
@@ -129,7 +123,6 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
 
   function handleReset() {
     form.resetFields();
-    setFieldValues({});
     onChange({});
   }
 
@@ -142,7 +135,11 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
     },
   };
   return (
-    <Form onFinish={(formValues) => handleSearchFormFinish(false, formValues)} form={form}>
+    <Form
+      onFinish={(formValues) => handleSearchFormFinish(false, formValues)}
+      form={form}
+      onFieldsChange={onFormChange}
+    >
       <Row gutter={40}>
         <Col span={12}>
           <FormItem name="taskId" {...formItemLayout} label="Task Id">

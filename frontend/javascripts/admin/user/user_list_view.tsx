@@ -161,7 +161,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     const updatedUsersMap = _.keyBy(updatedUsers, (u) => u.id);
 
     setIsExperienceModalOpen(false);
-    setUsers(users.map((user) => updatedUsersMap[user.id] || user));
+    setUsers((users) => users.map((user) => updatedUsersMap[user.id] || user));
     setSingleSelectedUser(null);
     setSelectedUserIds((singleSelectedUser) => singleSelectedUser == null ? [] : selectedUserIds);
   }

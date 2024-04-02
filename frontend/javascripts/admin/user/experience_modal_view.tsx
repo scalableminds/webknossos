@@ -187,7 +187,7 @@ function ExperienceModalView({
   }
 
   function removeEntryFromTable(domain: string) {
-    setTableEntries(tableEntries.filter((entry) => entry.domain !== domain));
+    setTableEntries((tableEntries) => tableEntries.filter((entry) => entry.domain !== domain));
     setRemovedDomains([...removedDomains, domain]);
   }
 

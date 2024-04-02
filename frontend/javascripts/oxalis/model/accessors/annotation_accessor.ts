@@ -119,3 +119,26 @@ export function getCombinedStatsFromServerAnnotation(
 
   return aggregatedStats;
 }
+
+export function aggregateStatsForAllLayers(stats: TracingStats[]): CombinedTracingStats {
+  const aggregatedStats: TracingStatsHelper = {};
+
+  for (const annotationLayerStats of stats) {
+    if (Object.keys(annotationLayerStats).includes("treeCount")) {
+      const { treeCount, nodeCount, edgeCount, branchPointCount } =
+        annotationLayerStats as SkeletonTracingStats;
+      aggregatedStats.treeCount = treeCount;
+      aggregatedStats.nodeCount = nodeCount;
+      aggregatedStats.edgeCount = edgeCount;
+      aggregatedStats.branchPointCount = branchPointCount;
+    } else if (Object.keys(annotationLayerStats).includes("segmentCount")) {
+      if (aggregatedStats.segmentCount == null) {
+        aggregatedStats.segmentCount = 0;
+      }
+
+      aggregatedStats.segmentCount += (annotationLayerStats as VolumeTracingStats).segmentCount;
+    }
+  }
+
+  return aggregatedStats;
+}

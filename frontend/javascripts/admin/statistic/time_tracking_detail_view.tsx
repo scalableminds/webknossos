@@ -7,6 +7,8 @@ import { Col, Divider, Row } from "antd";
 import { formatMilliseconds } from "libs/format_utils";
 import _ from "lodash";
 import { APITimeTracking } from "types/api_flow_types"; // TODO adjust type based on request
+import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
+import { aggregateStatsForAllLayers } from "oxalis/model/accessors/annotation_accessor";
 
 type TimeTrackingDetailViewProps = {
   userId: string;
@@ -15,8 +17,8 @@ type TimeTrackingDetailViewProps = {
   projectIds: string[];
 };
 
-const ANNOTATION_OR_TASK_NAME_SPAN = 18;
-const STATISTICS_SPAN = 8; // TODO use once stats are available
+const ANNOTATION_OR_TASK_NAME_SPAN = 10;
+const STATISTICS_SPAN = 8;
 const TIMESPAN_SPAN = 6;
 
 const renderRow = (
@@ -31,19 +33,31 @@ const renderRow = (
       const tableRows = loggedTimes.map((timeEntry) => (
         <Row>
           <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>Annotation: {timeEntry.annotation} </Col>
+          <Col span={STATISTICS_SPAN}>
+            <AnnotationStats
+              stats={aggregateStatsForAllLayers(timeEntry.annotationLayerStats)}
+              asInfoBlock={false}
+            />
+          </Col>
           <Col span={TIMESPAN_SPAN}>{formatMilliseconds(timeEntry.timeMillis)}</Col>
         </Row>
       ));
       annotationRows = annotationRows.concat(tableRows);
     } else {
       taskRows.push(
-        <Row style={{ fontWeight: "bold", margin: 5 }}>
+        <Row style={{ fontWeight: "bold", margin: 10 }}>
           <Col>{project}</Col>
         </Row>,
       );
       const tableRows = loggedTimes.map((timeEntry) => (
         <Row>
           <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>Task: {timeEntry.task}</Col>
+          <Col span={STATISTICS_SPAN}>
+            <AnnotationStats
+              stats={aggregateStatsForAllLayers(timeEntry.annotationLayerStats)}
+              asInfoBlock={false}
+            />
+          </Col>
           <Col span={TIMESPAN_SPAN}>{formatMilliseconds(timeEntry.timeMillis)}</Col>
         </Row>
       ));

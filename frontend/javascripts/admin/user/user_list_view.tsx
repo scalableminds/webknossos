@@ -163,7 +163,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     setIsExperienceModalOpen(false);
     setUsers(users.map((user) => updatedUsersMap[user.id] || user));
     setSingleSelectedUser(null);
-    setSelectedUserIds(singleSelectedUser == null ? [] : selectedUserIds);
+    setSelectedUserIds((singleSelectedUser) => singleSelectedUser == null ? [] : selectedUserIds);
   }
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {

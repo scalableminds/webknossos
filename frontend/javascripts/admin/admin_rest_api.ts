@@ -912,7 +912,7 @@ export async function getTracingForAnnotationType(
   // on the tracing's structure.
   tracing.typ = typ;
 
-  // @ts-ignore Remove dataSetName and organizationName as these should not be used in the front-end, anymore.
+  // @ts-ignore Remove datasetName and organizationName as these should not be used in the front-end, anymore.
   delete tracing.datasetName;
   // @ts-ignore
   delete tracing.organizationName;
@@ -1473,7 +1473,7 @@ export async function getDatasetViewConfiguration(
 ): Promise<DatasetConfiguration> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   const settings = await Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/${dataset.owningOrganization}/${dataset.name}${sharingTokenSuffix}`,
+    `/api/datasetConfigurations/${dataset.owningOrganization}/${dataset.name}${sharingTokenSuffix}`,
     {
       data: displayedVolumeTracings,
       method: "POST",
@@ -1489,7 +1489,7 @@ export function updateDatasetConfiguration(
   options: RequestOptions = {},
 ): Promise<Record<string, any>> {
   return Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
+    `/api/datasetConfigurations/${datasetId.owningOrganization}/${datasetId.name}`,
     { ...options, method: "PUT", data: datasetConfig },
   );
 }
@@ -1498,7 +1498,7 @@ export function getDatasetDefaultConfiguration(
   datasetId: APIDatasetId,
 ): Promise<DatasetConfiguration> {
   return Request.receiveJSON(
-    `/api/dataSetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
+    `/api/datasetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
   );
 }
 
@@ -1507,7 +1507,7 @@ export function updateDatasetDefaultConfiguration(
   datasetConfiguration: DatasetConfiguration,
 ): Promise<ArbitraryObject> {
   return Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
+    `/api/datasetConfigurations/default/${datasetId.owningOrganization}/${datasetId.name}`,
     {
       method: "PUT",
       data: datasetConfiguration,
@@ -2110,7 +2110,7 @@ export async function isDatasetAccessibleBySwitching(
     );
   } else {
     return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?organizationName=${commandType.owningOrganization}&dataSetName=${commandType.name}`,
+      `/api/auth/accessibleBySwitching?organizationName=${commandType.owningOrganization}&datasetName=${commandType.name}`,
       {
         showErrorToast: false,
       },

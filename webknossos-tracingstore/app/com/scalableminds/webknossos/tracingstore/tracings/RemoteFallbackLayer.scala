@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRem
 import scala.concurrent.ExecutionContext
 
 case class RemoteFallbackLayer(organizationName: String,
-                               dataSetName: String,
+                               datasetName: String,
                                layerName: String,
                                elementClass: ElementClassProto)
 
@@ -33,8 +33,8 @@ trait FallbackDataHelper {
       implicit ec: ExecutionContext): Fox[RemoteFallbackLayer] =
     for {
       layerName <- tracing.fallbackLayer.toFox ?~> "This feature is only defined on volume annotations with fallback segmentation layer."
-      dataSetId <- remoteWebknossosClient.getDataSourceIdForTracing(tracingId)
-    } yield RemoteFallbackLayer(dataSetId.team, dataSetId.name, layerName, tracing.elementClass)
+      datasetId <- remoteWebknossosClient.getDataSourceIdForTracing(tracingId)
+    } yield RemoteFallbackLayer(datasetId.team, datasetId.name, layerName, tracing.elementClass)
 
   def getFallbackDataFromDatastore(
       remoteFallbackLayer: RemoteFallbackLayer,

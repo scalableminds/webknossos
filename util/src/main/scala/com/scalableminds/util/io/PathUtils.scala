@@ -2,12 +2,12 @@ package com.scalableminds.util.io
 
 import java.io.File
 import java.nio.file.{Path, _}
-
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.FileUtils
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.IteratorHasAsScala
 import scala.reflect.io.Directory
 import scala.util.Random
 
@@ -15,10 +15,10 @@ object PathUtils extends PathUtils
 
 trait PathUtils extends LazyLogging {
 
-  def directoryFilter(path: Path): Boolean =
+  private def directoryFilter(path: Path): Boolean =
     Files.isDirectory(path) && !Files.isHidden(path)
 
-  def fileFilter(path: Path): Boolean =
+  private def fileFilter(path: Path): Boolean =
     !Files.isDirectory(path)
 
   def fileExtensionFilter(ext: String)(path: Path): Boolean =
@@ -50,8 +50,11 @@ trait PathUtils extends LazyLogging {
     else
       None
 
-  def listDirectoryEntries[A](directory: Path, maxDepth: Int, dropCount: Int, filters: (Path => Boolean)*)(
-      f: Iterator[Path] => Box[A]): Box[A] =
+  private def listDirectoryEntries[A](directory: Path,
+                                      maxDepth: Int,
+                                      dropCount: Int,
+                                      silent: Boolean,
+                                      filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
     try {
       val directoryStream = Files.walk(directory, maxDepth, FileVisitOption.FOLLOW_LINKS)
       val r = f(directoryStream.iterator().asScala.drop(dropCount).filter(d => filters.forall(_(d))))
@@ -60,36 +63,53 @@ trait PathUtils extends LazyLogging {
     } catch {
       case _: AccessDeniedException =>
         val errorMsg = s"Error access denied. Directory: ${directory.toAbsolutePath}"
-        logger.warn(errorMsg)
+        if (!silent) {
+          logger.warn(errorMsg)
+        }
         Failure(errorMsg)
       case _: NoSuchFileException =>
         val errorMsg = s"No such directory. Directory: ${directory.toAbsolutePath}"
-        logger.warn(errorMsg)
+        if (!silent) {
+          logger.warn(errorMsg)
+        }
         Failure(errorMsg)
       case ex: Exception =>
         val errorMsg =
           s"Error: ${ex.getClass.getCanonicalName} - ${ex.getMessage}. Directory: ${directory.toAbsolutePath}"
-        logger.warn(ex.getClass.getCanonicalName)
+        if (!silent) {
+          logger.warn(ex.getClass.getCanonicalName)
+        }
         Failure(errorMsg)
     }
 
-  def listDirectories(directory: Path, filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, 1, 1, filters :+ directoryFilter _: _*)(r => Full(r.toList))
+  def containsFile(directory: Path, maxDepth: Int, silent: Boolean, filters: (Path => Boolean)*): Box[Boolean] =
+    listDirectoryEntries(directory, maxDepth, dropCount = 0, silent, filters :+ fileFilter _: _*)(r => Full(r.nonEmpty))
 
-  def listDirectoriesRecursive(directory: Path, maxDepth: Int, filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, maxDepth, 0, filters :+ directoryFilter _: _*)(r => Full(r.toList))
+  def listDirectories(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
+    listDirectoryEntries(directory, 1, 1, silent, filters :+ directoryFilter _: _*)(r => Full(r.toList))
 
-  def listFiles(directory: Path, filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, 1, 1, filters :+ fileFilter _: _*)(r => Full(r.toList))
+  def listDirectoriesRecursive(directory: Path,
+                               silent: Boolean,
+                               maxDepth: Int,
+                               filters: (Path => Boolean)*): Box[List[Path]] =
+    listDirectoryEntries(directory, maxDepth, 0, silent, filters :+ directoryFilter _: _*)(r => Full(r.toList))
 
-  def listFilesRecursive(directory: Path, maxDepth: Int, filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, maxDepth, 1, filters :+ fileFilter _: _*)(r => Full(r.toList))
+  def listFiles(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
+    listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter _: _*)(r => Full(r.toList))
 
-  def lazyFileStream[A](directory: Path, filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
-    listDirectoryEntries(directory, 1, 1, filters :+ fileFilter _: _*)(f)
+  def listFilesRecursive(directory: Path,
+                         silent: Boolean,
+                         maxDepth: Int,
+                         filters: (Path => Boolean)*): Box[List[Path]] =
+    listDirectoryEntries(directory, maxDepth, 1, silent, filters :+ fileFilter _: _*)(r => Full(r.toList))
 
-  def lazyFileStreamRecursive[A](directory: Path, filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
-    listDirectoryEntries(directory, Int.MaxValue, 1, filters :+ fileFilter _: _*)(f)
+  def lazyFileStream[A](directory: Path, silent: Boolean, filters: (Path => Boolean)*)(
+      f: Iterator[Path] => Box[A]): Box[A] =
+    listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter _: _*)(f)
+
+  def lazyFileStreamRecursive[A](directory: Path, silent: Boolean, filters: (Path => Boolean)*)(
+      f: Iterator[Path] => Box[A]): Box[A] =
+    listDirectoryEntries(directory, Int.MaxValue, 1, silent, filters :+ fileFilter _: _*)(f)
 
   def ensureDirectory(path: Path): Path = {
     if (!Files.exists(path) || !Files.isDirectory(path))
@@ -169,11 +189,31 @@ trait PathUtils extends LazyLogging {
   }
 
   // use when you want to move a directory to a subdir of itself. Otherwise, just go for FileUtils.moveDirectory
-  def moveDirectoryViaTemp(source: Path, dst: Path): Unit = {
+  def moveDirectoryViaTemp(source: Path, dst: Path): Box[Unit] = tryo {
     val tmpId = Random.alphanumeric.take(10).mkString("")
     val tmpPath = source.getParent.resolve(s".${tmpId}")
     FileUtils.moveDirectory(source.toFile, tmpPath.toFile)
     FileUtils.moveDirectory(tmpPath.toFile, dst.toFile)
+  }
+
+  def recurseSubdirsUntil(path: Path, condition: Path => Boolean, maxDepth: Int = 10): Box[Path] = {
+    def recurse(p: Path, depth: Int): Box[Path] =
+      if (depth > maxDepth) {
+        Failure("Max depth reached")
+      } else if (condition(p)) {
+        Full(p)
+      } else {
+        val subdirs = listDirectories(p, silent = true)
+        subdirs.flatMap { dirs =>
+          dirs.foldLeft(Failure("No matching subdir found"): Box[Path]) { (acc, dir) =>
+            acc match {
+              case Full(_) => acc
+              case _       => recurse(dir, depth + 1)
+            }
+          }
+        }
+      }
+    recurse(path, 0)
   }
 
 }

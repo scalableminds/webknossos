@@ -26,7 +26,7 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorWithoutTimeTrackingAction,
 } from "oxalis/model/actions/view_mode_actions";
-import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletontracing_accessor";
 import { voxelToNm } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import PlaneView from "oxalis/view/plane_view";
@@ -34,7 +34,7 @@ import type { CameraData, Flycam, OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
-import { removeIsosurfaceAction } from "oxalis/model/actions/annotation_actions";
+import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
 import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
 
@@ -68,12 +68,12 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
     ) =>
       activeTool === AnnotationToolEnum.PROOFREAD
         ? ProofreadTool.onLeftClick(planeView, pos, plane, event, isTouch)
-        : SkeletonTool.onLegacyLeftClick(
+        : SkeletonTool.onLeftClick(
             planeView,
             pos,
             event.shiftKey,
             event.altKey,
-            event.ctrlKey,
+            event.ctrlKey || event.metaKey,
             OrthoViews.TDView,
             isTouch,
           ),
@@ -95,7 +95,7 @@ type StateProps = {
 type Props = OwnProps & StateProps;
 
 function maybeGetActiveNodeFromProps(props: Props) {
-  return props.tracing && props.tracing.skeleton && props.tracing.skeleton.activeNodeId != null
+  return props.tracing?.skeleton?.activeNodeId != null
     ? props.tracing.skeleton.activeNodeId
     : INVALID_ACTIVE_NODE_ID;
 }
@@ -128,7 +128,7 @@ class TDController extends React.PureComponent<Props> {
       // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
       // Thus we do it manually whenever the active node changes.
       getActiveNode(this.props.tracing.skeleton).map((activeNode) =>
-        this.setTargetAndFixPosition(activeNode.position),
+        this.setTargetAndFixPosition(getNodePosition(activeNode, Store.getState())),
       );
     }
   }
@@ -186,9 +186,7 @@ class TDController extends React.PureComponent<Props> {
 
   getTDViewMouseControls(): Record<string, any> {
     const skeletonControls =
-      this.props.tracing != null &&
-      this.props.tracing.skeleton != null &&
-      this.props.planeView != null
+      this.props.tracing?.skeleton != null && this.props.planeView != null
         ? getTDViewMouseControlsSkeleton(this.props.planeView)
         : null;
     const controls = {
@@ -199,14 +197,19 @@ class TDController extends React.PureComponent<Props> {
         // Fix the rotation target of the TrackballControls
         this.setTargetAndFixPosition();
       },
-      // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'delta' implicitly has an 'any' type.
-      pinch: (delta) => this.zoomTDView(delta, true),
-      mouseMove: (delta: Point2, position: Point2) => {
-        if (this.props.planeView == null) {
+      pinch: (delta: number) => this.zoomTDView(delta, true),
+      mouseMove: (
+        _delta: Point2,
+        position: Point2,
+        _id: string | null | undefined,
+        event: MouseEvent,
+      ) => {
+        // Avoid mesh hit test when rotating or moving the 3d view for performance reasons
+        if (this.props.planeView == null || event.buttons !== 0) {
           return;
         }
 
-        this.props.planeView.throttledPerformIsosurfaceHitTest([position.x, position.y]);
+        this.props.planeView.throttledPerformMeshHitTest([position.x, position.y]);
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (skeletonControls != null) {
@@ -217,22 +220,24 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        if (!event.shiftKey && !event.ctrlKey) {
+        const ctrlOrMetaPressed = event.ctrlKey || event.metaKey;
+        if (!event.shiftKey && !ctrlOrMetaPressed) {
           // No modifiers were pressed. No mesh related action is necessary.
           return;
         }
 
-        const hitPosition = this.props.planeView.performIsosurfaceHitTest([pos.x, pos.y]);
+        const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
 
-        if (!hitPosition) {
+        if (!intersection) {
           return;
         }
+        const { point: hitPosition } = intersection;
 
         const unscaledPosition = V3.divide3(hitPosition.toArray() as Vector3, this.props.scale);
 
         if (event.shiftKey) {
           Store.dispatch(setPositionAction(unscaledPosition));
-        } else if (event.ctrlKey) {
+        } else if (ctrlOrMetaPressed) {
           const storeState = Store.getState();
           const { hoveredSegmentId } = storeState.temporaryConfiguration;
           const segmentationLayer = getVisibleSegmentationLayer(storeState);
@@ -241,12 +246,15 @@ class TDController extends React.PureComponent<Props> {
             return;
           }
 
-          Store.dispatch(removeIsosurfaceAction(segmentationLayer.name, hoveredSegmentId));
+          Store.dispatch(removeMeshAction(segmentationLayer.name, hoveredSegmentId));
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (this.props.planeView == null || this.props.showContextMenuAt == null) return;
-
+        const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
+        // @ts-expect-error ts-migrate(2339) FIXME: Object is possibly 'null'.
+        const meshId = intersection ? intersection.object.parent?.cellId : null;
+        const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;
         handleOpenContextMenu(
           this.props.planeView,
           pos,
@@ -254,6 +262,8 @@ class TDController extends React.PureComponent<Props> {
           isTouch,
           event,
           this.props.showContextMenuAt,
+          meshId,
+          meshClickedPosition,
         );
       },
     };

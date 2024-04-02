@@ -1,7 +1,6 @@
 import { notification, Collapse } from "antd";
 import { CloseCircleOutlined } from "@ant-design/icons";
 import React from "react";
-const { Panel } = Collapse;
 
 export type ToastStyle = "info" | "warning" | "success" | "error";
 export type Message = {
@@ -21,7 +20,7 @@ export type ToastConfig = {
 const Toast = {
   messages(messages: Message[]): void {
     const errorChainObject = messages.find((msg) => typeof msg.chain !== "undefined");
-    const errorChainString: string | null | undefined = errorChainObject && errorChainObject.chain;
+    const errorChainString: string | null | undefined = errorChainObject?.chain;
     messages.forEach((singleMessage) => {
       if (singleMessage.success != null) {
         this.success(singleMessage.success);
@@ -59,19 +58,19 @@ const Toast = {
             background: "transparent",
             marginLeft: -16,
           }}
-        >
-          <Panel
-            key="toast-panel"
-            header="Show more information"
-            style={{
-              background: "transparent",
-              border: 0,
-              fontSize: 10,
-            }}
-          >
-            {details}
-          </Panel>
-        </Collapse>
+          items={[
+            {
+              key: "toast-panel",
+              label: "Show more information",
+              style: {
+                background: "transparent",
+                border: 0,
+                fontSize: 10,
+              },
+              children: details,
+            },
+          ]}
+        />
       </div>
     );
   },
@@ -116,11 +115,11 @@ const Toast = {
   },
 
   info(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {
-    return this.message("info", message, config, details);
+    this.message("info", message, config, details);
   },
 
   warning(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {
-    return this.message("warning", message, config, details);
+    this.message("warning", message, config, details);
   },
 
   success(
@@ -128,7 +127,7 @@ const Toast = {
     config: ToastConfig = {},
     details?: string | undefined,
   ): void {
-    return this.message("success", message, config, details);
+    this.message("success", message, config, details);
   },
 
   error(
@@ -136,11 +135,11 @@ const Toast = {
     config: ToastConfig = {},
     details?: string | undefined,
   ): void {
-    return this.message("error", message, config, details);
+    this.message("error", message, config, details);
   },
 
   close(key: string) {
-    notification.close(key);
+    notification.destroy(key);
   },
 };
 export default Toast;

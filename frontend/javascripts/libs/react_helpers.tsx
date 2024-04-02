@@ -1,22 +1,22 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useStore } from "react-redux";
 import type { OxalisState } from "oxalis/store";
+import { ArbitraryFunction } from "types/globals";
+
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/
 export function useInterval(
-  callback: (...args: Array<any>) => any,
+  callback: ArbitraryFunction,
   delay: number | null | undefined,
   ...additionalDependencies: Array<any>
 ) {
-  const savedCallback = useRef();
+  const savedCallback = useRef<ArbitraryFunction>();
   // Remember the latest callback.
   useEffect(() => {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type '(...args: any[]) => any' is not assignable t... Remove this comment to see the full error message
     savedCallback.current = callback;
   });
   // Set up the interval.
   useEffect(() => {
     function tick() {
-      // @ts-expect-error ts-migrate(2722) FIXME: Cannot invoke an object which is possibly 'undefin... Remove this comment to see the full error message
       if (savedCallback.current != null) savedCallback.current();
     }
 
@@ -40,6 +40,7 @@ export function useFetch<T>(
     setValue(fetchedValue);
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchValue is recomputed every time. Therefore, it is not included in the dependencies.
   useEffect(() => {
     fetchValue();
   }, dependencies);
@@ -69,17 +70,18 @@ export function usePolledState(callback: (arg0: OxalisState) => void, interval: 
   }, interval);
 }
 
-export function makeComponentLazy<T extends { isVisible: boolean }>(
+export function makeComponentLazy<T extends { isOpen: boolean }>(
   ComponentFn: React.ComponentType<T>,
 ): React.ComponentType<T> {
   return function LazyModalWrapper(props: T) {
     const [hasBeenInitialized, setHasBeenInitialized] = useState(false);
-    const isVisible = props.isVisible;
+    const isOpen = props.isOpen;
+    // biome-ignore lint/correctness/useExhaustiveDependencies: Only initialize once open state changes.
     useEffect(() => {
-      setHasBeenInitialized(hasBeenInitialized || isVisible);
-    }, [isVisible]);
+      setHasBeenInitialized(hasBeenInitialized || isOpen);
+    }, [isOpen]);
 
-    if (isVisible || hasBeenInitialized) {
+    if (isOpen || hasBeenInitialized) {
       return <ComponentFn {...props} />;
     }
     return null;

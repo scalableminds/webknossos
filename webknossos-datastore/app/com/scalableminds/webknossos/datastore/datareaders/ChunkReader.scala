@@ -1,147 +1,47 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import com.typesafe.scalalogging.LazyLogging
-import ucar.ma2.{Array => MultiArray, DataType => MADataType}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.box2Fox
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.Box.tryo
+import ucar.ma2.{Array => MultiArray}
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream, IOException}
-import javax.imageio.stream.MemoryCacheImageInputStream
-import scala.concurrent.Future
-import scala.util.Using
+import scala.collection.immutable.NumericRange
+import scala.concurrent.ExecutionContext
 
-object ChunkReader {
-  def create(store: FileSystemStore, header: DatasetHeader): ChunkReader =
-    new ChunkReader(header, store, createTypedChunkReader(header))
+class ChunkReader(header: DatasetHeader) {
 
-  def createTypedChunkReader(header: DatasetHeader): TypedChunkReader =
-    header.resolvedDataType match {
-      case ArrayDataType.i1 | ArrayDataType.u1 => new ByteChunkReader(header)
-      case ArrayDataType.i2 | ArrayDataType.u2 => new ShortChunkReader(header)
-      case ArrayDataType.i4 | ArrayDataType.u4 => new IntChunkReader(header)
-      case ArrayDataType.i8 | ArrayDataType.u8 => new LongChunkReader(header)
-      case ArrayDataType.f4                    => new FloatChunkReader(header)
-      case ArrayDataType.f8                    => new DoubleChunkReader(header)
-    }
-}
+  private lazy val chunkTyper = ChunkTyper.createFromHeader(header)
+  private lazy val shortcutChunkTyper = new ShortcutChunkTyper(header)
 
-class ChunkReader(val header: DatasetHeader, val store: FileSystemStore, val typedChunkReader: TypedChunkReader) {
-  lazy val chunkSize: Int = header.chunkSize.toList.product
-
-  @throws[IOException]
-  def read(path: String): Future[MultiArray] =
-    typedChunkReader.read(readBytes(path))
-
-  protected def readBytes(path: String): Option[Array[Byte]] =
-    Using.Manager { use =>
-      store.readBytes(path).map { bytes =>
-        val is = use(new ByteArrayInputStream(bytes))
-        val os = use(new ByteArrayOutputStream())
-        header.compressorImpl.uncompress(is, os)
-        os.toByteArray
+  def read(path: VaultPath,
+           chunkShapeFromMetadata: Array[Int],
+           range: Option[NumericRange[Long]],
+           useSkipTypingShortcut: Boolean)(implicit ec: ExecutionContext): Fox[MultiArray] =
+    for {
+      chunkBytesAndShapeBox: Box[(Array[Byte], Option[Array[Int]])] <- readChunkBytesAndShape(path, range).futureBox
+      chunkShape: Array[Int] = chunkBytesAndShapeBox.toOption.flatMap(_._2).getOrElse(chunkShapeFromMetadata)
+      typed <- chunkBytesAndShapeBox.map(_._1) match {
+        case Full(chunkBytes) if useSkipTypingShortcut =>
+          shortcutChunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.shortcutWrapAndType.failed"
+        case Empty if useSkipTypingShortcut =>
+          shortcutChunkTyper.createFromFillValue(chunkShape).toFox ?~> "chunk.shortcutCreateFromFillValue.failed"
+        case Full(chunkBytes) =>
+          chunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.wrapAndType.failed"
+        case Empty =>
+          chunkTyper.createFromFillValue(chunkShape).toFox ?~> "chunk.createFromFillValue.failed"
+        case f: Failure =>
+          f.toFox ?~> s"Reading chunk at $path failed"
       }
-    }.get
-}
+    } yield typed
 
-abstract class TypedChunkReader {
-  val header: DatasetHeader
-
-  var chunkShape: Array[Int] = header.chunkShapeOrdered
-  def ma2DataType: MADataType
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray]
-
-  def createFilled(dataType: MADataType): MultiArray =
-    MultiArrayUtils.createFilledArray(dataType, chunkShape, header.fillValueNumber)
-}
-
-class ByteChunkReader(val header: DatasetHeader) extends TypedChunkReader {
-  val ma2DataType: MADataType = MADataType.BYTE
-
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray] =
-    Future.successful(bytes.map { result =>
-      MultiArray.factory(ma2DataType, chunkShape, result)
-    }.getOrElse(createFilled(ma2DataType)))
-}
-
-class DoubleChunkReader(val header: DatasetHeader) extends TypedChunkReader {
-
-  val ma2DataType: MADataType = MADataType.DOUBLE
-
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray] =
-    Future.successful(Using.Manager { use =>
-      bytes.map { result =>
-        val typedStorage = new Array[Double](chunkShape.product)
-        val bais = use(new ByteArrayInputStream(result))
-        val iis = use(new MemoryCacheImageInputStream(bais))
-        iis.setByteOrder(header.byteOrder)
-        iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkShape, typedStorage)
-      }.getOrElse(createFilled(ma2DataType))
-    }.get)
-}
-
-class ShortChunkReader(val header: DatasetHeader) extends TypedChunkReader with LazyLogging {
-
-  val ma2DataType: MADataType = MADataType.SHORT
-
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray] =
-    Future.successful(Using.Manager { use =>
-      bytes.map { result =>
-        val typedStorage = new Array[Short](chunkShape.product)
-        val bais = use(new ByteArrayInputStream(result))
-        val iis = use(new MemoryCacheImageInputStream(bais))
-        iis.setByteOrder(header.byteOrder)
-        iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkShape, typedStorage)
-      }.getOrElse(createFilled(ma2DataType))
-    }.get)
-}
-
-class IntChunkReader(val header: DatasetHeader) extends TypedChunkReader {
-
-  val ma2DataType: MADataType = MADataType.INT
-
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray] =
-    Future.successful(Using.Manager { use =>
-      bytes.map { result =>
-        val typedStorage = new Array[Int](chunkShape.product)
-        val bais = use(new ByteArrayInputStream(result))
-        val iis = use(new MemoryCacheImageInputStream(bais))
-        iis.setByteOrder(header.byteOrder)
-        iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkShape, typedStorage)
-      }.getOrElse(createFilled(ma2DataType))
-    }.get)
-}
-
-class LongChunkReader(val header: DatasetHeader) extends TypedChunkReader {
-
-  val ma2DataType: MADataType = MADataType.LONG
-
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray] =
-    Future.successful(Using.Manager { use =>
-      bytes.map { result =>
-        val typedStorage = new Array[Long](chunkShape.product)
-        val bais = use(new ByteArrayInputStream(result))
-        val iis = use(new MemoryCacheImageInputStream(bais))
-        iis.setByteOrder(header.byteOrder)
-        iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkShape, typedStorage)
-      }.getOrElse(createFilled(ma2DataType))
-    }.get)
-}
-
-class FloatChunkReader(val header: DatasetHeader) extends TypedChunkReader {
-
-  val ma2DataType: MADataType = MADataType.FLOAT
-
-  def read(bytes: Option[Array[Byte]]): Future[MultiArray] =
-    Future.successful(Using.Manager { use =>
-      bytes.map { result =>
-        val typedStorage = new Array[Float](chunkShape.product)
-        val bais = use(new ByteArrayInputStream(result))
-        val iis = use(new MemoryCacheImageInputStream(bais))
-        iis.setByteOrder(header.byteOrder)
-        iis.readFully(typedStorage, 0, typedStorage.length)
-        MultiArray.factory(ma2DataType, chunkShape, typedStorage)
-      }.getOrElse(createFilled(ma2DataType))
-    }.get)
+  // Returns bytes (optional, Fox.empty may later be replaced with fill value)
+  // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
+  protected def readChunkBytesAndShape(path: VaultPath, range: Option[NumericRange[Long]])(
+      implicit ec: ExecutionContext): Fox[(Array[Byte], Option[Array[Int]])] =
+    for {
+      bytes <- path.readBytes(range)
+      decompressed <- tryo(header.compressorImpl.decompress(bytes)).toFox ?~> "chunk.decompress.failed"
+    } yield (decompressed, None)
 }

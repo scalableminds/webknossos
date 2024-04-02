@@ -28,14 +28,14 @@ export async function fetchGistContent(url: string, name: string): Promise<strin
 
   try {
     gist = (await Request.receiveJSON(`https://api.github.com/gists/${gistId}`)) as GithubGist;
-  } catch (e) {
+  } catch (_e) {
     handleError(name);
     return "";
   }
 
   const firstFile = gist.files[Object.keys(gist.files)[0]];
 
-  if (firstFile && firstFile.content) {
+  if (firstFile?.content) {
     return firstFile.content;
   } else {
     handleError(name);

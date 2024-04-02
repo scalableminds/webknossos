@@ -1,3 +1,4 @@
+import "test/mocks/lz4";
 import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'deep... Remove this comment to see the full error message
 import deepForEach from "deep-for-each";
@@ -8,6 +9,7 @@ import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import fs from "fs";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'shel... Remove this comment to see the full error message
 import shell from "shelljs";
+import { ArbitraryObject } from "types/globals";
 const requests = [];
 const tokenUserA =
   "1b88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21761e";
@@ -40,7 +42,7 @@ const volatileKeys: Array<string | number | symbol> = [
   "tracingTime",
   "tracingId",
 ];
-export function replaceVolatileValues(obj: Object | null | undefined) {
+export function replaceVolatileValues(obj: ArbitraryObject | null | undefined) {
   if (obj == null) return obj;
 
   // Replace volatile properties with deterministic values
@@ -48,7 +50,11 @@ export function replaceVolatileValues(obj: Object | null | undefined) {
 
   deepForEach(
     newObj,
-    <O extends Object | Array<any>, K extends keyof O>(_value: O[K], key: K, arrOrObj: O) => {
+    <O extends ArbitraryObject | Array<any>, K extends keyof O>(
+      _value: O[K],
+      key: K,
+      arrOrObj: O,
+    ) => {
       if (volatileKeys.includes(key)) {
         // @ts-ignore Typescript complains that we might change the type of arrOrObj[key] (which we do deliberately)
         arrOrObj[key] = key;
@@ -88,6 +94,10 @@ const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
   url: "http://example.org/",
 });
 const { window } = jsdom;
+
+// JSDOM does not support matchMedia yet which is why we mock it.
+// https://github.com/jsdom/jsdom/issues/3522
+window.matchMedia = () => false;
 
 function copyProps(src: any, target: any) {
   const props: Record<string, any> = {};
@@ -139,6 +149,6 @@ export function resetDatabase() {
   // The parameter needs to be set globally here.
   // See https://github.com/shelljs/shelljs/issues/981#issuecomment-626840798
   shell.config.fatal = true;
-  shell.exec("tools/postgres/prepareTestDB.sh", { silent: true });
+  shell.exec("tools/postgres/dbtool.js prepare-test-db", { silent: true });
 }
 export { tokenUserA, tokenUserB, tokenUserC, tokenUserD, tokenUserE, setCurrToken };

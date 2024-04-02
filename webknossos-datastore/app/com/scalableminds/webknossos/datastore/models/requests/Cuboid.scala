@@ -22,7 +22,7 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
     width == bucketLength && height == bucketLength && depth == bucketLength && topLeft == topLeft.toBucket.topLeft
 
   /**
-    * Returns all buckets that are withing the cuboid spanned by top-left and bottom-right
+    * Returns all buckets that are within the cuboid spanned by top-left and bottom-right
     */
   def allBucketsInCuboid: Seq[BucketPosition] = {
     val minBucket = topLeft.toBucket
@@ -44,4 +44,11 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
   }
 
   def mag: Vec3Int = topLeft.mag
+
+  def toMag1: Cuboid = Cuboid(
+    topLeft.toMag1,
+    width * mag.x,
+    height * mag.y,
+    depth * mag.z
+  )
 }

@@ -85,3 +85,5 @@ if __name__ == "__main__":
                 newest_version,
             ],
         )
+
+        print("Done!")

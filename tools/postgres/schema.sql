@@ -19,7 +19,8 @@ START TRANSACTION;
 CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(90);
+
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(113);
 COMMIT TRANSACTION;
 
 
@@ -28,7 +29,7 @@ CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelle
 CREATE TYPE webknossos.ANNOTATION_VISIBILITY AS ENUM ('Private', 'Internal', 'Public');
 CREATE TABLE webknossos.annotations(
   _id CHAR(24) PRIMARY KEY,
-  _dataSet CHAR(24) NOT NULL,
+  _dataset CHAR(24) NOT NULL,
   _task CHAR(24),
   _team CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
@@ -38,7 +39,6 @@ CREATE TABLE webknossos.annotations(
   name VARCHAR(256) NOT NULL DEFAULT '',
   viewConfiguration JSONB,
   state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Active',
-  statistics JSONB NOT NULL,
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   tracingTime BIGINT,
   typ webknossos.ANNOTATION_TYPE NOT NULL,
@@ -46,8 +46,7 @@ CREATE TABLE webknossos.annotations(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL)),
-  CONSTRAINT statisticsIsJsonObject CHECK(jsonb_typeof(statistics) = 'object')
+  CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL))
 );
 
 
@@ -57,8 +56,10 @@ CREATE TABLE webknossos.annotation_layers(
   tracingId CHAR(36) NOT NULL UNIQUE,
   typ webknossos.ANNOTATION_LAYER_TYPE NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
+  statistics JSONB NOT NULL,
   UNIQUE (name, _annotation),
-  PRIMARY KEY (_annotation, tracingId)
+  PRIMARY KEY (_annotation, tracingId),
+  CONSTRAINT statisticsIsJsonObject CHECK(jsonb_typeof(statistics) = 'object')
 );
 
 CREATE TABLE webknossos.annotation_sharedTeams(
@@ -71,6 +72,12 @@ CREATE TABLE webknossos.annotation_contributors(
   _annotation CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
   PRIMARY KEY (_annotation, _user)
+);
+
+CREATE TABLE webknossos.annotation_mutexes(
+  _annotation CHAR(24) PRIMARY KEY,
+  _user CHAR(24) NOT NULL,
+  expiry TIMESTAMP NOT NULL
 );
 
 CREATE TABLE webknossos.meshes(
@@ -93,12 +100,13 @@ CREATE TABLE webknossos.publications(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TABLE webknossos.dataSets(
+CREATE TABLE webknossos.datasets(
   _id CHAR(24) PRIMARY KEY,
   _dataStore VARCHAR(256) NOT NULL,
   _organization CHAR(24) NOT NULL,
   _publication CHAR(24),
   _uploader CHAR(24),
+  _folder CHAR(24) NOT NULL,
   inboxSourceHash INT,
   defaultViewConfiguration JSONB,
   adminViewConfiguration JSONB,
@@ -124,8 +132,8 @@ CREATE TABLE webknossos.dataSets(
 
 CREATE TYPE webknossos.DATASET_LAYER_CATEGORY AS ENUM ('color', 'mask', 'segmentation');
 CREATE TYPE webknossos.DATASET_LAYER_ELEMENT_CLASS AS ENUM ('uint8', 'uint16', 'uint24', 'uint32', 'uint64', 'float', 'double', 'int8', 'int16', 'int32', 'int64');
-CREATE TABLE webknossos.dataSet_layers(
-  _dataSet CHAR(24) NOT NULL,
+CREATE TABLE webknossos.dataset_layers(
+  _dataset CHAR(24) NOT NULL,
   name VARCHAR(256) NOT NULL,
   category webknossos.DATASET_LAYER_CATEGORY NOT NULL,
   elementClass webknossos.DATASET_LAYER_ELEMENT_CLASS NOT NULL,
@@ -134,28 +142,60 @@ CREATE TABLE webknossos.dataSet_layers(
   mappings VARCHAR(256)[],
   defaultViewConfiguration JSONB,
   adminViewConfiguration JSONB,
-  PRIMARY KEY(_dataSet, name),
+  PRIMARY KEY(_dataset, name),
   CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
   CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object')
 );
 
-CREATE TABLE webknossos.dataSet_allowedTeams(
-  _dataSet CHAR(24) NOT NULL,
-  _team CHAR(24) NOT NULL,
-  PRIMARY KEY (_dataSet, _team)
+CREATE TABLE webknossos.dataset_layer_coordinateTransformations(
+  _dataset CHAR(24) NOT NULL,
+  layerName VARCHAR(256) NOT NULL,
+  type VARCHAR(256) NOT NULL,
+  matrix JSONB,
+  correspondences JSONB,
+  insertionOrderIndex INT
 );
 
-CREATE TABLE webknossos.dataSet_resolutions(
-  _dataSet CHAR(24) NOT NULL,
+CREATE TABLE webknossos.dataset_layer_additionalAxes(
+   _dataset CHAR(24) NOT NULL,
+   layerName VARCHAR(256) NOT NULL,
+   name VARCHAR(256) NOT NULL,
+   lowerBound INT NOT NULL,
+   upperBound INT NOT NULL,
+   index INT NOT NULL
+);
+
+CREATE TABLE webknossos.dataset_allowedTeams(
+  _dataset CHAR(24) NOT NULL,
+  _team CHAR(24) NOT NULL,
+  PRIMARY KEY (_dataset, _team)
+);
+
+CREATE TABLE webknossos.dataset_resolutions(
+  _dataset CHAR(24) NOT NULL,
   dataLayerName VARCHAR(256),
   resolution webknossos.VECTOR3 NOT NULL,
-  PRIMARY KEY (_dataSet, dataLayerName, resolution)
+  PRIMARY KEY (_dataset, dataLayerName, resolution)
 );
 
-CREATE TABLE webknossos.dataSet_lastUsedTimes(
-  _dataSet CHAR(24) NOT NULL,
+CREATE TABLE webknossos.dataset_lastUsedTimes(
+  _dataset CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
   lastUsedTime TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE webknossos.dataset_thumbnails(
+  _dataset CHAR(24) NOT NULL,
+  dataLayerName VARCHAR(256),
+  width INT NOT NULL,
+  height INT NOT NULL,
+  mappingName VARCHAR(256) NOT NULL, -- emptystring means no mapping
+  image BYTEA NOT NULL,
+  mimetype VARCHAR(256),
+  mag webknossos.VECTOR3 NOT NULL,
+  mag1BoundingBox webknossos.BOUNDING_BOX NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (_dataset, dataLayerName, width, height, mappingName)
 );
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');
@@ -166,9 +206,9 @@ CREATE TABLE webknossos.dataStores(
   key VARCHAR(1024) NOT NULL,
   isScratch BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  isConnector BOOLEAN NOT NULL DEFAULT false,
   allowsUpload BOOLEAN NOT NULL DEFAULT true,
-  onlyAllowedOrganization CHAR(24)
+  onlyAllowedOrganization CHAR(24),
+  reportUsedStorageEnabled BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.tracingStores(
@@ -235,7 +275,7 @@ CREATE TABLE webknossos.tasks(
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
   totalInstances BIGINT NOT NULL,
-  openInstances BIGINT NOT NULL,
+  pendingInstances BIGINT NOT NULL,
   tracingTime BIGINT,
   boundingBox webknossos.BOUNDING_BOX,
   editPosition webknossos.VECTOR3 NOT NULL,
@@ -243,7 +283,7 @@ CREATE TABLE webknossos.tasks(
   creationInfo VARCHAR(512),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CONSTRAINT openInstancesLargeEnoughCheck CHECK (openInstances >= 0)
+  CONSTRAINT pendingInstancesLargeEnoughCheck CHECK (pendingInstances >= 0)
 );
 
 CREATE TABLE webknossos.experienceDomains(
@@ -273,22 +313,40 @@ CREATE TABLE webknossos.timespans(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Premium', 'Pilot', 'Custom');
+CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
 CREATE TABLE webknossos.organizations(
   _id CHAR(24) PRIMARY KEY,
   name VARCHAR(256) NOT NULL UNIQUE,
   additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
   logoUrl VARCHAR(2048) NOT NULL DEFAULT '',
   displayName VARCHAR(1024) NOT NULL DEFAULT '',
+  _rootFolder CHAR(24) NOT NULL UNIQUE,
   newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
   overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
   pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
+  paidUntil TIMESTAMPTZ DEFAULT NULL,
+  includedUsers INTEGER DEFAULT NULL,
+  includedStorage BIGINT DEFAULT NULL,
+  lastTermsOfServiceAcceptanceTime TIMESTAMPTZ,
+  lastTermsOfServiceAcceptanceVersion INT NOT NULL DEFAULT 0,
+  lastStorageScanTime TIMESTAMPTZ NOT NULL DEFAULT '1970-01-01T00:00:00.000Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt');
+CREATE TABLE webknossos.organization_usedStorage(
+  _organization CHAR(24) NOT NULL,
+  _dataStore VARCHAR(256) NOT NULL,
+  _dataset CHAR(24) NOT NULL,
+  layerName VARCHAR(256) NOT NULL,
+  magOrDirectoryName VARCHAR(256) NOT NULL,
+  usedStorageBytes BIGINT NOT NULL,
+  lastUpdated TIMESTAMPTZ,
+  PRIMARY KEY(_organization, _dataStore, _dataset, layerName, magOrDirectoryName)
+);
+
+CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt', 'Empty');
 CREATE TABLE webknossos.users(
   _id CHAR(24) PRIMARY KEY,
   _multiUser CHAR(24) NOT NULL,
@@ -299,6 +357,7 @@ CREATE TABLE webknossos.users(
   userConfiguration JSONB NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
   isAdmin BOOLEAN NOT NULL DEFAULT false,
+  isOrganizationOwner BOOLEAN NOT NULL DEFAULT false,
   isDatasetManager BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   lastTaskTypeId CHAR(24) DEFAULT NULL,
@@ -322,20 +381,20 @@ CREATE TABLE webknossos.user_experiences(
   PRIMARY KEY (_user, domain)
 );
 
-CREATE TABLE webknossos.user_dataSetConfigurations(
+CREATE TABLE webknossos.user_datasetConfigurations(
   _user CHAR(24) NOT NULL,
-  _dataSet CHAR(24) NOT NULL,
+  _dataset CHAR(24) NOT NULL,
   viewConfiguration JSONB NOT NULL,
-  PRIMARY KEY (_user, _dataSet),
+  PRIMARY KEY (_user, _dataset),
   CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
 );
 
-CREATE TABLE webknossos.user_dataSetLayerConfigurations(
+CREATE TABLE webknossos.user_datasetLayerConfigurations(
   _user CHAR(24) NOT NULL,
-  _dataSet CHAR(24) NOT NULL,
+  _dataset CHAR(24) NOT NULL,
   layerName VARCHAR(256) NOT NULL,
   viewConfiguration JSONB NOT NULL,
-  PRIMARY KEY (_user, _dataSet, layerName),
+  PRIMARY KEY (_user, _dataset, layerName),
   CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
 );
 
@@ -351,6 +410,7 @@ CREATE TABLE webknossos.multiUsers(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   selectedTheme webknossos.THEME NOT NULL DEFAULT 'auto',
   _lastLoggedInIdentity CHAR(24) DEFAULT NULL,
+  isEmailVerified BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CONSTRAINT nuxInfoIsJsonObject CHECK(jsonb_typeof(novelUserExperienceInfos) = 'object')
 );
@@ -360,7 +420,7 @@ CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'Rese
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TABLE webknossos.tokens(
   _id CHAR(24) PRIMARY KEY,
-  value Text NOT NULL,
+  value TEXT NOT NULL,
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
   loginInfo_providerKey VARCHAR(512) NOT NULL,
   lastUsedDateTime TIMESTAMPTZ NOT NULL,
@@ -371,17 +431,23 @@ CREATE TABLE webknossos.tokens(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TABLE webknossos.maintenance(
-  maintenanceExpirationTime TIMESTAMPTZ NOT NULL
+CREATE TABLE webknossos.maintenances(
+  _id CHAR(24) PRIMARY KEY,
+  _user CHAR(24) NOT NULL,
+  startTime TIMESTAMPTZ NOT NULL,
+  endTime TIMESTAMPTZ NOT NULL,
+  message TEXT NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
-INSERT INTO webknossos.maintenance(maintenanceExpirationTime) values('2000-01-01 00:00:00');
-
 
 CREATE TABLE webknossos.workers(
   _id CHAR(24) PRIMARY KEY,
   _dataStore VARCHAR(256) NOT NULL,
   key VARCHAR(1024) NOT NULL UNIQUE,
-  maxParallelJobs INT NOT NULL DEFAULT 1,
+  maxParallelHighPriorityJobs INT NOT NULL DEFAULT 1,
+  maxParallelLowPriorityJobs INT NOT NULL DEFAULT 1,
+  supportedJobCommands VARCHAR(256)[] NOT NULL DEFAULT array[]::varchar(256)[],
   lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
@@ -432,10 +498,50 @@ CREATE TABLE webknossos.shortLinks(
   longLink Text NOT NULL
 );
 
+CREATE TYPE webknossos.CREDENTIAL_TYPE AS ENUM ('HttpBasicAuth', 'HttpToken', 'S3AccessKey', 'GoogleServiceAccount');
+CREATE TABLE webknossos.credentials(
+  _id CHAR(24) PRIMARY KEY,
+  type webknossos.CREDENTIAL_TYPE NOT NULL,
+  name VARCHAR(256) NOT NULL,
+  identifier Text,
+  secret Text,
+  _user CHAR(24) NOT NULL,
+  _organization CHAR(24) NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE webknossos.folders(
+    _id CHAR(24) PRIMARY KEY,
+    name TEXT NOT NULL CHECK (name !~ '/'),
+    isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TABLE webknossos.folder_paths(
+    _ancestor CHAR(24) NOT NULL,
+    _descendant CHAR(24) NOT NULL,
+    depth INT NOT NULL,
+    PRIMARY KEY(_ancestor, _descendant)
+);
+
+CREATE TABLE webknossos.folder_allowedTeams(
+  _folder CHAR(24) NOT NULL,
+  _team CHAR(24) NOT NULL,
+  PRIMARY KEY (_folder, _team)
+);
+
+CREATE TABLE webknossos.emailVerificationKeys(
+  _id CHAR(24) PRIMARY KEY,
+  key TEXT NOT NULL,
+  email VARCHAR(512) NOT NULL,
+  _multiUser CHAR(24) NOT NULL,
+  validUntil TIMESTAMPTZ,
+  isUsed BOOLEAN NOT NULL DEFAULT false
+);
 
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');
 
-CREATE TABLE webknossos.voxelytics_artifacts (
+CREATE TABLE webknossos.voxelytics_artifacts(
     _id CHAR(24) NOT NULL,
     _task CHAR(24) NOT NULL,
     name VARCHAR(512) NOT NULL,
@@ -449,7 +555,7 @@ CREATE TABLE webknossos.voxelytics_artifacts (
     CONSTRAINT metadataIsJsonObject CHECK(jsonb_typeof(metadata) = 'object')
 );
 
-CREATE TABLE webknossos.voxelytics_runs (
+CREATE TABLE webknossos.voxelytics_runs(
     _id CHAR(24) NOT NULL,
     _organization CHAR(24) NOT NULL,
     _user CHAR(24) NOT NULL,
@@ -460,66 +566,54 @@ CREATE TABLE webknossos.voxelytics_runs (
     workflow_hash VARCHAR(512) NOT NULL,
     workflow_yamlContent TEXT,
     workflow_config JSONB,
+    beginTime TIMESTAMPTZ,
+    endTime TIMESTAMPTZ,
+    state webknossos.voxelytics_run_state NOT NULL DEFAULT 'PENDING',
     PRIMARY KEY (_id),
     UNIQUE (_organization, name),
     CONSTRAINT workflowConfigIsJsonObject CHECK(jsonb_typeof(workflow_config) = 'object')
 );
 
-CREATE TABLE webknossos.voxelytics_tasks (
+CREATE TABLE webknossos.voxelytics_tasks(
     _id CHAR(24) NOT NULL,
     _run CHAR(24) NOT NULL,
     name varCHAR(2048) NOT NULL,
     task varCHAR(512) NOT NULL,
     config JSONB NOT NULL,
+    beginTime TIMESTAMPTZ,
+    endTime TIMESTAMPTZ,
+    state webknossos.voxelytics_run_state NOT NULL DEFAULT 'PENDING',
     PRIMARY KEY (_id),
     UNIQUE (_run, name),
     CONSTRAINT configIsJsonObject CHECK(jsonb_typeof(config) = 'object')
 );
 
-CREATE TABLE webknossos.voxelytics_chunks (
+CREATE TABLE webknossos.voxelytics_chunks(
     _id CHAR(24) NOT NULL,
     _task CHAR(24) NOT NULL,
     executionId VARCHAR(2048) NOT NULL,
     chunkName VARCHAR(2048) NOT NULL,
+    beginTime TIMESTAMPTZ,
+    endTime TIMESTAMPTZ,
+    state webknossos.voxelytics_run_state NOT NULL DEFAULT 'PENDING',
     PRIMARY KEY (_id),
     UNIQUE (_task, executionId, chunkName)
 );
 
-CREATE TABLE webknossos.voxelytics_workflows (
+CREATE TABLE webknossos.voxelytics_workflows(
     _organization CHAR(24) NOT NULL,
     hash VARCHAR(512) NOT NULL,
     name TEXT NOT NULL,
     PRIMARY KEY (_organization, hash)
 );
 
-CREATE TABLE webknossos.voxelytics_runStateChangeEvents (
-    _run CHAR(24) NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
-    PRIMARY KEY (_run, timestamp)
-);
-
-CREATE TABLE webknossos.voxelytics_runHeartbeatEvents (
+CREATE TABLE webknossos.voxelytics_runHeartbeatEvents(
     _run CHAR(24) NOT NULL,
     timestamp TIMESTAMPTZ NOT NULL,
     PRIMARY KEY (_run)
 );
 
-CREATE TABLE webknossos.voxelytics_taskStateChangeEvents (
-    _task CHAR(24) NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
-    PRIMARY KEY (_task, timestamp)
-);
-
-CREATE TABLE webknossos.voxelytics_chunkStateChangeEvents (
-    _chunk CHAR(24) NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL,
-    state webknossos.VOXELYTICS_RUN_STATE NOT NULL,
-    PRIMARY KEY (_chunk, timestamp)
-);
-
-CREATE TABLE webknossos.voxelytics_chunkProfilingEvents (
+CREATE TABLE webknossos.voxelytics_chunkProfilingEvents(
     _chunk CHAR(24) NOT NULL,
     hostname TEXT NOT NULL,
     pid INT8 NOT NULL,
@@ -530,7 +624,7 @@ CREATE TABLE webknossos.voxelytics_chunkProfilingEvents (
     PRIMARY KEY (_chunk, timestamp)
 );
 
-CREATE TABLE webknossos.voxelytics_artifactFileChecksumEvents (
+CREATE TABLE webknossos.voxelytics_artifactFileChecksumEvents(
     _artifact CHAR(24) NOT NULL,
     path TEXT NOT NULL,
     resolvedPath TEXT NOT NULL,
@@ -542,11 +636,24 @@ CREATE TABLE webknossos.voxelytics_artifactFileChecksumEvents (
     PRIMARY KEY (_artifact, path, timestamp)
 );
 
+CREATE TABLE webknossos.analyticsEvents(
+  _id CHAR(24) PRIMARY KEY,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  sessionId BIGINT NOT NULL,
+  eventType VARCHAR(512) NOT NULL,
+  eventProperties JSONB NOT NULL,
+  _user CHAR(24) NOT NULL,
+  _organization CHAR(24) NOT NULL,
+  isOrganizationAdmin BOOLEAN NOT NULL,
+  isSuperUser BOOLEAN NOT NULL,
+  webknossosUri VARCHAR(512) NOT NULL,
+  CONSTRAINT eventProperties CHECK(jsonb_typeof(eventProperties) = 'object')
+);
 
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDeleted;
 CREATE VIEW webknossos.publications_ AS SELECT * FROM webknossos.publications WHERE NOT isDeleted;
-CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT isDeleted;
+CREATE VIEW webknossos.datasets_ AS SELECT * FROM webknossos.datasets WHERE NOT isDeleted;
 CREATE VIEW webknossos.dataStores_ AS SELECT * FROM webknossos.dataStores WHERE NOT isDeleted;
 CREATE VIEW webknossos.tracingStores_ AS SELECT * FROM webknossos.tracingStores WHERE NOT isDeleted;
 CREATE VIEW webknossos.projects_ AS SELECT * FROM webknossos.projects WHERE NOT isDeleted;
@@ -564,13 +671,16 @@ CREATE VIEW webknossos.workers_ AS SELECT * FROM webknossos.workers WHERE NOT is
 CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
 CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 CREATE VIEW webknossos.annotation_privateLinks_ as SELECT * FROM webknossos.annotation_privateLinks WHERE NOT isDeleted;
+CREATE VIEW webknossos.folders_ as SELECT * FROM webknossos.folders WHERE NOT isDeleted;
+CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHERE NOT isDeleted;
+CREATE VIEW webknossos.maintenances_ as SELECT * FROM webknossos.maintenances WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT
 u._id AS _user, m.email, u.firstName, u.lastname, o.displayName AS organization_displayName,
 u.isDeactivated, u.isDatasetManager, u.isAdmin, m.isSuperUser,
 u._organization, o.name AS organization_name, u.created AS user_created,
-m.created AS multiuser_created, u._multiUser, m._lastLoggedInIdentity, u.lastActivity
+m.created AS multiuser_created, u._multiUser, m._lastLoggedInIdentity, u.lastActivity, m.isEmailVerified
 FROM webknossos.users_ u
 JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
@@ -582,7 +692,8 @@ CREATE INDEX ON webknossos.annotations(typ, state, isDeleted);
 CREATE INDEX ON webknossos.annotations(_user, _task, isDeleted);
 CREATE INDEX ON webknossos.annotations(_task, typ, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, isDeleted);
-CREATE INDEX ON webknossos.dataSets(name);
+CREATE INDEX ON webknossos.datasets(name);
+CREATE INDEX ON webknossos.datasets(_folder);
 CREATE INDEX ON webknossos.tasks(_project);
 CREATE INDEX ON webknossos.tasks(isDeleted);
 CREATE INDEX ON webknossos.tasks(_project, isDeleted);
@@ -604,7 +715,7 @@ ALTER TABLE webknossos.annotations
   ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL DEFERRABLE,
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) DEFERRABLE,
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) DEFERRABLE,
-  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) DEFERRABLE,
+  ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE,
   ADD CONSTRAINT publication_ref FOREIGN KEY(_publication) REFERENCES webknossos.publications(_id) DEFERRABLE;
 ALTER TABLE webknossos.annotation_sharedTeams
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
@@ -612,20 +723,23 @@ ALTER TABLE webknossos.annotation_sharedTeams
 ALTER TABLE webknossos.annotation_contributors
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.annotation_mutexes
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
+    ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.meshes
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
-ALTER TABLE webknossos.dataSets
+ALTER TABLE webknossos.datasets
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE,
   ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE,
   ADD CONSTRAINT uploader_ref FOREIGN KEY(_uploader) REFERENCES webknossos.users(_id) DEFERRABLE,
   ADD CONSTRAINT publication_ref FOREIGN KEY(_publication) REFERENCES webknossos.publications(_id) DEFERRABLE;
-ALTER TABLE webknossos.dataSet_layers
-  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.dataSet_allowedTeams
-  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE DEFERRABLE,
+ALTER TABLE webknossos.dataset_layers
+  ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.dataset_allowedTeams
+  ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.dataSet_resolutions
-  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.dataset_resolutions
+  ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.projects
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) DEFERRABLE,
   ADD CONSTRAINT user_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id) DEFERRABLE;
@@ -648,12 +762,12 @@ ALTER TABLE webknossos.user_team_roles
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.user_experiences
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.user_dataSetConfigurations
+ALTER TABLE webknossos.user_datasetConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
-  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.user_dataSetLayerConfigurations
+  ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.user_datasetLayerConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
-  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE DEFERRABLE;
+  ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.multiUsers
   ADD CONSTRAINT lastLoggedInIdentity_ref FOREIGN KEY(_lastLoggedInIdentity) REFERENCES webknossos.users(_id) ON DELETE SET NULL;
 ALTER TABLE webknossos.experienceDomains
@@ -666,26 +780,30 @@ ALTER TABLE webknossos.workers
   ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name) DEFERRABLE;
 ALTER TABLE webknossos.annotation_privateLinks
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) DEFERRABLE;
-
+ALTER TABLE webknossos.folder_paths
+  ADD FOREIGN KEY (_ancestor) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.folder_paths
+  ADD FOREIGN KEY (_descendant) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.organizations
+  ADD FOREIGN KEY (_rootFolder) REFERENCES webknossos.folders(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.dataset_layer_coordinateTransformations
+  ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;
+ALTER TABLE webknossos.dataset_layer_additionalAxes
+  ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_artifacts
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_runs
   ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
-  ADD FOREIGN KEY (_organization, workflow_hash) REFERENCES webknossos.voxelytics_workflows(_organization, hash) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+  -- explicit naming for this constraint, as different postgres versions give different names to tuple key constraints
+  ADD CONSTRAINT voxelytics_runs__organization_workflow_hash_fkey FOREIGN KEY (_organization, workflow_hash) REFERENCES webknossos.voxelytics_workflows(_organization, hash) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_tasks
   ADD FOREIGN KEY (_run) REFERENCES webknossos.voxelytics_runs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_chunks
   ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_workflows
   ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.voxelytics_runStateChangeEvents
-  ADD FOREIGN KEY (_run) REFERENCES webknossos.voxelytics_runs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_runHeartbeatEvents
   ADD FOREIGN KEY (_run) REFERENCES webknossos.voxelytics_runs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.voxelytics_taskStateChangeEvents
-  ADD FOREIGN KEY (_task) REFERENCES webknossos.voxelytics_tasks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.voxelytics_chunkStateChangeEvents
-  ADD FOREIGN KEY (_chunk) REFERENCES webknossos.voxelytics_chunks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_chunkProfilingEvents
   ADD FOREIGN KEY (_chunk) REFERENCES webknossos.voxelytics_chunks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_artifactFileChecksumEvents
@@ -702,7 +820,7 @@ $$ LANGUAGE plpgsql;
 CREATE FUNCTION webknossos.onUpdateTask() RETURNS trigger AS $$
   BEGIN
     IF NEW.totalInstances <> OLD.totalInstances THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances + (NEW.totalInstances - OLD.totalInstances) WHERE _id = NEW._id;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances + (NEW.totalInstances - OLD.totalInstances) WHERE _id = NEW._id;
     END IF;
     RETURN NULL;
   END;
@@ -716,7 +834,7 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateTask();
 CREATE FUNCTION webknossos.onInsertAnnotation() RETURNS trigger AS $$
   BEGIN
     IF (NEW.typ = 'Task') AND (NEW.isDeleted = false) AND (NEW.state != 'Cancelled') THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances - 1 WHERE _id = NEW._task;
     END IF;
     RETURN NULL;
   END;
@@ -735,11 +853,11 @@ CREATE OR REPLACE FUNCTION webknossos.onUpdateAnnotation() RETURNS trigger AS $$
     END IF;
     IF (webknossos.countsAsTaskInstance(OLD) AND NOT webknossos.countsAsTaskInstance(NEW))
     THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = NEW._task;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances + 1 WHERE _id = NEW._task;
     END IF;
     IF (NOT webknossos.countsAsTaskInstance(OLD) AND webknossos.countsAsTaskInstance(NEW))
     THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances - 1 WHERE _id = NEW._task;
     END IF;
     RETURN NULL;
   END;
@@ -753,7 +871,7 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateAnnotation();
 CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS trigger AS $$
   BEGIN
     IF (OLD.typ = 'Task') AND (OLD.isDeleted = false) AND (OLD.state != 'Cancelled') THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = OLD._task;
+      UPDATE webknossos.tasks SET pendingInstances = pendingInstances + 1 WHERE _id = OLD._task;
     END IF;
     RETURN NULL;
   END;

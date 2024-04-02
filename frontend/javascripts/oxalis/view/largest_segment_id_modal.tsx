@@ -11,7 +11,10 @@ import Store from "oxalis/throttled_store";
 import { OxalisState, VolumeTracing } from "oxalis/store";
 import { mayUserEditDataset } from "libs/utils";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
-import { getSegmentationLayerForTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getSegmentationLayerForTracing,
+  getVolumeTracingByLayerName,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { APISegmentationLayer } from "types/api_flow_types";
 
 const TOAST_KEY = "enter-largest-segment-id";
@@ -47,18 +50,23 @@ export default function EnterLargestSegmentIdModal({
   segmentationLayer: APISegmentationLayer;
   destroy: (...args: Array<any>) => any;
 }) {
-  const [largestSegmentId, setLargestSegmentId] = React.useState(0);
+  const [largestSegmentId, setLargestSegmentId] = React.useState<number | null>(0);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const activeCellId =
+    useSelector(
+      (state: OxalisState) =>
+        getVolumeTracingByLayerName(state.tracing, segmentationLayer.name)?.activeCellId,
+    ) || 0;
 
   const dispatch = useDispatch();
   const handleOk = () => {
-    if (largestSegmentId < 1) {
+    if (largestSegmentId == null || largestSegmentId < 1) {
       Toast.warning("Please enter a segment id greater than 0.");
       return;
     }
     dispatch(setLargestSegmentIdAction(largestSegmentId));
-    dispatch(createCellAction(largestSegmentId));
+    dispatch(createCellAction(activeCellId, largestSegmentId));
     Toast.close(TOAST_KEY);
     destroy();
   };
@@ -82,9 +90,9 @@ export default function EnterLargestSegmentIdModal({
   const maxValue = 2 ** getBitDepth(segmentationLayer);
 
   return (
-    <Modal visible title="Enter Largest Segment ID" onOk={handleOk} onCancel={handleCancel}>
+    <Modal open title="Enter Largest Segment ID" onOk={handleOk} onCancel={handleCancel}>
       <p>
-        No largest segment ID was configured for this segmentation layer. This means that webKnossos
+        No largest segment ID was configured for this segmentation layer. This means that WEBKNOSSOS
         does not know which segment ID would be safe to use for annotating new segments (because it
         was not used yet).
       </p>

@@ -3,12 +3,15 @@ package com.scalableminds.webknossos.tracingstore.tracings
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import com.typesafe.scalalogging.LazyLogging
+import play.api.http.Status.CONFLICT
+import net.liftweb.common.Box
 import play.api.libs.json._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import java.util.UUID
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 object TracingIds {
@@ -22,7 +25,7 @@ trait TracingService[T <: GeneratedMessage]
     with ColorGenerator
     with BoundingBoxMerger {
 
-  val handledGroupCacheExpiry: FiniteDuration = 5 minutes
+  implicit val ec: ExecutionContext
 
   def tracingType: TracingType
 
@@ -52,59 +55,51 @@ trait TracingService[T <: GeneratedMessage]
   // to provide useful error messages to the user if the temporary tracing is no longer present
   private val temporaryIdStoreTimeout = 10 days
 
+  private val handledGroupCacheExpiry: FiniteDuration = 24 hours
+
   def currentVersion(tracingId: String): Fox[Long]
 
   def currentVersion(tracing: T): Long
 
-  def transactionBatchKey(tracingId: String,
-                          transactionidOpt: Option[String],
-                          transactionGroupindexOpt: Option[Int],
-                          version: Long) =
-    s"transactionBatch___${tracingId}___${transactionidOpt}___${transactionGroupindexOpt}___$version"
+  private def transactionGroupKey(tracingId: String, transactionId: String, transactionGroupIndex: Int, version: Long) =
+    s"transactionGroup___${tracingId}___${transactionId}___${transactionGroupIndex}___$version"
 
   protected def temporaryIdKey(tracingId: String) =
     s"temporaryTracingId___$tracingId"
 
-  def currentUncommittedVersion(tracingId: String, transactionIdOpt: Option[String]): Fox[Option[Long]] =
-    transactionIdOpt match {
-      case Some(_) =>
-        for {
-          keys <- uncommittedUpdatesStore.keys(s"transactionBatch___${tracingId}___${transactionIdOpt}___*")
-        } yield if (keys.isEmpty) None else Some(keys.flatMap(versionFromTransactionBatchKey).max)
-      case _ => Fox.successful(None)
-    }
-
-  private def versionFromTransactionBatchKey(key: String) = {
-    val pattern = """transactionBatch___(.*)___(.*)___(.*)___(\d+)""".r
-    pattern.findFirstMatchIn(key).map {
-      _.group(4).toLong
-    }
-  }
-
-  private def patternFor(tracingId: String, transactionIdOpt: Option[String]) =
-    s"transactionBatch___${tracingId}___${transactionIdOpt}___*"
+  private def patternFor(tracingId: String, transactionId: String) =
+    s"transactionGroup___${tracingId}___${transactionId}___*"
 
   def saveUncommitted(tracingId: String,
-                      transactionIdOpt: Option[String],
-                      transactionGroupindexOpt: Option[Int],
+                      transactionId: String,
+                      transactionGroupIndex: Int,
                       version: Long,
                       updateGroup: UpdateActionGroup[T],
                       expiry: FiniteDuration): Fox[Unit] =
-    uncommittedUpdatesStore.insert(transactionBatchKey(tracingId, transactionIdOpt, transactionGroupindexOpt, version),
-                                   Json.toJson(updateGroup).toString(),
-                                   Some(expiry))
+    for {
+      _ <- Fox.runIf(transactionGroupIndex > 0)(
+        Fox.assertTrue(
+          uncommittedUpdatesStore.contains(transactionGroupKey(
+            tracingId,
+            transactionId,
+            transactionGroupIndex - 1,
+            version))) ?~> s"Incorrect transaction index. Got: $transactionGroupIndex but ${transactionGroupIndex - 1} does not exist" ~> CONFLICT)
+      _ <- uncommittedUpdatesStore.insert(transactionGroupKey(tracingId, transactionId, transactionGroupIndex, version),
+                                          Json.toJson(updateGroup).toString(),
+                                          Some(expiry))
+    } yield ()
 
-  def getAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[List[UpdateActionGroup[T]]] =
+  def getAllUncommittedFor(tracingId: String, transactionId: String): Fox[List[UpdateActionGroup[T]]] =
     for {
       raw: Seq[String] <- uncommittedUpdatesStore.findAllConditional(patternFor(tracingId, transactionId))
       parsed: Seq[UpdateActionGroup[T]] = raw.flatMap(itemAsString =>
         JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup[T]]))
-    } yield parsed.toList.sortBy(_.version)
+    } yield parsed.toList.sortBy(_.transactionGroupIndex)
 
-  def removeAllUncommittedFor(tracingId: String, transactionId: Option[String]): Fox[Unit] =
+  def removeAllUncommittedFor(tracingId: String, transactionId: String): Fox[Unit] =
     uncommittedUpdatesStore.removeAllConditional(patternFor(tracingId, transactionId))
 
-  def migrateTracing(tracingFox: Fox[T], tracingId: String): Fox[T] =
+  private def migrateTracing(tracingFox: Fox[T], tracingId: String): Fox[T] =
     tracingMigrationService.migrateTracing(tracingFox).flatMap {
       case (tracing, hasChanged) =>
         if (hasChanged)
@@ -113,7 +108,10 @@ trait TracingService[T <: GeneratedMessage]
           Fox.successful(tracing)
     }
 
-  def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[T], previousVersion: Long): Fox[_]
+  def handleUpdateGroup(tracingId: String,
+                        updateGroup: UpdateActionGroup[T],
+                        previousVersion: Long,
+                        userToken: Option[String]): Fox[_]
 
   def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] = Fox.successful(tracing)
 
@@ -163,29 +161,33 @@ trait TracingService[T <: GeneratedMessage]
     }
   }
 
-  def handledGroupKey(tracingId: String, transactionId: String, version: Long) =
-    s"handledGroup___${tracingId}___${transactionId}___$version"
+  private def handledGroupKey(tracingId: String, transactionId: String, version: Long, transactionGroupIndex: Int) =
+    s"handledGroup___${tracingId}___${transactionId}___${version}___$transactionGroupIndex"
 
-  def saveToHandledGroupIdStore(tracingId: String, transactionIdOpt: Option[String], version: Long): Fox[Unit] =
-    transactionIdOpt match {
-      case Some(transactionId) =>
-        val key = handledGroupKey(tracingId, transactionId, version)
-        handledGroupIdStore.insert(key, "()", Some(handledGroupCacheExpiry))
-      case _ =>
-        Fox.successful(())
-    }
+  def saveToHandledGroupIdStore(tracingId: String,
+                                transactionId: String,
+                                version: Long,
+                                transactionGroupIndex: Int): Fox[Unit] = {
+    val key = handledGroupKey(tracingId, transactionId, version, transactionGroupIndex)
+    handledGroupIdStore.insert(key, "()", Some(handledGroupCacheExpiry))
+  }
 
-  def handledGroupIdStoreContains(tracingId: String, transactionId: String, version: Long): Fox[Boolean] =
-    handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version))
+  def handledGroupIdStoreContains(tracingId: String,
+                                  transactionId: String,
+                                  version: Long,
+                                  transactionGroupIndex: Int): Fox[Boolean] =
+    handledGroupIdStore.contains(handledGroupKey(tracingId, transactionId, version, transactionGroupIndex))
 
-  def merge(tracings: Seq[T]): T
+  def merge(tracings: Seq[T], mergedVolumeStats: MergedVolumeStats, newEditableMappingIdOpt: Option[String]): Box[T]
 
   def remapTooLargeTreeIds(tracing: T): T = tracing
 
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[T],
                       newId: String,
-                      newTracing: T,
-                      toCache: Boolean): Fox[Unit]
+                      newVersion: Long,
+                      toCache: Boolean,
+                      userToken: Option[String]): Fox[MergedVolumeStats]
 
+  def mergeEditableMappings(tracingsWithIds: List[(T, String)], userToken: Option[String]): Fox[String]
 }

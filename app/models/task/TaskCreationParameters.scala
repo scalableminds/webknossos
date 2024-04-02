@@ -4,22 +4,18 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int, Vec3Double}
 import models.user.Experience
 import play.api.libs.json.{Format, Json}
 
-case class TaskParameters(
-    taskTypeIdOrSummary: String,
-    // The taskTypeIdOrSummary parameter may be an id or a summary. At the beginning of TaskController>create
-    // this is normalized so only the task id is stored in this field.
-    neededExperience: Experience,
-    openInstances: Int,
-    projectName: String,
-    scriptId: Option[String],
-    boundingBox: Option[BoundingBox],
-    dataSet: String,
-    editPosition: Vec3Int,
-    editRotation: Vec3Double,
-    creationInfo: Option[String],
-    description: Option[String],
-    baseAnnotation: Option[BaseAnnotation]
-)
+case class TaskParameters(taskTypeId: String,
+                          neededExperience: Experience,
+                          pendingInstances: Int,
+                          projectName: String,
+                          scriptId: Option[String],
+                          boundingBox: Option[BoundingBox],
+                          dataSet: String,
+                          editPosition: Vec3Int,
+                          editRotation: Vec3Double,
+                          creationInfo: Option[String],
+                          description: Option[String],
+                          baseAnnotation: Option[BaseAnnotation])
 
 object TaskParameters {
   implicit val taskParametersFormat: Format[TaskParameters] = Json.format[TaskParameters]
@@ -27,7 +23,7 @@ object TaskParameters {
 
 case class NmlTaskParameters(taskTypeId: String,
                              neededExperience: Experience,
-                             openInstances: Int,
+                             pendingInstances: Int,
                              projectName: String,
                              scriptId: Option[String],
                              boundingBox: Option[BoundingBox])

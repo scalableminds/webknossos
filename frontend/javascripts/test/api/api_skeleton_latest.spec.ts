@@ -1,4 +1,5 @@
 // @ts-nocheck
+import "test/mocks/lz4";
 import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 import { makeBasicGroupObject } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
@@ -23,14 +24,14 @@ test("getActiveTree should get the active tree id", (t) => {
   api.tracing.setActiveNode(3);
   t.is(api.tracing.getActiveTreeId(), 2);
 });
-test("getActiveGroupId should get the active group id", (t) => {
+test("getActiveTreeGroupId should get the active group id", (t) => {
   const { api } = t.context;
-  t.is(api.tracing.getActiveGroupId(), null);
+  t.is(api.tracing.getActiveTreeGroupId(), null);
 });
-test("setActiveGroupId should set the active group id", (t) => {
+test("setActiveTreeGroupId should set the active group id", (t) => {
   const { api } = t.context;
-  api.tracing.setActiveGroup(3);
-  t.is(api.tracing.getActiveGroupId(), 3);
+  api.tracing.setActiveTreeGroup(3);
+  t.is(api.tracing.getActiveTreeGroupId(), 3);
 });
 test("getAllNodes should get a list of all nodes", (t) => {
   const { api } = t.context;
@@ -114,7 +115,7 @@ test("Data Api: getDataValue should get the data value for a layer, position and
   const cube = model.getCubeByLayerName("segmentation");
   const position = [100, 100, 100];
   const zoomStep = 0;
-  const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
+  const bucketAddress = cube.positionToZoomedAddress(position, null, zoomStep);
   const bucket = cube.getOrCreateBucket(bucketAddress);
   sinon.stub(cube.pullQueue, "pull").returns([Promise.resolve(true)]);
   sinon.stub(cube, "getDataValue").returns(1337);
@@ -161,7 +162,7 @@ test("Utils Api: registerKeyHandler should register a key handler and return a h
 test("Utils Api: registerOverwrite should overwrite an existing function", (t) => {
   const { api } = t.context;
   let bool = false;
-  api.utils.registerOverwrite("SET_ACTIVE_NODE", (store, call, action) => {
+  api.utils.registerOverwrite("SET_ACTIVE_NODE", (_store, call, action) => {
     bool = true;
     call(action);
   });
@@ -224,12 +225,12 @@ test.serial("getTreeGroups should get all tree groups and set a tree group", (t)
   t.is(state.tracing.skeleton.trees[2].groupId, 3);
   t.is(state.tracing.skeleton.trees[1].groupId, 7);
 });
-test.serial("renameGroup should rename a tree group", (t) => {
+test.serial("renameSkeletonGroup should rename a tree group", (t) => {
   const { api } = t.context;
   Store.dispatch(
     setTreeGroupsAction([makeBasicGroupObject(3, "group 3"), makeBasicGroupObject(7, "group 7")]),
   );
-  api.tracing.renameGroup(7, "renamed");
+  api.tracing.renameSkeletonGroup(7, "renamed");
   const state = Store.getState();
   t.is(state.tracing.skeleton.treeGroups[1].name, "renamed");
 });

@@ -1,6 +1,6 @@
 import type { Action } from "oxalis/model/actions/actions";
 import type { OxalisState } from "oxalis/store";
-import { updateKey } from "oxalis/model/helpers/deep_update";
+import { updateKey, updateKey2 } from "oxalis/model/helpers/deep_update";
 import {
   setToolReducer,
   getNextTool,
@@ -96,6 +96,18 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_AI_JOB_MODAL_STATE": {
+      return updateKey(state, "uiInformation", {
+        aIJobModalState: action.state,
+      });
+    }
+
+    case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showRenderAnimationModal: action.visible,
+      });
+    }
+
     case "SET_BUSY_BLOCKING_INFO_ACTION": {
       if (action.value.isBusy && state.uiInformation.busyBlockingInfo.isBusy) {
         throw new Error(
@@ -105,6 +117,40 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
 
       return updateKey(state, "uiInformation", {
         busyBlockingInfo: action.value,
+      });
+    }
+
+    case "SET_QUICK_SELECT_STATE": {
+      return updateKey(state, "uiInformation", {
+        quickSelectState: action.state,
+      });
+    }
+
+    case "SET_ARE_QUICK_SELECT_SETTINGS_OPEN": {
+      return updateKey(state, "uiInformation", {
+        areQuickSelectSettingsOpen: action.isOpen,
+      });
+    }
+
+    case "HIDE_MEASUREMENT_TOOLTIP": {
+      return updateKey2(state, "uiInformation", "measurementToolInfo", {
+        lastMeasuredPosition: null,
+      });
+    }
+
+    case "SET_LAST_MEASURED_POSITION": {
+      return updateKey2(state, "uiInformation", "measurementToolInfo", {
+        lastMeasuredPosition: action.position,
+      });
+    }
+    case "SET_IS_MEASURING": {
+      return updateKey2(state, "uiInformation", "measurementToolInfo", {
+        isMeasuring: action.isMeasuring,
+      });
+    }
+    case "SET_NAVBAR_HEIGHT": {
+      return updateKey(state, "uiInformation", {
+        navbarHeight: action.navbarHeight,
       });
     }
 

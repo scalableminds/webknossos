@@ -1,41 +1,41 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
-import com.typesafe.scalalogging.LazyLogging
-
-object ChunkUtils extends LazyLogging {
-  def computeChunkIndices(arrayShape: Array[Int],
-                          arrayChunkSize: Array[Int],
+object ChunkUtils {
+  def computeChunkIndices(arrayShapeOpt: Option[Array[Int]],
+                          arrayChunkShape: Array[Int],
                           selectedShape: Array[Int],
                           selectedOffset: Array[Int]): List[Array[Int]] = {
-    val depth = arrayShape.length
-    val start = new Array[Int](depth)
-    val to = new Array[Int](depth)
+    val nDims = arrayChunkShape.length
+    val start = new Array[Int](nDims)
+    val end = new Array[Int](nDims)
     var numChunks = 1
-    for (dim <- 0 until depth) {
-      val maxIdx = (arrayShape(dim) - 1) / arrayChunkSize(dim)
-      val startIdx = Math.min(maxIdx, selectedOffset(dim) / arrayChunkSize(dim))
-      var toIdx = (selectedOffset(dim) + selectedShape(dim) - 1) / arrayChunkSize(dim)
-      toIdx = Math.min(toIdx, maxIdx)
-      start(dim) = startIdx
-      to(dim) = toIdx
-      val numChunksForDim = toIdx - startIdx + 1
+    for (dim <- 0 until nDims) {
+      val largestPossibleIndex = arrayShapeOpt.map(arrayShape => (arrayShape(dim) - 1) / arrayChunkShape(dim))
+      val smallestPossibleIndex = 0
+      val startIndexRaw = selectedOffset(dim) / arrayChunkShape(dim)
+      val startIndexClamped =
+        Math.max(smallestPossibleIndex, Math.min(largestPossibleIndex.getOrElse(startIndexRaw), startIndexRaw))
+      val endIndexRaw = (selectedOffset(dim) + selectedShape(dim) - 1) / arrayChunkShape(dim)
+      val endIndexClampedToBbox =
+        Math.max(smallestPossibleIndex, Math.min(largestPossibleIndex.getOrElse(endIndexRaw), endIndexRaw))
+      val endIndexClamped = Math.max(startIndexClamped, endIndexClampedToBbox) // end index must be greater or equal to start index
+      start(dim) = startIndexClamped
+      end(dim) = endIndexClamped
+      val numChunksForDim = endIndexClamped - startIndexClamped + 1
       numChunks *= numChunksForDim
     }
-    if (numChunks < 0) {
-      logger.warn(
-        s"Failed to compute zarr chunk indices. array shape ${arrayShape.toList}, chunkShape: ${arrayChunkSize.toList}, requested ${selectedShape.toList} at ${selectedOffset.toList}")
-    }
+
     val chunkIndices = new Array[Array[Int]](numChunks)
-    val currentIdx = start.clone
+    val currentIndex = start.clone
     for (i <- chunkIndices.indices) {
-      chunkIndices(i) = currentIdx.clone
-      var depthIdx = depth - 1
-      while ({ depthIdx >= 0 }) if (currentIdx(depthIdx) >= to(depthIdx)) {
-        currentIdx(depthIdx) = start(depthIdx)
-        depthIdx -= 1
+      chunkIndices(i) = currentIndex.clone
+      var dimIndex = nDims - 1
+      while ({ dimIndex >= 0 }) if (currentIndex(dimIndex) >= end(dimIndex)) {
+        currentIndex(dimIndex) = start(dimIndex)
+        dimIndex -= 1
       } else {
-        currentIdx(depthIdx) += 1
-        depthIdx = -1
+        currentIndex(dimIndex) += 1
+        dimIndex = -1
       }
     }
     chunkIndices.toList

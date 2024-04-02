@@ -1,9 +1,8 @@
 import _ from "lodash";
-import { COMPRESSING_BATCH_SIZE } from "oxalis/model/bucket_data_handling/pushqueue";
 import type { Vector3 } from "oxalis/constants";
 import type { Versions } from "oxalis/view/version_view";
 import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import {
   getSegmentationLayerWithMappingSupport,
   getLayerByName,
@@ -14,7 +13,7 @@ import { isBusy } from "oxalis/model/accessors/save_accessor";
 import { isDatasetAccessibleBySwitching } from "admin/admin_rest_api";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import DataLayer from "oxalis/model/data_layer";
+import type DataLayer from "oxalis/model/data_layer";
 import type LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import type { TraceOrViewCommand } from "oxalis/store";
@@ -57,9 +56,8 @@ export class OxalisModel {
       }
     } catch (error) {
       try {
-        const maybeOrganizationToSwitchTo = await isDatasetAccessibleBySwitching(
-          initialCommandType,
-        );
+        const maybeOrganizationToSwitchTo =
+          await isDatasetAccessibleBySwitching(initialCommandType);
 
         if (maybeOrganizationToSwitchTo != null) {
           // @ts-ignore
@@ -167,12 +165,18 @@ export class OxalisModel {
     position: Vector3 | null | undefined,
   ): number {
     const state = Store.getState();
-    const zoomStep = getRequestLogZoomStep(state);
+    const { additionalCoordinates } = state.flycam;
+
+    const zoomStep = getActiveMagIndexForLayer(state, layerName);
     if (position == null) return zoomStep;
     const cube = this.getCubeByLayerName(layerName);
     // Depending on the zoom value, which magnifications are loaded and other settings,
     // the currently rendered zoom step has to be determined.
-    const renderedZoomStep = cube.getNextCurrentlyUsableZoomStepForPosition(position, zoomStep);
+    const renderedZoomStep = cube.getNextCurrentlyUsableZoomStepForPosition(
+      position,
+      additionalCoordinates,
+      zoomStep,
+    );
     return renderedZoomStep;
   }
 
@@ -181,12 +185,14 @@ export class OxalisModel {
     position: Vector3,
   ): Promise<number> {
     const state = Store.getState();
-    const zoomStep = getRequestLogZoomStep(state);
+    const { additionalCoordinates } = state.flycam;
+    const zoomStep = getActiveMagIndexForLayer(state, layerName);
     const cube = this.getCubeByLayerName(layerName);
     // Depending on the zoom value, the available magnifications and other settings,
     // the ultimately rendered zoom step has to be determined.
     const renderedZoomStep = await cube.getNextUltimatelyUsableZoomStepForPosition(
       position,
+      additionalCoordinates,
       zoomStep,
     );
     return renderedZoomStep;
@@ -217,9 +223,9 @@ export class OxalisModel {
       globalMousePosition,
     );
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pos' implicitly has an 'any' type.
-    const getIdForPos = (pos, usableZoomStep) => {
-      const id = cube.getDataValue(pos, null, usableZoomStep);
+    const getIdForPos = (pos: Vector3, usableZoomStep: number) => {
+      const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
+      const id = cube.getDataValue(pos, additionalCoordinates, null, usableZoomStep);
       return {
         id: cube.mapId(id),
         unmappedId: id,
@@ -286,21 +292,35 @@ export class OxalisModel {
     return storeStateSaved && pushQueuesSaved;
   }
 
+  getLongestPushQueueWaitTime() {
+    return (
+      _.max(
+        Utils.values(this.dataLayers).map((layer) => layer.pushQueue.getTransactionWaitTime()),
+      ) || 0
+    );
+  }
+
   getPushQueueStats() {
     const compressingBucketCount = _.sum(
-      Utils.values(this.dataLayers).map(
-        (dataLayer) =>
-          dataLayer.pushQueue.compressionTaskQueue.tasks.length * COMPRESSING_BATCH_SIZE,
+      Utils.values(this.dataLayers).map((dataLayer) =>
+        dataLayer.pushQueue.getCompressingBucketCount(),
       ),
     );
 
     const waitingForCompressionBucketCount = _.sum(
-      Utils.values(this.dataLayers).map((dataLayer) => dataLayer.pushQueue.pendingQueue.size),
+      Utils.values(this.dataLayers).map((dataLayer) => dataLayer.pushQueue.getPendingBucketCount()),
+    );
+
+    const outstandingBucketDownloadCount = _.sum(
+      Utils.values(this.dataLayers).map((dataLayer) =>
+        dataLayer.cube.temporalBucketManager.getCount(),
+      ),
     );
 
     return {
       compressingBucketCount,
       waitingForCompressionBucketCount,
+      outstandingBucketDownloadCount,
     };
   }
 
@@ -328,5 +348,7 @@ export class OxalisModel {
   };
 }
 const model = new OxalisModel(); // export the model as a singleton
+
+export type ModelType = typeof model;
 
 export default model;

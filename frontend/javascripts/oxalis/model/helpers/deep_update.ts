@@ -1,10 +1,11 @@
 // This module provides multiple methods to update deeply nested fields in StoreState.
-// In contrast to immutability-helper, flow will be able to completely type such calls.
+// When we still used flow, this module was superior to immutability-helper regarding
+// type safety. However, by now immutability-helper is also fine to use.
 // Example:
 // updateKey2(state, "viewModeData", "plane", { activeViewport: "PLANE_XY" });
 // The last parameter can hold multiple key-value pairs. Only the used keys will be updated.
 
-import { OxalisState } from "oxalis/store";
+import { type OxalisState } from "oxalis/store";
 
 export function updateKey<Key1 extends keyof OxalisState>(
   state: OxalisState,

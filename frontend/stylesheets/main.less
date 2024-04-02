@@ -1,6 +1,7 @@
 @import "../../node_modules/@fortawesome/fontawesome-free/css/all.min.css";
 @import "../../node_modules/react-sortable-tree/style.css";
 @import "../../node_modules/flexlayout-react/style/light.css";
+@import "../../node_modules/antd/dist/reset.css";
 
 // To update the antd iconfont:
 // * Go to https://ant.design/
@@ -14,7 +15,7 @@
 @import "_variables.less";
 @import "_utils.less";
 @import "_dashboard.less";
-@import "_spotlight.less";
+@import "_publications.less";
 @import "trace_view/_tracing_view.less";
 @import "trace_view/_status_bar.less";
 @import "trace_view/_user_settings_view.less";
@@ -27,20 +28,29 @@
 @import "_admin.less";
 @import "_google-charts-overwrites.less";
 @import "flex_layout_overwrites.less";
-@import "react_ansi_overwrites.less";
+@import "_drawings.less";
+@import "dark.less";
+
+@font-face {
+  font-family: "Nunito";
+  src: local("Nunito"), url("Nunito-VariableFont_wght.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Nunito";
+  src: local("Nunito"), url("Nunito-Italic-VariableFont_wght.ttf") format("truetype");
+  font-style: italic;
+}
 
 // ----------------------- MAIN STYLES
-@font-family: "Titillium Web", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI",
-  Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial,
-  sans-serif;
-
 body {
+  margin: 0;
   font-family: @font-family;
   font-weight: 400;
   font-size: 16px;
   -webkit-font-smoothing: antialised;
   height: 100vh;
-  padding-top: @navbar-height;
+  padding-top: var(--navbar-height);
 }
 
 #main-container > section > .ant-layout-header {
@@ -50,7 +60,7 @@ body {
 .save-error {
   .ant-layout-header,
   .ant-menu {
-    background-color: @error-color !important;
+    background-color: var(--ant-color-error) !important;
   }
 }
 
@@ -60,21 +70,42 @@ body {
 
 .ant-layout-header {
   .logo {
-    background: url(/assets/images/oxalis.svg) 15px center no-repeat;
+    background: url(/assets/images/logo-icon-only.svg) 15px center no-repeat;
     padding-left: 46px;
     height: 48px;
     float: left;
     margin-top: 1px;
-    background-size: 20px 20px;
-    filter: invert(1);
+    background-size: 24px 24px;
+  }
+  .ant-menu-item .logo {
+    filter: brightness(4);
   }
 
   @media @smartphones {
-    height: 54px !important;
-
     a[href="/"] span {
       font-size: 0px; // hide text
     }
+  }
+  .ant-avatar {
+    border: 1px solid var(--color-blue-zircon);
+    background: transparent;
+    transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+    cursor: pointer;
+    &:hover {
+      background-color: var(--color-blue-zircon);
+      color: var(--color-black);
+    }
+  }
+  .switch-organization-icon {
+    position: absolute;
+    top: 2px;
+    right: -5px;
+    margin-right: 0;
+    min-width: 12px;
+    height: 12px;
+    line-height: 12px;
+    font-size: 12px;
+    color: var(--color-blue-zircon);
   }
 }
 
@@ -95,7 +126,7 @@ body {
 }
 
 #credits {
-  background-color: @layout-footer-background;
+  background-color: var(--ant-layout-footer-bg);
   & > div {
     max-width: 600px;
     img {
@@ -107,7 +138,7 @@ body {
 }
 
 .onboarding {
-  min-height: calc(100vh - 48px);
+  min-height: calc(100vh - var(--navbar-height));
   display: flex;
   flex-direction: column;
   padding-bottom: 50px;
@@ -134,29 +165,16 @@ body {
   line-height: normal;
 }
 
-// make sure text and icons have space between them
-.anticon,
-i {
-  margin-right: 5px;
-}
-
-.ant-btn-icon-only > .anticon {
-  margin-right: 0;
-}
-
 button.narrow {
+  // undo/redo + toolbar buttons
   padding: 0 10px;
   i {
     margin-right: 0 !important;
   }
 }
 
-.without-icon-margin i,
-i.without-icon-margin,
-.without-icon-margin .anticon,
-.anticon.without-icon-margin {
-  // Allow to undo the above margin-right of 5px
-  margin-right: 0 !important;
+.icon-margin-right {
+  margin-inline-end: var(--ant-margin-xs);
 }
 
 .ant-spin-dot,
@@ -214,7 +232,7 @@ i.without-icon-margin,
   left: 0;
   width: 100%;
   height: 100%;
-  background: @body-background;
+  background: var(--ant-color-bg-base);
   z-index: 300;
 }
 
@@ -227,10 +245,14 @@ i.without-icon-margin,
 }
 
 .brain-loading-content {
-  flex: 1;
-  flex: none;
   max-width: 50%;
   width: 375px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+}
+.brain-loading-content > * {
+  margin: 1em 0;
 }
 
 .brain-loading-bar {
@@ -238,7 +260,7 @@ i.without-icon-margin,
   width: 100%;
   position: relative;
   overflow: hidden;
-  background-color: @border-color-base;
+  background-color: var(--ant-color-border);
 }
 .brain-loading-bar:before {
   display: block;
@@ -247,7 +269,7 @@ i.without-icon-margin,
   left: -200px;
   width: 200px;
   height: 2px;
-  background-color: @text-color-secondary;
+  background-color: var(--ant-color-text)-secondary;
   animation: loading 1.5s ease infinite;
 }
 
@@ -292,7 +314,7 @@ i.without-icon-margin,
   bottom: 0;
   left: 0;
   padding: 2.5em 0;
-  background: @modal-mask-bg;
+  background: var(--ant-color-bg-mask);
   text-align: center;
   z-index: 1000;
 }
@@ -301,8 +323,8 @@ i.without-icon-margin,
   top: 100px;
   width: 400px;
   height: 250px;
-  background: @modal-header-bg;
-  border-radius: 4px;
+  background: var(--ant-color-bg-container);
+  border-radius: var(--ant-border-radius);
   margin: 0 auto;
 }
 .dataset-upload-dropzone {
@@ -313,23 +335,23 @@ i.without-icon-margin,
   padding: 20px;
   border-width: 2px;
   border-radius: 2px;
-  border-color: fade(@text-color-secondary, 30%);
+  border-color: var(--ant-color-border-secondary);
   border-style: dashed;
-  background-color: @component-background;
-  color: @text-color;
+  background-color: var(--ant-color-bg-container);
+  color: var(--ant-color-text);
   font-size: 16px;
   outline: none;
   transition: border 0.24s ease-in-out;
   cursor: pointer;
 
   &.dataset-upload-dropzone-active {
-    border-color: @primary-color;
+    border-color: var(--ant-color-border);
   }
   &.dataset-upload-dropzone-accept {
-    border-color: @success-color;
+    border-color: var(--ant-color-success-border);
   }
   &.dataset-upload-dropzone-reject {
-    border-color: @error-color;
+    border-color: var(--ant-color-error-border);
   }
 }
 
@@ -340,55 +362,70 @@ i.without-icon-margin,
 .crosslink-box {
   padding: 20px;
   margin: 20px;
-  background: @component-background;
-  box-shadow: @box-shadow-base;
+  background: var(--ant-color-bg-container);
+  box-shadow: var(--ant-box-shadow);
   border-radius: 3px;
 }
 
 .webknossos-welcome-toast {
-  background: url(/assets/images/mesh_background.webp) 50% 50% / cover no-repeat, rgb(23, 103, 139);
-
-  &:before {
-    content: "";
-    background: linear-gradient(0deg, #222222d4 0%, rgba(23, 103, 139, 0.73) 100%);
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-  }
+  // small notification in the bottom right corner when you are viewing a dataset and you are not logged in
+  background-color: var(--color-wk-blue);
 
   .logo {
-    background: url(/assets/images/oxalis.svg) 15px center no-repeat;
-    padding-left: 105px;
-    height: 140px;
-    float: left;
-    margin-top: 2px;
-    margin-left: -15px;
-    background-size: 70px 70px;
-    filter: invert(1);
+    background: url(/assets/images/logo-icon-only.svg) 15px center no-repeat;
+    filter: brightness(4);
+    width: 74px;
+    height: 45px;
+    background-size: 45px 45px;
+    display: inline-block;
   }
 
-  .ant-notification-notice-content {
-    position: relative;
-  }
   .ant-notification-notice-message {
-    color: white;
+    padding-left: 40px;
+    margin-top: 20px;
+    margin-bottom: 30px !important;
+    color: white !important;
     font-size: 24px;
-    font-weight: bold;
   }
 
   .ant-notification-notice-description {
     font-size: 16px;
     line-height: 21px;
-    color: #ececec;
+    color: white !important;
+    margin-inline-start: 24px !important;
+
+    p {
+      margin-bottom: 30px;
+      margin-inline-end: 60px;
+    }
+
+    .drawing-welcome-guy {
+      position: relative;
+
+      &:before {
+        width: 53px;
+        height: 100px;
+        display: block;
+        position: absolute;
+        top: -5px;
+        right: 0px;
+        content: " ";
+        transform: translate(15%, -104%);
+        background-image: url(/assets/images/drawings/waving-person.svg);
+        background-repeat: no-repeat;
+        background-size: cover;
+      }
+    }
+
+    .ant-btn-background-ghost:hover {
+      color: #bbb;
+      border-color: #bbb;
+    }
   }
 
   .ant-notification-notice-close {
     color: white;
   }
-
-  color: white;
 }
 
 .no-borders {
@@ -399,8 +436,10 @@ i.without-icon-margin,
 }
 
 .voxelytics-view {
+  min-width: 1300px;
+
   .tasks-header {
-    border-bottom: 1px solid @border-color-base;
+    border-bottom: 1px solid var(--ant-color-border);
   }
 
   .task-panel {
@@ -434,9 +473,10 @@ i.without-icon-margin,
     text-align: right;
 
     tbody tr:nth-child(odd) {
-      background-color: rgba(128,128,128, 0.1);
+      background-color: rgba(128, 128, 128, 0.1);
     }
-    td, th {
+    td,
+    th {
       padding: 8px;
     }
     .stats-label {
@@ -455,10 +495,52 @@ i.without-icon-margin,
       margin-bottom: 8px;
     }
 
-    .log-tab-content {
+    .log-tab-warning {
+      font-size: 0.9em;
+      color: #777;
+      text-align: center;
+    }
+
+    .log-content {
+      position: relative;
+      background-color: var(--ant-color-bg-container);
       width: 100%;
       height: 500px;
+      overflow-y: auto;
+    }
+    .log-line {
       position: relative;
+      padding-left: 60px;
+
+      @log-font-family: "RobotoMono", Monaco, "Courier New", monospace;
+      @log-font-size: 12px;
+      @log-line-height: 19px;
+      @log-line-number-width: 60px;
+      .log-line-number {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: @log-line-number-width;
+        padding-right: 1em;
+        font-family: @log-font-family;
+        font-size: @log-font-size;
+        line-height: @log-line-height;
+        color: #666;
+        text-align: right;
+        user-select: none;
+      }
+      code {
+        display: block;
+        width: calc(100% - @log-line-number-width);
+        font-family: @log-font-family;
+        font-size: @log-font-size;
+        line-height: @log-line-height;
+        overflow-wrap: break-word;
+        color: var(--ant-color-text);
+      }
+      &:hover {
+        background-color: var(--ant-control-item-bg-hover);
+      }
     }
 
     &.log-tab-fullscreen {
@@ -468,7 +550,7 @@ i.without-icon-margin,
       width: 100%;
       height: 100%;
       z-index: 1001;
-      background: @body-background;
+      background: var(--ant-color-bg-base);
       padding-top: 8px;
 
       .log-tab-header {
@@ -483,7 +565,7 @@ i.without-icon-margin,
   }
   .react-flow {
     .react-flow__minimap {
-      background-color: @component-background;
+      background-color: var(--ant-color-bg-container);
     }
 
     .controls {
@@ -505,4 +587,75 @@ i.without-icon-margin,
       }
     }
   }
+}
+
+.folder-item {
+  padding: 0 4px;
+  border-radius: 2px;
+  display: inline-block;
+  flex-grow: 1;
+}
+
+.valid-drop-target {
+  background-color: var(--ant-blue-4);
+}
+
+.highlight-folder-sidebar {
+  background-color: var(--ant-table-row-selected-hover-bg);
+}
+
+.sidebar-label {
+  color: var(--ant-color-text-secondary);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.login-view {
+  & {
+    height: 100%;
+    min-height: calc(100vh - var(--navbar-height));
+    background: var(--background-blue-neurons);
+  }
+
+  .login-content {
+    width: 600px;
+    padding: 80px;
+
+    @media @smartphones {
+      padding: 20px;
+      margin: 20px;
+    }
+
+    &:before {
+      width: 260px;
+      height: 170px;
+      display: block;
+      position: absolute;
+      left: 0px;
+      top: 0px;
+      content: " ";
+      transform: translate(-14%, -70%);
+      background-image: url(/assets/images/drawings/login.svg);
+      background-repeat: no-repeat;
+      background-size: cover;
+    }
+  }
+}
+
+.ai-job-title {
+  text-align: center;
+  display: inherit;
+}
+
+.project-and-annotation-type-dropdown{
+  width: 200px;
+}
+
+.task-annotation-view{
+  width: 31%
+}
+
+.organization-switch-menu > ul {
+  max-height: calc(100vh - var(--navbar-height) - 200px) !important;
 }

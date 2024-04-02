@@ -3,17 +3,18 @@ import {
   Button,
   Dropdown,
   Empty,
-  Input,
-  Menu,
   Spin,
   Modal,
   Tooltip,
   notification,
+  MenuProps,
+  Space,
 } from "antd";
 import type { Dispatch } from "redux";
 import {
   DownloadOutlined,
   DownOutlined,
+  ExclamationCircleOutlined,
   SearchOutlined,
   UploadOutlined,
   WarningOutlined,
@@ -21,7 +22,7 @@ import {
 import { batchActions } from "redux-batched-actions";
 import { connect } from "react-redux";
 import { saveAs } from "file-saver";
-import JSZip from "jszip";
+import { BlobReader, BlobWriter, ZipReader, Entry } from "@zip.js/zip.js";
 import * as React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -37,9 +38,10 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getActiveTree,
-  getActiveGroup,
+  getActiveTreeGroup,
   getTree,
   enforceSkeletonTracing,
+  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBuildInfo, importVolumeTracing, clearCache } from "admin/admin_rest_api";
 import {
@@ -67,26 +69,25 @@ import {
   toggleInactiveTreesAction,
   setActiveTreeAction,
   deselectActiveTreeAction,
-  deselectActiveGroupAction,
-  setActiveGroupAction,
+  deselectActiveTreeGroupAction,
+  setActiveTreeGroupAction,
   setTreeGroupAction,
   setTreeGroupsAction,
   addTreesAndGroupsAction,
+  BatchableUpdateTreeAction,
+  batchUpdateGroupsAndTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type {
   OxalisState,
-  SkeletonTracing,
-  Tracing,
   Tree,
   TreeMap,
   TreeGroup,
-  UserConfiguration,
   MutableTreeMap,
   UserBoundingBox,
 } from "oxalis/store";
@@ -94,38 +95,22 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import TreeHierarchyView from "oxalis/view/right-border-tabs/tree_hierarchy_view";
 import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
-const InputGroup = Input.Group;
+
+const { confirm } = Modal;
 const treeTabId = "tree-list";
+
 type TreeOrTreeGroup = {
   name: string;
   id: number;
   type: string;
 };
-type StateProps = {
-  onShuffleAllTreeColors: () => void;
-  onSortTree: (arg0: boolean) => void;
-  onSelectNextTreeForward: () => void;
-  onSelectNextTreeBackward: () => void;
-  onCreateTree: () => void;
-  onDeleteTree: () => void;
-  onSetTreeGroup: (arg0: number | null | undefined, arg1: number) => void;
-  onChangeTreeName: (arg0: string) => void;
-  onBatchActions: (arg0: Array<Action>, arg1: string) => void;
-  annotation: Tracing;
-  skeletonTracing: SkeletonTracing | null | undefined;
-  userConfiguration: UserConfiguration;
-  onSetActiveTree: (arg0: number) => void;
-  onDeselectActiveTree: () => void;
-  onSetActiveGroup: (arg0: number) => void;
-  onDeselectActiveGroup: () => void;
-  showDropzoneModal: () => void;
-  allowUpdate: boolean;
-};
-type Props = StateProps;
+type StateProps = ReturnType<typeof mapStateToProps>;
+type DispatchProps = ReturnType<typeof mapDispatchToProps>;
+type Props = DispatchProps & StateProps;
 type State = {
   isUploading: boolean;
   isDownloading: boolean;
@@ -156,7 +141,13 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
     const tryParsingFileAsNml = async (file: File) => {
       try {
         const nmlString = await readFileAsText(file);
-        const { trees, treeGroups, userBoundingBoxes, datasetName } = await parseNml(nmlString);
+        const { trees, treeGroups, userBoundingBoxes, datasetName, containedVolumes } =
+          await parseNml(nmlString);
+        if (containedVolumes) {
+          Toast.warning(
+            "The NML file contained volume information which was ignored. Please upload the NML into the dashboard to create a new annotation which also contains the volume data.",
+          );
+        }
         return {
           importActions: wrappedAddTreesAndGroupsAction(
             trees,
@@ -186,7 +177,7 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         const parsedTracing = parseProtoTracing(nmlProtoBuffer, "skeleton");
 
         if (!("trees" in parsedTracing)) {
-          // This check is only for flow to realize that we have a skeleton tracing
+          // This check is only for TS to realize that we have a skeleton tracing
           // on our hands.
           throw new Error("Skeleton tracing doesn't contain trees");
         }
@@ -198,7 +189,6 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
             parsedTracing.treeGroups,
             file.name,
           ),
-          datasetName: parsedTracing.dataSetName,
         };
       } catch (error) {
         // @ts-ignore
@@ -209,22 +199,31 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
 
     const tryParsingFileAsZip = async (file: File) => {
       try {
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Promise<ArrayBuffer>' is not ass... Remove this comment to see the full error message
-        const zipFile = await JSZip().loadAsync(readFileAsArrayBuffer(file));
-        const nmlFileName = Object.keys(zipFile.files).find((key) =>
-          Utils.isFileExtensionEqualTo(key, "nml"),
-        );
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-        const nmlFile = await zipFile.file(nmlFileName).async("blob");
-        const nmlImportActions = await tryParsingFileAsNml(nmlFile);
-        const dataFileName = Object.keys(zipFile.files).find((key) =>
-          Utils.isFileExtensionEqualTo(key, "zip"),
+        const reader = new ZipReader(new BlobReader(file));
+        const entries = await reader.getEntries();
+        const nmlFileEntry = entries.find((entry: Entry) =>
+          Utils.isFileExtensionEqualTo(entry.filename, "nml"),
         );
 
-        if (dataFileName) {
-          // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-          const dataBlob = await zipFile.file(dataFileName).async("blob");
-          const dataFile = new File([dataBlob], dataFileName);
+        if (nmlFileEntry == null) {
+          await reader.close();
+          throw Error("Zip file doesn't contain an NML file.");
+        }
+
+        // The type definitions for getData are inaccurate. It is defined for entries obtained through calling ZipReader.getEntries, see https://github.com/gildas-lormeau/zip.js/issues/371#issuecomment-1272316813
+        const nmlBlob = await nmlFileEntry.getData!(new BlobWriter());
+        const nmlFile = new File([nmlBlob], nmlFileEntry.filename);
+
+        const nmlImportActions = await tryParsingFileAsNml(nmlFile);
+
+        const dataFileEntry = entries.find((entry: Entry) =>
+          Utils.isFileExtensionEqualTo(entry.filename, "zip"),
+        );
+
+        if (dataFileEntry) {
+          // The type definitions for getData are inaccurate. It is defined for entries obtained through calling ZipReader.getEntries, see https://github.com/gildas-lormeau/zip.js/issues/371#issuecomment-1272316813
+          const dataBlob = await dataFileEntry.getData!(new BlobWriter());
+          const dataFile = new File([dataBlob], dataFileEntry.filename);
           await Model.ensureSavedState();
           const storeState = Store.getState();
           const { tracing, dataset } = storeState;
@@ -259,11 +258,10 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
             Store.dispatch(setLargestSegmentIdAction(newLargestSegmentId));
             await clearCache(dataset, oldVolumeTracing.tracingId);
             await api.data.reloadBuckets(oldVolumeTracing.tracingId);
-            // @ts-ignore
-            window.needsRerender = true;
           }
         }
 
+        await reader.close();
         return nmlImportActions;
       } catch (error) {
         // @ts-ignore
@@ -391,7 +389,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     },
   );
 
-  handleChangeTreeName = (evt: React.SyntheticEvent) => {
+  handleChangeName = (evt: React.ChangeEvent<HTMLInputElement>) => {
     if (!this.props.skeletonTracing) {
       return;
     }
@@ -399,10 +397,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { activeGroupId } = this.props.skeletonTracing;
 
     if (activeGroupId != null) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
-      api.tracing.renameGroup(activeGroupId, evt.target.value);
+      api.tracing.renameSkeletonGroup(activeGroupId, evt.target.value);
     } else {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       this.props.onChangeTreeName(evt.target.value);
     }
   };
@@ -414,10 +410,18 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
     const { treeGroups, trees } = this.props.skeletonTracing;
 
-    const newTreeGroups = _.cloneDeep(treeGroups);
+    let newTreeGroups = _.cloneDeep(treeGroups);
 
     const groupToTreesMap = createGroupToTreesMap(trees);
     let treeIdsToDelete: number[] = [];
+
+    if (groupId === MISSING_GROUP_ID) {
+      // special case: delete Root group and all children (aka everything)
+      treeIdsToDelete = Object.values(this.props.skeletonTracing.trees).map((t) => t.treeId);
+      newTreeGroups = [];
+    }
+
+    const updateTreeActions: BatchableUpdateTreeAction[] = [];
     callDeep(newTreeGroups, groupId, (item, index, parentsChildren, parentGroupId) => {
       const subtrees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
       // Remove group
@@ -429,9 +433,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
         // Update all subtrees
         for (const tree of subtrees) {
-          this.props.onSetTreeGroup(
-            parentGroupId === MISSING_GROUP_ID ? null : parentGroupId,
-            tree.treeId,
+          updateTreeActions.push(
+            setTreeGroupAction(
+              parentGroupId === MISSING_GROUP_ID ? null : parentGroupId,
+              tree.treeId,
+            ),
           );
         }
 
@@ -439,24 +445,24 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       }
 
       // Finds all subtrees of the passed group recursively
-      const findSubtreesRecursively = (group: TreeGroup) => {
+      const findChildrenRecursively = (group: TreeGroup) => {
         const currentSubtrees =
           groupToTreesMap[group.groupId] != null ? groupToTreesMap[group.groupId] : [];
         // Delete all trees of the current group
         treeIdsToDelete = treeIdsToDelete.concat(currentSubtrees.map((tree) => tree.treeId));
         // Also delete the trees of all subgroups
-        group.children.forEach((subgroup) => findSubtreesRecursively(subgroup));
+        group.children.forEach((subgroup) => findChildrenRecursively(subgroup));
       };
 
-      findSubtreesRecursively(item);
+      findChildrenRecursively(item);
     });
     checkAndConfirmDeletingInitialNode(treeIdsToDelete).then(() => {
       // Update the store at once
-      const deleteTreeActions = treeIdsToDelete.map((treeId) => deleteTreeAction(treeId));
-      this.props.onBatchActions(
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-        deleteTreeActions.concat(setTreeGroupsAction(newTreeGroups)),
-        "DELETE_GROUP_AND_TREES",
+      const deleteTreeActions: BatchableUpdateTreeAction[] = treeIdsToDelete.map((treeId) =>
+        deleteTreeAction(treeId),
+      );
+      this.props.onBatchUpdateGroupsAndTreesAction(
+        updateTreeActions.concat(deleteTreeActions, [setTreeGroupsAction(newTreeGroups)]),
       );
     });
   };
@@ -472,12 +478,28 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { trees, treeGroups } = this.props.skeletonTracing;
     const treeGroupToDelete = treeGroups.find((el) => el.groupId === id);
     const groupToTreesMap = createGroupToTreesMap(trees);
-    if (treeGroupToDelete && treeGroupToDelete.children.length === 0 && !groupToTreesMap[id])
+    if (treeGroupToDelete && treeGroupToDelete.children.length === 0 && !groupToTreesMap[id]) {
+      // Group is empty
       this.deleteGroup(id);
-    else
+    } else if (id === MISSING_GROUP_ID) {
+      // Ask whether all children of root group should be deleted
+      // (doesn't need recursive/not-recursive distinction, since
+      // the root group itself cannot be removed).
+      confirm({
+        title: "Do you want to delete all trees and groups?",
+        icon: <ExclamationCircleOutlined />,
+        okType: "danger",
+        okText: "Delete",
+        onOk: () => {
+          this.deleteGroup(id);
+        },
+      });
+    } else {
+      // Show modal
       this.setState({
         groupToDelete: id,
       });
+    }
   };
 
   handleDelete = () => {
@@ -530,7 +552,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     Store.dispatch(toggleInactiveTreesAction());
   }
 
-  handleNmlDownload = async () => {
+  handleNmlDownload = async (applyTransforms: boolean) => {
     const { skeletonTracing } = this.props;
 
     if (!skeletonTracing) {
@@ -543,7 +565,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
     const state = Store.getState();
-    const nml = serializeToNml(state, this.props.annotation, skeletonTracing, buildInfo);
+    const nml = serializeToNml(
+      state,
+      this.props.annotation,
+      skeletonTracing,
+      buildInfo,
+      applyTransforms,
+    );
     this.setState({
       isDownloading: false,
     });
@@ -639,7 +667,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     if (selectedElement.type === "TREE") {
       this.props.onSetActiveTree(selectedElement.id);
     } else {
-      this.props.onSetActiveGroup(selectedElement.id);
+      this.props.onSetActiveTreeGroup(selectedElement.id);
     }
   };
 
@@ -680,54 +708,66 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
   }
 
-  getSettingsDropdown() {
+  getSettingsDropdown(): MenuProps {
     const activeMenuKey = this.props.userConfiguration.sortTreesByName
       ? "sortByName"
       : "sortByTime";
-    return (
-      <Menu selectedKeys={[activeMenuKey]} onClick={this.handleDropdownClick}>
-        <Menu.Item key="sortByName">by name</Menu.Item>
-        <Menu.Item key="sortByTime">by creation time</Menu.Item>
-      </Menu>
-    );
+    return {
+      selectedKeys: [activeMenuKey],
+      onClick: this.handleDropdownClick,
+      items: [
+        { key: "sortByName", label: "by name" },
+        { key: "sortByTime", label: "by creation time" },
+      ],
+    };
   }
 
-  getActionsDropdown() {
+  getActionsDropdown(): MenuProps {
     const isEditingDisabled = !this.props.allowUpdate;
-    return (
-      <Menu>
-        <Menu.Item
-          key="shuffleAllTreeColors"
-          onClick={this.shuffleAllTreeColors}
-          title="Shuffle All Tree Colors"
-          disabled={isEditingDisabled}
-        >
-          <i className="fas fa-random" /> Shuffle All Tree Colors
-        </Menu.Item>
-        <Menu.Item
-          key="handleNmlDownload"
-          onClick={this.handleNmlDownload}
-          title="Download selected trees as NML"
-        >
-          <DownloadOutlined /> Download Selected Trees
-        </Menu.Item>
-        <Menu.Item
-          key="importNml"
-          onClick={this.props.showDropzoneModal}
-          title="Import NML files"
-          disabled={isEditingDisabled}
-        >
-          <UploadOutlined /> Import NML
-        </Menu.Item>
-        <Menu.Item
-          key="measureAllSkeletons"
-          onClick={this.handleMeasureAllSkeletonsLength}
-          title="Measure Length of All Skeletons"
-        >
-          <i className="fas fa-ruler" /> Measure Length of All Skeletons
-        </Menu.Item>
-      </Menu>
-    );
+    return {
+      items: [
+        {
+          key: "shuffleAllTreeColors",
+          onClick: this.shuffleAllTreeColors,
+          title: "Shuffle All Tree Colors",
+          disabled: isEditingDisabled,
+          icon: <i className="fas fa-random" />,
+          label: "Shuffle All Tree Colors",
+        },
+        {
+          key: "handleNmlDownload",
+          onClick: () => this.handleNmlDownload(false),
+          icon: <DownloadOutlined />,
+          label: "Download Visible Trees",
+          title: "Download Visible Trees as NML",
+        },
+        this.props.isSkeletonLayerTransformed
+          ? {
+              key: "handleNmlDownloadTransformed",
+              onClick: () => this.handleNmlDownload(true),
+              icon: <DownloadOutlined />,
+              label: "Download Visible Trees (Transformed)",
+              title: "The currently active transformation will be applied to each node.",
+            }
+          : null,
+        {
+          key: "importNml",
+          onClick: this.props.showDropzoneModal,
+          title: "Import NML files",
+          disabled: isEditingDisabled,
+          icon: <UploadOutlined />,
+          label: "Import NML",
+        },
+        {
+          key: "measureAllSkeletons",
+          onClick: this.handleMeasureAllSkeletonsLength,
+          title: "Measure Length of All Skeletons",
+
+          icon: <i className="fas fa-ruler" />,
+          label: "Measure Length of All Skeletons",
+        },
+      ],
+    };
   }
 
   getSelectedTreesAlert = () =>
@@ -736,7 +776,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         type="info"
         message={
           <React.Fragment>
-            {this.state.selectedTrees.length} Tree(s) selected.{" "}
+            {this.state.selectedTrees.length}{" "}
+            {Utils.pluralize("Tree", this.state.selectedTrees.length)} selected.{" "}
             <Button type="dashed" size="small" onClick={this.deselectAllTrees}>
               Clear Selection
             </Button>
@@ -759,14 +800,21 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { skeletonTracing } = this.props;
 
     if (!skeletonTracing) {
-      return null;
+      return (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            "This annotation does not contain a skeleton layer. You can add one in the Layers tab in the left sidebar."
+          }
+        />
+      );
     }
 
     const { showSkeletons } = skeletonTracing;
     const activeTreeName = getActiveTree(skeletonTracing)
       .map((activeTree) => activeTree.name)
       .getOrElse("");
-    const activeGroupName = getActiveGroup(skeletonTracing)
+    const activeGroupName = getActiveTreeGroup(skeletonTracing)
       .map((activeGroup) => activeGroup.name)
       .getOrElse("");
     const { trees, treeGroups } = skeletonTracing;
@@ -790,7 +838,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
             !isVisibleInDom ? null : (
               <React.Fragment>
                 <Modal
-                  visible={this.state.isDownloading || this.state.isUploading}
+                  open={this.state.isDownloading || this.state.isUploading}
                   title={title}
                   closable={false}
                   footer={null}
@@ -801,7 +849,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <InputGroup compact className="compact-icons">
+                <Space.Compact className="compact-icons">
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -849,14 +897,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   >
                     <i className="fas fa-toggle-off" />
                   </ButtonComponent>
-                  <Dropdown overlay={this.getActionsDropdown()} trigger={["click"]}>
+                  <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
                     <ButtonComponent>
                       More
                       <DownOutlined />
                     </ButtonComponent>
                   </Dropdown>
-                </InputGroup>
-                <InputGroup compact className="compact-icons compact-items">
+                </Space.Compact>
+                <Space.Compact className="compact-icons compact-items">
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeBackward}
                     title="Select previous tree"
@@ -864,7 +912,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     <i className="fas fa-arrow-left" />
                   </ButtonComponent>
                   <InputComponent
-                    onChange={this.handleChangeTreeName}
+                    onChange={this.handleChangeName}
                     value={activeTreeName || activeGroupName}
                     disabled={noTreesAndGroups || isEditingDisabled}
                     title={
@@ -880,17 +928,17 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   >
                     <i className="fas fa-arrow-right" />
                   </ButtonComponent>
-                  <Dropdown overlay={this.getSettingsDropdown()} trigger={["click"]}>
+                  <Dropdown menu={this.getSettingsDropdown()} trigger={["click"]}>
                     <ButtonComponent title="Sort">
                       <i className="fas fa-sort-alpha-down" />
                     </ButtonComponent>
                   </Dropdown>
-                </InputGroup>
+                </Space.Compact>
                 {!showSkeletons ? (
                   <Tooltip title={messages["tracing.skeletons_are_hidden_warning"]}>
                     <WarningOutlined
                       style={{
-                        color: "var(--ant-warning)",
+                        color: "var(--ant-color-warning)",
                       }}
                     />
                   </Tooltip>
@@ -924,7 +972,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onJustDeleteGroup={() => {
                       this.deleteGroupAndHideModal(groupToDelete, false);
                     }}
-                    onDeleteGroupAndTrees={() => {
+                    onDeleteGroupAndChildren={() => {
                       this.deleteGroupAndHideModal(groupToDelete, true);
                     }}
                   />
@@ -943,6 +991,7 @@ const mapStateToProps = (state: OxalisState) => ({
   allowUpdate: state.tracing.restrictions.allowUpdate,
   skeletonTracing: state.tracing.skeleton,
   userConfiguration: state.userConfiguration,
+  isSkeletonLayerTransformed: isSkeletonLayerTransformed(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
@@ -974,6 +1023,10 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(batchActions(actions, actionName));
   },
 
+  onBatchUpdateGroupsAndTreesAction(actions: BatchableUpdateTreeAction[]) {
+    dispatch(batchUpdateGroupsAndTreesAction(actions));
+  },
+
   onSetTreeGroup(groupId: number | null | undefined, treeId: number) {
     dispatch(setTreeGroupAction(groupId, treeId));
   },
@@ -990,12 +1043,12 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     dispatch(deselectActiveTreeAction());
   },
 
-  onSetActiveGroup(groupId: number) {
-    dispatch(setActiveGroupAction(groupId));
+  onSetActiveTreeGroup(groupId: number) {
+    dispatch(setActiveTreeGroupAction(groupId));
   },
 
   onDeselectActiveGroup() {
-    dispatch(deselectActiveGroupAction());
+    dispatch(deselectActiveTreeGroupAction());
   },
 
   showDropzoneModal() {

@@ -7,31 +7,22 @@ import {
   colormapJet,
   jsColormapJet,
 } from "oxalis/shaders/utils.glsl";
-import { Vector4 } from "oxalis/constants";
+import { Vector3, Vector4 } from "oxalis/constants";
 import type { ShaderModule } from "./shader_module_system";
 import { binarySearchIndex } from "./mappings.glsl";
 import { getRgbaAtIndex } from "./texture_access.glsl";
+import { hashCombine } from "./hashing.glsl";
+
 export const convertCellIdToRGB: ShaderModule = {
-  requirements: [hsvToRgb, getRgbaAtIndex, getElementOfPermutation, aaStep, colormapJet],
+  requirements: [
+    hsvToRgb,
+    getRgbaAtIndex,
+    getElementOfPermutation,
+    aaStep,
+    colormapJet,
+    hashCombine,
+  ],
   code: `
-    highp uint hashCombine(highp uint state, highp uint value) {
-      // The used constants are written in decimal, because
-      // the parser tests don't support unsigned int hex notation
-      // (yet).
-      // See this issue: https://github.com/ShaderFrog/glsl-parser/issues/1
-      // 3432918353u == 0xcc9e2d51u
-      //  461845907u == 0x1b873593u
-      // 3864292196u == 0xe6546b64u
-
-      value *= 3432918353u;
-      value = (value << 15u) | (value >> 17u);
-      value *= 461845907u;
-      state ^= value;
-      state = (state << 13u) | (state >> 19u);
-      state = (state * 5u) + 3864292196u;
-      return state;
-    }
-
     uint vec4ToUint(vec4 idLow) {
       uint integerValue = (uint(idLow.a) << 24) | (uint(idLow.b) << 16) | (uint(idLow.g) << 8) | uint(idLow.r);
       return integerValue;
@@ -52,8 +43,6 @@ export const convertCellIdToRGB: ShaderModule = {
 
       return vec3(customEntry.gba) / 255.;
     }
-
-
     vec3 convertCellIdToRGB(vec4 idHigh, vec4 idLow) {
       /*
       This function maps from a segment id to a color with a pattern.
@@ -87,12 +76,12 @@ export const convertCellIdToRGB: ShaderModule = {
       // float colorHue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
 
       uint integerValue = vec4ToUint(idLow);
-      vec3 customColor = attemptCustomColorLookUp(integerValue, seed0);
+      vec3 customColor = attemptCustomColorLookUp(integerValue, custom_color_seeds[0]);
       if (customColor.r == -1.) {
-        customColor = attemptCustomColorLookUp(integerValue, seed1);
+        customColor = attemptCustomColorLookUp(integerValue, custom_color_seeds[1]);
       }
       if (customColor.r == -1.) {
-        customColor = attemptCustomColorLookUp(integerValue, seed2);
+        customColor = attemptCustomColorLookUp(integerValue, custom_color_seeds[2]);
       }
       if (customColor.r != -1.) {
         vec3 customHSV = rgb2hsv(customColor);
@@ -118,9 +107,9 @@ export const convertCellIdToRGB: ShaderModule = {
       vec3 worldCoordUVW = coordScaling * getWorldCoordUVW()  / zoomAdaption;
 
       float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
-      vec3 datasetScaleUVW = transDim(datasetScale) / baseVoxelSize;
-      worldCoordUVW.x = worldCoordUVW.x * datasetScaleUVW.x;
-      worldCoordUVW.y = worldCoordUVW.y * datasetScaleUVW.y;
+      vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;
+      worldCoordUVW.x = worldCoordUVW.x * anisotropyFactorUVW.x;
+      worldCoordUVW.y = worldCoordUVW.y * anisotropyFactorUVW.y;
 
       float angleCount = 17.;
       float angle = 1.0 / angleCount * getElementOfPermutation(significantSegmentIndex, angleCount, 3.0);
@@ -166,10 +155,10 @@ export const convertCellIdToRGB: ShaderModule = {
   `,
 };
 // This function mirrors the above convertCellIdToRGB-function.
-// Output is in [0,1] for H, S, L and A
-export const jsConvertCellIdToHSLA = (
+// Output is in [0,1] for R, G, B, and A
+export const jsConvertCellIdToRGBA = (
   id: number,
-  customColors?: Array<number> | null | undefined,
+  customColors?: Array<Vector3> | null | undefined,
   alpha: number = 1,
 ): Vector4 => {
   if (id === 0) {
@@ -177,11 +166,11 @@ export const jsConvertCellIdToHSLA = (
     return [1, 1, 1, 1];
   }
 
-  let hue;
+  let rgb;
 
   if (customColors != null) {
     const last8Bits = id % 2 ** 8;
-    hue = customColors[last8Bits] || 0;
+    rgb = customColors[last8Bits] || [0, 0, 0];
   } else {
     // The shader always derives the segment color by using a 64-bit id from which
     // - the lower 16 bits of the lower 32 bits and
@@ -195,11 +184,22 @@ export const jsConvertCellIdToHSLA = (
     const colorCount = 19;
     const colorIndex = jsGetElementOfPermutation(significantSegmentIndex, colorCount, 2);
     const colorValueDecimal = (1.0 / colorCount) * colorIndex;
-    hue = (1 / 360) * jsRgb2hsv(jsColormapJet(colorValueDecimal))[0];
+    rgb = jsColormapJet(colorValueDecimal);
   }
 
+  return [...rgb, alpha];
+};
+// Output is in [0,1] for H, S, L, and A
+export const jsConvertCellIdToHSLA = (
+  id: number,
+  customColors?: Array<Vector3> | null | undefined,
+  alpha: number = 1,
+): Vector4 => {
+  const [r, g, b] = jsConvertCellIdToRGBA(id, customColors, alpha);
+  const hue = (1 / 360) * jsRgb2hsv([r, g, b])[0];
   return [hue, 1, 0.5, alpha];
 };
+
 export const getBrushOverlay: ShaderModule = {
   code: `
     vec4 getBrushOverlay(vec3 worldCoordUVW) {
@@ -209,12 +209,15 @@ export const getBrushOverlay: ShaderModule = {
         return brushOverlayColor;
       }
       vec3 flooredMousePos = floor(globalMousePosition);
+
+      // Compute the anisotropy of the dataset so that the brush looks the same in
+      // each viewport
       float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
-      vec3 datasetScaleUVW = transDim(datasetScale) / baseVoxelSize;
+      vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;
 
-      float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * datasetScaleUVW.xy);
+      float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * anisotropyFactorUVW.xy);
 
-      float radius = round(brushSizeInPixel / 2.0);
+      float radius = ceil(brushSizeInPixel / 2.0);
       if (radius > dist) {
         brushOverlayColor = vec4(vec3(1.0), 0.5);
       }
@@ -223,29 +226,74 @@ export const getBrushOverlay: ShaderModule = {
     }
   `,
 };
+
+export const getCrossHairOverlay: ShaderModule = {
+  code: `
+    vec4 getCrossHairOverlay(vec3 worldCoordUVW) {
+      // An active segment position of -1, -1, -1 indicates that the position is not available
+      if (activeSegmentPosition == vec3(-1.0)) {
+        return vec4(0.0);
+      }
+
+      vec3 flooredGlobalPosUVW = transDim(floor(globalPosition));
+      vec3 activeSegmentPosUVW = transDim(activeSegmentPosition);
+
+      // Compute the anisotropy of the dataset so that the cross hair looks the same in
+      // each viewport
+      float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
+      vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;
+
+      // Compute the distance in screen coordinate space to show a zoom-independent cross hair
+      vec2 distanceVector = (worldCoordUVW.xy - activeSegmentPosUVW.xy) * anisotropyFactorUVW.xy / zoomValue;
+
+      vec4 crossHairColor = vec4(1.0, 1.0, 1.0, 0.5);
+      crossHairColor.a = float(
+        // Only show the cross hair in proofreading mode ...
+        isProofreading &&
+        // ... on the exact w-slice ...
+        flooredGlobalPosUVW.z == floor(activeSegmentPosUVW.z) &&
+        // ... with this extent ...
+        max(abs(distanceVector.x), abs(distanceVector.y)) < 12.0 &&
+        // ... with this thickness ...
+        (abs(distanceVector.x) < 2.0 || abs(distanceVector.y) < 2.0) &&
+        // ... leaving some free space in the middle.
+        max(abs(distanceVector.x), abs(distanceVector.y)) > 4.0
+      );
+
+      return crossHairColor;
+    }
+  `,
+};
+
 export const getSegmentationId: ShaderModule = {
   requirements: [binarySearchIndex, getRgbaAtIndex],
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
     vec4[2] getSegmentationId_<%= segmentationName %>(vec3 worldPositionUVW) {
-      vec4[2] volume_color =
+      vec4[2] volume_color;
+      vec3 transformedCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
+      if (isOutsideOfBoundingBox(transformedCoordUVW)) {
+        return volume_color;
+      }
+
+      volume_color =
         getSegmentIdOrFallback(
-          <%= segmentationName %>_lookup_texture,
           <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
           <%= segmentationName %>_data_texture_width,
-          <%= formatNumberAsGLSLFloat(packingDegreeLookup[segmentationName]) %>,
-          worldPositionUVW,
-          vec4(0.0, 0.0, 0.0, 0.0)
+          <%= formatNumberAsGLSLFloat(textureLayerInfos[segmentationName].packingDegree) %>,
+          transformedCoordUVW,
+          vec4(0.0, 0.0, 0.0, 0.0),
+          !<%= segmentationName %>_has_transform
         );
 
       // Depending on the packing degree, the returned volume color contains extra values
       // which should be ignored (in the binary search as well as when comparing
       // a cell id with the hovered cell passed via uniforms, for example).
 
-      <% if (packingDegreeLookup[segmentationName] === 4) { %>
+      <% if (textureLayerInfos[segmentationName].packingDegree === 4) { %>
         volume_color[1] = vec4(volume_color[1].r, 0.0, 0.0, 0.0);
-      <% } else if (packingDegreeLookup[segmentationName] === 2) { %>
+      <% } else if (textureLayerInfos[segmentationName].packingDegree === 2) { %>
         volume_color[1] = vec4(volume_color[1].r, volume_color[1].g, 0.0, 0.0);
       <% } %>
 

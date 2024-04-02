@@ -1,7 +1,9 @@
 import _ from "lodash";
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
+import { useSelector } from "react-redux";
 import {
+  APIOrganization,
   VoxelyticsRunInfo,
   VoxelyticsRunState,
   VoxelyticsTaskConfig,
@@ -15,10 +17,18 @@ import {
 } from "types/api_flow_types";
 import { useSearchParams, usePolling } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { getVoxelyticsWorkflow } from "admin/admin_rest_api";
+import { OxalisState } from "oxalis/store";
+import TabTitle from "oxalis/view/components/tab_title_component";
+import { getVoxelyticsWorkflow, isWorkflowAccessibleBySwitching } from "admin/admin_rest_api";
+import BrainSpinner, { BrainSpinnerWithError } from "components/brain_spinner";
 import TaskListView from "./task_list_view";
+import { VX_POLLING_INTERVAL } from "./utils";
 
-export const VX_POLLING_INTERVAL = 30 * 1000; // 30s
+type LoadingState =
+  | { status: "PENDING" }
+  | { status: "READY" }
+  | { status: "LOADING" }
+  | { status: "FAILED"; error: Error; organizationToSwitchTo?: APIOrganization };
 
 function lexicographicalTopologicalSort(
   nodes: Array<VoxelyticsWorkflowDagNode>,
@@ -64,7 +74,7 @@ function lexicographicalTopologicalSort(
 
 function parseDag(
   tasks: Record<string, VoxelyticsTaskConfig>,
-  run: VoxelyticsRunInfo,
+  taskInfos: Array<VoxelyticsTaskInfo>,
 ): VoxelyticsWorkflowDag {
   const dag: VoxelyticsWorkflowDag = {
     nodes: [],
@@ -75,7 +85,7 @@ function parseDag(
     dag.nodes.push({
       id: taskName,
       label: taskName,
-      state: run.tasks.find((t) => t.taskName === taskName)?.state ?? VoxelyticsRunState.PENDING,
+      state: taskInfos.find((t) => t.taskName === taskName)?.state ?? VoxelyticsRunState.PENDING,
       isMetaTask: task.isMetaTask,
     });
     for (const [key, input] of Object.entries(task.inputs)) {
@@ -107,7 +117,21 @@ function parseDag(
 }
 
 function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport {
-  const dag = parseDag(report.config.tasks, report.run);
+  const tasks = report.tasks.map(
+    (t) =>
+      ({
+        ...t,
+        runs: t.runs.map((r) => ({
+          ...r,
+          beginTime: r.beginTime != null ? new Date(r.beginTime) : null,
+          endTime: r.endTime != null ? new Date(r.endTime) : null,
+        })),
+        beginTime: t.beginTime != null ? new Date(t.beginTime) : null,
+        endTime: t.endTime != null ? new Date(t.endTime) : null,
+        state: t.state,
+      }) as VoxelyticsTaskInfo,
+  );
+  const dag = parseDag(report.config.tasks, tasks);
   return {
     ...report,
     config: {
@@ -115,18 +139,15 @@ function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport
       tasks: Object.fromEntries(dag.nodes.map((t) => [t.id, report.config.tasks[t.id]])),
     },
     dag,
-    run: {
-      ...report.run,
-      tasks: report.run.tasks.map(
-        (t) =>
-          ({
-            ...t,
-            beginTime: t.beginTime != null ? new Date(t.beginTime) : null,
-            endTime: t.endTime != null ? new Date(t.endTime) : null,
-            state: t.state,
-          } as VoxelyticsTaskInfo),
-      ),
-    },
+    runs: report.runs.map(
+      (run) =>
+        ({
+          ...run,
+          beginTime: run.beginTime != null ? new Date(run.beginTime) : null,
+          endTime: run.endTime != null ? new Date(run.endTime) : null,
+        }) as VoxelyticsRunInfo,
+    ),
+    tasks,
   };
 }
 
@@ -303,9 +324,10 @@ function shouldCollapseId(id: string, expandedKeys: Record<string, boolean>): [s
 
 export default function WorkflowView() {
   const { workflowName } = useParams<{ workflowName: string }>();
-  const { runId, metatask } = useSearchParams();
+  const { metatask } = useSearchParams();
+  const user = useSelector((state: OxalisState) => state.activeUser);
 
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [loadingState, setLoadingState] = useState<LoadingState>({ status: "PENDING" });
   const [report, setReport] = useState<VoxelyticsWorkflowReport | null>(null);
   // expandedMetaTaskKeys holds the meta tasks which should be expanded
   // in the left-side DAG. The right-side task listing will always show
@@ -330,8 +352,8 @@ export default function WorkflowView() {
 
   async function loadData() {
     try {
-      setIsLoading(true);
-      let _report = parseReport(await getVoxelyticsWorkflow(workflowName, runId));
+      setLoadingState({ status: "LOADING" });
+      let _report = parseReport(await getVoxelyticsWorkflow(workflowName, null));
       if (metatask != null) {
         // If a meta task is passed via a GET parameter,
         // the entire report is filtered so that only the tasks of the given
@@ -339,11 +361,21 @@ export default function WorkflowView() {
         _report = selectMetaTask(_report, metatask);
       }
       setReport(_report);
+      setLoadingState({ status: "READY" });
     } catch (err) {
-      console.error(err);
-      Toast.error("Could not load workflow report.");
-    } finally {
-      setIsLoading(false);
+      try {
+        const organization =
+          user != null ? await isWorkflowAccessibleBySwitching(workflowName) : null;
+        setLoadingState({
+          status: "FAILED",
+          organizationToSwitchTo: organization ?? undefined,
+          error: err as Error,
+        });
+      } catch (accessibleBySwitchingError) {
+        console.log(accessibleBySwitchingError);
+        Toast.error("Could not load workflow report.");
+        setLoadingState({ status: "FAILED", error: accessibleBySwitchingError as Error });
+      }
     }
   }
 
@@ -370,15 +402,27 @@ export default function WorkflowView() {
   usePolling(
     loadData,
     // Only poll while the workflow is still running
-    report == null || report.run.state === VoxelyticsRunState.RUNNING ? VX_POLLING_INTERVAL : null,
+    report == null || report.runs.some((run) => run.state === VoxelyticsRunState.RUNNING)
+      ? VX_POLLING_INTERVAL
+      : null,
   );
 
+  if (loadingState.status === "FAILED" && user != null) {
+    return (
+      <BrainSpinnerWithError
+        gotUnhandledError={false}
+        organizationToSwitchTo={loadingState.organizationToSwitchTo}
+        entity="workflow"
+      />
+    );
+  }
   if (report == null || collapsedReport == null || tasksWithHierarchy == null) {
-    return <div style={{ textAlign: "center" }}>Loading...</div>;
+    return <BrainSpinner />;
   }
 
   return (
     <div className="container voxelytics-view">
+      <TabTitle title={`${collapsedReport.workflow.name} | WEBKNOSSOS`} />
       <TaskListView
         report={collapsedReport}
         tasksWithHierarchy={tasksWithHierarchy}
@@ -386,7 +430,7 @@ export default function WorkflowView() {
         onToggleExpandedMetaTaskKey={handleToggleExpandedMetaTaskKey}
         openMetatask={metatask}
         onReload={loadData}
-        isLoading={isLoading}
+        isLoading={loadingState.status === "LOADING"}
       />
     </div>
   );

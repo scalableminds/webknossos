@@ -1,23 +1,25 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
+import play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{TracingStore, TracingStoreDAO}
-import models.binary._
+import models.dataset._
+import models.folder.{Folder, FolderDAO, FolderService}
 import models.project.{Project, ProjectDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
 import net.liftweb.common.{Box, Full}
-import org.joda.time.DateTime
-import oxalis.security._
 import play.api.libs.json.Json
 import utils.{ObjectId, StoreModules, WkConf}
+
 import javax.inject.Inject
-import models.organization.{Organization, OrganizationDAO}
+import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import play.api.mvc.{Action, AnyContent}
+import security.{Token, TokenDAO, TokenType, WkEnv}
 
 import scala.concurrent.ExecutionContext
 
@@ -36,10 +38,11 @@ class InitialDataController @Inject()(initialDataService: InitialDataService, si
 class InitialDataService @Inject()(userService: UserService,
                                    userDAO: UserDAO,
                                    multiUserDAO: MultiUserDAO,
-                                   userTeamRolesDAO: UserTeamRolesDAO,
                                    userExperiencesDAO: UserExperiencesDAO,
                                    taskTypeDAO: TaskTypeDAO,
                                    dataStoreDAO: DataStoreDAO,
+                                   folderDAO: FolderDAO,
+                                   folderService: FolderService,
                                    tracingStoreDAO: TracingStoreDAO,
                                    teamDAO: TeamDAO,
                                    tokenDAO: TokenDAO,
@@ -47,12 +50,14 @@ class InitialDataService @Inject()(userService: UserService,
                                    publicationDAO: PublicationDAO,
                                    organizationDAO: OrganizationDAO,
                                    storeModules: StoreModules,
+                                   organizationService: OrganizationService,
                                    conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
   implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
 
   private val defaultUserEmail = conf.WebKnossos.SampleOrganization.User.email
+  private val defaultUserEmail2 = conf.WebKnossos.SampleOrganization.User.email2
   private val defaultUserPassword = conf.WebKnossos.SampleOrganization.User.password
   private val defaultUserToken = conf.WebKnossos.SampleOrganization.User.token
   private val additionalInformation = """**Sample Organization**
@@ -63,21 +68,30 @@ Samplecountry
 """
   private val organizationTeamId = ObjectId.generate
   private val defaultOrganization =
-    Organization(ObjectId.generate,
-                 "sample_organization",
-                 additionalInformation,
-                 "/assets/images/oxalis.svg",
-                 "Sample Organization",
-                 PricingPlan.Custom)
+    Organization(
+      ObjectId.generate,
+      "sample_organization",
+      additionalInformation,
+      "/assets/images/logo.svg",
+      "Sample Organization",
+      PricingPlan.Custom,
+      None,
+      None,
+      None,
+      ObjectId.generate
+    )
   private val organizationTeam =
-    Team(organizationTeamId, defaultOrganization._id, defaultOrganization.name, isOrganizationTeam = true)
+    Team(organizationTeamId, defaultOrganization._id, "Default", isOrganizationTeam = true)
   private val userId = ObjectId.generate
   private val multiUserId = ObjectId.generate
+  private val userId2 = ObjectId.generate
+  private val multiUserId2 = ObjectId.generate
   private val defaultMultiUser = MultiUser(
     multiUserId,
     defaultUserEmail,
     userService.createPasswordInfo(defaultUserPassword),
     isSuperUser = conf.WebKnossos.SampleOrganization.User.isSuperUser,
+    isEmailVerified = true
   )
   private val defaultUser = User(
     userId,
@@ -85,19 +99,43 @@ Samplecountry
     defaultOrganization._id,
     "Sample",
     "User",
-    System.currentTimeMillis(),
+    Instant.now,
     Json.obj(),
     userService.createLoginInfo(userId),
     isAdmin = true,
+    isOrganizationOwner = true,
     isDatasetManager = true,
+    isUnlisted = false,
+    isDeactivated = false,
+    lastTaskTypeId = None
+  )
+  private val defaultMultiUser2 = MultiUser(
+    multiUserId2,
+    defaultUserEmail2,
+    userService.createPasswordInfo(defaultUserPassword),
+    isSuperUser = false,
+    isEmailVerified = true
+  )
+  private val defaultUser2 = User(
+    userId2,
+    multiUserId2,
+    defaultOrganization._id,
+    "Non-Admin",
+    "User",
+    Instant.now,
+    Json.obj(),
+    userService.createLoginInfo(userId2),
+    isAdmin = false,
+    isOrganizationOwner = false,
+    isDatasetManager = false,
     isUnlisted = false,
     isDeactivated = false,
     lastTaskTypeId = None
   )
   private val defaultPublication = Publication(
     ObjectId("5c766bec6c01006c018c7459"),
-    Some(System.currentTimeMillis()),
-    Some("https://static.webknossos.org/images/oxalis.svg"),
+    Some(Instant.now),
+    Some("https://static.webknossos.org/images/icon-only.svg"),
     Some("Dummy Title that is usually very long and contains highly scientific terms"),
     Some(
       "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.")
@@ -110,10 +148,13 @@ Samplecountry
       _ <- insertLocalDataStoreIfEnabled()
       _ <- insertLocalTracingStoreIfEnabled()
       _ <- assertInitialDataEnabled
-      _ <- assertNoOrganizationsPresent
+      _ <- organizationService.assertNoOrganizationsPresent
+      _ <- insertRootFolder()
       _ <- insertOrganization()
+      _ <- createOrganizationDirectory()
       _ <- insertTeams()
-      _ <- insertDefaultUser()
+      _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, isTeamManager = true)
+      _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, isTeamManager = false)
       _ <- insertToken()
       _ <- insertTaskType()
       _ <- insertProject()
@@ -125,32 +166,35 @@ Samplecountry
       _ <- bool2Fox(conf.WebKnossos.SampleOrganization.enabled) ?~> "initialData.notEnabled"
     } yield ()
 
-  def assertNoOrganizationsPresent: Fox[Unit] =
-    for {
-      organizations <- organizationDAO.findAll
-      _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
-    } yield ()
+  private def insertRootFolder(): Fox[Unit] =
+    folderDAO.findOne(defaultOrganization._rootFolder).futureBox.flatMap {
+      case Full(_) => Fox.successful(())
+      case _       => folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName))
+    }
 
-  private def insertDefaultUser(): Fox[Unit] =
+  private def insertDefaultUser(userEmail: String,
+                                multiUser: MultiUser,
+                                user: User,
+                                isTeamManager: Boolean): Fox[Unit] =
     userService
-      .userFromMultiUserEmail(defaultUserEmail)
+      .userFromMultiUserEmail(userEmail)
       .futureBox
       .flatMap {
         case Full(_) => Fox.successful(())
         case _ =>
           for {
-            _ <- multiUserDAO.insertOne(defaultMultiUser)
-            _ <- userDAO.insertOne(defaultUser)
-            _ <- userExperiencesDAO.updateExperiencesForUser(defaultUser, Map("sampleExp" -> 10))
-            _ <- userTeamRolesDAO.insertTeamMembership(defaultUser._id,
-                                                       TeamMembership(organizationTeam._id, isTeamManager = true))
+            _ <- multiUserDAO.insertOne(multiUser)
+            _ <- userDAO.insertOne(user)
+            _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
+            _ <- userDAO.insertTeamMembership(user._id,
+                                              TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
             _ = logger.info("Inserted default user")
           } yield ()
       }
       .toFox
 
   private def insertToken(): Fox[Unit] = {
-    val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry.toMillis
+    val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry
     tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
@@ -158,8 +202,8 @@ Samplecountry
           ObjectId.generate,
           defaultUserToken,
           LoginInfo("credentials", defaultUser._id.id),
-          new DateTime(System.currentTimeMillis()),
-          new DateTime(System.currentTimeMillis() + expiryTime),
+          Instant.now,
+          Instant.in(expiryTime),
           None,
           TokenType.Authentication
         )
@@ -190,7 +234,7 @@ Samplecountry
     taskTypeDAO.findAll.flatMap { types =>
       if (types.isEmpty) {
         val taskType = TaskType(
-          ObjectId.generate,
+          ObjectId("63721e2cef0100470266c485"),
           organizationTeam._id,
           "sampleTaskType",
           "Check those cells out!"
@@ -277,4 +321,7 @@ Samplecountry
         }
       }
     } else Fox.successful(())
+
+  private def createOrganizationDirectory(): Fox[Unit] =
+    organizationService.createOrganizationDirectory(defaultOrganization.name, RpcTokenHolder.webknossosToken) ?~> "organization.directoryCreation.failed"
 }

@@ -1,4 +1,4 @@
-import { Form, Input, Select, Button, Card, InputNumber, Checkbox, Spin } from "antd";
+import { Form, Input, Select, Button, Card, InputNumber, Checkbox } from "antd";
 import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
 import { useSelector } from "react-redux";
@@ -12,12 +12,12 @@ import {
   updateProject,
 } from "admin/admin_rest_api";
 import { FormItemWithInfo } from "../../dashboard/dataset/helper_components";
+
 const FormItem = Form.Item;
 type OwnProps = {
   projectId?: string | null | undefined;
 };
-type StateProps = {};
-type Props = OwnProps & StateProps;
+type Props = OwnProps;
 type PropsWithRouter = Props;
 
 function ProjectCreateView({ projectId }: PropsWithRouter) {
@@ -112,7 +112,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
               optionFilterProp="label"
               style={fullWidth}
               disabled={isEditMode}
-              notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
+              loading={isFetchingData}
               options={teams.map((team: APITeam) => ({
                 label: team.name,
                 value: team.id,
@@ -136,7 +136,7 @@ function ProjectCreateView({ projectId }: PropsWithRouter) {
               optionFilterProp="label"
               style={fullWidth}
               disabled={isEditMode}
-              notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
+              loading={isFetchingData}
               options={users.map((user: APIUser) => ({
                 label: `${user.lastName}, ${user.firstName} (${user.email})`,
                 value: user.id,

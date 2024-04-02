@@ -1,5 +1,4 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Spin, Button, Input, Modal } from "antd";
@@ -13,12 +12,11 @@ import LinkButton from "components/link_button";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { EmptyObject } from "types/globals";
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APIScript[] = [];
-type Props = {
-  history: RouteComponentProps["history"];
-};
+type Props = EmptyObject;
 type State = {
   isLoading: boolean;
   scripts: Array<APIScript>;
@@ -40,12 +38,12 @@ class ScriptListView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
     this.fetchData();
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   async fetchData(): Promise<void> {
@@ -56,9 +54,8 @@ class ScriptListView extends React.PureComponent<Props, State> {
     });
   }
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
@@ -121,7 +118,6 @@ class ScriptListView extends React.PureComponent<Props, State> {
               style={{
                 width: 200,
               }}
-              onPressEnter={this.handleSearch}
               onChange={this.handleSearch}
               value={this.state.searchQuery}
             />
@@ -199,12 +195,12 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 render={(__, script: APIScript) => (
                   <span>
                     <Link to={`/scripts/${script.id}/edit`}>
-                      <EditOutlined />
+                      <EditOutlined className="icon-margin-right" />
                       Edit
                     </Link>
                     <br />
                     <LinkButton onClick={_.partial(this.deleteScript, script)}>
-                      <DeleteOutlined />
+                      <DeleteOutlined className="icon-margin-right" />
                       Delete
                     </LinkButton>
                   </span>
@@ -218,4 +214,4 @@ class ScriptListView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(ScriptListView);
+export default ScriptListView;

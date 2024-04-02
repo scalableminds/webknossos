@@ -1,10 +1,11 @@
 import type { Vector3 } from "oxalis/constants";
 import type { MappingType } from "oxalis/store";
-export type AdHocIsosurfaceInfo = {
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
+export type AdHocMeshInfo = {
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   useDataStore?: boolean | null | undefined;
-  passive?: boolean | null | undefined;
   preferredQuality?: number | null | undefined;
 };
 export type LoadAdHocMeshAction = ReturnType<typeof loadAdHocMeshAction>;
@@ -13,29 +14,33 @@ export type LoadPrecomputedMeshAction = ReturnType<typeof loadPrecomputedMeshAct
 export type SegmentationAction = LoadAdHocMeshAction | LoadPrecomputedMeshAction;
 
 export const loadAdHocMeshAction = (
-  cellId: number,
+  segmentId: number,
   seedPosition: Vector3,
-  extraInfo?: AdHocIsosurfaceInfo,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
+  extraInfo?: AdHocMeshInfo,
   layerName?: string,
 ) =>
   ({
     type: "LOAD_AD_HOC_MESH_ACTION",
-    cellId,
+    segmentId,
     seedPosition,
+    seedAdditionalCoordinates,
     extraInfo,
     layerName,
-  } as const);
+  }) as const;
 
 export const loadPrecomputedMeshAction = (
-  cellId: number,
+  segmentId: number,
   seedPosition: Vector3,
+  seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   layerName?: string,
 ) =>
   ({
     type: "LOAD_PRECOMPUTED_MESH_ACTION",
-    cellId,
+    segmentId,
     seedPosition,
+    seedAdditionalCoordinates,
     meshFileName,
     layerName,
-  } as const);
+  }) as const;

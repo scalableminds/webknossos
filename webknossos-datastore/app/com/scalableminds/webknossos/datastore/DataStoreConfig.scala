@@ -21,9 +21,11 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val pingInterval: FiniteDuration = get[FiniteDuration]("datastore.webKnossos.pingInterval")
     }
     val baseFolder: String = get[String]("datastore.baseFolder")
+    val localFolderWhitelist: List[String] = getList[String]("datastore.localFolderWhitelist")
     object WatchFileSystem {
       val enabled: Boolean = get[Boolean]("datastore.watchFileSystem.enabled")
       val interval: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.interval")
+      val initialDelay: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.initialDelay")
     }
     object Cache {
       object DataCube {
@@ -31,6 +33,9 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       }
       object Mapping {
         val maxEntries: Int = get[Int]("datastore.cache.mapping.maxEntries")
+      }
+      object ImageArrayChunks {
+        val maxSizeBytes: Long = get[Long]("datastore.cache.imageArrayChunks.maxSizeBytes")
       }
       object AgglomerateFile {
         val maxFileHandleEntries: Int = get[Int]("datastore.cache.agglomerateFile.maxFileHandleEntries")
@@ -40,9 +45,9 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       }
       val children = List(DataCube, Mapping, AgglomerateFile)
     }
-    object Isosurface {
-      val timeout: FiniteDuration = get[FiniteDuration]("datastore.isosurface.timeout")
-      val actorPoolSize: Int = get[Int]("datastore.isosurface.actorPoolSize")
+    object AdHocMesh {
+      val timeout: FiniteDuration = get[FiniteDuration]("datastore.adHocMesh.timeout")
+      val actorPoolSize: Int = get[Int]("datastore.adHocMesh.actorPoolSize")
     }
     object Redis {
       val address: String = get[String]("datastore.redis.address")
@@ -51,7 +56,10 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     object AgglomerateSkeleton {
       val maxEdges: Int = get[Int]("datastore.agglomerateSkeleton.maxEdges")
     }
-    val children = List(WebKnossos, WatchFileSystem, Cache, Isosurface, Redis, AgglomerateSkeleton)
+    object ReportUsedStorage {
+      val enabled: Boolean = get[Boolean]("datastore.reportUsedStorage.enabled")
+    }
+    val children = List(WebKnossos, WatchFileSystem, Cache, AdHocMesh, Redis, AgglomerateSkeleton)
   }
 
   object SlackNotifications {

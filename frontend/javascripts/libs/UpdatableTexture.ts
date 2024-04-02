@@ -1,53 +1,26 @@
 import * as THREE from "three";
-import { document } from "libs/window";
 import _ from "lodash";
-import { TypedArray } from "oxalis/constants";
 
-const lazyGetCanvas = _.memoize(() => {
-  const canvas = document.createElement("canvas");
-  canvas.width = 1;
-  canvas.height = 1;
-  return canvas;
-});
-
-const getImageData = _.memoize(
-  (
-    width: number,
-    height: number,
-    isInt: boolean,
-  ): { width: number; height: number; data: TypedArray } => {
-    const canvas = lazyGetCanvas();
-    const ctx = canvas.getContext("2d");
-    if (ctx == null) {
-      throw new Error("Could not get context for texture.");
-    }
-
-    // Integer textures cannot be used with four channels, which is why
-    // we are creating an image-like object here which can be used
-    // with ThreeJS if isDataTexture = true is given.
-    if (isInt) {
-      return { width, height, data: new Uint32Array(4 * width * height) };
-    }
-
-    const imageData = ctx.createImageData(width, height);
-
-    // Explicitly "release" canvas. Necessary for iOS.
-    // See https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/
-    canvas.width = 1;
-    canvas.height = 1;
-    ctx.clearRect(0, 0, 1, 1);
-
-    return imageData;
-  },
-  (width: number, height: number, isInt: boolean) => `${width}_${height}_${isInt}`,
-);
+/* The UpdatableTexture class exposes a way to partially update a texture.
+ * Since we use this class for data which is usually only available in chunks,
+ * the default ThreeJS way of initializing the texture with an appropriately
+ * sized array buffer is inefficient (both allocation of array and upload to GPU).
+ * Therefore, we only allocate a dummy typed array of size 0 which mismatches
+ * the actual texture size. To avoid (benign) WebGL errors in the console,
+ * the WebGL function texSubImage2D is overridden to do nothing if an empty array
+ * is passed so that ThreeJS effectively doesn't try to upload the dummy data.
+ * This is a hacky workaround and can hopefully be removed, when/if this issue
+ * is done in ThreeJS: https://github.com/mrdoob/three.js/issues/25133
+ * In WebGL 1, we used to simply resize the texture after initialization, but
+ * this is not possible anymore, since ThreeJS uses texStorage2D now (which is
+ * also recommended).
+ */
+let originalTexSubImage2D: WebGL2RenderingContext["texSubImage2D"] | null = null;
 
 class UpdatableTexture extends THREE.Texture {
   isUpdatableTexture: boolean = true;
-  // Needs to be set to true for integer textures:
-  isDataTexture: boolean = false;
   renderer!: THREE.WebGLRenderer;
-  gl: any;
+  gl!: WebGL2RenderingContext;
   utils!: THREE.WebGLUtils;
   width: number | undefined;
   height: number | undefined;
@@ -65,7 +38,7 @@ class UpdatableTexture extends THREE.Texture {
     anisotropy?: number,
     encoding?: THREE.TextureEncoding,
   ) {
-    const imageData = getImageData(width, height, type === THREE.UnsignedIntType);
+    const imageData = { width, height, data: new Uint32Array(0) };
 
     super(
       // @ts-ignore
@@ -91,36 +64,12 @@ class UpdatableTexture extends THREE.Texture {
 
   setRenderer(renderer: THREE.WebGLRenderer) {
     this.renderer = renderer;
-    this.gl = this.renderer.getContext();
+    this.gl = this.renderer.getContext() as WebGL2RenderingContext;
     this.utils = new THREE.WebGLUtils(
       this.gl,
       this.renderer.extensions,
       this.renderer.capabilities,
     );
-  }
-
-  setSize(width: number, height: number) {
-    if (width === this.width && height === this.height) return;
-    if (!this.isInitialized()) return;
-    this.width = width;
-    this.height = height;
-    const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
-    const textureProperties = this.renderer.properties.get(this);
-    this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
-    if (!this.isInitialized()) this.width = undefined;
-
-    this.gl.texImage2D(
-      this.gl.TEXTURE_2D,
-      0,
-      this.utils.convert(this.format),
-      width,
-      height,
-      0,
-      this.utils.convert(this.format),
-      this.utils.convert(this.type),
-      null,
-    );
-    this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
   }
 
   isInitialized() {
@@ -134,25 +83,38 @@ class UpdatableTexture extends THREE.Texture {
     width: number,
     height: number,
   ) {
+    if (originalTexSubImage2D == null) {
+      // See explanation at declaration of originalTexSubImage2D.
+      originalTexSubImage2D = this.gl.texSubImage2D.bind(this.gl);
+      // @ts-ignore
+      this.gl.texSubImage2D = (...args) => {
+        // @ts-ignore
+        if (args.length >= 7 && args[6]?.data?.length === 0) {
+          return;
+        }
+        // @ts-ignore
+        return originalTexSubImage2D(...args);
+      };
+    }
     if (!this.isInitialized()) {
       this.renderer.initTexture(this);
     }
     const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
     const textureProperties = this.renderer.properties.get(this);
     this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
-    this.gl.texSubImage2D(
+
+    originalTexSubImage2D(
       this.gl.TEXTURE_2D,
       0,
       x,
       y,
       width,
       height,
-      this.utils.convert(this.format),
-      this.utils.convert(this.type),
+      this.utils.convert(this.format) as number,
+      this.utils.convert(this.type) as number,
       src,
     );
     this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
-    this.image = null;
   }
 }
 export default UpdatableTexture;

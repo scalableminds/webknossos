@@ -14,6 +14,7 @@ export const tracing: ServerSkeletonTracing = {
             y: 22,
             z: 0,
           },
+          additionalCoordinates: [],
           rotation: {
             x: 0,
             y: 0,
@@ -60,6 +61,7 @@ export const tracing: ServerSkeletonTracing = {
             y: 32,
             z: 0,
           },
+          additionalCoordinates: [],
           rotation: {
             x: 0,
             y: 0,
@@ -79,6 +81,7 @@ export const tracing: ServerSkeletonTracing = {
             y: 106,
             z: 0,
           },
+          additionalCoordinates: [],
           rotation: {
             x: 0,
             y: 0,
@@ -133,7 +136,6 @@ export const tracing: ServerSkeletonTracing = {
       groupId: 2,
     },
   ],
-  dataSetName: "ROI2017_wkw",
   createdTimestamp: 1502302761387,
   userBoundingBoxes: [],
   activeNodeId: 3,
@@ -142,11 +144,13 @@ export const tracing: ServerSkeletonTracing = {
     y: 32,
     z: 0,
   },
+  editPositionAdditionalCoordinates: null,
   editRotation: {
     x: 79.99999570976581,
     y: 73.99999869555745,
     z: 4.908922051072295e-7,
   },
+  additionalAxes: [],
   zoomLevel: 2,
   version: 7,
 };
@@ -160,7 +164,6 @@ export const annotation: APIAnnotation = {
   teams: [],
   typ: "Explorational",
   task: null,
-  stats: {},
   restrictions: {
     allowAccess: true,
     allowUpdate: true,
@@ -168,12 +171,12 @@ export const annotation: APIAnnotation = {
     allowDownload: true,
     allowSave: true,
   },
-  formattedHash: "f043e7",
   annotationLayers: [
     {
       name: "Skeleton",
       tracingId: "47e37793-d0be-4240-a371-87ce68561a13",
       typ: "Skeleton",
+      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",
@@ -182,8 +185,9 @@ export const annotation: APIAnnotation = {
     name: "localhost",
     url: "http://localhost:9000",
     isScratch: false,
-    isConnector: false,
     allowsUpload: true,
+    jobsEnabled: false,
+    jobsSupportedByAvailableWorkers: [],
   },
   tracingStore: {
     name: "localhost",
@@ -199,7 +203,6 @@ export const annotation: APIAnnotation = {
   },
   tags: ["ROI2017_wkw", "skeleton"],
   tracingTime: 0,
-  meshes: [],
   contributors: [],
   othersMayEdit: false,
 };

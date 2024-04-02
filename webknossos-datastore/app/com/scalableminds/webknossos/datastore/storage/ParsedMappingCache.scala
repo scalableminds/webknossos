@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataServiceMapping
 import com.scalableminds.webknossos.datastore.storage
 import net.liftweb.common.{Empty, Failure, Full}
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 case class CachedMapping(
     organization: String,
@@ -30,7 +30,8 @@ class ParsedMappingCache(val maxEntries: Int)
     with FoxImplicits {
 
   def withCache[T](mappingRequest: DataServiceMappingRequest)(
-      loadFn: DataServiceMappingRequest => Fox[AbstractDataLayerMapping])(f: AbstractDataLayerMapping => T): Fox[T] = {
+      loadFn: DataServiceMappingRequest => Fox[AbstractDataLayerMapping])(f: AbstractDataLayerMapping => T)(
+      implicit ec: ExecutionContext): Fox[T] = {
 
     val cachedMappingInfo = CachedMapping.fromMappingRequest(mappingRequest)
 

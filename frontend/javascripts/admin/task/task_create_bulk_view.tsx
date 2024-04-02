@@ -23,8 +23,8 @@ export type NewTask = {
   };
   readonly projectName: string;
   readonly scriptId: string | null | undefined;
-  readonly openInstances: number;
-  readonly taskTypeIdOrSummary: string;
+  readonly pendingInstances: number;
+  readonly taskTypeId: string;
   readonly csvFile?: File;
   readonly nmlFiles?: File;
   readonly baseAnnotation?:
@@ -54,7 +54,7 @@ export const normFile = (
     return e;
   }
 
-  return e && e.fileList;
+  return e?.fileList;
 };
 
 function TaskCreateBulkView() {
@@ -69,11 +69,11 @@ function TaskCreateBulkView() {
     if (
       !_.isString(task.neededExperience.domain) ||
       !_.isString(task.dataSet) ||
-      !_.isString(task.taskTypeIdOrSummary) ||
+      !_.isString(task.taskTypeId) ||
       !_.isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
       task.editRotation.some(Number.isNaN) ||
-      Number.isNaN(task.openInstances) ||
+      Number.isNaN(task.pendingInstances) ||
       Number.isNaN(task.neededExperience.value) || // Bounding Box is optional and can be null
       (boundingBox != null
         ? boundingBox.topLeft.some(Number.isNaN) ||
@@ -111,7 +111,7 @@ function TaskCreateBulkView() {
   function parseLine(line: string): NewTask {
     const words = splitToWords(line);
     const dataSet = words[0];
-    const taskTypeIdOrSummary = words[1];
+    const taskTypeId = words[1];
     const experienceDomain = words[2];
     const minExperience = parseInt(words[3]);
     const x = parseInt(words[4]);
@@ -120,7 +120,7 @@ function TaskCreateBulkView() {
     const rotX = parseInt(words[7]);
     const rotY = parseInt(words[8]);
     const rotZ = parseInt(words[9]);
-    const openInstances = parseInt(words[10]);
+    const pendingInstances = parseInt(words[10]);
     const boundingBoxX = parseInt(words[11]);
     const boundingBoxY = parseInt(words[12]);
     const boundingBoxZ = parseInt(words[13]);
@@ -150,9 +150,9 @@ function TaskCreateBulkView() {
           };
     return {
       dataSet,
-      taskTypeIdOrSummary,
+      taskTypeId,
       scriptId,
-      openInstances,
+      pendingInstances,
       boundingBox,
       projectName,
       neededExperience: {
@@ -181,7 +181,7 @@ function TaskCreateBulkView() {
   const handleSubmit = async (formValues) => {
     let tasks;
 
-    if (formValues.csvFile && formValues.csvFile.length) {
+    if (formValues.csvFile?.length) {
       // Workaround: Antd replaces file objects in the formValues with a wrapper file
       // The original file object is contained in the originFileObj property
       // This is most likely not intentional and may change in a future Antd version
@@ -257,10 +257,10 @@ function TaskCreateBulkView() {
             Specify each new task on a separate line as comma seperated values (CSV) in the
             following format:
             <br />
-            <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskType (ID or summary)</a>,
-            experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ,
-            width, height, depth, <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>
-            , baseAnnotationId]
+            <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
+            minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height,
+            depth, <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>,
+            baseAnnotationId]
             <br />
             If you want to define some (but not all) of the optional values, please list all
             optional values and use an empty value for the ones you do not want to set (e.g.,
@@ -278,7 +278,7 @@ function TaskCreateBulkView() {
                     // If a csv file has been uploaded it takes precedence and this form item doesn't need to validate
                     const csvFile = getFieldValue("csvFile");
 
-                    if (csvFile && csvFile.length) {
+                    if (csvFile?.length) {
                       return Promise.resolve();
                     }
 
@@ -299,7 +299,7 @@ function TaskCreateBulkView() {
             >
               <TextArea
                 className="input-monospace"
-                placeholder="dataset, taskType (ID or summary), experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
+                placeholder="dataset, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
                 autoSize={{
                   minRows: 6,
                 }}

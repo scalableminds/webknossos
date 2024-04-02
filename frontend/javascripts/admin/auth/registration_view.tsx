@@ -5,14 +5,15 @@ import messages from "messages";
 import Toast from "libs/toast";
 import { getDefaultOrganization } from "admin/admin_rest_api";
 import features from "features";
-import SpotlightRegistrationForm from "admin/auth/spotlight_registration_form";
-import RegistrationForm from "admin/auth/registration_form";
+import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
+import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import { APIOrganization } from "types/api_flow_types";
 
-function RegistrationViewNotDemo() {
+function RegistrationViewGeneric() {
   const history = useHistory();
   const [organization, setOrganization] = useState<APIOrganization | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     (async () => {
       setIsLoading(true);
@@ -25,6 +26,7 @@ function RegistrationViewNotDemo() {
       }
     })();
   }, []);
+
   let content = null;
 
   if (isLoading) {
@@ -47,7 +49,7 @@ function RegistrationViewNotDemo() {
         >
           You are about to join the organization &ldquo;{organization.displayName}&rdquo;!
         </Card>
-        <RegistrationForm // The key is used to enforce a remount in case the organizationName changes.
+        <RegistrationFormGeneric // The key is used to enforce a remount in case the organizationName changes.
           // That way, we ensure that the organization field is cleared.
           key={organization.name}
           targetOrganization={organization}
@@ -79,37 +81,27 @@ function RegistrationViewNotDemo() {
 
   return (
     <Spin spinning={isLoading}>
-      <Row
-        justify="center"
-        style={{
-          padding: 50,
-        }}
-        align="middle"
-      >
-        <Col span={8}>
-          <h3>Sign Up</h3>
-          {content}
-          <Link to="/auth/login">Already have an account? Login instead.</Link>
+      <Row justify="center" align="middle" className="login-view">
+        <Col>
+          <Card className="login-content drawing-signup" style={{ width: 1000 }}>
+            <h3>Sign Up</h3>
+            {content}
+            <Link to="/auth/login">Already have an account? Login instead.</Link>
+          </Card>
         </Col>
       </Row>
     </Spin>
   );
 }
 
-function RegistrationViewDemo() {
+function RegistrationViewWkOrg() {
   const history = useHistory();
   return (
-    <Row
-      justify="center"
-      style={{
-        padding: 50,
-      }}
-      align="middle"
-    >
-      <Col span={8}>
-        <div>
+    <Row justify="center" align="middle" className="login-view">
+      <Col>
+        <Card className="login-content drawing-signup" style={{ width: 1000 }}>
           <h3>Sign Up</h3>
-          <SpotlightRegistrationForm
+          <RegistrationFormWKOrg
             onRegistered={() => {
               history.push("/dashboard");
             }}
@@ -121,14 +113,14 @@ function RegistrationViewDemo() {
           >
             <Link to="/auth/login">Log in to existing account</Link>
           </p>
-        </div>
+        </Card>
       </Col>
     </Row>
   );
 }
 
 function RegistrationView() {
-  return features().isDemoInstance ? <RegistrationViewDemo /> : <RegistrationViewNotDemo />;
+  return features().isWkorgInstance ? <RegistrationViewWkOrg /> : <RegistrationViewGeneric />;
 }
 
 export default RegistrationView;

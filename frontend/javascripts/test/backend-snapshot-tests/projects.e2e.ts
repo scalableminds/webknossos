@@ -1,12 +1,13 @@
 import _ from "lodash";
-import type { APIProject, APIProjectUpdater } from "types/api_flow_types";
 import {
   tokenUserA,
   tokenUserD,
   setCurrToken,
+  replaceVolatileValues,
   resetDatabase,
   writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
+import type { APIProject, APIProjectUpdater } from "types/api_flow_types";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
 test.before("Reset database", async () => {
@@ -21,22 +22,22 @@ test.serial("getProjects()", async (t) => {
   writeTypeCheckingFile(projects, "project", "APIProject", {
     isArray: true,
   });
-  t.snapshot(projects, {
+  t.snapshot(replaceVolatileValues(projects), {
     id: "projects-getProjects()",
   });
 });
-test.serial("getProjectsWithOpenAssignments()", async (t) => {
-  const projects = _.sortBy(await api.getProjectsWithOpenAssignments(), (p) => p.name);
+test.serial("getProjectsWithStatus()", async (t) => {
+  const projects = _.sortBy(await api.getProjectsWithStatus(), (p) => p.name);
 
-  t.snapshot(projects, {
-    id: "projects-getProjectsWithOpenAssignments()",
+  t.snapshot(replaceVolatileValues(projects), {
+    id: "projects-getProjectsWithStatus()",
   });
 });
 test.serial("getProject(projectId: string)", async (t) => {
   const projectId = _.sortBy(await api.getProjects(), (p) => p.name)[0].id;
 
   const project = await api.getProject(projectId);
-  t.snapshot(project, {
+  t.snapshot(replaceVolatileValues(project), {
     id: "projects-getProject(projectId: string)",
   });
 });
@@ -53,7 +54,7 @@ test.serial("createProject and deleteProject", async (t) => {
     priority: 1,
     paused: false,
     expectedTime: 1,
-    numberOfOpenAssignments: 1,
+    pendingInstances: 1,
     isBlacklistedFromReport: true,
   };
   const createdProject = await api.createProject(newProject);
@@ -62,7 +63,7 @@ test.serial("createProject and deleteProject", async (t) => {
   const createdProjectWithFixedId = Object.assign({}, createdProject, {
     id: "fixed-project-id",
   });
-  t.snapshot(createdProjectWithFixedId, {
+  t.snapshot(replaceVolatileValues(createdProjectWithFixedId), {
     id: "projects-createProject(project: APIProjectType)",
   });
   const response = await api.deleteProject(createdProject.id);
@@ -85,11 +86,11 @@ test.serial("updateProject(projectId: string, project: APIProjectType)", async (
     priority: 1337,
   });
   const updatedProject = await api.updateProject(projectId, projectWithNewPriority);
-  t.snapshot(updatedProject, {
+  t.snapshot(replaceVolatileValues(updatedProject), {
     id: "projects-updateProject(projectId: string, project: APIProjectType)",
   });
   const revertedProject = await api.updateProject(projectId, projectWithOwnerId);
-  t.snapshot(revertedProject, {
+  t.snapshot(replaceVolatileValues(revertedProject), {
     id: "projects-revertedProject",
   });
 });
@@ -97,18 +98,18 @@ test.serial("increaseProjectTaskInstances", async (t) => {
   await setCurrToken(tokenUserD);
   const projectId = (await api.getProjects())[0].id;
   const updatedProject = await api.increaseProjectTaskInstances(projectId, 10);
-  t.snapshot(updatedProject, {
+  t.snapshot(replaceVolatileValues(updatedProject), {
     id: "projects-increaseProjectTaskInstances(projectId: string, delta?: number)",
   });
 });
 test.serial("pauseProject and resumeProject", async (t) => {
   const projectId = (await api.getProjects())[0].id;
   const pausedProject = await api.pauseProject(projectId);
-  t.snapshot(pausedProject, {
+  t.snapshot(replaceVolatileValues(pausedProject), {
     id: "projects-pauseProject(projectId: string)",
   });
   const resumedProject = await api.resumeProject(projectId);
-  t.snapshot(resumedProject, {
+  t.snapshot(replaceVolatileValues(resumedProject), {
     id: "projects-resumeProject(projectId: string)",
   });
 });

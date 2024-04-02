@@ -4,7 +4,7 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Store from "oxalis/store";
-import type { OrthoView, Vector3, Vector4 } from "oxalis/constants";
+import type { OrthoView, Vector3 } from "oxalis/constants";
 import constants, {
   OrthoViewColors,
   OrthoViewCrosshairColors,
@@ -12,12 +12,28 @@ import constants, {
   OrthoViewValues,
 } from "oxalis/constants";
 
+// A subdivision of 100 means that there will be 100 segments per axis
+// and thus 101 vertices per axis (i.e., the vertex shader is executed 101**2).
+// In an extreme scenario, these vertices would have a distance to each other
+// of 32 voxels. Thus, each square (two triangles) would render one bucket.
+// 100**2 == 10,000 buckets per plane are currently unrealistic and therefore
+// a valid upper bound.
+// However, note that in case of anisotropic datasets, the above calculation
+// needs to be adapted a bit. For example, consider a dataset with mag 8-8-1.
+// The XZ plane could render 100 buckets along the X coordinate (as above), but
+// only ~13 buckets along the Z coordinate. This would require 1300 which is not
+// unrealistic. PLANE_SUBDIVISION values of 80 showed rare problems which is why
+// a value of 100 is now used. If this should become problematic, too, a dynamic
+// subdivision would probably be the next step.
+export const PLANE_SUBDIVISION = 100;
+
 class Plane {
   // This class is supposed to collect all the Geometries that belong to one single plane such as
   // the plane itself, its texture, borders and crosshairs.
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: THREE.Mesh;
   planeID: OrthoView;
+  materialFactory!: PlaneMaterialFactory;
   displayCrosshair: boolean;
   baseScaleVector: THREE.Vector3;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'crosshair' has no initializer and is not... Remove this comment to see the full error message
@@ -43,14 +59,13 @@ class Plane {
   createMeshes(): void {
     const pWidth = constants.VIEWPORT_WIDTH;
     // create plane
-    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
-    const textureMaterial = new PlaneMaterialFactory(
+    const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, PLANE_SUBDIVISION, PLANE_SUBDIVISION);
+    this.materialFactory = new PlaneMaterialFactory(
       this.planeID,
       true,
       OrthoViewValues.indexOf(this.planeID),
-    )
-      .setup()
-      .getMaterial();
+    );
+    const textureMaterial = this.materialFactory.setup().getMaterial();
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
     // create crosshair
     const crosshairGeometries = [];
@@ -59,7 +74,7 @@ class Plane {
     for (let i = 0; i <= 1; i++) {
       crosshairGeometries.push(new THREE.BufferGeometry());
 
-      // prettier-ignore
+      // biome-ignore format: don't format array
       const crosshairVertices = new Float32Array([
         (-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0,
         -25 * i, -25 * (1 - i), 0,
@@ -124,28 +139,12 @@ class Plane {
     });
   };
 
-  updateAnchorPoints(
-    anchorPoint: Vector4 | null | undefined,
-    fallbackAnchorPoint?: Vector4 | null | undefined,
-  ): void {
-    if (anchorPoint) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setAnchorPoint' does not exist on type '... Remove this comment to see the full error message
-      this.plane.material.setAnchorPoint(anchorPoint);
-    }
-
-    if (fallbackAnchorPoint) {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'setFallbackAnchorPoint' does not exist o... Remove this comment to see the full error message
-      this.plane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
-    }
-  }
-
   setScale(xFactor: number, yFactor: number): void {
-    if (this.lastScaleFactors[0] !== xFactor || this.lastScaleFactors[1] !== yFactor) {
-      this.lastScaleFactors[0] = xFactor;
-      this.lastScaleFactors[1] = yFactor;
-    } else {
+    if (this.lastScaleFactors[0] === xFactor && this.lastScaleFactors[1] === yFactor) {
       return;
     }
+    this.lastScaleFactors[0] = xFactor;
+    this.lastScaleFactors[1] = yFactor;
 
     const scaleVec = new THREE.Vector3().multiplyVectors(
       new THREE.Vector3(xFactor, yFactor, 1),
@@ -165,7 +164,7 @@ class Plane {
 
   // In case the plane's position was offset to make geometries
   // on the plane visible (by moving the plane to the back), one can
-  // additionall pass the originalPosition (which is necessary for the
+  // additionally pass the originalPosition (which is necessary for the
   // shader)
   setPosition = (pos: Vector3, originalPosition?: Vector3): void => {
     const [x, y, z] = pos;

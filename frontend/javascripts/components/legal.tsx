@@ -4,7 +4,8 @@ import Markdown from "react-remarkable";
 import React from "react";
 import type { APIOrganization } from "types/api_flow_types";
 import { getOperatorData, getDefaultOrganization } from "admin/admin_rest_api";
-type Props = {};
+import { EmptyObject } from "types/globals";
+type Props = EmptyObject;
 type State = {
   operatorData: string;
   defaultOrganization: APIOrganization | null | undefined;
@@ -58,9 +59,8 @@ export class Imprint extends LegalBase {
               />
             </Card>
             <p />
-            {this.state.defaultOrganization != null &&
-            // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-            this.state.defaultOrganization.additionalInformation ? (
+            {/* @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'. */}
+            {this.state.defaultOrganization?.additionalInformation ? (
               <Card>
                 <Markdown
                   // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
@@ -89,11 +89,11 @@ export class Privacy extends LegalBase {
             <h2>Privacy Statement</h2>
 
             <p>
-              webKnossos is a team-based open-source tool for exploring and collaboratively
+              WEBKNOSSOS is a team-based open-source tool for exploring and collaboratively
               annotating 3D image datasets. Viewing datasets is possible without a registration.
               However, if users want to create annotations or perform any other changes to the
               system, they need to have a registered account. Personal data is processed in
-              webKnossos. This privacy statement describes the data that is processed, the rights
+              WEBKNOSSOS. This privacy statement describes the data that is processed, the rights
               data subjects have, what external services are used and other privacy-related
               information.
             </p>
@@ -101,24 +101,24 @@ export class Privacy extends LegalBase {
             <h3>Definitions</h3>
             <ul>
               <li>
-                &quot;<strong>webKnossos</strong>&quot; is the application that can be used for
+                &quot;<strong>WEBKNOSSOS</strong>&quot; is the application that can be used for
                 viewing and annotating 3D image datasets.
               </li>
               <li>
-                An &quot;<strong>instance</strong>&quot; of webKnossos is one installation of the
+                An &quot;<strong>instance</strong>&quot; of WEBKNOSSOS is one installation of the
                 application on a server with one domain name attached (e.g. https://webknossos.org).
               </li>
               <li>
-                Persons that use webKnossos are &quot;<strong>users</strong>&quot; or &quot;
+                Persons that use WEBKNOSSOS are &quot;<strong>users</strong>&quot; or &quot;
                 <strong>you</strong>&quot; (in GDPR terms &quot;<strong>data subjects</strong>
                 &quot;).
               </li>
               <li>
                 &quot;<strong>Anonymous users</strong>&quot; are users that do not have a registered
-                account with webKnossos.
+                account with WEBKNOSSOS.
               </li>
               <li>
-                &quot;<strong>Registered users</strong>&quot; have an account. webKnossos processes
+                &quot;<strong>Registered users</strong>&quot; have an account. WEBKNOSSOS processes
                 personal data of users.
               </li>
               <li>
@@ -131,18 +131,18 @@ export class Privacy extends LegalBase {
                 Art. 4 (7) for full definition).
               </li>
               <li>
-                A research group or research lab or other entity that uses webKnossos for their team
+                A research group or research lab or other entity that uses WEBKNOSSOS for their team
                 is technically represented as an &quot;<strong>organization</strong>&quot; in
-                webKnossos. The organization or their representative is the data controller of the
-                information within their instance of webKnossos.
+                WEBKNOSSOS. The organization or their representative is the data controller of the
+                information within their instance of WEBKNOSSOS.
               </li>
               <li>
-                When multiple organizations share a webKnossos instance, they are joint controllers
+                When multiple organizations share a WEBKNOSSOS instance, they are joint controllers
                 for shared information (e.g. data of anonymous users) and single controllers for
                 organization-specific information (e.g. data of registered users).
               </li>
               <li>
-                webKnossos may be provided as a hosted service. In that case, the hosting provider
+                WEBKNOSSOS may be provided as a hosted service. In that case, the hosting provider
                 is a &quot;<strong>processor</strong>&quot; within the meaning of GDPR (see GDPR
                 Art. 4 (8) for full definition). The processor performs data processing on behalf of
                 the controller.
@@ -181,7 +181,7 @@ export class Privacy extends LegalBase {
             <h3>Your Data</h3>
             <ul>
               <li>
-                In order to provide the webKnossos application, several external services are used.
+                In order to provide the WEBKNOSSOS application, several external services are used.
                 Some personal data of users may be transmitted to these services as described below.
                 <ul>
                   <li>
@@ -214,7 +214,7 @@ export class Privacy extends LegalBase {
                   </li>
                   <li>
                     Request logs are collected that contain a series of general data and information
-                    when a data subject or automated systems calls up webKnossos. This general data
+                    when a data subject or automated systems calls up WEBKNOSSOS. This general data
                     and information are stored in the server log files. Collected may be (1) the
                     browser types and versions used, (2) the operating system used by the accessing
                     system, (3) the website from which an accessing system reaches our website
@@ -245,9 +245,9 @@ export class Privacy extends LegalBase {
                 provide the Service.
               </li>
               <li>
-                Registered users may participate in discussions on the webKnossos discuss platform.
-                Posts and replies that they make there are visible to other webKnossos users (also
-                from other webKnossos instances). Their posts and replies may be removed at any
+                Registered users may participate in discussions on the WEBKNOSSOS discuss platform.
+                Posts and replies that they make there are visible to other WEBKNOSSOS users (also
+                from other WEBKNOSSOS instances). Their posts and replies may be removed at any
                 time.
               </li>
               <li>
@@ -302,7 +302,7 @@ export class Privacy extends LegalBase {
               processing is based on Art. 6(1) lit. c GDPR.
             </p>
             <p>
-              In case of a hosted webKnossos service, the processing is performed by the processor
+              In case of a hosted WEBKNOSSOS service, the processing is performed by the processor
               on behalf of the controller.
             </p>
             <h3>Data security</h3>

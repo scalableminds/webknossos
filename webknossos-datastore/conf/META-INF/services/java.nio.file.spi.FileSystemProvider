@@ -1,3 +1,0 @@
-com.scalableminds.webknossos.datastore.s3fs.S3FileSystemProvider
-com.scalableminds.webknossos.datastore.storage.httpsfilesystem.HttpsFileSystemProvider
-com.scalableminds.webknossos.datastore.storage.httpsfilesystem.HttpFileSystemProvider

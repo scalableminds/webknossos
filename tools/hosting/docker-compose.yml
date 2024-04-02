@@ -2,7 +2,7 @@ version: "2.2"
 
 services:
   webknossos:
-    image: scalableminds/webknossos:${DOCKER_TAG:-22.05.1}
+    image: scalableminds/webknossos:${DOCKER_TAG:-23.04.0}
     ports:
       - "127.0.0.1:9000:9000"
     depends_on:
@@ -32,7 +32,7 @@ services:
 
   # Postgres
   postgres:
-    image: postgres:10-alpine
+    image: postgres:15-bullseye
     environment:
       POSTGRES_DB: webknossos
       POSTGRES_USER: postgres
@@ -58,11 +58,11 @@ services:
 
   # FossilDB
   fossildb:
-    image: scalableminds/fossildb:master__410
+    image: scalableminds/fossildb:master__442
     command:
       - fossildb
       - -c
-      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates
+      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates,volumeSegmentIndex,editableMappings,editableMappingUpdates,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate
     user: 0:0
     volumes:
       - "./persistent/fossildb/data:/fossildb/data"
@@ -70,7 +70,7 @@ services:
 
   # Redis
   redis:
-    image: redis:5.0
+    image: redis:7
     command:
       - redis-server
     healthcheck:
@@ -85,7 +85,7 @@ services:
 
   # Nginx
   nginx:
-    image: scalableminds/nginx-proxy:master__117
+    image: scalableminds/nginx-proxy:master__4605879364
     ports:
       - "80:80"
       - "443:443"
@@ -98,7 +98,7 @@ services:
       - com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy
 
   nginx-letsencrypt:
-    image: jrcs/letsencrypt-nginx-proxy-companion
+    image: nginxproxy/acme-companion
     environment:
       - DEFAULT_EMAIL=${LETSENCRYPT_EMAIL}
     depends_on:

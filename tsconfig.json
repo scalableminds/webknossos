@@ -9,11 +9,15 @@
     "outDir": "build",
     "jsx": "react",
     "strict": true,
-    "target": "es2020",
+    "target": "es2021",
     "types": [], //reconsider this later
     "skipLibCheck": true, //reconsider this later
     "allowSyntheticDefaultImports": true,
     "baseUrl": "./frontend/javascripts",
+    "lib": [
+      "ES2021",
+      "dom",
+    ],
     "paths": {
       "oxalis/*": ["./oxalis/*"],
       "libs/*": ["./libs/*"],

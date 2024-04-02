@@ -71,12 +71,14 @@ export function jsRgb2hsl(rgb: Vector3): Vector3 {
     const d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
-      case r:
+      case r: {
         h = (g - b) / d + (g < b ? 6 : 0);
         break;
-      case g:
+      }
+      case g: {
         h = (b - r) / d + 2;
         break;
+      }
       case b:
       default:
         h = (r - g) / d + 4;
@@ -125,8 +127,11 @@ export const aaStep: ShaderModule = {
       See: https://www.shadertoy.com/view/wtjGzt
     */
     float aaStep(float x) {
-        float w = fwidth(x);    // pixel width
-        return smoothstep(.7, -.7, (abs(fract(x - .25) - .5) - .25) / w);
+      // float w = fwidth(x);    // pixel width
+      // inspired by https://www.shadertoy.com/view/MlByRD
+      float w = pow(2., zoomValue)/viewportExtent.x;
+
+      return smoothstep(.7, -.7, (abs(fract(x - .25) - .5) - .25) / w);
     }
   `,
 };
@@ -339,3 +344,33 @@ export const isFlightMode: ShaderModule = {
     }
   `,
 };
+
+export const almostEq: ShaderModule = {
+  code: `
+    // These functions are useful for debugging.
+    bool almostEq(vec3 x, vec3 y, float thresh) {
+      vec3 diff = abs(x - y);
+      return diff.x <= thresh && diff.y <= thresh && diff.z <= thresh;
+    }
+
+    bool almostEq(vec3 x, vec3 y, vec3 thresh) {
+      vec3 diff = abs(x - y);
+      return diff.x <= thresh.x && diff.y <= thresh.y && diff.z <= thresh.z;
+    }
+
+    bool almostEq(float x, float y, float thresh) {
+      float diff = abs(x - y);
+      return diff <= thresh;
+    }
+  `,
+};
+
+export function formatNumberAsGLSLFloat(aNumber: number): string {
+  if (aNumber % 1 === 0) {
+    // Append ".0" via toFixed
+    return aNumber.toFixed(1);
+  } else {
+    // It is already a floating point number, so we can use toString.
+    return aNumber.toString();
+  }
+}

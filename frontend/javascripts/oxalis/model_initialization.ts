@@ -9,6 +9,7 @@ import type {
   ServerTracing,
   ServerEditableMapping,
   APICompoundType,
+  APISegmentationLayer,
 } from "types/api_flow_types";
 import type { Versions } from "oxalis/view/version_view";
 import {
@@ -16,20 +17,19 @@ import {
   getSupportedTextureSpecs,
   validateMinimumRequirements,
 } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { convertBoundariesToBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import {
   determineAllowedModes,
   getBitDepth,
-  getBoundaries,
+  getDatasetBoundingBox,
   getDataLayers,
   getDatasetCenter,
-  getResolutionUnion,
   hasSegmentation,
   isElementClassSupported,
   isSegmentationLayer,
   getSegmentationLayers,
-  getSegmentationLayerByNameOrFallbackName,
+  getLayerByName,
   getSegmentationLayerByName,
+  getUnifiedAdditionalCoordinates,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getNullableSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getServerVolumeTracings } from "oxalis/model/accessors/volumetracing_accessor";
@@ -42,7 +42,7 @@ import {
   getSharingTokenFromUrlParameters,
   getUserConfiguration,
   getDatasetViewConfiguration,
-  getEditableMapping,
+  getEditableMappingInfo,
   getAnnotationCompoundInformation,
 } from "admin/admin_rest_api";
 import {
@@ -56,6 +56,7 @@ import {
   setControlModeAction,
   setViewModeAction,
   setMappingAction,
+  updateLayerSettingAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   initializeEditableMappingAction,
@@ -65,12 +66,14 @@ import {
   setActiveNodeAction,
   initializeSkeletonTracingAction,
   loadAgglomerateSkeletonAction,
+  setShowSkeletonsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setDatasetAction } from "oxalis/model/actions/dataset_actions";
 import {
   setPositionAction,
   setZoomStepAction,
   setRotationAction,
+  setAdditionalCoordinatesAction,
 } from "oxalis/model/actions/flycam_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import { setToolAction } from "oxalis/model/actions/ui_actions";
@@ -97,6 +100,11 @@ import {
   setActiveConnectomeAgglomerateIdsAction,
   updateCurrentConnectomeFileAction,
 } from "oxalis/model/actions/connectome_actions";
+import {
+  PricingPlanEnum,
+  isFeatureAllowedByPricingPlan,
+} from "admin/organization/pricing_plan_utils";
+import { convertServerAdditionalAxesToFrontEnd } from "./model/reducers/reducer_helpers";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -175,8 +183,10 @@ export async function initialize(
     dataset,
     initialDatasetSettings,
   );
+  const enforcedInitialUserSettings =
+    enforcePricingRestrictionsOnUserConfiguration(initialUserSettings);
   initializeSettings(
-    initialUserSettings,
+    enforcedInitialUserSettings,
     annotationSpecificDatasetSettings,
     initialDatasetSettings,
   );
@@ -184,7 +194,7 @@ export async function initialize(
 
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
   if (initialFetch) {
-    const { gpuMemoryFactor } = initialUserSettings;
+    const { gpuMemoryFactor } = Store.getState().userConfiguration;
     initializationInformation = initializeDataLayerInstances(gpuMemoryFactor);
     if (serverTracings.length > 0)
       Store.dispatch(setZoomStepAction(getSomeServerTracing(serverTracings).zoomLevel));
@@ -207,7 +217,7 @@ export async function initialize(
     initializeTracing(annotation, serverTracings, editableMappings);
   } else {
     // In view only tracings we need to set the view mode too.
-    const { allowedModes } = determineAllowedModes(dataset);
+    const { allowedModes } = determineAllowedModes();
     const mode = UrlManager.initialState.mode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
   }
@@ -241,7 +251,7 @@ async function fetchEditableMappings(
 ): Promise<ServerEditableMapping[]> {
   const promises = serverVolumeTracings
     .filter((tracing) => tracing.mappingIsEditable)
-    .map((tracing) => getEditableMapping(tracingStoreUrl, tracing.id));
+    .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id));
   return Promise.all(promises);
 }
 
@@ -283,7 +293,7 @@ function initializeTracing(
   // This method is not called for the View mode
   const { dataset } = Store.getState();
   let annotation = _annotation;
-  const { allowedModes, preferredMode } = determineAllowedModes(dataset, annotation.settings);
+  const { allowedModes, preferredMode } = determineAllowedModes(annotation.settings);
 
   _.extend(annotation.settings, {
     allowedModes,
@@ -329,18 +339,11 @@ function initializeTracing(
     }
   }
 
-  // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
+  // Initialize 'flight', 'oblique' or 'orthogonal' mode
   if (allowedModes.length === 0) {
     Toast.error(messages["tracing.no_allowed_mode"]);
   } else {
     const maybeUrlViewMode = UrlManager.initialState.mode;
-    // todo: refactor MODE_VOLUME away or make this logic compatible
-    // const isHybridTracing = serverTracings.skeleton != null && serverTracings.volume != null;
-    // let maybeUrlViewMode = UrlManager.initialState.mode;
-    // if (isHybridTracing && UrlManager.initialState.mode === constants.MODE_VOLUME) {
-    //   // Here we avoid going into volume mode in hybrid tracings.
-    //   maybeUrlViewMode = constants.MODE_PLANE_TRACING;
-    // }
     const mode = preferredMode || maybeUrlViewMode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
   }
@@ -402,19 +405,17 @@ function initializeDataset(
     validateVolumeLayers(volumeTracings, newDataLayers);
   }
 
-  ensureMatchingLayerResolutions(mutableDataset);
   Store.dispatch(setDatasetAction(mutableDataset as APIDataset));
+  initializeAdditionalCoordinates(mutableDataset);
 }
 
-export function ensureMatchingLayerResolutions(dataset: APIDataset): void {
-  try {
-    getResolutionUnion(dataset, true);
-  } catch (exception) {
-    console.warn(exception);
-    Toast.error(messages["dataset.resolution_mismatch"], {
-      sticky: true,
-    });
-  }
+function initializeAdditionalCoordinates(mutableDataset: MutableAPIDataset) {
+  const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(mutableDataset);
+  const initialAdditionalCoordinates = Utils.values(unifiedAdditionalCoordinates).map(
+    ({ name, bounds }) => ({ name, value: Math.floor((bounds[1] - bounds[0]) / 2) }),
+  );
+
+  Store.dispatch(setAdditionalCoordinatesAction(initialAdditionalCoordinates));
 }
 
 function initializeSettings(
@@ -444,12 +445,12 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     maximumTextureCountForLayer,
   } = validateSpecsForLayers(dataset, requiredBucketCapacity);
 
-  if (process.env.BABEL_ENV !== "test") {
+  if (!process.env.IS_TESTING) {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");
   }
 
   const layers = dataset.dataSource.dataLayers;
-  const dataLayers = {};
+  const dataLayers: DataLayerCollection = {};
 
   for (const layer of layers) {
     const textureInformation = textureInformationPerLayer.get(layer);
@@ -458,7 +459,6 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
       throw new Error("No texture information for layer?");
     }
 
-    // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
     dataLayers[layer.name] = new DataLayer(
       layer,
       textureInformation.textureSize,
@@ -501,7 +501,7 @@ function setupLayerForVolumeTracing(
     );
 
     const fallbackLayer = fallbackLayerIndex > -1 ? originalLayers[fallbackLayerIndex] : null;
-    const boundaries = getBoundaries(dataset);
+    const boundingBox = getDatasetBoundingBox(dataset).asServerBoundingBox();
     const resolutions = tracing.resolutions || [];
     const tracingHasResolutionList = resolutions.length > 0;
     // Legacy tracings don't have the `tracing.resolutions` property
@@ -511,18 +511,20 @@ function setupLayerForVolumeTracing(
     const tracingResolutions: Vector3[] = tracingHasResolutionList
       ? resolutions.map(({ x, y, z }) => [x, y, z])
       : [[1, 1, 1]];
-    const tracingLayer: APIDataLayer = {
+    const tracingLayer: APISegmentationLayer = {
       name: tracing.id,
       tracingId: tracing.id,
       elementClass: tracing.elementClass,
       category: "segmentation",
       largestSegmentId: tracing.largestSegmentId,
-      boundingBox: convertBoundariesToBoundingBox(boundaries),
+      boundingBox,
       resolutions: tracingResolutions,
-      mappings: fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : [],
+      mappings:
+        fallbackLayer != null && "mappings" in fallbackLayer ? fallbackLayer.mappings : undefined,
       // Remember the name of the original layer (e.g., used to request mappings)
       fallbackLayer: tracing.fallbackLayer,
       fallbackLayerInfo: fallbackLayer,
+      additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
     };
     if (fallbackLayerIndex > -1) {
       newLayers[fallbackLayerIndex] = tracingLayer;
@@ -560,6 +562,7 @@ function determineDefaultState(
 ): PartialUrlManagerState {
   const {
     position: urlStatePosition,
+    additionalCoordinates: urlStateAdditionalCoordinates,
     zoomStep: urlStateZoomStep,
     rotation: urlStateRotation,
     activeNode: urlStateActiveNode,
@@ -568,9 +571,11 @@ function determineDefaultState(
   } = urlState;
   // If there is no editPosition (e.g. when viewing a dataset) and
   // no default position, compute the center of the dataset
-  const { dataset, datasetConfiguration } = Store.getState();
+  const { dataset, datasetConfiguration, temporaryConfiguration } = Store.getState();
+  const { viewMode } = temporaryConfiguration;
   const defaultPosition = datasetConfiguration.position;
   let position = getDatasetCenter(dataset);
+  let additionalCoordinates = null;
 
   if (defaultPosition != null) {
     position = defaultPosition;
@@ -580,10 +585,15 @@ function determineDefaultState(
 
   if (someTracing != null) {
     position = Utils.point3ToVector3(someTracing.editPosition);
+    additionalCoordinates = someTracing.editPositionAdditionalCoordinates;
   }
 
   if (urlStatePosition != null) {
     position = urlStatePosition;
+  }
+
+  if (urlStateAdditionalCoordinates != null) {
+    additionalCoordinates = urlStateAdditionalCoordinates;
   }
 
   let zoomStep = datasetConfiguration.zoom;
@@ -596,14 +606,17 @@ function determineDefaultState(
     zoomStep = urlStateZoomStep;
   }
 
-  let { rotation } = datasetConfiguration;
+  let rotation = undefined;
+  if (viewMode !== "orthogonal") {
+    rotation = datasetConfiguration.rotation;
 
-  if (someTracing != null) {
-    rotation = Utils.point3ToVector3(someTracing.editRotation);
-  }
+    if (someTracing != null) {
+      rotation = Utils.point3ToVector3(someTracing.editRotation);
+    }
 
-  if (urlStateRotation != null) {
-    rotation = urlStateRotation;
+    if (urlStateRotation != null) {
+      rotation = urlStateRotation;
+    }
   }
 
   const stateByLayer = urlStateByLayer ?? {};
@@ -612,18 +625,21 @@ function determineDefaultState(
     (tracing) => tracing.typ === "Volume",
   ) as ServerVolumeTracing[];
   for (const volumeTracing of volumeTracings) {
-    const { id: layerName, mappingName } = volumeTracing;
-
-    if (mappingName == null) continue;
+    const { id: layerName, mappingName, mappingIsLocked } = volumeTracing;
 
     if (!(layerName in stateByLayer)) {
       stateByLayer[layerName] = {};
     }
-    if (stateByLayer[layerName].mappingInfo == null) {
-      stateByLayer[layerName].mappingInfo = {
-        mappingName,
-        mappingType: "HDF5",
-      };
+    if (stateByLayer[layerName].mappingInfo == null || mappingIsLocked) {
+      // A locked mapping always takes precedence over the URL configuration.
+      if (mappingName == null) {
+        delete stateByLayer[layerName].mappingInfo;
+      } else {
+        stateByLayer[layerName].mappingInfo = {
+          mappingName,
+          mappingType: "HDF5",
+        };
+      }
     }
   }
 
@@ -634,6 +650,7 @@ function determineDefaultState(
     rotation,
     activeNode,
     stateByLayer,
+    additionalCoordinates,
     ...rest,
   };
 }
@@ -660,6 +677,10 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
   if (state.stateByLayer != null) {
     applyLayerState(state.stateByLayer);
   }
+
+  if (state.additionalCoordinates != null) {
+    Store.dispatch(setAdditionalCoordinatesAction(state.additionalCoordinates));
+  }
 }
 
 async function applyLayerState(stateByLayer: UrlStateByLayer) {
@@ -668,9 +689,16 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
     let effectiveLayerName;
 
     const { dataset } = Store.getState();
+
+    if (layerName === "Skeleton" && layerState.isDisabled != null) {
+      Store.dispatch(setShowSkeletonsAction(!layerState.isDisabled));
+      // The remaining options are only valid for data layers
+      continue;
+    }
+
     try {
       // The name of the layer could have changed if a volume tracing was created from a viewed annotation
-      effectiveLayerName = getSegmentationLayerByNameOrFallbackName(dataset, layerName).name;
+      effectiveLayerName = getLayerByName(dataset, layerName, true).name;
     } catch (e) {
       console.error(e);
       Toast.error(
@@ -681,6 +709,17 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       ErrorHandling.notify(e, {
         urlLayerState: stateByLayer,
       });
+      continue;
+    }
+
+    if (layerState.isDisabled != null) {
+      Store.dispatch(
+        updateLayerSettingAction(effectiveLayerName, "isDisabled", layerState.isDisabled),
+      );
+    }
+
+    if (!isSegmentationLayer(dataset, effectiveLayerName)) {
+      // The remaining options are only valid for segmentation layers
       continue;
     }
 
@@ -701,7 +740,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
         }
 
         if (mappingType !== "HDF5") {
-          Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file"]);
+          Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file_active"]);
           continue;
         }
 
@@ -727,12 +766,18 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       }
 
       for (const mesh of meshes) {
-        const { segmentId, seedPosition } = mesh;
+        const { segmentId, seedPosition, seedAdditionalCoordinates } = mesh;
 
         if (mesh.isPrecomputed) {
           const { meshFileName } = mesh;
           Store.dispatch(
-            loadPrecomputedMeshAction(segmentId, seedPosition, meshFileName, effectiveLayerName),
+            loadPrecomputedMeshAction(
+              segmentId,
+              seedPosition,
+              seedAdditionalCoordinates,
+              meshFileName,
+              effectiveLayerName,
+            ),
           );
         } else {
           const { mappingName, mappingType } = mesh;
@@ -740,6 +785,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
             loadAdHocMeshAction(
               segmentId,
               seedPosition,
+              seedAdditionalCoordinates,
               {
                 mappingName,
                 mappingType,
@@ -762,6 +808,19 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       }
     }
   }
+}
+
+function enforcePricingRestrictionsOnUserConfiguration(
+  userConfiguration: UserConfiguration,
+): UserConfiguration {
+  const activeOrganization = Store.getState().activeOrganization;
+  if (!isFeatureAllowedByPricingPlan(activeOrganization, PricingPlanEnum.Team)) {
+    return {
+      ...userConfiguration,
+      renderWatermark: true,
+    };
+  }
+  return userConfiguration;
 }
 
 function applyAnnotationSpecificViewConfiguration(

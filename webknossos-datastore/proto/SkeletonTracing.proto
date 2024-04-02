@@ -14,6 +14,7 @@ message Node {
     required int32 bitDepth = 7;
     required bool interpolation = 8;
     required int64 createdTimestamp = 9;
+    repeated AdditionalCoordinateProto additionalCoordinates = 10;
 }
 
 message Edge {
@@ -31,6 +32,11 @@ message BranchPoint {
     required int64 createdTimestamp = 2;
 }
 
+enum TreeTypeProto {
+  DEFAULT = 0;
+  AGGLOMERATE = 1;
+}
+
 message Tree {
      required int32 treeId = 1;
      repeated Node nodes = 2;
@@ -41,7 +47,9 @@ message Tree {
      required string name = 7;
      required int64 createdTimestamp = 8;
      optional int32 groupId = 9;
-     optional bool isVisible = 10; // in this case `None` means `true`
+     optional bool isVisible = 10; // `None` means `true`
+     optional TreeTypeProto type = 11;
+     optional bool edgesAreVisible = 12; // `None` means `true`
 }
 
 message TreeGroup {
@@ -51,7 +59,7 @@ message TreeGroup {
 }
 
 message SkeletonTracing {
-    required string dataSetName = 1;
+    required string datasetName = 1; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
     repeated Tree trees = 2;
     required int64 createdTimestamp = 3;
     optional BoundingBoxProto boundingBox = 4;
@@ -63,7 +71,9 @@ message SkeletonTracing {
     optional BoundingBoxProto userBoundingBox = 10;
     repeated TreeGroup treeGroups = 11;
     repeated NamedBoundingBoxProto userBoundingBoxes = 12;
-    optional string organizationName = 13; // to identify the dataset (may differ from annotation orga)
+    optional string organizationName = 13; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
+    repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
+    repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
 }
 
 message SkeletonTracingOpt {

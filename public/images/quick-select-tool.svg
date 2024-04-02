@@ -1,0 +1,16 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M8.60487 14.1312C6.36549 10.6795 7.00779 7.31307 8.21064 6.22283C9.41349 5.13259 11.7147 4.66518 12.9046 6.06634C14.0945 7.46752 12.4454 10.1734 13.8763 11.4705C15.3072 12.7676 18.5033 15.666 16.719 17.414C14.9347 19.1619 10.8443 17.5827 8.60487 14.1312Z" fill="#F1F1F1"/>
+<rect width="2" height="2" fill="#F1F1F1"/>
+<rect x="6" width="4" height="2" fill="#F1F1F1"/>
+<rect x="14" width="4" height="2" fill="#F1F1F1"/>
+<rect x="6" y="22" width="4" height="2" fill="#F1F1F1"/>
+<rect x="14" y="22" width="4" height="2" fill="#F1F1F1"/>
+<rect y="18" width="4" height="2" transform="rotate(-90 0 18)" fill="#F1F1F1"/>
+<rect y="10" width="4" height="2" transform="rotate(-90 0 10)" fill="#F1F1F1"/>
+<rect x="22" y="18" width="4" height="2" transform="rotate(-90 22 18)" fill="#F1F1F1"/>
+<rect x="22" y="10" width="4" height="2" transform="rotate(-90 22 10)" fill="#F1F1F1"/>
+<rect x="22" y="22" width="2" height="2" fill="#F1F1F1"/>
+<rect y="22" width="2" height="2" fill="#F1F1F1"/>
+<rect x="22" width="2" height="2" fill="#F1F1F1"/>
+<rect x="22" width="2" height="2" fill="#F1F1F1"/>
+</svg>

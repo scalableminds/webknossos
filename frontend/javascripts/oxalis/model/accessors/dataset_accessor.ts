@@ -1,15 +1,15 @@
-import Maybe from "data.maybe";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import { getMaxZoomStepDiff } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import type {
+  AdditionalAxis,
   APIAllowedMode,
+  APIDataLayer,
   APIDataset,
   APIMaybeUnimportedDataset,
   APISegmentationLayer,
+  APISkeletonLayer,
   ElementClass,
 } from "types/api_flow_types";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import type {
   Settings,
   DataLayerType,
@@ -19,246 +19,24 @@ import type {
   ActiveMappingInfo,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import type { Vector3, ViewMode } from "oxalis/constants";
+import { IdentityTransform, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
-import { aggregateBoundingBox, map3 } from "libs/utils";
+import { aggregateBoundingBox, maxValue } from "libs/utils";
 import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
-import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
-export type ResolutionsMap = Map<number, Vector3>;
-export type SmallerOrHigherInfo = {
-  smaller: boolean;
-  higher: boolean;
-};
-type UnrenderableLayersInfos = {
-  layer: DataLayerType;
-  smallerOrHigherInfo: SmallerOrHigherInfo;
-};
-
-function maxValue(array: Array<number>): number {
-  const value = _.max(array);
-  if (value == null) {
-    throw Error(`Max of empty array: ${array}`);
-  }
-  return value;
-}
-
-function minValue(array: Array<number>): number {
-  const value = _.min(array);
-  if (value == null) {
-    throw Error(`Min of empty array: ${array}`);
-  }
-  return value;
-}
-
-export class ResolutionInfo {
-  resolutions: ReadonlyArray<Vector3>;
-  resolutionMap: Map<number, Vector3>;
-
-  constructor(resolutions: Array<Vector3>) {
-    this.resolutions = resolutions;
-    this.resolutionMap = new Map();
-
-    this._buildResolutionMap();
-  }
-
-  _buildResolutionMap() {
-    // Each resolution entry can be characterized by it's greatest resolution dimension.
-    // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
-    // a zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
-    // Therefore, the largest dim for each resolution has to be unique across all resolutions.
-    // This function creates a map which maps from powerOfTwo (2**index) to resolution.
-    const { resolutions } = this;
-
-    if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
-      throw new Error("Max dimension in resolutions is not unique.");
-    }
-
-    for (const resolution of resolutions) {
-      this.resolutionMap.set(maxValue(resolution), resolution);
-    }
-  }
-
-  getDenseResolutions(): Array<Vector3> {
-    return convertToDenseResolution(this.getResolutionList());
-  }
-
-  getResolutionList(): Array<Vector3> {
-    return Array.from(this.resolutionMap.values());
-  }
-
-  getResolutionsWithIndices(): Array<[number, Vector3]> {
-    return _.sortBy(
-      Array.from(this.resolutionMap.entries()).map((entry) => {
-        const [powerOfTwo, resolution] = entry;
-        const resolutionIndex = Math.log2(powerOfTwo);
-        return [resolutionIndex, resolution];
-      }), // Sort by resolutionIndex
-      (tuple) => tuple[0],
-    );
-  }
-
-  indexToPowerOf2(index: number): number {
-    return 2 ** index;
-  }
-
-  hasIndex(index: number): boolean {
-    const powerOfTwo = this.indexToPowerOf2(index);
-    return this.resolutionMap.has(powerOfTwo);
-  }
-
-  getResolutionByIndex(index: number): Vector3 | null | undefined {
-    const powerOfTwo = this.indexToPowerOf2(index);
-    return this.getResolutionByPowerOf2(powerOfTwo);
-  }
-
-  getResolutionByIndexOrThrow(index: number): Vector3 {
-    const resolution = this.getResolutionByIndex(index);
-
-    if (!resolution) {
-      throw new Error(`Magnification with index ${index} does not exist.`);
-    }
-
-    return resolution;
-  }
-
-  getIndexByResolution(resolution: Vector3): number {
-    const index = Math.log2(Math.max(...resolution));
-
-    // Assert that the index exists and that the resolution at that index
-    // equals the resolution argument
-    const resolutionMaybe = this.getResolutionByIndex(index);
-    if (!_.isEqual(resolution, resolutionMaybe)) {
-      throw new Error(
-        `Magnification ${resolution} with index ${index} is not equal to existing magnification at that index: ${resolutionMaybe}.`,
-      );
-    }
-    return index;
-  }
-
-  getResolutionByIndexWithFallback(
-    index: number,
-    fallbackResolutionInfo: ResolutionInfo | null | undefined,
-  ): Vector3 {
-    let resolutionMaybe = this.getResolutionByIndex(index);
-
-    if (resolutionMaybe) {
-      return resolutionMaybe;
-    }
-
-    resolutionMaybe =
-      fallbackResolutionInfo != null ? fallbackResolutionInfo.getResolutionByIndex(index) : null;
-
-    if (resolutionMaybe) {
-      return resolutionMaybe;
-    }
-
-    if (index === 0) {
-      // If the index is 0, only mag 1-1-1 can be meant.
-      return [1, 1, 1];
-    }
-
-    throw new Error(`Magnification could not be determined for index ${index}`);
-  }
-
-  getResolutionByPowerOf2(powerOfTwo: number): Vector3 | null | undefined {
-    return this.resolutionMap.get(powerOfTwo);
-  }
-
-  getHighestResolutionPowerOf2(): number {
-    return maxValue(Array.from(this.resolutionMap.keys()));
-  }
-
-  getLowestResolutionPowerOf2(): number {
-    return minValue(Array.from(this.resolutionMap.keys()));
-  }
-
-  getHighestResolutionIndex(): number {
-    return Math.log2(this.getHighestResolutionPowerOf2());
-  }
-
-  getLowestResolutionIndex(): number {
-    return Math.log2(this.getLowestResolutionPowerOf2());
-  }
-
-  getHighestResolution(): Vector3 {
-    // @ts-ignore
-    return this.getResolutionByPowerOf2(this.getHighestResolutionPowerOf2());
-  }
-
-  getLowestResolution(): Vector3 {
-    // @ts-ignore
-    return this.getResolutionByPowerOf2(this.getLowestResolutionPowerOf2());
-  }
-
-  getAllIndices(): Array<number> {
-    return this.getResolutionsWithIndices().map((entry) => entry[0]);
-  }
-
-  getClosestExistingIndex(index: number): number {
-    if (this.hasIndex(index)) {
-      return index;
-    }
-
-    const indices = this.getAllIndices();
-    const indicesWithDistances = indices.map((_index) => {
-      const distance = index - _index;
-
-      if (distance >= 0) {
-        // The candidate _index is smaller than the requested index.
-        // Since webKnossos only supports rendering from higher mags,
-        // when a mag is missing, we want to prioritize "higher" mags
-        // when looking for a substitute. Therefore, we artificially
-        // downrank the smaller mag _index.
-        return [_index, distance + 0.5];
-      } else {
-        return [_index, Math.abs(distance)];
-      }
-    });
-
-    const bestIndexWithDistance = _.head(_.sortBy(indicesWithDistances, (entry) => entry[1]));
-    if (bestIndexWithDistance == null) {
-      throw new Error("Couldn't find any resolution.");
-    }
-
-    return bestIndexWithDistance[0];
-  }
-
-  hasSmallerAndOrHigherIndex(index: number): SmallerOrHigherInfo {
-    const indices = this.getAllIndices();
-    const hasSmallOrHigher = {
-      smaller: false,
-      higher: false,
-    };
-
-    for (const currentIndex of indices) {
-      if (currentIndex < index) {
-        hasSmallOrHigher.smaller = true;
-      } else if (currentIndex > index) {
-        hasSmallOrHigher.higher = true;
-      }
-    }
-
-    return hasSmallOrHigher;
-  }
-
-  getIndexOrClosestHigherIndex(requestedIndex: number): number | null | undefined {
-    if (this.hasIndex(requestedIndex)) {
-      return requestedIndex;
-    }
-
-    const indices = this.getResolutionsWithIndices().map((entry) => entry[0]);
-
-    for (const index of indices) {
-      if (index > requestedIndex) {
-        // Return the first existing index which is higher than the requestedIndex
-        return index;
-      }
-    }
-
-    return null;
-  }
-}
+import { DataLayer } from "types/schemas/datasource.types";
+import BoundingBox from "../bucket_data_handling/bounding_box";
+import { M4x4, Matrix4x4, V3 } from "libs/mjs";
+import { convertToDenseResolution, ResolutionInfo } from "../helpers/resolution_info";
+import MultiKeyMap from "libs/multi_key_map";
+import {
+  chainTransforms,
+  createAffineTransformFromMatrix,
+  createThinPlateSplineTransform,
+  invertTransform,
+  Transform,
+  transformPointUnscaled,
+} from "../helpers/transformation_helpers";
 
 function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
   return new ResolutionInfo(resolutions);
@@ -267,95 +45,90 @@ function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
 // Don't use memoizeOne here, since we want to cache the resolutions for all layers
 // (which are not that many).
 export const getResolutionInfo = _.memoize(_getResolutionInfo);
-export function getResolutionUnion(
-  dataset: APIDataset,
-  shouldThrow: boolean = false,
-): Array<Vector3> {
-  const resolutionUnionDict: { [key: number]: Vector3 } = {};
+
+function _getResolutionInfoByLayer(dataset: APIDataset): Record<string, ResolutionInfo> {
+  const infos: Record<string, ResolutionInfo> = {};
+
+  for (const layer of dataset.dataSource.dataLayers) {
+    infos[layer.name] = getResolutionInfo(layer.resolutions);
+  }
+
+  return infos;
+}
+
+export const getResolutionInfoByLayer = _.memoize(_getResolutionInfoByLayer);
+
+export function getDenseResolutionsForLayerName(dataset: APIDataset, layerName: string) {
+  return getResolutionInfoByLayer(dataset)[layerName].getDenseResolutions();
+}
+
+export const getResolutionUnion = memoizeOne((dataset: APIDataset): Array<Vector3[]> => {
+  /*
+   * Returns a list of existent mags per mag level. For example:
+   * [
+   *    [[1, 1, 1]],
+   *    [[2, 2, 2], [2, 2, 1]],
+   *    [[4, 4, 4], [4, 4, 1]],
+   *    [[8, 8, 8], [8, 8, 2]],
+   * ]
+   */
+  const resolutionUnionDict: { [key: number]: Vector3[] } = {};
 
   for (const layer of dataset.dataSource.dataLayers) {
     for (const resolution of layer.resolutions) {
       const key = maxValue(resolution);
 
       if (resolutionUnionDict[key] == null) {
-        resolutionUnionDict[key] = resolution;
-      } else if (_.isEqual(resolutionUnionDict[key], resolution)) {
-        // the same resolution was already picked up
-      } else if (shouldThrow) {
-        throw new Error(
-          `The resolutions of the different layers don't match. ${resolutionUnionDict[key].join(
-            "-",
-          )} != ${resolution.join("-")}.`,
-        );
+        resolutionUnionDict[key] = [resolution];
       } else {
-        // The resolutions don't match, but shouldThrow is false
+        resolutionUnionDict[key].push(resolution);
       }
     }
   }
 
-  return _.chain(resolutionUnionDict).values().sortBy(maxValue).valueOf();
-}
-export function convertToDenseResolution(resolutions: Array<Vector3>): Array<Vector3> {
-  // Each resolution entry can be characterized by it's greatest resolution dimension.
-  // E.g., the resolution array [[1, 1, 1], [2, 2, 1], [4, 4, 2]] defines that
-  // a log zoomstep of 2 corresponds to the resolution [2, 2, 1] (and not [4, 4, 2]).
-  // Therefore, the largest dim for each resolution has to be unique across all resolutions.
-  // This function returns an array of resolutions, for which each index will
-  // hold a resolution with highest_dim === 2**index and where resolutions are monotonously increasing.
-
-  if (resolutions.length !== _.uniq(resolutions.map(maxValue)).length) {
-    throw new Error("Max dimension in resolutions is not unique.");
+  for (const keyStr of Object.keys(resolutionUnionDict)) {
+    const key = Number(keyStr);
+    resolutionUnionDict[key] = _.uniqWith(resolutionUnionDict[key], V3.isEqual);
   }
 
-  const maxResolution = Math.log2(maxValue(resolutions.map((v) => maxValue(v))));
+  const keys = Object.keys(resolutionUnionDict)
+    .sort((a, b) => Number(a) - Number(b))
+    .map((el) => Number(el));
 
-  const resolutionsLookUp = _.keyBy(resolutions, maxValue);
+  return keys.map((key) => resolutionUnionDict[key]);
+});
 
-  const maxResPower = 2 ** maxResolution;
-  let lastResolution = [maxResPower, maxResPower, maxResPower];
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
-  return _.range(maxResolution, -1, -1)
-    .map((exp) => {
-      const resPower = 2 ** exp;
-      // If the resolution does not exist, use the component-wise minimum of the next-higher
-      // resolution and an isotropic fallback resolution. Otherwise for anisotropic resolutions,
-      // the dense resolutions wouldn't be monotonously increasing.
-      const fallback = map3((i) => Math.min(lastResolution[i], resPower), [0, 1, 2]);
-      lastResolution = resolutionsLookUp[resPower] || fallback;
-      return lastResolution;
-    })
-    .reverse();
+export function getWidestResolutions(dataset: APIDataset): Vector3[] {
+  const allLayerResolutions = dataset.dataSource.dataLayers.map((layer) =>
+    convertToDenseResolution(layer.resolutions),
+  );
+
+  return _.maxBy(allLayerResolutions, (resolutions) => resolutions.length) || [];
 }
 
-function _getResolutions(dataset: APIDataset): Vector3[] {
-  // Different layers can have different resolutions. At the moment,
-  // mismatching resolutions will result in undefined behavior (rather than
-  // causing a hard error). During the model initialization, an error message
-  // will be shown, though.
-  // In the long term, getResolutions should not be used anymore.
-  // Instead, all the code should use the ResolutionInfo class which represents
-  // exactly which resolutions exist per layer.
-  return convertToDenseResolution(getResolutionUnion(dataset));
-}
+export const getSomeResolutionInfoForDataset = memoizeOne((dataset: APIDataset): ResolutionInfo => {
+  const resolutionUnion = getResolutionUnion(dataset);
+  const areMagsDistinct = resolutionUnion.every((mags) => mags.length <= 1);
 
-// _getResolutions itself is not very performance intensive, but other functions which rely
-// on the returned resolutions are. To avoid busting memoization caches (which rely on references),
-// we memoize _getResolutions, as well.
-export const getResolutions = memoizeOne(_getResolutions);
-export function getDatasetResolutionInfo(dataset: APIDataset): ResolutionInfo {
-  return getResolutionInfo(getResolutions(dataset));
-}
+  if (areMagsDistinct) {
+    return new ResolutionInfo(resolutionUnion.map((mags) => mags[0]));
+  } else {
+    return new ResolutionInfo(getWidestResolutions(dataset));
+  }
+});
 
-function _getMaxZoomStep(maybeDataset: APIDataset | null | undefined): number {
+function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
   const minimumZoomStepCount = 1;
-  const maxZoomstep = Maybe.fromNullable(maybeDataset)
-    .map((dataset) =>
-      Math.max(
-        minimumZoomStepCount,
-        Math.max(0, ...getResolutions(dataset).map((r) => Math.max(r[0], r[1], r[2]))),
-      ),
-    )
-    .getOrElse(2 ** (minimumZoomStepCount - 1));
+
+  if (!dataset) {
+    return minimumZoomStepCount;
+  }
+
+  const maxZoomstep = Math.max(
+    minimumZoomStepCount,
+    _.max(_.flattenDeep(getResolutionUnion(dataset))) || minimumZoomStepCount,
+  );
+
   return maxZoomstep;
 }
 
@@ -377,28 +150,18 @@ function _getResolutionInfoOfVisibleSegmentationLayer(state: OxalisState): Resol
 export const getResolutionInfoOfVisibleSegmentationLayer = memoizeOne(
   _getResolutionInfoOfVisibleSegmentationLayer,
 );
-export function getLayerByName(dataset: APIDataset, layerName: string): DataLayerType {
-  const dataLayers = getDataLayers(dataset);
-  const hasUniqueNames = _.uniqBy(dataLayers, "name").length === dataLayers.length;
-  ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
-  const layer = dataLayers.find((l) => l.name === layerName);
-
-  if (!layer) {
-    throw new Error(`Layer "${layerName}" not found`);
-  }
-
-  return layer;
-}
-export function getLayerByNameOrFallbackName(
+export function getLayerByName(
   dataset: APIDataset,
   layerName: string,
+  alsoMatchFallbackLayer: boolean = false,
 ): DataLayerType {
   const dataLayers = getDataLayers(dataset);
   const hasUniqueNames = _.uniqBy(dataLayers, "name").length === dataLayers.length;
   ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
   const layer = dataLayers.find(
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
-    (l) => l.name === layerName || (l.fallbackLayer && l.fallbackLayer === layerName),
+    (l) =>
+      l.name === layerName ||
+      (alsoMatchFallbackLayer && "fallbackLayer" in l && l.fallbackLayer === layerName),
   );
 
   if (!layer) {
@@ -407,23 +170,12 @@ export function getLayerByNameOrFallbackName(
 
   return layer;
 }
+
 export function getSegmentationLayerByName(
   dataset: APIDataset,
   layerName: string,
 ): APISegmentationLayer {
   const layer = getLayerByName(dataset, layerName);
-
-  if (layer.category !== "segmentation") {
-    throw new Error(`The requested layer with name ${layerName} is not a segmentation layer.`);
-  }
-
-  return layer;
-}
-export function getSegmentationLayerByNameOrFallbackName(
-  dataset: APIDataset,
-  layerName: string,
-): APISegmentationLayer {
-  const layer = getLayerByNameOrFallbackName(dataset, layerName);
 
   if (layer.category !== "segmentation") {
     throw new Error(`The requested layer with name ${layerName} is not a segmentation layer.`);
@@ -450,12 +202,12 @@ export function getByteCount(dataset: APIDataset, layerName: string): number {
 export function getElementClass(dataset: APIDataset, layerName: string): ElementClass {
   return getLayerByName(dataset, layerName).elementClass;
 }
-export function getDefaultIntensityRangeOfLayer(
+export function getDefaultValueRangeOfLayer(
   dataset: APIDataset,
   layerName: string,
 ): [number, number] {
   const maxFloatValue = 3.40282347e38;
-  // eslint-disable-next-line @typescript-eslint/no-loss-of-precision
+  // biome-ignore lint/correctness/noPrecisionLoss: This number literal will lose precision at runtime. The value at runtime will be inf.
   const maxDoubleValue = 1.79769313486232e308;
   const elementClass = getElementClass(dataset, layerName);
 
@@ -494,53 +246,43 @@ export function getDefaultIntensityRangeOfLayer(
       return [0, 255];
   }
 }
-export type Boundary = {
-  lowerBoundary: Vector3;
-  upperBoundary: Vector3;
-};
 
-/*
-   The returned Boundary denotes a half-open interval. This means that the lowerBoundary
-   is included in the bounding box and the upper boundary is *not* included.
-*/
-export function getLayerBoundaries(dataset: APIDataset, layerName: string): Boundary {
+export function getLayerBoundingBox(dataset: APIDataset, layerName: string): BoundingBox {
+  /*
+     The returned bounding box denotes a half-open interval. This means that min
+     is included in the bounding box and max is *not* included.
+  */
   const { topLeft, width, height, depth } = getLayerByName(dataset, layerName).boundingBox;
-  const lowerBoundary = topLeft;
-  const upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
-  return {
-    lowerBoundary,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-    upperBoundary,
-  };
+  const min = topLeft;
+  const max = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth] as Vector3;
+
+  return new BoundingBox({
+    min,
+    max,
+  });
 }
-export function getBoundaries(dataset: APIDataset): Boundary {
-  const lowerBoundary = [Infinity, Infinity, Infinity];
-  const upperBoundary = [-Infinity, -Infinity, -Infinity];
+
+export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
+  const min: Vector3 = [Infinity, Infinity, Infinity];
+  const max: Vector3 = [-Infinity, -Infinity, -Infinity];
   const layers = getDataLayers(dataset);
 
   for (const dataLayer of layers) {
-    const layerBoundaries = getLayerBoundaries(dataset, dataLayer.name);
+    const layerBox = getLayerBoundingBox(dataset, dataLayer.name);
 
     for (const i of Vector3Indicies) {
-      lowerBoundary[i] = Math.min(lowerBoundary[i], layerBoundaries.lowerBoundary[i]);
-      upperBoundary[i] = Math.max(upperBoundary[i], layerBoundaries.upperBoundary[i]);
+      min[i] = Math.min(min[i], layerBox.min[i]);
+      max[i] = Math.max(max[i], layerBox.max[i]);
     }
   }
 
-  return {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-    lowerBoundary,
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-    upperBoundary,
-  };
+  return new BoundingBox({
+    min,
+    max,
+  });
 }
 export function getDatasetCenter(dataset: APIDataset): Vector3 {
-  const { lowerBoundary, upperBoundary } = getBoundaries(dataset);
-  return [
-    (lowerBoundary[0] + upperBoundary[0]) / 2,
-    (lowerBoundary[1] + upperBoundary[1]) / 2,
-    (lowerBoundary[2] + upperBoundary[2]) / 2,
-  ];
+  return getDatasetBoundingBox(dataset).getCenter();
 }
 export function getDatasetExtentInVoxel(dataset: APIDataset) {
   const datasetLayers = dataset.dataSource.dataLayers;
@@ -585,10 +327,7 @@ export function getDatasetExtentAsString(
   const extent = getDatasetExtentInLength(dataset);
   return formatExtentWithLength(extent, formatNumberToLength);
 }
-export function determineAllowedModes(
-  dataset: APIDataset,
-  settings?: Settings,
-): {
+export function determineAllowedModes(settings?: Settings): {
   preferredMode: APIAllowedMode | null | undefined;
   allowedModes: Array<APIAllowedMode>;
 } {
@@ -598,7 +337,7 @@ export function determineAllowedModes(
     : ViewModeValues;
   let preferredMode = null;
 
-  if (settings && settings.preferredMode != null) {
+  if (settings?.preferredMode != null) {
     const modeId = settings.preferredMode;
 
     if (allowedModes.includes(modeId)) {
@@ -611,7 +350,12 @@ export function determineAllowedModes(
     allowedModes,
   };
 }
-export function getBitDepth(layerInfo: DataLayerType): number {
+
+export function getMaximumSegmentIdForLayer(dataset: APIDataset, layerName: string) {
+  return getDefaultValueRangeOfLayer(dataset, layerName)[1];
+}
+
+export function getBitDepth(layerInfo: DataLayer | DataLayerType): number {
   switch (layerInfo.elementClass) {
     case "uint8":
       return 8;
@@ -803,60 +547,14 @@ export function getEnabledLayers(
   });
 }
 
-/*
-  This function returns layers that cannot be rendered (since the current resolution is missing),
-  even though they should be rendered (since they are enabled). For each layer, this method
-  additionally returns whether data of this layer can be rendered by zooming in or out.
-  The function takes fallback resolutions into account if renderMissingDataBlack is disabled.
- */
-function _getUnrenderableLayerInfosForCurrentZoom(
-  state: OxalisState,
-): Array<UnrenderableLayersInfos> {
-  const { dataset } = state;
-  const zoomStep = getRequestLogZoomStep(state);
-  const { renderMissingDataBlack } = state.datasetConfiguration;
-  const maxZoomStepDiff = getMaxZoomStepDiff(state.datasetConfiguration.loadingStrategy);
-  const unrenderableLayers = getEnabledLayers(dataset, state.datasetConfiguration)
-    .map((layer: DataLayerType) => ({
-      layer,
-      resolutionInfo: getResolutionInfo(layer.resolutions),
-    }))
-    .filter(({ resolutionInfo }) => {
-      const isPresent = resolutionInfo.hasIndex(zoomStep);
-
-      if (isPresent) {
-        // The layer exists. Thus, it is not unrenderable.
-        return false;
-      }
-
-      if (renderMissingDataBlack) {
-        // We already know that the layer is missing. Since `renderMissingDataBlack`
-        // is enabled, the fallback resolutions don't matter. The layer cannot be
-        // rendered.
-        return true;
-      }
-
-      // The current resolution is missing and fallback rendering
-      // is activated. Thus, check whether one of the fallback
-      // zoomSteps can be rendered.
-      return !_.range(1, maxZoomStepDiff + 1).some((diff) => {
-        const fallbackZoomStep = zoomStep + diff;
-        return resolutionInfo.hasIndex(fallbackZoomStep);
-      });
-    })
-    .map<UnrenderableLayersInfos>(({ layer, resolutionInfo }) => {
-      const smallerOrHigherInfo = resolutionInfo.hasSmallerAndOrHigherIndex(zoomStep);
-      return {
-        layer,
-        smallerOrHigherInfo,
-      };
-    });
-  return unrenderableLayers;
+export function getEnabledColorLayers(
+  dataset: APIDataset,
+  datasetConfiguration: DatasetConfiguration,
+) {
+  const enabledLayers = getEnabledLayers(dataset, datasetConfiguration);
+  return enabledLayers.filter((layer) => isColorLayer(dataset, layer.name));
 }
 
-export const getUnrenderableLayerInfosForCurrentZoom = reuseInstanceOnEquality(
-  _getUnrenderableLayerInfosForCurrentZoom,
-);
 export function getThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
   const organizationName = dataset.owningOrganization;
@@ -884,16 +582,6 @@ export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   return "";
 }
 
-function _keyResolutionsByMax(dataset: APIDataset): Record<number, Vector3> {
-  const resolutions = getResolutions(dataset);
-  return _.keyBy(resolutions, (res) => Math.max(...res));
-}
-
-const keyResolutionsByMax = memoizeOne(_keyResolutionsByMax);
-export function getResolutionByMax(dataset: APIDataset, maxDim: number): Vector3 {
-  const keyedResolutionsByMax = keyResolutionsByMax(dataset);
-  return keyedResolutionsByMax[maxDim];
-}
 export function isLayerVisible(
   dataset: APIDataset,
   layerName: string,
@@ -910,6 +598,53 @@ export function isLayerVisible(
   const isHiddenBecauseOfArbitraryMode = isArbitraryMode && isSegmentationLayer(dataset, layerName);
   return !layerConfig.isDisabled && layerConfig.alpha > 0 && !isHiddenBecauseOfArbitraryMode;
 }
+
+export function hasFallbackLayer(layer: APIDataLayer) {
+  return "fallbackLayer" in layer && layer.fallbackLayer != null;
+}
+
+function _getLayerNameToIsDisabled(datasetConfiguration: DatasetConfiguration) {
+  const nameToIsDisabled: { [name: string]: boolean } = {};
+  for (const layerName of Object.keys(datasetConfiguration.layers)) {
+    nameToIsDisabled[layerName] = datasetConfiguration.layers[layerName].isDisabled;
+  }
+  return nameToIsDisabled;
+}
+
+export const getLayerNameToIsDisabled = memoizeOne(_getLayerNameToIsDisabled);
+
+function _getUnifiedAdditionalAxes(
+  mutableDataset: APIDataset,
+): Record<string, Omit<AdditionalAxis, "index">> {
+  /*
+   * Merge additional coordinates from all layers.
+   */
+  const unifiedAdditionalAxes: Record<string, Omit<AdditionalAxis, "index">> = {};
+  for (const layer of mutableDataset.dataSource.dataLayers) {
+    const { additionalAxes } = layer;
+
+    for (const additionalCoordinate of additionalAxes || []) {
+      const { name, bounds } = additionalCoordinate;
+      if (additionalCoordinate.name in unifiedAdditionalAxes) {
+        const existingBounds = unifiedAdditionalAxes[name].bounds;
+        unifiedAdditionalAxes[name].bounds = [
+          Math.min(bounds[0], existingBounds[0]),
+          Math.max(bounds[1], existingBounds[1]),
+        ];
+      } else {
+        unifiedAdditionalAxes[name] = {
+          name,
+          bounds,
+        };
+      }
+    }
+  }
+
+  return unifiedAdditionalAxes;
+}
+
+export const getUnifiedAdditionalCoordinates = memoizeOne(_getUnifiedAdditionalAxes);
+
 export function is2dDataset(dataset: APIDataset): boolean {
   // An empty dataset (e.g., depth == 0), should not be considered as 2D.
   // This avoids that the empty dummy dataset is rendered with a 2D layout
@@ -920,13 +655,13 @@ export function is2dDataset(dataset: APIDataset): boolean {
 const dummyMapping = {
   mappingName: null,
   mapping: null,
-  mappingKeys: null,
   mappingColors: null,
   hideUnmappedIds: false,
   mappingStatus: MappingStatusEnum.DISABLED,
   mappingSize: 0,
   mappingType: "JSON",
-};
+} as const;
+
 export function getMappingInfo(
   activeMappingInfos: Record<string, ActiveMappingInfo>,
   layerName: string | null | undefined,
@@ -937,7 +672,6 @@ export function getMappingInfo(
 
   // Return a dummy object (this mirrors webKnossos' behavior before the support of
   // multiple segmentation layers)
-  // @ts-expect-error ts-migrate(2322) FIXME: Type '{ mappingName: null; mapping: null; mappingK... Remove this comment to see the full error message
   return dummyMapping;
 }
 export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {
@@ -946,4 +680,210 @@ export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappi
     state.temporaryConfiguration.activeMappingByLayer,
     layer ? layer.name : null,
   );
+}
+
+// Returns the transforms (if they exist) for a layer as
+// they are defined in the dataset properties.
+function _getOriginalTransformsForLayerOrNull(
+  dataset: APIDataset,
+  layer: APIDataLayer,
+): Transform | null {
+  const coordinateTransformations = layer.coordinateTransformations;
+  if (!coordinateTransformations || coordinateTransformations.length === 0) {
+    return null;
+  }
+  if (coordinateTransformations.length > 1) {
+    console.error(
+      "Data layer has defined multiple coordinate transforms. This is currently not supported and ignored",
+    );
+    return null;
+  }
+  const transformation = coordinateTransformations[0];
+  const { type } = transformation;
+
+  if (type === "affine") {
+    const nestedMatrix = transformation.matrix;
+    return createAffineTransformFromMatrix(nestedMatrix);
+  } else if (type === "thin_plate_spline") {
+    const { source, target } = transformation.correspondences;
+
+    return createThinPlateSplineTransform(target, source, dataset.dataSource.scale);
+  }
+
+  console.error(
+    "Data layer has defined a coordinate transform that is not affine or thin_plate_spline. This is currently not supported and ignored",
+  );
+  return null;
+}
+
+function _getTransformsForLayerOrNull(
+  dataset: APIDataset,
+  layer: APIDataLayer | APISkeletonLayer,
+  nativelyRenderedLayerName: string | null,
+): Transform | null {
+  if (layer.category === "skeleton") {
+    return getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName);
+  }
+  const layerTransforms = _getOriginalTransformsForLayerOrNull(dataset, layer);
+
+  if (nativelyRenderedLayerName == null) {
+    // No layer is requested to be rendered natively. Just use the transforms
+    // as they are in the dataset.
+    return layerTransforms;
+  }
+
+  if (nativelyRenderedLayerName === layer.name) {
+    // This layer should be rendered without any transforms.
+    return null;
+  }
+
+  // Apply the inverse of the layer that should be rendered natively
+  // to the current layers transforms
+  const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
+
+  const transformsOfNativeLayer = _getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
+
+  if (transformsOfNativeLayer == null) {
+    // The inverse of no transforms, are no transforms. Leave the layer
+    // transforms untouched.
+    return layerTransforms;
+  }
+
+  const inverseNativeTransforms = invertTransform(transformsOfNativeLayer);
+  return chainTransforms(layerTransforms, inverseNativeTransforms);
+}
+
+function memoizeWithThreeKeys<A, B, C, T>(fn: (a: A, b: B, c: C) => T) {
+  const map = new MultiKeyMap<A | B | C, T, [A, B, C]>();
+  return (a: A, b: B, c: C): T => {
+    let res = map.get([a, b, c]);
+    if (res === undefined) {
+      res = fn(a, b, c);
+      map.set([a, b, c], res);
+    }
+    return res;
+  };
+}
+
+export const getTransformsForLayerOrNull = memoizeWithThreeKeys(_getTransformsForLayerOrNull);
+export function getTransformsForLayer(
+  dataset: APIDataset,
+  layer: APIDataLayer | APISkeletonLayer,
+  nativelyRenderedLayerName: string | null,
+): Transform {
+  return (
+    getTransformsForLayerOrNull(dataset, layer, nativelyRenderedLayerName || null) ||
+    IdentityTransform
+  );
+}
+
+function _getTransformsForSkeletonLayerOrNull(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): Transform | null {
+  if (nativelyRenderedLayerName == null) {
+    // No layer is requested to be rendered natively. We can use
+    // each layer's transforms as is. The skeleton layer doesn't have
+    // a transforms property currently, which is why we return null.
+    return null;
+  }
+
+  // Compute the inverse of the layer that should be rendered natively
+  const nativeLayer = getLayerByName(dataset, nativelyRenderedLayerName, true);
+  const transformsOfNativeLayer = _getOriginalTransformsForLayerOrNull(dataset, nativeLayer);
+
+  if (transformsOfNativeLayer == null) {
+    // The inverse of no transforms, are no transforms
+    return null;
+  }
+
+  return invertTransform(transformsOfNativeLayer);
+}
+
+export const getTransformsForSkeletonLayerOrNull = memoizeOne(_getTransformsForSkeletonLayerOrNull);
+
+export function getTransformsForSkeletonLayer(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): Transform {
+  return (
+    getTransformsForSkeletonLayerOrNull(dataset, nativelyRenderedLayerName || null) ||
+    IdentityTransform
+  );
+}
+
+function _getTransformsPerLayer(
+  dataset: APIDataset,
+  nativelyRenderedLayerName: string | null,
+): Record<string, Transform> {
+  const transformsPerLayer: Record<string, Transform> = {};
+  const layers = dataset.dataSource.dataLayers;
+  for (const layer of layers) {
+    const transforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
+    transformsPerLayer[layer.name] = transforms;
+  }
+
+  return transformsPerLayer;
+}
+
+export const getTransformsPerLayer = memoizeOne(_getTransformsPerLayer);
+
+export function getInverseSegmentationTransformer(
+  state: OxalisState,
+  segmentationLayerName: string,
+) {
+  const { dataset } = state;
+  const { nativelyRenderedLayerName } = state.datasetConfiguration;
+  const layer = getLayerByName(dataset, segmentationLayerName);
+  const segmentationTransforms = getTransformsForLayer(dataset, layer, nativelyRenderedLayerName);
+  return transformPointUnscaled(invertTransform(segmentationTransforms));
+}
+
+export const hasDatasetTransforms = memoizeOne((dataset: APIDataset) => {
+  const layers = dataset.dataSource.dataLayers;
+  return layers.some((layer) => _getOriginalTransformsForLayerOrNull(dataset, layer) != null);
+});
+
+export function flatToNestedMatrix(matrix: Matrix4x4): [Vector4, Vector4, Vector4, Vector4] {
+  return [
+    matrix.slice(0, 4) as Vector4,
+    matrix.slice(4, 8) as Vector4,
+    matrix.slice(8, 12) as Vector4,
+    matrix.slice(12, 16) as Vector4,
+  ];
+}
+
+// Transposition is often needed so that the matrix has the right format
+// for matrix operations (e.g., on the GPU; but not for ThreeJS).
+// Inversion is needed when the position of an "output voxel" (e.g., during
+// rendering in the fragment shader) needs to be mapped to its original
+// data position (i.e., how it's stored without the transformation).
+// Without the inversion, the matrix maps from stored position to the position
+// where it should be rendered.
+export const invertAndTranspose = _.memoize((mat: Matrix4x4) => {
+  return M4x4.transpose(M4x4.inverse(mat));
+});
+
+export function getEffectiveIntensityRange(
+  dataset: APIDataset,
+  layerName: string,
+  datasetConfiguration: DatasetConfiguration,
+): [number, number] {
+  const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, layerName);
+  const layerConfiguration = datasetConfiguration.layers[layerName];
+
+  return layerConfiguration.intensityRange || defaultIntensityRange;
+}
+
+// Note that `hasSegmentIndex` needs to be loaded first (otherwise, the returned
+// value will be undefined). Dispatch an ensureSegmentIndexIsLoadedAction to make
+// sure this info is fetched.
+export function getMaybeSegmentIndexAvailability(
+  dataset: APIDataset,
+  layerName: string | null | undefined,
+) {
+  if (layerName == null) {
+    return false;
+  }
+  return dataset.dataSource.dataLayers.find((layer) => layer.name === layerName)?.hasSegmentIndex;
 }

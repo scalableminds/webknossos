@@ -71,5 +71,9 @@ frontend/javascripts/test/snapshots/type-check/*
 **/screenshots/*.new.png
 .nyc_output
 coverage
+coverage-ts
 *.vscode
 .bsp
+temp-webknossos-schema**
+conf/application.conf-e
+.env

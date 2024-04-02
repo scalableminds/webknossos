@@ -1,9 +1,7 @@
 import _ from "lodash";
 export function chunk2<T>(arr: Array<T>): Array<[T, T]> {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'T[][]' is not assignable to type '[T, T][]'.
-  return _.chunk(arr, 2);
+  return _.chunk(arr, 2) as Array<[T, T]>;
 }
 export function chunk3<T>(arr: Array<T>): Array<[T, T, T]> {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'T[][]' is not assignable to type '[T, T, T][... Remove this comment to see the full error message
-  return _.chunk(arr, 3);
+  return _.chunk(arr, 3) as Array<[T, T, T]>;
 }

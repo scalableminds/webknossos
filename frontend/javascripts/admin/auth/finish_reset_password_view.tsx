@@ -1,6 +1,6 @@
 import React from "react";
 import { RouteComponentProps, withRouter } from "react-router-dom";
-import { Form, Input, Button, Col, Row } from "antd";
+import { Form, Input, Button, Col, Row, Card } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import Request from "libs/request";
 import messages from "messages";
@@ -32,8 +32,7 @@ function FinishResetPasswordView(props: Props) {
     });
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
-  function checkPasswordsAreMatching(value, otherPasswordFieldKey) {
+  function checkPasswordsAreMatching(value: string, otherPasswordFieldKey: string[]) {
     const otherFieldValue = form.getFieldValue(otherPasswordFieldKey);
 
     if (value && otherFieldValue) {
@@ -49,88 +48,82 @@ function FinishResetPasswordView(props: Props) {
   }
 
   return (
-    <Row
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
-      type="flex"
-      justify="center"
-      style={{
-        padding: 50,
-      }}
-      align="middle"
-    >
-      <Col span={8}>
-        <h3>Reset Password</h3>
-        <Form onFinish={onFinish} form={form}>
-          <FormItem
-            hasFeedback
-            name={["password", "password1"]}
-            rules={[
-              {
-                required: true,
-                message: messages["auth.reset_new_password"],
-              },
-              {
-                min: 8,
-                message: messages["auth.registration_password_length"],
-              },
-              {
-                validator: (_, value) =>
-                  checkPasswordsAreMatching(value, ["password", "password2"]),
-              },
-            ]}
-          >
-            <Password
-              prefix={
-                <LockOutlined
-                  style={{
-                    fontSize: 13,
-                  }}
-                />
-              }
-              placeholder="New Password"
-            />
-          </FormItem>
-          <FormItem
-            hasFeedback
-            name={["password", "password2"]}
-            rules={[
-              {
-                required: true,
-                message: messages["auth.reset_new_password2"],
-              },
-              {
-                min: 8,
-                message: messages["auth.registration_password_length"],
-              },
-              {
-                validator: (_, value) =>
-                  checkPasswordsAreMatching(value, ["password", "password1"]),
-              },
-            ]}
-          >
-            <Password
-              prefix={
-                <LockOutlined
-                  style={{
-                    fontSize: 13,
-                  }}
-                />
-              }
-              placeholder="Confirm New Password"
-            />
-          </FormItem>
-          <FormItem>
-            <Button
-              type="primary"
-              htmlType="submit"
-              style={{
-                width: "100%",
-              }}
+    <Row className="login-view" justify="center" align="middle">
+      <Col>
+        <Card className="login-content">
+          <h3>Reset Password</h3>
+          <Form onFinish={onFinish} form={form}>
+            <FormItem
+              hasFeedback
+              name={["password", "password1"]}
+              rules={[
+                {
+                  required: true,
+                  message: messages["auth.reset_new_password"],
+                },
+                {
+                  min: 8,
+                  message: messages["auth.registration_password_length"],
+                },
+                {
+                  validator: (_, value: string) =>
+                    checkPasswordsAreMatching(value, ["password", "password2"]),
+                },
+              ]}
             >
-              Reset Password
-            </Button>
-          </FormItem>
-        </Form>
+              <Password
+                prefix={
+                  <LockOutlined
+                    style={{
+                      fontSize: 13,
+                    }}
+                  />
+                }
+                placeholder="New Password"
+              />
+            </FormItem>
+            <FormItem
+              hasFeedback
+              name={["password", "password2"]}
+              rules={[
+                {
+                  required: true,
+                  message: messages["auth.reset_new_password2"],
+                },
+                {
+                  min: 8,
+                  message: messages["auth.registration_password_length"],
+                },
+                {
+                  validator: (_, value: string) =>
+                    checkPasswordsAreMatching(value, ["password", "password1"]),
+                },
+              ]}
+            >
+              <Password
+                prefix={
+                  <LockOutlined
+                    style={{
+                      fontSize: 13,
+                    }}
+                  />
+                }
+                placeholder="Confirm New Password"
+              />
+            </FormItem>
+            <FormItem>
+              <Button
+                type="primary"
+                htmlType="submit"
+                style={{
+                  width: "100%",
+                }}
+              >
+                Reset Password
+              </Button>
+            </FormItem>
+          </Form>
+        </Card>
       </Col>
     </Row>
   );

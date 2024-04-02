@@ -10,14 +10,14 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrCoordinatesP
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.WebKnossosDataRequest
+import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{EditableMappingService, RemoteFallbackLayer}
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
-  TSRemoteWebKnossosClient,
+  TSRemoteWebknossosClient,
   TracingStoreAccessTokenService
 }
 import play.api.i18n.Messages
@@ -31,7 +31,7 @@ class VolumeTracingZarrStreamingController @Inject()(
     accessTokenService: TracingStoreAccessTokenService,
     editableMappingService: EditableMappingService,
     remoteDataStoreClient: TSRemoteDatastoreClient,
-    remoteWebKnossosClient: TSRemoteWebKnossosClient)(implicit ec: ExecutionContext)
+    remoteWebknossosClient: TSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends ExtendedController
     with ProtoGeometryImplicits
     with FoxImplicits {
@@ -152,8 +152,7 @@ class VolumeTracingZarrStreamingController @Inject()(
         tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
 
         existingMags = tracing.resolutions.map(vec3IntFromProto)
-        dataSource <- remoteWebKnossosClient.getDataSource(tracing.organizationName, tracing.dataSetName) ~> NOT_FOUND
-
+        dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadata.fromNameScaleAndMags(tracingId,
                                                           dataSourceScale = dataSource.scale,
                                                           mags = existingMags.toList)
@@ -172,7 +171,7 @@ class VolumeTracingZarrStreamingController @Inject()(
             largestSegmentId = tracing.largestSegmentId,
             boundingBox = tracing.boundingBox,
             elementClass = tracing.elementClass,
-            mags = tracing.resolutions.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz))),
+            mags = tracing.resolutions.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
             mappings = None,
             numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1)
           )
@@ -194,18 +193,20 @@ class VolumeTracingZarrStreamingController @Inject()(
             (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> NOT_FOUND
             _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> NOT_FOUND
             cubeSize = DataLayer.bucketLength
-            wkRequest = WebKnossosDataRequest(
+            wkRequest = WebknossosDataRequest(
               position = Vec3Int(x, y, z) * cubeSize * magParsed,
               mag = magParsed,
               cubeSize = cubeSize,
               fourBit = Some(false),
               applyAgglomerate = None,
-              version = None
+              version = None,
+              additionalCoordinates = None
             )
             (data, missingBucketIndices) <- if (tracing.getMappingIsEditable)
-              editableMappingService.volumeData(tracing, List(wkRequest), urlOrHeaderToken(token, request))
+              editableMappingService.volumeData(tracing, tracingId, List(wkRequest), urlOrHeaderToken(token, request))
             else tracingService.data(tracingId, tracing, List(wkRequest))
             dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
+                                                            tracingId,
                                                             data,
                                                             missingBucketIndices,
                                                             magParsed,
@@ -218,39 +219,29 @@ class VolumeTracingZarrStreamingController @Inject()(
     }
 
   private def getFallbackLayerDataIfEmpty(tracing: VolumeTracing,
+                                          tracingId: String,
                                           data: Array[Byte],
                                           missingBucketIndices: List[Int],
                                           mag: Vec3Int,
                                           position: Vec3Int,
                                           cubeSize: Int,
-                                          urlToken: Option[String]): Fox[Array[Byte]] = {
-    def fallbackLayerData(fallbackLayerName: String): Fox[Array[Byte]] = {
-      val request = WebKnossosDataRequest(
-        position = position * mag * cubeSize,
-        mag = mag,
-        cubeSize = cubeSize,
-        fourBit = Some(false),
-        applyAgglomerate = tracing.mappingName,
-        version = None
-      )
+                                          urlToken: Option[String]): Fox[Array[Byte]] =
+    if (missingBucketIndices.nonEmpty) {
       for {
-        organizationName <- tracing.organizationName ?~> "Zarr streaming not supported for legacy volume annotations (organizationName is not set)"
-        remoteFallbackLayer = RemoteFallbackLayer(organizationName,
-                                                  tracing.dataSetName,
-                                                  fallbackLayerName,
-                                                  tracing.elementClass)
+        remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId) ?~> "No data at coordinates, no fallback layer defined"
+        request = WebknossosDataRequest(
+          position = position * mag * cubeSize,
+          mag = mag,
+          cubeSize = cubeSize,
+          fourBit = Some(false),
+          applyAgglomerate = tracing.mappingName,
+          version = None,
+          additionalCoordinates = None
+        )
         (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(remoteFallbackLayer,
                                                                                       List(request),
                                                                                       urlToken)
         _ <- bool2Fox(fallbackMissingBucketIndices.isEmpty) ?~> "No data at coordinations in fallback layer"
       } yield fallbackData
-    }
-
-    if (missingBucketIndices.nonEmpty) {
-      for {
-        fallbackLayer <- tracing.fallbackLayer.toFox ?~> "No data at coordinates, no fallback layer defined"
-        data <- fallbackLayerData(fallbackLayer) ?~> "No data at coordinates, no fallback layer data at coordinates."
-      } yield data
     } else Fox.successful(data)
-  }
 }

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import _ from "lodash";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 
 // This component allows cross origin communication, for example, between a host page
 // and an embedded webKnossos iframe.
@@ -144,6 +144,7 @@ function CrossOriginApi() {
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, []);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Rerun each time window.webknossos changes.
   useEffect(() => {
     // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type 'Wind... Remove this comment to see the full error message
     if (window.webknossos && window.parent) {

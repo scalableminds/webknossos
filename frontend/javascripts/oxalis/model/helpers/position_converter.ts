@@ -1,11 +1,14 @@
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4, BucketAddress } from "oxalis/constants";
 import constants from "oxalis/constants";
-import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+import { type ResolutionInfo } from "./resolution_info";
+
 export function globalPositionToBucketPosition(
   [x, y, z]: Vector3,
   resolutions: Array<Vector3>,
   resolutionIndex: number,
-): Vector4 {
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+): BucketAddress {
   const resolution =
     resolutionIndex < resolutions.length
       ? resolutions[resolutionIndex]
@@ -15,6 +18,7 @@ export function globalPositionToBucketPosition(
     Math.floor(y / (constants.BUCKET_WIDTH * resolution[1])),
     Math.floor(z / (constants.BUCKET_WIDTH * resolution[2])),
     resolutionIndex,
+    additionalCoordinates || [],
   ];
 }
 export function scaleGlobalPositionWithResolution(
@@ -64,10 +68,11 @@ export function upsampleResolution(resolutions: Array<Vector3>, resolutionIndex:
   ];
 }
 export function bucketPositionToGlobalAddress(
-  [x, y, z, resolutionIndex]: Vector4,
-  resolutions: Array<Vector3>,
+  bucketPosition: BucketAddress,
+  resolutionInfo: ResolutionInfo,
 ): Vector3 {
-  const resolution = resolutions[resolutionIndex];
+  const [x, y, z, resolutionIndex, _additionalCoordinates] = bucketPosition;
+  const resolution = resolutionInfo.getResolutionByIndexOrThrow(resolutionIndex);
   return [
     x * constants.BUCKET_WIDTH * resolution[0],
     y * constants.BUCKET_WIDTH * resolution[1],
@@ -84,15 +89,17 @@ export function getResolutionsFactors(resolutionA: Vector3, resolutionB: Vector3
 export function zoomedPositionToZoomedAddress(
   [x, y, z]: Vector3,
   resolutionIndex: number,
-): Vector4 {
+  additionalCoordinates: AdditionalCoordinate[] | null,
+): BucketAddress {
   return [
     Math.floor(x / constants.BUCKET_WIDTH),
     Math.floor(y / constants.BUCKET_WIDTH),
     Math.floor(z / constants.BUCKET_WIDTH),
     resolutionIndex,
+    additionalCoordinates || [],
   ];
 }
-export function zoomedAddressToZoomedPosition([x, y, z, _]: Vector4): Vector3 {
+export function zoomedAddressToZoomedPosition([x, y, z, _]: BucketAddress): Vector3 {
   return [x * constants.BUCKET_WIDTH, y * constants.BUCKET_WIDTH, z * constants.BUCKET_WIDTH];
 }
 // TODO: zoomedAddressToAnotherZoomStep usages should be converted to zoomedAddressToAnotherZoomStepWithInfo
@@ -137,8 +144,12 @@ export function zoomedAddressToAnotherZoomStepWithInfo(
     targetResolutionIndex,
   ];
 }
-export function getBucketExtent(resolutions: Vector3[], resolutionIndex: number): Vector3 {
-  return bucketPositionToGlobalAddress([1, 1, 1, resolutionIndex], resolutions);
+export function getBucketExtent(resolution: Vector3): Vector3 {
+  return [
+    constants.BUCKET_WIDTH * resolution[0],
+    constants.BUCKET_WIDTH * resolution[1],
+    constants.BUCKET_WIDTH * resolution[2],
+  ];
 }
 // This function returns all bucket addresses for which the fallback bucket
 // is the provided bucket.

@@ -8,6 +8,10 @@ if (process.env.NODE_ENV === "production") deepFreeze = _.identity;
 export default function reduceReducers(
   ...reducers: Array<(...args: Array<any>) => any>
 ): (...args: Array<any>) => any {
+  if (reducers.some((r) => r == null)) {
+    console.log("A reducer is null:", reducers);
+    throw new Error("A reducer is null. Are there cyclic dependencies?");
+  }
   return (previous, current) =>
     reducers.reduce((p, r) => deepFreeze(r(p, current)), deepFreeze(previous));
 }

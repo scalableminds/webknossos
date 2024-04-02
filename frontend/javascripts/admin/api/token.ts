@@ -25,7 +25,7 @@ export function getSharingTokenFromUrlParameters(): string | null | undefined {
   if (location != null) {
     const params = Utils.getUrlParamsObject();
 
-    if (params != null && params.token != null) {
+    if (params?.token != null) {
       return params.token;
     }
   }

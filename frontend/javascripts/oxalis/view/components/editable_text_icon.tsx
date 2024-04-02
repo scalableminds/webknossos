@@ -1,11 +1,12 @@
-import { Input } from "antd";
-// @ts-expect-error ts-migrate(2724) FIXME: '"react"' has no exported member named 'Element'. ... Remove this comment to see the full error message
-import type { Element } from "react";
+import { Button, Input } from "antd";
 import React from "react";
+
 type Props = {
-  icon: Element<any>;
-  onChange: (...args: Array<any>) => any;
+  icon: React.ReactElement;
+  label?: string;
+  onChange: (value: string, event: React.SyntheticEvent<HTMLInputElement>) => void;
 };
+
 type State = {
   isEditing: boolean;
   value: string;
@@ -17,14 +18,13 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
     value: "",
   };
 
-  handleInputChange = (event: React.SyntheticEvent) => {
+  handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       value: event.target.value,
     });
   };
 
-  handleInputSubmit = (event: React.SyntheticEvent) => {
+  handleInputSubmit = (event: React.SyntheticEvent<HTMLInputElement>) => {
     const { value } = this.state;
 
     if (value !== "") {
@@ -38,10 +38,6 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const iconStyle = {
-      cursor: "pointer",
-    };
-
     if (this.state.isEditing) {
       return (
         <Input
@@ -56,15 +52,27 @@ class EditableTextIcon extends React.PureComponent<Props, State> {
           autoFocus
         />
       );
-    } else {
-      return React.cloneElement(this.props.icon, {
-        style: iconStyle,
-        onClick: () =>
+    }
+
+    return (
+      <Button
+        size="small"
+        icon={this.props.icon}
+        style={{
+          height: 22,
+          width: this.props.label ? "initial" : 22,
+          fontSize: "12px",
+          color: "#7c7c7c",
+        }}
+        onClick={() =>
           this.setState({
             isEditing: true,
-          }),
-      });
-    }
+          })
+        }
+      >
+        {this.props.label ? <span style={{ marginLeft: 0 }}>{this.props.label}</span> : null}
+      </Button>
+    );
   }
 }
 

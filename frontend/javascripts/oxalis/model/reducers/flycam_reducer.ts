@@ -6,10 +6,13 @@ import { M4x4 } from "libs/mjs";
 import type { OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
-import { getValidZoomRangeForUser } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getValidZoomRangeForUser,
+  ZOOM_STEP_INTERVAL,
+} from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import * as Utils from "libs/utils";
-export const ZOOM_STEP_INTERVAL = 1.1;
+import { getUnifiedAdditionalCoordinates } from "../accessors/dataset_accessor";
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
@@ -32,7 +35,7 @@ function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   ];
 }
 
-function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vector3): Matrix4x4 {
+export function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vector3): Matrix4x4 {
   return M4x4.rotate(angle, axis, currentMatrix, []);
 }
 
@@ -87,15 +90,15 @@ function rotateReducer(
   });
 }
 
-export function getMatrixScale(dataSetScale: Vector3): Vector3 {
-  const scale = [1 / dataSetScale[0], 1 / dataSetScale[1], 1 / dataSetScale[2]];
+export function getMatrixScale(datasetScale: Vector3): Vector3 {
+  const scale = [1 / datasetScale[0], 1 / datasetScale[1], 1 / datasetScale[2]];
   const maxScale = Math.max(scale[0], scale[1], scale[2]);
   const multi = 1 / maxScale;
   return [multi * scale[0], multi * scale[1], multi * scale[2]];
 }
 
-function resetMatrix(matrix: Matrix4x4, dataSetScale: Vector3) {
-  const scale = getMatrixScale(dataSetScale);
+function resetMatrix(matrix: Matrix4x4, datasetScale: Vector3) {
+  const scale = getMatrixScale(datasetScale);
   // Save position
   const position = [matrix[12], matrix[13], matrix[14]];
   // Reset rotation
@@ -162,6 +165,7 @@ export function setDirectionReducer(state: OxalisState, direction: Vector3) {
     },
   });
 }
+
 export function setRotationReducer(state: OxalisState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
@@ -234,8 +238,50 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_ADDITIONAL_COORDINATES": {
+      const unifiedAdditionalCoordinates = getUnifiedAdditionalCoordinates(state.dataset);
+
+      // In case the specified additional coordinates don't cover all existing additional
+      // coordinates, add the missing coordinates back.
+      // This *should* not happen, but in case of a bug somewhere, it's better to guard
+      // against this here (for example, if a skeleton node doesn't have the necessary
+      // additional coordinates, the UI shouldn't forget about the other additional
+      // coordinates).
+      let { values } = action;
+
+      const existingAdditionalCoordinates = state.flycam.additionalCoordinates;
+      values = Utils.values(unifiedAdditionalCoordinates).map(({ name, bounds }, index) => {
+        const fallbackValue =
+          (existingAdditionalCoordinates != null
+            ? existingAdditionalCoordinates[index]?.value
+            : null) ?? bounds[0];
+        if (values) {
+          const specifiedValue = values.find((element) => element.name === name);
+          if (specifiedValue) {
+            return {
+              name,
+              value: Utils.clamp(bounds[0], specifiedValue.value, bounds[1]),
+            };
+          }
+        }
+        return { name, value: fallbackValue };
+      });
+
+      return update(state, {
+        flycam: {
+          additionalCoordinates: { $set: values },
+        },
+      });
+    }
+
     case "SET_ROTATION": {
-      return setRotationReducer(state, action.rotation);
+      // This action should only be dispatched when *not* being in orthogonal mode,
+      // because this would lead to incorrect buckets being selected for rendering.
+      if (state.temporaryConfiguration.viewMode !== "orthogonal") {
+        return setRotationReducer(state, action.rotation);
+      }
+      // No-op
+      return state;
     }
 
     case "SET_DIRECTION": {

@@ -37,7 +37,6 @@ class AbstractTreeTab extends Component<Props, State> {
     window.removeEventListener("resize", this.drawTree, false);
   }
 
-  // eslint-disable-next-line react/sort-comp
   drawTree = _.throttle(() => {
     if (!this.props.skeletonTracing || !this.state.visible) {
       return;

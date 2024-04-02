@@ -14,7 +14,7 @@ import {
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter, Link } from "react-router-dom";
@@ -26,21 +26,21 @@ import type {
   MutableAPIDataSource,
   APIDatasetId,
   APIMessage,
+  APIUnimportedDatasource,
 } from "types/api_flow_types";
-import { Unicode } from "oxalis/constants";
+import { Unicode, Vector3 } from "oxalis/constants";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
-import DatasetCacheProvider, { datasetCache } from "dashboard/dataset/dataset_cache_provider";
 import LinkButton from "components/link_button";
 import { diffObjects, jsonStringify } from "libs/utils";
 import {
   getDataset,
-  updateDataset,
   getDatasetDefaultConfiguration,
   updateDatasetDefaultConfiguration,
   getDatasetDatasource,
   updateDatasetDatasource,
   updateDatasetTeams,
   sendAnalyticsEvent,
+  updateDatasetPartial,
 } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import { trackAction } from "oxalis/model/helpers/analytics";
@@ -54,9 +54,9 @@ import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
 import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
 import DatasetSettingsDeleteTab from "./dataset_settings_delete_tab";
-import DatasetSettingsDataTab from "./dataset_settings_data_tab";
+import DatasetSettingsDataTab, { syncDataSourceFields } from "./dataset_settings_data_tab";
+import { defaultContext } from "@tanstack/react-query";
 
-const { TabPane } = Tabs;
 const FormItem = Form.Item;
 const notImportedYetStatus = "Not imported yet.";
 type OwnProps = {
@@ -95,10 +95,9 @@ type State = {
   isLoading: boolean;
   activeDataSourceEditMode: "simple" | "advanced";
   activeTabKey: TabKey;
-  savedDataSourceOnServer: APIDataSource | null | undefined;
+  savedDataSourceOnServer: APIDataSource | APIUnimportedDatasource | null | undefined;
   inferredDataSource: APIDataSource | null | undefined;
   differenceBetweenDataSources: Record<string, any>;
-  hasNoAllowedTeams: boolean;
   dataSourceSettingsStatus: DataSourceSettingsStatus;
 };
 export type FormData = {
@@ -110,25 +109,35 @@ export type FormData = {
 };
 
 function ensureValidScaleOnInferredDataSource(
-  savedDataSourceOnServer: APIDataSource | null | undefined,
+  savedDataSourceOnServer: APIDataSource | APIUnimportedDatasource | null | undefined,
   inferredDataSource: APIDataSource | null | undefined,
 ): APIDataSource | null | undefined {
   if (savedDataSourceOnServer == null || inferredDataSource == null) {
     // If one of the data sources is null, return the other.
-    return savedDataSourceOnServer || inferredDataSource;
+    const potentialSource = savedDataSourceOnServer || inferredDataSource;
+    if (potentialSource && "dataLayers" in potentialSource) {
+      return potentialSource as APIDataSource;
+    } else {
+      return null;
+    }
   }
 
   const inferredDataSourceClone = _.cloneDeep(inferredDataSource) as any as MutableAPIDataSource;
 
-  if (
-    _.isEqual(inferredDataSource.scale, [0, 0, 0]) &&
-    !_.isEqual(savedDataSourceOnServer.scale, [0, 0, 0])
-  ) {
-    inferredDataSourceClone.scale = savedDataSourceOnServer.scale;
+  const savedScale =
+    "dataLayers" in savedDataSourceOnServer
+      ? savedDataSourceOnServer.scale
+      : ([0, 0, 0] as Vector3);
+  if (_.isEqual(inferredDataSource.scale, [0, 0, 0]) && !_.isEqual(savedScale, [0, 0, 0])) {
+    inferredDataSourceClone.scale = savedScale;
   }
 
   // Trying to use the saved value for largestSegmentId instead of 0.
-  if (savedDataSourceOnServer.dataLayers != null && inferredDataSourceClone.dataLayers != null) {
+  if (
+    "dataLayers" in savedDataSourceOnServer &&
+    savedDataSourceOnServer.dataLayers != null &&
+    inferredDataSourceClone.dataLayers != null
+  ) {
     const segmentationLayerSettings = inferredDataSourceClone.dataLayers.find(
       (layer) => layer.category === "segmentation",
     );
@@ -156,6 +165,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
   formRef = React.createRef<FormInstance>();
   unblock: UnregisterCallback | null | undefined;
   blockTimeoutId: number | null | undefined;
+  static contextType = defaultContext;
+  declare context: React.ContextType<typeof defaultContext>;
 
   state: State = {
     hasUnsavedChanges: false,
@@ -168,7 +179,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     savedDataSourceOnServer: null,
     inferredDataSource: null,
     differenceBetweenDataSources: {},
-    hasNoAllowedTeams: false,
     dataSourceSettingsStatus: {
       appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
       isJSONFormatValid: IsJSONFormatValidEnum.Yes,
@@ -248,6 +258,21 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       const didParsingTheSavedDataSourceJSONSucceed =
         savedDataSourceOnServer != null && savedDataSourceOnServer.status == null;
 
+      // Ensure that zarr layers (which aren't inferred by the back-end) are still
+      // included in the inferred data source
+      if (
+        savedDataSourceOnServer &&
+        "dataLayers" in savedDataSourceOnServer &&
+        inferredDataSource != null
+      ) {
+        const layerDict = _.keyBy(inferredDataSource.dataLayers, "name");
+        for (const layer of savedDataSourceOnServer.dataLayers) {
+          if (layer.dataFormat === "zarr" && layerDict[layer.name] == null) {
+            inferredDataSource.dataLayers.push(layer);
+          }
+        }
+      }
+
       if (didParsingTheSavedDataSourceJSONSucceed) {
         dataSource = savedDataSourceOnServer;
 
@@ -286,7 +311,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         throw new Error("No datasource received from server.");
       }
 
-      if (dataset.dataSource.status != null && dataset.dataSource.status.includes("Error")) {
+      if (dataset.dataSource.status?.includes("Error")) {
         // If the datasource-properties.json could not be parsed due to schema errors,
         // we replace it with the version that is at least parsable.
         const datasetClone = _.cloneDeep(dataset) as any as MutableAPIDataset;
@@ -308,7 +333,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
           isPublic: dataset.isPublic || false,
           description: dataset.description || undefined,
           allowedTeams: dataset.allowedTeams || [],
-          sortingKey: moment(dataset.sortingKey),
+          sortingKey: dayjs(dataset.sortingKey),
         },
       });
       // This call cannot be combined with the previous setFieldsValue,
@@ -329,9 +354,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         ),
       });
       this.setState({
-        datasetDefaultConfiguration,
+        datasetDefaultConfiguration: datasetDefaultConfiguration,
         dataset,
-        hasNoAllowedTeams: (dataset.allowedTeams || []).length === 0,
       });
     } catch (error) {
       handleGenericError(error as Error);
@@ -364,8 +388,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       return null;
     }
 
-    // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'title' implicitly has an 'any' type.
-    function showJSONModal(title, object) {
+    function showJSONModal(title: string, object: any) {
       Modal.info({
         title,
         width: 800,
@@ -414,9 +437,9 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       message = (
         <div>
           The current datasource-properties.json on the server seems to be in an invalid JSON format
-          and webKnossos could not parse this file. The settings below are suggested by webKnossos
-          and should be adjusted. <br />
-          Be aware that webKnossos cannot guess properties like the voxel size or the largest
+          (or is missing completely). The settings below are suggested by WEBKNOSSOS and should be
+          adjusted. <br />
+          Be aware that WEBKNOSSOS cannot guess properties like the voxel size or the largest
           segment id. You must set them yourself.
         </div>
       );
@@ -437,7 +460,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
           >
             Here
           </LinkButton>{" "}
-          are suggested settings from webKnossos. But be aware that properties like the voxel size
+          are suggested settings from WEBKNOSSOS. But be aware that properties like the voxel size
           or the largest segment id cannot be detected correctly. <br />
           If you want to apply those settings, click{" "}
           <LinkButton onClick={applySuggestedSettings}>here</LinkButton>.
@@ -461,7 +484,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       // The datasource-properties.json saved on the server is valid and the user did not merge the suggested settings.
       message = (
         <div>
-          webKnossos detected additional information not yet present in the dataset’s{" "}
+          WEBKNOSSOS detected additional information not yet present in the dataset’s{" "}
           <em>datasource-properties.json</em> file:
           <div
             style={{
@@ -587,7 +610,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         const dataSource = JSON.parse(form.getFieldValue("dataSourceJson"));
         const didNotEditDatasource = !this.didDatasourceChange(dataSource);
         return didNotEditDatasource;
-      } catch (e) {
+      } catch (_e) {
         return false;
       }
     }
@@ -611,12 +634,15 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
 
   handleSubmit = () => {
     // Ensure that all form fields are in sync
-    this.syncDataSourceFields();
     const form = this.formRef.current;
 
     if (!form) {
       return;
     }
+    syncDataSourceFields(
+      form,
+      this.state.activeDataSourceEditMode === "simple" ? "advanced" : "simple",
+    );
 
     const afterForceUpdateCallback = () =>
       // Trigger validation manually, because fields may have been updated
@@ -640,7 +666,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     }
 
     const teamIds = formValues.dataset.allowedTeams.map((t) => t.id);
-    await updateDataset(this.props.datasetId, { ...dataset, ...datasetChangeValues });
+    await updateDatasetPartial(this.props.datasetId, datasetChangeValues);
 
     if (datasetDefaultConfiguration != null) {
       await updateDatasetDefaultConfiguration(
@@ -654,7 +680,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     await updateDatasetTeams(this.props.datasetId, teamIds);
     const dataSource = JSON.parse(formValues.dataSourceJson);
 
-    if (dataset != null && !dataset.dataStore.isConnector && this.didDatasourceChange(dataSource)) {
+    if (dataset != null && this.didDatasourceChange(dataSource)) {
       await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
       this.setState({
         savedDataSourceOnServer: dataSource,
@@ -667,7 +693,18 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     this.setState({
       hasUnsavedChanges: false,
     });
-    datasetCache.clear();
+
+    if (dataset) {
+      // Update new cache
+      const queryClient = this.context;
+      if (queryClient) {
+        queryClient.invalidateQueries({
+          queryKey: ["datasetsByFolder", dataset.folderId],
+        });
+        queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+      }
+    }
+
     trackAction(`Dataset ${verb}`);
     this.props.onComplete();
   };
@@ -742,36 +779,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     );
   }
 
-  syncDataSourceFields = (_syncTargetTabKey?: "simple" | "advanced"): void => {
-    // If no sync target was provided, update the non-active tab with the values of the active one
-    const syncTargetTabKey =
-      _syncTargetTabKey ||
-      (this.state.activeDataSourceEditMode === "simple" ? "advanced" : "simple");
-    const form = this.formRef.current;
-
-    if (!form) {
-      return;
-    }
-
-    if (syncTargetTabKey === "advanced") {
-      // Copy from simple to advanced: update json
-      const dataSourceFromSimpleTab = form.getFieldValue("dataSource");
-      form.setFieldsValue({
-        dataSourceJson: jsonStringify(dataSourceFromSimpleTab),
-      });
-    } else {
-      const dataSourceFromAdvancedTab = JSON.parse(form.getFieldValue("dataSourceJson"));
-      // Copy from advanced to simple: update form values
-      form.setFieldsValue({
-        dataSource: dataSourceFromAdvancedTab,
-      });
-    }
-  };
-
-  onValuesChange = (changedValues: FormData, allValues: FormData) => {
-    const hasNoAllowedTeams = (allValues.dataset.allowedTeams || []).length === 0;
+  onValuesChange = (_changedValues: FormData, _allValues: FormData) => {
     this.setState({
-      hasNoAllowedTeams,
       hasUnsavedChanges: true,
     });
   };
@@ -806,22 +815,100 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         <ExclamationCircleOutlined
           style={{
             marginLeft: 4,
-            color: "var(--ant-error)",
+            color: "var(--ant-color-error)",
           }}
         />
       </Tooltip>
     );
-    const { hasNoAllowedTeams } = this.state;
-    const hasNoAllowedTeamsWarning = hasNoAllowedTeams ? (
-      <Tooltip title="Please double-check some fields here.">
-        <ExclamationCircleOutlined
-          style={{
-            marginLeft: 4,
-            color: "var(--ant-warning)",
-          }}
-        />
-      </Tooltip>
-    ) : null;
+
+    const tabs = [
+      {
+        label: <span> Data {formErrors.data ? errorIcon : ""}</span>,
+        key: "data",
+        forceRender: true,
+        children: (
+          <Hideable hidden={this.state.activeTabKey !== "data"}>
+            {
+              // We use the Hideable component here to avoid that the user can "tab"
+              // to hidden form elements.
+            }
+            {form && (
+              <DatasetSettingsDataTab
+                key="SimpleAdvancedDataForm"
+                dataset={this.state.dataset}
+                allowRenamingDataset={false}
+                form={form}
+                activeDataSourceEditMode={this.state.activeDataSourceEditMode}
+                onChange={(activeEditMode) => {
+                  const currentForm = this.formRef.current;
+
+                  if (!currentForm) {
+                    return;
+                  }
+
+                  syncDataSourceFields(currentForm, activeEditMode);
+                  currentForm.validateFields();
+                  this.setState({
+                    activeDataSourceEditMode: activeEditMode,
+                  });
+                }}
+                additionalAlert={this.getDatasourceDiffAlert()}
+              />
+            )}
+          </Hideable>
+        ),
+      },
+
+      {
+        label: <span>Sharing & Permissions {formErrors.general ? errorIcon : null}</span>,
+        key: "sharing",
+        forceRender: true,
+        children: (
+          <Hideable hidden={this.state.activeTabKey !== "sharing"}>
+            <DatasetSettingsSharingTab
+              form={form}
+              datasetId={this.props.datasetId}
+              dataset={this.state.dataset}
+            />
+          </Hideable>
+        ),
+      },
+
+      {
+        label: <span>Metadata</span>,
+        key: "general",
+        forceRender: true,
+        children: (
+          <Hideable hidden={this.state.activeTabKey !== "general"}>
+            <DatasetSettingsMetadataTab />
+          </Hideable>
+        ),
+      },
+
+      {
+        label: <span> View Configuration {formErrors.defaultConfig ? errorIcon : ""}</span>,
+        key: "defaultConfig",
+        forceRender: true,
+        children: (
+          <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
+            <DatasetSettingsViewConfigTab />
+          </Hideable>
+        ),
+      },
+    ];
+
+    if (isUserAdmin && features().allowDeleteDatasets)
+      tabs.push({
+        label: <span> Delete Dataset </span>,
+        key: "deleteDataset",
+        forceRender: true,
+        children: (
+          <Hideable hidden={this.state.activeTabKey !== "deleteDataset"}>
+            <DatasetSettingsDeleteTab datasetId={this.props.datasetId} />
+          </Hideable>
+        ),
+      });
+
     return (
       <Form
         ref={this.formRef}
@@ -851,88 +938,8 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                     activeTabKey,
                   })
                 }
-              >
-                <TabPane
-                  tab={<span> Data {formErrors.data ? errorIcon : ""}</span>}
-                  key="data"
-                  forceRender
-                >
-                  {
-                    // We use the Hideable component here to avoid that the user can "tab"
-                    // to hidden form elements.
-                  }
-                  <Hideable hidden={this.state.activeTabKey !== "data"}>
-                    <DatasetSettingsDataTab
-                      key="SimpleAdvancedDataForm"
-                      isReadOnlyDataset={
-                        this.state.dataset != null && this.state.dataset.dataStore.isConnector
-                      }
-                      form={form}
-                      activeDataSourceEditMode={this.state.activeDataSourceEditMode}
-                      onChange={(activeEditMode) => {
-                        const currentForm = this.formRef.current;
-
-                        if (!currentForm) {
-                          return;
-                        }
-
-                        this.syncDataSourceFields(activeEditMode);
-                        currentForm.validateFields();
-                        this.setState({
-                          activeDataSourceEditMode: activeEditMode,
-                        });
-                      }}
-                      additionalAlert={this.getDatasourceDiffAlert()}
-                    />
-                  </Hideable>
-                </TabPane>
-
-                <TabPane
-                  tab={
-                    <span>
-                      Sharing & Permissions{" "}
-                      {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
-                    </span>
-                  }
-                  key="sharing"
-                  forceRender
-                >
-                  <Hideable hidden={this.state.activeTabKey !== "sharing"}>
-                    <DatasetSettingsSharingTab
-                      form={form}
-                      datasetId={this.props.datasetId}
-                      dataset={this.state.dataset}
-                      hasNoAllowedTeams={hasNoAllowedTeams}
-                    />
-                  </Hideable>
-                </TabPane>
-
-                <TabPane tab={<span>Metadata</span>} key="general" forceRender>
-                  <Hideable hidden={this.state.activeTabKey !== "general"}>
-                    <DatasetSettingsMetadataTab />
-                  </Hideable>
-                </TabPane>
-
-                <TabPane
-                  tab={<span> View Configuration {formErrors.defaultConfig ? errorIcon : ""}</span>}
-                  key="defaultConfig"
-                  forceRender
-                >
-                  <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
-                    <DatasetSettingsViewConfigTab />
-                  </Hideable>
-                </TabPane>
-
-                {isUserAdmin && features().allowDeleteDatasets ? (
-                  <TabPane tab={<span> Delete Dataset </span>} key="deleteDataset" forceRender>
-                    <Hideable hidden={this.state.activeTabKey !== "deleteDataset"}>
-                      <DatasetCacheProvider>
-                        <DatasetSettingsDeleteTab datasetId={this.props.datasetId} />
-                      </DatasetCacheProvider>
-                    </Hideable>
-                  </TabPane>
-                ) : null}
-              </Tabs>
+                items={tabs}
+              />
             </Card>
             <FormItem
               style={{
@@ -953,7 +960,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  isUserAdmin: state.activeUser != null && state.activeUser.isAdmin,
+  isUserAdmin: state.activeUser?.isAdmin || false,
 });
 
 const connector = connect(mapStateToProps);

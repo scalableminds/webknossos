@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { InputKeyboardNoLoop } from "libs/input";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
 import {
@@ -21,18 +21,15 @@ import {
   getActiveNode,
   getActiveTree,
   getTree,
+  getNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  getDatasetResolutionInfo,
-  getLayerBoundaries,
-} from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, AnnotationTool, ControlMode } from "oxalis/constants";
 import type { Node, UserConfiguration, DatasetConfiguration, TreeMap, Mapping } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
-import window, { location } from "libs/window";
+import { location } from "libs/window";
 import * as Utils from "libs/utils";
 import {
   ControlModeEnum,
@@ -50,7 +47,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
-import { doWithToken, finishAnnotation, requestTask } from "admin/admin_rest_api";
+import { finishAnnotation, requestTask } from "admin/admin_rest_api";
 import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import messages from "messages";
 import type { ToastStyle } from "libs/toast";
@@ -60,6 +57,8 @@ import { APICompoundType, APICompoundTypeEnum } from "types/api_flow_types";
 import { coalesce } from "libs/utils";
 
 import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
+import { getLayerBoundingBox } from "oxalis/model/accessors/dataset_accessor";
+import { type AdditionalCoordinate } from "types/api_flow_types";
 
 function makeTreeBackwardsCompatible(tree: TreeMap) {
   return update(tree, {
@@ -159,7 +158,7 @@ class TracingApi {
       const tree =
         treeId != null
           ? skeletonTracing.trees[treeId]
-          : findTreeByNodeId(skeletonTracing.trees, nodeId).get();
+          : findTreeByNodeId(skeletonTracing.trees, nodeId);
       assertExists(tree, `Couldn't find node ${nodeId}.`);
       Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
     } else {
@@ -192,7 +191,6 @@ class TracingApi {
       assertExists(tree, `Couldn't find node ${nodeId}.`);
     }
 
-    // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
     const comment = tree.comments.find((__) => __.nodeId === nodeId);
     return comment != null ? comment.content : null;
   }
@@ -259,10 +257,9 @@ class TracingApi {
       const annotation = await requestTask();
       const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
 
-      const isDifferentTaskType =
-        annotation.task.type.id !== Utils.__guard__(task, (x) => x.type.id);
+      const isDifferentTaskType = annotation.task.type.id !== task?.type.id;
 
-      const currentScript = task != null && task.script != null ? task.script.gist : null;
+      const currentScript = task?.script != null ? task.script.gist : null;
       const nextScript = annotation.task.script != null ? annotation.task.script.gist : null;
       const isDifferentScript = currentScript !== nextScript;
       const newTaskUrl = `/annotations/${annotation.typ}/${annotation.id}`;
@@ -350,9 +347,10 @@ class TracingApi {
    * api.tracing.centerNode()
    */
   centerNode = (nodeId?: number): void => {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const state = Store.getState();
+    const skeletonTracing = assertSkeleton(state.tracing);
     getNodeAndTree(skeletonTracing, nodeId).map(([, node]) =>
-      Store.dispatch(setPositionAction(node.position)),
+      Store.dispatch(setPositionAction(getNodePosition(node, state))),
     );
   };
 
@@ -557,7 +555,7 @@ class DataApi {
    *
    * api.setMapping("segmentation", mapping);
    */
-  setMapping(layerName: string, mapping: Mapping) {
+  setMapping(layerName: string, mapping: Mapping | Record<number, number>) {
     const segmentationLayer = this.model.getLayerByName(layerName);
     const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
 
@@ -566,23 +564,22 @@ class DataApi {
     }
 
     const mappingProperties = {
-      mapping: _.clone(mapping),
-      mappingKeys: Object.keys(mapping).map((x) => parseInt(x, 10)),
+      mapping:
+        mapping instanceof Map
+          ? new Map(mapping)
+          : new Map(Object.entries(mapping).map(([key, value]) => [parseInt(key, 10), value])),
     };
     Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
   }
 
   /**
    * Returns the bounding box for a given layer name. Note that the described interval
-     is half-open, meaning that the lowerBoundary is included and the upperBoundary is not
+     is half-open, meaning that the lower boundary is included and the upper boundary is not
      included in the bounding box.
    */
   getBoundingBox(layerName: string): [Vector3, Vector3] {
-    const { lowerBoundary, upperBoundary } = getLayerBoundaries(
-      Store.getState().dataset,
-      layerName,
-    );
-    return [lowerBoundary, upperBoundary];
+    const { min, max } = getLayerBoundingBox(Store.getState().dataset, layerName);
+    return [min, max];
   }
 
   /**
@@ -601,7 +598,7 @@ class DataApi {
   async getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
     const cube = this.model.getCubeByLayerName(layerName);
     const pullQueue = this.model.getPullQueueByLayerName(layerName);
-    const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
+    const bucketAddress = cube.positionToZoomedAddress(position, null, zoomStep);
     const bucket = cube.getOrCreateBucket(bucketAddress);
     if (bucket.type === "null") return 0;
     let needsToAwaitBucket = false;
@@ -624,7 +621,7 @@ class DataApi {
     }
 
     // Bucket has been loaded by now or was loaded already
-    return cube.getDataValue(position, null, zoomStep);
+    return cube.getDataValue(position, null, null, zoomStep);
   }
 
   /**
@@ -634,25 +631,12 @@ class DataApi {
    * @example // Download a cuboid (from (0, 0, 0) to (100, 200, 100)) of raw data from the "segmentation" layer.
    * api.data.downloadRawDataCuboid("segmentation", [0,0,0], [100,200,100]);
    */
-  downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
-    const { dataset } = Store.getState();
-    const resolutionInfo = getDatasetResolutionInfo(dataset);
-    const resolution = resolutionInfo.getLowestResolution();
-    const magString = resolution.join("-");
-    return doWithToken((token) => {
-      const downloadUrl =
-        `${dataset.dataStore.url}/data/datasets/${dataset.name}/layers/${layerName}/data?mag=${magString}&` +
-        `token=${token}&` +
-        `x=${topLeft[0]}&` +
-        `y=${topLeft[1]}&` +
-        `z=${topLeft[2]}&` +
-        `width=${bottomRight[0] - topLeft[0]}&` +
-        `height=${bottomRight[1] - topLeft[1]}&` +
-        `depth=${bottomRight[2] - topLeft[2]}`;
-      window.open(downloadUrl);
-      // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
-      return Promise.resolve();
-    });
+  downloadRawDataCuboid(
+    _layerName: string,
+    _topLeft: Vector3,
+    _bottomRight: Vector3,
+  ): Promise<void> {
+    throw new Error("Please use at least version 3 of the webknossos API.");
   }
 
   /**
@@ -665,12 +649,20 @@ class DataApi {
    * @example // Set the segmentation id for some voxels to 1337
    * api.data.labelVoxels([[1,1,1], [1,2,1], [2,1,1], [2,2,1]], 1337);
    */
-  async labelVoxels(voxels: Array<Vector3>, label: number): Promise<void> {
+  async labelVoxels(
+    voxels: Array<Vector3>,
+    label: number,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
+  ): Promise<void> {
     assertVolume(Store.getState());
     const segmentationLayer = this.model.getEnforcedSegmentationTracingLayer();
     await Promise.all(
       voxels.map((voxel) =>
-        segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(voxel, label),
+        segmentationLayer.cube._labelVoxelInAllResolutions_DEPRECATED(
+          voxel,
+          additionalCoordinates,
+          label,
+        ),
       ),
     );
     segmentationLayer.cube.pushQueue.push();
@@ -853,7 +845,7 @@ class UtilsApi {
    */
   registerOverwrite<S, A>(
     actionName: string,
-    overwriteFunction: (store: S, next: (action: A) => void, originalAction: A) => void,
+    overwriteFunction: (store: S, next: (action: A) => void, originalAction: A) => A | Promise<A>,
   ) {
     overwriteAction(actionName, overwriteFunction);
   }

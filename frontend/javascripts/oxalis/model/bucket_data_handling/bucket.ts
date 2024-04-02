@@ -1,25 +1,23 @@
-import { createNanoEvents } from "nanoevents";
+import { createNanoEvents, Emitter } from "nanoevents";
 import * as THREE from "three";
 import _ from "lodash";
 import type { ElementClass } from "types/api_flow_types";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
 import type { MaybeUnmergedBucketLoadedPromise } from "oxalis/model/actions/volumetracing_actions";
 import { addBucketToUndoAction } from "oxalis/model/actions/volumetracing_actions";
-import {
-  bucketPositionToGlobalAddress,
-  zoomedAddressToAnotherZoomStep,
-} from "oxalis/model/helpers/position_converter";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 import { castForArrayType, mod } from "libs/utils";
-import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
+import type { BoundingBoxType, BucketAddress, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
-import DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import window from "libs/window";
-export const enum BucketStateEnum {
+import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
+export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
   REQUESTED = "REQUESTED",
   MISSING = "MISSING", // Missing means that the bucket couldn't be found on the data store
@@ -44,11 +42,7 @@ export const bucketDebuggingFlags = {
 // Exposing this variable allows debugging on deployed systems
 // @ts-ignore
 window.bucketDebuggingFlags = bucketDebuggingFlags;
-type Emitter = {
-  on: (...args: any[]) => any;
-  events: Record<string, any>;
-  emit: (...args: any[]) => any;
-};
+
 const WARNING_THROTTLE_THRESHOLD = 10000;
 
 const warnMergeWithoutPendingOperations = _.throttle(() => {
@@ -57,13 +51,14 @@ const warnMergeWithoutPendingOperations = _.throttle(() => {
   );
 }, WARNING_THROTTLE_THRESHOLD);
 
-export class NullBucket {
-  type: "null" = "null";
-  isOutOfBoundingBox: boolean;
-
-  constructor(isOutOfBoundingBox: boolean) {
-    this.isOutOfBoundingBox = isOutOfBoundingBox;
+export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucket {
+  if (bucket.type === "null") {
+    throw new Error("Unexpected null bucket.");
   }
+}
+
+export class NullBucket {
+  type = "null" as const;
 
   hasData(): boolean {
     return false;
@@ -119,8 +114,7 @@ export const getConstructorForElementClass = (
       throw new Error(`This type is not supported by the DataBucket class: ${type}`);
   }
 };
-export const NULL_BUCKET = new NullBucket(false);
-export const NULL_BUCKET_OUT_OF_BB = new NullBucket(true);
+export const NULL_BUCKET = new NullBucket();
 // The type is used within the DataBucket class which is why
 // we have to define it here.
 export type Bucket = DataBucket | NullBucket;
@@ -131,8 +125,9 @@ export const bucketsAlreadyInUndoState: Set<Bucket> = new Set();
 export function markVolumeTransactionEnd() {
   bucketsAlreadyInUndoState.clear();
 }
+
 export class DataBucket {
-  type: "data" = "data";
+  type = "data" as const;
   elementClass: ElementClass;
   visualizedMesh: Record<string, any> | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
@@ -151,16 +146,21 @@ export class DataBucket {
   accessed: boolean;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
-  zoomedAddress: Vector4;
+  zoomedAddress: BucketAddress;
   cube: DataCube;
   _fallbackBucket: Bucket | null | undefined;
   throttledTriggerLabeled: () => void;
   emitter: Emitter;
   maybeUnmergedBucketLoadedPromise: MaybeUnmergedBucketLoadedPromise;
+  // Especially, for segmentation buckets, it can be interesting to
+  // know whether a certain ID is contained in this bucket. To
+  // speed up such requests a cached set of the contained values
+  // can be stored in cachedValueSet.
+  cachedValueSet: Set<number | bigint> | null = null;
 
   constructor(
     elementClass: ElementClass,
-    zoomedAddress: Vector4,
+    zoomedAddress: BucketAddress,
     temporalBucketManager: TemporalBucketManager,
     cube: DataCube,
   ) {
@@ -199,9 +199,10 @@ export class DataBucket {
   }
 
   getBoundingBox(): BoundingBoxType {
-    const resolutions = getResolutions(Store.getState().dataset);
-    const min = bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
-    const bucketResolution = resolutions[this.zoomedAddress[3]];
+    const min = bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
+    const bucketResolution = this.cube.resolutionInfo.getResolutionByIndexOrThrow(
+      this.zoomedAddress[3],
+    );
     const max: Vector3 = [
       min[0] + Constants.BUCKET_WIDTH * bucketResolution[0],
       min[1] + Constants.BUCKET_WIDTH * bucketResolution[1],
@@ -214,8 +215,7 @@ export class DataBucket {
   }
 
   getGlobalPosition(): Vector3 {
-    const resolutions = getResolutions(Store.getState().dataset);
-    return bucketPositionToGlobalAddress(this.zoomedAddress, resolutions);
+    return bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo);
   }
 
   getTopLeftInMag(): Vector3 {
@@ -242,6 +242,7 @@ export class DataBucket {
     // so that at least the big memory hog is tamed (unfortunately,
     // this doesn't help against references which point directly to this.data)
     this.data = null;
+    this.invalidateValueSet();
     this.trigger("bucketCollected");
     // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
     this.emitter.events = {};
@@ -277,15 +278,20 @@ export class DataBucket {
     return [this.zoomedAddress[0], this.zoomedAddress[1], this.zoomedAddress[2]];
   }
 
+  getAdditionalCoordinates(): AdditionalCoordinate[] | undefined | null {
+    return this.zoomedAddress[4];
+  }
+
   is3DVoxelInsideBucket = (voxel: Vector3, zoomStep: number) => {
     // Checks whether a given 3D voxel is outside of the bucket it refers to (i.e., a coordinate is negative
     // or greater than 32). If this is the case, the bucket address of the neighbor which contains the position
     // is also returned along with the adjusted voxel coordinate in that neighboring bucket.
-    const neighbourBucketAddress: Vector4 = [
+    const neighbourBucketAddress: BucketAddress = [
       this.zoomedAddress[0],
       this.zoomedAddress[1],
       this.zoomedAddress[2],
       zoomStep,
+      this.getAdditionalCoordinates() || [],
     ];
     let isVoxelOutside = false;
     const adjustedVoxel: Vector3 = [voxel[0], voxel[1], voxel[2]];
@@ -297,7 +303,7 @@ export class DataBucket {
         const offset = Math.ceil(Math.abs(voxel[dimensionIndex]) / Constants.BUCKET_WIDTH);
         // If the voxel coordinate is below 0, sign is negative and will lower the neighbor
         // bucket address
-        neighbourBucketAddress[dimensionIndex] += sign * offset;
+        (neighbourBucketAddress[dimensionIndex] as number) += sign * offset;
       }
 
       adjustedVoxel[dimensionIndex] = mod(adjustedVoxel[dimensionIndex], Constants.BUCKET_WIDTH);
@@ -385,6 +391,7 @@ export class DataBucket {
 
   setData(newData: BucketDataArray, newPendingOperations: Array<(arg0: BucketDataArray) => void>) {
     this.data = newData;
+    this.invalidateValueSet();
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
@@ -470,7 +477,7 @@ export class DataBucket {
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,
-  ) {
+  ): boolean {
     const data = this.getOrCreateData();
 
     if (this.needsBackendData()) {
@@ -492,7 +499,7 @@ export class DataBucket {
       );
     }
 
-    this._applyVoxelMapInPlace(
+    return this._applyVoxelMapInPlace(
       data,
       voxelMap,
       segmentId,
@@ -514,8 +521,9 @@ export class DataBucket {
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,
-  ) {
+  ): boolean {
     const out = new Float32Array(3);
+    let wroteVoxels = false;
 
     const segmentId = castForArrayType(uncastSegmentId, data);
 
@@ -532,17 +540,23 @@ export class DataBucket {
 
           if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
             data[voxelAddress] = segmentId;
+            wroteVoxels = true;
           }
         }
       }
     }
+
+    this.invalidateValueSet();
+
+    return wroteVoxels;
   }
 
   markAsPulled(): void {
     switch (this.state) {
-      case BucketStateEnum.UNREQUESTED:
+      case BucketStateEnum.UNREQUESTED: {
         this.state = BucketStateEnum.REQUESTED;
         break;
+      }
 
       default:
         this.unexpectedState();
@@ -551,7 +565,7 @@ export class DataBucket {
 
   markAsFailed(isMissing: boolean): void {
     switch (this.state) {
-      case BucketStateEnum.REQUESTED:
+      case BucketStateEnum.REQUESTED: {
         this.state = isMissing ? BucketStateEnum.MISSING : BucketStateEnum.UNREQUESTED;
 
         if (isMissing) {
@@ -559,6 +573,7 @@ export class DataBucket {
         }
 
         break;
+      }
 
       default:
         this.unexpectedState();
@@ -571,7 +586,7 @@ export class DataBucket {
 
     if (data.length !== channelCount * Constants.BUCKET_SIZE) {
       const debugInfo = // Disable this conditional if you need verbose output here.
-        process.env.BABEL_ENV === "test"
+        process.env.IS_TESTING
           ? " (<omitted>)"
           : {
               arrayBuffer,
@@ -597,6 +612,7 @@ export class DataBucket {
         } else {
           this.data = data;
         }
+        this.invalidateValueSet();
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
@@ -608,12 +624,29 @@ export class DataBucket {
     }
   }
 
+  private invalidateValueSet() {
+    this.cachedValueSet = null;
+  }
+
+  private recomputeValueSet() {
+    // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
+    this.cachedValueSet = new Set(this.data);
+  }
+
+  containsValue(value: number | bigint): boolean {
+    if (this.cachedValueSet == null) {
+      this.recomputeValueSet();
+    }
+    return this.cachedValueSet!.has(value);
+  }
+
   markAsPushed(): void {
     switch (this.state) {
       case BucketStateEnum.LOADED:
-      case BucketStateEnum.MISSING:
+      case BucketStateEnum.MISSING: {
         this.dirty = false;
         break;
+      }
 
       default:
         this.unexpectedState();
@@ -626,37 +659,6 @@ export class DataBucket {
 
   getTracingId(): string {
     return this.cube.layerName;
-  }
-
-  getFallbackBucket(): Bucket {
-    if (this._fallbackBucket != null) {
-      return this._fallbackBucket;
-    }
-
-    const zoomStep = this.zoomedAddress[3];
-    const fallbackZoomStep = zoomStep + 1;
-    const resolutions = getResolutions(Store.getState().dataset);
-
-    if (fallbackZoomStep >= resolutions.length) {
-      this._fallbackBucket = NULL_BUCKET;
-      return NULL_BUCKET;
-    }
-
-    const fallbackBucketAddress = zoomedAddressToAnotherZoomStep(
-      this.zoomedAddress,
-      resolutions,
-      fallbackZoomStep,
-    );
-    const fallbackBucket = this.cube.getOrCreateBucket(fallbackBucketAddress);
-    this._fallbackBucket = fallbackBucket;
-
-    if (fallbackBucket.type !== "null") {
-      fallbackBucket.once("bucketCollected", () => {
-        this._fallbackBucket = null;
-      });
-    }
-
-    return fallbackBucket;
   }
 
   merge(fetchedData: BucketDataArray): void {
@@ -677,7 +679,7 @@ export class DataBucket {
 
     if (this.pendingOperations.length === 0) {
       // This can happen when mutating an unloaded bucket and then
-      // undoing it. The bucket is still marked as dirty, even though,
+      // undoing it. The bucket is still marked as dirty, even though
       // no pending operations are necessary (since the bucket was restored
       // to an untouched version).
       // See this refactoring issue: https://github.com/scalableminds/webknossos/issues/5973
@@ -694,15 +696,24 @@ export class DataBucket {
       return;
     }
 
-    const zoomStep = getRequestLogZoomStep(Store.getState());
+    const colors = [
+      new THREE.Color(0, 0, 0),
+      new THREE.Color(255, 0, 0),
+      new THREE.Color(0, 255, 0),
+      new THREE.Color(0, 0, 255),
+      new THREE.Color(255, 0, 255),
+      new THREE.Color(255, 255, 0),
+    ];
+
+    const zoomStep = getActiveMagIndexForLayer(Store.getState(), this.cube.layerName);
 
     if (this.zoomedAddress[3] === zoomStep) {
-      const resolutions = getResolutions(Store.getState().dataset);
       // @ts-ignore
       this.visualizedMesh = window.addBucketMesh(
-        bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),
+        bucketPositionToGlobalAddress(this.zoomedAddress, this.cube.resolutionInfo),
         this.zoomedAddress[3],
-        this.visualizationColor,
+        this.cube.resolutionInfo.getResolutionByIndex(this.zoomedAddress[3]),
+        colors[this.zoomedAddress[3]] || this.visualizationColor,
       );
     }
   }

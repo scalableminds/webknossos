@@ -1,30 +1,47 @@
 package models.annotation
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
+
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, Path, StandardCopyOption}
-
 import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeGroup}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.{SegmentGroup, VolumeTracing}
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
+import files.TempFileService
+
 import javax.inject.Inject
 import models.annotation.nml.NmlResults._
 import models.annotation.nml.{NmlParser, NmlResults}
+import models.dataset.{DatasetDAO, DatasetService, WKRemoteDataStoreClient}
+import models.organization.OrganizationDAO
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.util.Helpers.tryo
-import oxalis.files.TempFileService
+import net.liftweb.common.Box.tryo
 import play.api.i18n.MessagesProvider
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 
 case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, name: Option[String]) {
   def getDataZipFrom(otherFiles: Map[String, File]): Option[File] =
     otherFiles.get(dataZipLocation)
 }
 
-class AnnotationUploadService @Inject()(tempFileService: TempFileService) extends LazyLogging {
+class AnnotationUploadService @Inject()(tempFileService: TempFileService,
+                                        datasetService: DatasetService,
+                                        datasetDAO: DatasetDAO,
+                                        organizationDAO: OrganizationDAO,
+                                        rpc: RPC)
+    extends LazyLogging {
 
-  private def extractFromNml(file: File, name: String, overwritingDataSetName: Option[String], isTaskUpload: Boolean)(
-      implicit m: MessagesProvider): NmlParseResult =
-    extractFromNml(new FileInputStream(file), name, overwritingDataSetName, isTaskUpload)
+  private def extractFromNmlFile(
+      file: File,
+      name: String,
+      overwritingDatasetName: Option[String],
+      isTaskUpload: Boolean)(implicit m: MessagesProvider, ec: ExecutionContext): NmlParseResult =
+    extractFromNml(new FileInputStream(file), name, overwritingDatasetName, isTaskUpload)
 
   private def formatChain(chain: Box[Failure]): String = chain match {
     case Full(failure) =>
@@ -32,14 +49,20 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
     case _ => ""
   }
 
-  def extractFromNml(inputStream: InputStream,
-                     name: String,
-                     overwritingDataSetName: Option[String],
-                     isTaskUpload: Boolean,
-                     basePath: Option[String] = None)(implicit m: MessagesProvider): NmlParseResult =
-    NmlParser.parse(name, inputStream, overwritingDataSetName, isTaskUpload, basePath) match {
-      case Full((skeletonTracing, uploadedVolumeLayers, description)) =>
-        NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, description)
+  def extractFromNml(
+      inputStream: InputStream,
+      name: String,
+      overwritingDatasetName: Option[String],
+      isTaskUpload: Boolean,
+      basePath: Option[String] = None)(implicit m: MessagesProvider, ec: ExecutionContext): NmlParseResult =
+    NmlParser.parse(name,
+                    inputStream,
+                    overwritingDatasetName,
+                    isTaskUpload,
+                    basePath,
+                    (a, b) => getRemoteDatastoreClientForDatasetNameAndOrg(a, b)) match {
+      case Full((skeletonTracing, uploadedVolumeLayers, description, wkUrl)) =>
+        NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, description, wkUrl)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
       case Empty                  => NmlParseEmpty(name)
     }
@@ -47,8 +70,8 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
   def extractFromZip(file: File,
                      zipFileName: Option[String] = None,
                      useZipName: Boolean,
-                     overwritingDataSetName: Option[String],
-                     isTaskUpload: Boolean)(implicit m: MessagesProvider): MultiNmlParseResult = {
+                     overwritingDatasetName: Option[String],
+                     isTaskUpload: Boolean)(implicit m: MessagesProvider, ec: ExecutionContext): MultiNmlParseResult = {
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, File]
     var parseResults = List.empty[NmlParseResult]
@@ -56,7 +79,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
     ZipIO.withUnziped(file) { (filename, inputStream) =>
       if (filename.toString.endsWith(".nml")) {
         val result =
-          extractFromNml(inputStream, filename.toString, overwritingDataSetName, isTaskUpload, Some(file.getPath))
+          extractFromNml(inputStream, filename.toString, overwritingDatasetName, isTaskUpload, Some(file.getPath))
         parseResults ::= (if (useZipName) result.withName(name) else result)
       } else {
         val tempFile: Path = tempFileService.create(file.getPath.replaceAll("/", "_") + filename.toString)
@@ -67,23 +90,25 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
     MultiNmlParseResult(parseResults, otherFiles)
   }
 
-  def wrapOrPrefixTrees(parseResults: List[NmlParseResult],
-                        shouldCreateGroupForEachFile: Boolean): List[NmlParseResult] =
+  def wrapOrPrefixGroups(parseResults: List[NmlParseResult],
+                         shouldCreateGroupForEachFile: Boolean): List[NmlParseResult] =
     if (shouldCreateGroupForEachFile)
-      wrapTreesInGroups(parseResults)
+      wrapInGroups(parseResults)
     else
-      addPrefixesToTreeNames(parseResults)
+      addPrefixesToGroupItemNames(parseResults)
 
-  private def addPrefixesToTreeNames(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
+  private def addPrefixesToGroupItemNames(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
     def renameTrees(name: String, tracing: SkeletonTracing): SkeletonTracing = {
       val prefix = name.replaceAll("\\.[^.]*$", "") + "_"
       tracing.copy(trees = tracing.trees.map(tree => tree.copy(name = prefix + tree.name)))
     }
 
+    // Segments are not renamed in this case. Segment ids are adjusted in the separate merge step.
+
     if (parseResults.length > 1) {
       parseResults.map {
-        case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description) =>
-          NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), uploadedVolumeLayers, description)
+        case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description, wkUrl) =>
+          NmlParseSuccess(name, Some(renameTrees(name, skeletonTracing)), uploadedVolumeLayers, description, wkUrl)
         case r => r
       }
     } else {
@@ -91,29 +116,49 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
     }
   }
 
-  private def wrapTreesInGroups(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
-    def getMaximumGroupId(treeGroups: Seq[TreeGroup]): Int =
+  private def wrapInGroups(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
+    def getMaximumTreeGroupId(treeGroups: Seq[TreeGroup]): Int =
       if (treeGroups.isEmpty) 0
-      else Math.max(treeGroups.map(_.groupId).max, getMaximumGroupId(treeGroups.flatMap(_.children)))
+      else Math.max(treeGroups.map(_.groupId).max, getMaximumTreeGroupId(treeGroups.flatMap(_.children)))
+
+    def getMaximumSegmentGroupId(segmentGroups: Seq[SegmentGroup]): Int =
+      if (segmentGroups.isEmpty) 0
+      else Math.max(segmentGroups.map(_.groupId).max, getMaximumSegmentGroupId(segmentGroups.flatMap(_.children)))
 
     def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing = {
-      val unusedGroupId = getMaximumGroupId(tracing.treeGroups) + 1
+      val unusedGroupId = getMaximumTreeGroupId(tracing.treeGroups) + 1
       val newTrees = tracing.trees.map(tree => tree.copy(groupId = Some(tree.groupId.getOrElse(unusedGroupId))))
       val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups))
       tracing.copy(trees = newTrees, treeGroups = newTreeGroups)
     }
 
+    def wrapSegmentsInGroup(name: String, tracing: VolumeTracing): VolumeTracing = {
+      val unusedGroupId = getMaximumSegmentGroupId(tracing.segmentGroups) + 1
+      val newSegments =
+        tracing.segments.map(segment => segment.copy(groupId = Some(segment.groupId.getOrElse(unusedGroupId))))
+      val newSegmentGroups = Seq(SegmentGroup(name, unusedGroupId, tracing.segmentGroups))
+      tracing.copy(segments = newSegments, segmentGroups = newSegmentGroups)
+    }
+
+    def wrapVolumeLayers(name: String, volumeLayers: List[UploadedVolumeLayer]): List[UploadedVolumeLayer] =
+      volumeLayers.map(v => v.copy(tracing = wrapSegmentsInGroup(name, v.tracing)))
+
     parseResults.map {
-      case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description) =>
-        NmlParseSuccess(name, Some(wrapTreesInGroup(name, skeletonTracing)), uploadedVolumeLayers, description)
+      case NmlParseSuccess(name, Some(skeletonTracing), uploadedVolumeLayers, description, wkUrl) =>
+        NmlParseSuccess(name,
+                        Some(wrapTreesInGroup(name, skeletonTracing)),
+                        wrapVolumeLayers(name, uploadedVolumeLayers),
+                        description,
+                        wkUrl)
       case r => r
     }
   }
 
-  def extractFromFiles(files: Seq[(File, String)],
-                       useZipName: Boolean,
-                       overwritingDataSetName: Option[String] = None,
-                       isTaskUpload: Boolean = false)(implicit m: MessagesProvider): MultiNmlParseResult =
+  def extractFromFiles(
+      files: Seq[(File, String)],
+      useZipName: Boolean,
+      overwritingDatasetName: Option[String] = None,
+      isTaskUpload: Boolean = false)(implicit m: MessagesProvider, ec: ExecutionContext): MultiNmlParseResult =
     files.foldLeft(NmlResults.MultiNmlParseResult()) {
       case (acc, (file, name)) =>
         if (name.endsWith(".zip"))
@@ -122,29 +167,42 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
               if (allZips)
                 acc.combineWith(
                   extractFromFiles(
-                    extractFromZip(file, Some(name), useZipName, overwritingDataSetName, isTaskUpload).otherFiles.toSeq
+                    extractFromZip(file, Some(name), useZipName, overwritingDatasetName, isTaskUpload).otherFiles.toSeq
                       .map(tuple => (tuple._2, tuple._1)),
                     useZipName,
-                    overwritingDataSetName,
+                    overwritingDatasetName,
                     isTaskUpload
                   ))
-              else acc.combineWith(extractFromFile(file, name, useZipName, overwritingDataSetName, isTaskUpload))
+              else
+                acc.combineWith(extractFromFile(file, name, useZipName, overwritingDatasetName, isTaskUpload))
             case _ => acc
-          } else acc.combineWith(extractFromFile(file, name, useZipName, overwritingDataSetName, isTaskUpload))
+          } else
+          acc.combineWith(extractFromFile(file, name, useZipName, overwritingDatasetName, isTaskUpload))
     }
 
   def extractFromFile(file: File,
                       fileName: String,
                       useZipName: Boolean,
-                      overwritingDataSetName: Option[String],
-                      isTaskUpload: Boolean)(implicit m: MessagesProvider): MultiNmlParseResult =
+                      overwritingDatasetName: Option[String],
+                      isTaskUpload: Boolean)(implicit m: MessagesProvider, ec: ExecutionContext): MultiNmlParseResult =
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")
-      extractFromZip(file, Some(fileName), useZipName, overwritingDataSetName, isTaskUpload)
+      extractFromZip(file, Some(fileName), useZipName, overwritingDatasetName, isTaskUpload)
     } else {
       logger.trace("Extracting from Nml file")
-      val parseResult = extractFromNml(file, fileName, overwritingDataSetName, isTaskUpload)
+      val parseResult = extractFromNmlFile(file, fileName, overwritingDatasetName, isTaskUpload)
       MultiNmlParseResult(List(parseResult), Map.empty)
     }
+
+  def getRemoteDatastoreClientForDatasetNameAndOrg(datasetName: String, organizationName: String)(
+      implicit ec: ExecutionContext): Option[WKRemoteDataStoreClient] = {
+    val fox = for {
+      _ <- Fox.successful(())
+      organizationObjectId <- organizationDAO.findIdByName(organizationName)(GlobalAccessContext)
+      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationObjectId)(GlobalAccessContext)
+      dataStore <- datasetService.dataStoreFor(dataset)(GlobalAccessContext)
+    } yield new WKRemoteDataStoreClient(dataStore, rpc)
+    fox.await("No fox context in AnnotationUploadService, see #7551", 1 minute).toOption
+  }
 
 }

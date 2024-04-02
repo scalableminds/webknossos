@@ -1,6 +1,12 @@
+import _ from "lodash";
 import * as React from "react";
 import type { Rect, Viewport } from "oxalis/constants";
-import { ArbitraryViewport } from "oxalis/constants";
+import {
+  AnnotationToolEnum,
+  ArbitraryViewport,
+  ArbitraryViews,
+  OrthoViews,
+} from "oxalis/constants";
 import { setInputCatcherRects } from "oxalis/model/actions/view_mode_actions";
 import Scalebar from "oxalis/view/scalebar";
 import ViewportStatusIndicator from "oxalis/view/viewport_status_indicator";
@@ -8,8 +14,8 @@ import type { BusyBlockingInfo, OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 import { waitForCondition } from "libs/utils";
-import { useKeyPress } from "libs/react_hooks";
-import { useEffect, useRef } from "react";
+import { useEffectOnlyOnce, useKeyPress } from "libs/react_hooks";
+import { useRef } from "react";
 import { useSelector } from "react-redux";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 
@@ -21,7 +27,7 @@ const emptyViewportRect = {
 };
 
 function ignoreContextMenu(event: React.MouseEvent) {
-  // hide contextmenu, while rightclicking a canvas
+  // hide contextmenu, while right-clicking a canvas
   event.preventDefault();
 }
 
@@ -80,8 +86,16 @@ export function recalculateInputCatcherSizes() {
     viewportRects[viewportID] = rect;
   }
 
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
-  Store.dispatch(setInputCatcherRects(viewportRects));
+  // Clicking on a viewport will trigger a FlexLayout model change event if
+  // the click changes the focus from one tab to another.
+  // Since the mere click does not change the size of the input catchers,
+  // we want to avoid the following set action, as the corresponding reducer
+  // will re-calculate the zoom ranges for the available magnifications
+  // (which is expensive and unnecessary).
+  if (!_.isEqual(viewportRects, Store.getState().viewModeData.plane.inputCatcherRects)) {
+    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Record<string, any>' is not assi... Remove this comment to see the full error message
+    Store.dispatch(setInputCatcherRects(viewportRects));
+  }
 }
 
 const cursorForTool = {
@@ -93,8 +107,11 @@ const cursorForTool = {
   ERASE_TRACE: "url(/assets/images/eraser-pointed-solid-border.svg) 0 16,auto",
   FILL_CELL: "url(/assets/images/fill-pointed-solid-border.svg) 0 16,auto",
   PICK_CELL: "url(/assets/images/eye-dropper-solid-border.svg) 0 12,auto",
-  BOUNDING_BOX: "move",
+  BOUNDING_BOX: "copy",
+  QUICK_SELECT: "crosshair",
   PROOFREAD: "crosshair",
+  LINE_MEASUREMENT: "url(/assets/images/ruler-pointed-border.svg) 0 14,auto",
+  AREA_MEASUREMENT: "url(/assets/images/lasso-pointed-solid-border.svg) 0 14,auto",
 };
 
 function InputCatcher({
@@ -109,7 +126,7 @@ function InputCatcher({
   busyBlockingInfo: BusyBlockingInfo;
 }) {
   const domElementRef = useRef<HTMLElement | null>(null);
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     if (domElementRef.current) {
       renderedInputCatchers.set(viewportID, domElementRef.current);
     }
@@ -118,46 +135,51 @@ function InputCatcher({
         renderedInputCatchers.delete(viewportID);
       }
     };
-  }, []);
+  });
 
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
 
   const isShiftPressed = useKeyPress("Shift");
-  const isControlPressed = useKeyPress("Control");
+  const isControlPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
 
-  const adaptedTool = adaptActiveToolToShortcuts(
-    activeTool,
-    isShiftPressed,
-    isControlPressed,
-    isAltPressed,
-  );
+  const adaptedTool =
+    viewportID === ArbitraryViews.arbitraryViewport
+      ? AnnotationToolEnum.SKELETON
+      : viewportID === OrthoViews.TDView
+        ? AnnotationToolEnum.MOVE
+        : adaptActiveToolToShortcuts(activeTool, isShiftPressed, isControlPressed, isAltPressed);
 
   return (
     <div
-      className="flexlayout-dont-overflow"
-      onContextMenu={ignoreContextMenu}
-      style={{ cursor: busyBlockingInfo.isBusy ? "wait" : cursorForTool[adaptedTool] }}
+      id={`screenshot_target_inputcatcher_${viewportID}`}
+      className={`inputcatcher-border ${viewportID}`}
     >
       <div
-        id={`inputcatcher_${viewportID}`}
-        ref={(domElement) => {
-          domElementRef.current = domElement;
-        }}
-        data-value={viewportID}
-        className={`inputcatcher ${viewportID}`}
-        style={{
-          position: "relative",
-          // Disable inputs while wk is busy. However, keep the custom cursor and the ignoreContextMenu handler
-          // which is why those are defined at the outer element.
-          pointerEvents: busyBlockingInfo.isBusy ? "none" : "auto",
-        }}
+        className="flexlayout-dont-overflow"
+        onContextMenu={ignoreContextMenu}
+        style={{ cursor: busyBlockingInfo.isBusy ? "wait" : cursorForTool[adaptedTool] }}
       >
-        <ViewportStatusIndicator />
-        {displayScalebars && viewportID !== "arbitraryViewport" ? (
-          <Scalebar viewportID={viewportID} />
-        ) : null}
-        {children}
+        <div
+          id={`inputcatcher_${viewportID}`}
+          ref={(domElement) => {
+            domElementRef.current = domElement;
+          }}
+          data-value={viewportID}
+          className={`inputcatcher ${viewportID}`}
+          style={{
+            position: "relative",
+            // Disable inputs while wk is busy. However, keep the custom cursor and the ignoreContextMenu handler
+            // which is why those are defined at the outer element.
+            pointerEvents: busyBlockingInfo.isBusy ? "none" : "auto",
+          }}
+        >
+          <ViewportStatusIndicator />
+          {displayScalebars && viewportID !== "arbitraryViewport" ? (
+            <Scalebar viewportID={viewportID} />
+          ) : null}
+          {children}
+        </div>
       </div>
     </div>
   );

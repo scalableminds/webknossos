@@ -4,11 +4,11 @@ import test from "ava";
 import "test/sagas/saga_integration.mock.js";
 import { __setupOxalis, TIMESTAMP } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
-import { enforceSkeletonTracing, getStats } from "oxalis/model/accessors/skeletontracing_accessor";
-import { maximumActionCountPerBatch } from "oxalis/model/sagas/save_saga_constants";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getStats } from "oxalis/model/accessors/annotation_accessor";
+import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
-import * as Utils from "libs/utils";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import dummyUser from "test/fixtures/dummy_user";
@@ -56,17 +56,18 @@ test.serial(
           UpdateActions.updateSkeletonTracing(
             Store.getState().tracing.skeleton,
             [1, 2, 3],
+            [],
             [0, 0, 0],
             2,
           ),
         ],
       ],
       TIMESTAMP,
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'SkeletonTracingStats | null | un... Remove this comment to see the full error message
-      Utils.toNullable(getStats(state.tracing)),
+      getStats(state.tracing, "skeleton", "irrelevant_in_skeleton_case") || undefined,
     );
     // Reset the info field which is just for debugging purposes
     const actualSaveQueue = state.save.queue.skeleton.map((entry) => {
+      // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
       const { info, ...rest } = entry;
       return { ...rest, info: "[]" };
     });
@@ -81,7 +82,10 @@ test.serial("Save actions should not be chunked below the chunk limit (1/3)", (t
   const trees = generateDummyTrees(1000, 1);
   Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
   t.is(Store.getState().save.queue.skeleton.length, 1);
-  t.true(Store.getState().save.queue.skeleton[0].actions.length < maximumActionCountPerBatch);
+  t.true(
+    Store.getState().save.queue.skeleton[0].actions.length <
+      MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton,
+  );
 });
 test.serial("Save actions should be chunked above the chunk limit (2/3)", (t) => {
   Store.dispatch(discardSaveQueuesAction());
@@ -90,7 +94,7 @@ test.serial("Save actions should be chunked above the chunk limit (2/3)", (t) =>
   Store.dispatch(addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), []));
   const state = Store.getState();
   t.true(state.save.queue.skeleton.length > 1);
-  t.is(state.save.queue.skeleton[0].actions.length, maximumActionCountPerBatch);
+  t.is(state.save.queue.skeleton[0].actions.length, MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton);
 });
 test.serial("Save actions should be chunked after compacting (3/3)", (t) => {
   const nodeCount = 20000;
@@ -106,6 +110,6 @@ test.serial("Save actions should be chunked after compacting (3/3)", (t) => {
   const { skeleton: skeletonSaveQueue } = Store.getState().save.queue;
   // There should only be one chunk
   t.is(skeletonSaveQueue.length, 1);
-  t.true(skeletonSaveQueue[0].actions.length < maximumActionCountPerBatch);
+  t.true(skeletonSaveQueue[0].actions.length < MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton);
   t.is(skeletonSaveQueue[0].actions[1].name, "moveTreeComponent");
 });

@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { M4x4, V3 } from "libs/mjs";
 import { OrthoViews } from "oxalis/constants";
+import update from "immutability-helper";
 import {
   getPosition,
   getRotation,
@@ -25,6 +26,7 @@ const initialState = {
   dataset: {
     dataSource: {
       scale: [1, 1, 2],
+      dataLayers: [{ name: "color", type: "color", additionalCoordinates: [] }],
     },
   },
   userConfiguration: {
@@ -33,8 +35,12 @@ const initialState = {
   },
   flycam: {
     zoomStep: 2,
+    additionalCoordinates: [],
     currentMatrix: M4x4.identity,
     spaceDirectionOrtho: [1, 1, 1],
+  },
+  temporaryConfiguration: {
+    viewMode: "oblique",
   },
 };
 test("Flycam should calculate zoomed matrix", (t) => {
@@ -148,4 +154,74 @@ test("Flycam should move by plane in ortho mode with dynamicSpaceDirection", (t)
     FlycamActions.movePlaneFlycamOrthoAction([0, 0, 2], OrthoViews.PLANE_XY, true),
   );
   equalWithEpsilon(t, getPosition(newState.flycam), [0, 0, -2]);
+});
+test("Flycam should not change additional coordinates value when layers don't have any.", (t) => {
+  const newState = FlycamReducer(
+    initialState,
+    FlycamActions.setAdditionalCoordinatesAction([{ name: "t", value: 123 }]),
+  );
+  t.deepEqual(initialState, newState);
+});
+
+test("Flycam should get correct subset of additional coordinates value when subset is set.", (t) => {
+  const adaptedState = update(initialState, {
+    // flycam
+    dataset: {
+      dataSource: {
+        dataLayers: {
+          $set: [
+            {
+              name: "color1",
+              type: "color",
+              additionalAxes: [{ name: "t", bounds: [0, 10] }],
+            },
+            {
+              name: "color2",
+              type: "color",
+              additionalAxes: [{ name: "u", bounds: [10, 20] }],
+            },
+          ],
+        },
+      },
+    },
+  });
+  const newState = FlycamReducer(
+    adaptedState,
+    // t is passed, but u is missing. Instead, a superfluous
+    // q is passed.
+    FlycamActions.setAdditionalCoordinatesAction([
+      { name: "t", value: 7 },
+      { name: "q", value: 0 },
+    ]),
+  );
+  t.deepEqual(newState.flycam.additionalCoordinates, [
+    { name: "t", value: 7 },
+    { name: "u", value: 10 },
+  ]);
+});
+
+test("Flycam should get valid additional coordinate value even when invalid value is passed.", (t) => {
+  const adaptedState = update(initialState, {
+    // flycam
+    dataset: {
+      dataSource: {
+        dataLayers: {
+          $set: [
+            {
+              name: "color1",
+              type: "color",
+              additionalAxes: [{ name: "t", bounds: [0, 10] }],
+            },
+          ],
+        },
+      },
+    },
+  });
+  const newState = FlycamReducer(
+    adaptedState,
+    // t is passed, but u is missing. Instead, a superfluous
+    // q is passed.
+    FlycamActions.setAdditionalCoordinatesAction([{ name: "t", value: 70 }]),
+  );
+  t.deepEqual(newState.flycam.additionalCoordinates, [{ name: "t", value: 10 }]);
 });

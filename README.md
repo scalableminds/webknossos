@@ -1,13 +1,13 @@
-# [webKnossos](https://webknossos.org/)
-<img align="right" src="https://static.webknossos.org/images/oxalis.svg" alt="webKnossos Logo" />
-webKnossos is an open-source tool for annotating and exploring large 3D image datasets.
+# [WEBKNOSSOS](https://webknossos.org/)
+<img align="right" src="https://raw.githubusercontent.com/scalableminds/webknossos/master/public/images/logo-icon-only.svg" alt="WEBKNOSSOS Logo" width="150" />
+WEBKNOSSOS is an open-source tool for annotating and exploring large 3D image datasets.
 
 * Fly through your data for fast skeletonization and proof-reading
 * Create 3D training data for automated segmentations efficiently
 * Scale data reconstruction projects with crowdsourcing workflows
 * Share datasets and annotations with collaborating scientists
 
-[Start using webKnossos](https://webknossos.org) - [On your own server](https://docs.webknossos.org/webknossos/installation.html) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@webknossos.org)
+[Start using WEBKNOSSOS](https://webknossos.org) - [On your own server](https://docs.webknossos.org/webknossos/installation.html) - [User Documentation](https://docs.webknossos.org) - [Contact us](mailto:hello@webknossos.org)
 
 [![](https://img.shields.io/circleci/project/github/scalableminds/webknossos/master.svg?logo=circleci)](https://circleci.com/gh/scalableminds/webknossos)
 [![](https://img.shields.io/github/release/scalableminds/webknossos.svg)](https://github.com/scalableminds/webknossos/releases/latest)
@@ -27,9 +27,9 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 * Sharing and collaboration features
 * Proof-Reading tools for working with large (over)-segmentations
 * [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
-* Supported dataset formats: [WKW](https://github.com/scalableminds/webknossos-wrap), [Neuroglancer Precomputed, and BossDB](https://github.com/scalableminds/webknossos-connect), [Zarr](https://zarr.dev)
+* Supported dataset formats: [WKW](https://github.com/scalableminds/webknossos-wrap), [Neuroglancer Precomputed](https://github.com/google/neuroglancer/tree/master/src/datasource/precomputed), [Zarr](https://zarr.dev), [N5](https://github.com/saalfeldlab/n5)
 * Supported image formats: Grayscale, Segmentation Maps, RGB, Multi-Channel
-* [Support for 3D mesh rendering and on-the-fly isosurface generation](https://docs.webknossos.org/webknossos/mesh_visualization.html)
+* [Support for 3D mesh rendering and ad-hoc mesh generation](https://docs.webknossos.org/webknossos/mesh_visualization.html)
 * Export and streaming of any dataset and annotation as [Zarr](https://zarr.dev) to third-party tools
 * [Documented frontend API for user scripts](https://webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
 * Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
@@ -44,9 +44,9 @@ webKnossos is an open-source tool for annotating and exploring large 3D image da
 [Read more about the original publication.](https://publication.webknossos.org)
 
 ## Installation
-webKnossos is open-source, so you can install it on your own server.
+WEBKNOSSOS is open-source, so you can install it on your own server.
 
-[Check out the documentation](https://docs.webknossos.org/webknossos/installation.html) for a tutorial on how to install webKnossos on your own server.
+[Check out the documentation](https://docs.webknossos.org/webknossos/installation.html) for a tutorial on how to install WEBKNOSSOS on your own server.
 
 For development installations, please see `DEV_INSTALL.md` file.
 
@@ -61,17 +61,17 @@ For details on community contributions, please refer to our [Contributing guide]
 
 Contact us at [hello@webknossos.org](mailto:hello@webknossos.org).
 
-[scalable minds](https://scalableminds.com) offers commercial hosting, support and development services for webKnossos.
+[scalable minds](https://scalableminds.com) offers commercial hosting, support and development services for WEBKNOSSOS.
 
 
 ## Credits
 * scalable minds - https://scalableminds.com/
 * Max Planck Institute for Brain Research – https://brain.mpg.de/
 
-webKnossos was inspired by [KNOSSOS](https://knossos.app).
+WEBKNOSSOS was inspired by [KNOSSOS](https://knossos.app).
 
 ### Thanks
-* [Browser Stack](https://www.browserstack.com/) for letting us test webKnossos on a variety of different devices
+* [Browser Stack](https://www.browserstack.com/) for letting us test WEBKNOSSOS on a variety of different devices
   <a href="https://www.browserstack.com/"><img src="https://avatars.githubusercontent.com/u/1119453?s=200&v=4" width=100 alt="Browserstack Logo" align="right"></a>
 * [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI
 

@@ -1,49 +1,56 @@
 package com.scalableminds.webknossos.datastore.services
 
-import java.io.{File, FileWriter}
-import java.nio.file.{Files, Path, Paths}
-
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
+import com.scalableminds.webknossos.datastore.dataformats.n5.N5Layer
+import com.scalableminds.webknossos.datastore.dataformats.precomputed.PrecomputedLayer
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
+import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrLayer
+import com.scalableminds.webknossos.datastore.dataformats.zarr3.Zarr3Layer
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
-import org.joda.time.DateTime
-import org.joda.time.format.ISODateTimeFormat
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import java.io.{File, FileWriter}
+import java.nio.file.{Files, Path, Paths}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.io.Source
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
     dataSourceRepository: DataSourceRepository,
+    remoteSourceDescriptorService: RemoteSourceDescriptorService,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val system: ActorSystem
-) extends IntervalScheduler
+)(implicit val ec: ExecutionContext)
+    extends IntervalScheduler
     with LazyLogging
     with FoxImplicits {
 
-  override protected lazy val enabled: Boolean = config.Datastore.WatchFileSystem.enabled
-  protected lazy val tickerInterval: FiniteDuration = config.Datastore.WatchFileSystem.interval
+  override protected def enabled: Boolean = config.Datastore.WatchFileSystem.enabled
+  override protected def tickerInterval: FiniteDuration = config.Datastore.WatchFileSystem.interval
+
+  override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 
   val dataBaseDir: Path = Paths.get(config.Datastore.baseFolder)
 
-  private val propertiesFileName = Paths.get("datasource-properties.json")
+  private val propertiesFileName = Paths.get(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
   private val logFileName = Paths.get("datasource-properties-backups.log")
 
-  var inboxCheckVerboseCounter = 0
+  private var inboxCheckVerboseCounter = 0
 
   def tick(): Unit = {
     checkInbox(verbose = inboxCheckVerboseCounter == 0)
@@ -54,7 +61,7 @@ class DataSourceService @Inject()(
   def checkInbox(verbose: Boolean): Fox[Unit] = {
     if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")
     for {
-      _ <- PathUtils.listDirectories(dataBaseDir) match {
+      _ <- PathUtils.listDirectories(dataBaseDir, silent = false) match {
         case Full(organizationDirs) =>
           for {
             _ <- Fox.successful(())
@@ -95,7 +102,7 @@ class DataSourceService @Inject()(
   private def logEmptyDirs(paths: List[Path]): Unit = {
 
     val emptyDirs = paths.flatMap { path =>
-      PathUtils.listDirectories(path) match {
+      PathUtils.listDirectories(path, silent = true) match {
         case Full(Nil) =>
           Some(path)
         case _ => None
@@ -109,13 +116,15 @@ class DataSourceService @Inject()(
     val path = dataBaseDir.resolve(id.team).resolve(id.name)
     val report = DataSourceImportReport[Path](dataBaseDir.relativize(path))
     for {
-      dataSource <- WKWDataFormat.exploreDataSource(id, path, previous, report)
+      looksLikeWKWDataSource <- WKWDataFormat.looksLikeWKWDataSource(path)
+      dataSource <- if (looksLikeWKWDataSource) WKWDataFormat.exploreDataSource(id, path, previous, report)
+      else WKWDataFormat.dummyDataSource(id, previous, report)
     } yield (dataSource, report.messages.toList)
   }
 
-  def exploreMappings(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
+  def exploreMappings(organizationName: String, datasetName: String, dataLayerName: String): Set[String] =
     MappingProvider
-      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName))
       .getOrElse(Set())
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
@@ -170,19 +179,18 @@ class DataSourceService @Inject()(
       _ <- dataSourceRepository.updateDataSource(dataSource)
     } yield ()
 
-  def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
+  private def backupPreviousProperties(dataSourcePath: Path): Box[Unit] = {
     val propertiesFile = dataSourcePath.resolve(propertiesFileName)
     val previousContentOrEmpty = if (Files.exists(propertiesFile)) {
       val previousContentSource = Source.fromFile(propertiesFile.toString)
-      val previousContent = previousContentSource.getLines.mkString("\n")
+      val previousContent = previousContentSource.getLines().mkString("\n")
       previousContentSource.close()
       previousContent
     } else {
       "<empty>"
     }
-    val timestamp = ISODateTimeFormat.dateTime.print(new DateTime())
     val outputForLogfile =
-      f"Contents of $propertiesFileName were changed by webKnossos at $timestamp. Old content: \n\n$previousContentOrEmpty\n\n"
+      f"Contents of $propertiesFileName were changed by WEBKNOSSOS at ${Instant.now}. Old content: \n\n$previousContentOrEmpty\n\n"
     val logfilePath = dataSourcePath.resolve(logFileName)
     try {
       val fileWriter = new FileWriter(logfilePath.toString, true)
@@ -198,7 +206,7 @@ class DataSourceService @Inject()(
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
     val organization = path.getFileName.toString
 
-    PathUtils.listDirectories(path) match {
+    PathUtils.listDirectories(path, silent = true) match {
       case Full(dataSourceDirs) =>
         val dataSources = dataSourceDirs.map(path => dataSourceFromFolder(path, organization))
         dataSources
@@ -227,5 +235,32 @@ class DataSourceService @Inject()(
       UnusableDataSource(id, "Not imported yet.")
     }
   }
+
+  def invalidateVaultCache(dataSource: InboxDataSource, dataLayerName: Option[String]): Fox[Int] =
+    for {
+      genericDataSource <- dataSource.toUsable
+      dataLayers = dataLayerName match {
+        case Some(ln) => Seq(genericDataSource.getDataLayer(ln))
+        case None     => genericDataSource.dataLayers.map(d => Some(d))
+      }
+      removedEntriesList = for {
+        dataLayerOpt <- dataLayers
+        dataLayer <- dataLayerOpt
+        magsOpt = dataLayer match {
+          case layer: N5Layer          => Some(layer.mags)
+          case layer: PrecomputedLayer => Some(layer.mags)
+          case layer: ZarrLayer        => Some(layer.mags)
+          case layer: Zarr3Layer       => Some(layer.mags)
+          case _                       => None
+        }
+        removedEntriesCount = magsOpt match {
+          case Some(mags) =>
+            mags.map(mag =>
+              remoteSourceDescriptorService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag))
+            mags.length
+          case None => 0
+        }
+      } yield removedEntriesCount
+    } yield removedEntriesList.sum
 
 }

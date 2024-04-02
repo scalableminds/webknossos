@@ -2,9 +2,10 @@ import * as React from "react";
 import _ from "lodash";
 import { WarningOutlined } from "@ant-design/icons";
 import { Tooltip } from "antd";
-import type { SmallerOrHigherInfo } from "oxalis/model/accessors/dataset_accessor";
-import { getUnrenderableLayerInfosForCurrentZoom } from "oxalis/model/accessors/dataset_accessor";
+import { getUnrenderableLayerInfosForCurrentZoom } from "oxalis/model/accessors/flycam_accessor";
 import { usePolledState } from "libs/react_helpers";
+import { SmallerOrHigherInfo } from "oxalis/model/helpers/resolution_info";
+
 const { useState } = React;
 type UnrenderableLayerNamesInfo = {
   layerName: string;

@@ -26,6 +26,7 @@ function channelCountToFormat(channelCount: number, type: THREE.TextureDataType)
 // This function has to be in its own file as non-resolvable cycles are created otherwise
 export function createUpdatableTexture(
   width: number,
+  height: number,
   channelCount: number,
   type: THREE.TextureDataType,
   renderer: THREE.WebGLRenderer,
@@ -39,7 +40,7 @@ export function createUpdatableTexture(
 
   const newTexture = new UpdatableTexture(
     width,
-    width,
+    height,
     format,
     type,
     THREE.UVMapping,
@@ -49,7 +50,6 @@ export function createUpdatableTexture(
     THREE.NearestFilter,
   );
   newTexture.setRenderer(renderer);
-  newTexture.setSize(width, width);
   return newTexture;
 }
 export default {};

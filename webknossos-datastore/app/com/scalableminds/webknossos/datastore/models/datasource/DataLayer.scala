@@ -1,25 +1,33 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
+  PrecomputedDataLayer,
+  PrecomputedSegmentationLayer
+}
+import ucar.ma2.{Array => MultiArray}
+import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json._
 
 object DataFormat extends ExtendedEnumeration {
-  val wkw, zarr, n5, tracing = Value
+  val wkw, zarr, zarr3, n5, neuroglancerPrecomputed, tracing = Value
 }
 
 object Category extends ExtendedEnumeration {
   val color, mask, segmentation = Value
 
-  def fromElementClass(elementClass: ElementClass.Value): Category.Value =
+  def guessFromElementClass(elementClass: ElementClass.Value): Category.Value =
     elementClass match {
       case ElementClass.uint16 => segmentation
       case ElementClass.uint32 => segmentation
@@ -32,6 +40,23 @@ object ElementClass extends ExtendedEnumeration {
   val uint8, uint16, uint24, uint32, uint64, float, double, int8, int16, int32, int64 = Value
 
   def segmentationElementClasses: Set[Value] = Set(uint8, uint16, uint32, uint64)
+
+  def encodeAsByte(elementClass: ElementClass.Value): Byte = {
+    val asInt = elementClass match {
+      case ElementClass.uint8  => 0
+      case ElementClass.uint16 => 1
+      case ElementClass.uint24 => 2
+      case ElementClass.uint32 => 3
+      case ElementClass.uint64 => 4
+      case ElementClass.float  => 5
+      case ElementClass.double => 6
+      case ElementClass.int8   => 7
+      case ElementClass.int16  => 8
+      case ElementClass.int32  => 9
+      case ElementClass.int64  => 10
+    }
+    asInt.toByte
+  }
 
   def bytesPerElement(elementClass: ElementClass.Value): Int = elementClass match {
     case ElementClass.uint8  => 1
@@ -58,7 +83,7 @@ object ElementClass extends ExtendedEnumeration {
   }
 
   /* only used for segmentation layers, so only unsigned integers 8 16 32 64 */
-  def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
+  private def maxSegmentIdValue(elementClass: ElementClass.Value): Long = elementClass match {
     case ElementClass.uint8  => 1L << 8L
     case ElementClass.uint16 => 1L << 16L
     case ElementClass.uint32 => 1L << 32L
@@ -118,6 +143,8 @@ object ElementClass extends ExtendedEnumeration {
 object LayerViewConfiguration {
   type LayerViewConfiguration = Map[String, JsValue]
 
+  def empty: LayerViewConfiguration = Map()
+
   implicit val jsonFormat: Format[LayerViewConfiguration] = Format.of[LayerViewConfiguration]
 }
 
@@ -136,8 +163,14 @@ trait DataLayerLike {
   // This is the default from the DataSource JSON.
   def defaultViewConfiguration: Option[LayerViewConfiguration]
 
-  // This is the default from the DataSet Edit View.
+  // This is the default from the Dataset Edit View.
   def adminViewConfiguration: Option[LayerViewConfiguration]
+
+  def coordinateTransformations: Option[List[CoordinateTransformation]]
+
+  // n-dimensional datasets = 3-dimensional datasets with additional coordinate axes
+  def additionalAxes: Option[Seq[AdditionalAxis]]
+
 }
 
 object DataLayerLike {
@@ -174,7 +207,11 @@ trait DataLayer extends DataLayerLike {
     */
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int
 
-  def bucketProvider: BucketProvider
+  def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                     dataSourceId: DataSourceId,
+                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
+
+  def bucketProviderCacheKey: String = this.name
 
   def containsResolution(resolution: Vec3Int): Boolean = resolutions.contains(resolution)
 
@@ -188,7 +225,7 @@ trait DataLayer extends DataLayerLike {
 object DataLayer {
 
   /**
-    * Defines the length of a buckets. This is the minimal size that can be loaded from a file.
+    * Defines the length of a bucket per axis. This is the minimal size that can be loaded from a wkw file.
     */
   val bucketLength: Int = 32
 
@@ -204,7 +241,12 @@ object DataLayer {
           case (DataFormat.zarr, _)                     => json.validate[ZarrDataLayer]
           case (DataFormat.n5, Category.segmentation)   => json.validate[N5SegmentationLayer]
           case (DataFormat.n5, _)                       => json.validate[N5DataLayer]
-          case _                                        => json.validate[WKWDataLayer]
+          case (DataFormat.`neuroglancerPrecomputed`, Category.segmentation) =>
+            json.validate[PrecomputedSegmentationLayer]
+          case (DataFormat.`neuroglancerPrecomputed`, _)   => json.validate[PrecomputedDataLayer]
+          case (DataFormat.`zarr3`, Category.segmentation) => json.validate[Zarr3SegmentationLayer]
+          case (DataFormat.`zarr3`, _)                     => json.validate[Zarr3DataLayer]
+          case _                                           => json.validate[WKWDataLayer]
         }
       } yield {
         layer
@@ -212,12 +254,16 @@ object DataLayer {
 
     override def writes(layer: DataLayer): JsValue =
       (layer match {
-        case l: WKWDataLayer          => WKWDataLayer.jsonFormat.writes(l)
-        case l: WKWSegmentationLayer  => WKWSegmentationLayer.jsonFormat.writes(l)
-        case l: ZarrDataLayer         => ZarrDataLayer.jsonFormat.writes(l)
-        case l: ZarrSegmentationLayer => ZarrSegmentationLayer.jsonFormat.writes(l)
-        case l: N5DataLayer           => N5DataLayer.jsonFormat.writes(l)
-        case l: N5SegmentationLayer   => N5SegmentationLayer.jsonFormat.writes(l)
+        case l: WKWDataLayer                 => WKWDataLayer.jsonFormat.writes(l)
+        case l: WKWSegmentationLayer         => WKWSegmentationLayer.jsonFormat.writes(l)
+        case l: ZarrDataLayer                => ZarrDataLayer.jsonFormat.writes(l)
+        case l: ZarrSegmentationLayer        => ZarrSegmentationLayer.jsonFormat.writes(l)
+        case l: N5DataLayer                  => N5DataLayer.jsonFormat.writes(l)
+        case l: N5SegmentationLayer          => N5SegmentationLayer.jsonFormat.writes(l)
+        case l: PrecomputedDataLayer         => PrecomputedDataLayer.jsonFormat.writes(l)
+        case l: PrecomputedSegmentationLayer => PrecomputedSegmentationLayer.jsonFormat.writes(l)
+        case l: Zarr3DataLayer               => Zarr3DataLayer.jsonFormat.writes(l)
+        case l: Zarr3SegmentationLayer       => Zarr3SegmentationLayer.jsonFormat.writes(l)
       }).as[JsObject] ++ Json.obj(
         "category" -> layer.category,
         "dataFormat" -> layer.dataFormat
@@ -225,15 +271,89 @@ object DataLayer {
   }
 }
 
-trait SegmentationLayer extends DataLayer with SegmentationLayerLike {
+trait DataLayerWithMagLocators extends DataLayer {
 
-  val category: Category.Value = Category.segmentation
+  def mags: List[MagLocator]
 
-  lazy val mappingProvider: MappingProvider = new MappingProvider(this)
+  def mapped(boundingBoxMapping: BoundingBox => BoundingBox = b => b,
+             defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,
+             magMapping: MagLocator => MagLocator = m => m,
+             name: String = this.name,
+             coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations)
+    : DataLayerWithMagLocators =
+    this match {
+      case l: ZarrDataLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: ZarrSegmentationLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: N5DataLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: N5SegmentationLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: PrecomputedDataLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: PrecomputedSegmentationLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: Zarr3DataLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case l: Zarr3SegmentationLayer =>
+        l.copy(
+          boundingBox = boundingBoxMapping(l.boundingBox),
+          defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
+          mags = l.mags.map(magMapping),
+          name = name,
+          coordinateTransformations = coordinateTransformations
+        )
+      case _ => throw new Exception("Encountered unsupported layer format")
+    }
+
 }
 
-object SegmentationLayer {
-  val defaultLargestSegmentId = 0
+trait SegmentationLayer extends DataLayer with SegmentationLayerLike {
+  val category: Category.Value = Category.segmentation
+  lazy val mappingProvider: MappingProvider = new MappingProvider(this)
 }
 
 case class AbstractDataLayer(
@@ -243,7 +363,9 @@ case class AbstractDataLayer(
     resolutions: List[Vec3Int],
     elementClass: ElementClass.Value,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+    additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends DataLayerLike
 
 object AbstractDataLayer {
@@ -256,7 +378,9 @@ object AbstractDataLayer {
       layer.resolutions,
       layer.elementClass,
       layer.defaultViewConfiguration,
-      layer.adminViewConfiguration
+      layer.adminViewConfiguration,
+      layer.coordinateTransformations,
+      layer.additionalAxes
     )
 
   implicit val jsonFormat: OFormat[AbstractDataLayer] = Json.format[AbstractDataLayer]
@@ -271,7 +395,9 @@ case class AbstractSegmentationLayer(
     largestSegmentId: Option[Long] = None,
     mappings: Option[Set[String]],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+    additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends SegmentationLayerLike
 
 object AbstractSegmentationLayer {
@@ -286,7 +412,9 @@ object AbstractSegmentationLayer {
       layer.largestSegmentId,
       layer.mappings,
       layer.defaultViewConfiguration,
-      layer.adminViewConfiguration
+      layer.adminViewConfiguration,
+      layer.coordinateTransformations,
+      layer.additionalAxes
     )
 
   implicit val jsonFormat: OFormat[AbstractSegmentationLayer] = Json.format[AbstractSegmentationLayer]

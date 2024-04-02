@@ -2,8 +2,9 @@ import Maybe from "data.maybe";
 import _ from "lodash";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SkeletonTracing } from "oxalis/store";
+import type { OxalisState, SkeletonTracing, Tree } from "oxalis/store";
 import {
+  convertServerAdditionalAxesToFrontEnd,
   convertServerBoundingBoxToFrontend,
   convertUserBoundingBoxesFromServerToFrontend,
 } from "oxalis/model/reducers/reducer_helpers";
@@ -32,10 +33,12 @@ import {
   getSkeletonTracing,
   findTreeByNodeId,
   getTree,
+  getTreesWithType,
   getNodeAndTree,
+  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
-import Constants from "oxalis/constants";
+import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -53,9 +56,9 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       const activeTreeIdMaybe = activeNodeIdMaybe
         .chain((nodeId) => {
           // use activeNodeId to find active tree
-          const treeIdMaybe = findTreeByNodeId(trees, nodeId).map((tree) => tree.treeId);
+          const treeIdMaybe = findTreeByNodeId(trees, nodeId)?.treeId;
 
-          if (treeIdMaybe.isNothing) {
+          if (treeIdMaybe == null) {
             // There is an activeNodeId without a corresponding tree.
             // Warn the user, since this shouldn't happen, but clear the activeNodeId
             // so that wk is usable.
@@ -68,17 +71,17 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             activeNodeId = null;
           }
 
-          return treeIdMaybe;
+          return Maybe.fromNullable(treeIdMaybe);
         })
         .orElse(() => {
           // use last tree for active tree
-          const lastTree = Maybe.fromNullable(_.maxBy(_.values(trees), (tree) => tree.treeId));
+          const lastTree: Maybe<Tree> = Maybe.fromNullable(
+            _.maxBy(_.values(trees), (tree) => tree.treeId),
+          );
           return lastTree.map((t) => {
             // use last node for active node
-            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
             const lastNode = _.maxBy(Array.from(t.nodes.values()), (node) => node.id);
 
-            // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
             activeNodeId = lastNode != null ? lastNode.id : null;
             return t.treeId;
           });
@@ -105,6 +108,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           activeIndex: -1,
         },
         showSkeletons: true,
+        additionalAxes: convertServerAdditionalAxesToFrontEnd(action.tracing.additionalAxes),
       };
       return update(state, {
         tracing: {
@@ -127,25 +131,26 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       switch (action.type) {
         case "SET_ACTIVE_NODE": {
           const { nodeId } = action;
-          return findTreeByNodeId(skeletonTracing.trees, nodeId)
-            .map((tree) =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    activeNodeId: {
-                      $set: nodeId,
-                    },
-                    activeTreeId: {
-                      $set: tree.treeId,
-                    },
-                    activeGroupId: {
-                      $set: null,
-                    },
+          const tree = findTreeByNodeId(skeletonTracing.trees, nodeId);
+          if (tree) {
+            return update(state, {
+              tracing: {
+                skeleton: {
+                  activeNodeId: {
+                    $set: nodeId,
+                  },
+                  activeTreeId: {
+                    $set: tree.treeId,
+                  },
+                  activeGroupId: {
+                    $set: null,
                   },
                 },
-              }),
-            )
-            .getOrElse(state);
+              },
+            });
+          } else {
+            return state;
+          }
         }
 
         case "SET_NODE_RADIUS": {
@@ -263,7 +268,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         }
 
-        case "SET_ACTIVE_GROUP": {
+        case "SET_TREE_ACTIVE_GROUP": {
           return update(state, {
             tracing: {
               skeleton: {
@@ -281,7 +286,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           });
         }
 
-        case "DESELECT_ACTIVE_GROUP": {
+        case "DESELECT_ACTIVE_TREE_GROUP": {
           return update(state, {
             tracing: {
               skeleton: {
@@ -376,6 +381,27 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                     trees: {
                       [treeId]: {
                         $set: tree,
+                      },
+                    },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "SET_TREE_TYPE": {
+          const { treeType, treeId } = action;
+          return getTree(skeletonTracing, treeId)
+            .map((tree) =>
+              update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: {
+                        type: {
+                          $set: treeType,
+                        },
                       },
                     },
                   },
@@ -550,14 +576,27 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
       switch (action.type) {
         case "CREATE_NODE": {
-          const { position, rotation, viewport, resolution, treeId, timestamp } = action;
-          return getOrCreateTree(state, skeletonTracing, treeId, timestamp)
+          if (isSkeletonLayerTransformed(state)) {
+            // Don't create nodes if the skeleton layer is rendered with transforms.
+            return state;
+          }
+          const {
+            position,
+            rotation,
+            viewport,
+            resolution,
+            treeId,
+            timestamp,
+            additionalCoordinates,
+          } = action;
+          return getOrCreateTree(state, skeletonTracing, treeId, timestamp, TreeTypeEnum.DEFAULT)
             .chain((tree) =>
               createNode(
                 state,
                 skeletonTracing,
                 tree,
                 position,
+                additionalCoordinates,
                 rotation,
                 viewport,
                 resolution,
@@ -607,7 +646,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
         case "DELETE_NODE": {
           const { timestamp, nodeId, treeId } = action;
-          return getNodeAndTree(skeletonTracing, nodeId, treeId)
+          return getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT)
             .chain(([tree, node]) => deleteNode(state, tree, node, timestamp))
             .map(([trees, newActiveTreeId, newActiveNodeId, newMaxNodeId]) =>
               update(state, {
@@ -641,9 +680,11 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           if (sourceNodeId === targetNodeId) {
             return state;
           }
-
-          const sourceTreeMaybe = getNodeAndTree(skeletonTracing, sourceNodeId);
-          const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId);
+          const isProofreadingActive =
+            state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+          const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
+          const sourceTreeMaybe = getNodeAndTree(skeletonTracing, sourceNodeId, null, treeType);
+          const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId, null, treeType);
           return sourceTreeMaybe
             .chain(([sourceTree, sourceNode]) =>
               targetTreeMaybe.chain(([targetTree, targetNode]) =>
@@ -668,14 +709,20 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "SET_NODE_POSITION": {
+          if (isSkeletonLayerTransformed(state)) {
+            // Don't move node if the skeleton layer is rendered with transforms.
+            return state;
+          }
           const { position, nodeId, treeId } = action;
-          return getNodeAndTree(skeletonTracing, nodeId, treeId)
+          return getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT)
             .map(([tree, node]) => {
               const diffableMap = skeletonTracing.trees[tree.treeId].nodes;
               const newDiffableMap = diffableMap.set(
                 node.id,
                 update(node, {
-                  position: {
+                  untransformedPosition: {
+                    // Don't round here, since this would make the continuous
+                    // movement of a node weird.
                     $set: position,
                   },
                 }),
@@ -701,21 +748,20 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           const { timestamp, nodeId, treeId } = action;
           return getNodeAndTree(skeletonTracing, nodeId, treeId)
             .chain(([tree, node]) =>
-              createBranchPoint(skeletonTracing, tree, node, timestamp, restrictions).map(
-                (branchPoint) =>
-                  update(state, {
-                    tracing: {
-                      skeleton: {
-                        trees: {
-                          [tree.treeId]: {
-                            branchPoints: {
-                              $push: [branchPoint],
-                            },
+              createBranchPoint(tree, node, timestamp, restrictions).map((branchPoint) =>
+                update(state, {
+                  tracing: {
+                    skeleton: {
+                      trees: {
+                        [tree.treeId]: {
+                          branchPoints: {
+                            $push: [branchPoint],
                           },
                         },
                       },
                     },
-                  }),
+                  },
+                }),
               ),
             )
             .getOrElse(state);
@@ -890,7 +936,11 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
         case "MERGE_TREES": {
           const { sourceNodeId, targetNodeId } = action;
-          return mergeTrees(skeletonTracing, sourceNodeId, targetNodeId)
+          const isProofreadingActive =
+            state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+          const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
+          const trees = getTreesWithType(skeletonTracing, treeType);
+          return mergeTrees(trees, sourceNodeId, targetNodeId)
             .map(([trees, newActiveTreeId, newActiveNodeId]) =>
               update(state, {
                 tracing: {
@@ -926,6 +976,26 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                       [tree.treeId]: {
                         name: {
                           $set: newName,
+                        },
+                      },
+                    },
+                  },
+                },
+              });
+            })
+            .getOrElse(state);
+        }
+
+        case "SET_EDGES_ARE_VISIBLE": {
+          return getTree(skeletonTracing, action.treeId)
+            .map((tree) => {
+              return update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: {
+                        edgesAreVisible: {
+                          $set: action.edgesAreVisible,
                         },
                       },
                     },

@@ -48,11 +48,11 @@ jobs:
             - yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
             - yarn-cache-{{ checksum ".circleci/cache_version" }}-
       - run:
-          name: Assert unique evolution numbers
-          command: tools/postgres/assert_unique_evolution_numbers.sh
-      - run:
           name: Install frontend dependencies
           command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
+      - run:
+          name: Assert unique evolution numbers
+          command: docker-compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
       - restore_cache:
           name: Restore webpack cache
           keys:
@@ -63,7 +63,7 @@ jobs:
           command: |
             docker-compose up -d postgres
             sleep 3
-            docker-compose run compile tools/postgres/diff_schema.js tools/postgres/schema.sql "conf/evolutions/*.sql"
+            docker-compose run compile tools/postgres/dbtool.js check-evolutions-schema
       - run:
           name: Build frontend documentation
           command: docker-compose run base yarn run docs
@@ -128,7 +128,11 @@ jobs:
       - run:
           name: Lint frontend code and check formatting
           command: |
-            .circleci/not-on-master.sh docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
+            .circleci/not-on-master.sh docker-compose run base bash -c "yarn run check-frontend"
+      - run:
+          name: Check for cyclic dependencies in front-end
+          command: |
+            .circleci/not-on-master.sh docker-compose run base yarn check-cyclic-dependencies
       - run:
           name: Run frontend tests
           command: |
@@ -275,7 +279,10 @@ jobs:
       - run:
           name: Run screenshot-tests
           command: |
+            # CircleCI cancels the job after 60 minutes. To ensure that screenshots are still
+            # uploaded as artifacts, we define a timeout of 50 minutes for the screenshot tests.
             URL=https://master.webknossos.xyz/ \
+            timeout 3000 \
             yarn test-screenshot
 
       - store_artifacts:
@@ -284,11 +291,34 @@ jobs:
       - store_artifacts:
           path: frontend/javascripts/test/snapshots/type-check
 
+  wkorg_nightly:
+    docker:
+      - image: scalableminds/puppeteer:master
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            yarn install --frozen-lockfile
+      - run:
+          name: Run screenshot-tests
+          command: |
+            # CircleCI cancels the job after 60 minutes. To ensure that screenshots are still
+            # uploaded as artifacts, we define a timeout of 50 minutes for the screenshot tests.
+            timeout 3000 \
+            yarn test-wkorg-screenshot
+
+      - store_artifacts:
+          path: frontend/javascripts/test/screenshots-wkorg
+
 workflows:
   version: 2
   circleci_build:
     jobs:
       - build_test_deploy:
+          context:
+            - DockerHub
           filters:
             tags:
               only: /.*/
@@ -299,6 +329,17 @@ workflows:
       - schedule:
           # 02:15 AM UTC
           cron: "15 2 * * *"
+          filters:
+            branches:
+              only:
+                - master
+  circleci_wkorg_nightly:
+    jobs:
+      - wkorg_nightly
+    triggers:
+      - schedule:
+          # 03:15 AM UTC
+          cron: "15 3 * * *"
           filters:
             branches:
               only:

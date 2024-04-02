@@ -1,4 +1,4 @@
-import { Dropdown, Menu, Modal } from "antd";
+import { Dropdown, MenuProps, Modal, Tooltip } from "antd";
 import {
   EyeOutlined,
   PlayCircleOutlined,
@@ -30,7 +30,6 @@ import Toast from "libs/toast";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import messages from "messages";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
-const { Item } = Menu;
 const { confirm } = Modal;
 type OwnProps = {
   task: APITask;
@@ -40,7 +39,7 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps;
 type State = {
-  isTransferModalVisible: boolean;
+  isTransferModalOpen: boolean;
   annotations: Array<APIAnnotation>;
   currentAnnotation: APIAnnotation | null | undefined;
 };
@@ -48,7 +47,7 @@ type State = {
 class TaskAnnotationView extends React.PureComponent<Props, State> {
   state: State = {
     currentAnnotation: null,
-    isTransferModalVisible: false,
+    isTransferModalOpen: false,
     annotations: [],
   };
 
@@ -94,83 +93,100 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
 
   updateAnnotationState = (updatedAnnotation: APIAnnotation) => {
     this.setState((prevState) => ({
-      isTransferModalVisible: false,
+      isTransferModalOpen: false,
       annotations: prevState.annotations.map((a) =>
         a.id === updatedAnnotation.id ? updatedAnnotation : a,
       ),
     }));
   };
 
-  getDropdownMenu(annotation: APIAnnotation) {
+  getViewOrOpenLabel(annotation: APIAnnotation) {
+    const iconClassName = "icon-margin-right";
     let doesAnnotationNotBelongToActiveUser = true;
 
     if (annotation.owner && this.props.activeUser) {
       doesAnnotationNotBelongToActiveUser = annotation.owner.id !== this.props.activeUser.id;
     }
-
     const label =
+      annotation.state === "Finished" || doesAnnotationNotBelongToActiveUser ? "View" : "Open";
+    const icon =
       annotation.state === "Finished" || doesAnnotationNotBelongToActiveUser ? (
-        <React.Fragment>
-          <EyeOutlined />
-          View
-        </React.Fragment>
+        <EyeOutlined className={iconClassName} />
       ) : (
-        <React.Fragment>
-          <PlayCircleOutlined />
-          Open
-        </React.Fragment>
+        <PlayCircleOutlined className={iconClassName} />
       );
-    return (
-      <Menu>
-        <Item key={`${annotation.id}-view`}>
-          <a href={`/annotations/Task/${annotation.id}`}>{label}</a>
-        </Item>
 
-        <Item
-          key={`${annotation.id}-transfer`}
-          onClick={() =>
+    return (
+      <a href={`/annotations/Task/${annotation.id}`}>
+        {icon}
+        {label}
+      </a>
+    );
+  }
+
+  getDropdownMenu(annotation: APIAnnotation): MenuProps {
+    return {
+      items: [
+        {
+          key: `${annotation.id}-transfer`,
+          onClick: () =>
             this.setState({
               currentAnnotation: annotation,
-              isTransferModalVisible: true,
-            })
-          }
-        >
-          <TeamOutlined />
-          Transfer
-        </Item>
-        <Item key={`${annotation.id}-download`}>
-          <AsyncLink
-            href="#"
-            onClick={() => {
-              const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
-              return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
-            }}
-            icon={<DownloadOutlined />}
-          >
-            Download
-          </AsyncLink>
-        </Item>
-        <Item key={`${annotation.id}-reset`} onClick={() => this.resetAnnotation(annotation)}>
-          <RollbackOutlined />
-          Reset
-        </Item>
-        <Item key={`${annotation.id}-delete`} onClick={() => this.deleteAnnotation(annotation)}>
-          <DeleteOutlined />
-          Reset and Cancel
-        </Item>
-        {annotation.state === "Finished" ? (
-          <Item key={`${annotation.id}-reopen`} onClick={() => this.reOpenAnnotation(annotation)}>
-            <FolderOpenOutlined />
-            Reopen
-          </Item>
-        ) : (
-          <Item key={`${annotation.id}-finish`} onClick={() => this.finishAnnotation(annotation)}>
-            <CheckCircleOutlined />
-            Finish
-          </Item>
-        )}
-      </Menu>
-    );
+              isTransferModalOpen: true,
+            }),
+          icon: <TeamOutlined />,
+          label: "Transfer",
+        },
+        {
+          key: `${annotation.id}-download`,
+          icon: <DownloadOutlined />,
+          label: (
+            <AsyncLink
+              href="#"
+              onClick={() => {
+                const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
+                return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
+              }}
+            >
+              Download
+            </AsyncLink>
+          ),
+        },
+        {
+          key: `${annotation.id}-reset`,
+          onClick: () => this.resetAnnotation(annotation),
+          icon: <RollbackOutlined />,
+          label: (
+            <Tooltip title={messages["task.tooltip_explain_reset"]} placement="left">
+              Reset
+            </Tooltip>
+          ),
+        },
+        {
+          key: `${annotation.id}-delete`,
+          onClick: () => this.deleteAnnotation(annotation),
+          icon: <DeleteOutlined />,
+          label: (
+            <Tooltip title={messages["task.tooltip_explain_reset_cancel"]} placement="left">
+              Reset and Cancel
+            </Tooltip>
+          ),
+        },
+        annotation.state === "Finished"
+          ? {
+              key: `${annotation.id}-reopen`,
+              onClick: () => this.reOpenAnnotation(annotation),
+              icon: <FolderOpenOutlined />,
+              label: "Reopen",
+            }
+          : {
+              key: `${annotation.id}-finish`,
+              onClick: () => this.finishAnnotation(annotation),
+              icon: <CheckCircleOutlined />,
+              label: "Finish",
+            },
+      ],
+    };
   }
 
   render() {
@@ -188,42 +204,45 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                 : "<no user>";
               return (
                 <tr key={`${annotation.id}-tr`}>
-                  <td>{userString}</td>
-                  <td>
+                  <td className="task-annotation-view">{userString}</td>
+                  <td className="task-annotation-view">
                     <FormattedDate timestamp={annotation.modified} />
                   </td>
-                  <td>
+                  <td className="task-annotation-view">
                     <span>
-                      <CheckCircleOutlined />
+                      <CheckCircleOutlined className="icon-margin-right" />
                       {`${annotation.state === "Finished" ? "Finished" : "In Progress"}`}
                     </span>
                     <br />
                     <span>
-                      <ClockCircleOutlined />
+                      <ClockCircleOutlined className="icon-margin-right" />
                       {annotation.tracingTime != null
                         ? formatSeconds(annotation.tracingTime / 1000)
                         : 0}
                     </span>
                   </td>
                   <td className="nowrap">
-                    <Dropdown overlay={this.getDropdownMenu(annotation)} trigger={["click"]}>
-                      <a className="ant-dropdown-link" href="#">
-                        Actions <DownOutlined />
-                      </a>
-                    </Dropdown>
+                    <div>{this.getViewOrOpenLabel(annotation)}</div>
+                    <div>
+                      <Dropdown menu={this.getDropdownMenu(annotation)} trigger={["click"]}>
+                        <a className="ant-dropdown-link" href="#">
+                          Actions <DownOutlined />
+                        </a>
+                      </Dropdown>
+                    </div>
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        {this.state.currentAnnotation && this.state.currentAnnotation.owner ? (
+        {this.state.currentAnnotation?.owner ? (
           <TransferTaskModal
-            visible={this.state.isTransferModalVisible}
+            isOpen={this.state.isTransferModalOpen}
             annotationId={this.state.currentAnnotation.id}
             onCancel={() =>
               this.setState({
-                isTransferModalVisible: false,
+                isTransferModalOpen: false,
               })
             }
             onChange={this.updateAnnotationState}

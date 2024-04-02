@@ -7,7 +7,9 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, 
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
-import com.scalableminds.webknossos.tracingstore.{TSRemoteWebKnossosClient, TracingStoreAccessTokenService}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
+import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
+import net.liftweb.common.Empty
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
@@ -15,7 +17,7 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scala.concurrent.ExecutionContext
 
 class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingService,
-                                          val remoteWebKnossosClient: TSRemoteWebKnossosClient,
+                                          val remoteWebknossosClient: TSRemoteWebknossosClient,
                                           val accessTokenService: TracingStoreAccessTokenService,
                                           val slackNotificationService: TSSlackNotificationService)(
     implicit val ec: ExecutionContext,
@@ -38,9 +40,9 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           val tracings: List[Option[SkeletonTracing]] = request.body
-          val mergedTracing = tracingService.merge(tracings.flatten)
-          val processedTracing = tracingService.remapTooLargeTreeIds(mergedTracing)
           for {
+            mergedTracing <- Fox.box2Fox(tracingService.merge(tracings.flatten, MergedVolumeStats.empty(), Empty))
+            processedTracing = tracingService.remapTooLargeTreeIds(mergedTracing)
             newId <- tracingService.save(processedTracing, None, processedTracing.version, toCache = !persist)
           } yield Ok(Json.toJson(newId))
         }

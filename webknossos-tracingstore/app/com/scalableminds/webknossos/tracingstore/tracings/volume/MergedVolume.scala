@@ -1,19 +1,30 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io.File
-
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedInteger, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.services.DataConverter
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClass
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import net.liftweb.common.Box
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0)
+case class MergedVolumeStats(
+    largestSegmentId: Long,
+    sortedResolutionList: Option[List[Vec3IntProto]], // None means do not touch the resolution list
+    labelMaps: List[Map[Long, Long]],
+    createdSegmentIndex: Boolean
+)
+
+object MergedVolumeStats {
+  def empty(createdSegmentIndex: Boolean = false): MergedVolumeStats =
+    MergedVolumeStats(0L, None, List.empty, createdSegmentIndex)
+}
+
+class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Long = 0)
     extends DataConverter
     with ByteUtils
     with VolumeDataZipHelper
@@ -23,13 +34,13 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
   private val labelMaps = mutable.ListBuffer[mutable.HashMap[UnsignedInteger, UnsignedInteger]]()
   var largestSegmentId: UnsignedInteger = UnsignedInteger.zeroFromElementClass(elementClass)
 
-  def addLabelSetFromDataZip(zipFile: File): Box[Unit] = {
+  def addLabelSetFromDataZip(zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] = {
     val importLabelSet: mutable.Set[UnsignedInteger] = scala.collection.mutable.Set()
     val unzipResult = withBucketsFromZip(zipFile) { (_, bytes) =>
       val dataTyped =
         UnsignedIntegerArray.fromByteArray(bytes, elementClass)
       val nonZeroData = UnsignedIntegerArray.filterNonZero(dataTyped)
-      importLabelSet ++= nonZeroData
+      Fox.successful(importLabelSet ++= nonZeroData)
     }
     for {
       _ <- unzipResult
@@ -51,7 +62,7 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
     addLabelSet(labelSet)
   }
 
-  def addLabelSet(labelSet: mutable.Set[UnsignedInteger]): Unit = labelSets += labelSet
+  private def addLabelSet(labelSet: mutable.Set[UnsignedInteger]): Unit = labelSets += labelSet
 
   private def prepareLabelMaps(): Unit =
     if (labelSets.isEmpty || (labelSets.length == 1 && initialLargestSegmentId == 0) || labelMaps.nonEmpty) {
@@ -83,9 +94,9 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
         }
     }
 
-  def addFromDataZip(sourceVolumeIndex: Int, zipFile: File): Box[Unit] =
+  def addFromDataZip(sourceVolumeIndex: Int, zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] =
     withBucketsFromZip(zipFile) { (bucketPosition, bytes) =>
-      add(sourceVolumeIndex, bucketPosition, bytes)
+      Fox.successful(add(sourceVolumeIndex, bucketPosition, bytes))
     }
 
   def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {
@@ -120,15 +131,31 @@ class MergedVolume(elementClass: ElementClass, initialLargestSegmentId: Long = 0
 
   def withMergedBuckets(block: (BucketPosition, Array[Byte]) => Fox[Unit])(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- Fox.combined(mergedVolume.map {
-        case (bucketPosition, bucketData) =>
-          block(bucketPosition, UnsignedIntegerArray.toByteArray(bucketData, elementClass))
-      }.toList)
+      _ <- Fox.serialCombined(mergedVolume.keysIterator) { bucketPosition =>
+        block(bucketPosition, UnsignedIntegerArray.toByteArray(mergedVolume(bucketPosition), elementClass))
+      }
     } yield ()
 
   def presentResolutions: Set[Vec3Int] =
     mergedVolume.map {
       case (bucketPosition: BucketPosition, _) => bucketPosition.mag
     }.toSet
+
+  def stats(createdSegmentIndex: Boolean): MergedVolumeStats =
+    MergedVolumeStats(
+      largestSegmentId.toLong,
+      Some(presentResolutions.toList.sortBy(_.maxDim).map(vec3IntToProto)),
+      labelMapsToLongMaps,
+      createdSegmentIndex
+    )
+
+  private def labelMapsToLongMaps =
+    labelMaps.toList.map { unsignedIntegerMap =>
+      val longMap = new mutable.HashMap[Long, Long]()
+      unsignedIntegerMap.foreach { keyValueTuple =>
+        longMap += ((keyValueTuple._1.toLong, keyValueTuple._2.toLong))
+      }
+      longMap.toMap
+    }
 
 }

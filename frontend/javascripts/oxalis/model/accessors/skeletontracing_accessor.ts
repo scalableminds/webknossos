@@ -15,16 +15,19 @@ import type {
   TreeGroup,
   TreeGroupTypeFlat,
   Node,
+  OxalisState,
 } from "oxalis/store";
-import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { mapGroups } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import {
+  findGroup,
+  MISSING_GROUP_ID,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import type { TreeType, Vector3 } from "oxalis/constants";
+import {
+  getTransformsForSkeletonLayer,
+  getTransformsForSkeletonLayerOrNull,
+} from "./dataset_accessor";
+import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 
-export type SkeletonTracingStats = {
-  treeCount: number;
-  nodeCount: number;
-  edgeCount: number;
-  branchPointCount: number;
-};
 export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
   if (tracing.skeleton != null) {
     return Maybe.Just(tracing.skeleton);
@@ -51,7 +54,7 @@ export function getNullableSkeletonTracing(
   const skeletonTracings = (tracings || []).filter((tracing) => tracing.typ === "Skeleton");
 
   if (skeletonTracings.length > 0 && skeletonTracings[0].typ === "Skeleton") {
-    // Only one skeleton is supported. The second type-check is only for flow.
+    // Only one skeleton is supported. The second type-check is only for TS.
     return skeletonTracings[0];
   }
 
@@ -78,7 +81,7 @@ export function getActiveTree(skeletonTracing: SkeletonTracing): Maybe<Tree> {
 
   return Maybe.Nothing();
 }
-export function getActiveGroup(skeletonTracing: SkeletonTracing): Maybe<TreeGroup> {
+export function getActiveTreeGroup(skeletonTracing: SkeletonTracing): Maybe<TreeGroup> {
   const { activeGroupId } = skeletonTracing;
 
   if (activeGroupId != null) {
@@ -97,24 +100,35 @@ export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tr
 
   return Maybe.Nothing();
 }
-export function findTreeByNodeId(trees: TreeMap, nodeId: number): Maybe<Tree> {
-  return Maybe.fromNullable(_.values(trees).find((tree) => tree.nodes.has(nodeId)));
+export function findTreeByNodeId(trees: TreeMap, nodeId: number): Tree | undefined {
+  return _.values(trees).find((tree) => tree.nodes.has(nodeId));
 }
-export function findTreeByName(trees: TreeMap, treeName: string): Maybe<Tree> {
-  return Maybe.fromNullable(_.values(trees).find((tree: Tree) => tree.name === treeName));
+export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefined {
+  return _.values(trees).find((tree: Tree) => tree.name === treeName);
+}
+export function getTreesWithType(
+  skeletonTracing: SkeletonTracing,
+  type?: TreeType | null | undefined,
+): TreeMap {
+  return type != null
+    ? _.pickBy(skeletonTracing.trees, (tree) => tree.type === type)
+    : skeletonTracing.trees;
 }
 export function getTree(
   skeletonTracing: SkeletonTracing,
   treeId?: number | null | undefined,
+  type?: TreeType | null | undefined,
 ): Maybe<Tree> {
+  const trees = getTreesWithType(skeletonTracing, type);
+
   if (treeId != null) {
-    return Maybe.fromNullable(skeletonTracing.trees[treeId]);
+    return Maybe.fromNullable(trees[treeId]);
   }
 
   const { activeTreeId } = skeletonTracing;
 
   if (activeTreeId != null) {
-    return Maybe.fromNullable(skeletonTracing.trees[activeTreeId]);
+    return Maybe.fromNullable(trees[activeTreeId]);
   }
 
   return Maybe.Nothing();
@@ -123,18 +137,21 @@ export function getNodeAndTree(
   skeletonTracing: SkeletonTracing,
   nodeId?: number | null | undefined,
   treeId?: number | null | undefined,
+  type?: TreeType | null | undefined,
 ): Maybe<[Tree, Node]> {
   let tree;
 
+  const trees = getTreesWithType(skeletonTracing, type);
+
   if (treeId != null) {
-    tree = skeletonTracing.trees[treeId];
+    tree = trees[treeId];
   } else if (nodeId != null) {
-    tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nodeId));
+    tree = _.values(trees).find((__) => __.nodes.has(nodeId));
   } else {
     const { activeTreeId } = skeletonTracing;
 
     if (activeTreeId != null) {
-      tree = skeletonTracing.trees[activeTreeId];
+      tree = trees[activeTreeId];
     }
   }
 
@@ -181,6 +198,36 @@ export function getNodeAndTreeOrNull(
       node: null,
     });
 }
+
+export function isSkeletonLayerTransformed(state: OxalisState) {
+  return (
+    getTransformsForSkeletonLayerOrNull(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ) != null
+  );
+}
+
+export function getNodePosition(node: Node, state: OxalisState): Vector3 {
+  return transformNodePosition(node.untransformedPosition, state);
+}
+
+export function transformNodePosition(position: Vector3, state: OxalisState): Vector3 {
+  const dataset = state.dataset;
+  const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
+
+  const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+  return transformPointUnscaled(currentTransforms)(position);
+}
+
+export function untransformNodePosition(position: Vector3, state: OxalisState): Vector3 {
+  const dataset = state.dataset;
+  const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
+
+  const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+  return transformPointUnscaled(invertTransform(currentTransforms))(position);
+}
+
 export function getMaxNodeIdInTree(tree: Tree): Maybe<number> {
   const maxNodeId = _.reduce(
     Array.from(tree.nodes.keys()),
@@ -205,21 +252,15 @@ export function getBranchPoints(tracing: Tracing): Maybe<Array<BranchPoint>> {
     _.flatMap(skeletonTracing.trees, (tree) => tree.branchPoints),
   );
 }
-export function getStats(tracing: Tracing): Maybe<SkeletonTracingStats> {
-  return getSkeletonTracing(tracing)
-    .chain((skeletonTracing) => Maybe.fromNullable(skeletonTracing.trees))
-    .map((trees) => ({
-      treeCount: _.size(trees),
-      nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
-      edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
-      branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
-    }));
-}
+
 export function getFlatTreeGroups(skeletonTracing: SkeletonTracing): Array<TreeGroupTypeFlat> {
   return Array.from(
-    mapGroups(skeletonTracing.treeGroups, ({ children: _children, ...bareTreeGroup }) => ({
-      ...bareTreeGroup,
-    })),
+    mapGroupsToGenerator(
+      skeletonTracing.treeGroups,
+      ({ children: _children, ...bareTreeGroup }) => ({
+        ...bareTreeGroup,
+      }),
+    ),
   );
 }
 export function getTreeGroupsMap(
@@ -232,3 +273,44 @@ export const getTreeNameForAgglomerateSkeleton = (
   agglomerateId: number,
   mappingName: string,
 ): string => `agglomerate ${agglomerateId} (${mappingName})`;
+
+// Helper
+export function* mapGroupsToGenerator<R>(
+  groups: Array<TreeGroup>,
+  callback: (arg0: TreeGroup) => R,
+): Generator<R, void, void> {
+  for (const group of groups) {
+    yield callback(group);
+
+    if (group.children) {
+      yield* mapGroupsToGenerator(group.children, callback);
+    }
+  }
+}
+
+function mapGroupAndChildrenHelper(group: TreeGroup, fn: (g: TreeGroup) => TreeGroup): TreeGroup {
+  const newChildren = mapGroups(group.children, fn);
+  return fn({ ...group, children: newChildren });
+}
+
+export function mapGroups(groups: TreeGroup[], fn: (g: TreeGroup) => TreeGroup): TreeGroup[] {
+  return groups.map((group) => mapGroupAndChildrenHelper(group, fn));
+}
+
+export function mapGroupsWithRoot(
+  groups: TreeGroup[],
+  fn: (g: TreeGroup) => TreeGroup,
+): TreeGroup[] {
+  // Add the virtual root group so that the map function can also mutate
+  // the high-level elements (e.g., filtering elements in the first level).
+  return mapGroups(
+    [
+      {
+        name: "Root",
+        groupId: MISSING_GROUP_ID,
+        children: groups,
+      },
+    ],
+    fn,
+  )[0].children; // Read the root group's children again
+}

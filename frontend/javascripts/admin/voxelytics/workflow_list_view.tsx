@@ -4,38 +4,26 @@ import { Table, Progress, Tooltip, Button } from "antd";
 import { Link } from "react-router-dom";
 import { getVoxelyticsWorkflows } from "admin/admin_rest_api";
 import {
-  VoxelyticsRunInfo,
+  VoxelyticsWorkflowListingRun,
   VoxelyticsRunState,
-  VoxelyticsTaskInfo,
-  VoxelyticsWorkflowInfo,
+  VoxelyticsWorkflowListing,
 } from "types/api_flow_types";
 import { usePolling } from "libs/react_hooks";
-import { formatDateMedium } from "libs/format_utils";
+import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Toast from "libs/toast";
-import { VX_POLLING_INTERVAL } from "./workflow_view";
+import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
 
-function parseTaskInfo(taskInfo: VoxelyticsTaskInfo): VoxelyticsTaskInfo {
-  return {
-    ...taskInfo,
-    beginTime: taskInfo.beginTime != null ? new Date(taskInfo.beginTime) : null,
-    endTime: taskInfo.endTime != null ? new Date(taskInfo.endTime) : null,
-  } as VoxelyticsTaskInfo;
-}
-
-function parseRunInfo(runInfo: VoxelyticsRunInfo): VoxelyticsRunInfo {
+function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun): VoxelyticsWorkflowListingRun {
   return {
     ...runInfo,
-    tasks: runInfo.tasks.map(parseTaskInfo),
     beginTime: new Date(runInfo.beginTime),
     endTime: runInfo.endTime != null ? new Date(runInfo.endTime) : null,
-  } as any as VoxelyticsRunInfo;
+  } as any as VoxelyticsWorkflowListingRun;
 }
 
-function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowInfo): VoxelyticsWorkflowInfo {
+function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowListing): VoxelyticsWorkflowListing {
   return {
     ...workflowInfo,
-    beginTime: new Date(workflowInfo.beginTime),
-    endTime: workflowInfo.endTime != null ? new Date(workflowInfo.endTime) : null,
     runs: workflowInfo.runs
       .map(parseRunInfo)
       .sort((a, b) => b.beginTime.getTime() - a.beginTime.getTime()),
@@ -46,47 +34,15 @@ function uniqueify<T>(array: Array<T>): Array<T> {
   return [...new Set(array)];
 }
 
-function aggregateTasks(runs: Array<VoxelyticsRunInfo>): Array<VoxelyticsTaskInfo> {
-  function selectCombinedTaskRun(taskRuns: Array<VoxelyticsTaskInfo>): VoxelyticsTaskInfo {
-    const runningOrFinishedTaskRuns = taskRuns.filter((t) =>
-      [
-        VoxelyticsRunState.RUNNING,
-        VoxelyticsRunState.STALE,
-        VoxelyticsRunState.COMPLETE,
-        VoxelyticsRunState.FAILED,
-        VoxelyticsRunState.CANCELLED,
-      ].includes(t.state),
-    );
-    if (runningOrFinishedTaskRuns.length > 0) {
-      return runningOrFinishedTaskRuns[0];
-    }
-    return taskRuns[0];
-  }
-
-  const combinedTaskRuns = runs[0].tasks.map((task) =>
-    selectCombinedTaskRun(
-      runs
-        .flatMap((run) => {
-          const taskMaybe = run.tasks.find((t) => t.taskName === task.taskName);
-          return taskMaybe != null ? [taskMaybe] : [];
-        })
-        .sort(
-          (a, b) => (b.beginTime?.getTime() ?? -Infinity) - (a.beginTime?.getTime() ?? -Infinity),
-        ),
-    ),
-  );
-  return combinedTaskRuns;
-}
-
-type RenderRunInfo = VoxelyticsRunInfo & {
+type RenderRunInfo = VoxelyticsWorkflowListingRun & {
   workflowName: string;
   workflowHash: string;
-  children?: Array<VoxelyticsRunInfo>;
+  children?: Array<VoxelyticsWorkflowListingRun>;
 };
 
 export default function WorkflowListView() {
   const [isLoading, setIsLoading] = useState(false);
-  const [workflows, setWorkflows] = useState<Array<VoxelyticsWorkflowInfo>>([]);
+  const [workflows, setWorkflows] = useState<Array<VoxelyticsWorkflowListing>>([]);
 
   async function loadData() {
     setIsLoading(true);
@@ -116,7 +72,7 @@ export default function WorkflowListView() {
         username: uniqueify(workflow.runs.map((run) => run.username)).join(", "),
         hostname: uniqueify(workflow.runs.map((run) => run.hostname)).join(", "),
         voxelyticsVersion: uniqueify(workflow.runs.map((run) => run.voxelyticsVersion)).join(", "),
-        tasks: aggregateTasks(workflow.runs),
+        taskCounts: workflow.taskCounts,
         children: workflow.runs.map((run) => ({
           workflowName: workflow.name,
           workflowHash: workflow.hash,
@@ -127,60 +83,45 @@ export default function WorkflowListView() {
   ) as any as Array<RenderRunInfo>;
 
   function renderProgress(run: RenderRunInfo) {
-    const skippedCount = run.tasks.filter(
-      (taskRun) => taskRun.state === VoxelyticsRunState.SKIPPED,
-    ).length;
-    const completeCount = run.tasks.filter(
-      (taskRun) => taskRun.state === VoxelyticsRunState.COMPLETE,
-    ).length;
-    const cancelledCount = run.tasks.filter(
-      (taskRun) => taskRun.state === VoxelyticsRunState.CANCELLED,
-    ).length;
-    const failedCount = run.tasks.filter(
-      (taskRun) => taskRun.state === VoxelyticsRunState.FAILED,
-    ).length;
-    const runnableCount = run.tasks.filter(
-      (taskRun) => taskRun.state !== VoxelyticsRunState.SKIPPED,
-    ).length;
-    let label = `${completeCount}/${runnableCount} complete`;
-    if (cancelledCount > 0) {
-      label += `, ${cancelledCount} cancelled`;
+    let label = "";
+    if (run.state === VoxelyticsRunState.RUNNING) {
+      const remainingCount =
+        run.taskCounts.total -
+        run.taskCounts.complete -
+        run.taskCounts.failed -
+        run.taskCounts.cancelled -
+        run.taskCounts.skipped;
+      label += `${remainingCount} remaining • `;
     }
-    if (failedCount > 0) {
-      label += `, ${failedCount} failed`;
+    label += `${run.taskCounts.complete} complete`;
+    if (run.taskCounts.cancelled > 0) {
+      label += ` • ${run.taskCounts.cancelled} cancelled`;
     }
-    if (skippedCount > 0) {
-      label += `, ${skippedCount} skipped`;
+    if (run.taskCounts.failed > 0) {
+      label += ` • ${run.taskCounts.failed} failed`;
     }
+    if (run.taskCounts.skipped > 0) {
+      label += ` • ${run.taskCounts.skipped} skipped`;
+    }
+    label += ` • ${run.taskCounts.total} total`;
     if (run.state === VoxelyticsRunState.STALE) {
-      label += ", timeout";
+      label += " • timeout";
     }
 
     return (
       <Tooltip title={label}>
         <Progress
-          percent={Math.round(((completeCount + failedCount) / runnableCount) * 100)}
+          percent={Math.round(
+            ((run.taskCounts.complete + run.taskCounts.cancelled + run.taskCounts.failed) /
+              run.taskCounts.total) *
+              100,
+          )}
           status={runStateToStatus(run.state)}
-          success={{ percent: Math.round((completeCount / runnableCount) * 100) }}
+          success={{ percent: Math.round((run.taskCounts.complete / run.taskCounts.total) * 100) }}
           size="small"
         />
       </Tooltip>
     );
-  }
-
-  function runStateToStatus(state: VoxelyticsRunState) {
-    switch (state) {
-      case VoxelyticsRunState.COMPLETE:
-        return "success";
-      case VoxelyticsRunState.STALE:
-      case VoxelyticsRunState.FAILED:
-      case VoxelyticsRunState.CANCELLED:
-        return "exception";
-      case VoxelyticsRunState.PENDING:
-        return "active";
-      default:
-        return "normal";
-    }
   }
 
   return (
@@ -239,6 +180,27 @@ export default function WorkflowListView() {
             key: "progress",
             width: 200,
             render: renderProgress,
+          },
+          {
+            title: "File Size",
+            key: "fileSize",
+            width: 200,
+            render: (run: RenderRunInfo) => (
+              <Tooltip
+                overlay={
+                  <>
+                    {formatCountToDataAmountUnit(run.taskCounts.fileSize)} •{" "}
+                    {formatNumber(run.taskCounts.inodeCount)} inodes
+                    <br />
+                    Note: manual changes on disk are not reflected here
+                  </>
+                }
+              >
+                {formatCountToDataAmountUnit(run.taskCounts.fileSize)}
+              </Tooltip>
+            ),
+            sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
+              a.taskCounts.fileSize - b.taskCounts.fileSize,
           },
           {
             title: "Begin",

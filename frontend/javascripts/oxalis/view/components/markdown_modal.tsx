@@ -1,8 +1,7 @@
-import { Alert, Modal, Button, Row, Col } from "antd";
+import { Alert, Modal, Button, Row, Col, Input } from "antd";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import * as React from "react";
-import InputComponent from "oxalis/view/components/input_component";
 
 function getFirstLine(comment: string) {
   const newLineIndex = comment.indexOf("\n");
@@ -22,24 +21,28 @@ export function MarkdownWrapper({ source, singleLine }: { source: string; single
     />
   );
 }
+
 export function MarkdownModal({
   source,
-  visible,
+  isOpen,
   onOk,
   onChange,
   label,
+  placeholder,
 }: {
   source: string;
   label: string;
-  visible?: boolean;
+  isOpen?: boolean;
+  placeholder?: string;
   onOk: () => void;
-  onChange: (arg0: React.SyntheticEvent) => void;
+  onChange: React.ChangeEventHandler<HTMLTextAreaElement>;
 }) {
+  const placeholderText = placeholder ? placeholder : `Add ${label}`;
   return (
     <Modal
       key="comment-markdown-modal"
       title={<span>{`Edit ${label}`}</span>}
-      visible={visible}
+      open={isOpen}
       onCancel={onOk}
       closable={false}
       width={700}
@@ -68,16 +71,15 @@ export function MarkdownModal({
       />
       <Row gutter={16}>
         <Col span={12}>
-          <InputComponent
-            value={source}
-            placeholder={`Add ${label}`}
+          <Input.TextArea
+            defaultValue={source}
+            placeholder={placeholderText}
             onChange={onChange}
             rows={5}
             autoSize={{
               minRows: 5,
               maxRows: 20,
             }}
-            isTextArea
           />
         </Col>
         <Col

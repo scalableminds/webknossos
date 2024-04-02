@@ -1,12 +1,12 @@
 package models.voxelytics
 
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.User
 import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
 import utils.ObjectId
 
-import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -20,35 +20,74 @@ case class RunEntry(id: ObjectId,
                     workflow_yamlContent: String,
                     workflow_config: JsObject,
                     state: VoxelyticsRunState,
-                    beginTime: Instant,
+                    beginTime: Option[Instant],
                     endTime: Option[Instant])
 
 object RunEntry {
   implicit val jsonFormat: OFormat[RunEntry] = Json.format[RunEntry]
 }
 
-case class TaskRunEntry(runName: String,
-                        runId: ObjectId,
+case class TaskRunEntry(runId: ObjectId,
+                        runName: String,
                         taskId: ObjectId,
                         taskName: String,
                         state: VoxelyticsRunState,
                         beginTime: Option[Instant],
                         endTime: Option[Instant],
                         currentExecutionId: Option[String],
-                        chunksTotal: Long,
-                        chunksFinished: Long)
+                        chunkCounts: ChunkCounts)
 
 object TaskRunEntry {
   implicit val jsonFormat: OFormat[TaskRunEntry] = Json.format[TaskRunEntry]
 }
 
+case class CombinedTaskRunEntry(taskName: String, currentExecutionId: Option[String], chunkCounts: ChunkCounts)
+
+object CombinedTaskRunEntry {
+  implicit val jsonFormat: OFormat[TaskRunEntry] = Json.format[TaskRunEntry]
+}
+
 case class WorkflowEntry(
     name: String,
-    hash: String
+    hash: String,
+    _organization: ObjectId
 )
 
 object WorkflowEntry {
   implicit val jsonFormat: OFormat[WorkflowEntry] = Json.format[WorkflowEntry]
+}
+
+case class TaskCounts(total: Long,
+                      failed: Long,
+                      skipped: Long,
+                      complete: Long,
+                      cancelled: Long,
+                      fileSize: Long,
+                      inodeCount: Long)
+
+object TaskCounts {
+  implicit val jsonFormat: OFormat[TaskCounts] = Json.format[TaskCounts]
+}
+
+case class ChunkCounts(total: Long, failed: Long, skipped: Long, complete: Long, cancelled: Long)
+
+object ChunkCounts {
+  implicit val jsonFormat: OFormat[ChunkCounts] = Json.format[ChunkCounts]
+}
+
+case class WorkflowListingRunEntry(id: ObjectId,
+                                   name: String,
+                                   username: String,
+                                   hostname: String,
+                                   voxelyticsVersion: String,
+                                   workflow_hash: String,
+                                   state: VoxelyticsRunState,
+                                   beginTime: Option[Instant],
+                                   endTime: Option[Instant],
+                                   taskCounts: TaskCounts)
+
+object WorkflowListingRunEntry {
+  implicit val jsonFormat: OFormat[WorkflowListingRunEntry] = Json.format[WorkflowListingRunEntry]
 }
 
 case class ArtifactEntry(artifactId: ObjectId,
@@ -78,10 +117,10 @@ object StatisticsEntry {
 }
 
 case class ChunkStatisticsEntry(executionId: String,
-                                countTotal: Long,
-                                countFinished: Long,
-                                beginTime: Instant,
-                                endTime: Instant,
+                                chunkCounts: ChunkCounts,
+                                beginTime: Option[Instant],
+                                endTime: Option[Instant],
+                                wallTime: Double,
                                 memory: StatisticsEntry,
                                 cpuUser: StatisticsEntry,
                                 cpuSystem: StatisticsEntry,
@@ -117,10 +156,39 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
       runUserId <- voxelyticsDAO.getUserIdForRunOpt(runName, user._organization)
     } yield bool2Fox(user.isAdmin || runUserId.forall(_ == user._id))
 
-  def runPublicWrites(run: RunEntry, tasks: List[TaskRunEntry]): JsObject =
-    Json.toJson(run).as[JsObject] ++ Json.obj(
-      "tasks" -> tasks.map(Json.toJson(_))
-    )
+  def taskRunsPublicWrites(combinedTaskRuns: List[CombinedTaskRunEntry], taskRuns: List[TaskRunEntry]): JsArray = {
+    val groupedTaskRuns = taskRuns.groupBy(_.taskName)
+    JsArray(
+      groupedTaskRuns
+        .map(group => {
+          val sortedTaskRuns = group._2.sortBy(_.beginTime).reverse
+          val combinedTaskRun = combinedTaskRuns.find(_.taskName == group._1)
+          val state = sortedTaskRuns
+            .map(_.state)
+            .find(s => s != VoxelyticsRunState.SKIPPED && s != VoxelyticsRunState.PENDING)
+            .orElse(sortedTaskRuns.headOption.map(_.state))
+            .getOrElse(VoxelyticsRunState.SKIPPED)
+          val chunkCounts = combinedTaskRun.map(_.chunkCounts).getOrElse(ChunkCounts(0, 0, 0, 0, 0))
+          Json.obj(
+            "taskName" -> group._1,
+            "state" -> state,
+            "beginTime" -> Try(sortedTaskRuns.flatMap(_.beginTime).min).toOption,
+            "endTime" -> Try(sortedTaskRuns.flatMap(_.endTime).max).toOption,
+            "currentExecutionId" -> combinedTaskRun.flatMap(_.currentExecutionId),
+            "chunkCounts" -> chunkCounts,
+            "runs" -> sortedTaskRuns.map(taskRun =>
+              Json.obj(
+                "runId" -> taskRun.runId,
+                "state" -> taskRun.state,
+                "beginTime" -> taskRun.beginTime,
+                "endTime" -> taskRun.endTime,
+                "currentExecutionId" -> taskRun.currentExecutionId,
+                "chunkCounts" -> taskRun.chunkCounts
+            ))
+          )
+        })
+        .toList)
+  }
 
   def artifactsPublicWrites(artifacts: List[ArtifactEntry]): JsObject = {
     val artifactsByTask = artifacts.groupBy(_.taskName)
@@ -134,24 +202,6 @@ class VoxelyticsService @Inject()(voxelyticsDAO: VoxelyticsDAO)(implicit ec: Exe
   def workflowConfigPublicWrites(workflowConfig: JsObject, tasks: List[TaskEntry]): JsObject =
     workflowConfig ++
       Json.obj("tasks" -> JsObject(tasks.map(t => (t.name, t.config ++ Json.obj("task" -> t.task)))))
-
-  def aggregateBeginEndTime(runs: List[RunEntry]): (VoxelyticsRunState, Instant, Option[Instant]) = {
-    // The calling code needs to make sure that runs is non-empty, otherwise the next lines will throw exceptions
-    val state = runs.maxBy(_.beginTime).state
-    val beginTime = runs.map(_.beginTime).min
-    val endTime = Try(runs.flatMap(_.endTime).max).toOption
-
-    (state, beginTime, endTime)
-  }
-
-  def combineTaskRuns(allTaskRuns: List[TaskRunEntry], mostRecentRunId: ObjectId): List[TaskRunEntry] =
-    allTaskRuns
-      .filter(task => task.runId == mostRecentRunId)
-      .map(task => {
-        val thisTaskRuns = allTaskRuns.filter(t => t.taskName == task.taskName).sortBy(_.beginTime).reverse
-        val nonWaitingTaskRuns = thisTaskRuns.filter(t => VoxelyticsRunState.nonWaitingStates.contains(t.state))
-        nonWaitingTaskRuns.headOption.getOrElse(thisTaskRuns.head)
-      })
 
   def upsertTaskWithArtifacts(runId: ObjectId,
                               taskName: String,

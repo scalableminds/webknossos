@@ -3,13 +3,13 @@ package controllers
 import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task._
-import oxalis.security.WkEnv
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import models.user.UserService
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
+import security.WkEnv
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -23,9 +23,9 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     with FoxImplicits {
 
   private val scriptPublicReads =
-    ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
-      (__ \ 'gist).read[String] and
-      (__ \ 'owner).read[ObjectId])(Script.fromForm _)
+    ((__ \ "name").read[String](minLength[String](2) or maxLength[String](50)) and
+      (__ \ "gist").read[String] and
+      (__ \ "owner").read[ObjectId])(Script.fromForm _)
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>
@@ -33,6 +33,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)
         _ <- bool2Fox(isTeamManagerOrAdmin) ?~> "notAllowed" ~> FORBIDDEN
         _ <- bool2Fox(script._owner == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- scriptService.assertValidScriptName(script.name)
         _ <- scriptDAO.insertOne(script)
         js <- scriptService.publicWrites(script) ?~> "script.write.failed"
       } yield Ok(js)
@@ -64,6 +65,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
         scriptIdValidated <- ObjectId.fromString(scriptId)
         oldScript <- scriptDAO.findOne(scriptIdValidated) ?~> "script.notFound" ~> NOT_FOUND
         _ <- bool2Fox(oldScript._owner == request.identity._id) ?~> "script.notOwner" ~> FORBIDDEN
+        _ <- scriptService.assertValidScriptName(scriptFromForm.name)
         updatedScript = scriptFromForm.copy(_id = oldScript._id)
         _ <- scriptDAO.updateOne(updatedScript)
         js <- scriptService.publicWrites(updatedScript) ?~> "script.write.failed"

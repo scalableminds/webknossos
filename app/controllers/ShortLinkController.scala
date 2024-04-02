@@ -1,11 +1,11 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
 import models.shortlinks.{ShortLink, ShortLinkDAO}
-import oxalis.security.{RandomIDGenerator, WkEnv}
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.{RandomIDGenerator, WkEnv}
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
@@ -30,7 +30,7 @@ class ShortLinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[
 
   def getByKey(key: String): Action[AnyContent] = Action.async { implicit request =>
     for {
-      shortLink <- shortLinkDAO.findOneByKey(key)
+      shortLink <- shortLinkDAO.findOneByKey(key) ?~> "shortLink.notFound"
     } yield Ok(Json.toJson(shortLink))
   }
 }

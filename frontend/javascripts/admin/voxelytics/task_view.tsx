@@ -1,6 +1,6 @@
 import React from "react";
 import { JSONTree } from "react-json-tree";
-import { Progress, Tabs, Tooltip } from "antd";
+import { Progress, Tabs, TabsProps, Tooltip } from "antd";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import {
@@ -10,49 +10,11 @@ import {
   VoxelyticsTaskInfo,
   VoxelyticsWorkflowDagEdge,
 } from "types/api_flow_types";
-import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
 import ArtifactsViewer from "./artifacts_view";
 import LogTab from "./log_tab";
 import StatisticsTab from "./statistics_tab";
-
-const { TabPane } = Tabs;
-
-export type Result<T> =
-  | {
-      type: "SUCCESS";
-      value: T;
-    }
-  | { type: "ERROR" }
-  | { type: "LOADING" };
-
-// https://github.com/reduxjs/redux-devtools/blob/75322b15ee7ba03fddf10ac3399881e302848874/src/react/themes/default.js
-const theme = {
-  scheme: "default",
-  author: "chris kempson (http://chriskempson.com)",
-  base00: "transparent",
-  base01: "#282828",
-  base02: "#383838",
-  base03: "#585858",
-  base04: "#b8b8b8",
-  base05: "#d8d8d8",
-  base06: "#e8e8e8",
-  base07: "#f8f8f8",
-  base08: "#ab4642",
-  base09: "#dc9656",
-  base0A: "#f7ca88",
-  base0B: "#a1b56c",
-  base0C: "#86c1b9",
-  base0D: "#7cafc2",
-  base0E: "#ba8baf",
-  base0F: "#a16946",
-};
-
-export function useTheme(): [typeof theme, boolean] {
-  const selectedTheme = useSelector((state: OxalisState) => state.uiInformation.theme);
-  return [theme, selectedTheme === "light"];
-}
-
+import { runStateToStatus, useTheme } from "./utils";
+import { formatNumber } from "libs/format_utils";
 function labelRenderer(_keyPath: Array<string | number>) {
   const keyPath = _keyPath.slice().reverse();
   const divWithId = <div id={`label-${keyPath.join(".")}`}>{keyPath.slice(-1)[0]}</div>;
@@ -62,6 +24,7 @@ function labelRenderer(_keyPath: Array<string | number>) {
 function TaskView({
   taskName,
   workflowHash,
+  runId,
   task,
   artifacts,
   dag,
@@ -69,6 +32,7 @@ function TaskView({
   onSelectTask,
 }: {
   workflowHash: string;
+  runId: string | null;
   taskName: string;
   task: VoxelyticsTaskConfig;
   artifacts: Record<string, VoxelyticsArtifactConfig>;
@@ -76,22 +40,130 @@ function TaskView({
   taskInfo: VoxelyticsTaskInfo;
   onSelectTask: (id: string) => void;
 }) {
-  const shouldExpandNode = (keyPath: Array<string | number>, data: any) =>
+  const shouldExpandNode = (_keyPath: Array<string | number>, data: any) =>
     // Expand all with at most 10 keys
     (data.length || 0) <= 10;
 
   const ingoingEdges = dag.edges.filter((edge) => edge.target === taskName);
-  const [, invertTheme] = useTheme();
+  const [theme, invertTheme] = useTheme();
+
+  const configTab = (
+    <>
+      <p>
+        Class: <span style={{ fontFamily: "monospace" }}>{task.task}</span>
+      </p>
+      <JSONTree
+        data={task.config}
+        hideRoot
+        shouldExpandNode={shouldExpandNode}
+        labelRenderer={labelRenderer}
+        theme={theme}
+        invertTheme={invertTheme}
+      />
+    </>
+  );
+
+  const logTab =
+    runId != null ? (
+      <LogTab
+        workflowHash={workflowHash}
+        runId={runId}
+        taskName={taskInfo.taskName}
+        isRunning={taskInfo.state === VoxelyticsRunState.RUNNING}
+        beginTime={taskInfo.beginTime}
+        endTime={taskInfo.endTime}
+      />
+    ) : (
+      <p>Please select a specific run.</p>
+    );
+
+  const tabs: TabsProps["items"] = [{ label: "Config", key: "1", children: configTab }];
+  if (task.description != null)
+    tabs.unshift({
+      label: "Description",
+      key: "0",
+      children: (
+        <Markdown
+          source={task.description}
+          options={{
+            html: false,
+            breaks: true,
+            linkify: true,
+          }}
+        />
+      ),
+    });
+
+  if (Object.keys(artifacts).length > 0)
+    tabs.push({
+      label: "Output Artifacts",
+      key: "2",
+      children: (
+        <ArtifactsViewer
+          workflowHash={workflowHash}
+          runId={runId}
+          taskName={taskName}
+          artifacts={artifacts}
+        />
+      ),
+    });
+
+  if (Object.keys(task.inputs).length > 0)
+    tabs.push({
+      label: "Input Artifacts",
+      key: "3",
+      children: <ul>{renderInputs(task.inputs, ingoingEdges, onSelectTask)}</ul>,
+    });
+
+  if (
+    [
+      VoxelyticsRunState.COMPLETE,
+      VoxelyticsRunState.RUNNING,
+      VoxelyticsRunState.STALE,
+      VoxelyticsRunState.FAILED,
+      VoxelyticsRunState.CANCELLED,
+    ].includes(taskInfo.state)
+  ) {
+    tabs.push({ label: "Logs", key: "4", children: logTab });
+    tabs.push({
+      label: "Statistics",
+      key: "5",
+      children: (
+        <StatisticsTab
+          workflowHash={workflowHash}
+          runId={runId}
+          taskName={taskInfo.taskName}
+          isRunning={taskInfo.state === VoxelyticsRunState.RUNNING}
+        />
+      ),
+    });
+  }
 
   return (
     <div>
-      {taskInfo.state === VoxelyticsRunState.RUNNING && (
+      {[
+        VoxelyticsRunState.RUNNING,
+        VoxelyticsRunState.CANCELLED,
+        VoxelyticsRunState.FAILED,
+        VoxelyticsRunState.STALE,
+      ].includes(taskInfo.state) && (
         <div style={{ display: "flex", flexDirection: "row" }}>
-          Approx. Chunk Progress:
+          Chunk Progress:
           <Tooltip
             overlay={
               <>
-                Finished chunks: {taskInfo.chunksFinished}, Total chunks: {taskInfo.chunksTotal}
+                {formatNumber(
+                  taskInfo.chunkCounts.total -
+                    taskInfo.chunkCounts.complete -
+                    taskInfo.chunkCounts.failed -
+                    taskInfo.chunkCounts.cancelled -
+                    taskInfo.chunkCounts.skipped,
+                )}{" "}
+                remaining • {formatNumber(taskInfo.chunkCounts.complete)} complete •{" "}
+                {formatNumber(taskInfo.chunkCounts.cancelled)} cancelled •{" "}
+                {formatNumber(taskInfo.chunkCounts.failed)} failed •{" "}
+                {formatNumber(taskInfo.chunkCounts.skipped)} skipped •{" "}
+                {formatNumber(taskInfo.chunkCounts.total)} total
               </>
             }
           >
@@ -105,95 +177,38 @@ function TaskView({
               }}
             >
               <Progress
-                percent={(taskInfo.chunksFinished / taskInfo.chunksTotal) * 100}
+                percent={
+                  ((taskInfo.chunkCounts.complete +
+                    taskInfo.chunkCounts.cancelled +
+                    taskInfo.chunkCounts.failed) /
+                    (taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped)) *
+                  100
+                }
+                status={runStateToStatus(taskInfo.state)}
+                success={{
+                  percent: Math.round(
+                    (taskInfo.chunkCounts.complete /
+                      (taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped)) *
+                      100,
+                  ),
+                }}
                 size="small"
                 showInfo={false}
                 style={{ flex: 1 }}
               />
               <span style={{ fontSize: "0.9em", marginLeft: "1em" }}>
-                {taskInfo.chunksFinished} / {taskInfo.chunksTotal}
+                {formatNumber(taskInfo.chunkCounts.complete)} /{" "}
+                {formatNumber(taskInfo.chunkCounts.total - taskInfo.chunkCounts.skipped)}
               </span>
             </span>
           </Tooltip>
-          Current Execution Id:&nbsp;
+          Current Execution ID:&nbsp;
           <span style={{ fontFamily: "monospace" }}>
             {taskInfo.currentExecutionId != null ? taskInfo.currentExecutionId : "-"}
           </span>
         </div>
       )}
-      <Tabs defaultActiveKey="1">
-        {task.description != null ? (
-          <TabPane tab="Description" key="0">
-            <Markdown
-              source={task.description}
-              options={{
-                html: false,
-                breaks: true,
-                linkify: true,
-              }}
-            />
-          </TabPane>
-        ) : null}
-        <TabPane tab="Config" key="1">
-          <p>
-            Class: <span style={{ fontFamily: "monospace" }}>{task.task}</span>
-          </p>
-          <JSONTree
-            data={task.config}
-            hideRoot
-            shouldExpandNode={shouldExpandNode}
-            labelRenderer={labelRenderer}
-            theme={theme}
-            invertTheme={invertTheme}
-          />
-        </TabPane>
-        {Object.keys(artifacts).length > 0 ? (
-          <TabPane tab="Output Artifacts" key="2">
-            <ArtifactsViewer
-              artifacts={artifacts}
-              runId={taskInfo.runId}
-              workflowHash={workflowHash}
-              taskName={taskName}
-            />
-          </TabPane>
-        ) : null}
-        {Object.keys(task.inputs).length > 0 ? (
-          <TabPane tab="Input Artifacts" key="3">
-            <ul>{renderInputs(task.inputs, ingoingEdges, onSelectTask)}</ul>
-          </TabPane>
-        ) : null}
-        {[
-          VoxelyticsRunState.COMPLETE,
-          VoxelyticsRunState.RUNNING,
-          VoxelyticsRunState.STALE,
-          VoxelyticsRunState.FAILED,
-          VoxelyticsRunState.CANCELLED,
-        ].includes(taskInfo.state) && (
-          <TabPane tab="Logs" key="4">
-            <LogTab
-              runId={taskInfo.runId}
-              taskName={taskInfo.taskName}
-              isRunning={taskInfo.state === VoxelyticsRunState.RUNNING}
-            />
-          </TabPane>
-        )}
-        {[
-          VoxelyticsRunState.COMPLETE,
-          VoxelyticsRunState.RUNNING,
-          VoxelyticsRunState.STALE,
-          VoxelyticsRunState.FAILED,
-          VoxelyticsRunState.CANCELLED,
-        ].includes(taskInfo.state) && (
-          <TabPane tab="Statistics" key="5">
-            <StatisticsTab
-              workflowHash={workflowHash}
-              runId={taskInfo.runId}
-              taskName={taskInfo.taskName}
-              isRunning={taskInfo.state === VoxelyticsRunState.RUNNING}
-            />
-          </TabPane>
-        )}
-      </Tabs>
+      <Tabs defaultActiveKey="1" items={tabs} />
     </div>
   );
 }
@@ -210,7 +225,13 @@ function renderInputs(
   // (in that case, renderInputs is called recursively).
   return Object.entries(inputs).map(([key, linkLabelOrDict]) => {
     const sourceTaskName = getTaskProducerOfInput(ingoingEdges, prevKeys.concat([key]));
-    if (typeof linkLabelOrDict === "string") {
+    if (linkLabelOrDict == null) {
+      return (
+        <li key={key}>
+          <b>{key}:</b> -
+        </li>
+      );
+    } else if (typeof linkLabelOrDict === "string") {
       const linkLabel = linkLabelOrDict;
       return (
         <li key={key}>

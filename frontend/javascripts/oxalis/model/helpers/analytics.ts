@@ -15,7 +15,6 @@ function gtagGuard(...params) {
   }
 }
 
-// The void return type is needed for flow to check successfully
 export function trackAction(action: string): void {
   gtagGuard("event", "action", action, getOrganization());
 }

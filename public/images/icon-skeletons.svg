@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="20"
+   height="20"
+   viewBox="0 0 5.2916665 5.2916668"
+   version="1.1"
+   id="svg5349"
+   inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
+   sodipodi:docname="icon-skeletons.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview5351"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:document-units="px"
+     showgrid="false"
+     units="px"
+     inkscape:zoom="22.627417"
+     inkscape:cx="5.5021747"
+     inkscape:cy="8.0654367"
+     inkscape:window-width="1920"
+     inkscape:window-height="1068"
+     inkscape:window-x="0"
+     inkscape:window-y="30"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs5346" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <g
+       transform="matrix(0.16903016,0,0,0.16903016,-236.96635,-131.13681)"
+       id="g198"
+       style="clip-rule:evenodd;fill-rule:evenodd;stroke-width:1.09571;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;stroke-dasharray:none">
+      <g
+         transform="matrix(1.14759,0,0,1.78738,-225.684,-847.746)"
+         id="g172"
+         style="stroke-width:0.765058;stroke-miterlimit:1.5;stroke-dasharray:none">
+        <path
+           d="m 1422.74,917.11 h 10.45"
+           style="fill:none;stroke:#5660ff;stroke-width:0.655764;stroke-miterlimit:1.5;stroke-dasharray:none"
+           id="path170" />
+      </g>
+      <g
+         transform="matrix(1.78187,0.0959177,-0.0431998,1.75919,-1082.9,-962.473)"
+         id="g176"
+         style="stroke-width:0.618465;stroke-miterlimit:1.5;stroke-dasharray:none">
+        <path
+           d="m 1426.4,919.248 4.95,-5.418"
+           style="fill:none;stroke:#5660ff;stroke-width:0.530113;stroke-miterlimit:1.5;stroke-dasharray:none"
+           id="path174" />
+      </g>
+      <g
+         transform="matrix(1.32169,0,0,1.32169,-472.348,-413.641)"
+         id="g180"
+         style="stroke-width:0.829023;stroke-miterlimit:1.5;stroke-dasharray:none">
+        <rect
+           x="1429.25"
+           y="910.01099"
+           width="3.579"
+           height="3.579"
+           style="fill:#5660ff;stroke-width:0.829023;stroke-miterlimit:1.5;stroke-dasharray:none"
+           id="rect178" />
+      </g>
+      <g
+         transform="matrix(1.32169,0,0,1.32169,-484.347,-413.641)"
+         id="g184"
+         style="stroke-width:0.829023;stroke-miterlimit:1.5;stroke-dasharray:none">
+        <rect
+           x="1429.25"
+           y="910.01099"
+           width="3.579"
+           height="3.579"
+           style="fill:#5660ff;stroke-width:0.829023;stroke-miterlimit:1.5;stroke-dasharray:none"
+           id="rect182" />
+      </g>
+      <g
+         transform="matrix(1.32169,0,0,1.32169,-463.293,-422.696)"
+         id="g188"
+         style="stroke-width:0.829023;stroke-miterlimit:1.5;stroke-dasharray:none">
+        <rect
+           x="1429.25"
+           y="910.01099"
+           width="3.579"
+           height="3.579"
+           style="fill:#5660ff;stroke-width:0.829023;stroke-miterlimit:1.5;stroke-dasharray:none"
+           id="rect186" />
+      </g>
+      <g
+         transform="matrix(1.78187,-0.0959177,-0.0431998,-1.75919,-1082.9,2545.42)"
+         id="g192"
+         style="stroke-width:0.618465;stroke-miterlimit:1.5;stroke-dasharray:none">
+        <path
+           d="m 1426.4,919.248 4.95,-5.418"
+           style="fill:none;stroke:#5660ff;stroke-width:0.530113;stroke-miterlimit:1.5;stroke-dasharray:none"
+           id="path190" />
+      </g>
+      <g
+         transform="matrix(1.32169,0,0,-1.32169,-463.293,2005.64)"
+         id="g196"
+         style="stroke-width:0.829023;stroke-miterlimit:1.5;stroke-dasharray:none">
+        <rect
+           x="1429.25"
+           y="910.01099"
+           width="3.579"
+           height="3.579"
+           style="fill:#5660ff;stroke-width:0.829023;stroke-miterlimit:1.5;stroke-dasharray:none"
+           id="rect194" />
+      </g>
+    </g>
+  </g>
+</svg>

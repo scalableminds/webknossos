@@ -1,5 +1,5 @@
 const GROW_MULTIPLIER = 1.3;
-type Class<T> = new (...args: any[]) => T;
+type Class<T> = new (..._args: any[]) => T;
 
 class ResizableBuffer<T extends Float32Array> {
   elementLength: number;
@@ -54,7 +54,9 @@ class ResizableBuffer<T extends Float32Array> {
   }
 
   set(element: Array<number> | T, i: number): void {
+    this.ensureCapacity((i + 1) * this.elementLength);
     this.buffer.set(element, i * this.elementLength);
+    this.length = Math.max(this.length, (i + 1) * this.elementLength);
   }
 
   push(element: Array<number> | T): void {
@@ -132,7 +134,10 @@ class ResizableBuffer<T extends Float32Array> {
       const { buffer } = this;
 
       while (this.capacity < newCapacity) {
-        this.capacity = Math.floor(this.capacity * GROW_MULTIPLIER);
+        this.capacity = Math.max(
+          this.capacity + this.elementLength,
+          Math.floor(this.capacity * GROW_MULTIPLIER),
+        );
         this.capacity -= this.capacity % this.elementLength;
       }
 

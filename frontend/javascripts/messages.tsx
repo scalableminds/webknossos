@@ -1,10 +1,10 @@
 import React from "react";
 import _ from "lodash";
 import type { Vector4 } from "oxalis/constants";
-import type {
-  DatasetConfiguration,
-  UserConfiguration,
-  DatasetLayerConfiguration,
+import {
+  type DatasetConfiguration,
+  type UserConfiguration,
+  type DatasetLayerConfiguration,
 } from "oxalis/store";
 
 export type RecommendedConfiguration = Partial<
@@ -28,6 +28,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   particleSize: "Particle Size",
   tdViewDisplayPlanes: "Plane Display Mode in 3D View",
   tdViewDisplayDatasetBorders: "Display Dataset Borders in 3D View",
+  tdViewDisplayLayerBorders: "Display Layer Borders in 3D View",
   fourBit: "4 Bit",
   interpolation: "Interpolation",
   segmentationOpacity: "Segmentation Opacity",
@@ -44,6 +45,10 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   gpuMemoryFactor: "Hardware Utilization",
   overwriteMode: "Volume Annotation Overwrite Mode",
   useLegacyBindings: "Classic Controls",
+  blendMode: "Blend Mode",
+  renderWatermark: "Logo in Screenshots",
+  antialiasRendering: "Antialiasing",
+  colorLayerOrder: "Color Layer Order",
 };
 export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, string>> = {
   loadingStrategy: `You can choose between loading the best quality first
@@ -56,7 +61,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   renderMissingDataBlack:
     "If disabled, missing data will be rendered by using downsampled magnifications.",
   gpuMemoryFactor:
-    "Controls which data magnification is displayed, depending on zoom value and viewport size. Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance.",
+    "Controls which data magnification is displayed, depending on zoom value and viewport size. Adapt this setting to your hardware, so that rendering quality and performance are balanced. Medium is the default. Choosing a higher setting can result in poor performance. This setting also influences how much memory the graphics card will allocate.",
   useLegacyBindings:
     "When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.",
   dynamicSpaceDirection:
@@ -71,6 +76,12 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   mouseRotateValue: "Rotation speed when using the mouse to drag the rotation.",
   zoom: "Zoom in or out in the data viewports",
   displayScalebars: "Show a scale in the lower-right corner of each viewport",
+  blendMode:
+    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers. Cover mode enables reordering of color layers.",
+  renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
+  antialiasRendering: "Antialias rendering (can impact performance)",
+  colorLayerOrder:
+    "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
 };
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
   color: "Color",
@@ -100,16 +111,16 @@ export default {
     "The datastore server at <%- url %> does not seem to be available. Please check back in five minutes.",
   ),
   "datastore.version.too_new": _.template(
-    "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this webKnossos instance",
+    "The datastore server at (<%- url %>) supplies a newer API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact your admins to upgrade this WEBKNOSSOS instance",
   ),
   "datastore.version.too_old": _.template(
-    "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this webKnossos expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
+    "The datastore server at (<%- url %>) supplies an older API version (<%- suppliedDatastoreApiVersion %>) than this WEBKNOSSOS expects (<%- expectedDatastoreApiVersion %>). Please contact the admins of the remote data store to upgrade.",
   ),
   "save.failed_simultaneous_tracing": `The annotation couldn't be saved because there was a conflict (annotation was edited either by someone else or in another browser tab).
 
 A reload is necessary to return to a valid state.`,
   "react.rendering_error":
-    "Unfortunately, webKnossos encountered an error during rendering. Your latest changes may not have been saved. Please reload the page to try again.",
+    "Unfortunately, WEBKNOSSOS encountered an error during rendering. Your latest changes may not have been saved. Please reload the page to try again.",
   "save.leave_page_unfinished":
     "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save annotation. Retrying.",
@@ -125,6 +136,12 @@ A reload is necessary to return to a valid state.`,
     "Importing a volume annotation cannot be undone. However, if you want to restore an earlier version of this annotation, use the 'Restore Older Version' functionality in the dropdown next to the 'Save' button.",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
+  "download.python_do_not_share": _.template(
+    "These snippets are pre-configured and contain your personal access token and <%- typeName %> meta data. Do not share this information with anyone you do not trust!",
+  ),
+  "download.export_as_tiff": _.template(
+    "Export this <%- typeName %> as TIFF image(s). This may take a few moments depending on the size of your configured export.",
+  ),
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "data.enabled_render_missing_data_black":
     "You just enabled the option to render missing data black. All layers will now be reloaded.",
@@ -159,6 +176,9 @@ instead. Only enable this option if you understand its effect. All layers will n
     </span>
   ),
   "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered segment id",
+  "tracing.segment_id_out_of_bounds": _.template(
+    "Cannot create a segment id larger than the segment layers maximum value of <%- maxSegmentId %>.",
+  ),
   "tracing.copy_maybe_mapped_cell_id":
     "Hit CTRL + I to copy the currently hovered segment id. Press CTRL + ALT + I if you want to copy the mapped id.",
   "tracing.no_more_branchpoints": "No more branchpoints",
@@ -209,10 +229,10 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.natural_sorting": "Correctly sort numbers in text (word2 < word10). This may be slow!",
   "tracing.cant_create_node": "You cannot create nodes, since no tree is active.",
   "tracing.invalid_state":
-    "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of webKnossos to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
+    "A corruption in the current skeleton annotation was detected. Please contact your supervisor and/or the maintainers of WEBKNOSSOS to get help for restoring a working version. Please include as much details as possible about your past user interactions. This will be very helpful to investigate the source of this bug.",
   "tracing.merger_mode_node_outside_segment":
     "You cannot place nodes outside of a segment in merger mode.",
-  "tracing.not_isosurface_available_to_download":
+  "tracing.not_mesh_available_to_download":
     "There is no mesh for the active segment id available to download.",
   "tracing.mesh_listing_failed":
     "A precomputed mesh could not be loaded for this segment. More information was printed to the browser's console.",
@@ -222,20 +242,30 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Clicked on the background. Please click on a segment to load a skeleton.",
   "tracing.agglomerate_skeleton.no_mapping":
     "Activate an agglomerate file mapping to load a skeleton for a segment.",
-  "tracing.agglomerate_skeleton.no_agglomerate_file":
+  "tracing.agglomerate_skeleton.no_agglomerate_file_active":
     "Loading a skeleton for a segment only works with agglomerate file mappings.",
+  "tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet":
+    "Checking for agglomerate files...",
+  "tracing.agglomerate_skeleton.no_agglomerate_file_available":
+    "No agglomerate file mapping is available for this segmentation layer. Please reach out to hello@webknossos.org to get help with generating one.",
   "tracing.agglomerate_skeleton.no_skeleton_tracing":
     "Loading a skeleton for a segment only works in skeleton or hybrid tracings.",
   "tracing.skeletons_are_hidden_warning":
     'All trees are currently hidden. You can disable this by toggling the "Skeleton" layer in the layer settings in the left sidebar.',
   "tracing.invalid_json_url_hash":
     "Cannot parse JSON URL hash. More information was printed to the browser's console.",
+  "tracing.locked_mapping_info":
+    "The active volume annotation layer has an active mapping. By mutating the layer, the mapping will be permanently locked and can no longer be changed or disabled. This can only be undone by restoring an older version of this annotation. Are you sure you want to continue?",
+  "tracing.locked_mapping_confirmed": (mappingName: string) =>
+    `The mapping ${mappingName} is now locked for this annotation and can no longer be changed or disabled.`,
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "webgl.context_loss":
-    "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
+    "The WebGL context was lost. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, you can also try to lower the data rendering quality in the settings. Restarting your browser might also help.",
+  "webgl.context_recovery":
+    "The WebGL context has been recovered. If you experience unusual behavior, consider reloading the page.",
   "webgl.too_many_active_layers": _.template(
     "Your hardware cannot render all layers of this dataset simultaneously. Please ensure that not more than <%- maximumLayerCountToRender %> layers are enabled in the left sidebar settings.",
   ),
@@ -257,6 +287,13 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.undoFinish.confirm": "Are you sure you want to reopen your old task?",
   "annotation.undoFinish.content":
     "If you reopen your old annotation, the current annotation will not be finished or cancelled. Instead, it will remain open and you can find it in the dashboard to continue annotating.",
+  "annotation.acquiringMutexFailed": _.template(
+    "This annotation is currently being edited by <%- userName %>. To avoid conflicts, you can only view it. If you want to edit it, please ask <%- userName %> to finish their work first.",
+  ),
+  "annotation.acquiringMutexFailed.noUser":
+    "This annotation is currently being edited by someone else. To avoid conflicts, you can only view it at the moment.",
+  "annotation.acquiringMutexSucceeded":
+    "This annotation is not being edited anymore and available for editing. Reload the page to see its newest version and to edit it.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
@@ -267,11 +304,17 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The dataset <%- datasetName %> was successfully deleted on disk. Redirecting to dashboard...",
   ),
   "task.no_tasks_to_download": "There are no tasks available to download.",
+  "task.tooltip_explain_reset":
+    "Resets this task instance to its initial state, undoing any annotation work of the assigned user. The task will remain assigned to this user for further annotation work.",
+  "task.tooltip_explain_reset_cancel":
+    "Resets this task instance to its initial state, undoing any annotation work of the assigned user. Furthermore, the task assignment will be removed from the user’s account and recycled into the pool of available tasks for other users. The currently assigned user will not be assigned to this task again (unless they are an Admin).",
   "dataset.upload_success": "The dataset was uploaded successfully.",
   "dataset.upload_failed": "The dataset upload failed.",
   "dataset.upload_cancel": "The dataset upload was cancelled.",
   "dataset.unsupported_file_type":
     "It looks like the selected file is not supported. WebKnossos only supports uploading zipped WKW datasets or image files.",
+  "dataset.upload_zip_with_nml":
+    "The archive you attached contains an NML file. If the archive is an annotation, please use the Annotations tab in the dashboard to upload it. Uploading annotations here won't succeed.",
   "dataset.upload_invalid_zip":
     "It looks like the selected file is not a valid zip file. Please ensure that your dataset is zipped to a single file and that the format is correct.",
   "dataset.leave_during_upload":
@@ -286,7 +329,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.missing_datasource_json":
-    "The datasource-properties.json was not found. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
+    "The datasource-properties.json was not found. The values below are guessed by WEBKNOSSOS. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.import_complete":
     "A valid datasource-properties.json was found. The dataset is imported and ready to use. You may still change the properties below.",
   "dataset.confirm_signup":
@@ -300,9 +343,10 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.import.required.datastore": "Please select a datastore for the dataset.",
   "dataset.import.required.zipFile": "Please select a file to upload.",
   "dataset.import.required.url": "Please provide a URL to a dataset.",
-  "dataset.import.required.initialTeam": "Please select at least one team you manage.",
+  "dataset.import.required.folder": "Please define a target folder for this dataset.",
   "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
+  "dataset.name_length": "Dataset name must be at least 3 characters",
   "dataset.unsupported_element_class": (layerName: string, elementClass: string) =>
     `The layer "${layerName}" was defined as ${elementClass}. This format is not officially supported. Please convert the layer to a supported format.`,
   "dataset.unsupported_segmentation_class_uint24":
@@ -326,12 +370,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.shared_teams_edited_failed":
     "Updating the sharing options for the annotation failed. Please retry or see the error message in the console.",
   "annotation.download": "The following annotation data is available for download immediately.",
-  "annotation.export":
-    "Exporting this annotation as TIFF images will trigger a background job to prepare data for download. This may take a while depending on the size of your dataset as well as bounding box and layer selection. You can monitor the progress and start the download from the ",
   "annotation.export_no_worker":
-    "This webKnossos instance is not configured to run TIFF export jobs on a dedicated background worker. To learn more about this feature please contact us at ",
-  "annotation.python_do_not_share":
-    "These snippets are pre-configured and contain your personal access token and annotation meta data. Do not share this information with anyone you do not trust!",
+    "This WEBKNOSSOS instance is not configured to run export jobs. To learn more about this feature please contact us at ",
   "annotation.register_for_token": "Please log in to get an access token for the script below.",
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":
@@ -345,6 +385,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This download does only include the volume data annotated in the tasks of this project. The fallback volume data is excluded.",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
+  "team.no_members": "This team has no members assigned yet.",
   "taskType.delete": "Do you really want to delete this task type and all its associated tasks?",
   "auth.registration_email_input": "Please input your E-mail!",
   "auth.registration_email_invalid": "The input is not valid E-mail!",
@@ -371,11 +412,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Your account has been created. An administrator is going to unlock you soon.",
   "auth.automatic_user_activation": "User was activated automatically",
   "auth.error_no_user": "No active user is logged in.",
+  "auth.error_no_organization": "No active organziation can be loaded.",
   "auth.invalid_organization_name":
     "The link is not valid, since the specified organization does not exist. You are being redirected to the general registration form.",
   "request.max_item_count_alert":
     "Your request returned more than 1000 results. More results might be available on the server but were omitted for technical reasons.",
-  "timetracking.date_range_too_long": "Please specify a date range of 31 days or less.",
+  "timetracking.date_range_too_long": "Please specify a date range of three months or less.",
   "nml.node_outside_tree":
     "NML contains <node ...> tag that is not enclosed by a <thing ...> tag: Node with id",
   "nml.edge_outside_tree":
@@ -383,6 +425,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "nml.expected_attribute_missing":
     "Attribute with the following name was expected, but is missing or empty:",
   "nml.invalid_timestamp": "Attribute with the following name was expected to be a unix timestamp:",
+  "nml.invalid_tree_type":
+    "Attribute with the following name was expected to be a valid tree type:",
   "nml.branchpoint_without_tree":
     "NML contains <branchpoint ...> with a node id that is not in any tree: Node with id",
   "nml.comment_without_tree":
@@ -406,7 +450,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You selected more than one user. To change the organization permissions of users you need to select them individually.",
   "users.change_permissions_title": "Do you really want to change the permissions of this user?",
   "users.revoke_all_permissions": _.template(
-    "<%- userName %> is about lose all administrative privileges and any extra access permissions to datasets. As a regular webKnossos member, access to datasets will be determined by the user's team memberships.",
+    "<%- userName %> is about lose all administrative privileges and any extra access permissions to datasets. As a regular WEBKNOSSOS member, access to datasets will be determined by the user's team memberships.",
   ),
   "users.set_dataset_manager": _.template(
     "<%- userName %> is about to become a dataset manager and will be able to access and edit all datasets within this organization.",
@@ -429,4 +473,13 @@ instead. Only enable this option if you understand its effect. All layers will n
   "ui.moving_center_tab_into_border_error": "You cannot move this tab into a sidebar!",
   "ui.moving_border_tab_into_center_error": "You cannot move this tab out of this sidebar!",
   "ui.no_form_active": "Could not set the initial form values as the form could not be loaded.",
+  "organization.plan.upgrage_request_sent":
+    "An email with your upgrade request has been sent to the WEBKNOSSOS sales team.",
+  "organization.plan.feature_not_available": (
+    requiredPlan: string,
+    organizationOwnerName: string,
+  ) =>
+    `This feature is not available in your organization's plan. Ask the owner of your organization ${organizationOwnerName} to upgrade to a ${requiredPlan} plan or higher.`,
+  "organization.plan.feature_not_available.owner": (requiredPlan: string) =>
+    `This feature is not available in your organization's plan. Consider upgrading to a ${requiredPlan} plan or higher.`,
 };

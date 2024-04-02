@@ -112,14 +112,14 @@ test("tasks_user_D", async (t) => {
   setCurrToken(tokenUserD);
   t.plan(1);
   await api.getTask("58135c192faeb34c0081c058").catch((err) => {
-    t.is(err.messages[0].error, "Task couldn’t be found");
+    t.is(err.messages[0].error, "Task could not be found");
   });
 });
 test("tasks_user_E", async (t) => {
   setCurrToken(tokenUserE);
   t.plan(1);
   await api.getTask("58135c192faeb34c0081c058").catch((err) => {
-    t.is(err.messages[0].error, "Task couldn’t be found");
+    t.is(err.messages[0].error, "Task could not be found");
   });
 });
 test("tasks_user_C", async (t) => {
@@ -149,6 +149,6 @@ test("project_user_B", async (t) => {
   t.plan(1);
   const projectId = "58135bfd2faeb3190181c057";
   await api.deleteProject(projectId).catch((err) => {
-    t.is(err.messages[0].error, "Project couldn’t be found");
+    t.is(err.messages[0].error, "Project could not be found");
   });
 });

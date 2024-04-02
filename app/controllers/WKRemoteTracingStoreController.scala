@@ -1,33 +1,49 @@
 package controllers
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.TracingUpdatesReport
+
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, UpdateAnnotationEvent, UpdateAnnotationViewOnlyEvent}
 import models.annotation.AnnotationState._
-import models.annotation.{Annotation, AnnotationDAO, TracingStoreService}
-import models.binary.{DataSetDAO, DataSetService}
+import models.annotation.{
+  Annotation,
+  AnnotationDAO,
+  AnnotationInformationProvider,
+  AnnotationLayerDAO,
+  TracingDataSourceTemporaryStore,
+  TracingStoreService
+}
+import models.dataset.{DatasetDAO, DatasetService}
 import models.organization.OrganizationDAO
 import models.user.UserDAO
 import models.user.time.TimeSpanService
-import oxalis.security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
+import utils.WkConf
 
 import scala.concurrent.ExecutionContext
 
-class WKRemoteTracingStoreController @Inject()(
-    tracingStoreService: TracingStoreService,
-    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-    timeSpanService: TimeSpanService,
-    dataSetService: DataSetService,
-    organizationDAO: OrganizationDAO,
-    userDAO: UserDAO,
-    analyticsService: AnalyticsService,
-    dataSetDAO: DataSetDAO,
-    annotationDAO: AnnotationDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStoreService,
+                                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                                               timeSpanService: TimeSpanService,
+                                               datasetService: DatasetService,
+                                               organizationDAO: OrganizationDAO,
+                                               userDAO: UserDAO,
+                                               annotationInformationProvider: AnnotationInformationProvider,
+                                               analyticsService: AnalyticsService,
+                                               datasetDAO: DatasetDAO,
+                                               annotationDAO: AnnotationDAO,
+                                               annotationLayerDAO: AnnotationLayerDAO,
+                                               wkConf: WkConf,
+                                               tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(
+    implicit ec: ExecutionContext,
+    playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -42,12 +58,14 @@ class WKRemoteTracingStoreController @Inject()(
         for {
           annotation <- annotationDAO.findOneByTracingId(report.tracingId)
           _ <- ensureAnnotationNotFinished(annotation)
+          _ <- annotationDAO.updateModified(annotation._id, Instant.now)
           _ <- Fox.runOptional(report.statistics) { statistics =>
-            annotationDAO.updateStatistics(annotation._id, statistics)
+            annotationLayerDAO.updateStatistics(annotation._id, report.tracingId, statistics)
           }
-          _ <- annotationDAO.updateModified(annotation._id, System.currentTimeMillis)
           userBox <- bearerTokenService.userForTokenOpt(report.userToken).futureBox
-          _ <- Fox.runOptional(userBox)(user => timeSpanService.logUserInteraction(report.timestamps, user, annotation))
+          trackTime = (report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges)
+          _ <- Fox.runOptional(userBox)(user =>
+            Fox.runIf(trackTime)(timeSpanService.logUserInteraction(report.timestamps, user, annotation)))
           _ <- Fox.runOptional(userBox)(user =>
             Fox.runIf(user._id != annotation._user)(annotationDAO.addContributor(annotation._id, user._id)))
           _ = userBox.map { user =>
@@ -67,29 +85,38 @@ class WKRemoteTracingStoreController @Inject()(
     if (annotation.state == Finished) Fox.failure("annotation already finshed")
     else Fox.successful(())
 
-  def dataSource(name: String, key: String, organizationName: Option[String], dataSetName: String): Action[AnyContent] =
+  def dataSourceForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      tracingStoreService.validateAccess(name, key) { _ =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
+        tracingDataSourceTemporaryStore.find(tracingId) match {
+          case Some(dataSource) => Fox.successful(Ok(Json.toJson(dataSource)))
+          case None =>
+            for {
+              annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+              dataset <- datasetDAO.findOne(annotation._dataset)
+              dataSource <- datasetService.dataSourceFor(dataset)
+            } yield Ok(Json.toJson(dataSource))
+        }
+      }
+    }
+
+  def dataSourceIdForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          organizationIdOpt <- Fox.runOptional(organizationName) {
-            organizationDAO.findOneByName(_).map(_._id)
-          } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
-          organizationId <- Fox.fillOption(organizationIdOpt) {
-            dataSetDAO.getOrganizationForDataSet(dataSetName)
-          } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
-            "dataSet.noAccess",
-            dataSetName) ~> FORBIDDEN
-          dataSource <- dataSetService.dataSourceFor(dataSet)
-        } yield Ok(Json.toJson(dataSource))
+          annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
+          dataset <- datasetDAO.findOne(annotation._dataset)
+          organization <- organizationDAO.findOne(dataset._organization)
+        } yield Ok(Json.toJson(DataSourceId(dataset.name, organization.name)))
       }
     }
 
-  def dataStoreURIForDataSet(name: String,
+  def dataStoreUriForDataset(name: String,
                              key: String,
                              organizationName: Option[String],
-                             dataSetName: String): Action[AnyContent] =
+                             datasetName: String): Action[AnyContent] =
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
@@ -98,12 +125,12 @@ class WKRemoteTracingStoreController @Inject()(
             organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
           } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
           organizationId <- Fox.fillOption(organizationIdOpt) {
-            dataSetDAO.getOrganizationForDataSet(dataSetName)(GlobalAccessContext)
-          } ?~> Messages("dataSet.noAccess", dataSetName) ~> FORBIDDEN
-          dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organizationId) ?~> Messages(
-            "dataSet.noAccess",
-            dataSetName) ~> FORBIDDEN
-          dataStore <- dataSetService.dataStoreFor(dataSet)
+            datasetDAO.getOrganizationForDataset(datasetName)(GlobalAccessContext)
+          } ?~> Messages("dataset.noAccess", datasetName) ~> FORBIDDEN
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> Messages(
+            "dataset.noAccess",
+            datasetName) ~> FORBIDDEN
+          dataStore <- datasetService.dataStoreFor(dataset)
         } yield Ok(Json.toJson(dataStore.url))
       }
     }

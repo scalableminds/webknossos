@@ -1,5 +1,9 @@
-import { getResolutionFactors, getRelativeCoords } from "oxalis/shaders/coords.glsl";
+import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { getResolutionFactors, getAbsoluteCoords } from "oxalis/shaders/coords.glsl";
+import { hashCombine } from "./hashing.glsl";
 import type { ShaderModule } from "./shader_module_system";
+import { transDim } from "./utils.glsl";
+
 export const linearizeVec3ToIndex: ShaderModule = {
   requirements: [],
   code: `
@@ -26,16 +30,17 @@ export const linearizeVec3ToIndexWithMod: ShaderModule = {
 export const getRgbaAtIndex: ShaderModule = {
   code: `
     vec4 getRgbaAtIndex(sampler2D dtexture, float textureWidth, float idx) {
-      float finalPosX = mod(idx, textureWidth);
-      float finalPosY = div(idx, textureWidth);
+      int finalPosX = int(mod(idx, textureWidth));
+      int finalPosY = int(div(idx, textureWidth));
 
-      return texture2D(
+      return texelFetch(
           dtexture,
-          vec2(
-            (floor(finalPosX) + 0.5) / textureWidth,
-            (floor(finalPosY) + 0.5) / textureWidth
-          )
-        ).rgba;
+          ivec2(
+            finalPosX,
+            finalPosY
+          ),
+          0
+      ).rgba;
     }
   `,
 };
@@ -51,14 +56,14 @@ export const getRgbaAtXYIndex: ShaderModule = {
         // here which checks for each case individually. The else-if-branches are constructed via
         // lodash templates.
 
-        <% if (dataTextureCountPerLayer === 1) { %>
+        <% if (textureLayerInfos[name].dataTextureCount === 1) { %>
             // Don't use if-else when there is only one data texture anyway
 
             return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
         <% } else { %>
           if (textureIdx == 0.0) {
             return texelFetch(<%= name + "_textures" %>[0], ivec2(x, y), 0).rgba;
-          } <% _.range(1, dataTextureCountPerLayer).forEach(textureIndex => { %>
+          } <% _.range(1, textureLayerInfos[name].dataTextureCount).forEach(textureIndex => { %>
           else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
             return texelFetch(<%= name + "_textures" %>[<%= textureIndex %>], ivec2(x, y), 0).rgba;
           }
@@ -68,11 +73,11 @@ export const getRgbaAtXYIndex: ShaderModule = {
       }
     <% }); %>
 
-    vec4 getRgbaAtXYIndex(float layerIndex, float textureIdx, float x, float y) {
-      if (layerIndex == 0.0) {
+    vec4 getRgbaAtXYIndex(float localLayerIndex, float textureIdx, float x, float y) {
+      if (localLayerIndex == 0.0) {
         return getRgbaAtXYIndex_<%= layerNamesWithSegmentation[0] %>(textureIdx, x, y);
       } <% _.each(layerNamesWithSegmentation.slice(1), (name, index) => { %>
-        else if (layerIndex == <%= formatNumberAsGLSLFloat(index + 1) %>) {
+        else if (localLayerIndex == <%= formatNumberAsGLSLFloat(index + 1) %>) {
           return getRgbaAtXYIndex_<%= name %>(textureIdx, x, y);
         }
       <% }); %>
@@ -86,16 +91,86 @@ export const getColorForCoords: ShaderModule = {
     linearizeVec3ToIndexWithMod,
     getRgbaAtIndex,
     getRgbaAtXYIndex,
-    getRelativeCoords,
+    getAbsoluteCoords,
     getResolutionFactors,
+    hashCombine,
+    transDim,
   ],
   code: `
+    float NOT_YET_COMMITTED_VALUE = pow(2., 21.) - 1.;
+
+    float attemptLookUpLookUp(uint globalLayerIndex, uvec4 bucketAddress, uint seed) {
+      <% if (!isFragment) { %>
+        outputSeed[globalLayerIndex] = seed;
+      <% } %>
+
+
+      highp uint h0 = hashCombine(seed, bucketAddress.x);
+      h0 = hashCombine(h0, bucketAddress.y);
+      h0 = hashCombine(h0, bucketAddress.z);
+      h0 = hashCombine(h0, bucketAddress.a);
+      h0 = hashCombine(h0, globalLayerIndex);
+      h0 = h0 % LOOKUP_CUCKOO_ENTRY_CAPACITY;
+      h0 = uint(h0 * LOOKUP_CUCKOO_ELEMENTS_PER_ENTRY / LOOKUP_CUCKOO_ELEMENTS_PER_TEXEL);
+
+      highp uint x = h0 % LOOKUP_CUCKOO_TWIDTH;
+      highp uint y = h0 / LOOKUP_CUCKOO_TWIDTH;
+
+      uvec4 compressedEntry = texelFetch(lookup_texture, ivec2(x, y), 0);
+
+      <% if (!isFragment) { %>
+        outputCompressedEntry[globalLayerIndex] = compressedEntry;
+      <% } %>
+
+      uint compressedBytes = compressedEntry.a;
+      uint foundMagIdx = compressedBytes >> (32u - 5u);
+      uint foundLayerIndex = (compressedBytes >> 21u) & (uint(pow(2., 6.)) - 1u);
+
+      if (compressedEntry.xyz != bucketAddress.xyz
+        || globalLayerIndex != foundLayerIndex
+        || foundMagIdx != bucketAddress.a) {
+        <% if (!isFragment) { %>
+          outputAddress[globalLayerIndex] = -1.;
+        <% } %>
+        return -1.;
+      }
+      uint address = compressedBytes & (uint(pow(2., 21.)) - 1u);
+
+      <% if (!isFragment) { %>
+        outputAddress[globalLayerIndex] = float(address);
+      <% } %>
+
+      return float(address);
+    }
+
+    float lookUpBucket(uint globalLayerIndex, uvec4 bucketAddress, bool supportsPrecomputedBucketAddress) {
+      // The fragment shader can read the entry that was
+      // calculated by the vertex shader. However, this won't always
+      // be precise because the triangles of the plane won't necessarily
+      // align with the bucket borders.
+      <% if (isFragment) { %>
+        if (supportsPrecomputedBucketAddress) {
+          return outputAddress[globalLayerIndex];
+        }
+      <% } %>
+
+
+      float bucketAddressInTexture = attemptLookUpLookUp(globalLayerIndex, bucketAddress, lookup_seeds[0]);
+      if (bucketAddressInTexture == -1.) {
+        bucketAddressInTexture = attemptLookUpLookUp(globalLayerIndex, bucketAddress, lookup_seeds[1]);
+      }
+      if (bucketAddressInTexture == -1.) {
+        bucketAddressInTexture = attemptLookUpLookUp(globalLayerIndex, bucketAddress, lookup_seeds[2]);
+      }
+      return bucketAddressInTexture;
+    }
+
     vec4[2] getColorForCoords64(
-      sampler2D lookUpTexture,
-      float layerIndex,
+      float localLayerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 worldPositionUVW
+      vec3 worldPositionUVW,
+      bool supportsPrecomputedBucketAddress
     ) {
       // This method looks up the color data at the given position.
       // The data will be clamped to be non-negative, since negative data
@@ -104,56 +179,86 @@ export const getColorForCoords: ShaderModule = {
       // Will hold [highValue, lowValue];
       vec4 returnValue[2];
 
-      vec3 coords = floor(getRelativeCoords(worldPositionUVW, zoomStep));
-      vec3 relativeBucketPosition = div(coords, bucketWidth);
-      vec3 offsetInBucket = mod(coords, bucketWidth);
-
-      if (relativeBucketPosition.x > addressSpaceDimensions.x ||
-          relativeBucketPosition.y > addressSpaceDimensions.y ||
-          relativeBucketPosition.z > addressSpaceDimensions.z ||
-          relativeBucketPosition.x < 0.0 ||
-          relativeBucketPosition.y < 0.0 ||
-          relativeBucketPosition.z < 0.0) {
-        // In theory, the current magnification should always be selected
-        // so that we won't have to address data outside of the addresSpaceDimensions.
-        // Nevertheless, we explicitly guard against this situation here to avoid
-        // rendering wrong data.
-        returnValue[1] = vec4(1.0, 1.0, 0.0, 1.0);
+      if (worldPositionUVW.x < 0. || worldPositionUVW.y < 0. || worldPositionUVW.z < 0.) {
+        // Negative coordinates would likely produce incorrect bucket look ups due to casting
+        // (the keys are stored as uint). Render black.
+        returnValue[1] = vec4(0.0, 0.0, 0.0, 0.0);
         return returnValue;
       }
 
-      float bucketIdx = linearizeVec3ToIndex(relativeBucketPosition, addressSpaceDimensions);
+      uint globalLayerIndex = availableLayerIndexToGlobalLayerIndex[uint(localLayerIndex)];
+      uint activeMagIdx = uint(activeMagIndices[int(globalLayerIndex)]);
 
-      vec2 bucketAddressWithZoomStep = getRgbaAtIndex(
-        lookUpTexture,
-        l_texture_width,
-        bucketIdx
-      ).rg;
+      float bucketAddress;
+      vec3 offsetInBucket;
+      uint renderedMagIdx;
 
-      float bucketAddress = bucketAddressWithZoomStep.x;
-      float renderedZoomStep = bucketAddressWithZoomStep.y;
-
-      if (bucketAddress == -2.0) {
-        // The bucket is out of bounds. Render black
-        // In flight mode, it can happen that buckets were not passed to the GPU
-        // since the approximate implementation of the bucket picker missed the bucket.
-        // We simply handle this case as if the bucket was not yet loaded which means
-        // that fallback data is loaded.
-        // The downside is that data which does not exist, will be rendered gray instead of black.
-        // Issue to track progress: #3446
-        float alpha = isFlightMode() ? -1.0 : 0.0;
-        returnValue[1] = vec4(0.0, 0.0, 0.0, alpha);
-        return returnValue;
+      // To avoid rare rendering artifacts, don't use the precomputed
+      // bucket address when being at the border of buckets.
+      bool beSafe = false;
+      {
+        renderedMagIdx = outputMagIdx[globalLayerIndex];
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
+        vec3 absoluteBucketPosition = div(coords, bucketWidth);
+        offsetInBucket = mod(coords, bucketWidth);
+        vec3 offsetInBucketUVW = transDim(offsetInBucket);
+        if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
+            || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
+            || isNan(offsetInBucketUVW.x) || isNan(offsetInBucketUVW.y)
+            || isNan(offsetInBucketUVW.z)
+          ) {
+          beSafe = true;
+        }
       }
 
-      if (bucketAddress < 0. ||
-          isNan(bucketAddress)) {
+
+      if (beSafe || !supportsPrecomputedBucketAddress) {
+        for (uint i = 0u; i <= ${MAX_ZOOM_STEP_DIFF}u; i++) {
+          renderedMagIdx = activeMagIdx + i;
+          vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
+          vec3 absoluteBucketPosition = div(coords, bucketWidth);
+          offsetInBucket = mod(coords, bucketWidth);
+          bucketAddress = lookUpBucket(
+            globalLayerIndex,
+            uvec4(uvec3(absoluteBucketPosition), renderedMagIdx),
+            (supportsPrecomputedBucketAddress && !beSafe)
+          );
+
+          if (bucketAddress != -1. && bucketAddress != NOT_YET_COMMITTED_VALUE) {
+            break;
+          }
+        }
+      } else {
+        // Use mag that was precomputed in vertex shader. Also,
+        // lookUpBucket() will use the precomputed address.
+        renderedMagIdx = outputMagIdx[globalLayerIndex];
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, renderedMagIdx, globalLayerIndex));
+        vec3 absoluteBucketPosition = div(coords, bucketWidth);
+        offsetInBucket = mod(coords, bucketWidth);
+        bucketAddress = lookUpBucket(
+          globalLayerIndex,
+          uvec4(uvec3(absoluteBucketPosition), renderedMagIdx),
+          supportsPrecomputedBucketAddress
+        );
+      }
+
+
+      if (bucketAddress == NOT_YET_COMMITTED_VALUE) {
+        // No bucket was found that was already committed.
         // Not-yet-existing data is encoded with a = -1.0
+        // and will be rendered gray.
         returnValue[1] = vec4(0.0, 0.0, 0.0, -1.0);
         return returnValue;
       }
 
-      if (renderedZoomStep != zoomStep) {
+      if (bucketAddress < 0. || isNan(bucketAddress)) {
+        // The requested data could not be found in the look up
+        // table. Render black.
+        returnValue[1] = vec4(0.0, 0.0, 0.0, 0.0);
+        return returnValue;
+      }
+
+      if (renderedMagIdx != activeMagIdx) {
         /* We already know which fallback bucket we have to look into. However,
          * for 8 mag-1 buckets, there is usually one fallback bucket in mag-2.
          * Therefore, depending on the actual mag-1 bucket, we have to look into
@@ -170,8 +275,11 @@ export const getColorForCoords: ShaderModule = {
          * with the resolution factor. A typical resolution factor is 2.
          */
 
-        vec3 magnificationFactors = getResolutionFactors(renderedZoomStep, zoomStep);
-        vec3 worldBucketPosition = relativeBucketPosition + anchorPoint;
+        vec3 magnificationFactors = getResolutionFactors(renderedMagIdx, activeMagIdx, globalLayerIndex);
+        vec3 coords = floor(getAbsoluteCoords(worldPositionUVW, activeMagIdx, globalLayerIndex));
+        offsetInBucket = mod(coords, bucketWidth);
+        vec3 worldBucketPosition = div(coords, bucketWidth);
+
         vec3 subVolumeIndex = mod(worldBucketPosition, magnificationFactors);
         offsetInBucket = floor(
           (offsetInBucket + vec3(bucketWidth) * subVolumeIndex)
@@ -200,7 +308,7 @@ export const getColorForCoords: ShaderModule = {
 
       // The lower 32-bit of the value.
       vec4 bucketColor = getRgbaAtXYIndex(
-        layerIndex,
+        localLayerIndex,
         textureIndex,
         x,
         y
@@ -208,7 +316,7 @@ export const getColorForCoords: ShaderModule = {
 
       if (packingDegree == 0.5) {
         vec4 bucketColorHigh = getRgbaAtXYIndex(
-          layerIndex,
+          localLayerIndex,
           textureIndex,
           // x + 1.0 will never exceed the texture width because
           // - the texture width is even
@@ -226,7 +334,10 @@ export const getColorForCoords: ShaderModule = {
       }
 
       if (packingDegree == 1.0) {
-        returnValue[1] = max(bucketColor, 0.0);
+        // Negative values in the alpha channel would result in this
+        // value being interpreted as missing. Therefore, we are clamping
+        // the alpha value.
+        returnValue[1] = vec4(bucketColor.xyz, max(bucketColor.a, 0.0));
         return returnValue;
       }
 
@@ -238,18 +349,18 @@ export const getColorForCoords: ShaderModule = {
         // The same goes for the following code where the packingDegree is 4 and we only have 1 byte of information.
         if (rgbaIndex == 0.0) {
           returnValue[1] = vec4(
-            max(bucketColor.r, 0.0),
-            max(bucketColor.g, 0.0),
-            max(bucketColor.r, 0.0),
-            max(bucketColor.g, 0.0)
+            bucketColor.r,
+            bucketColor.g,
+            bucketColor.r,
+            1.0
           );
           return returnValue;
         } else if (rgbaIndex == 1.0) {
           returnValue[1] = vec4(
-            max(bucketColor.b, 0.0),
-            max(bucketColor.a, 0.0),
-            max(bucketColor.b, 0.0),
-            max(bucketColor.a, 0.0)
+            bucketColor.b,
+            bucketColor.a,
+            bucketColor.b,
+            1.0
           );
           return returnValue;
         }
@@ -257,16 +368,16 @@ export const getColorForCoords: ShaderModule = {
 
       // The following code deals with packingDegree == 4.0
       if (rgbaIndex == 0.0) {
-        returnValue[1] = vec4(max(bucketColor.r, 0.0));
+        returnValue[1] = vec4(vec3(bucketColor.r), 1.0);
         return returnValue;
       } else if (rgbaIndex == 1.0) {
-        returnValue[1] = vec4(max(bucketColor.g, 0.0));
+        returnValue[1] = vec4(vec3(bucketColor.g), 1.0);
         return returnValue;
       } else if (rgbaIndex == 2.0) {
-        returnValue[1] = vec4(max(bucketColor.b, 0.0));
+        returnValue[1] = vec4(vec3(bucketColor.b), 1.0);
         return returnValue;
       } else if (rgbaIndex == 3.0) {
-        returnValue[1] = vec4(max(bucketColor.a, 0.0));
+        returnValue[1] = vec4(vec3(bucketColor.a), 1.0);
         return returnValue;
       }
 
@@ -275,16 +386,16 @@ export const getColorForCoords: ShaderModule = {
     }
 
     vec4 getColorForCoords(
-      sampler2D lookUpTexture,
-      float layerIndex,
+      float localLayerIndex,
       float d_texture_width,
       float packingDegree,
-      vec3 worldPositionUVW
+      vec3 worldPositionUVW,
+      bool supportsPrecomputedBucketAddress
     ) {
       // The potential overhead of delegating to the 64-bit variant (instead of using a specialized
       // 32-bit variant) was measured by rendering 600 times consecutively (without throttling).
       // No clear negative impact could be measured which is why this delegation should be ok.
-      vec4[2] retVal = getColorForCoords64(lookUpTexture, layerIndex, d_texture_width, packingDegree, worldPositionUVW);
+      vec4[2] retVal = getColorForCoords64(localLayerIndex, d_texture_width, packingDegree, worldPositionUVW, supportsPrecomputedBucketAddress);
       return retVal[1];
     }
   `,

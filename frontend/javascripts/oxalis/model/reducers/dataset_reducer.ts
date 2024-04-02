@@ -4,6 +4,7 @@ import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import { getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import DiffableMap from "libs/diffable_map";
 import { MappingStatusEnum } from "oxalis/constants";
+import { deepIterate } from "libs/utils";
 
 function createDictWithKeysAndValue<T>(
   keys: Array<string>,
@@ -21,7 +22,7 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
         ...state,
         dataset,
         localSegmentationData: createDictWithKeysAndValue(segmentationLayerNames, () => ({
-          isosurfaces: {},
+          meshes: {},
           availableMeshFiles: null,
           currentMeshFile: null,
           segments: new DiffableMap(),
@@ -32,13 +33,16 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
             activeAgglomerateIds: [],
             skeleton: null,
           },
+          selectedIds: {
+            segments: [],
+            group: null,
+          },
         })),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,
           activeMappingByLayer: createDictWithKeysAndValue(segmentationLayerNames, () => ({
             mappingName: null,
             mapping: null,
-            mappingKeys: null,
             mappingColors: null,
             hideUnmappedIds: false,
             mappingStatus: MappingStatusEnum.DISABLED,
@@ -58,6 +62,55 @@ function DatasetReducer(state: OxalisState, action: Action): OxalisState {
           return layer;
         }
       });
+      return updateKey2(state, "dataset", "dataSource", {
+        dataLayers: newLayers,
+      });
+    }
+
+    case "SET_LAYER_HAS_SEGMENT_INDEX": {
+      const { layerName, hasSegmentIndex } = action;
+      const newLayers = state.dataset.dataSource.dataLayers.map((layer) => {
+        if (layer.name === layerName) {
+          return {
+            ...layer,
+            hasSegmentIndex,
+          };
+        } else {
+          return layer;
+        }
+      });
+
+      return updateKey2(state, "dataset", "dataSource", {
+        dataLayers: newLayers,
+      });
+    }
+
+    case "SET_LAYER_TRANSFORMS": {
+      const { layerName, coordinateTransformations } = action;
+
+      let hasNaN = false;
+      deepIterate(coordinateTransformations, (el: any) => {
+        if (Number.isNaN(el)) hasNaN = true;
+      });
+
+      if (hasNaN) {
+        console.error(
+          "Did not update layer transforms, because it contained NaN values.",
+          coordinateTransformations,
+        );
+        return state;
+      }
+      const newLayers = state.dataset.dataSource.dataLayers.map((layer) => {
+        if (layer.name === layerName) {
+          return {
+            ...layer,
+            coordinateTransformations,
+          };
+        } else {
+          return layer;
+        }
+      });
+
       return updateKey2(state, "dataset", "dataSource", {
         dataLayers: newLayers,
       });

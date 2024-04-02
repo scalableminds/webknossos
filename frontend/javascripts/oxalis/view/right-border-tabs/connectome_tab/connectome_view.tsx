@@ -1,4 +1,4 @@
-import { Alert, Empty, Input, Tooltip } from "antd";
+import { Alert, Empty, Space, Tooltip, TreeProps } from "antd";
 import { connect } from "react-redux";
 import Maybe from "data.maybe";
 import React from "react";
@@ -36,7 +36,7 @@ import {
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import { setMappingAction } from "oxalis/model/actions/settings_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import type { Vector3 } from "oxalis/constants";
+import { TreeTypeEnum, Vector3 } from "oxalis/constants";
 import Constants, { MappingStatusEnum } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -153,10 +153,12 @@ const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree
   comments: [],
   isVisible: true,
   groupId: null,
+  type: TreeTypeEnum.DEFAULT,
+  edgesAreVisible: true,
 });
 
 const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): MutableNode => ({
-  position: synapsePosition,
+  untransformedPosition: synapsePosition,
   radius: Constants.DEFAULT_NODE_RADIUS,
   rotation: [0, 0, 0],
   viewport: 0,
@@ -165,6 +167,9 @@ const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): Mutabl
   timestamp: Date.now(),
   bitDepth: 8,
   interpolation: false,
+  // Don't assume any additionalCoordinates here, because no 4D connectomes are
+  // known yet. Also see https://github.com/scalableminds/webknossos/issues/7229.
+  additionalCoordinates: null,
 });
 
 function* mapAndFilterTreeData<R>(
@@ -572,7 +577,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const getMappingNameFromConnectomeDataEnforced = (
       connectome: ConnectomeData | null | undefined,
     ) => {
-      // This should never be the case, but it's not straightforward for Flow to infer
+      // This should never be the case, but it's not straightforward for TS to infer
       if (connectome == null) throw new Error("Connectome data was null.");
       return connectome.connectomeFile.mappingName;
     };
@@ -653,22 +658,11 @@ class ConnectomeView extends React.Component<Props, State> {
     Store.dispatch(setActiveConnectomeAgglomerateIdsAction(segmentationLayer.name, agglomerateIds));
   };
 
-  handleCheck = (
-    {
-      checked,
-    }: {
-      checked: Array<string>;
-    },
-    {
-      node,
-      checked: isChecked,
-    }: {
-      node: TreeNode;
-      checked: boolean;
-    },
-  ) => {
+  handleCheck: TreeProps<TreeNode>["onCheck"] = (checked, { node, checked: isChecked }) => {
     // The trailing ; is important to avoid matching 1234 if the id is 12
     const checkedNodeKeyPrefix = `segment;${node.data.id};`;
+    // @ts-ignore antd's <Tree> component uses objects instead of simple string if "checkable" prop is present
+    const checkedKeys = checked.checked as string[];
 
     if (isChecked) {
       // Find out which keys should also be checked, because they represent the same agglomerate
@@ -681,20 +675,19 @@ class ConnectomeView extends React.Component<Props, State> {
         ),
       );
       this.setState({
-        checkedKeys: [...checked, ...additionalCheckedKeys],
+        checkedKeys: [...checkedKeys, ...additionalCheckedKeys],
       });
     } else {
       // Find out which keys should also be unchecked, because they represent the same agglomerate
-      const checkedKeys = checked.filter((key) => !key.startsWith(checkedNodeKeyPrefix));
       this.setState({
-        checkedKeys,
+        checkedKeys: checkedKeys.filter((key) => !key.startsWith(checkedNodeKeyPrefix)),
       });
     }
   };
 
-  handleExpand = (expandedKeys: Array<string>) => {
+  handleExpand: TreeProps<TreeNode>["onExpand"] = (expandedKeys) => {
     this.setState({
-      expandedKeys,
+      expandedKeys: expandedKeys as string[],
     });
   };
 
@@ -752,8 +745,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const disabled = currentConnectomeFile == null;
     return (
       <>
-        <Input.Group
-          compact
+        <Space.Compact
           className="compact-icons"
           style={{
             marginBottom: 10,
@@ -780,7 +772,7 @@ class ConnectomeView extends React.Component<Props, State> {
             disabled={disabled}
           />
           <ConnectomeSettings segmentationLayer={segmentationLayer} />
-        </Input.Group>
+        </Space.Compact>
         {this.getConnectomeMappingActivationAlert()}
       </>
     );

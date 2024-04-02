@@ -1,4 +1,3 @@
-// @ts-nocheck
 /* eslint-disable no-await-in-loop */
 import "test/sagas/saga_integration.mock";
 import _ from "lodash";
@@ -8,6 +7,7 @@ import {
   FillModeEnum,
   OrthoViews,
   OverwriteModeEnum,
+  Vector3,
 } from "oxalis/constants";
 import { __setupOxalis, createBucketResponseFunction } from "test/helpers/apiHelpers";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
@@ -15,10 +15,22 @@ import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";
 import mockRequire from "mock-require";
-import test from "ava";
+import anyTest, { ExecutionContext, TestInterface } from "ava";
 import { V3 } from "libs/mjs";
 import dummyUser from "test/fixtures/dummy_user";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import {
+  batchUpdateGroupsAndSegmentsAction,
+  clickSegmentAction,
+  removeSegmentAction,
+  setSegmentGroupsAction,
+  updateSegmentAction,
+} from "oxalis/model/actions/volumetracing_actions";
+import { type ModelType } from "oxalis/model";
+import { type RequestType } from "libs/request";
+import { type ApiInterface } from "oxalis/api/api_latest";
+import { type DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 
 const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(
   "oxalis/model/actions/save_actions",
@@ -35,6 +47,19 @@ const { setPositionAction, setZoomStepAction } = mockRequire.reRequire(
   "oxalis/model/actions/flycam_actions",
 );
 const { setToolAction } = mockRequire.reRequire("oxalis/model/actions/ui_actions");
+
+// Ava's recommendation for Typescript types
+// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
+type Context = {
+  model: ModelType;
+  mocks: {
+    Request: RequestType;
+  };
+  setSlowCompression: (b: boolean) => void;
+  api: ApiInterface;
+};
+const test: TestInterface<Context> = anyTest as any;
+
 test.beforeEach(async (t) => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
@@ -62,7 +87,7 @@ test.serial("Executing a floodfill in mag 1", async (t) => {
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
   // function.
   await t.context.api.data.reloadAllBuckets();
-  const paintCenter = [0, 0, 43];
+  const paintCenter = [0, 0, 43] as Vector3;
   const brushSize = 10;
   const newCellId = 2;
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
@@ -165,7 +190,7 @@ test.serial("Executing a floodfill in mag 2", async (t) => {
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
   // function.
   await t.context.api.data.reloadAllBuckets();
-  const paintCenter = [0, 0, 43];
+  const paintCenter = [0, 0, 43] as Vector3;
   const brushSize = 10;
   const newCellId = 2;
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
@@ -260,7 +285,7 @@ test.serial("Executing a floodfill in mag 1 (long operation)", async (t) => {
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
   // function.
   await t.context.api.data.reloadAllBuckets();
-  const paintCenter = [128, 128, 128];
+  const paintCenter = [128, 128, 128] as Vector3;
   Store.dispatch(setPositionAction(paintCenter));
   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, paintCenter, 0), 0);
@@ -333,7 +358,7 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
   // function.
   await t.context.api.data.reloadAllBuckets();
-  const paintCenter = [0, 0, 0];
+  const paintCenter = [0, 0, 0] as Vector3;
   const brushSize = 10;
   const newCellId = 2;
   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
@@ -403,7 +428,7 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
   );
 });
 test.serial("Brushing/Tracing with already existing backend data", async (t) => {
-  const paintCenter = [0, 0, 0];
+  const paintCenter = [0, 0, 0] as Vector3;
   const brushSize = 10;
   const newCellId = 2;
   const oldCellId = 11;
@@ -458,7 +483,11 @@ test.serial("Brushing/Tracing with undo (Ia iv)", undoTestHelper, true, true);
 test.serial("Brushing/Tracing with undo (Ib)", testBrushingWithUndo, true);
 test.serial("Brushing/Tracing with undo (Ic)", testBrushingWithUndo, false);
 
-async function undoTestHelper(t, assertBeforeUndo, assertAfterUndo) {
+async function undoTestHelper(
+  t: ExecutionContext<Context>,
+  assertBeforeUndo: boolean,
+  assertAfterUndo: boolean,
+) {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -468,7 +497,7 @@ async function undoTestHelper(t, assertBeforeUndo, assertAfterUndo) {
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
   // function.
   await t.context.api.data.reloadAllBuckets();
-  const paintCenter = [0, 0, 0];
+  const paintCenter = [0, 0, 0] as Vector3;
   const brushSize = 10;
   const newCellId = 2;
   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
@@ -518,7 +547,7 @@ async function undoTestHelper(t, assertBeforeUndo, assertAfterUndo) {
   t.is(await t.context.api.data.getDataValue(volumeTracingLayerName, [5, 0, 0]), oldCellId);
 }
 
-async function testBrushingWithUndo(t, assertBeforeRedo) {
+async function testBrushingWithUndo(t: ExecutionContext<Context>, assertBeforeRedo: boolean) {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -528,7 +557,7 @@ async function testBrushingWithUndo(t, assertBeforeRedo) {
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
   // function.
   await t.context.api.data.reloadAllBuckets();
-  const paintCenter = [3000, 0, 0];
+  const paintCenter = [3000, 0, 0] as Vector3;
   const brushSize = 10;
   const newCellId = 2;
   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
@@ -555,7 +584,7 @@ async function testBrushingWithUndo(t, assertBeforeRedo) {
   // Undo erasure
   await dispatchUndoAsync(Store.dispatch);
   const cube = t.context.api.data.model.getCubeByLayerName(volumeTracingLayerName);
-  const problematicBucket = cube.getOrCreateBucket([93, 0, 0, 0]);
+  const problematicBucket = cube.getOrCreateBucket([93, 0, 0, 0]) as DataBucket;
   t.true(problematicBucket.needsBackendData());
 
   if (assertBeforeRedo) {
@@ -612,7 +641,7 @@ test.serial("Brushing/Tracing with undo (II)", async (t) => {
   // Reload buckets which might have already been loaded before swapping the sendJSONReceiveArraybufferWithHeaders
   // function.
   await t.context.api.data.reloadAllBuckets();
-  const paintCenter = [0, 0, 0];
+  const paintCenter = [0, 0, 0] as Vector3;
   const brushSize = 10;
   const newCellId = 2;
   Store.dispatch(updateUserSettingAction("brushSize", brushSize));
@@ -648,7 +677,7 @@ test.serial("Brushing/Tracing with upsampling to unloaded data", async (t) => {
   // function.
   await t.context.api.data.reloadAllBuckets();
   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
-  const paintCenter = [0, 0, 0];
+  const paintCenter = [0, 0, 0] as Vector3;
   const brushSize = 16;
   const newCellId = 2;
   Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_EMPTY));
@@ -672,7 +701,7 @@ test.serial("Brushing/Tracing with upsampling to unloaded data", async (t) => {
 test.serial("Erasing on mag 4 where mag 1 is unloaded", eraseInMag4Helper, false);
 test.serial("Erasing on mag 4 where mag 1 is loaded", eraseInMag4Helper, true);
 
-async function eraseInMag4Helper(t, loadDataAtBeginning) {
+async function eraseInMag4Helper(t: ExecutionContext<Context>, loadDataAtBeginning: boolean) {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -684,7 +713,7 @@ async function eraseInMag4Helper(t, loadDataAtBeginning) {
   // function.
   await t.context.api.data.reloadAllBuckets();
   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
-  const paintCenter = [0, 0, 0];
+  const paintCenter = [0, 0, 0] as Vector3;
   // This particular brushSize used to trigger a bug. It should not be changed.
   const brushSize = 263;
 
@@ -721,13 +750,14 @@ async function eraseInMag4Helper(t, loadDataAtBeginning) {
     t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
   }
 
+  // @ts-ignore
   t.is(_.max(data), 0, "All the data should be 0 (== erased).");
 }
 
 test.serial("Undo erasing in mag 4 (load before undo)", undoEraseInMag4Helper, false);
 test.serial("Undo erasing in mag 4 (load after undo)", undoEraseInMag4Helper, true);
 
-async function undoEraseInMag4Helper(t, loadBeforeUndo) {
+async function undoEraseInMag4Helper(t: ExecutionContext<Context>, loadBeforeUndo: boolean) {
   const oldCellId = 11;
   t.context.mocks.Request.sendJSONReceiveArraybufferWithHeaders = createBucketResponseFunction(
     Uint16Array,
@@ -739,7 +769,7 @@ async function undoEraseInMag4Helper(t, loadBeforeUndo) {
   // function.
   await t.context.api.data.reloadAllBuckets();
   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
-  const paintCenter = [0, 0, 0];
+  const paintCenter = [0, 0, 0] as Vector3;
   const brushSize = 10;
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
   Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
@@ -786,7 +816,7 @@ test.serial("Provoke race condition when bucket compression is very slow", async
   // function.
   await t.context.api.data.reloadAllBuckets();
   const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
-  const paintCenter = [0, 0, 0];
+  const paintCenter = [0, 0, 0] as Vector3;
   const brushSize = 10;
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
   Store.dispatch(updateUserSettingAction("overwriteMode", OverwriteModeEnum.OVERWRITE_ALL));
@@ -827,4 +857,186 @@ test.serial("Provoke race condition when bucket compression is very slow", async
     );
     t.is(readValue, 0, `Voxel should be erased at zoomstep=${zoomStep}`);
   }
+});
+
+test.serial("Undo for deleting segment group (without recursion)", async (t) => {
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+  const position = [1, 2, 3] as Vector3;
+  Store.dispatch(clickSegmentAction(1, position, undefined));
+  Store.dispatch(clickSegmentAction(2, position, undefined));
+  Store.dispatch(clickSegmentAction(3, position, undefined));
+  Store.dispatch(clickSegmentAction(4, position, undefined));
+
+  Store.dispatch(
+    setSegmentGroupsAction(
+      [
+        { name: "Group 1", groupId: 1, children: [] },
+        { name: "Group 2", groupId: 2, children: [] },
+      ],
+      volumeTracingLayerName,
+    ),
+  );
+
+  Store.dispatch(updateSegmentAction(1, { groupId: 1 }, volumeTracingLayerName));
+  Store.dispatch(updateSegmentAction(2, { groupId: 1 }, volumeTracingLayerName));
+  Store.dispatch(updateSegmentAction(3, { groupId: 2 }, volumeTracingLayerName));
+  Store.dispatch(updateSegmentAction(4, { groupId: 2 }, volumeTracingLayerName));
+
+  Store.dispatch(
+    batchUpdateGroupsAndSegmentsAction([
+      updateSegmentAction(1, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      updateSegmentAction(2, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      updateSegmentAction(3, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      updateSegmentAction(4, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      setSegmentGroupsAction([], volumeTracingLayerName),
+    ]),
+  );
+
+  const state = Store.getState();
+  const tracing = state.tracing.volumes[0];
+  t.is(tracing.segmentGroups.length, 0);
+  t.is(tracing.segments.size(), 4);
+
+  for (const segment of tracing.segments.values()) {
+    t.is(segment.groupId, null);
+  }
+
+  await dispatchUndoAsync(Store.dispatch);
+
+  const stateRestored = Store.getState();
+  const tracingRestored = stateRestored.tracing.volumes[0];
+  t.is(tracingRestored.segmentGroups.length, 2);
+  t.is(tracingRestored.segments.size(), 4);
+
+  t.is(tracingRestored.segments.get(1).groupId, 1);
+  t.is(tracingRestored.segments.get(2).groupId, 1);
+  t.is(tracingRestored.segments.get(3).groupId, 2);
+  t.is(tracingRestored.segments.get(4).groupId, 2);
+});
+
+test.serial("Undo for deleting segment group (with recursion)", async (t) => {
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+  const position = [1, 2, 3] as Vector3;
+  Store.dispatch(clickSegmentAction(1, position, undefined));
+  Store.dispatch(clickSegmentAction(2, position, undefined));
+  Store.dispatch(clickSegmentAction(3, position, undefined));
+  Store.dispatch(clickSegmentAction(4, position, undefined));
+
+  Store.dispatch(
+    setSegmentGroupsAction(
+      [{ name: "Group 1", groupId: 1, children: [{ name: "Group 2", groupId: 2, children: [] }] }],
+      volumeTracingLayerName,
+    ),
+  );
+
+  Store.dispatch(updateSegmentAction(1, { groupId: 1 }, volumeTracingLayerName));
+  Store.dispatch(updateSegmentAction(2, { groupId: 1 }, volumeTracingLayerName));
+  Store.dispatch(updateSegmentAction(3, { groupId: 2 }, volumeTracingLayerName));
+  Store.dispatch(updateSegmentAction(4, { groupId: 2 }, volumeTracingLayerName));
+
+  Store.dispatch(
+    batchUpdateGroupsAndSegmentsAction([
+      removeSegmentAction(1, volumeTracingLayerName),
+      removeSegmentAction(2, volumeTracingLayerName),
+      removeSegmentAction(3, volumeTracingLayerName),
+      removeSegmentAction(4, volumeTracingLayerName),
+      setSegmentGroupsAction([], volumeTracingLayerName),
+    ]),
+  );
+
+  const state = Store.getState();
+  const tracing = state.tracing.volumes[0];
+  t.is(tracing.segmentGroups.length, 0);
+  t.is(tracing.segments.size(), 0);
+
+  await dispatchUndoAsync(Store.dispatch);
+
+  const stateRestored = Store.getState();
+  const tracingRestored = stateRestored.tracing.volumes[0];
+  t.is(tracingRestored.segmentGroups.length, 1);
+  t.is(tracingRestored.segmentGroups[0]?.children.length || 0, 1);
+  t.is(tracingRestored.segments.size(), 4);
+
+  t.is(tracingRestored.segments.get(1).groupId, 1);
+  t.is(tracingRestored.segments.get(2).groupId, 1);
+  t.is(tracingRestored.segments.get(3).groupId, 2);
+  t.is(tracingRestored.segments.get(4).groupId, 2);
+});
+
+test.serial("Undo for deleting segment group (bug repro)", async (t) => {
+  const volumeTracingLayerName = t.context.api.data.getVolumeTracingLayerIds()[0];
+  const position = [1, 2, 3] as Vector3;
+  Store.dispatch(clickSegmentAction(1, position, undefined));
+  Store.dispatch(clickSegmentAction(2, position, undefined));
+  Store.dispatch(clickSegmentAction(3, position, undefined));
+  Store.dispatch(clickSegmentAction(4, position, undefined));
+
+  /* Set up
+    Group 1
+      Segment 1
+      Segment 2
+    Group 2
+      Segment 3
+      Segment 4
+  */
+  Store.dispatch(
+    setSegmentGroupsAction(
+      [
+        { name: "Group 1", groupId: 1, children: [] },
+        { name: "Group 2", groupId: 2, children: [] },
+      ],
+      volumeTracingLayerName,
+    ),
+  );
+
+  Store.dispatch(updateSegmentAction(1, { groupId: 1 }, volumeTracingLayerName));
+  Store.dispatch(updateSegmentAction(2, { groupId: 1 }, volumeTracingLayerName));
+  Store.dispatch(updateSegmentAction(3, { groupId: 2 }, volumeTracingLayerName));
+  Store.dispatch(updateSegmentAction(4, { groupId: 2 }, volumeTracingLayerName));
+
+  t.is(Store.getState().tracing.volumes[0].segmentGroups.length, 2);
+
+  // Delete everything
+  Store.dispatch(
+    batchUpdateGroupsAndSegmentsAction([
+      removeSegmentAction(1, volumeTracingLayerName),
+      removeSegmentAction(2, volumeTracingLayerName),
+      removeSegmentAction(3, volumeTracingLayerName),
+      removeSegmentAction(4, volumeTracingLayerName),
+      setSegmentGroupsAction([], volumeTracingLayerName),
+    ]),
+  );
+
+  const state = Store.getState();
+  const tracing = state.tracing.volumes[0];
+  t.is(tracing.segmentGroups.length, 0);
+  t.is(tracing.segments.size(), 0);
+
+  // Undo again
+  await dispatchUndoAsync(Store.dispatch);
+
+  t.is(Store.getState().tracing.volumes[0].segmentGroups.length, 2);
+
+  // Delete without recursion
+  Store.dispatch(
+    batchUpdateGroupsAndSegmentsAction([
+      updateSegmentAction(1, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      updateSegmentAction(2, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      updateSegmentAction(3, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      updateSegmentAction(4, { groupId: MISSING_GROUP_ID }, volumeTracingLayerName),
+      setSegmentGroupsAction([], volumeTracingLayerName),
+    ]),
+  );
+
+  await dispatchUndoAsync(Store.dispatch);
+
+  const stateRestored = Store.getState();
+  const tracingRestored = stateRestored.tracing.volumes[0];
+  t.is(tracingRestored.segments.size(), 4);
+  t.is(tracingRestored.segmentGroups.length, 2);
+
+  t.is(tracingRestored.segments.get(1).groupId, 1);
+  t.is(tracingRestored.segments.get(2).groupId, 1);
+  t.is(tracingRestored.segments.get(3).groupId, 2);
+  t.is(tracingRestored.segments.get(4).groupId, 2);
 });

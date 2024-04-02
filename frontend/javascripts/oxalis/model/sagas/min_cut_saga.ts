@@ -12,15 +12,18 @@ import {
   getActiveSegmentationTracingLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { finishAnnotationStrokeAction } from "oxalis/model/actions/volumetracing_actions";
-import { getResolutionInfo, ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import createProgressCallback from "libs/progress_callback";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import window from "libs/window";
 import { APISegmentationLayer } from "types/api_flow_types";
+import { ResolutionInfo } from "../helpers/resolution_info";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box
 // the min-cut is computed.
@@ -173,7 +176,10 @@ function removeOutgoingEdge(edgeBuffer: Uint16Array, idx: number, neighborIdx: n
 
 export function isBoundingBoxUsableForMinCut(boundingBoxObj: BoundingBoxType, nodes: Array<Node>) {
   const bbox = new BoundingBox(boundingBoxObj);
-  return bbox.containsPoint(nodes[0].position) && bbox.containsPoint(nodes[1].position);
+  return (
+    bbox.containsPoint(nodes[0].untransformedPosition) &&
+    bbox.containsPoint(nodes[1].untransformedPosition)
+  );
 }
 
 type L = (x: number, y: number, z: number) => number;
@@ -230,10 +236,18 @@ function* performMinCut(action: Action): Saga<void> {
     boundingBoxObj = boundingBoxes[0].boundingBox;
   } else {
     const newBBox = {
-      min: V3.floor(V3.sub(V3.min(nodes[0].position, nodes[1].position), DEFAULT_PADDING)),
+      min: V3.floor(
+        V3.sub(
+          V3.min(nodes[0].untransformedPosition, nodes[1].untransformedPosition),
+          DEFAULT_PADDING,
+        ),
+      ),
       max: V3.floor(
         V3.add(
-          V3.add(V3.max(nodes[0].position, nodes[1].position), DEFAULT_PADDING), // Add [1, 1, 1], since BoundingBox.max is exclusive
+          V3.add(
+            V3.max(nodes[0].untransformedPosition, nodes[1].untransformedPosition),
+            DEFAULT_PADDING,
+          ), // Add [1, 1, 1], since BoundingBox.max is exclusive
           [1, 1, 1],
         ),
       ),
@@ -241,9 +255,11 @@ function* performMinCut(action: Action): Saga<void> {
     yield* put(
       addUserBoundingBoxAction({
         boundingBox: newBBox,
-        name: `Bounding box used for splitting cell (seedA=(${nodes[0].position.join(
+        name: `Bounding box used for splitting cell (seedA=(${nodes[0].untransformedPosition.join(
           ",",
-        )}), seedB=(${nodes[1].position.join(",")}), timestamp=${new Date().getTime()})`,
+        )}), seedB=(${nodes[1].untransformedPosition.join(
+          ",",
+        )}), timestamp=${new Date().getTime()})`,
         color: Utils.getRandomColor(),
         isVisible: true,
       }),
@@ -412,18 +428,21 @@ function* tryMinCutAtMag(
 ): Saga<void> {
   const targetMagString = `${targetMag.join(",")}`;
   const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(targetMag);
-  const globalSeedA = V3.fromMag1ToMag(nodes[0].position, targetMag);
-  const globalSeedB = V3.fromMag1ToMag(nodes[1].position, targetMag);
+  const globalSeedA = V3.fromMag1ToMag(nodes[0].untransformedPosition, targetMag);
+  const globalSeedB = V3.fromMag1ToMag(nodes[1].untransformedPosition, targetMag);
   const minDistToSeed = Math.min(V3.length(V3.sub(globalSeedA, globalSeedB)) / 2, MIN_DIST_TO_SEED);
   console.log("Setting minDistToSeed to ", minDistToSeed);
   const seedA = V3.sub(globalSeedA, boundingBoxTarget.min);
   const seedB = V3.sub(globalSeedB, boundingBoxTarget.min);
   console.log(`Loading data... (for ${boundingBoxTarget.getVolume()} vx)`);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+
   const inputData = yield* call(
     [api.data, api.data.getDataForBoundingBox],
     volumeTracingLayer.name,
     boundingBoxMag1,
     resolutionIndex,
+    additionalCoordinates,
   );
   // For the 3D volume flat arrays are constructed
   // which can be accessed with the helper methods
@@ -507,7 +526,16 @@ function* tryMinCutAtMag(
   const { visitedField } = traverseResidualsField(boundingBoxTarget, seedA, ll, edgeBuffer);
   console.timeEnd(`traverseResidualsField (${targetMagString})`);
   console.time(`labelDeletedEdges (${targetMagString})`);
-  labelDeletedEdges(visitedField, boundingBoxTarget, size, originalEdgeBuffer, targetMag, l, ll);
+  labelDeletedEdges(
+    visitedField,
+    boundingBoxTarget,
+    size,
+    originalEdgeBuffer,
+    targetMag,
+    l,
+    ll,
+    additionalCoordinates,
+  );
   console.timeEnd(`labelDeletedEdges (${targetMagString})`);
   console.timeEnd(`Total min-cut (${targetMagString})`);
 }
@@ -773,6 +801,7 @@ function labelDeletedEdges(
   targetMag: Vector3,
   l: L,
   ll: LL,
+  additionalCoordinates: AdditionalCoordinate[] | null,
 ) {
   for (let z = 0; z < size[2]; z++) {
     for (let y = 0; y < size[1]; y++) {
@@ -795,7 +824,11 @@ function labelDeletedEdges(
               for (let dz = 0; dz < targetMag[2]; dz++) {
                 for (let dy = 0; dy < targetMag[1]; dy++) {
                   for (let dx = 0; dx < targetMag[0]; dx++) {
-                    api.data.labelVoxels([V3.add(position, [dx, dy, dz])], 0);
+                    api.data.labelVoxels(
+                      [V3.add(position, [dx, dy, dz])],
+                      0,
+                      additionalCoordinates,
+                    );
                   }
                 }
               }

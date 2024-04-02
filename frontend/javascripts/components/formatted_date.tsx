@@ -1,6 +1,7 @@
 import { Tooltip } from "antd";
 import * as React from "react";
-import moment from "moment";
+import dayjs from "dayjs";
+
 const defaultTimeFormat = "YYYY-MM-DD HH:mm";
 
 /**
@@ -13,30 +14,33 @@ export function formatDateInLocalTimeZone(
   format: string | null | undefined = null,
 ): string {
   format = format || defaultTimeFormat;
-  return moment(date).format(format);
+  return dayjs(date).format(format);
 }
 
 export default function FormattedDate({
   timestamp,
   format,
+  tooltipFormat,
 }: {
   timestamp: string | number | Date;
   format?: string;
+  tooltipFormat?: string;
 }) {
-  const _moment = moment.utc(timestamp);
+  const _timestamp = dayjs.utc(timestamp);
 
   const _format = format || defaultTimeFormat;
+  const _tooltipFormat = tooltipFormat || format;
 
   return (
     <Tooltip
       title={
         <span>
           The displayed time refers to your local timezone. In UTC, the time is:{" "}
-          {_moment.format(_format)}
+          {_timestamp.format(_tooltipFormat)}
         </span>
       }
     >
-      {_moment.local().format(_format)}
+      {_timestamp.local().format(_format)}
     </Tooltip>
   );
 }

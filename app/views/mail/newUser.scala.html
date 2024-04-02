@@ -1,4 +1,4 @@
-@(name: String, brainDBresult: Option[String], enableAutoVerify: Boolean ) 
+@(name: String, enableAutoVerify: Boolean )
 
 @emailBaseTemplate() {
 
@@ -6,18 +6,14 @@
 
   @if(!enableAutoVerify) {
     <p>
-      Welcome to your new webKnossos account. You are almost ready to share and annotate your large 3D datasets.
+      Welcome to your new WEBKNOSSOS account. You are almost ready to share and annotate your large 3D datasets.
     </p>
     <p>Your account is currently under review. An administrator will activate you soon.</p>
   } else {
     <p>
-      Welcome to your new webKnossos account. Get ready to share and annotate your large 3D datasets.
+      Welcome to your new WEBKNOSSOS account. Get ready to share and annotate your large 3D datasets.
     </p>
   }
 
-  @if(brainDBresult.isDefined) { 
-    <p>@brainDBresult.get</p>
-  } 
-
-  <p>With best regards,<br />Your webKnossos Team</p>
+  <p>With best regards,<br />your WEBKNOSSOS team</p>
 }

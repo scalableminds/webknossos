@@ -15,12 +15,19 @@ import {
   getAgglomeratesForDatasetLayer,
 } from "admin/admin_rest_api";
 import type { APIMapping } from "types/api_flow_types";
-import { setLayerMappingsAction } from "oxalis/model/actions/dataset_actions";
-import { getLayerByName, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import {
+  EnsureLayerMappingsAreLoadedAction,
+  setLayerMappingsAction,
+} from "oxalis/model/actions/dataset_actions";
+import {
+  getLayerByName,
+  getMappingInfo,
+  getVisibleSegmentationLayer,
+} from "oxalis/model/accessors/dataset_accessor";
 import type { ActiveMappingInfo, Mapping } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import { MappingStatusEnum } from "oxalis/constants";
 import { isMappingActivationAllowed } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
@@ -44,8 +51,18 @@ export default function* watchActivatedMappings(): Saga<void> {
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
   const mappingChangeActionChannel = yield* actionChannel(["SET_MAPPING_ENABLED"]);
   yield* take("WK_READY");
-  yield* takeLatest(setMappingActionChannel, maybeFetchMapping, oldActiveMappingByLayer);
+  yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
   yield* takeEvery(mappingChangeActionChannel, maybeReloadData, oldActiveMappingByLayer);
+  yield* takeEvery(
+    "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
+    function* handler(action: EnsureLayerMappingsAreLoadedAction) {
+      const layerName =
+        action.layerName || (yield* select((state) => getVisibleSegmentationLayer(state)?.name));
+      if (layerName) {
+        yield* loadLayerMappings(layerName, true);
+      }
+    },
+  );
 }
 
 function* maybeReloadData(
@@ -77,7 +94,38 @@ function* maybeReloadData(
   oldActiveMappingByLayer = activeMappingByLayer;
 }
 
-function* maybeFetchMapping(
+function* loadLayerMappings(layerName: string, updateInStore: boolean): Saga<[string[], string[]]> {
+  const dataset = yield* select((state) => state.dataset);
+  const layerInfo = getLayerByName(dataset, layerName);
+
+  if (layerInfo.category === "color") {
+    throw new Error("loadLayerMappings was called with a color layer.");
+  }
+
+  if (layerInfo.mappings != null && layerInfo.agglomerates != null) {
+    return [layerInfo.mappings, layerInfo.agglomerates];
+  }
+
+  const params = [
+    dataset.dataStore.url,
+    dataset, // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+    "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
+      ? layerInfo.fallbackLayer
+      : layerInfo.name,
+  ] as const;
+  const [jsonMappings, serverHdf5Mappings] = yield* all([
+    call(getMappingsForDatasetLayer, ...params),
+    call(getAgglomeratesForDatasetLayer, ...params),
+  ]);
+
+  if (updateInStore) {
+    yield* put(setLayerMappingsAction(layerName, jsonMappings, serverHdf5Mappings));
+  }
+
+  return [jsonMappings, serverHdf5Mappings];
+}
+
+function* handleSetMapping(
   oldActiveMappingByLayer: Record<string, ActiveMappingInfo>,
   action: SetMappingAction,
 ): Saga<void> {
@@ -119,23 +167,16 @@ function* maybeFetchMapping(
 
   const dataset = yield* select((state) => state.dataset);
   const layerInfo = getLayerByName(dataset, layerName);
-  const params = [
-    dataset.dataStore.url,
-    dataset, // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
-    "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
-      ? layerInfo.fallbackLayer
-      : layerInfo.name,
-  ] as const;
-  const [jsonMappings, serverHdf5Mappings] = yield* all([
-    call(getMappingsForDatasetLayer, ...params),
-    call(getAgglomeratesForDatasetLayer, ...params),
-  ]);
+
   // Make sure the available mappings are persisted in the store if they are not already
   const areServerHdf5MappingsInStore =
     "agglomerates" in layerInfo && layerInfo.agglomerates != null;
-  if (!areServerHdf5MappingsInStore) {
-    yield* put(setLayerMappingsAction(layerName, jsonMappings, serverHdf5Mappings));
-  }
+  const [jsonMappings, serverHdf5Mappings] = yield* call(
+    loadLayerMappings,
+    layerName,
+    !areServerHdf5MappingsInStore,
+  );
+
   const editableMappings = yield* select((state) =>
     state.tracing.volumes
       .filter((volumeTracing) => volumeTracing.mappingIsEditable)
@@ -163,7 +204,7 @@ function* maybeFetchMapping(
   }
 
   // Call maybeReloadData only after it was checked whether the activated mapping is valid, otherwise there would
-  // be a race between the maybeReloadData and maybeFetchMapping sagas
+  // be a race between the maybeReloadData and handleSetMapping sagas
   yield* fork(maybeReloadData, oldActiveMappingByLayer, action);
 
   if (mappingType !== "JSON") {
@@ -188,14 +229,9 @@ function* maybeFetchMapping(
   const fetchedMapping = fetchedMappings[mappingName];
   const { hideUnmappedIds, colors: mappingColors } = fetchedMapping;
 
-  const [mappingObject, mappingKeys] = yield* call(
-    buildMappingObject,
-    mappingName,
-    fetchedMappings,
-  );
+  const mapping = yield* call(buildMappingObject, mappingName, fetchedMappings);
   const mappingProperties = {
-    mapping: mappingObject,
-    mappingKeys,
+    mapping,
     mappingColors,
     hideUnmappedIds,
   };
@@ -218,9 +254,9 @@ function* maybeFetchMapping(
 
 function convertMappingObjectToClasses(existingMapping: Mapping) {
   const classesByRepresentative: Record<number, number[]> = {};
-  for (const unmappedStr of Object.keys(existingMapping)) {
-    const unmapped = Number(unmappedStr);
-    const mapped = existingMapping[unmapped];
+  for (const unmapped of existingMapping.keys()) {
+    // @ts-ignore unmapped is guaranteed to exist in existingMapping as it was obtained using existingMapping.keys()
+    const mapped: number = existingMapping.get(unmapped);
     classesByRepresentative[mapped] = classesByRepresentative[mapped] || [];
     classesByRepresentative[mapped].push(unmapped);
   }
@@ -239,10 +275,10 @@ function* setCustomColors(
   let classIdx = 0;
   for (const aClass of classes) {
     const firstIdEntry = aClass[0];
-    if (firstIdEntry == null) {
-      continue;
-    }
-    const representativeId = mappingProperties.mapping[firstIdEntry];
+    if (firstIdEntry == null) continue;
+
+    const representativeId = mappingProperties.mapping.get(firstIdEntry);
+    if (representativeId == null) continue;
 
     const hueValue = mappingProperties.mappingColors[classIdx];
     const color = jsHsv2rgb(360 * hueValue, 1, 1);
@@ -278,14 +314,8 @@ function* fetchMappings(
   }
 }
 
-function buildMappingObject(
-  mappingName: string,
-  fetchedMappings: APIMappings,
-): [Mapping, Array<number>] {
-  const mappingObject: Mapping = {};
-  // Performance optimization: Object.keys(...) is slow for large objects
-  // keeping track of the keys in a separate array is ~5x faster
-  const mappingKeys = [];
+function buildMappingObject(mappingName: string, fetchedMappings: APIMappings): Mapping {
+  const mappingObject: Mapping = new Map();
 
   for (const currentMappingName of getMappingChain(mappingName, fetchedMappings)) {
     const mapping = fetchedMappings[currentMappingName];
@@ -300,17 +330,15 @@ function buildMappingObject(
         // The class is empty and can be ignored
         continue;
       }
-      const mappedId = mappingObject[minId] || minId;
+      const mappedId = mappingObject.get(minId) || minId;
 
       for (const id of mappingClass) {
-        mappingObject[id] = mappedId;
-        mappingKeys.push(id);
+        mappingObject.set(id, mappedId);
       }
     }
   }
 
-  mappingKeys.sort((a, b) => a - b);
-  return [mappingObject, mappingKeys];
+  return mappingObject;
 }
 
 function getMappingChain(mappingName: string, fetchedMappings: APIMappings): Array<string> {

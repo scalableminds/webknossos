@@ -1,8 +1,7 @@
-// @ts-nocheck
+import "test/mocks/lz4";
 import update from "immutability-helper";
 import { getFirstVolumeTracingOrFail } from "test/helpers/apiHelpers";
-import { AnnotationToolEnum } from "oxalis/constants";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { AnnotationToolEnum, Vector3 } from "oxalis/constants";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import * as UiActions from "oxalis/model/actions/ui_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
@@ -10,14 +9,18 @@ import UiReducer from "oxalis/model/reducers/ui_reducer";
 import mockRequire from "mock-require";
 import test from "ava";
 import { initialState } from "test/fixtures/volumetracing_object";
+import { OxalisState } from "oxalis/store";
+import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
+
 mockRequire("app", {
   currentUser: {
     firstName: "SCM",
     lastName: "Boy",
   },
 });
+
 test("VolumeTracing should set a new active cell", (t) => {
-  const createCellAction = VolumeTracingActions.createCellAction();
+  const createCellAction = VolumeTracingActions.createCellAction(1000, 1000);
   const setActiveCellAction = VolumeTracingActions.setActiveCellAction(1);
   // Create two cells, then set first one active
   let newState = VolumeTracingReducer(initialState, createCellAction);
@@ -26,6 +29,7 @@ test("VolumeTracing should set a new active cell", (t) => {
   t.not(newState, initialState);
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => t.is(tracing.activeCellId, 1));
 });
+
 test("VolumeTracing should set a new active cell, which did not exist before", (t) => {
   const setActiveCellAction = VolumeTracingActions.setActiveCellAction(10);
   // Set a cell active which did not exist before
@@ -35,6 +39,7 @@ test("VolumeTracing should set a new active cell, which did not exist before", (
     t.is(tracing.activeCellId, 10);
   });
 });
+
 test("VolumeTracing should set active but not create a cell 0", (t) => {
   const setActiveCellActionFn = VolumeTracingActions.setActiveCellAction;
   // Set activeCellId to 1 and back to 0
@@ -45,9 +50,11 @@ test("VolumeTracing should set active but not create a cell 0", (t) => {
     t.is(tracing.activeCellId, 0);
   });
 });
+
 test("VolumeTracing should create a cell and set it as the activeCell", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction(
-    initialState.tracing.volumes[0].largestSegmentId,
+    initialState.tracing.volumes[0].activeCellId as number,
+    initialState.tracing.volumes[0].largestSegmentId as number,
   );
   // Create cell
   const newState = VolumeTracingReducer(initialState, createCellAction);
@@ -55,9 +62,11 @@ test("VolumeTracing should create a cell and set it as the activeCell", (t) => {
     t.is(tracing.activeCellId, 1);
   });
 });
+
 test("VolumeTracing should create a non-existing cell id and not update the largestSegmentId", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction(
-    initialState.tracing.volumes[0].largestSegmentId,
+    initialState.tracing.volumes[0].activeCellId as number,
+    initialState.tracing.volumes[0].largestSegmentId as number,
   );
   // Create a cell with an id that is higher than the largestSegmentId
   const newState = VolumeTracingReducer(initialState, createCellAction);
@@ -65,9 +74,11 @@ test("VolumeTracing should create a non-existing cell id and not update the larg
     t.is(tracing.largestSegmentId, 0);
   });
 });
+
 test("VolumeTracing should create an existing cell and not update the largestSegmentId", (t) => {
   const createCellAction = VolumeTracingActions.createCellAction(
-    initialState.tracing.volumes[0].largestSegmentId,
+    initialState.tracing.volumes[0].activeCellId as number,
+    initialState.tracing.volumes[0].largestSegmentId as number,
   );
   const alteredState = update(initialState, {
     tracing: {
@@ -86,9 +97,14 @@ test("VolumeTracing should create an existing cell and not update the largestSeg
     t.is(tracing.largestSegmentId, 5);
   });
 });
+
 test("VolumeTracing should create cells and only update the largestSegmentId after a voxel was annotated", (t) => {
   const LARGEST_SEGMENT_ID = 5;
-  const createCellAction = VolumeTracingActions.createCellAction(LARGEST_SEGMENT_ID);
+  const getCreateCellAction = (state: OxalisState) =>
+    VolumeTracingActions.createCellAction(
+      state.tracing.volumes[0].activeCellId as number,
+      LARGEST_SEGMENT_ID,
+    );
   const finishAnnotationStrokeAction =
     VolumeTracingActions.finishAnnotationStrokeAction("tracingId");
   const alteredState = update(initialState, {
@@ -103,19 +119,20 @@ test("VolumeTracing should create cells and only update the largestSegmentId aft
     },
   });
   // Create two cells without specifying an id
-  let newState = VolumeTracingReducer(alteredState, createCellAction);
-  newState = VolumeTracingReducer(newState, createCellAction);
+  let newState = VolumeTracingReducer(alteredState, getCreateCellAction(alteredState));
+  newState = VolumeTracingReducer(newState, getCreateCellAction(newState));
   // The largestSegmentId should not be updated, since no voxel was annotated yet
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {
-    t.is(tracing.largestSegmentId, 5);
+    t.is(tracing.largestSegmentId, LARGEST_SEGMENT_ID);
   });
-  newState = VolumeTracingReducer(newState, createCellAction);
+  newState = VolumeTracingReducer(newState, getCreateCellAction(newState));
   newState = VolumeTracingReducer(newState, finishAnnotationStrokeAction);
   // The largestSegmentId should be updated, since a voxel was annotated with id 8
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {
     t.is(tracing.largestSegmentId, 8);
   });
 });
+
 test("VolumeTracing should set trace/view tool", (t) => {
   const setToolAction = UiActions.setToolAction(AnnotationToolEnum.TRACE);
   // Change tool to Trace
@@ -123,22 +140,25 @@ test("VolumeTracing should set trace/view tool", (t) => {
   t.not(newState, initialState);
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.TRACE);
 });
-test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(zoomStep) is > 1", (t) => {
+
+test("VolumeTracing should not allow to set trace tool if getActiveMagIndexForLayer(zoomStep, 'tracingId') is > 1", (t) => {
   const setToolAction = UiActions.setToolAction(AnnotationToolEnum.TRACE);
   const alteredState = update(initialState, {
     flycam: {
       zoomStep: {
-        $set: 3,
+        $set: 5,
       },
     },
   });
-  t.true(getRequestLogZoomStep(alteredState) > 1);
+
+  t.true(getActiveMagIndexForLayer(alteredState, "tracingId") > 1);
   // Try to change tool to Trace
   const newState = UiReducer(alteredState, setToolAction);
   t.is(alteredState, newState);
   // Tool should not have changed
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.MOVE);
 });
+
 test("VolumeTracing should cycle trace/view/brush tool", (t) => {
   const cycleToolAction = () => UiActions.cycleToolAction();
 
@@ -157,13 +177,20 @@ test("VolumeTracing should cycle trace/view/brush tool", (t) => {
   newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.PICK_CELL);
   newState = UiReducer(newState, cycleToolAction());
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.QUICK_SELECT);
+  newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.BOUNDING_BOX);
+  newState = UiReducer(newState, cycleToolAction());
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.LINE_MEASUREMENT);
+  newState = UiReducer(newState, cycleToolAction());
+  t.is(newState.uiInformation.activeTool, AnnotationToolEnum.AREA_MEASUREMENT);
   // Cycle tool back to MOVE
   newState = UiReducer(newState, cycleToolAction());
   t.is(newState.uiInformation.activeTool, AnnotationToolEnum.MOVE);
 });
+
 test("VolumeTracing should update its lastLabelActions", (t) => {
-  const direction = [4, 6, 9];
+  const direction = [4, 6, 9] as Vector3;
   const registerLabelPointAction = VolumeTracingActions.registerLabelPointAction(direction);
   // Update direction
   const newState = VolumeTracingReducer(initialState, registerLabelPointAction);
@@ -173,12 +200,12 @@ test("VolumeTracing should update its lastLabelActions", (t) => {
   });
 });
 
-const prepareContourListTest = (t, state) => {
+const prepareContourListTest = (_t: any, state: OxalisState) => {
   const contourList = [
     [4, 6, 9],
     [1, 2, 3],
     [9, 3, 2],
-  ];
+  ] as Vector3[];
   const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
   let newState = VolumeTracingReducer(state, addToLayerActionFn(contourList[0]));
   newState = VolumeTracingReducer(newState, addToLayerActionFn(contourList[1]));
@@ -196,7 +223,8 @@ test("VolumeTracing should add values to the contourList", (t) => {
     t.deepEqual(tracing.contourList, contourList);
   });
 });
-test("VolumeTracing should add values to the contourList even if getRequestLogZoomStep(zoomStep) > 1", (t) => {
+
+test("VolumeTracing should add values to the contourList even if getActiveMagIndexForLayer(zoomStep, 'tracingId') > 1", (t) => {
   const alteredState = update(initialState, {
     flycam: {
       zoomStep: {
@@ -204,19 +232,20 @@ test("VolumeTracing should add values to the contourList even if getRequestLogZo
       },
     },
   });
-  t.true(getRequestLogZoomStep(alteredState) > 1);
+  t.true(getActiveMagIndexForLayer(alteredState, "tracingId") > 1);
   const { newState, contourList } = prepareContourListTest(t, alteredState);
   t.not(newState, initialState);
   getFirstVolumeTracingOrFail(newState.tracing).map((tracing) => {
     t.deepEqual(tracing.contourList, contourList);
   });
 });
+
 test("VolumeTracing should not add values to the contourList if volumetracing is not allowed", (t) => {
   const contourList = [
     [4, 6, 9],
     [1, 2, 3],
     [9, 3, 2],
-  ];
+  ] as Vector3[];
   const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
   const alteredState = update(initialState, {
     tracing: {
@@ -233,12 +262,13 @@ test("VolumeTracing should not add values to the contourList if volumetracing is
   newState = VolumeTracingReducer(newState, addToLayerActionFn(contourList[2]));
   t.is(newState, alteredState);
 });
+
 test("VolumeTracing should reset contourList", (t) => {
   const contourList = [
     [4, 6, 9],
     [1, 2, 3],
     [9, 3, 2],
-  ];
+  ] as Vector3[];
   const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
   const resetContourAction = VolumeTracingActions.resetContourAction();
   // Add positions to the contourList

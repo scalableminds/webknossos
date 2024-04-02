@@ -4,11 +4,13 @@ import Markdown from "react-remarkable";
 import * as React from "react";
 import type { EditableTextLabelProp } from "oxalis/view/components/editable_text_label";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
+
 type EditableProps = EditableTextLabelProp & {
   isEditable: true;
   description: string;
 };
 type NonEditableProps = {
+  markdown?: boolean;
   isEditable: false;
   description: string;
   value: string;
@@ -61,8 +63,7 @@ class TextWithDescription extends React.PureComponent<Props> {
             </Tooltip>
           ) : null}
         </span>
-        {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message */}
-        <span className={hasDescription ? "flex-item" : null}>
+        <span className={hasDescription ? "flex-item" : undefined}>
           {isEditable ? (
             // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             <EditableTextLabel {...editableProps} />
@@ -73,7 +74,6 @@ class TextWithDescription extends React.PureComponent<Props> {
                 display: "inline-block",
               }}
             >
-              {/* @ts-expect-error ts-migrate(2339) FIXME: Property 'markdown' does not exist on type 'Readon... Remove this comment to see the full error message */}
               {this.props.markdown ? (
                 <Markdown
                   source={this.props.value}

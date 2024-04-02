@@ -1,5 +1,5 @@
-import { Alert } from "antd";
-import { connect } from "react-redux";
+import { Alert, Popover } from "antd";
+import { connect, useDispatch, useSelector } from "react-redux";
 import * as React from "react";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { createExplorational } from "admin/admin_rest_api";
@@ -12,13 +12,15 @@ import {
 import { trackAction } from "oxalis/model/helpers/analytics";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import type { ViewMode, ControlMode } from "oxalis/constants";
+import { ViewMode, ControlMode, MappingStatusEnum } from "oxalis/constants";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
-import type { LayoutProps } from "oxalis/view/action-bar/tracing_actions_view";
-import TracingActionsView, { LayoutMenu } from "oxalis/view/action-bar/tracing_actions_view";
+import TracingActionsView, {
+  getLayoutMenu,
+  LayoutProps,
+} from "oxalis/view/action-bar/tracing_actions_view";
 import ViewDatasetActionsView from "oxalis/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import ToolbarView from "oxalis/view/action-bar/toolbar_view";
@@ -26,8 +28,18 @@ import {
   is2dDataset,
   doesSupportVolumeWithFallback,
   getVisibleSegmentationLayer,
+  getMappingInfoForSupportedLayer,
+  getUnifiedAdditionalCoordinates,
+  getColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import { AsyncButton } from "components/async_clickables";
+import { AsyncButton, AsyncButtonProps } from "components/async_clickables";
+import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
+import { NumberSliderSetting } from "./components/setting_input_views";
+import { ArbitraryVectorInput } from "libs/vector_input";
+import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
+import ButtonComponent from "./components/button_component";
+import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
+import { StartAIJobModalState, StartAIJobModal } from "./action-bar/starting_job_modals";
 
 const VersionRestoreWarning = (
   <Alert
@@ -42,24 +54,93 @@ type StateProps = {
   dataset: APIDataset;
   activeUser: APIUser | null | undefined;
   controlMode: ControlMode;
-  hasVolumeFallback: boolean;
   hasSkeleton: boolean;
   showVersionRestore: boolean;
   isReadOnly: boolean;
   is2d: boolean;
   viewMode: ViewMode;
+  aiJobModalState: StartAIJobModalState;
 };
 type OwnProps = {
   layoutProps: LayoutProps;
 };
 type Props = OwnProps & StateProps;
 type State = {
-  isNewLayoutModalVisible: boolean;
+  isNewLayoutModalOpen: boolean;
 };
+
+function AdditionalCoordinatesInputView() {
+  const additionalAxes = useSelector((state: OxalisState) =>
+    getUnifiedAdditionalCoordinates(state.dataset),
+  );
+  const additionalCoordinates = useSelector(
+    (state: OxalisState) => state.flycam.additionalCoordinates,
+  );
+  const dispatch = useDispatch();
+  const changeAdditionalCoordinates = (values: AdditionalCoordinate[] | null) => {
+    if (values != null) {
+      dispatch(setAdditionalCoordinatesAction(values));
+    }
+  };
+  const changeAdditionalCoordinatesFromVector = (values: number[]) => {
+    if (additionalCoordinates != null) {
+      dispatch(
+        setAdditionalCoordinatesAction(
+          additionalCoordinates.map((el, index) => ({
+            ...el,
+            value: values[index],
+          })),
+        ),
+      );
+    }
+  };
+
+  if (additionalCoordinates == null || additionalCoordinates.length === 0) {
+    return null;
+  }
+  return (
+    <Popover
+      content={
+        <div>
+          {additionalCoordinates.map((coord, idx) => {
+            const { bounds } = additionalAxes[coord.name];
+            return (
+              <NumberSliderSetting
+                label={coord.name}
+                key={coord.name}
+                min={bounds[0]}
+                max={bounds[1] - 1}
+                value={coord.value}
+                spans={[2, 18, 4]}
+                onChange={(newCoord) => {
+                  const newCoords = additionalCoordinates.slice();
+                  newCoords[idx] = {
+                    ...newCoords[idx],
+                    value: newCoord,
+                  };
+                  changeAdditionalCoordinates(newCoords);
+                }}
+              />
+            );
+          })}
+        </div>
+      }
+    >
+      <ArbitraryVectorInput
+        autoSize
+        vectorLength={additionalCoordinates.length}
+        value={additionalCoordinates.map((el) => el.value)}
+        onChange={changeAdditionalCoordinatesFromVector}
+        style={{ marginLeft: 10, marginRight: 10 }}
+        addonBefore={additionalCoordinates.map((coord) => coord.name).join("")}
+      />
+    </Popover>
+  );
+}
 
 class ActionBarView extends React.PureComponent<Props, State> {
   state: State = {
-    isNewLayoutModalVisible: false,
+    isNewLayoutModalOpen: false,
   };
 
   handleResetLayout = () => {
@@ -76,7 +157,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   addNewLayout = (layoutName: string) => {
     this.setState({
-      isNewLayoutModalVisible: false,
+      isNewLayoutModalOpen: false,
     });
     const configForLayout = getLayoutConfig(
       this.props.layoutProps.layoutKey,
@@ -88,7 +169,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     }
   };
 
-  createTracing = async (dataset: APIDataset) => {
+  createAnnotation = async (dataset: APIDataset) => {
     // If the dataset supports creating an annotation with a fallback segmentation,
     // use it (as the fallback can always be removed later)
     const maybeSegmentationLayer = getVisibleSegmentationLayer(Store.getState());
@@ -96,24 +177,58 @@ class ActionBarView extends React.PureComponent<Props, State> {
       maybeSegmentationLayer && doesSupportVolumeWithFallback(dataset, maybeSegmentationLayer)
         ? maybeSegmentationLayer.name
         : null;
-    const annotation = await createExplorational(dataset, "hybrid", fallbackLayerName);
+
+    const mappingInfo = getMappingInfoForSupportedLayer(Store.getState());
+    let maybeMappingName = null;
+    if (
+      mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
+      mappingInfo.mappingType === "HDF5"
+    ) {
+      maybeMappingName = mappingInfo.mappingName;
+    }
+
+    const annotation = await createExplorational(
+      dataset,
+      "hybrid",
+      false,
+      fallbackLayerName,
+      maybeMappingName,
+    );
     trackAction("Create hybrid tracing (from view mode)");
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
   };
 
+  renderStartAIJobButton(disabled: boolean): React.ReactNode {
+    const tooltipText = disabled
+      ? "The dataset needs to have a color layer to start AI processing jobs."
+      : "Start a processing job using AI";
+    return (
+      <ButtonComponent
+        key="ai-job-button"
+        onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
+        style={{ marginLeft: 12, pointerEvents: "auto" }}
+        disabled={disabled}
+        title={tooltipText}
+        icon={<i className="fas fa-magic" />}
+      >
+        AI Analysis
+      </ButtonComponent>
+    );
+  }
+
   renderStartTracingButton(): React.ReactNode {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(props: AsyncButtonProps) => Ele... Remove this comment to see the full error message
-    const ButtonWithAuthentication = withAuthentication(AsyncButton);
+    const ButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
+      AsyncButton,
+    );
     return (
       <ButtonWithAuthentication
         activeUser={this.props.activeUser}
         authenticationMessage="You have to register or login to create an annotation."
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: string; activeUser: APIUser | nu... Remove this comment to see the full error message
         style={{
           marginLeft: 12,
         }}
         type="primary"
-        onClick={() => this.createTracing(this.props.dataset)}
+        onClick={() => this.createAnnotation(this.props.dataset)}
       >
         Create Annotation
       </ButtonWithAuthentication>
@@ -122,7 +237,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
   render() {
     const {
-      hasVolumeFallback,
+      dataset,
       is2d,
       isReadOnly,
       showVersionRestore,
@@ -133,43 +248,53 @@ class ActionBarView extends React.PureComponent<Props, State> {
     } = this.props;
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const isArbitrarySupported = hasSkeleton || isViewMode;
-    const layoutMenu = (
-      <LayoutMenu
-        {...layoutProps}
-        key="layout-menu"
-        addNewLayout={() => {
-          this.setState({
-            isNewLayoutModalVisible: true,
-          });
-        }}
-        onResetLayout={this.handleResetLayout}
-        onSelectLayout={layoutProps.setCurrentLayout}
-        onDeleteLayout={this.handleLayoutDeleted}
-      />
-    );
+    const isAIAnalysisEnabled = () => {
+      const jobsEnabled =
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NUCLEI);
+      return jobsEnabled;
+    };
+
+    const layoutMenu = getLayoutMenu({
+      ...layoutProps,
+      addNewLayout: () => {
+        this.setState({
+          isNewLayoutModalOpen: true,
+        });
+      },
+      onResetLayout: this.handleResetLayout,
+      onSelectLayout: layoutProps.setCurrentLayout,
+      onDeleteLayout: this.handleLayoutDeleted,
+    });
+
+    const datasetHasColorLayer = getColorLayers(dataset).length > 0;
+
     return (
       <React.Fragment>
         <div className="action-bar">
           {isViewMode || showVersionRestore ? (
             <ViewDatasetActionsView layoutMenu={layoutMenu} />
           ) : (
-            <TracingActionsView layoutMenu={layoutMenu} hasVolumeFallback={hasVolumeFallback} />
+            <TracingActionsView layoutMenu={layoutMenu} />
           )}
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionView />
-          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
+          <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
+          {isAIAnalysisEnabled() ? this.renderStartAIJobButton(!datasetHasColorLayer) : null}
+          {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
         </div>
         <AddNewLayoutModal
           addLayout={this.addNewLayout}
-          visible={this.state.isNewLayoutModalVisible}
+          isOpen={this.state.isNewLayoutModalOpen}
           onCancel={() =>
             this.setState({
-              isNewLayoutModalVisible: false,
+              isNewLayoutModalOpen: false,
             })
           }
         />
+        <StartAIJobModal aIJobModalState={this.props.aiJobModalState} />
       </React.Fragment>
     );
   }
@@ -180,11 +305,11 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
   controlMode: state.temporaryConfiguration.controlMode,
   showVersionRestore: state.uiInformation.showVersionRestore,
-  hasVolumeFallback: state.tracing.volumes.some((volume) => volume.fallbackLayer != null),
   hasSkeleton: state.tracing.skeleton != null,
   isReadOnly: !state.tracing.restrictions.allowUpdate,
   is2d: is2dDataset(state.dataset),
   viewMode: state.temporaryConfiguration.viewMode,
+  aiJobModalState: state.uiInformation.aIJobModalState,
 });
 
 const connector = connect(mapStateToProps);

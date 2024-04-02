@@ -1,14 +1,16 @@
-import { Select, Spin } from "antd";
+import { Select } from "antd";
 import * as React from "react";
 import _ from "lodash";
 import type { APITeam } from "types/api_flow_types";
 import { getEditableTeams, getTeams } from "admin/admin_rest_api";
+
 const { Option } = Select;
+
 type Props = {
   value?: APITeam | Array<APITeam>;
   onChange?: (value: APITeam | Array<APITeam>) => void;
   afterFetchedTeams?: (arg0: Array<APITeam>) => void;
-  mode?: "default" | "multiple";
+  mode?: "tags" | "multiple" | undefined;
   allowNonEditableTeams?: boolean;
   disabled?: boolean;
 };
@@ -53,7 +55,7 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
       if (this.props.afterFetchedTeams != null) {
         this.props.afterFetchedTeams(possibleTeams);
       }
-    } catch (exception) {
+    } catch (_exception) {
       console.error("Could not load teams.");
     }
   }
@@ -83,8 +85,7 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
     return (
       <Select
         showSearch
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '"default" | "multiple"' is not assignable to... Remove this comment to see the full error message
-        mode={this.props.mode ? this.props.mode : "default"}
+        mode={this.props.mode}
         style={{
           width: "100%",
         }}
@@ -96,7 +97,7 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
         value={this.state.selectedTeams.map((t) => t.id)}
         filterOption
         disabled={this.props.disabled ? this.props.disabled : false}
-        notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+        loading={this.state.isFetchingData}
       >
         {this.getAllTeams().map((team) => (
           <Option

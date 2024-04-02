@@ -1,21 +1,22 @@
 package models.project
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
 import models.annotation.{AnnotationState, AnnotationType}
 import models.task.TaskDAO
 import models.team.TeamDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{Json, _}
-import slick.jdbc.PostgresProfile.api._
+import play.api.libs.json._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.ObjectId
+import utils.sql.{SQLDAO, SqlClient}
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 case class Project(
@@ -27,7 +28,7 @@ case class Project(
     paused: Boolean,
     expectedTime: Option[Long],
     isBlacklistedFromReport: Boolean,
-    created: Long = System.currentTimeMillis(),
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 ) extends FoxImplicits {
 
@@ -40,27 +41,27 @@ object Project {
 
   // format: off
   val projectPublicReads: Reads[Project] =
-    ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
-      (__ \ 'team).read[ObjectId] and
-      (__ \ 'priority).read[Int] and
-      (__ \ 'paused).readNullable[Boolean] and
-      (__ \ 'expectedTime).readNullable[Long] and
-      (__ \ 'owner).read[ObjectId] and
-      (__ \ 'isBlacklistedFromReport).read[Boolean]) (
+    ((__ \ "name").read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
+      (__ \ "team").read[ObjectId] and
+      (__ \ "priority").read[Int] and
+      (__ \ "paused").readNullable[Boolean] and
+      (__ \ "expectedTime").readNullable[Long] and
+      (__ \ "owner").read[ObjectId] and
+      (__ \ "isBlacklistedFromReport").read[Boolean]) (
       (name, team, priority, paused, expectedTime, owner, isBlacklistedFromReport) =>
         Project(ObjectId.generate, team, owner, name, priority, paused getOrElse false, expectedTime, isBlacklistedFromReport))
   // format: on
 
 }
 
-class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
-  val collection = Projects
+  protected val collection = Projects
 
-  def idColumn(x: Projects): Rep[String] = x._Id
-  def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
+  protected def idColumn(x: Projects): Rep[String] = x._Id
+  protected def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
 
-  def parse(r: ProjectsRow): Fox[Project] =
+  protected def parse(r: ProjectsRow): Fox[Project] =
     Fox.successful(
       Project(
         ObjectId(r._Id),
@@ -71,31 +72,31 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
         r.paused,
         r.expectedtime,
         r.isblacklistedfromreport,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       ))
 
-  override def readAccessQ(requestingUserId: ObjectId) =
-    s"""(
-        (_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))
-        or _owner = '${requestingUserId.id}'
-        or _organization = (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)
+  override protected def readAccessQ(requestingUserId: ObjectId) =
+    q"""(
+        (_team in (select _team from webknossos.user_team_roles where _user = $requestingUserId))
+        or _owner = $requestingUserId
+        or _organization = (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin)
         )"""
-  override def deleteAccessQ(requestingUserId: ObjectId) = s"_owner = '${requestingUserId.id}'"
+  override protected def deleteAccessQ(requestingUserId: ObjectId) = q"_owner = $requestingUserId"
 
   // read operations
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where _id = $id and #$accessQuery".as[ProjectsRow])
+      r <- run(q"select $columns from $existingCollectionName where _id = $id and $accessQuery".as[ProjectsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select #$columns from #$existingCollectionName where #$accessQuery order by created".as[ProjectsRow])
+      r <- run(q"select $columns from $existingCollectionName where $accessQuery order by created".as[ProjectsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -103,11 +104,11 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def findAllWithTaskType(taskTypeId: String): Fox[List[Project]] =
     for {
       r <- run(
-        sql"""select distinct #${columnsWithPrefix("p.")}
-              from webknossos.projects_ p
-              join webknossos.tasks_ t on t._project = p._id
-              join webknossos.taskTypes_ tt on t._taskType = tt._id
-              where tt._id = $taskTypeId
+        q"""select distinct ${columnsWithPrefix("p.")}
+            from webknossos.projects_ p
+            join webknossos.tasks_ t on t._project = p._id
+            join webknossos.taskTypes_ tt on t._taskType = tt._id
+            where tt._id = $taskTypeId
            """.as[ProjectsRow]
       )
       parsed <- parseAll(r)
@@ -117,25 +118,24 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
       implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        sql"select #$columns from #$existingCollectionName where name = '#${sanitize(name)}' and _organization = $organizationId and #$accessQuery"
-          .as[ProjectsRow])
+      r <- run(q"""select $columns from $existingCollectionName
+                   where name = $name and _organization = $organizationId and $accessQuery""".as[ProjectsRow])
       parsed <- parseFirst(r, s"$organizationId/$name")
     } yield parsed
 
   def findUsersWithActiveTasks(projectId: ObjectId): Fox[List[(String, String, String, Int)]] =
     for {
-      rSeq <- run(sql"""select m.email, u.firstName, u.lastName, count(a._id)
-                         from
-                         webknossos.annotations_ a
-                         join webknossos.tasks_ t on a._task = t._id
-                         join webknossos.projects_ p on t._project = p._id
-                         join webknossos.users_ u on a._user = u._id
-                         join webknossos.multiusers_ m on u._multiUser = m._id
-                         where p._id = $projectId
-                         and a.state = '#${AnnotationState.Active.toString}'
-                         and a.typ = '#${AnnotationType.Task}'
-                         group by m.email, u.firstName, u.lastName
+      rSeq <- run(q"""select m.email, u.firstName, u.lastName, count(a._id)
+                      from
+                      webknossos.annotations_ a
+                      join webknossos.tasks_ t on a._task = t._id
+                      join webknossos.projects_ p on t._project = p._id
+                      join webknossos.users_ u on a._user = u._id
+                      join webknossos.multiusers_ m on u._multiUser = m._id
+                      where p._id = $projectId
+                      and a.state = ${AnnotationState.Active}
+                      and a.typ = ${AnnotationType.Task}
+                      group by m.email, u.firstName, u.lastName
                      """.as[(String, String, String, Int)])
     } yield rSeq.toList
 
@@ -143,28 +143,28 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def insertOne(p: Project, organizationId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.projects(
+      _ <- run(q"""insert into webknossos.projects(
                                      _id, _organization, _team, _owner, name, priority,
                                      paused, expectedTime, isblacklistedfromreport, created, isDeleted)
                          values(${p._id}, $organizationId, ${p._team}, ${p._owner}, ${p.name}, ${p.priority},
                          ${p.paused}, ${p.expectedTime}, ${p.isBlacklistedFromReport},
-                         ${new java.sql.Timestamp(p.created)}, ${p.isDeleted})""")
+                         ${p.created}, ${p.isDeleted})""".asUpdate)
     } yield ()
 
   def updateOne(p: Project)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { // note that p.created is immutable, hence skipped here
       _ <- assertUpdateAccess(p._id)
-      _ <- run(sqlu"""update webknossos.projects
-                          set
-                            _team = ${p._team.id},
-                            _owner = ${p._owner.id},
-                            name = ${p.name},
-                            priority = ${p.priority},
-                            paused = ${p.paused},
-                            expectedTime = ${p.expectedTime},
-                            isblacklistedfromreport = ${p.isBlacklistedFromReport},
-                            isDeleted = ${p.isDeleted}
-                          where _id = ${p._id}""")
+      _ <- run(q"""update webknossos.projects
+                   set
+                     _team = ${p._team},
+                     _owner = ${p._owner},
+                     name = ${p.name},
+                     priority = ${p.priority},
+                     paused = ${p.paused},
+                     expectedTime = ${p.expectedTime},
+                     isblacklistedfromreport = ${p.isBlacklistedFromReport},
+                     isDeleted = ${p.isDeleted}
+                   where _id = ${p._id}""".asUpdate)
     } yield ()
 
   def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -172,10 +172,12 @@ class ProjectDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
 
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {
-      countList <- run(sql"select count(_id) from #$existingCollectionName where _team = $teamId".as[Int])
+      countList <- run(q"select count(*) from $existingCollectionName where _team = $teamId".as[Int])
       count <- countList.headOption
     } yield count
 
+  override def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    deleteOneWithNameSuffix(projectId)
 }
 
 class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userService: UserService, taskDAO: TaskDAO)(
@@ -203,10 +205,7 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
 
   def publicWrites(project: Project)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      owner <- userService
-        .findOneById(project._owner, useCache = true)
-        .flatMap(u => userService.compactWrites(u))
-        .futureBox
+      owner <- userService.findOneCached(project._owner).flatMap(u => userService.compactWrites(u)).futureBox
       teamNameOpt <- teamDAO.findOne(project._team)(GlobalAccessContext).map(_.name).toFutureOption
     } yield {
       Json.obj(
@@ -218,16 +217,17 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
         "paused" -> project.paused,
         "expectedTime" -> project.expectedTime,
         "isBlacklistedFromReport" -> project.isBlacklistedFromReport,
-        "id" -> project._id.toString
+        "id" -> project._id.toString,
+        "created" -> project.created
       )
     }
 
-  def publicWritesWithStatus(project: Project, openTaskInstances: Long, tracingTime: Long)(
+  def publicWritesWithStatus(project: Project, pendingInstances: Long, tracingTime: Long)(
       implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       projectJson <- publicWrites(project)
     } yield {
-      projectJson ++ Json.obj("numberOfOpenAssignments" -> JsNumber(openTaskInstances), "tracingTime" -> tracingTime)
+      projectJson ++ Json.obj("pendingInstances" -> JsNumber(pendingInstances), "tracingTime" -> tracingTime)
     }
 
 }

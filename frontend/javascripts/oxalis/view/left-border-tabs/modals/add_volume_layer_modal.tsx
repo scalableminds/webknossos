@@ -2,18 +2,20 @@ import { Modal, Row } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
 import React, { useMemo, useState } from "react";
 import _ from "lodash";
-import type { APIDataset } from "types/api_flow_types";
+import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import {
   NewVolumeLayerSelection,
   RestrictResolutionSlider,
 } from "dashboard/advanced_dataset/create_explorative_modal";
-import type { Tracing } from "oxalis/store";
+import Store, { type Tracing } from "oxalis/store";
 import { addAnnotationLayer } from "admin/admin_rest_api";
 import {
-  getDatasetResolutionInfo,
+  getSomeResolutionInfoForDataset,
   getLayerByName,
+  getMappingInfo,
   getSegmentationLayers,
+  getResolutionInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getAllReadableLayerNames,
@@ -21,8 +23,9 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import Toast from "libs/toast";
+import { MappingStatusEnum } from "oxalis/constants";
 
 export type ValidationResult = { isValid: boolean; message: string };
 export function checkForLayerNameDuplication(
@@ -101,6 +104,7 @@ export default function AddVolumeLayerModal({
     () => getAllReadableLayerNames(dataset, tracing),
     [dataset, tracing],
   );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether to add more dependencies.
   const initialNewLayerName = useMemo(() => {
     if (preselectedLayerName) {
       return preselectedLayerName;
@@ -118,19 +122,26 @@ export default function AddVolumeLayerModal({
       return name;
     }
   }, [dataset, tracing]);
+  const selectedSegmentationLayer =
+    selectedSegmentationLayerName != null
+      ? (getLayerByName(dataset, selectedSegmentationLayerName) as APISegmentationLayer)
+      : null;
   const [newLayerName, setNewLayerName] = useState(initialNewLayerName);
 
-  const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
+  const resolutionInfo =
+    selectedSegmentationLayer == null
+      ? getSomeResolutionInfoForDataset(dataset)
+      : getResolutionInfo(selectedSegmentationLayer.resolutions);
   const [resolutionIndices, setResolutionIndices] = useState([0, 10000]);
 
-  const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const handleSetNewLayerName = (evt: React.ChangeEvent<HTMLInputElement>) =>
     setNewLayerName(evt.target.value);
 
   const segmentationLayers = getSegmentationLayers(dataset);
   const volumeTracingLayers = getVolumeTracingLayers(dataset);
 
   const availableSegmentationLayers = _.differenceWith(segmentationLayers, volumeTracingLayers);
-  let selectedSegmentationLayer = null;
+
   const handleAddVolumeLayer = async () => {
     await api.tracing.save();
     const validationResult = validateReadableLayerName(
@@ -143,10 +154,10 @@ export default function AddVolumeLayerModal({
       return;
     }
     const minResolutionAllowed = Math.max(
-      ...datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[0]),
+      ...resolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[0]),
     );
     const maxResolutionAllowed = Math.max(
-      ...datasetResolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[1]),
+      ...resolutionInfo.getResolutionByIndexOrThrow(resolutionIndices[1]),
     );
 
     if (selectedSegmentationLayerName == null) {
@@ -160,8 +171,23 @@ export default function AddVolumeLayerModal({
         },
       });
     } else {
-      selectedSegmentationLayer = getLayerByName(dataset, selectedSegmentationLayerName);
+      if (selectedSegmentationLayer == null) {
+        throw new Error("Segmentation layer is null");
+      }
       const fallbackLayerName = selectedSegmentationLayer.name;
+
+      const mappingInfo = getMappingInfo(
+        Store.getState().temporaryConfiguration.activeMappingByLayer,
+        selectedSegmentationLayerName,
+      );
+      let maybeMappingName = null;
+      if (
+        mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
+        mappingInfo.mappingType === "HDF5"
+      ) {
+        maybeMappingName = mappingInfo.mappingName;
+      }
+
       await addAnnotationLayer(tracing.annotationId, tracing.annotationType, {
         typ: "Volume",
         name: newLayerName,
@@ -170,6 +196,7 @@ export default function AddVolumeLayerModal({
           min: minResolutionAllowed,
           max: maxResolutionAllowed,
         },
+        mappingName: maybeMappingName,
       });
     }
 
@@ -183,7 +210,7 @@ export default function AddVolumeLayerModal({
       width={500}
       maskClosable={false}
       onCancel={onCancel}
-      visible
+      open
     >
       Layer Name:{" "}
       <InputComponent
@@ -206,7 +233,7 @@ export default function AddVolumeLayerModal({
         />
       ) : null}
       <RestrictResolutionSlider
-        datasetResolutionInfo={datasetResolutionInfo}
+        resolutionInfo={resolutionInfo}
         selectedSegmentationLayer={selectedSegmentationLayer}
         resolutionIndices={resolutionIndices}
         setResolutionIndices={setResolutionIndices}

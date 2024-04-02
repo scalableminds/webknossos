@@ -16,7 +16,7 @@ class Api {
    */
   constructor(oxalisModel: OxalisModel) {
     this.readyPromise = new Promise((resolve) => {
-      app.vent.listenTo(app.vent, "webknossos:ready", resolve);
+      app.vent.on("webknossos:ready", resolve);
     });
     this.model = oxalisModel;
   }
@@ -36,7 +36,7 @@ class Api {
    * });
    */
   apiReady(version: number = latestVersion): Promise<Record<string, any>> {
-    if (process.env.BABEL_ENV !== "test") {
+    if (!process.env.IS_TESTING) {
       if (version !== latestVersion) {
         console.warn(`
           Attention! You requested api version: ${version} which is
@@ -61,5 +61,7 @@ class Api {
     });
   }
 }
+
+export type ApiType = Api;
 
 export default Api;

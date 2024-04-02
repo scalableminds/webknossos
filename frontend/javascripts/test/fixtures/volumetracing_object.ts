@@ -1,4 +1,3 @@
-/* eslint-disable import/prefer-default-export */
 import update from "immutability-helper";
 import Constants, { AnnotationToolEnum } from "oxalis/constants";
 import mockRequire from "mock-require";
@@ -82,6 +81,8 @@ export const initialState = update(defaultState, {
           color: [0, 0, 0],
           alpha: 100,
           intensityRange: [0, 255],
+          min: 0,
+          max: 255,
           isDisabled: false,
           isInverted: false,
           isInEditMode: false,

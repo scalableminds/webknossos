@@ -1,6 +1,8 @@
 import mockRequire from "mock-require";
 import * as antd from "antd";
 import _ from "lodash";
+import "test/mocks/lz4";
+
 const REQUEST_ID = "dummyRequestId";
 const UidMock = {
   getUid: () => REQUEST_ID,

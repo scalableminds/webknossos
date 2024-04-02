@@ -2,14 +2,20 @@ import * as React from "react";
 import _ from "lodash";
 import type { ServerBoundingBoxTypeTuple } from "types/api_flow_types";
 import type { Vector3, Vector6 } from "oxalis/constants";
-import InputComponent, { InputComponentProps } from "oxalis/view/components/input_component";
+import InputComponent from "oxalis/view/components/input_component";
 import * as Utils from "libs/utils";
+import { InputProps } from "antd";
 
-type BaseProps<T> = Omit<InputComponentProps, "value"> & {
+const CHARACTER_WIDTH_PX = 8;
+
+type BaseProps<T> = Omit<InputProps, "value" | "onChange"> & {
   value: T | string;
   onChange: (value: T) => void;
   changeOnlyOnBlur?: boolean;
   allowDecimals?: boolean;
+  autoSize?: boolean;
+  // Only used in ArbitraryVectorInput case
+  vectorLength?: number;
 };
 type State = {
   isEditing: boolean;
@@ -17,9 +23,8 @@ type State = {
   text: string;
 }; // Accepts both a string or a VectorX as input and always outputs a valid VectorX
 
-class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BaseProps<T>, State> {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'defaultValue' has no initializer and is ... Remove this comment to see the full error message
-  defaultValue: T;
+abstract class BaseVector<T extends number[]> extends React.PureComponent<BaseProps<T>, State> {
+  abstract get defaultValue(): T;
   static defaultProps = {
     value: "",
     onChange: () => {},
@@ -51,7 +56,7 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
     return value;
   }
 
-  handleBlur = () => {
+  handleBlur = (_: React.FocusEvent<HTMLInputElement>) => {
     this.setState({
       isEditing: false,
     });
@@ -89,7 +94,7 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
     return vector;
   }
 
-  handleFocus = () => {
+  handleFocus = (_event: React.FocusEvent<HTMLInputElement>) => {
     this.setState({
       isEditing: true,
       text: this.getText(this.props.value),
@@ -117,37 +122,90 @@ class BaseVector<T extends Vector3 | Vector6> extends React.PureComponent<BasePr
     });
   };
 
+  handleOnKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    /* Increment/decrement current value when using arrow up/down */
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") {
+      return;
+    }
+
+    event.preventDefault();
+    const { selectionStart, value } = event.target as HTMLInputElement;
+    const vec = Utils.stringToNumberArray(value) as T;
+
+    // Count commas before the selection to obtain the index of the current element
+    const vectorIndex = Array.from((value as string).slice(0, selectionStart || 0)).filter(
+      (el: string) => el === ",",
+    ).length;
+    if (event.key === "ArrowUp") {
+      vec[vectorIndex] += 1;
+    } else {
+      vec[vectorIndex] -= 1;
+    }
+    this.props.onChange(vec);
+    const text = vec.join(", ");
+    this.setState({ text });
+  };
+
   render() {
-    const { style, autoSize, ...props } = _.omit(this.props, [
-      "onChange",
-      "value",
-      "changeOnlyOnBlur",
-      "allowDecimals",
-    ]);
+    const {
+      style,
+      autoSize,
+      vectorLength: _vectorLength,
+      ...props
+    } = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur", "allowDecimals"]);
+
+    const { addonBefore } = props;
+    const addonBeforeLength =
+      typeof addonBefore === "string" ? 20 + CHARACTER_WIDTH_PX * addonBefore.length : 0;
 
     return (
       <InputComponent
-        // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
         onChange={this.handleChange}
         onFocus={this.handleFocus}
-        onBlur={this.handleBlur}
         value={this.state.text}
+        onKeyDown={this.handleOnKeyDown}
         style={
-          autoSize ? { ...style, width: this.getText(this.state.text).length * 8 + 25 } : style
+          autoSize
+            ? {
+                ...style,
+                width:
+                  this.getText(this.state.text).length * CHARACTER_WIDTH_PX +
+                  25 +
+                  addonBeforeLength,
+              }
+            : style
         }
         {...props}
+        // onBlur needs to be placed below the ...props spread
+        // to ensure that it isn't overridden. User-specified onBlurs
+        // are not supported (see Props type), but might be passed
+        // nevertheless (e.g., when the VectorInput is a child of a
+        // Popover component). Until now, it hasn't raised any problems
+        // (the Popover example merely passed undefined as onBlur, anyway).
+        onBlur={this.handleBlur}
       />
     );
   }
 }
 
 export class Vector3Input extends BaseVector<Vector3> {
-  defaultValue: Vector3 = [0, 0, 0];
+  get defaultValue(): Vector3 {
+    return [0, 0, 0];
+  }
 }
 export class Vector6Input extends BaseVector<Vector6> {
-  defaultValue: Vector6 = [0, 0, 0, 0, 0, 0];
+  get defaultValue(): Vector6 {
+    return [0, 0, 0, 0, 0, 0];
+  }
 }
-type BoundingBoxInputProps = Omit<InputComponentProps, "value"> & {
+
+export class ArbitraryVectorInput extends BaseVector<number[]> {
+  get defaultValue(): number[] {
+    return Array(this.props.vectorLength).fill(0);
+  }
+}
+
+type BoundingBoxInputProps = Omit<InputProps, "value"> & {
   value: ServerBoundingBoxTypeTuple;
   onChange: (arg0: ServerBoundingBoxTypeTuple) => void;
 };
@@ -179,7 +237,6 @@ export class BoundingBoxInput extends React.PureComponent<BoundingBoxInputProps>
         {...props}
         value={vector6Value}
         changeOnlyOnBlur
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '([x, y, z, width, height, depth]: [any, any,... Remove this comment to see the full error message
         onChange={([x, y, z, width, height, depth]) =>
           onChange({
             topLeft: [x, y, z],

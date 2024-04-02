@@ -61,7 +61,7 @@ message GetMultipleVersionsReply {
 
 message GetMultipleKeysRequest {
     required string collection = 1;
-    required string key = 2;
+    optional string startAfterKey = 2;
     optional string prefix = 3;
     optional uint64 version = 4;
     optional uint32 limit = 5;
@@ -130,6 +130,23 @@ message RestoreFromBackupReply {
     optional string errorMessage = 2;
 }
 
+message CompactAllDataRequest {}
+
+message CompactAllDataReply {
+    required bool success = 1;
+    optional string errorMessage = 2;
+}
+
+message ExportDBRequest {
+    required string newDataDir = 1;
+    optional string optionsFile = 2;
+}
+
+message ExportDBReply {
+    required bool success = 1;
+    optional string errorMessage = 2;
+}
+
 
 service FossilDB {
     rpc Health (HealthRequest) returns (HealthReply) {}
@@ -143,4 +160,6 @@ service FossilDB {
     rpc ListVersions (ListVersionsRequest) returns (ListVersionsReply) {}
     rpc Backup (BackupRequest) returns (BackupReply) {}
     rpc RestoreFromBackup (RestoreFromBackupRequest) returns (RestoreFromBackupReply) {}
+    rpc CompactAllData (CompactAllDataRequest) returns (CompactAllDataReply) {}
+    rpc ExportDB (ExportDBRequest) returns (ExportDBReply) {}
 }

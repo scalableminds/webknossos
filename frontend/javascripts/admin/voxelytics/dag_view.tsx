@@ -21,6 +21,8 @@ import { OxalisState, Theme } from "oxalis/store";
 import { Button } from "antd";
 import { ExpandOutlined, MinusOutlined, PlusOutlined } from "@ant-design/icons";
 
+export const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
+
 const getNodeWidth = (() => {
   const NODE_PADDING = 10;
 
@@ -31,7 +33,7 @@ const getNodeWidth = (() => {
       throw new Error("Could not create measuring canvas");
     }
     ctx.font =
-      '12px "Titillium Web", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif';
+      '12px "Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif';
     return ctx;
   });
 
@@ -96,8 +98,6 @@ function getEdgesAndNodes(
 ) {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
-
-  const colorHasher = new ColorHash({ lightness: [0.35, 0.5, 0.65] });
 
   const filteredTaskNames = filteredTasks.map((task) => task.taskName);
 
@@ -265,11 +265,11 @@ function DAGView({
     >
       <MiniMap
         nodeStrokeColor={(n) => {
-          if (n.style && n.style.borderColor) return n.style.borderColor;
+          if (n.style?.borderColor) return n.style.borderColor;
           return "#eee";
         }}
         nodeColor={(n) => {
-          if (n.style && n.style.borderColor) return n.style.borderColor;
+          if (n.style?.borderColor) return n.style.borderColor;
           return "#fff";
         }}
         nodeBorderRadius={2}

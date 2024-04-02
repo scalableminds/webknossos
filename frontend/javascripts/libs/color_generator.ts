@@ -74,21 +74,19 @@ const rawRgbs = [
   9,
 ];
 // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
-export const rgbs: Array<Vector3> = chunk3(rawRgbs).map((rgb) => rgb.map((el) => el / 255));
+export const rgbs: Vector3[] = chunk3(rawRgbs).map((rgb) => rgb.map((el) => el / 255));
 const ColorGenerator = {
   distinctColorForId(id: number): Vector3 {
     return rgbs[(id - 1 + rgbs.length) % rgbs.length];
   },
 
-  getNRandomColors(n: number): Array<Vector3> {
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'shuffledColors' implicitly has type 'any... Remove this comment to see the full error message
-    let shuffledColors = [];
+  getNRandomColors(n: number): Vector3[] {
+    let shuffledColors: Vector3[] = [];
     let remainingColorCount = n;
 
     while (remainingColorCount > 0) {
       // Take the first k colors
       const batchSize = Math.min(remainingColorCount, rgbs.length);
-      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'shuffledColors' implicitly has an 'any[]... Remove this comment to see the full error message
       shuffledColors = shuffledColors.concat(rgbs.slice(0, batchSize));
       remainingColorCount -= batchSize;
     }

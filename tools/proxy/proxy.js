@@ -105,6 +105,19 @@ function toWebpackDev(req, res) {
   proxy.web(req, res, { target: `http://127.0.0.1:${PORT + 2}` });
 }
 
+function toSam(req, res) {
+  proxy.web(req, res, { target: `http://127.0.0.1:8080` });
+}
+
+proxy.on("proxyReq", (proxyReq, req) => {
+  if (req.url.match(/\/assets\/bundle\/.+\.js/)) {
+    // Disable compression for JS files, as the performance penalty of the compression
+    // isn't worth the size gain.
+    proxyReq.removeHeader("Accept-Encoding");
+  }
+});
+
+app.all("/dist/*", toSam);
 app.all("/assets/bundle/*", toWebpackDev);
 app.all("/*", toBackend);
 

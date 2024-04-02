@@ -1,6 +1,8 @@
 import { Chart } from "react-google-charts";
 import * as React from "react";
 import { getWindowBounds } from "libs/utils";
+import dayjs from "dayjs";
+
 export type ColumnDefinition = {
   id?: string;
   type: string;
@@ -8,8 +10,8 @@ export type ColumnDefinition = {
   p?: Record<string, any>;
 };
 export type RowContent = [string, string, string, Date, Date];
-// @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'moment$Moment'.
-export type DateRange = [moment$Moment, moment$Moment];
+
+export type DateRange = [dayjs.Dayjs, dayjs.Dayjs];
 type Props = {
   columns: Array<ColumnDefinition>;
   rows: Array<RowContent>;
@@ -54,7 +56,7 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
       const { target } = event;
       const isTargetNotATimeEntry =
         // @ts-expect-error ts-migrate(2339) FIXME: Property 'tagName' does not exist on type 'EventTa... Remove this comment to see the full error message
-        (target != null && target.tagName != null && target.tagName !== "rect") ||
+        (target?.tagName != null && target.tagName !== "rect") ||
         // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
         target.getAttribute("stroke") !== "none";
 
@@ -135,6 +137,8 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
             },
           },
         ]}
+        // component is always light, even in darkmode. the font color is white in darkmode though, so set it to black instead.
+        style={{ color: "black" }}
       />
     );
   }

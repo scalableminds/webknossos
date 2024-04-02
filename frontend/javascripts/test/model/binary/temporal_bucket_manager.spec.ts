@@ -3,6 +3,8 @@ import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
 import type { TestInterface } from "ava";
 import anyTest from "ava";
+import "test/mocks/lz4";
+
 mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });

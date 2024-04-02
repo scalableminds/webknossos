@@ -1,15 +1,18 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.FoxImplicits
 import models.annotation.AnnotationDAO
 import models.mesh.{MeshDAO, MeshInfo, MeshInfoParameters, MeshService}
-import oxalis.security.WkEnv
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer}
+import security.WkEnv
 import utils.ObjectId
 import javax.inject.Inject
 
 import scala.concurrent.ExecutionContext
+
+// Note that this wk-side controller deals with user-uploaded meshes stored in postgres
+// Not to be confused with the DSMeshController that deals with on-disk meshfiles
 
 class MeshController @Inject()(meshDAO: MeshDAO,
                                annotationDAO: AnnotationDAO,

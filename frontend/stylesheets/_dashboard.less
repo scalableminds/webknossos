@@ -1,4 +1,4 @@
-.dataset-actions {
+.dataset-table-actions {
   & > a {
     display: block;
     img {
@@ -28,56 +28,47 @@
 }
 
 .welcome-header-wrapper {
-  background-color: @component-background;
-  background-image: linear-gradient(0deg, @body-background 0%, @blue-1 70%);
+  background: var(--background-blue-neurons);
+
+  button {
+    color: white;
+  }
 }
 .welcome-header-content {
-  max-width: 1600px;
-  margin: auto;
-  padding: 80px 0px 20px;
-
-  .wk-logo {
-    width: 100%;
-    max-width: 250px;
-    margin-right: 25px;
-    margin-left: 25px;
-    display: none;
-
-    @media (min-width: 1400px) {
-      display: inline-block;
-    }
-  }
+  padding: 40px 0px 40px;
 
   .text-and-button-container {
     max-width: 1000px;
     margin: auto;
-    display: inline-block;
 
     h1 {
-      color: @text-color;
-      margin-left: 56px;
+      color: white;
       font-weight: 200;
       font-size: 64px;
       line-height: 150%;
       margin-bottom: 0;
+      text-align: center;
     }
 
     .subtitle {
-      margin: 0 20px 0px 60px;
+      color: white;
       font-weight: 300;
-      font-size: 20px;
+      font-size: 18px;
       line-height: 150%;
-      color: @text-color-secondary;
+      max-width: 70%;
+      text-align: center;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .whats-next-actions-grid {
       display: flex;
       flex-wrap: wrap;
-      justify-content: left;
+      justify-content: center;
       padding-inline-start: 0;
 
       a {
-        color: rgb(107, 114, 128);
+        color: var(--color-black);
         flex: 0 1 400px; /*  No stretching: */
         margin: 20px;
         margin-left: 0;
@@ -99,43 +90,58 @@
         h2 {
           font-size: 16px;
           line-height: 18px;
-          color: @text-color;
-          margin-bottom: 4px;
+          color: var(--color-black);
+          margin-bottom: 8px;
         }
 
         p {
           font-size: 14px;
           line-height: 18px;
-          color: @text-color-secondary;
+          color: var(--color-black);
           margin: 0;
         }
 
-        .chevron,
-        .action-icon {
-          font-size: 32px;
-          margin: 8px;
-        }
-
-        background: @component-background;
-        box-shadow: @box-shadow-base;
-        border-radius: 3px;
+        background: white;
+        border-radius: var(--ant-border-radius);
+        border: white 2px solid;
       }
 
       a:hover {
-        background: darken(@primary-color, 10%);
+        background: var(--ant-color-primary);
 
-        .chevron,
-        .action-icon {
-          color: @text-color-dark;
+        i {
+          filter: brightness(100);
         }
 
         h2 {
-          color: @text-color-dark;
+          color: var(--ant-color-text);
         }
 
         p {
-          color: @text-color-secondary-dark;
+          color: var(--ant-color-text);
         }
+      }
+
+      .icon-open-demo {
+        background-image: url(/assets/images/icon-open-demo.svg);
+      }
+      .icon-import-own-data {
+        background-image: url(/assets/images/icon-import-own-data.svg);
+        background-size: 94px;
+      }
+      .icon-annotate {
+        background-image: url(/assets/images/icon-annotate.svg);
+      }
+      .icon-invite-colleagues {
+        background-image: url(/assets/images/icon-invite-colleagues.svg);
+      }
+
+      i {
+        background-repeat: no-repeat;
+        background-size: 100px;
+        background-position: center;
+        height: 100%;
+        width: 64px;
       }
     }
   }
@@ -145,13 +151,72 @@ pre.dataset-import-folder-structure-hint {
   text-align: left;
   display: inline-block;
   line-height: 16px;
-  color: @text-color-secondary;
-  background: @layout-body-background;
+  color: var(--ant-color-text-secondary);
+  background: var(--ant-color-bg-container);
   border-radius: 2px;
   box-shadow: inset 0em 0em 4px 0px #9e9e9e6b;
   padding: 4px;
 }
 
 .incognito-link {
-  color: @text-color;
+  color: var(--ant-color-text);
+}
+
+.propagate-flex-height {
+  // Make the entire DOM hierarchy use flexbox so that the actual dataset
+  // list can have its own scroll bar. This requires that all parent elements
+  // are exactly as tall as the remaining space which is done with flexboxes.
+  // min-height has to be set to 0, since flex containers automatically make
+  // the min-height property default to "auto" for their children. Then, the
+  // items can grow larger than the screen, though, which prevents the scrollbar
+  // from working as intended.
+
+  .flex-column();
+  .flex-grow-1();
+  .min-height-0();
+
+  .ant-tabs-top {
+    .flex-grow-1();
+    .min-height-0();
+  }
+
+  .ant-tabs-content-holder {
+    .flex-column();
+    .min-height-0();
+  }
+
+  .ant-tabs-content-top,
+  .ant-tabs-tabpane-active {
+    .flex-grow-1();
+    .flex-column();
+    .min-height-0();
+  }
+}
+
+.tags-container {
+  display: inline-block;
+  line-height: 26px;
+  .ant-tag {
+    margin-right: 4px;
+  }
+}
+
+.dataset-table-thumbnail {
+  width: 80px;
+  height: 80px;
+  border-radius: 5px;
+  margin-right: 20px;
+}
+
+.dataset-table-name {
+  font-size: 16px;
+  font-weight: 500;
+  display: block;
+  min-height: 30px
+}
+
+.dataset-table-name-container {
+  display: inline-block;
+  vertical-align: middle;
+  max-width: 520px;
 }

@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import type { Tree } from "oxalis/store";
 import type { Vector2 } from "oxalis/constants";
@@ -48,8 +46,7 @@ class AbstractTreeRenderer {
     canvas: HTMLCanvasElement,
     tree: Tree | null | undefined,
     activeNodeId: number | null | undefined,
-    // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
-    size?: Vector2 = [450, 600],
+    size: Vector2 = [450, 600],
   ) {
     const renderer = new AbstractTreeRenderer(canvas);
 
@@ -82,8 +79,6 @@ class AbstractTreeRenderer {
   }
 
   constructor(canvas: HTMLCanvasElement) {
-    _.extend(this, BackboneEvents);
-
     this.canvas = canvas;
     const ctx = canvas.getContext("2d");
 
@@ -620,7 +615,7 @@ class AbstractTreeRenderer {
    * Clear the background of the canvas.
    */
   clearBackground(): void {
-    return this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
   /**

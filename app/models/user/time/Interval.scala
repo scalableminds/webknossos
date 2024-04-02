@@ -1,35 +1,31 @@
 package models.user.time
 
-import org.joda.time.{DateTime, DateTimeConstants}
+import com.scalableminds.util.time.Instant
 import play.api.libs.json.{Json, OFormat}
 
-trait Interval {
-  def start: DateTime
+import java.time.temporal.TemporalAdjusters
+import java.time.temporal.TemporalAdjusters.firstInMonth
+import java.time.{DayOfWeek, LocalTime, ZoneId, ZonedDateTime}
 
-  def end: DateTime
+trait Interval {
+  def start: Instant
+
+  def end: Instant
 }
 
 case class Month(month: Int, year: Int) extends Interval with Ordered[Month] {
 
   def compare(p: Month): Int = 12 * (year - p.year) + (month - p.month)
 
-  override def <(that: Month): Boolean = (this compare that) < 0
-
-  override def >(that: Month): Boolean = (this compare that) > 0
-
-  override def <=(that: Month): Boolean = (this compare that) <= 0
-
-  override def >=(that: Month): Boolean = (this compare that) >= 0
-
   override def toString = f"$year%d-$month%02d"
 
-  def start: DateTime =
-    jodaMonth.dayOfMonth().withMinimumValue().millisOfDay().withMinimumValue()
+  def start: Instant =
+    Instant.fromZonedDateTime(asZonedDateTime.`with`(TemporalAdjusters.firstDayOfMonth()).`with`(LocalTime.MIN))
 
-  private def jodaMonth: DateTime = new DateTime().withYear(year).withMonthOfYear(month)
+  def end: Instant =
+    Instant.fromZonedDateTime(asZonedDateTime.`with`(TemporalAdjusters.lastDayOfMonth()).`with`(LocalTime.MAX))
 
-  def end: DateTime =
-    jodaMonth.dayOfMonth().withMaximumValue().millisOfDay().withMaximumValue()
+  private def asZonedDateTime: ZonedDateTime = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
 }
 
 object Month {
@@ -39,24 +35,21 @@ object Month {
 case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
 
   def compare(p: Week): Int = 53 * (year - p.year) + (week - p.week)
-
-  override def <(that: Week): Boolean = (this compare that) < 0
-
-  override def >(that: Week): Boolean = (this compare that) > 0
-
-  override def <=(that: Week): Boolean = (this compare that) <= 0
-
-  override def >=(that: Week): Boolean = (this compare that) >= 0
-
   override def toString = f"$year%d-W$week%02d"
 
-  def start: DateTime =
-    jodaWeek.withDayOfWeek(DateTimeConstants.MONDAY).millisOfDay().withMinimumValue()
+  def start: Instant =
+    Instant.fromZonedDateTime(
+      asZonedDateTime.`with`(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).`with`(LocalTime.MIN))
 
-  private def jodaWeek: DateTime = new DateTime().withYear(year).withWeekOfWeekyear(week)
+  def end: Instant =
+    Instant.fromZonedDateTime(
+      asZonedDateTime.`with`(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)).`with`(LocalTime.MAX))
 
-  def end: DateTime =
-    jodaWeek.dayOfWeek().withMaximumValue().millisOfDay().withMaximumValue()
+  private def asZonedDateTime: ZonedDateTime =
+    ZonedDateTime
+      .of(year, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
+      .`with`(firstInMonth(DayOfWeek.MONDAY))
+      .plusWeeks(week - 1)
 }
 
 object Week {
@@ -67,23 +60,16 @@ case class Day(day: Int, month: Int, year: Int) extends Interval with Ordered[Da
 
   def compare(p: Day): Int = 500 * (year - p.year) + 40 * (month - p.month) + (day - p.day)
 
-  override def <(that: Day): Boolean = (this compare that) < 0
-
-  override def >(that: Day): Boolean = (this compare that) > 0
-
-  override def <=(that: Day): Boolean = (this compare that) <= 0
-
-  override def >=(that: Day): Boolean = (this compare that) >= 0
-
   override def toString = f"$year%d-$month%02d-$day%02d"
 
-  def start: DateTime =
-    jodaDay.millisOfDay().withMinimumValue()
+  def start: Instant =
+    Instant.fromZonedDateTime(asZonedDateTime.`with`(LocalTime.MIN))
 
-  private def jodaDay = new DateTime().withDate(year, month, day)
+  def end: Instant =
+    Instant.fromZonedDateTime(asZonedDateTime.`with`(LocalTime.MAX))
 
-  def end: DateTime =
-    jodaDay.millisOfDay().withMaximumValue()
+  private def asZonedDateTime: ZonedDateTime =
+    ZonedDateTime.of(year, month, day, 0, 0, 0, 0, ZoneId.of("UTC"))
 }
 
 object Day {

@@ -1,13 +1,14 @@
 package com.scalableminds.webknossos.datastore.models.requests
 
-import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, CubePosition}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, CubePosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
+
 import java.nio.file.Path
 
-case class DataServiceRequestSettings(halfByte: Boolean,
+case class DataServiceRequestSettings(halfByte: Boolean = false,
                                       appliedAgglomerate: Option[String] = None,
-                                      version: Option[Long] = None)
+                                      version: Option[Long] = None,
+                                      additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
 
 object DataServiceRequestSettings {
   val default: DataServiceRequestSettings = DataServiceRequestSettings(halfByte = false)
@@ -16,10 +17,9 @@ object DataServiceRequestSettings {
 case class DataServiceDataRequest(
     dataSource: DataSource, // null in VolumeTracings
     dataLayer: DataLayer,
-    dataLayerMapping: Option[String],
+    dataLayerMapping: Option[String], // No longer used. use appliedAgglomerate in settings instead
     cuboid: Cuboid,
-    settings: DataServiceRequestSettings,
-    subsamplingStrides: Vec3Int = Vec3Int(1, 1, 1) // if > 1, skip voxels when loading (used for isosurface generation)
+    settings: DataServiceRequestSettings
 )
 
 case class DataReadInstruction(

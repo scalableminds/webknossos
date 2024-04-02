@@ -1,5 +1,5 @@
 import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Tag, Spin, Button, Input, Modal, Alert, Row, Col, Tooltip } from "antd";
@@ -9,6 +9,7 @@ import {
   CloseCircleOutlined,
   CopyOutlined,
   InfoCircleOutlined,
+  MailOutlined,
   TeamOutlined,
   TrophyOutlined,
   UserAddOutlined,
@@ -16,26 +17,33 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-import * as React from "react";
+import React from "react";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import { location } from "libs/window";
-import type { APIUser, APITeamMembership, ExperienceMap } from "types/api_flow_types";
+import type {
+  APIUser,
+  APITeamMembership,
+  ExperienceMap,
+  APIOrganization,
+} from "types/api_flow_types";
 import { InviteUsersModal } from "admin/onboarding";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import LinkButton from "components/link_button";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
-import { stringToColor } from "libs/format_utils";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import Persistence from "libs/persistence";
 import PermissionsAndTeamsModalView from "admin/user/permissions_and_teams_modal_view";
+import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 import Store from "../../oxalis/store";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
+import { renderTeamRolesAndPermissionsForUser } from "admin/team/team_list_view";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -43,6 +51,7 @@ const typeHint: APIUser[] = [];
 
 type StateProps = {
   activeUser: APIUser;
+  activeOrganization: APIOrganization;
 };
 type Props = RouteComponentProps & StateProps;
 
@@ -50,11 +59,11 @@ type State = {
   isLoading: boolean;
   users: Array<APIUser>;
   selectedUserIds: Key[];
-  isExperienceModalVisible: boolean;
-  isTeamRoleModalVisible: boolean;
-  isInviteModalVisible: boolean;
+  isExperienceModalOpen: boolean;
+  isTeamRoleModalOpen: boolean;
+  isInviteModalOpen: boolean;
   singleSelectedUser: APIUser | null | undefined;
-  activationFilter: Array<"true" | "false">;
+  activationFilter: Array<"activated" | "deactivated" | "verified" | "unverified">;
   searchQuery: string;
   domainToEdit: string | null | undefined;
 };
@@ -71,10 +80,10 @@ class UserListView extends React.PureComponent<Props, State> {
     isLoading: true,
     users: [],
     selectedUserIds: [],
-    isExperienceModalVisible: false,
-    isTeamRoleModalVisible: false,
-    isInviteModalVisible: false,
-    activationFilter: ["true"],
+    isExperienceModalOpen: false,
+    isTeamRoleModalOpen: false,
+    isInviteModalOpen: false,
+    activationFilter: ["activated"],
     searchQuery: "",
     singleSelectedUser: null,
     domainToEdit: null,
@@ -82,18 +91,18 @@ class UserListView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
     this.fetchData();
 
     if (location.hash === "#invite") {
       this.setState({
-        isInviteModalVisible: true,
+        isInviteModalOpen: true,
       });
     }
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   async fetchData(): Promise<void> {
@@ -101,6 +110,7 @@ class UserListView extends React.PureComponent<Props, State> {
       isLoading: true,
     });
     const users = await getEditableUsers();
+
     this.setState({
       isLoading: false,
       users,
@@ -108,26 +118,31 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   activateUser = async (selectedUser: APIUser, isActive: boolean = true) => {
-    const newUserPromises = this.state.users.map((user) => {
-      if (selectedUser.id === user.id) {
-        const newUser = Object.assign({}, user, {
-          isActive,
-        });
-        return updateUser(newUser);
-      }
+    const newUser = await updateUser({ ...selectedUser, isActive });
+    const newUsers = this.state.users.map((user) => (selectedUser.id === user.id ? newUser : user));
 
-      return Promise.resolve(user);
+    this.setState({
+      users: newUsers,
     });
-    Promise.all(newUserPromises).then(
-      (newUsers) => {
+
+    if (!isActive) {
+      // Don't ask the user for the team permissions
+      return;
+    }
+    Modal.confirm({
+      title: "Account was activated.",
+      content:
+        "If the user was activated for the first time, they will only be able to see datasets that belong to the Default team. Do you want to configure the teams and permissions of the user?",
+      okText: "Configure teams and permissions",
+      cancelText: "Close",
+      icon: <CheckCircleOutlined style={{ color: "green" }} />,
+      onOk: () => {
         this.setState({
-          users: newUsers,
           selectedUserIds: [selectedUser.id],
-          isTeamRoleModalVisible: isActive,
+          isTeamRoleModalOpen: isActive,
         });
       },
-      () => {}, // Do nothing, change did not succeed
-    );
+    });
   };
 
   deactivateUser = (user: APIUser): void => {
@@ -161,8 +176,8 @@ class UserListView extends React.PureComponent<Props, State> {
   handleUsersChange = (updatedUsers: Array<APIUser>): void => {
     this.setState({
       users: updatedUsers,
-      isExperienceModalVisible: false,
-      isTeamRoleModalVisible: false,
+      isExperienceModalOpen: false,
+      isTeamRoleModalOpen: false,
     });
   };
 
@@ -170,16 +185,15 @@ class UserListView extends React.PureComponent<Props, State> {
     const updatedUsersMap = _.keyBy(updatedUsers, (u) => u.id);
 
     this.setState((prevState) => ({
-      isExperienceModalVisible: false,
+      isExperienceModalOpen: false,
       users: prevState.users.map((user) => updatedUsersMap[user.id] || user),
       singleSelectedUser: null,
       selectedUserIds: prevState.singleSelectedUser == null ? [] : prevState.selectedUserIds,
     }));
   };
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
@@ -191,9 +205,9 @@ class UserListView extends React.PureComponent<Props, State> {
   };
 
   renderNewUsersAlert() {
-    const now = moment();
+    const now = dayjs();
     const newInactiveUsers = this.state.users.filter(
-      (user) => !user.isActive && moment.duration(now.diff(user.created)).asDays() <= 14,
+      (user) => !user.isActive && dayjs.duration(now.diff(user.created)).asDays() <= 14,
     );
     const newInactiveUsersHeader = (
       <React.Fragment>
@@ -235,20 +249,16 @@ class UserListView extends React.PureComponent<Props, State> {
     ) : null;
   }
 
-  renderPlaceholder() {
+  renderInviteUsersAlert() {
+    const inviteUsersCallback = () =>
+      this.setState({
+        isInviteModalOpen: true,
+      });
+
     const noUsersMessage = (
       <React.Fragment>
-        {"You can "}
-        <a
-          onClick={() =>
-            this.setState({
-              isInviteModalVisible: true,
-            })
-          }
-        >
-          invite more users
-        </a>
-        {" to join your organization. After the users joined, you need to activate them manually."}
+        <a onClick={inviteUsersCallback}>Invite colleagues and collaboration partners</a>
+        {" to join your organization. Share datasets and collaboratively work on annotiatons."}
       </React.Fragment>
     );
     return this.state.isLoading ? null : (
@@ -260,6 +270,32 @@ class UserListView extends React.PureComponent<Props, State> {
         style={{
           marginTop: 20,
         }}
+        action={
+          <Button type="primary" onClick={inviteUsersCallback}>
+            Invite Users
+          </Button>
+        }
+      />
+    );
+  }
+
+  renderUpgradePlanAlert() {
+    return (
+      <Alert
+        message="You reached the maximum number of users"
+        description={`You organization reached the maxmium number of users included in your current plan. Consider upgrading your WEBKNOSSOS plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
+          this.state.users,
+        )} active users of ${this.props.activeOrganization.includedUsers} allowed by your plan.`}
+        type="warning"
+        showIcon
+        style={{
+          marginTop: 20,
+        }}
+        action={
+          <Link to={`/organizations/${this.props.activeUser.organization}`}>
+            <Button type="primary">Upgrade Plan</Button>
+          </Link>
+        }
       />
     );
   }
@@ -302,7 +338,7 @@ class UserListView extends React.PureComponent<Props, State> {
       }),
       selectedRowKeys: this.state.selectedUserIds,
     };
-    const activationFilterWarning = this.state.activationFilter.includes("true") ? (
+    const activationFilterWarning = this.state.activationFilter.includes("activated") ? (
       <Tag closable onClose={this.handleDismissActivationFilter} color="blue">
         Show Active Users Only
       </Tag>
@@ -311,6 +347,9 @@ class UserListView extends React.PureComponent<Props, State> {
       marginRight: 20,
     };
     const noOtherUsers = this.state.users.length < 2;
+    const isUserInvitesDisabled =
+      getActiveUserCount(this.state.users) >= this.props.activeOrganization.includedUsers;
+
     return (
       <div className="container test-UserListView">
         <h3>Users</h3>
@@ -326,7 +365,7 @@ class UserListView extends React.PureComponent<Props, State> {
           <Button
             onClick={() =>
               this.setState({
-                isTeamRoleModalVisible: true,
+                isTeamRoleModalOpen: true,
               })
             }
             icon={<TeamOutlined />}
@@ -338,7 +377,7 @@ class UserListView extends React.PureComponent<Props, State> {
           <Button
             onClick={() => {
               this.setState({
-                isExperienceModalVisible: true,
+                isExperienceModalOpen: true,
               });
             }}
             icon={<TrophyOutlined />}
@@ -349,22 +388,24 @@ class UserListView extends React.PureComponent<Props, State> {
           </Button>
           <Button
             icon={<UserAddOutlined />}
+            disabled={isUserInvitesDisabled}
             style={marginRight}
             onClick={() =>
               this.setState({
-                isInviteModalVisible: true,
+                isInviteModalOpen: true,
               })
             }
           >
             Invite Users
           </Button>
           <InviteUsersModal
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
+            currentUserCount={getActiveUserCount(this.state.users)}
+            maxUserCountPerOrganization={this.props.activeOrganization.includedUsers}
+            isOpen={this.state.isInviteModalOpen}
             organizationName={this.props.activeUser.organization}
-            visible={this.state.isInviteModalVisible}
             handleVisibleChange={(visible) => {
               this.setState({
-                isInviteModalVisible: visible,
+                isInviteModalOpen: visible,
               });
             }}
           />
@@ -380,14 +421,14 @@ class UserListView extends React.PureComponent<Props, State> {
               width: 200,
               float: "right",
             }}
-            onPressEnter={this.handleSearch}
             onChange={this.handleSearch}
             value={this.state.searchQuery}
           />
           <div className="clearfix" />
         </div>
 
-        {noOtherUsers ? this.renderPlaceholder() : null}
+        {isUserInvitesDisabled ? this.renderUpgradePlanAlert() : null}
+        {noOtherUsers && !isUserInvitesDisabled ? this.renderInviteUsersAlert() : null}
         {this.renderNewUsersAlert()}
 
         <Spin size="large" spinning={this.state.isLoading}>
@@ -405,7 +446,7 @@ class UserListView extends React.PureComponent<Props, State> {
             style={{
               marginTop: 30,
             }}
-            onChange={(pagination, filters) =>
+            onChange={(_pagination, filters) =>
               this.setState({
                 // @ts-expect-error ts-migrate(2322) FIXME: Type 'FilterValue' is not assignable to type '("tr... Remove this comment to see the full error message
                 activationFilter: filters.isActive != null ? filters.isActive : [],
@@ -437,7 +478,7 @@ class UserListView extends React.PureComponent<Props, State> {
               title="Email"
               dataIndex="email"
               key="email"
-              width={350}
+              width={320}
               sorter={Utils.localeCompareBy(typeHint, (user) => user.email)}
               render={(__, user: APIUser) =>
                 this.props.activeUser.isAdmin ? (
@@ -482,7 +523,7 @@ class UserListView extends React.PureComponent<Props, State> {
                           // If no user is selected, set singleSelectedUser. Otherwise,
                           // open the modal so that all selected users are edited.
                           singleSelectedUser: prevState.selectedUserIds.length > 0 ? null : user,
-                          isExperienceModalVisible: true,
+                          isExperienceModalOpen: true,
                           domainToEdit: domain,
                         }));
                       }}
@@ -508,36 +549,9 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="teams"
               key="teams_"
               width={250}
-              render={(teams: Array<APITeamMembership>, user: APIUser) => {
-                if (user.isAdmin) {
-                  return (
-                    <Tag key={`team_role_${user.id}`} color="red">
-                      Admin - Access to all Teams
-                    </Tag>
-                  );
-                } else {
-                  const teamTags = user.isDatasetManager
-                    ? [
-                        <Tag key={`dataset_manager_${user.id}`} color="geekblue">
-                          Dataset Manager - Edit all Datasets
-                        </Tag>,
-                      ]
-                    : [];
-                  return teamTags.concat(
-                    teams.map((team) => {
-                      const roleName = team.isTeamManager ? "Team Manager" : "Member";
-                      return (
-                        <Tag
-                          key={`team_role_${user.id}_${team.id}`}
-                          color={stringToColor(roleName)}
-                        >
-                          {team.name}: {roleName}
-                        </Tag>
-                      );
-                    }),
-                  );
-                }
-              }}
+              render={(_teams: APITeamMembership[], user: APIUser) =>
+                renderTeamRolesAndPermissionsForUser(user)
+              }
             />
             <Column
               title="Status"
@@ -547,32 +561,89 @@ class UserListView extends React.PureComponent<Props, State> {
               filters={[
                 {
                   text: "Activated",
-                  value: "true",
+                  value: "activated",
                 },
                 {
                   text: "Deactivated",
-                  value: "false",
+                  value: "deactivated",
+                },
+                {
+                  text: "E-Mail is verified",
+                  value: "verified",
+                },
+                {
+                  text: "E-Mail is not verified",
+                  value: "unverified",
                 },
               ]}
               filtered
               filteredValue={this.state.activationFilter}
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '(value: boolean, user: APIUser) => boolean' ... Remove this comment to see the full error message
-              onFilter={(value: boolean, user: APIUser) => user.isActive.toString() === value}
-              render={(isActive) =>
-                isActive ? (
-                  <CheckCircleOutlined
-                    style={{
-                      fontSize: 20,
-                    }}
-                  />
+              filterMultiple
+              // @ts-ignore
+              onFilter={(
+                value: "activated" | "deactivated" | "verified" | "unverified",
+                user: APIUser,
+              ) => {
+                if (value === "activated") {
+                  return user.isActive;
+                } else if (value === "deactivated") {
+                  return !user.isActive;
+                } else if (value === "verified") {
+                  return user.isEmailVerified;
+                } else if (value === "unverified") {
+                  return !user.isEmailVerified;
+                }
+              }}
+              render={(isActive, user: APIUser) => {
+                const activation = isActive ? (
+                  <Tooltip title="Account is activated">
+                    <CheckCircleOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Tooltip>
                 ) : (
-                  <CloseCircleOutlined
-                    style={{
-                      fontSize: 20,
-                    }}
-                  />
-                )
-              }
+                  <Tooltip title="Account is not activated">
+                    <CloseCircleOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                        color: "#e84749",
+                      }}
+                    />
+                  </Tooltip>
+                );
+
+                const mail = user.isEmailVerified ? (
+                  <Tooltip title="Email is verified">
+                    <MailOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                      }}
+                    />
+                  </Tooltip>
+                ) : (
+                  <Tooltip title="Email is not verified">
+                    <MailOutlined
+                      className="icon-margin-right"
+                      style={{
+                        fontSize: 20,
+                        color: "#e84749",
+                      }}
+                    />
+                  </Tooltip>
+                );
+
+                return (
+                  <>
+                    {activation}
+                    {mail}
+                  </>
+                );
+              }}
             />
             <Column
               title="Actions"
@@ -590,13 +661,23 @@ class UserListView extends React.PureComponent<Props, State> {
                     // eslint-disable-next-line no-nested-ternary
                     user.isActive ? (
                       this.props.activeUser.isAdmin ? (
-                        <LinkButton onClick={() => this.deactivateUser(user)}>
+                        <LinkButton
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            this.deactivateUser(user);
+                          }}
+                        >
                           <UserDeleteOutlined />
                           Deactivate User
                         </LinkButton>
                       ) : null
                     ) : (
-                      <LinkButton onClick={() => this.activateUser(user)}>
+                      <LinkButton
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          this.activateUser(user);
+                        }}
+                      >
                         <UserAddOutlined />
                         Activate User
                       </LinkButton>
@@ -607,9 +688,9 @@ class UserListView extends React.PureComponent<Props, State> {
             />
           </Table>
         </Spin>
-        {this.state.isExperienceModalVisible ? (
+        {this.state.isExperienceModalOpen ? (
           <ExperienceModalView
-            visible={this.state.isExperienceModalVisible}
+            isOpen={this.state.isExperienceModalOpen}
             selectedUsers={
               this.state.singleSelectedUser
                 ? [this.state.singleSelectedUser]
@@ -619,7 +700,7 @@ class UserListView extends React.PureComponent<Props, State> {
             onChange={this.closeExperienceModal}
             onCancel={() =>
               this.setState({
-                isExperienceModalVisible: false,
+                isExperienceModalOpen: false,
                 singleSelectedUser: null,
                 domainToEdit: null,
               })
@@ -627,13 +708,13 @@ class UserListView extends React.PureComponent<Props, State> {
           />
         ) : null}
         <PermissionsAndTeamsModalView
-          visible={this.state.isTeamRoleModalVisible}
+          isOpen={this.state.isTeamRoleModalOpen}
           selectedUserIds={this.state.selectedUserIds}
           users={this.state.users}
           onChange={this.handleUsersChange}
           onCancel={() =>
             this.setState({
-              isTeamRoleModalVisible: false,
+              isTeamRoleModalOpen: false,
             })
           }
           activeUser={this.props.activeUser}
@@ -645,7 +726,8 @@ class UserListView extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
+  activeOrganization: enforceActiveOrganization(state.activeOrganization),
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(UserListView));
+export default connector(UserListView);

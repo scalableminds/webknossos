@@ -22,11 +22,11 @@ export default function traverse(
   const u = startPosition;
   const v = V3.sub(endPosition, startPosition);
   // The initialization phase begins by identifying the voxel in which the ray origin, → u, is found.
-  const uBucket = globalPositionToBucketPosition(startPosition, resolutions, zoomStep);
-  const lastBucket = globalPositionToBucketPosition(endPosition, resolutions, zoomStep);
+  const uBucket = globalPositionToBucketPosition(startPosition, resolutions, zoomStep, null);
+  const lastBucket = globalPositionToBucketPosition(endPosition, resolutions, zoomStep, null);
   // The integer variables X and Y are initialized to the starting voxel coordinates.
   let [X, Y, Z] = uBucket;
-  const voxelSize = getBucketExtent(resolutions, zoomStep);
+  const voxelSize = getBucketExtent(resolutions[zoomStep]);
   // In addition, the variables stepX and stepY are initialized to either 1 or -1 indicating whether X and Y are
   // incremented or decremented as the ray crosses voxel boundaries (this is determined by the sign of the x and y components of → v).
   const [stepX, stepY, stepZ] = v.map((el) => Math.sign(el));
@@ -40,10 +40,9 @@ export default function traverse(
     Math.abs(voxelSize[1] / v[1]),
     Math.abs(voxelSize[2] / v[2]),
   ];
-  const intersectedBuckets = [[X, Y, Z]];
+  const intersectedBuckets: Vector3[] = [[X, Y, Z]];
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'dim' implicitly has an 'any' type.
-  const behindLastBucket = (dim, pos) => {
+  const behindLastBucket = (dim: 0 | 1 | 2, pos: number) => {
     if (step[dim] < 0) {
       return pos < lastBucket[dim];
     } else if (step[dim] > 0) {
@@ -112,13 +111,11 @@ export default function traverse(
 
   while (loopProtection++ < maximumIterations) {
     if (X === lastBucket[0] && Y === lastBucket[1] && Z === lastBucket[2]) {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
       return intersectedBuckets;
     }
 
     if (behindLastBucket(0, X) || behindLastBucket(1, Y) || behindLastBucket(2, Z)) {
       // We didn't cross the lastBucket for some reason?
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[][]' is not assignable to type 'Vecto... Remove this comment to see the full error message
       return intersectedBuckets;
     }
 
@@ -153,7 +150,11 @@ export default function traverse(
     }
   }
 
-  throw new Error("Didn't reach target voxel?");
+  // In case this error is thrown, check that there weren't any NaN values
+  // passed. Since this should never happen, we don't check the values explicitly
+  // here (due to performance). During development this might happen by accident,
+  // though.
+  throw new Error("Didn't reach target voxel for an unknown reason.");
 }
 
 function initializeTMax(

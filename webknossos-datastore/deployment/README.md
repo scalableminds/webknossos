@@ -6,7 +6,7 @@
 * Public domain name with SSL certificate
 
 ## Prepare file system
-webKnossos expects the following file structure:
+WEBKNOSSOS expects the following file structure:
 ```
 docker-compose.yml
 binaryData/ # path can be specified in config/environment

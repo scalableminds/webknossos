@@ -1,8 +1,7 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Tag, Spin, Button, Input, Modal, Card } from "antd";
+import { Table, Tag, Spin, Button, Input, Modal, Card, Alert } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -13,13 +12,14 @@ import {
   ForkOutlined,
   PlayCircleOutlined,
   PlusOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
 import React from "react";
 import _ from "lodash";
 import features from "features";
 import { AsyncLink } from "components/async_clickables";
-import type { APITask, APITaskType } from "types/api_flow_types";
-import { deleteTask, getTasks, downloadAnnotation } from "admin/admin_rest_api";
+import type { APITask, APITaskType, APIUser, TaskStatus } from "types/api_flow_types";
+import { deleteTask, getTasks, downloadAnnotation, assignTaskToUser } from "admin/admin_rest_api";
 import { formatTuple, formatSeconds } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
 import FormattedDate from "components/formatted_date";
@@ -33,17 +33,19 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import FixedExpandableTable from "components/fixed_expandable_table";
+import UserSelectionComponent from "admin/user/user_selection_component";
 const { Column } = Table;
 const { Search, TextArea } = Input;
 type Props = {
   initialFieldValues?: TaskFormFieldValues;
-  history: RouteComponentProps["history"];
 };
 type State = {
   isLoading: boolean;
   tasks: Array<APITask>;
+  users: APIUser[];
   searchQuery: string;
-  isAnonymousTaskLinkModalVisible: boolean;
+  selectedUserIdForAssignment: string | null;
+  isAnonymousTaskLinkModalOpen: boolean;
 };
 const typeHint: Array<APITask> = [];
 const persistence = new Persistence<Pick<State, "searchQuery">>(
@@ -57,17 +59,19 @@ class TaskListView extends React.PureComponent<Props, State> {
   state: State = {
     isLoading: false,
     tasks: [],
+    users: [],
     searchQuery: "",
-    isAnonymousTaskLinkModalVisible: Utils.hasUrlParam("showAnonymousLinks"),
+    selectedUserIdForAssignment: null,
+    isAnonymousTaskLinkModalOpen: Utils.hasUrlParam("showAnonymousLinks"),
   };
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   async fetchData(queryObject: QueryObject) {
@@ -95,9 +99,8 @@ class TaskListView extends React.PureComponent<Props, State> {
     }
   }
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
@@ -120,6 +123,45 @@ class TaskListView extends React.PureComponent<Props, State> {
           this.setState({
             isLoading: false,
           });
+        }
+      },
+    });
+  };
+
+  assignTaskToUser = (task: APITask) => {
+    Modal.confirm({
+      title: "Manual Task Assignment",
+      icon: <UserAddOutlined />,
+      width: 500,
+      content: (
+        <>
+          <div>Please, select a user to manually assign this task to:</div>
+          <div style={{ marginTop: 10, marginBottom: 25 }}>
+            <UserSelectionComponent
+              handleSelection={(value) => this.setState({ selectedUserIdForAssignment: value })}
+            />
+          </div>
+          <Alert
+            message="Note, manual assignments will bypass the automated task distribution system and its checks for user experience, access rights and other eligibility criteria."
+            type="info"
+          />
+        </>
+      ),
+      onOk: async () => {
+        const userId = this.state.selectedUserIdForAssignment;
+        if (userId != null) {
+          try {
+            const updatedTask = await assignTaskToUser(task.id, userId);
+            this.setState((prevState) => ({
+              tasks: [...prevState.tasks.filter((t) => t.id !== task.id), updatedTask],
+            }));
+
+            Toast.success("A user was successfully assigned to the task.");
+          } catch (error) {
+            handleGenericError(error as Error);
+          } finally {
+            this.setState({ selectedUserIdForAssignment: null });
+          }
         }
       },
     });
@@ -156,7 +198,7 @@ class TaskListView extends React.PureComponent<Props, State> {
   getAnonymousTaskLinkModal() {
     const anonymousTaskId = Utils.getUrlParamValue("showAnonymousLinks");
 
-    if (!this.state.isAnonymousTaskLinkModalVisible) {
+    if (!this.state.isAnonymousTaskLinkModalOpen) {
       return null;
     }
 
@@ -167,18 +209,18 @@ class TaskListView extends React.PureComponent<Props, State> {
     return (
       <Modal
         title={`Anonymous Task Links for Task ${anonymousTaskId}`}
-        visible={this.state.isAnonymousTaskLinkModalVisible}
+        open={this.state.isAnonymousTaskLinkModalOpen}
         onOk={() => {
           navigator.clipboard
             .writeText(tasksString)
             .then(() => Toast.success("Links copied to clipboard"));
           this.setState({
-            isAnonymousTaskLinkModalVisible: false,
+            isAnonymousTaskLinkModalOpen: false,
           });
         }}
         onCancel={() =>
           this.setState({
-            isAnonymousTaskLinkModalVisible: false,
+            isAnonymousTaskLinkModalOpen: false,
           })
         }
       >
@@ -201,7 +243,7 @@ class TaskListView extends React.PureComponent<Props, State> {
           by clicking on the <strong>Add Task</strong> button.
         </p>
         <p>
-          To learn more about the task system in webKnossos,{" "}
+          To learn more about the task system in WEBKNOSSOS,{" "}
           <a
             href="https://docs.webknossos.org/webknossos/tasks.html"
             rel="noopener noreferrer"
@@ -232,7 +274,6 @@ class TaskListView extends React.PureComponent<Props, State> {
             style={{
               width: 200,
             }}
-            onPressEnter={this.handleSearch}
             onChange={this.handleSearch}
             value={searchQuery}
           />
@@ -245,7 +286,7 @@ class TaskListView extends React.PureComponent<Props, State> {
         >
           Tasks
         </h3>
-        {features().isDemoInstance ? (
+        {features().isWkorgInstance ? (
           <>
             <a
               href="https://webknossos.org/services/annotations"
@@ -314,7 +355,9 @@ class TaskListView extends React.PureComponent<Props, State> {
               marginTop: 30,
               marginBottom: 30,
             }}
-            expandedRowRender={(task) => <TaskAnnotationView task={task} />}
+            expandable={{
+              expandedRowRender: (task) => <TaskAnnotationView task={task} />,
+            }}
             locale={{
               emptyText: this.renderPlaceholder(),
             }}
@@ -354,6 +397,49 @@ class TaskListView extends React.PureComponent<Props, State> {
               sorter={Utils.localeCompareBy(typeHint, (task) => task.dataSet)}
             />
             <Column
+              title="Stats"
+              dataIndex="status"
+              key="status"
+              render={(status, task: APITask) => (
+                <div className="nowrap">
+                  <span title="Pending Instances">
+                    <PlayCircleOutlined className="icon-margin-right" />
+                    {status.pending}
+                  </span>
+                  <br />
+                  <span title="Active Instances">
+                    <ForkOutlined className="icon-margin-right" />
+                    {status.active}
+                  </span>
+                  <br />
+                  <span title="Finished Instances">
+                    <CheckCircleOutlined className="icon-margin-right" />
+                    {status.finished}
+                  </span>
+                  <br />
+                  <span title="Annotation Time">
+                    <ClockCircleOutlined className="icon-margin-right" />
+                    {formatSeconds((task.tracingTime || 0) / 1000)}
+                  </span>
+                </div>
+              )}
+              filters={[
+                {
+                  text: "Has Pending Instances",
+                  value: "pending",
+                },
+                {
+                  text: "Has Active Instances",
+                  value: "active",
+                },
+                {
+                  text: "Has Finished Instances",
+                  value: "finished",
+                },
+              ]}
+              onFilter={(key, task: APITask) => task.status[key as unknown as keyof TaskStatus] > 0}
+            />
+            <Column
               title="Edit Position / Bounding Box"
               dataIndex="editPosition"
               key="editPosition"
@@ -386,35 +472,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               width={200}
               sorter={Utils.compareBy(typeHint, (task) => task.created)}
               render={(created) => <FormattedDate timestamp={created} />}
-            />
-            <Column
-              title="Stats"
-              dataIndex="status"
-              key="status"
-              width={120}
-              render={(status, task: APITask) => (
-                <div className="nowrap">
-                  <span title="Open Instances">
-                    <PlayCircleOutlined />
-                    {status.open}
-                  </span>
-                  <br />
-                  <span title="Active Instances">
-                    <ForkOutlined />
-                    {status.active}
-                  </span>
-                  <br />
-                  <span title="Finished Instances">
-                    <CheckCircleOutlined />
-                    {status.finished}
-                  </span>
-                  <br />
-                  <span title="Annotation Time">
-                    <ClockCircleOutlined />
-                    {formatSeconds((task.tracingTime || 0) / 1000)}
-                  </span>
-                </div>
-              )}
+              defaultSortOrder={"descend"}
             />
             <Column
               title="Action"
@@ -422,41 +480,54 @@ class TaskListView extends React.PureComponent<Props, State> {
               width={170}
               fixed="right"
               render={(__, task: APITask) => (
-                <span>
+                <>
                   {task.status.finished > 0 ? (
-                    <a
-                      href={`/annotations/CompoundTask/${task.id}`}
-                      title="View all Finished Annotations"
-                    >
-                      <EyeOutlined />
-                      View
+                    <div>
+                      <a
+                        href={`/annotations/CompoundTask/${task.id}`}
+                        title="View all Finished Annotations"
+                      >
+                        <EyeOutlined className="icon-margin-right" />
+                        View
+                      </a>
+                    </div>
+                  ) : null}
+                  <div>
+                    <a href={`/tasks/${task.id}/edit`} title="Edit Task">
+                      <EditOutlined className="icon-margin-right" />
+                      Edit
                     </a>
+                  </div>
+                  {task.status.pending > 0 ? (
+                    <div>
+                      <LinkButton onClick={_.partial(this.assignTaskToUser, task)}>
+                        <UserAddOutlined className="icon-margin-right" />
+                        Manually Assign to User
+                      </LinkButton>
+                    </div>
                   ) : null}
-                  <br />
-                  <a href={`/tasks/${task.id}/edit`} title="Edit Task">
-                    <EditOutlined />
-                    Edit
-                  </a>
-                  <br />
                   {task.status.finished > 0 ? (
-                    <AsyncLink
-                      href="#"
-                      onClick={() => {
-                        const includesVolumeData = task.type.tracingType !== "skeleton";
-                        return downloadAnnotation(task.id, "CompoundTask", includesVolumeData);
-                      }}
-                      title="Download all Finished Annotations"
-                      icon={<DownloadOutlined />}
-                    >
-                      Download
-                    </AsyncLink>
+                    <div>
+                      <AsyncLink
+                        href="#"
+                        onClick={() => {
+                          const includesVolumeData = task.type.tracingType !== "skeleton";
+                          return downloadAnnotation(task.id, "CompoundTask", includesVolumeData);
+                        }}
+                        title="Download all Finished Annotations"
+                        icon={<DownloadOutlined className="icon-margin-right" />}
+                      >
+                        Download
+                      </AsyncLink>
+                    </div>
                   ) : null}
-                  <br />
-                  <LinkButton onClick={_.partial(this.deleteTask, task)}>
-                    <DeleteOutlined />
-                    Delete
-                  </LinkButton>
-                </span>
+                  <div>
+                    <LinkButton onClick={_.partial(this.deleteTask, task)}>
+                      <DeleteOutlined className="icon-margin-right" />
+                      Delete
+                    </LinkButton>
+                  </div>
+                </>
               )}
             />
           </FixedExpandableTable>
@@ -467,4 +538,4 @@ class TaskListView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(TaskListView);
+export default TaskListView;

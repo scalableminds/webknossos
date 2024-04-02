@@ -1,4 +1,5 @@
 // @ts-nocheck
+import "test/mocks/lz4";
 import { __setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";
@@ -92,7 +93,7 @@ test("getDataValue should get the data value for a layer, position and zoomstep"
   const cube = model.getCubeByLayerName("segmentation");
   const position = [100, 100, 100];
   const zoomStep = 0;
-  const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
+  const bucketAddress = cube.positionToZoomedAddress(position, null, zoomStep);
   const bucket = cube.getOrCreateBucket(bucketAddress);
   sinon.stub(cube.pullQueue, "pull").returns([Promise.resolve(true)]);
   sinon.stub(cube, "getDataValue").returns(1337);
@@ -133,7 +134,7 @@ test("registerKeyHandler should register a key handler and return a handler to u
 test("registerOverwrite should overwrite newAddNode", (t) => {
   const api = t.context.api;
   let bool = false;
-  api.utils.registerOverwrite("SET_ACTIVE_NODE", (store, call, action) => {
+  api.utils.registerOverwrite("SET_ACTIVE_NODE", (_store, call, action) => {
     bool = true;
     call(action);
   });
@@ -146,7 +147,7 @@ test("registerOverwrite should overwrite newAddNode", (t) => {
 test("registerOverwrite should overwrite deleteActiveNode", (t) => {
   const api = t.context.api;
   let bool = false;
-  api.utils.registerOverwrite("DELETE_NODE", (store, call, action) => {
+  api.utils.registerOverwrite("DELETE_NODE", (_store, call, action) => {
     bool = true;
     call(action);
   });

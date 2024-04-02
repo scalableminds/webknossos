@@ -1,6 +1,8 @@
-FROM openjdk:8-jdk
-RUN apt-get update \
-  && apt-get -y install libblosc1 postgresql-client \
+FROM eclipse-temurin:21
+ARG VERSION_NODE="18.x"
+
+RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \
+  && apt-get -y install libblosc1 libbrotli1 postgresql-client libdraco4 git nodejs \
   && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /webknossos

@@ -1,7 +1,7 @@
 import { Button, List } from "antd";
 import React, { useState, useEffect } from "react";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
 import type { APIUpdateActionBatch } from "types/api_flow_types";
 import type { Versions } from "oxalis/view/version_view";
 import { chunkIntoTimeWindows } from "libs/utils";
@@ -19,13 +19,14 @@ import {
 } from "oxalis/model/sagas/update_actions";
 import { setAnnotationAllowUpdateAction } from "oxalis/model/actions/annotation_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import type { EditableMapping, SkeletonTracing, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
 import VersionEntryGroup from "oxalis/view/version_entry_group";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import Toast from "libs/toast";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 
 const ENTRIES_PER_PAGE = 5000;
 
@@ -38,14 +39,7 @@ type Props = {
 // The string key is a date string
 // The value is an array of chunked APIUpdateActionBatches
 type GroupedAndChunkedVersions = Record<string, Array<Array<APIUpdateActionBatch>>>;
-const MOMENT_CALENDAR_FORMAT = {
-  sameDay: "[Today]",
-  nextDay: "[Tomorrow]",
-  nextWeek: "dddd",
-  lastDay: "[Yesterday]",
-  lastWeek: "[Last] dddd (YYYY-MM-DD)",
-  sameElse: "YYYY-MM-DD",
-};
+
 const VERSION_LIST_PLACEHOLDER = {
   emptyText: "No versions created yet.",
 };
@@ -133,9 +127,7 @@ const getGroupedAndChunkedVersions = _.memoize(
     // Then, the versions for each day are chunked into x-minute intervals,
     // so that the actions of one chunk are all from within one x-minute interval.
     const groupedVersions = _.groupBy(versions, (batch) =>
-      moment
-        .utc(_.max(batch.value.map((action) => action.value.actionTimestamp)))
-        .calendar(null, MOMENT_CALENDAR_FORMAT),
+      dayjs.utc(_.max(batch.value.map((action) => action.value.actionTimestamp))).calendar(null),
     );
 
     const getBatchTime = (batch: APIUpdateActionBatch): number =>
@@ -222,14 +214,14 @@ function VersionList(props: Props) {
 
   const queryKey = ["versions", props.tracing.tracingId];
 
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     // Remove all previous existent queries so that the content of this view
     // is loaded from scratch. This is important since the loaded page numbers
     // are relative to the base version. If the version of the tracing changed,
     // old pages are not valid anymore.
     queryClient.removeQueries(queryKey);
     Store.dispatch(setAnnotationAllowUpdateAction(false));
-  }, []);
+  });
 
   const {
     data: versions,
@@ -245,11 +237,12 @@ function VersionList(props: Props) {
   });
   const flattenedVersions = _.flatten(versions?.pages.map((page) => page.data) || []);
   const groupedAndChunkedVersions = getGroupedAndChunkedVersions(flattenedVersions);
-  const batchesAndDateStrings = _.flattenDepth(
-    Object.entries(groupedAndChunkedVersions),
+  const batchesAndDateStrings: Array<string | APIUpdateActionBatch[]> = _.flattenDepth(
+    Object.entries(groupedAndChunkedVersions) as any,
     2,
-  ) as Array<string | APIUpdateActionBatch[]>;
+  );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether fetchNextPage should be added to the dependencies.
   useEffect(() => {
     // The initially loaded page could be quite short (e.g., if
     // ENTRIES_PER_PAGE is 100 and the current version is 105, the first
@@ -266,7 +259,7 @@ function VersionList(props: Props) {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [flattenedVersions, hasNextPage, isFetchingNextPage]);
+  }, [flattenedVersions, hasNextPage, isFetchingNextPage, baseVersion]);
 
   useEffect(() => {
     if (error) {

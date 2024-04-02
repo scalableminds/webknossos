@@ -1,15 +1,16 @@
 package backend
 
 import java.io.ByteArrayInputStream
-
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.geometry.{AdditionalAxisProto, Vec2IntProto}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, FetchedAnnotationLayer}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
 import models.annotation.nml.{NmlParser, NmlWriter}
 import models.annotation.UploadedVolumeLayer
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, Empty, Full}
+import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatestplus.play.PlaySpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
-import play.api.libs.iteratee.Iteratee
 import play.api.test.FakeRequest
 
 import scala.concurrent.Await
@@ -23,21 +24,42 @@ class NMLUnitTestSuite extends PlaySpec {
   }
 
   def writeAndParseTracing(skeletonTracing: SkeletonTracing)
-    : Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String)] = {
-    val annotationLayers = List(FetchedAnnotationLayer("dummySkeletonTracingId", AnnotationLayer.defaultSkeletonLayerName, Left(skeletonTracing), None))
-    val nmlEnumarator =
-      new NmlWriter().toNmlStream(annotationLayers, None, None, None, "testOrganization", None, None)
-    val arrayFuture = Iteratee.flatten(nmlEnumarator |>> Iteratee.consume[Array[Byte]]()).run
-    val array = Await.result(arrayFuture, Duration.Inf)
-    NmlParser.parse("", new ByteArrayInputStream(array), None, isTaskUpload = true)
+    : Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] = {
+    val annotationLayers = List(
+      FetchedAnnotationLayer("dummySkeletonTracingId",
+                             AnnotationLayer.defaultSkeletonLayerName,
+                             Left(skeletonTracing),
+                             None))
+    val nmlFunctionStream =
+      new NmlWriter()(scala.concurrent.ExecutionContext.global).toNmlStream("",
+                                                                            annotationLayers,
+                                                                            None,
+                                                                            None,
+                                                                            None,
+                                                                            "testOrganization",
+                                                                            "http://wk.test",
+                                                                            "dummy_dataset",
+                                                                            None,
+                                                                            None,
+                                                                            volumeDataZipFormat =
+                                                                              VolumeDataZipFormat.wkw)
+    val os = new ByteArrayOutputStream()
+    Await.result(nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global), Duration.Inf)
+    val array = os.toByteArray
+    NmlParser.parse("",
+                    new ByteArrayInputStream(array),
+                    None,
+                    isTaskUpload = true,
+                    None,
+                    (a: String, b: String) => None)
   }
 
   def isParseSuccessful(
-      parsedTracing: Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String)]): Boolean =
+      parsedTracing: Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])]): Boolean =
     parsedTracing match {
       case Full(tuple) =>
         tuple match {
-          case (Some(_), _, _) => true
+          case (Some(_), _, _, _) => true
           case _                  => false
         }
       case _ => false
@@ -50,7 +72,7 @@ class NMLUnitTestSuite extends PlaySpec {
       writeAndParseTracing(dummyTracing) match {
         case Full(tuple) =>
           tuple match {
-            case (Some(tracing), _, _) =>
+            case (Some(tracing), _, _, _) =>
               assert(tracing == dummyTracing)
             case _ => throw new Exception
           }
@@ -118,6 +140,14 @@ class NMLUnitTestSuite extends PlaySpec {
 
     "throw an error for duplicate groupId state" in {
       val newTracing = dummyTracing.copy(treeGroups = TreeGroup("Group", 3) +: dummyTracing.treeGroups)
+
+      assert(!isParseSuccessful(writeAndParseTracing(newTracing)))
+    }
+
+    "throw an error for multiple additional coordinates of the same name" in {
+      val newTracing = dummyTracing.copy(
+        additionalAxes = Seq(new AdditionalAxisProto("t", 0, Vec2IntProto(0, 10)),
+                             new AdditionalAxisProto("t", 1, Vec2IntProto(10, 20))))
 
       assert(!isParseSuccessful(writeAndParseTracing(newTracing)))
     }

@@ -1,3 +1,4 @@
+import { BLEND_MODES } from "oxalis/constants";
 import { type DatasetLayerConfiguration, type DatasetConfiguration } from "oxalis/store";
 
 export function getDefaultLayerViewConfiguration(
@@ -10,13 +11,14 @@ export function getDefaultLayerViewConfiguration(
     color: [255, 255, 255],
     alpha: 100,
     gammaCorrectionValue: 1,
-    intensityRange: [0, 255],
     isDisabled: false,
     isInverted: false,
     isInEditMode: false,
   };
   return { ...defaultLayerViewConfiguration, ...dynamicDefault };
 }
+
+export const defaultIntensityRange = [0, 255];
 
 // Note that these values will only be used as a default,
 // if the property is marked as required in the corresponding JSON schema.
@@ -65,11 +67,14 @@ export const layerViewConfiguration = {
 };
 export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = {
   fourBit: false,
-  interpolation: true,
+  interpolation: false,
   renderMissingDataBlack: false,
   loadingStrategy: "PROGRESSIVE_QUALITY",
   segmentationPatternOpacity: 40,
   layers: {},
+  blendMode: BLEND_MODES.Additive,
+  colorLayerOrder: [],
+  nativelyRenderedLayerName: null,
 };
 export const defaultDatasetViewConfiguration = {
   ...defaultDatasetViewConfigurationWithoutNull,
@@ -99,6 +104,9 @@ export const baseDatasetViewConfiguration = {
     minimum: 0,
     maximum: 100,
   },
+  blendMode: {
+    enum: Object.values(BLEND_MODES),
+  },
 };
 export const datasetViewConfiguration = {
   ...baseDatasetViewConfiguration,
@@ -121,6 +129,12 @@ export const datasetViewConfiguration = {
   layers: {
     type: "object",
   },
+  colorLayerOrder: {
+    type: "array",
+    items: {
+      type: "string",
+    },
+  },
 };
 export default {
   $schema: "http://json-schema.org/draft-06/schema#",
@@ -141,6 +155,7 @@ export default {
         "loadingStrategy",
         "segmentationPatternOpacity",
         "layers",
+        "colorLayerOrder",
       ],
     },
     "types::OptionalLayerViewConfiguration": {
@@ -155,7 +170,6 @@ export default {
       required: [
         "color",
         "alpha",
-        "intensityRange",
         "gammaCorrectionValue",
         "isDisabled",
         "isInverted",

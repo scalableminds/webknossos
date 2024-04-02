@@ -9,7 +9,7 @@ export default function PresentModernControls() {
   const dispatch = useDispatch();
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [isModalVisible, setIsModalVisible] = React.useState(
-    activeUser != null && activeUser.novelUserExperienceInfos.shouldSeeModernControlsModal,
+    activeUser?.novelUserExperienceInfos.shouldSeeModernControlsModal,
   );
 
   if (!isModalVisible) {
@@ -35,10 +35,10 @@ export default function PresentModernControls() {
   };
 
   return (
-    <Modal maskClosable={false} visible onCancel={closeModal} width={800} footer={null}>
+    <Modal maskClosable={false} open onCancel={closeModal} width={800} footer={null}>
       <h1>Say Hello to the Context Menu</h1>
       <p>
-        webKnossos now provides an easy-to-use context menu that allows performing even complex
+        WEBKNOSSOS now provides an easy-to-use context menu that allows performing even complex
         actions, such as merging two trees, intuitively. Simply right-click an element of interest
         (e.g., a node or segment) to see available actions.
       </p>
@@ -72,7 +72,7 @@ export default function PresentModernControls() {
       </div>
       <p
         style={{
-          color: "var(--ant-text-secondary)",
+          color: "var(--ant-color-text-secondary)",
           fontSize: 12,
           textAlign: "center",
           margin: "8px auto",

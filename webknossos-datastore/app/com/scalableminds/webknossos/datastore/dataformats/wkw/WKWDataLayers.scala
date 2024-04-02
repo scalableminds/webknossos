@@ -1,9 +1,13 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, _}
+import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{Json, OFormat}
+import ucar.ma2.{Array => MultiArray}
 
 case class WKWResolution(resolution: Vec3Int, cubeLength: Int)
 
@@ -15,7 +19,10 @@ trait WKWLayer extends DataLayer {
 
   val dataFormat: DataFormat.Value = DataFormat.wkw
 
-  lazy val bucketProvider = new WKWBucketProvider(this)
+  override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                              dataSourceId: DataSourceId,
+                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
+    new WKWBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
   def wkwResolutions: List[WKWResolution]
 
@@ -33,7 +40,9 @@ case class WKWDataLayer(
     wkwResolutions: List[WKWResolution],
     elementClass: ElementClass.Value,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+    additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends WKWLayer
 
 object WKWDataLayer {
@@ -48,7 +57,9 @@ case class WKWSegmentationLayer(
     mappings: Option[Set[String]],
     largestSegmentId: Option[Long] = None,
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+    additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends SegmentationLayer
     with WKWLayer
 

@@ -1,30 +1,38 @@
-// @ts-nocheck
+import "test/mocks/lz4";
 import _ from "lodash";
 import update from "immutability-helper";
 import sinon from "sinon";
-import type { Node } from "oxalis/store";
+import type { Node, SkeletonTracing, OxalisState } from "oxalis/store";
 import defaultState from "oxalis/default_state";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import mock from "mock-require";
-import test from "ava";
+import test, { ExecutionContext } from "ava";
+import { TreeTypeEnum } from "oxalis/constants";
+import * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
+import * as OriginalNmlHelpers from "oxalis/model/helpers/nml_helpers";
+import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
+import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
+
 const TIMESTAMP = 123456789;
-const buildInfo = {
-  webknossos: {
-    commitHash: "fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17",
-  },
-};
-const { serializeToNml, getNmlName, parseNml } = mock.reRequire("oxalis/model/helpers/nml_helpers");
-const SkeletonTracingReducer = mock.reRequire(
+const { serializeToNml, getNmlName, parseNml }: typeof OriginalNmlHelpers = mock.reRequire(
+  "oxalis/model/helpers/nml_helpers",
+);
+const SkeletonTracingReducer: typeof OriginalSkeletonTracingReducer = mock.reRequire(
   "oxalis/model/reducers/skeletontracing_reducer",
 ).default;
-const SkeletonTracingActions = mock.reRequire("oxalis/model/actions/skeletontracing_actions");
+const SkeletonTracingActions: typeof OriginalSkeletonTracingActions = mock.reRequire(
+  "oxalis/model/actions/skeletontracing_actions",
+);
 
 const createDummyNode = (id: number): Node => ({
   bitDepth: 8,
   id,
-  position: [id, id, id],
+  untransformedPosition: [id, id, id],
+  additionalCoordinates: [],
   radius: id,
   resolution: 10,
   rotation: [id, id, id],
@@ -33,158 +41,175 @@ const createDummyNode = (id: number): Node => ({
   interpolation: id % 2 === 0,
 });
 
-const tracing = {
-  annotationId: "annotationId",
-  name: "",
-  restrictions: {
-    branchPointsAllowed: true,
-    allowUpdate: true,
-    allowFinish: true,
-    allowAccess: true,
-    allowDownload: true,
-  },
-  skeleton: {
-    type: "skeleton",
-    cachedMaxNodeId: 7,
-    trees: {
-      "1": {
-        treeId: 1,
-        name: "TestTree-0",
-        nodes: new DiffableMap([
-          [0, createDummyNode(0)],
-          [1, createDummyNode(1)],
-          [2, createDummyNode(2)],
-          [7, createDummyNode(7)],
-        ]),
-        timestamp: 0,
-        branchPoints: [
-          {
-            nodeId: 1,
-            timestamp: 0,
-          },
-          {
-            nodeId: 7,
-            timestamp: 0,
-          },
-        ],
-        edges: EdgeCollection.loadFromArray([
-          {
-            source: 0,
-            target: 1,
-          },
-          {
-            source: 2,
-            target: 1,
-          },
-          {
-            source: 1,
-            target: 7,
-          },
-        ]),
-        comments: [
-          {
-            content: "comment",
-            nodeId: 0,
-          },
-        ],
-        color: [0.09019607843137255, 0.09019607843137255, 0.09019607843137255],
-        isVisible: true,
-        groupId: 3,
-      },
-      "2": {
-        treeId: 2,
-        name: "TestTree-1",
-        nodes: new DiffableMap([
-          [4, createDummyNode(4)],
-          [5, createDummyNode(5)],
-          [6, createDummyNode(6)],
-        ]),
-        timestamp: 4,
-        branchPoints: [],
-        edges: EdgeCollection.loadFromArray([
-          {
-            source: 4,
-            target: 5,
-          },
-          {
-            source: 5,
-            target: 6,
-          },
-        ]),
-        comments: [],
-        color: [0.11764705882352941, 0.11764705882352941, 0.11764705882352941],
-        isVisible: true,
-        groupId: 2,
-      },
-    },
-    annotationType: "Explorational",
-    treeGroups: [
-      {
-        groupId: 1,
-        name: "Axon 1",
-        children: [
-          {
-            groupId: 3,
-            name: "Blah",
-            children: [],
-          },
-        ],
-      },
-      {
-        groupId: 2,
-        name: "Axon 2",
-        children: [],
-      },
-    ],
-    activeTreeId: 1,
-    activeNodeId: 1,
-    boundingBox: {
-      min: [0, 0, 0],
-      max: [500, 500, 500],
-    },
-    userBoundingBoxes: [
-      {
-        id: 10,
-        boundingBox: {
-          min: [5, 5, 5],
-          max: [250, 250, 250],
+const initialSkeletonTracing: SkeletonTracing = {
+  type: "skeleton",
+  createdTimestamp: 0,
+  tracingId: "tracingId",
+  version: 0,
+  cachedMaxNodeId: 7,
+  trees: {
+    "1": {
+      treeId: 1,
+      name: "TestTree-0",
+      nodes: new DiffableMap([
+        [0, createDummyNode(0)],
+        [1, createDummyNode(1)],
+        [2, createDummyNode(2)],
+        [7, createDummyNode(7)],
+      ]),
+      timestamp: 0,
+      branchPoints: [
+        {
+          nodeId: 1,
+          timestamp: 0,
         },
-        name: "Test Bounding Box",
-        color: [1, 0, 0],
-        isVisible: true,
-      },
-    ],
+        {
+          nodeId: 7,
+          timestamp: 0,
+        },
+      ],
+      edges: EdgeCollection.loadFromArray([
+        {
+          source: 0,
+          target: 1,
+        },
+        {
+          source: 2,
+          target: 1,
+        },
+        {
+          source: 1,
+          target: 7,
+        },
+      ]),
+      comments: [
+        {
+          content: "comment",
+          nodeId: 0,
+        },
+      ],
+      color: [0.09019607843137255, 0.09019607843137255, 0.09019607843137255],
+      isVisible: true,
+      groupId: 3,
+      type: TreeTypeEnum.DEFAULT,
+      edgesAreVisible: true,
+    },
+    "2": {
+      treeId: 2,
+      name: "TestTree-1",
+      nodes: new DiffableMap([
+        [4, createDummyNode(4)],
+        [5, createDummyNode(5)],
+        [6, createDummyNode(6)],
+      ]),
+      timestamp: 4,
+      branchPoints: [],
+      edges: EdgeCollection.loadFromArray([
+        {
+          source: 4,
+          target: 5,
+        },
+        {
+          source: 5,
+          target: 6,
+        },
+      ]),
+      comments: [],
+      color: [0.11764705882352941, 0.11764705882352941, 0.11764705882352941],
+      isVisible: true,
+      groupId: 2,
+      type: TreeTypeEnum.DEFAULT,
+      edgesAreVisible: true,
+    },
   },
+  treeGroups: [
+    {
+      groupId: 1,
+      name: "Axon 1",
+      children: [
+        {
+          groupId: 3,
+          name: "Blah",
+          children: [],
+        },
+      ],
+    },
+    {
+      groupId: 2,
+      name: "Axon 2",
+      children: [],
+    },
+  ],
+  activeTreeId: 1,
+  activeNodeId: 1,
+  activeGroupId: null,
+  boundingBox: {
+    min: [0, 0, 0],
+    max: [500, 500, 500],
+  },
+  userBoundingBoxes: [
+    {
+      id: 10,
+      boundingBox: {
+        min: [5, 5, 5],
+        max: [250, 250, 250],
+      },
+      name: "Test Bounding Box",
+      color: [1, 0, 0],
+      isVisible: true,
+    },
+  ],
+  navigationList: {
+    list: [],
+    activeIndex: -1,
+  },
+  showSkeletons: true,
+  additionalAxes: [],
 };
 
-const initialState = _.extend({}, defaultState, {
-  tracing,
+const initialState: OxalisState = _.extend({}, defaultState, {
+  tracing: {
+    name: "",
+    restrictions: {
+      branchPointsAllowed: true,
+      allowUpdate: true,
+      allowFinish: true,
+      allowAccess: true,
+      allowDownload: true,
+    },
+    skeleton: initialSkeletonTracing,
+    annotationType: "Explorational",
+    annotationId: "annotationId",
+  },
+  task: TASK_ANNOTATION.task,
   activeUser: {
     firstName: "SCM",
     lastName: "Boy",
   },
-  task: {
-    id: 1,
-  },
 });
 
-async function testThatParserThrowsWithState(t, invalidState, key) {
+async function testThatParserThrowsWithState(
+  t: ExecutionContext<any>,
+  invalidState: OxalisState,
+  key: string,
+) {
   // Serialize the NML using the invalidState, then parse it again, which should throw an NMLParseError
   const nmlWithInvalidContent = serializeToNml(
     invalidState,
     invalidState.tracing,
-    invalidState.tracing.skeleton,
-    buildInfo,
+    enforceSkeletonTracing(invalidState.tracing),
+    BUILD_INFO,
+    false,
   );
   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidContent), key);
 }
 
-async function throwsAsyncParseError(t, fn, key) {
+async function throwsAsyncParseError(t: ExecutionContext<any>, fn: () => void, key: string) {
   try {
-    await fn.call();
+    await fn();
     t.fail(`Test did not throw, calling the function with the following key: ${key}`);
   } catch (e) {
-    if (e.name === "NmlParseError") {
+    if (e instanceof Error && e.name === "NmlParseError") {
       t.true(true);
     } else {
       throw e;
@@ -197,18 +222,20 @@ test.before("Mock Date.now", async () => {
   sinon.stub(Date, "now").returns(TIMESTAMP);
 });
 test.after("Reset mocks", async () => {
+  // @ts-ignore
   Date.now.restore();
 });
 test("NML serializing and parsing should yield the same state", async (t) => {
   const serializedNml = serializeToNml(
     initialState,
     initialState.tracing,
-    initialState.tracing.skeleton,
-    buildInfo,
+    enforceSkeletonTracing(initialState.tracing),
+    BUILD_INFO,
+    false,
   );
   const { trees, treeGroups } = await parseNml(serializedNml);
-  t.deepEqual(initialState.tracing.skeleton.trees, trees);
-  t.deepEqual(initialState.tracing.skeleton.treeGroups, treeGroups);
+  t.deepEqual(initialSkeletonTracing.trees, trees);
+  t.deepEqual(initialSkeletonTracing.treeGroups, treeGroups);
 });
 test("NML serializing and parsing should yield the same state even when using special characters", async (t) => {
   const state = update(initialState, {
@@ -229,10 +256,17 @@ test("NML serializing and parsing should yield the same state even when using sp
       },
     },
   });
-  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+    false,
+  );
   const { trees, treeGroups } = await parseNml(serializedNml);
-  t.deepEqual(state.tracing.skeleton.trees, trees);
-  t.deepEqual(state.tracing.skeleton.treeGroups, treeGroups);
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  t.deepEqual(skeletonTracing.trees, trees);
+  t.deepEqual(skeletonTracing.treeGroups, treeGroups);
 });
 test("NML serializing and parsing should yield the same state even when using multiline attributes", async (t) => {
   const state = update(initialState, {
@@ -253,10 +287,52 @@ test("NML serializing and parsing should yield the same state even when using mu
       },
     },
   });
-  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+    false,
+  );
   const { trees, treeGroups } = await parseNml(serializedNml);
-  t.deepEqual(state.tracing.skeleton.trees, trees);
-  t.deepEqual(state.tracing.skeleton.treeGroups, treeGroups);
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  t.deepEqual(skeletonTracing.trees, trees);
+  t.deepEqual(skeletonTracing.treeGroups, treeGroups);
+});
+test("NML serializing and parsing should yield the same state even when additional coordinates exist", async (t) => {
+  const existingNodeMap = initialState.tracing.skeleton?.trees[1].nodes;
+  if (existingNodeMap == null) {
+    throw new Error("Unexpected null value.");
+  }
+  const existingNode = existingNodeMap.get(1);
+  const newNodeMap = existingNodeMap.set(1, {
+    ...existingNode,
+    additionalCoordinates: [{ name: "t", value: 123 }],
+  });
+  const state = update(initialState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          "1": {
+            nodes: {
+              $set: newNodeMap,
+            },
+          },
+        },
+      },
+    },
+  });
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+    false,
+  );
+  const { trees, treeGroups } = await parseNml(serializedNml);
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  t.deepEqual(skeletonTracing.trees, trees);
+  t.deepEqual(skeletonTracing.treeGroups, treeGroups);
 });
 test("NML Serializer should only serialize visible trees", async (t) => {
   const state = update(initialState, {
@@ -272,12 +348,19 @@ test("NML Serializer should only serialize visible trees", async (t) => {
       },
     },
   });
-  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+    false,
+  );
   const { trees } = await parseNml(serializedNml);
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
   // Tree 1 should not be exported as it is not visible
-  delete state.tracing.skeleton.trees["1"];
-  t.deepEqual(Object.keys(state.tracing.skeleton.trees), Object.keys(trees));
-  t.deepEqual(state.tracing.skeleton.trees, trees);
+  delete skeletonTracing.trees["1"];
+  t.deepEqual(Object.keys(skeletonTracing.trees), Object.keys(trees));
+  t.deepEqual(skeletonTracing.trees, trees);
 });
 test("NML Serializer should only serialize groups with visible trees", async (t) => {
   const state = update(initialState, {
@@ -293,23 +376,74 @@ test("NML Serializer should only serialize groups with visible trees", async (t)
       },
     },
   });
-  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
-  const { treeGroups } = await parseNml(serializedNml);
-  // Group 1 (and group 3 and 4 which are children of group 1) should not be exported as they do not contain a visible tree
-  const expectedTreeGroups = state.tracing.skeleton.treeGroups.filter(
-    (group) => group.groupId !== 1,
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+    false,
   );
+  const { treeGroups } = await parseNml(serializedNml);
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  // Group 1 (and group 3 and 4 which are children of group 1) should not be exported as they do not contain a visible tree
+  const expectedTreeGroups = skeletonTracing.treeGroups.filter((group) => group.groupId !== 1);
   t.deepEqual(expectedTreeGroups, treeGroups);
 });
 test("NML serializer should produce correct NMLs", (t) => {
   const serializedNml = serializeToNml(
     initialState,
     initialState.tracing,
-    initialState.tracing.skeleton,
-    buildInfo,
+    enforceSkeletonTracing(initialState.tracing),
+    BUILD_INFO,
+    false,
   );
   t.snapshot(serializedNml, {
     id: "nml",
+  });
+});
+test("NML serializer should produce correct NMLs with additional coordinates", (t) => {
+  let adaptedState = update(initialState, {
+    tracing: {
+      skeleton: {
+        additionalAxes: {
+          $set: [{ name: "t", bounds: [0, 100], index: 0 }],
+        },
+      },
+    },
+  });
+
+  const existingNodeMap = adaptedState.tracing.skeleton?.trees[1].nodes;
+  if (existingNodeMap == null) {
+    throw new Error("Unexpected null value.");
+  }
+  const existingNode = existingNodeMap.get(1);
+  const newNodeMap = existingNodeMap.set(1, {
+    ...existingNode,
+    additionalCoordinates: [{ name: "t", value: 123 }],
+  });
+  adaptedState = update(adaptedState, {
+    tracing: {
+      skeleton: {
+        trees: {
+          "1": {
+            nodes: {
+              $set: newNodeMap,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const serializedNml = serializeToNml(
+    adaptedState,
+    adaptedState.tracing,
+    enforceSkeletonTracing(adaptedState.tracing),
+    BUILD_INFO,
+    false,
+  );
+  t.snapshot(serializedNml, {
+    id: "nml-with-additional-coordinates",
   });
 });
 test("NML serializer should escape special characters and multilines", (t) => {
@@ -334,7 +468,13 @@ test("NML serializer should escape special characters and multilines", (t) => {
       },
     },
   });
-  const serializedNml = serializeToNml(state, state.tracing, state.tracing.skeleton, buildInfo);
+  const serializedNml = serializeToNml(
+    state,
+    state.tracing,
+    enforceSkeletonTracing(state.tracing),
+    BUILD_INFO,
+    false,
+  );
   // Explicitly check for the encoded characters
   t.true(
     serializedNml.indexOf(
@@ -346,9 +486,9 @@ test("NML serializer should escape special characters and multilines", (t) => {
   });
 });
 test("Serialized nml should be correctly named", async (t) => {
-  t.is(getNmlName(initialState), "Test Dataset__1__sboy__tionId.nml");
+  t.is(getNmlName(initialState), "Test Dataset__5b1fd1cb97000027049c67ec__sboy__tionId.nml");
 
-  const stateWithoutTask = _.omit(initialState, "task");
+  const stateWithoutTask = { ...initialState, task: null };
 
   t.is(getNmlName(stateWithoutTask), "Test Dataset__explorational__sboy__tionId.nml");
 });
@@ -540,28 +680,29 @@ test("NML Parser should throw errors for invalid nmls", async (t) => {
 });
 test("addTreesAndGroups reducer should assign new node and tree ids", (t) => {
   const action = SkeletonTracingActions.addTreesAndGroupsAction(
-    _.cloneDeep(initialState.tracing.skeleton.trees),
+    _.cloneDeep(initialSkeletonTracing.trees),
     [],
   );
   const newState = SkeletonTracingReducer(initialState, action);
   t.not(newState, initialState);
+  const newSkeletonTracing = enforceSkeletonTracing(newState.tracing);
   // This should be unchanged / sanity check
   t.is(newState.tracing.name, initialState.tracing.name);
-  t.is(newState.tracing.activeTreeId, initialState.tracing.activeTreeId);
+  t.is(newSkeletonTracing.activeTreeId, initialSkeletonTracing.activeTreeId);
   // New node and tree ids should have been assigned
-  t.is(_.size(newState.tracing.skeleton.trees), 4);
-  t.is(newState.tracing.skeleton.trees[3].treeId, 3);
-  t.is(newState.tracing.skeleton.trees[4].treeId, 4);
-  t.is(newState.tracing.skeleton.trees[3].nodes.size(), 4);
-  t.is(newState.tracing.skeleton.trees[3].nodes.get(8).id, 8);
-  t.is(newState.tracing.skeleton.trees[3].nodes.get(9).id, 9);
-  t.is(newState.tracing.skeleton.trees[4].nodes.size(), 3);
-  t.is(newState.tracing.skeleton.trees[4].nodes.get(12).id, 12);
+  t.is(_.size(newSkeletonTracing.trees), 4);
+  t.is(newSkeletonTracing.trees[3].treeId, 3);
+  t.is(newSkeletonTracing.trees[4].treeId, 4);
+  t.is(newSkeletonTracing.trees[3].nodes.size(), 4);
+  t.is(newSkeletonTracing.trees[3].nodes.get(8).id, 8);
+  t.is(newSkeletonTracing.trees[3].nodes.get(9).id, 9);
+  t.is(newSkeletonTracing.trees[4].nodes.size(), 3);
+  t.is(newSkeletonTracing.trees[4].nodes.get(12).id, 12);
 
-  const getSortedEdges = (edges) => _.sortBy(edges.asArray(), "source");
+  const getSortedEdges = (edges: EdgeCollection) => _.sortBy(edges.asArray(), "source");
 
   // And node ids in edges, branchpoints and comments should have been replaced
-  t.deepEqual(getSortedEdges(newState.tracing.skeleton.trees[3].edges), [
+  t.deepEqual(getSortedEdges(newSkeletonTracing.trees[3].edges), [
     {
       source: 8,
       target: 9,
@@ -575,7 +716,7 @@ test("addTreesAndGroups reducer should assign new node and tree ids", (t) => {
       target: 9,
     },
   ]);
-  t.deepEqual(newState.tracing.skeleton.trees[3].branchPoints, [
+  t.deepEqual(newSkeletonTracing.trees[3].branchPoints, [
     {
       nodeId: 9,
       timestamp: 0,
@@ -585,13 +726,13 @@ test("addTreesAndGroups reducer should assign new node and tree ids", (t) => {
       timestamp: 0,
     },
   ]);
-  t.deepEqual(newState.tracing.skeleton.trees[3].comments, [
+  t.deepEqual(newSkeletonTracing.trees[3].comments, [
     {
       content: "comment",
       nodeId: 8,
     },
   ]);
-  t.deepEqual(getSortedEdges(newState.tracing.skeleton.trees[4].edges), [
+  t.deepEqual(getSortedEdges(newSkeletonTracing.trees[4].edges), [
     {
       source: 12,
       target: 13,
@@ -602,36 +743,31 @@ test("addTreesAndGroups reducer should assign new node and tree ids", (t) => {
     },
   ]);
   // The cachedMaxNodeId should be correct afterwards as well
-  t.is(newState.tracing.skeleton.cachedMaxNodeId, 14);
+  t.is(newSkeletonTracing.cachedMaxNodeId, 14);
 });
 test("addTreesAndGroups reducer should assign new group ids", (t) => {
   const action = SkeletonTracingActions.addTreesAndGroupsAction(
-    _.cloneDeep(initialState.tracing.skeleton.trees),
-    _.cloneDeep(initialState.tracing.skeleton.treeGroups),
+    _.cloneDeep(initialSkeletonTracing.trees),
+    _.cloneDeep(initialSkeletonTracing.treeGroups),
   );
   const newState = SkeletonTracingReducer(initialState, action);
   t.not(newState, initialState);
+  const newSkeletonTracing = enforceSkeletonTracing(newState.tracing);
   // This should be unchanged / sanity check
   t.is(newState.tracing.name, initialState.tracing.name);
-  t.is(newState.tracing.activeTreeId, initialState.tracing.activeTreeId);
+  t.is(newSkeletonTracing.activeTreeId, initialSkeletonTracing.activeTreeId);
   // New node and tree ids should have been assigned
-  t.is(_.size(newState.tracing.skeleton.treeGroups), 4);
-  t.not(
-    newState.tracing.skeleton.treeGroups[2].groupId,
-    newState.tracing.skeleton.treeGroups[0].groupId,
-  );
-  t.not(
-    newState.tracing.skeleton.treeGroups[3].groupId,
-    newState.tracing.skeleton.treeGroups[1].groupId,
-  );
-  t.is(newState.tracing.skeleton.trees[3].groupId, 5);
-  t.is(newState.tracing.skeleton.trees[4].groupId, newState.tracing.skeleton.treeGroups[3].groupId);
+  t.is(_.size(newSkeletonTracing.treeGroups), 4);
+  t.not(newSkeletonTracing.treeGroups[2].groupId, newSkeletonTracing.treeGroups[0].groupId);
+  t.not(newSkeletonTracing.treeGroups[3].groupId, newSkeletonTracing.treeGroups[1].groupId);
+  t.is(newSkeletonTracing.trees[3].groupId, 5);
+  t.is(newSkeletonTracing.trees[4].groupId, newSkeletonTracing.treeGroups[3].groupId);
 });
 test("addTreesAndGroups reducer should replace nodeId references in comments when changing nodeIds", (t) => {
   const commentWithoutValidReferences =
     "Reference to non-existing id #42 and position reference #(4,5,6)";
 
-  const newTrees = _.cloneDeep(initialState.tracing.skeleton.trees);
+  const newTrees = _.cloneDeep(initialSkeletonTracing.trees);
 
   newTrees[1].comments.push({
     nodeId: 1,
@@ -643,14 +779,15 @@ test("addTreesAndGroups reducer should replace nodeId references in comments whe
   });
   const action = SkeletonTracingActions.addTreesAndGroupsAction(newTrees, []);
   const newState = SkeletonTracingReducer(initialState, action);
+  const newSkeletonTracing = enforceSkeletonTracing(newState.tracing);
   // Comments should have been rewritten if appropriate
-  t.is(_.size(newState.tracing.skeleton.trees), 4);
-  t.is(newState.tracing.skeleton.trees[3].comments.length, 3);
+  t.is(_.size(newSkeletonTracing.trees), 4);
+  t.is(newSkeletonTracing.trees[3].comments.length, 3);
   t.is(
-    newState.tracing.skeleton.trees[3].comments[1].content,
+    newSkeletonTracing.trees[3].comments[1].content,
     "Reference to existing id in another tree #12",
   );
-  t.is(newState.tracing.skeleton.trees[3].comments[2].content, commentWithoutValidReferences);
+  t.is(newSkeletonTracing.trees[3].comments[2].content, commentWithoutValidReferences);
 });
 test("NML Parser should split up disconnected trees", async (t) => {
   const disconnectedTreeState = update(initialState, {
@@ -674,18 +811,18 @@ test("NML Parser should split up disconnected trees", async (t) => {
   const nmlWithDisconnectedTree = serializeToNml(
     disconnectedTreeState,
     disconnectedTreeState.tracing,
-    disconnectedTreeState.tracing.skeleton,
-    buildInfo,
+    enforceSkeletonTracing(disconnectedTreeState.tracing),
+    BUILD_INFO,
+    false,
   );
-  const { trees: parsedTrees, treeGroups: parsedTreeGroups } = await parseNml(
-    nmlWithDisconnectedTree,
-  );
+  const { trees: parsedTrees, treeGroups: parsedTreeGroups } =
+    await parseNml(nmlWithDisconnectedTree);
   // Check that the tree was split up into its three components
   t.is(_.size(parsedTrees), 4);
   t.true(parsedTrees[3].nodes.has(0));
   t.true(parsedTrees[3].nodes.has(1));
-  t.not(parsedTrees[3].nodes.has(2));
-  t.not(parsedTrees[3].nodes.has(7));
+  t.false(parsedTrees[3].nodes.has(2));
+  t.false(parsedTrees[3].nodes.has(7));
   t.is(_.size(parsedTrees[3].branchPoints), 1);
   t.is(_.size(parsedTrees[3].comments), 1);
   t.true(parsedTrees[4].nodes.has(2));

@@ -1,13 +1,19 @@
+import "test/mocks/lz4";
 import Model from "oxalis/model";
 import constants from "oxalis/constants";
 import mockRequire from "mock-require";
 import test from "ava";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import DATASET from "../fixtures/dataset_server_object";
-mockRequire.stopAll();
+
+const { setModel } = require("oxalis/singletons");
+
+setModel(Model);
+
 mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });
+
 const { call } = mockRequire.reRequire("redux-saga/effects");
 const { triggerDataPrefetching, prefetchForArbitraryMode, prefetchForPlaneMode } =
   mockRequire.reRequire("oxalis/model/sagas/prefetch_saga");

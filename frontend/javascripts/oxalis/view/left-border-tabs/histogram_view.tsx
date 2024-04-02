@@ -1,15 +1,17 @@
 import type { Dispatch } from "redux";
-import { Slider, Row, Col, InputNumber, Tooltip } from "antd";
+import { Alert, Slider, Row, Col, InputNumber, Spin, Tooltip } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as _ from "lodash";
-import type { Vector2, Vector3 } from "oxalis/constants";
+import { PRIMARY_COLOR, Vector2, Vector3 } from "oxalis/constants";
 import type { APIHistogramData, HistogramDatum, ElementClass } from "types/api_flow_types";
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "oxalis/store";
+import { CloseOutlined } from "@ant-design/icons";
+
 type OwnProps = {
-  data: APIHistogramData;
+  data: APIHistogramData | null | undefined;
   layerName: string;
   intensityRangeMin: number;
   intensityRangeMax: number;
@@ -17,18 +19,20 @@ type OwnProps = {
   max?: number;
   isInEditMode: boolean;
   defaultMinMax: Vector2;
+  reloadHistogram: () => void;
 };
 type HistogramProps = OwnProps & {
   onChangeLayer: (
     layerName: string,
     propertyName: keyof DatasetLayerConfiguration,
-    value: [number, number] | number,
+    value: [number, number] | number | boolean,
   ) => void;
 };
 type HistogramState = {
   currentMin: number;
   currentMax: number;
 };
+
 const uint24Colors = [
   [255, 65, 54],
   [46, 204, 64],
@@ -36,17 +40,25 @@ const uint24Colors = [
 ];
 const canvasHeight = 100;
 const canvasWidth = 318;
+
 export function isHistogramSupported(elementClass: ElementClass): boolean {
   return ["int8", "uint8", "int16", "uint16", "float", "uint24"].includes(elementClass);
 }
 
 function getMinAndMax(props: HistogramProps) {
-  const { min, max, data } = props;
+  const { min, max, data, defaultMinMax } = props;
 
   if (min != null && max != null) {
     return {
       min,
       max,
+    };
+  }
+
+  if (data == null) {
+    return {
+      min: defaultMinMax[0],
+      max: defaultMinMax[1],
     };
   }
 
@@ -75,22 +87,6 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     };
   }
 
-  componentDidMount() {
-    if (this.canvasRef == null) {
-      return;
-    }
-
-    const ctx = this.canvasRef.getContext("2d");
-    if (ctx == null) {
-      return;
-    }
-    ctx.translate(0, canvasHeight);
-    ctx.scale(1, -1);
-    ctx.lineWidth = 1;
-    ctx.lineJoin = "round";
-    this.updateCanvas();
-  }
-
   componentDidUpdate(prevProps: HistogramProps) {
     if (
       prevProps.min !== this.props.min ||
@@ -107,6 +103,24 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     this.updateCanvas();
   }
 
+  onCanvasRefChange = (ref: HTMLCanvasElement | null | undefined) => {
+    this.canvasRef = ref;
+
+    if (this.canvasRef == null) {
+      return;
+    }
+
+    const ctx = this.canvasRef.getContext("2d");
+    if (ctx == null) {
+      return;
+    }
+    ctx.translate(0, canvasHeight);
+    ctx.scale(1, -1);
+    ctx.lineWidth = 1;
+    ctx.lineJoin = "round";
+    this.updateCanvas();
+  };
+
   updateCanvas() {
     if (this.canvasRef == null) {
       return;
@@ -119,6 +133,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
     const { min, max } = getMinAndMax(this.props);
     const { data } = this.props;
+
+    if (data == null) return;
+
     // Compute the overall maximum count, so the RGB curves are scaled correctly relative to each other.
     const maxValue = Math.max(
       ...data.map(({ elementCounts, min: histogramMin, max: histogramMax }) => {
@@ -135,7 +152,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     );
 
     for (const [i, histogram] of data.entries()) {
-      const color = this.props.data.length > 1 ? uint24Colors[i] : uint24Colors[2];
+      const color = data.length > 1 ? uint24Colors[i] : PRIMARY_COLOR;
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[]' is not assignable to p... Remove this comment to see the full error message
       this.drawHistogram(ctx, histogram, maxValue, color, min, max);
     }
@@ -188,8 +205,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.fill(activeRegion);
   };
 
-  onThresholdChange = ([firstVal, secVal]: [number, number]) => {
+  onThresholdChange = (values: number[]) => {
     const { layerName } = this.props;
+    const [firstVal, secVal] = values;
 
     if (firstVal < secVal) {
       this.props.onChangeLayer(layerName, "intensityRange", [firstVal, secVal]);
@@ -198,12 +216,15 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     }
   };
 
-  tipFormatter = (value: number) =>
-    value >= 100000 || (value < 0.001 && value > -0.001 && value !== 0)
+  tipFormatter = (value: number | undefined) => {
+    if (value == null) {
+      return "invalid";
+    }
+    return value >= 100000 || (value < 0.001 && value > -0.001 && value !== 0)
       ? value.toExponential()
       : roundTo(value, this.getPrecision()).toString();
+  };
 
-  // eslint-disable-next-line react/sort-comp
   updateMinimumDebounced = _.debounce(
     (value, layerName) => this.props.onChangeLayer(layerName, "min", value),
     500,
@@ -215,8 +236,27 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
   );
 
   render() {
-    const { intensityRangeMin, intensityRangeMax, isInEditMode, defaultMinMax, layerName } =
+    const { intensityRangeMin, intensityRangeMax, isInEditMode, defaultMinMax, layerName, data } =
       this.props;
+
+    if (data === null) {
+      return (
+        <Alert
+          type="warning"
+          style={{ margin: 10 }}
+          message={
+            <>
+              Histogram couldn&apos;t be fetched.{" "}
+              <a href="#" onClick={this.props.reloadHistogram}>
+                Retry
+              </a>
+            </>
+          }
+          showIcon
+        />
+      );
+    }
+
     const { currentMin, currentMax } = this.state;
     const { min: minRange, max: maxRange } = getMinAndMax(this.props);
 
@@ -227,14 +267,8 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
       width: "100%",
     };
     return (
-      <React.Fragment>
-        <canvas
-          ref={(ref) => {
-            this.canvasRef = ref;
-          }}
-          width={canvasWidth}
-          height={canvasHeight}
-        />
+      <Spin spinning={data === undefined}>
+        <canvas ref={this.onCanvasRefChange} width={canvasWidth} height={canvasHeight} />
         <Slider
           range
           value={[intensityRangeMin, intensityRangeMax]}
@@ -242,10 +276,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           max={maxRange}
           defaultValue={[minRange, maxRange]}
           onChange={this.onThresholdChange}
-          onAfterChange={this.onThresholdChange}
+          onChangeComplete={this.onThresholdChange}
           step={(maxRange - minRange) / 255}
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '(value: number) => string' is not assignable... Remove this comment to see the full error message
-          tipFormatter={this.tipFormatter}
+          tooltip={{ formatter: this.tipFormatter }}
           style={{
             width: canvasWidth,
             margin: 0,
@@ -254,14 +287,12 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
         />
         {isInEditMode ? (
           <Row
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element[]; type: string; align: ... Remove this comment to see the full error message
-            type="flex"
             align="middle"
             style={{
               marginTop: 6,
             }}
           >
-            <Col span={4}>
+            <Col span={3}>
               <label className="setting-label">Min:</label>
             </Col>
             <Col span={8}>
@@ -272,6 +303,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   max={maxRange}
                   defaultValue={currentMin}
                   value={currentMin}
+                  variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
                     value = parseFloat(value);
@@ -287,7 +319,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                 />
               </Tooltip>
             </Col>
-            <Col span={4}>
+            <Col span={3}>
               <label
                 className="setting-label"
                 style={{
@@ -306,6 +338,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   max={defaultMinMax[1]}
                   defaultValue={currentMax}
                   value={currentMax}
+                  variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
                     value = parseFloat(value);
@@ -321,9 +354,18 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                 />
               </Tooltip>
             </Col>
+            <Tooltip title="Stop editing histogram range">
+              <Col
+                span={2}
+                style={{ textAlign: "right", cursor: "pointer" }}
+                onClick={() => this.props.onChangeLayer(layerName, "isInEditMode", !isInEditMode)}
+              >
+                <CloseOutlined />
+              </Col>
+            </Tooltip>
           </Row>
         ) : null}
-      </React.Fragment>
+      </Spin>
     );
   }
 }

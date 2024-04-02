@@ -6,7 +6,7 @@ import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
 
-case class NgffCoordinateTransformation(`type`: String = "scale", scale: List[Double])
+case class NgffCoordinateTransformation(`type`: String = "scale", scale: Option[List[Double]])
 
 object NgffCoordinateTransformation {
   implicit val jsonFormat: OFormat[NgffCoordinateTransformation] = Json.format[NgffCoordinateTransformation]
@@ -84,19 +84,45 @@ object NgffMultiscalesItem {
   implicit val jsonFormat: OFormat[NgffMultiscalesItem] = Json.format[NgffMultiscalesItem]
 }
 
-case class NgffMetadata(multiscales: List[NgffMultiscalesItem])
+case class NgffMetadata(multiscales: List[NgffMultiscalesItem], omero: Option[NgffOmeroMetadata])
 
 object NgffMetadata {
   def fromNameScaleAndMags(dataLayerName: String, dataSourceScale: Vec3Double, mags: List[Vec3Int]): NgffMetadata = {
     val datasets = mags.map(
       mag =>
-        NgffDataset(
-          path = mag.toMagLiteral(allowScalar = true),
-          List(NgffCoordinateTransformation(scale = List[Double](1.0) ++ (dataSourceScale * Vec3Double(mag)).toList))))
-    NgffMetadata(multiscales = List(NgffMultiscalesItem(name = Some(dataLayerName), datasets = datasets)))
+        NgffDataset(path = mag.toMagLiteral(allowScalar = true),
+                    List(NgffCoordinateTransformation(
+                      scale = Some(List[Double](1.0) ++ (dataSourceScale * Vec3Double(mag)).toList)))))
+    NgffMetadata(multiscales = List(NgffMultiscalesItem(name = Some(dataLayerName), datasets = datasets)), None)
   }
 
   implicit val jsonFormat: OFormat[NgffMetadata] = Json.format[NgffMetadata]
 
   val FILENAME_DOT_ZATTRS = ".zattrs"
+}
+
+case class NgffLabelsGroup(labels: List[String])
+
+object NgffLabelsGroup {
+  implicit val jsonFormat: OFormat[NgffLabelsGroup] = Json.format[NgffLabelsGroup]
+  val LABEL_PATH = "labels/.zattrs"
+}
+
+case class NgffOmeroMetadata(channels: List[NgffChannelAttributes])
+object NgffOmeroMetadata {
+  implicit val jsonFormat: OFormat[NgffOmeroMetadata] = Json.format[NgffOmeroMetadata]
+}
+
+case class NgffChannelWindow(min: Double, max: Double, start: Double, end: Double)
+object NgffChannelWindow {
+  implicit val jsonFormat: OFormat[NgffChannelWindow] = Json.format[NgffChannelWindow]
+}
+
+case class NgffChannelAttributes(color: Option[String],
+                                 label: Option[String],
+                                 window: Option[NgffChannelWindow],
+                                 inverted: Option[Boolean],
+                                 active: Option[Boolean])
+object NgffChannelAttributes {
+  implicit val jsonFormat: OFormat[NgffChannelAttributes] = Json.format[NgffChannelAttributes]
 }

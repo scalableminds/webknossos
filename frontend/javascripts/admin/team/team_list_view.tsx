@@ -1,31 +1,105 @@
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
-import { Table, Spin, Button, Input, Modal, Alert } from "antd";
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import { Table, Spin, Button, Input, Modal, Alert, Tag } from "antd";
+import { DeleteOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import type { APITeam } from "types/api_flow_types";
-import { getEditableTeams, deleteTeam } from "admin/admin_rest_api";
+import type { APITeam, APITeamMembership, APIUser } from "types/api_flow_types";
+import { getEditableTeams, deleteTeam, getEditableUsers } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import LinkButton from "components/link_button";
 import CreateTeamModal from "admin/team/create_team_modal_view";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { stringToColor } from "libs/format_utils";
+import EditTeamModalView from "./edit_team_modal_view";
+import { EmptyObject } from "types/globals";
 const { Column } = Table;
 const { Search } = Input;
 const typeHint: APITeam[] = [];
-type Props = {
-  history: RouteComponentProps["history"];
-};
+
+type Props = EmptyObject;
 type State = {
   isLoading: boolean;
-  teams: Array<APITeam>;
+  teams: APITeam[];
+  users: APIUser[];
   searchQuery: string;
   isTeamCreationModalVisible: boolean;
+  isTeamEditModalVisible: boolean;
+  selectedTeam: APITeam | null;
 };
+
+export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
+  //used by user list page
+  const tags = [
+    ...(user.isOrganizationOwner ? [["Organization Owner", "cyan"]] : []),
+    ...(user.isAdmin
+      ? [["Admin - Access to all Teams", "red"]]
+      : [
+          ...(user.isDatasetManager ? [["Dataset Manager - Edit all Datasets", "geekblue"]] : []),
+          ...user.teams.map((team) => {
+            const roleName = team.isTeamManager ? "Team Manager" : "Member";
+            return [`${team.name}: ${roleName}`, stringToColor(roleName)];
+          }),
+        ]),
+  ];
+
+  return tags.map(([text, color]) => (
+    <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
+      {text}
+    </Tag>
+  ));
+}
+
+export function filterTeamMembersOf(team: APITeam, user: APIUser): boolean {
+  return (
+    user.teams.some((userTeam: APITeamMembership) => userTeam.id === team.id) ||
+    (user.isAdmin && user.isActive)
+  );
+}
+
+export function renderUsersForTeam(
+  team: APITeam,
+  allUsers: APIUser[] | null,
+  renderAdditionalContent = (_teamMember: APIUser, _team: APITeam) => {},
+) {
+  if (allUsers === null) return;
+  const teamMembers = allUsers.filter((user) => filterTeamMembersOf(team, user));
+  if (teamMembers.length === 0) return messages["team.no_members"];
+
+  return (
+    <ul>
+      {teamMembers.map((teamMember) => (
+        <li>
+          {teamMember.firstName} {teamMember.lastName} ({teamMember.email}){" "}
+          {renderTeamRolesForUser(teamMember, team)}
+          {renderAdditionalContent(teamMember, team)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
+  // used by teams list page
+  // does not include dataset managers and team names
+  const tags = user.isAdmin
+    ? [["Admin - Access to all Teams", "red"]]
+    : user.teams
+        .filter((team) => team.id === highlightedTeam.id)
+        .map((team) => {
+          const roleName = team.isTeamManager ? "Team Manager" : "Member";
+          return [`${roleName}`, stringToColor(roleName)];
+        });
+
+  return tags.map(([text, color]) => (
+    <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }}>
+      {text}
+    </Tag>
+  ));
+}
+
 const persistence = new Persistence<Pick<State, "searchQuery">>(
   {
     searchQuery: PropTypes.string,
@@ -37,31 +111,34 @@ class TeamListView extends React.PureComponent<Props, State> {
   state: State = {
     isLoading: true,
     teams: [],
+    users: [],
     searchQuery: "",
     isTeamCreationModalVisible: false,
+    isTeamEditModalVisible: false,
+    selectedTeam: null,
   };
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
     this.fetchData();
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   async fetchData(): Promise<void> {
-    const teams = await getEditableTeams();
+    const [teams, users] = await Promise.all([getEditableTeams(), getEditableUsers()]);
     this.setState({
       isLoading: false,
       teams,
+      users,
     });
   }
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
@@ -131,7 +208,7 @@ class TeamListView extends React.PureComponent<Props, State> {
         >
           <div className="pull-right">
             <Button
-              icon={<PlusOutlined />}
+              icon={<PlusOutlined className="icon-margin-right" />}
               style={marginRight}
               type="primary"
               onClick={() =>
@@ -146,7 +223,6 @@ class TeamListView extends React.PureComponent<Props, State> {
               style={{
                 width: 200,
               }}
-              onPressEnter={this.handleSearch}
               onChange={this.handleSearch}
               value={this.state.searchQuery}
             />
@@ -171,6 +247,10 @@ class TeamListView extends React.PureComponent<Props, State> {
               pagination={{
                 defaultPageSize: 50,
               }}
+              expandable={{
+                expandedRowRender: (team) => renderUsersForTeam(team, this.state.users),
+                rowExpandable: (_team) => true,
+              }}
               style={{
                 marginTop: 30,
                 marginBottom: 30,
@@ -183,13 +263,30 @@ class TeamListView extends React.PureComponent<Props, State> {
                 sorter={Utils.localeCompareBy(typeHint, (team) => team.name)}
               />
               <Column
-                title="Action"
+                title="Actions"
                 key="actions"
-                render={(__, script: APITeam) => (
-                  <LinkButton onClick={_.partial(this.deleteTeam, script)}>
-                    <DeleteOutlined />
-                    Delete
-                  </LinkButton>
+                render={(__, team: APITeam) => (
+                  <span>
+                    <div>
+                      <LinkButton
+                        onClick={() =>
+                          this.setState({
+                            isTeamEditModalVisible: true,
+                            selectedTeam: team,
+                          })
+                        }
+                      >
+                        <UserOutlined className="icon-margin-right" />
+                        Add / Remove Users
+                      </LinkButton>
+                    </div>
+                    <div>
+                      <LinkButton onClick={_.partial(this.deleteTeam, team)}>
+                        <DeleteOutlined className="icon-margin-right" />
+                        Delete
+                      </LinkButton>
+                    </div>
+                  </span>
                 )}
               />
             </Table>
@@ -197,7 +294,7 @@ class TeamListView extends React.PureComponent<Props, State> {
           <CreateTeamModal
             // @ts-expect-error ts-migrate(2322) FIXME: Type '{ teams: never[]; isVisible: boolean; onOk: ... Remove this comment to see the full error message
             teams={this.state.teams}
-            isVisible={this.state.isTeamCreationModalVisible}
+            isOpen={this.state.isTeamCreationModalVisible}
             onOk={this.createTeam}
             onCancel={() =>
               this.setState({
@@ -205,10 +302,20 @@ class TeamListView extends React.PureComponent<Props, State> {
               })
             }
           />
+          <EditTeamModalView
+            isOpen={this.state.isTeamEditModalVisible}
+            onCancel={() =>
+              this.setState({
+                isTeamEditModalVisible: false,
+                selectedTeam: null,
+              })
+            }
+            team={this.state.selectedTeam}
+          />
         </div>
       </div>
     );
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(TeamListView);
+export default TeamListView;

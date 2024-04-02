@@ -1,15 +1,4 @@
-import {
-  Button,
-  Card,
-  Checkbox,
-  Form,
-  Input,
-  Radio,
-  Select,
-  InputNumber,
-  Tooltip,
-  Spin,
-} from "antd";
+import { Button, Card, Checkbox, Form, Input, Radio, Select, InputNumber, Tooltip } from "antd";
 import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";
 import { InfoCircleOutlined } from "@ant-design/icons";
@@ -44,7 +33,7 @@ type State = {
 };
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'rule' implicitly has an 'any' type.
-function isValidMagnification(rule, value) {
+function isValidMagnification(_rule, value) {
   if (value === "" || value == null || (Math.log(value) / Math.log(2)) % 1 === 0) {
     return Promise.resolve();
   } else {
@@ -89,8 +78,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
   async applyDefaults() {
     const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
-    const hasRecommendedConfiguration =
-      taskType != null && taskType.recommendedConfiguration != null;
+    const hasRecommendedConfiguration = taskType?.recommendedConfiguration != null;
     const defaultValues = {
       settings: {
         somaClickingAllowed: true,
@@ -141,7 +129,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
     form.setFieldsValue(formValues);
 
-    if (taskType != null && taskType.recommendedConfiguration != null) {
+    if (taskType?.recommendedConfiguration != null) {
       // Only "activate" the recommended configuration checkbox if the existing task type contained one
       this.setState({
         useRecommendedConfiguration: true,
@@ -256,7 +244,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                 style={{
                   width: "100%",
                 }}
-                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                loading={this.state.isFetchingData}
                 options={this.state.teams.map((team: APITeam) => ({
                   value: team.id,
                   label: `${team.name}`,

@@ -1,9 +1,243 @@
 # Migration Guide (Released)
-All migrations of webKnossos are documented in this file.
+
+All migrations of WEBKNOSSOS are documented in this file.
 See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an official release.
 
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
+
+## [24.04.0](https://github.com/scalableminds/webknossos/releases/tag/24.04.0) - 2024-03-25
+[Commits](https://github.com/scalableminds/webknossos/compare/24.02.3...24.04.0)
+- WKW datasets can now only be read if they have a `header.wkw` file in their mag directories. If specific datasets can no longer be loaded, consider adding such a file. Backend logging should show according error message. [#7528](https://github.com/scalableminds/webknossos/pull/7528)
+- Content Security Policy (CSP) settings are now relaxed by default. To keep stricter CSP rules, add them to your specific `application.conf`. [#7589](https://github.com/scalableminds/webknossos/pull/7589)
+- The way the segment index is stored for nd-annotations has been changed ([#7411](https://github.com/scalableminds/webknossos/pull/7411)). Annotations with old segment indices should be
+archived if they do not contain relevant data. The following SQL query can be used:
+```sql
+UPDATE webknossos.annotations_ SET state = 'Finished' WHERE _id IN  (SELECT DISTINCT a._id AS nd_annotations_id FROM webknossos.annotations_ AS a INNER JOIN webknossos.datasets AS d ON a._dataset = d._id INNER JOIN webknossos.dataset_layer_additionalaxes AS dla ON d._id = dla._dataset)
+```
+- WEBKNOSSOS now uses Java 21 (up from Java 11). [#7599](https://github.com/scalableminds/webknossos/pull/7599)
+- NodeJS version 18+ is required for snapshot tests with ShadowDOM elements from Antd v5. [#7522](https://github.com/scalableminds/webknossos/pull/7522)
+- Email verification is disabled by default. To enable it, set `webKnossos.user.emailVerification.activated` to `true` in your `application.conf`. [#7620](https://github.com/scalableminds/webknossos/pull/7620) [#7621](https://github.com/scalableminds/webknossos/pull/7621)
+- New dependency draco/libdraco-dev needs to be installed when deploying without docker and for local development.
+- Config block `braintracing` is now unused and can be removed. [#7693](https://github.com/scalableminds/webknossos/pull/7693)
+
+### Postgres Evolutions:
+
+- [113-analytics-events.sql](conf/evolutions/113-analytics-events.sql)
+
+
+## [24.02.3](https://github.com/scalableminds/webknossos/releases/tag/24.02.3) - 2024-02-22
+[Commits](https://github.com/scalableminds/webknossos/compare/24.02.2...24.02.3)
+
+## [24.02.2](https://github.com/scalableminds/webknossos/releases/tag/24.02.2) - 2024-02-15
+[Commits](https://github.com/scalableminds/webknossos/compare/24.02.1...24.02.2)
+
+## [24.02.1](https://github.com/scalableminds/webknossos/releases/tag/24.02.2) - 2024-02-15
+[Commits](https://github.com/scalableminds/webknossos/compare/24.02.0...24.02.1)
+
+## [24.02.0](https://github.com/scalableminds/webknossos/releases/tag/24.02.0) - 2024-01-26
+[Commits](https://github.com/scalableminds/webknossos/compare/23.12.0...24.02.0)
+- The config `setting play.http.secret.key` (secret random string) now requires a minimum length of 32 bytes.
+- If your setup contains webknossos-workers, postgres evolution 110 introduces the column `supportedJobCommands`. This needs to be filled in manually for your workers. Currently available job commands are `compute_mesh_file`, `compute_segment_index_file`, `convert_to_wkw`, `export_tiff`, `find_largest_segment_id`, `infer_nuclei`, `infer_neurons`, `materialize_volume_annotation`, `render_animation`. [#7463](https://github.com/scalableminds/webknossos/pull/7463)
+- If your setup contains webknossos-workers,  postgres evolution 110 introduces the columns `maxParallelHighPriorityJobs` and `maxParallelLowPriorityJobs`. Make sure to set those values to match what you want for your deployment. [#7463](https://github.com/scalableminds/webknossos/pull/7463)
+- If your setup contains webknossos-workers, you may want to add the new available worker job `compute_segment_index_file` to the `supportedJobCommands` column of one or more of your workers. [#7493](https://github.com/scalableminds/webknossos/pull/7493)
+- The WEBKNOSSOS api version has changed to 6. The `isValidNewName` route for datasets now returns 200 regardless of whether the name is valid or not. The body contains a JSON object with the key "isValid". [#7550](https://github.com/scalableminds/webknossos/pull/7550)
+- If your setup contains ND datasets, run the python3 script at `tools/migrate-axis-bounds/migration.py` on your datastores to update the datasource-properties.jsons of the ND datasets.
+- With the upgrade to Play 3 and the migration to pekko, configuration keys using akka need to be changed. For the default configuration this results in the following changes:
+  - akka.requestTimeout → pekko.requestTimeout
+  - akka.actor.default-dispatcher → pekko.actor.default-dispatcher
+
+### Postgres Evolutions:
+
+- [110-worker-config.sql](conf/evolutions/110-worker-config.sql)
+- [111-stats-per-annotation-layer.sql](conf/evolutions/111-stats-per-annotation-layer.sql)
+- [112-reuse-deleted.sql](conf/evolutions/112-reuse-deleted.sql)
+
+
+## [23.12.0](https://github.com/scalableminds/webknossos/releases/tag/23.12.0) - 2023-11-27
+[Commits](https://github.com/scalableminds/webknossos/compare/23.11.0...23.12.0)
+
+- If your deployment starts FossilDB separately, make sure to upgrade to version 0.1.27 (build master__484). Note that with the upgraded version, the database contents are automatically migrated. A downgrade to an older FossilDB version is not possible afterwards (creating an additional backup of the FossilDB data directory is advised)
+- WEBKNOSSOS now sets the Content-Security-Policy (CSP) HTTP response header restricting which dynamic resources are allowed to load. Please update the `application.conf` - `play.filters.csp.directives` key if you'd like to change the default CSP. The default CSP is suited for WEBKNOSSOS development. For production follow the comments next to the respective directives in the `application.conf`, i.e. remove 'unsafe-inline' from the script-src, remove ws://localhost:9002 from the connect-src, add the URLs of all external datastores to the connect-src, and add the host domain to the connect-src. [#7367](https://github.com/scalableminds/webknossos/pull/7367) and [#7450](https://github.com/scalableminds/webknossos/pull/7450)
+
+## [23.11.0](https://github.com/scalableminds/webknossos/releases/tag/23.11.0) - 2023-10-24
+[Commits](https://github.com/scalableminds/webknossos/compare/23.10.2...23.11.0)
+
+- The `datastore/isosurface` configuration key was renamed to `datastore/adHocMesh.
+- In order to enable segment statistics for existing volume annotations (without fallback segmentation), a user with superuser rights can call a migration route during a downtime. This will transform all volume annotation layers that qualify (cross organization). This will take some time, results will be logged by WEBKNOSSOS to stdout. The trigger route is `curl -X PATCH "<domain>/api/annotations/addSegmentIndicesToAll?parallelBatchCount=16" -H 'X-Auth-Token: <token>'` with the `parallelBatchCount` parameter controlling the parallelity of the migration (e.g. number of cpu cores of the tracingstore server). This action is designed to be idempotent.
+
+## [23.10.2](https://github.com/scalableminds/webknossos/releases/tag/23.10.2) - 2023-09-26
+[Commits](https://github.com/scalableminds/webknossos/compare/23.10.1...23.10.2)
+
+## [23.10.1](https://github.com/scalableminds/webknossos/releases/tag/23.10.1) - 2023-09-22
+[Commits](https://github.com/scalableminds/webknossos/compare/23.10.0...23.10.1)
+
+## [23.10.0](https://github.com/scalableminds/webknossos/releases/tag/23.10.0) - 2023-09-21
+[Commits](https://github.com/scalableminds/webknossos/compare/23.09.0...23.10.0)
+
+### Postgres Evolutions:
+- [108-additional-coordinates](conf/evolutions/108-additional-coordinates.sql)
+- [109-scheduled-maintenances.sql](conf/evolutions/109-scheduled-maintenances.sql)
+
+
+## [23.09.0](https://github.com/scalableminds/webknossos/releases/tag/23.09.0) - 2023-08-29
+[Commits](https://github.com/scalableminds/webknossos/compare/23.08.0...23.09.0)
+
+- Postgres Evolution 105 (see below) adds email verification and sets the emails of all existing users as verified.
+To set all email addresses as unverified, execute this query:
+```sql
+UPDATE webknossos.multiUsers SET isEmailVerified = false;
+```
+
+- When interacting with webknossos via the python library, make sure you update to the latest version, as the task and project api have changed. Compare [webknossos-libs#930](https://github.com/scalableminds/webknossos-libs/pull/930). [#7220](https://github.com/scalableminds/webknossos/pull/7220)
+
+ - If you have OIDC authentication set up, you can now remove the config keys `singleSignOn.openIdConnect.publicKey` and `singleSignOn.openIdConnect.publicKeyAlgorithm`, as the server’s public key is now automatically fetched. [#7267](https://github.com/scalableminds/webknossos/pull/7267)
+
+### Postgres Evolutions:
+- [105-verify-email.sql](conf/evolutions/105-verify-email.sql)
+- [106-folder-no-slashes.sql](conf/evolutions/106-folder-no-slashes.sql)
+- [107-task-terminology.sql](conf/evolutions/107-task-terminology.sql)
+
+
+## [23.08.0](https://github.com/scalableminds/webknossos/releases/tag/23.08.0) - 2023-07-24
+[Commits](https://github.com/scalableminds/webknossos/compare/23.07.0...23.08.0)
+
+### Postgres Evolutions:
+- [103-thin-plane-splines.sql](conf/evolutions/103-thin-plane-splines.sql)
+- [104-thumbnails.sql](conf/evolutions/104-thumbnails.sql)
+
+
+## [23.07.0](https://github.com/scalableminds/webknossos/releases/tag/23.07.0) - 2023-06-20
+[Commits](https://github.com/scalableminds/webknossos/compare/23.06.0...23.07.0)
+- FossilDB needs to be opened with new additional column family volumeSegmentIndex.
+
+### Postgres Evolutions:
+- [102-no-more-wkconnect.sql](conf/evolutions/102-no-more-wkconnect.sql)
+
+## [23.06.0](https://github.com/scalableminds/webknossos/releases/tag/23.06.0) - 2023-05-30
+[Commits](https://github.com/scalableminds/webknossos/compare/23.05.2...23.06.0)
+- FossilDB needs to be opened with new additional column families editableMappingsInfo, editableMappingsAgglomerateToGraph, editableMappingsSegmentToAgglomerate.
+- For instances with existing editable mapping (a.k.a supervoxel proofreading) annotations: To keep those annotations alive, a python migration has to be run with access to your tracingstore’s FossilDB. It is recommended to do this during a webknossos downtime to avoid data loss. It needs python 3.8+ and the pip packages installable by `pip install grpcio-tools grpcio-health-checking`. Run it with `python tools/migrate-editable-mappings/migrate-editable-mappings.py -v -w -o localhost:7155`. Omit -o for a faster migration but no access to older versions of the editable mappings. The migration is idempotent.
+- The datastore now needs `brotli`. For Debian-based systems, this can be installed with `apt-get install libbrotli1`.
+- New FossilDB version 0.1.23 (`master__448` on Dockerhub) is required, compare [FossilDB PR](https://github.com/scalableminds/fossildb/pull/38).
+
+### Postgres Evolutions:
+None.
+
+## [23.05.2](https://github.com/scalableminds/webknossos/releases/tag/23.05.2) - 2023-05-08
+[Commits](https://github.com/scalableminds/webknossos/compare/23.05.1...23.05.2)
+
+### Postgres Evolutions:
+None.
+
+## [23.05.1](https://github.com/scalableminds/webknossos/releases/tag/23.05.1) - 2023-05-02
+[Commits](https://github.com/scalableminds/webknossos/compare/23.05.0...23.05.1)
+
+### Postgres Evolutions:
+None.
+
+## [23.05.0](https://github.com/scalableminds/webknossos/releases/tag/23.05.0) - 2023-04-25
+[Commits](https://github.com/scalableminds/webknossos/compare/23.04.2...23.05.0)
+- The config key features.isDemoInstance was renamed to features.isWkorgInstance (only needs to be adapted for the main wkorg instance). [#6941](https://github.com/scalableminds/webknossos/pull/6941/files)
+
+### Postgres Evolutions:
+None.
+
+## [23.04.2](https://github.com/scalableminds/webknossos/releases/tag/23.04.2) - 2023-04-14
+[Commits](https://github.com/scalableminds/webknossos/compare/23.04.1...23.04.2)
+
+### Postgres Evolutions:
+None.
+
+## [23.04.1](https://github.com/scalableminds/webknossos/releases/tag/23.04.1) - 2023-04-06
+[Commits](https://github.com/scalableminds/webknossos/compare/23.04.0...23.04.1)
+
+### Postgres Evolutions:
+None.
+
+## [23.04.0](https://github.com/scalableminds/webknossos/releases/tag/23.04.0) - 2023-03-27
+[Commits](https://github.com/scalableminds/webknossos/compare/23.03.1...23.04.0)
+
+### Postgres Evolutions:
+- [101-coordinate-transformations.sql](conf/evolutions/101-coordinate-transformations.sql)
+
+## [23.03.1](https://github.com/scalableminds/webknossos/releases/tag/23.03.1) - 2023-03-14
+[Commits](https://github.com/scalableminds/webknossos/compare/23.03.0...23.03.1)
+- WEBKNOSSOS now requires at least Java 11 (up from Java 8). [#6869](https://github.com/scalableminds/webknossos/pull/6869)
+
+### Postgres Evolutions:
+None.
+
+## [23.03.0](https://github.com/scalableminds/webknossos/releases/tag/23.03.0) - 2023-02-28
+[Commits](https://github.com/scalableminds/webknossos/compare/23.02.1...23.03.0)
+
+- WEBKNOSSOS now requires Node.js not only for development and building, but also for execution. The prebuilt Docker images already contain this dependency. If you're using these, nothing needs to be changed. [#6803](https://github.com/scalableminds/webknossos/pull/6803)
+- Requires Voxelytics worker version 23.02.xx for long-running jobs. [#6838](https://github.com/scalableminds/webknossos/pull/6838)
+
+### Postgres Evolutions:
+
+- [099-rename-credential-types.sql](conf/evolutions/099-rename-credential-types.sql)
+- [100-annotation-mutexes.sql](conf/evolutions/100-annotation-mutexes.sql)
+
+
+## [23.02.1](https://github.com/scalableminds/webknossos/releases/tag/23.02.1) - 2023-02-07
+[Commits](https://github.com/scalableminds/webknossos/compare/23.02.0...23.02.1)
+
+### Postgres Evolutions:
+None.
+
+## [23.02.0](https://github.com/scalableminds/webknossos/releases/tag/23.02.0) - 2023-02-01
+[Commits](https://github.com/scalableminds/webknossos/compare/23.01.0...23.02.0)
+
+- WEBKNOSSOS requires Loki instead of Elasticsearch for Voxelytics logging now. Please update the `application.conf`: Remove `voxelytics.elasticsearch.index`, rename `voxelytics.elasticsearch` to `voxelytics.loki`, and update `voxelytics.loki.uri`. [#6770](https://github.com/scalableminds/webknossos/pull/6770)
+
+### Postgres Evolutions:
+
+- [094-pricing-plans.sql](conf/evolutions/094-pricing-plans.sql)
+- [095-constraint-naming.sql](conf/evolutions/095-constraint-naming.sql)
+- [096-storage.sql](conf/evolutions/096-storage.sql)
+- [097-credentials.sql](conf/evolutions/097-credentials.sql)
+- [098-voxelytics-states.sql](conf/evolutions/098-voxelytics-states.sql)
+
+
+## [23.01.0](https://github.com/scalableminds/webknossos/releases/tag/23.01.0) - 2023-01-03
+[Commits](https://github.com/scalableminds/webknossos/compare/22.12.0...23.01.0)
+
+- Bulk task creation now needs the taskTypeId, the task type summary will no longer be accepted. If you have scripts generating CSVs for bulk task creation, they should not output task type summaries. [#6640](https://github.com/scalableminds/webknossos/pull/6640)
+
+### Postgres Evolutions:
+
+- [091-folders.sql](conf/evolutions/091-folders.sql)
+- [092-oidc.sql](conf/evolutions/092-oidc.sql)
+- [093-terms-of-service.sql](conf/evolutions/093-terms-of-service.sql)
+
+
+## [22.12.0](https://github.com/scalableminds/webknossos/releases/tag/22.12.0) - 2022-11-24
+[Commits](https://github.com/scalableminds/webknossos/compare/22.11.2...22.12.0)
+
+### Postgres Evolutions:
+None.
+
+
+## [22.11.2](https://github.com/scalableminds/webknossos/releases/tag/22.11.2) - 2022-11-10
+[Commits](https://github.com/scalableminds/webknossos/compare/22.11.1...22.11.2)
+
+### Postgres Evolutions:
+None.
+
+
+## [22.11.1](https://github.com/scalableminds/webknossos/releases/tag/22.11.1) - 2022-10-27
+[Commits](https://github.com/scalableminds/webknossos/compare/22.11.0...22.11.1)
+
+### Postgres Evolutions:
+None.
+
+
+## [22.11.0](https://github.com/scalableminds/webknossos/releases/tag/22.11.0) - 2022-10-24
+[Commits](https://github.com/scalableminds/webknossos/compare/22.10.0...22.11.0)
+
+### Postgres Evolutions:
+None.
 
 ## [22.10.0](https://github.com/scalableminds/webknossos/releases/tag/22.10.0) - 2022-09-27
 [Commits](https://github.com/scalableminds/webknossos/compare/22.09.0...22.10.0)

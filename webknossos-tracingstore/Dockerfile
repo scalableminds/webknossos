@@ -1,4 +1,8 @@
-FROM openjdk:8-jre
+FROM eclipse-temurin:21
+
+RUN apt-get update \
+  && apt-get -y install libdraco4 \
+  && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /webknossos-tracingstore \
   && groupadd -g 1000 -r webknossos \

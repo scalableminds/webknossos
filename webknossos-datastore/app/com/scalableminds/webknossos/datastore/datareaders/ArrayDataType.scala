@@ -19,4 +19,32 @@ object ArrayDataType extends ExtendedEnumeration {
       case ArrayDataType.i1 => 1
       case ArrayDataType.u1 => 1
     }
+
+  def maxValue(dataType: ArrayDataType): Number =
+    dataType match {
+      case ArrayDataType.f8 => Double.MaxValue
+      case ArrayDataType.f4 => Float.MaxValue
+      case ArrayDataType.i8 => Long.MaxValue
+      case ArrayDataType.u8 => Long.MaxValue // Max value for primitive datatypes
+      case ArrayDataType.i4 => Int.MaxValue
+      case ArrayDataType.u4 => Math.pow(2, 4 * 8).toLong - 1
+      case ArrayDataType.i2 => Char.MaxValue
+      case ArrayDataType.u2 => Math.pow(2, 2 * 8).toLong - 1
+      case ArrayDataType.i1 => Byte.MaxValue
+      case ArrayDataType.u1 => Math.pow(2, 1 * 8).toLong - 1
+    }
+
+  def minValue(dataType: ArrayDataType): Number =
+    dataType match {
+      case ArrayDataType.f8 => Double.MinValue
+      case ArrayDataType.f4 => Float.MinValue
+      case ArrayDataType.i8 => Long.MinValue
+      case ArrayDataType.u8 => 0
+      case ArrayDataType.i4 => Int.MinValue
+      case ArrayDataType.u4 => 0
+      case ArrayDataType.i2 => Char.MinValue
+      case ArrayDataType.u2 => 0
+      case ArrayDataType.i1 => Byte.MinValue
+      case ArrayDataType.u1 => 0
+    }
 }

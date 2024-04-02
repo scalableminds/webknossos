@@ -1,4 +1,3 @@
-import Maybe from "data.maybe";
 import mockRequire from "mock-require";
 import test from "ava";
 import "test/reducers/save_reducer.mock";
@@ -6,12 +5,13 @@ import dummyUser from "test/fixtures/dummy_user";
 import type { SaveState } from "oxalis/store";
 import { APIUser } from "types/api_flow_types";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
+import { EmptyObject } from "types/globals";
 const TIMESTAMP = 1494695001688;
 const DateMock = {
   now: () => TIMESTAMP,
 };
 const AccessorMock = {
-  getStats: () => Maybe.Nothing(),
+  getStats: () => null,
 };
 mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/accessors/skeletontracing_accessor", AccessorMock);
@@ -19,13 +19,13 @@ const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const SaveReducer = mockRequire.reRequire("oxalis/model/reducers/save_reducer").default;
 const { createEdge } = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 
-const initialState: { save: SaveState; activeUser: APIUser } = {
+const initialState: { save: SaveState; activeUser: APIUser; tracing: EmptyObject } = {
   activeUser: dummyUser,
   save: {
     isBusyInfo: {
       skeleton: false,
-      volume: false,
-      mapping: false,
+      volumes: {},
+      mappings: {},
     },
     queue: {
       skeleton: [],
@@ -42,6 +42,7 @@ const initialState: { save: SaveState; activeUser: APIUser } = {
       totalActionCount: 0,
     },
   },
+  tracing: {},
 };
 test("Save should add update actions to the queue", (t) => {
   const items = [createEdge(0, 1, 2), createEdge(0, 2, 3)];

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { CopyOutlined, SwapOutlined } from "@ant-design/icons";
-import { Input, Button, Col, Row, Spin, Form } from "antd";
+import { Input, Button, Col, Row, Spin, Form, Space } from "antd";
 import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";
 import type { OxalisState } from "oxalis/store";
 import Toast from "libs/toast";
@@ -48,8 +48,6 @@ function AuthTokenView() {
   return (
     <div>
       <Row
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; type: string; justify: ... Remove this comment to see the full error message
-        type="flex"
         justify="center"
         style={{
           padding: 50,
@@ -61,7 +59,7 @@ function AuthTokenView() {
             <h3>Auth Token</h3>
             <Form form={form}>
               <FormItem>
-                <Input.Group compact>
+                <Space.Compact>
                   <Input
                     value={currentToken}
                     style={{
@@ -69,11 +67,8 @@ function AuthTokenView() {
                     }}
                     readOnly
                   />
-                  <Button
-                    onClick={copyTokenToClipboard}
-                    icon={<CopyOutlined className="without-icon-margin" />}
-                  />
-                </Input.Group>
+                  <Button onClick={copyTokenToClipboard} icon={<CopyOutlined />} />
+                </Space.Compact>
               </FormItem>
               <FormItem>
                 <Button icon={<SwapOutlined />} onClick={handleRevokeToken}>
@@ -86,7 +81,7 @@ function AuthTokenView() {
                 <h4>Organization ID</h4>
                 <Form>
                   <FormItem>
-                    <Input.Group compact>
+                    <Space.Compact>
                       <Input
                         value={activeUser.organization}
                         style={{
@@ -94,11 +89,8 @@ function AuthTokenView() {
                         }}
                         readOnly
                       />
-                      <Button
-                        onClick={copyOrganizationNameToClipboard}
-                        icon={<CopyOutlined className="without-icon-margin" />}
-                      />
-                    </Input.Group>
+                      <Button onClick={copyOrganizationNameToClipboard} icon={<CopyOutlined />} />
+                    </Space.Compact>
                   </FormItem>
                 </Form>
               </>

@@ -1,5 +1,4 @@
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Spin, Button, Input, Modal, Tooltip } from "antd";
@@ -19,11 +18,11 @@ import { connect } from "react-redux";
 import * as React from "react";
 import _ from "lodash";
 import { AsyncLink } from "components/async_clickables";
-import type { APIProjectWithAssignments, APIProject, APIUser } from "types/api_flow_types";
+import type { APIProjectWithStatus, APIProject, APIUser, APIUserBase } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
-  getProjectsWithOpenAssignments,
+  getProjectsWithStatus,
   getProjectsForTaskType,
   increaseProjectTaskInstances,
   deleteProject,
@@ -39,6 +38,7 @@ import Persistence from "libs/persistence";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import FormattedDate from "components/formatted_date";
 const { Column } = Table;
 const { Search } = Input;
 type OwnProps = {
@@ -49,15 +49,13 @@ type StateProps = {
   activeUser: APIUser;
 };
 type Props = OwnProps & StateProps;
-type PropsWithRouter = Props & {
-  history: RouteComponentProps["history"];
-};
+
 type State = {
   isLoading: boolean;
-  projects: Array<APIProjectWithAssignments>;
+  projects: Array<APIProjectWithStatus>;
   searchQuery: string;
   isTransferTasksVisible: boolean;
-  selectedProject: APIProjectWithAssignments | null | undefined;
+  selectedProject: APIProjectWithStatus | null | undefined;
   taskTypeName: string | null | undefined;
 };
 const persistence = new Persistence<Pick<State, "searchQuery">>(
@@ -67,7 +65,7 @@ const persistence = new Persistence<Pick<State, "searchQuery">>(
   "projectList",
 );
 
-class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
+class ProjectListView extends React.PureComponent<Props, State> {
   state: State = {
     isLoading: true,
     projects: [],
@@ -78,8 +76,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
   };
 
   componentDidMount() {
-    // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load() as { searchQuery: string });
 
     if (this.props.initialSearchValue != null && this.props.initialSearchValue !== "") {
       // Only override the persisted value if the provided initialSearchValue is not empty
@@ -91,9 +88,8 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     this.fetchData();
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'prevProps' implicitly has an 'any' type... Remove this comment to see the full error message
-  componentDidUpdate(prevProps) {
-    persistence.persist(this.props.history, this.state);
+  componentDidUpdate(prevProps: Props) {
+    persistence.persist(this.state);
 
     if (prevProps.taskTypeId !== this.props.taskTypeId) {
       this.fetchData();
@@ -112,7 +108,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
       ]);
       taskTypeName = taskType.summary;
     } else {
-      projects = await getProjectsWithOpenAssignments();
+      projects = await getProjectsWithStatus();
     }
 
     this.setState({
@@ -122,14 +118,13 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     });
   }
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
 
-  deleteProject = (project: APIProjectWithAssignments) => {
+  deleteProject = (project: APIProjectWithStatus) => {
     Modal.confirm({
       title: messages["project.delete"],
       onOk: async () => {
@@ -154,12 +149,12 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
   };
 
   mergeProjectWithUpdated = (
-    oldProject: APIProjectWithAssignments,
+    oldProject: APIProjectWithStatus,
     updatedProject: APIProject,
-  ): APIProjectWithAssignments => ({ ...oldProject, ...updatedProject });
+  ): APIProjectWithStatus => ({ ...oldProject, ...updatedProject });
 
   pauseResumeProject = async (
-    project: APIProjectWithAssignments,
+    project: APIProjectWithStatus,
     APICall: (arg0: string) => Promise<APIProject>,
   ) => {
     const updatedProject = await APICall(project.id);
@@ -170,7 +165,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     }));
   };
 
-  increaseProjectTaskInstances = async (project: APIProjectWithAssignments) => {
+  increaseProjectTaskInstances = async (project: APIProjectWithStatus) => {
     Modal.confirm({
       title: messages["project.increase_instances"],
       onOk: async () => {
@@ -193,7 +188,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
     });
   };
 
-  showActiveUsersModal = async (project: APIProjectWithAssignments) => {
+  showActiveUsersModal = async (project: APIProjectWithStatus) => {
     this.setState({
       selectedProject: project,
       isTransferTasksVisible: true,
@@ -222,25 +217,39 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
   renderPlaceholder() {
     return this.state.isLoading ? null : (
       <React.Fragment>
-        {"There are no projects. You can "}
-        <Link to="/projects/create">add a project</Link>
-        {" which can be used to track the progress of tasks."}
+        {"There are no projects yet or no projects matching your filters. "}
+        <Link to="/projects/create">Add a new project</Link>
+        {" to distribute and track the progress of annotation tasks or adjust your filters."}
       </React.Fragment>
     );
   }
 
   render() {
-    const marginRight = {
-      marginRight: 20,
-    };
-    const typeHint: Array<APIProjectWithAssignments> = [];
+    const greaterThanZeroFilters = [
+      {
+        text: "0",
+        value: "0",
+      },
+      {
+        text: ">0",
+        value: ">0",
+      },
+    ];
+
+    const typeHint: Array<APIProjectWithStatus> = [];
+    const filteredProjects = Utils.filterWithSearchQueryAND(
+      this.state.projects,
+      ["name", "team", "priority", "owner", "pendingInstances", "tracingTime"],
+      this.state.searchQuery,
+    );
+
     return (
       <div className="container TestProjectListView">
         <div>
           <div className="pull-right">
             {this.props.taskTypeId ? null : (
               <Link to="/projects/create">
-                <Button icon={<PlusOutlined />} style={marginRight} type="primary">
+                <Button icon={<PlusOutlined />} style={{ marginRight: 20 }} type="primary">
                   Add Project
                 </Button>
               </Link>
@@ -249,7 +258,6 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
               style={{
                 width: 200,
               }}
-              onPressEnter={this.handleSearch}
               onChange={this.handleSearch}
               value={this.state.searchQuery}
             />
@@ -267,11 +275,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
           />
           <Spin spinning={this.state.isLoading} size="large">
             <Table
-              dataSource={Utils.filterWithSearchQueryAND(
-                this.state.projects,
-                ["name", "team", "priority", "owner", "numberOfOpenAssignments", "tracingTime"],
-                this.state.searchQuery,
-              )}
+              dataSource={filteredProjects}
               rowKey="id"
               pagination={{
                 defaultPageSize: 50,
@@ -296,56 +300,102 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 width={250}
               />
               <Column
-                title="Team"
-                dataIndex="teamName"
-                key="teamName"
-                sorter={Utils.localeCompareBy(typeHint, (project) => project.team)}
-                width={300}
-              />
-              <Column
-                title="Priority"
-                dataIndex="priority"
-                key="priority"
-                sorter={Utils.compareBy(typeHint, (project) => project.priority)}
-                render={(priority, project: APIProjectWithAssignments) =>
-                  `${priority} ${project.paused ? "(paused)" : ""}`
-                }
-              />
-              <Column
-                title="Owner"
-                dataIndex="owner"
-                key="owner"
-                sorter={Utils.localeCompareBy(typeHint, (project) => project.owner.lastName)}
-                render={(owner) =>
-                  owner.email ? `${owner.lastName}, ${owner.firstName} (${owner.email})` : "-"
-                }
-              />
-              <Column
-                title="Open Assignments"
-                dataIndex="numberOfOpenAssignments"
-                key="numberOfOpenAssignments"
-                width={200}
-                sorter={Utils.compareBy(typeHint, (project) => project.numberOfOpenAssignments)}
+                title="Pending Task Instances"
+                dataIndex="pendingInstances"
+                key="pendingInstances"
+                sorter={Utils.compareBy(typeHint, (project) => project.pendingInstances)}
+                filters={greaterThanZeroFilters}
+                onFilter={(value, project: APIProjectWithStatus) => {
+                  if (value === "0") {
+                    return project.tracingTime === 0;
+                  }
+                  return project.tracingTime > 0;
+                }}
               />
               <Column
                 title={
-                  <Tooltip title="Total time spent annotating for this project">Time [h]</Tooltip>
+                  <Tooltip title="Total annotating time spent on this project">Time [h]</Tooltip>
                 }
                 dataIndex="tracingTime"
                 key="tracingTime"
-                width={200}
                 sorter={Utils.compareBy(typeHint, (project) => project.tracingTime)}
                 render={(tracingTimeMs) =>
                   Utils.millisecondsToHours(tracingTimeMs).toLocaleString(undefined, {
                     maximumFractionDigits: 1,
                   })
                 }
+                filters={greaterThanZeroFilters}
+                onFilter={(value, project: APIProjectWithStatus) => {
+                  if (value === "0") {
+                    return project.tracingTime === 0;
+                  }
+                  return project.tracingTime > 0;
+                }}
+              />
+              <Column
+                title="Team"
+                dataIndex="teamName"
+                key="teamName"
+                sorter={Utils.localeCompareBy(typeHint, (project) => project.team)}
+                filters={_.uniqBy(
+                  filteredProjects.map((project) => ({
+                    text: project.teamName,
+                    value: project.team,
+                  })),
+                  "text",
+                )}
+                onFilter={(value, project: APIProjectWithStatus) => value === project.team}
+                filterMultiple
+              />
+              <Column
+                title="Owner"
+                dataIndex="owner"
+                key="owner"
+                sorter={Utils.localeCompareBy(typeHint, (project) => project.owner.lastName)}
+                render={(owner: APIUserBase) => (
+                  <>
+                    <div>{owner.email ? `${owner.lastName}, ${owner.firstName}` : "-"}</div>
+                    <div>{owner.email ? `(${owner.email})` : "-"}</div>
+                  </>
+                )}
+                filters={_.uniqBy(
+                  filteredProjects.map((project) => ({
+                    text: `${project.owner.firstName} ${project.owner.lastName}`,
+                    value: project.owner.id,
+                  })),
+                  "text",
+                )}
+                onFilter={(value, project: APIProjectWithStatus) => value === project.owner.id}
+                filterMultiple
+              />
+              <Column
+                title="Creation Date"
+                dataIndex="created"
+                key="created"
+                sorter={Utils.compareBy(typeHint, (project) => project.created)}
+                render={(created) => <FormattedDate timestamp={created} />}
+                defaultSortOrder="descend"
+              />
+              <Column
+                title="Priority"
+                dataIndex="priority"
+                key="priority"
+                sorter={Utils.compareBy(typeHint, (project) => project.priority)}
+                render={(priority, project: APIProjectWithStatus) =>
+                  `${priority} ${project.paused ? "(paused)" : ""}`
+                }
+                filters={[
+                  {
+                    text: "Paused",
+                    value: "paused",
+                  },
+                ]}
+                onFilter={(_value, project: APIProjectWithStatus) => project.paused}
               />
               <Column
                 title="Time Limit"
                 dataIndex="expectedTime"
                 key="expectedTime"
-                width={200}
                 sorter={Utils.compareBy(typeHint, (project) => project.expectedTime)}
                 render={(expectedTime) => `${expectedTime}m`}
               />
@@ -354,18 +404,18 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                 key="actions"
                 fixed="right"
                 width={200}
-                render={(__, project: APIProjectWithAssignments) => (
+                render={(__, project: APIProjectWithStatus) => (
                   <span>
                     <Link
                       to={`/annotations/CompoundProject/${project.id}`}
                       title="View all Finished Annotations"
                     >
-                      <EyeOutlined />
+                      <EyeOutlined className="icon-margin-right" />
                       View
                     </Link>
                     <br />
                     <Link to={`/projects/${project.id}/edit`} title="Edit Project">
-                      <EditOutlined />
+                      <EditOutlined className="icon-margin-right" />
                       Edit
                     </Link>
                     <br />
@@ -375,7 +425,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                           onClick={_.partial(this.pauseResumeProject, project, resumeProject)}
                           title="Resume Project"
                         >
-                          <PlayCircleOutlined />
+                          <PlayCircleOutlined className="icon-margin-right" />
                           Resume
                         </a>
                         <br />
@@ -386,14 +436,14 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                           onClick={_.partial(this.pauseResumeProject, project, pauseProject)}
                           title="Pause Tasks"
                         >
-                          <PauseCircleOutlined />
+                          <PauseCircleOutlined className="icon-margin-right" />
                           Pause
                         </a>
                         <br />
                       </div>
                     )}
                     <Link to={`/projects/${project.id}/tasks`} title="View Tasks">
-                      <ScheduleOutlined />
+                      <ScheduleOutlined className="icon-margin-right" />
                       Tasks
                     </Link>
                     <br />
@@ -401,7 +451,7 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                       onClick={_.partial(this.increaseProjectTaskInstances, project)}
                       title="Increase Task instances"
                     >
-                      <PlusSquareOutlined />
+                      <PlusSquareOutlined className="icon-margin-right" />
                       Increase Instances
                     </a>
                     <br />
@@ -412,19 +462,19 @@ class ProjectListView extends React.PureComponent<PropsWithRouter, State> {
                         await downloadAnnotation(project.id, "CompoundProject");
                       }}
                       title="Download all Finished Annotations"
-                      icon={<DownloadOutlined key="download-icon" />}
+                      icon={<DownloadOutlined key="download-icon" className="icon-margin-right" />}
                     >
                       Download
                     </AsyncLink>
                     <br />
                     <a onClick={_.partial(this.showActiveUsersModal, project)}>
-                      <TeamOutlined />
+                      <TeamOutlined className="icon-margin-right" />
                       Show active users
                     </a>
                     <br />
                     {project.owner.email === this.props.activeUser.email ? (
                       <a onClick={_.partial(this.deleteProject, project)}>
-                        <DeleteOutlined />
+                        <DeleteOutlined className="icon-margin-right" />
                         Delete
                       </a>
                     ) : null}
@@ -451,4 +501,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & OwnProps, any>(ProjectListView));
+export default connector(ProjectListView);

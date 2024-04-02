@@ -1,4 +1,6 @@
-export const ViewModeValues = ["orthogonal", "flight", "oblique", "volume"] as ViewMode[];
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
+export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 
 export const ViewModeValuesIndices = {
   Orthogonal: 0,
@@ -6,12 +8,19 @@ export const ViewModeValuesIndices = {
   Oblique: 2,
   Volume: 3,
 };
-export type ViewMode = "orthogonal" | "oblique" | "flight" | "volume";
+export type ViewMode = "orthogonal" | "oblique" | "flight";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
 export type Vector5 = [number, number, number, number, number];
 export type Vector6 = [number, number, number, number, number, number];
+
+// For 3D data BucketAddress = x, y, z, mag
+// For higher dimensional data, BucketAddress = x, y, z, mag, [{name: "t", value: t}, ...]
+export type BucketAddress =
+  | Vector4
+  | [number, number, number, number, AdditionalCoordinate[] | null];
+
 export type Point2 = {
   x: number;
   y: number;
@@ -49,7 +58,7 @@ export enum OrthoViews {
   PLANE_XZ = "PLANE_XZ",
   TDView = "TDView",
 }
-export const enum OrthoViewsToName {
+export enum OrthoViewsToName {
   PLANE_XY = "XY",
   PLANE_YZ = "YZ",
   PLANE_XZ = "XZ",
@@ -66,17 +75,15 @@ export const ArbitraryViewport = "arbitraryViewport";
 export const ArbitraryViews = {
   arbitraryViewport: "arbitraryViewport",
   TDView: "TDView",
-};
+} as const;
 export const ArbitraryViewsToName = {
   arbitraryViewport: "Arbitrary View",
   TDView: "3D",
 };
 export type ArbitraryView = keyof typeof ArbitraryViews;
-export type ArbitraryViewMap<T> = Record<ArbitraryView, T>;
 export type Viewport = OrthoView | typeof ArbitraryViewport;
 export const allViewports = Object.keys(OrthoViews).concat([ArbitraryViewport]) as Viewport[];
 export type ViewportMap<T> = Record<Viewport, T>;
-export type ViewportExtents = Readonly<ViewportMap<Vector2>>;
 export type ViewportRects = Readonly<ViewportMap<Rect>>;
 export const OrthoViewValues = Object.keys(OrthoViews) as OrthoView[];
 export const OrthoViewIndices = {
@@ -90,19 +97,21 @@ export const OrthoViewValuesWithoutTDView: Array<OrthoViewWithoutTD> = [
   OrthoViews.PLANE_YZ,
   OrthoViews.PLANE_XZ,
 ];
+
+const PINK = 0xeb4b98;
+const BLUE = 0x5660ff;
+const TURQUOISE = 0x59f8e8;
+
 export const OrthoViewColors: OrthoViewMap<number> = {
-  [OrthoViews.PLANE_XY]: 0xc81414,
-  // red
-  [OrthoViews.PLANE_YZ]: 0x1414c8,
-  // blue
-  [OrthoViews.PLANE_XZ]: 0x14c814,
-  // green
+  [OrthoViews.PLANE_XY]: PINK,
+  [OrthoViews.PLANE_YZ]: BLUE,
+  [OrthoViews.PLANE_XZ]: TURQUOISE,
   [OrthoViews.TDView]: 0xffffff,
 };
 export const OrthoViewCrosshairColors: OrthoViewMap<[number, number]> = {
-  [OrthoViews.PLANE_XY]: [0x0000ff, 0x00ff00],
-  [OrthoViews.PLANE_YZ]: [0xff0000, 0x00ff00],
-  [OrthoViews.PLANE_XZ]: [0x0000ff, 0xff0000],
+  [OrthoViews.PLANE_XY]: [BLUE, TURQUOISE],
+  [OrthoViews.PLANE_YZ]: [PINK, TURQUOISE],
+  [OrthoViews.PLANE_XZ]: [BLUE, PINK],
   [OrthoViews.TDView]: [0x000000, 0x000000],
 };
 export type BorderTabType = {
@@ -179,8 +188,11 @@ export enum AnnotationToolEnum {
   ERASE_TRACE = "ERASE_TRACE",
   FILL_CELL = "FILL_CELL",
   PICK_CELL = "PICK_CELL",
+  QUICK_SELECT = "QUICK_SELECT",
   BOUNDING_BOX = "BOUNDING_BOX",
   PROOFREAD = "PROOFREAD",
+  LINE_MEASUREMENT = "LINE_MEASUREMENT",
+  AREA_MEASUREMENT = "AREA_MEASUREMENT",
 }
 export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.BRUSH,
@@ -189,20 +201,28 @@ export const VolumeTools: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.FILL_CELL,
   AnnotationToolEnum.PICK_CELL,
+  AnnotationToolEnum.QUICK_SELECT,
 ];
 export const ToolsWithOverwriteCapabilities: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.TRACE,
   AnnotationToolEnum.BRUSH,
   AnnotationToolEnum.ERASE_TRACE,
   AnnotationToolEnum.ERASE_BRUSH,
+  AnnotationToolEnum.QUICK_SELECT,
 ];
 export const ToolsWithInterpolationCapabilities: Array<keyof typeof AnnotationToolEnum> = [
   AnnotationToolEnum.TRACE,
   AnnotationToolEnum.BRUSH,
+  AnnotationToolEnum.QUICK_SELECT,
+];
+
+export const MeasurementTools: Array<keyof typeof AnnotationToolEnum> = [
+  AnnotationToolEnum.LINE_MEASUREMENT,
+  AnnotationToolEnum.AREA_MEASUREMENT,
 ];
 
 export type AnnotationTool = keyof typeof AnnotationToolEnum;
-export const enum ContourModeEnum {
+export enum ContourModeEnum {
   DRAW = "DRAW",
   DELETE = "DELETE",
 }
@@ -231,19 +251,26 @@ export enum TDViewDisplayModeEnum {
   DATA = "DATA",
 }
 export type TDViewDisplayMode = keyof typeof TDViewDisplayModeEnum;
-export const enum MappingStatusEnum {
+export enum MappingStatusEnum {
   DISABLED = "DISABLED",
   ACTIVATING = "ACTIVATING",
   ENABLED = "ENABLED",
 }
 export type MappingStatus = keyof typeof MappingStatusEnum;
+export enum TreeTypeEnum {
+  DEFAULT = "DEFAULT",
+  AGGLOMERATE = "AGGLOMERATE",
+}
+export type TreeType = keyof typeof TreeTypeEnum;
 export const NODE_ID_REF_REGEX = /#([0-9]+)/g;
 export const POSITION_REF_REGEX = /#\(([0-9]+,[0-9]+,[0-9]+)\)/g;
-// The plane in orthogonal mode is a little smaller than the viewport
-// There is an outer yellow CSS border and an inner (red/green/blue) border
-// that is a result of the plane being smaller than the renderer viewport
-export const OUTER_CSS_BORDER = 2;
 const VIEWPORT_WIDTH = 376;
+
+// ARBITRARY_CAM_DISTANCE has to be calculated such that with cam
+// angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
+// viewport.
+export const ARBITRARY_CAM_DISTANCE = VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
+
 export const ensureSmallerEdge = false;
 export const Unicode = {
   ThinSpace: "\u202f",
@@ -254,11 +281,12 @@ export const Unicode = {
 // to a 2D slice of labeled voxels. These labeled voxels
 // are stored in a Uint8Array in a binary way (which cell
 // id the voxels should be changed to is not encoded).
-export type LabeledVoxelsMap = Map<Vector4, Uint8Array>;
+export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
+
 // LabelMasksByBucketAndW is similar to LabeledVoxelsMap with the difference
 // that it can hold multiple slices per bucket (keyed by the W component,
 // e.g., z in XY viewport).
-export type LabelMasksByBucketAndW = Map<Vector4, Map<number, Uint8Array>>;
+export type LabelMasksByBucketAndW = Map<BucketAddress, Map<number, Uint8Array>>;
 export type ShowContextMenuFunction = (
   arg0: number,
   arg1: number,
@@ -266,7 +294,10 @@ export type ShowContextMenuFunction = (
   arg3: number | null | undefined,
   arg4: Vector3 | null | undefined,
   arg5: OrthoView,
+  arg6?: number | null | undefined,
+  arg7?: Vector3 | null | undefined,
 ) => void;
+
 const Constants = {
   ARBITRARY_VIEW: 4,
   DEFAULT_BORDER_WIDTH: 400,
@@ -281,6 +312,8 @@ const Constants = {
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
+  DEFAULT_NAVBAR_HEIGHT: 48,
+  MAINTENANCE_BANNER_HEIGHT: 38,
   // For reference, the area of a large brush size (let's say, 300px) corresponds to
   // pi * 300 ^ 2 == 282690.
   // We multiply this with 5, since the labeling is not done
@@ -292,7 +325,7 @@ const Constants = {
   // which will be multiplied with GPU_FACTOR_MULTIPLIER to calculate the
   // the actual amount of buckets.
   GPU_FACTOR_MULTIPLIER: 512,
-  DEFAULT_GPU_MEMORY_FACTOR: 3,
+  DEFAULT_GPU_MEMORY_FACTOR: 4,
   DEFAULT_LOOK_UP_TEXTURE_WIDTH: 256,
   MAX_ZOOM_STEP_DIFF_PREFETCH: 1,
   // prefetch only fallback buckets for currentZoomStep + 1
@@ -307,9 +340,13 @@ const Constants = {
   // Maximum of how many buckets will be held in RAM (per layer)
   MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,
   FLOOD_FILL_EXTENTS: {
-    _2D: (process.env.BABEL_ENV === "test" ? [512, 512, 1] : [768, 768, 1]) as Vector3,
-    _3D: (process.env.BABEL_ENV === "test" ? [64, 64, 32] : [96, 96, 96]) as Vector3,
+    _2D: (process.env.IS_TESTING ? [512, 512, 1] : [768, 768, 1]) as Vector3,
+    _3D: (process.env.IS_TESTING ? [64, 64, 32] : [96, 96, 96]) as Vector3,
   },
+  MAXIMUM_DATE_TIMESTAMP: 8640000000000000,
+  SCALEBAR_HEIGHT: 22,
+  SCALEBAR_OFFSET: 10,
+  OBJECT_ID_STRING_LENGTH: 24,
 };
 export default Constants;
 
@@ -326,3 +363,45 @@ export type TypedArray =
   | BigUint64Array;
 
 export type TypedArrayWithoutBigInt = Exclude<TypedArray, BigUint64Array>;
+
+export const PRIMARY_COLOR: Vector3 = [86, 96, 255];
+
+export enum LOG_LEVELS {
+  NOTSET = "NOTSET",
+  DEBUG = "DEBUG",
+  INFO = "INFO",
+  NOTICE = "NOTICE",
+  WARNING = "WARNING",
+  ERROR = "ERROR",
+  CRITICAL = "CRITICAL",
+}
+
+export enum BLEND_MODES {
+  Additive = "Additive",
+  Cover = "Cover",
+}
+
+export const Identity4x4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+export const IdentityTransform = {
+  type: "affine",
+  affineMatrix: Identity4x4,
+  affineMatrixInv: Identity4x4,
+} as const;
+export const EMPTY_OBJECT = {} as const;
+
+const isMac = (() => {
+  try {
+    // Even though navigator.platform¹ is deprecated, this still
+    // seems to be the best mechanism to find out whether the machine is
+    // a Mac. At some point, NavigatorUAData² might be a feasible alternative.
+    //
+    // ¹ https://developer.mozilla.org/en-US/docs/Web/API/Navigator/platform
+    // ² https://developer.mozilla.org/en-US/docs/Web/API/NavigatorUAData/platform
+    return navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+  } catch {
+    return false;
+  }
+})();
+
+export const AltOrOptionKey = isMac ? "⌥" : "Alt";
+export const CtrlOrCmdKey = isMac ? "Cmd" : "Ctrl";

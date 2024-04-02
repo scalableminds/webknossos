@@ -1,12 +1,12 @@
 package com.scalableminds.util.io
 
 import java.io._
-
+import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Box, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.IOUtils
-import play.api.libs.iteratee.{Enumerator, Iteratee}
 
+import java.nio.charset.Charset
 import scala.concurrent.{ExecutionContext, Future, blocking}
 
 trait NamedStream {
@@ -20,26 +20,25 @@ trait NamedStream {
       name.replace(sep, '/')
   }
 
-  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Future[Unit]
+  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Fox[Unit]
 }
 
-case class NamedFunctionStream(name: String, writer: OutputStream => Future[Unit]) extends NamedStream {
-  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] = writer(out)
+object NamedFunctionStream {
+  def fromBytes(name: String, bytes: Array[Byte])(implicit ec: ExecutionContext): NamedFunctionStream =
+    NamedFunctionStream(name, os => Fox.successful(os.write(bytes)))
+
+  def fromString(name: String, str: String)(implicit ec: ExecutionContext): NamedFunctionStream =
+    fromBytes(name, str.getBytes(Charset.forName("UTF-8")))
 }
 
-case class NamedEnumeratorStream(name: String, enumerator: Enumerator[Array[Byte]]) extends NamedStream {
-  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] = {
-    val iteratee = Iteratee.foreach[Array[Byte]] { bytes =>
-      out.write(bytes)
-    }
-    enumerator |>>> iteratee
-  }
+case class NamedFunctionStream(name: String, writer: OutputStream => Fox[Unit]) extends NamedStream {
+  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Fox[Unit] = writer(out)
 }
 
 case class NamedFileStream(name: String, file: File) extends NamedStream {
   def stream(): InputStream = new FileInputStream(file)
 
-  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Future[Unit] =
+  def writeTo(out: OutputStream)(implicit ec: ExecutionContext): Fox[Unit] =
     Future {
       blocking {
         val in = stream()

@@ -1,22 +1,40 @@
 import type { ModifierKeys } from "libs/input";
-import type { OrthoView, Point2, ShowContextMenuFunction, AnnotationTool } from "oxalis/constants";
+import * as THREE from "three";
+import type {
+  OrthoView,
+  Point2,
+  ShowContextMenuFunction,
+  AnnotationTool,
+  Vector3,
+  Viewport,
+} from "oxalis/constants";
 import { OrthoViews, ContourModeEnum, AnnotationToolEnum } from "oxalis/constants";
 import {
   enforceActiveVolumeTracing,
+  getActiveSegmentationTracing,
   getContourTracingMode,
+  getSegmentColorAsHSLA,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   handleAgglomerateSkeletonAtClick,
   handleClickSegment,
 } from "oxalis/controller/combinations/segmentation_handlers";
-import { hideBrushAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  computeQuickSelectForRectAction,
+  confirmQuickSelectAction,
+  hideBrushAction,
+  maybePrefetchEmbeddingAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
-import type { SelectedEdge } from "oxalis/controller/combinations/bounding_box_handlers";
+import {
+  createBoundingBoxAndGetEdges,
+  SelectedEdge,
+} from "oxalis/controller/combinations/bounding_box_handlers";
 import {
   getClosestHoveredBoundingBox,
   handleResizingBoundingBox,
@@ -26,9 +44,21 @@ import Store from "oxalis/store";
 import * as Utils from "libs/utils";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import { document } from "libs/window";
-import api from "oxalis/api/internal_api";
-import { proofreadAtPosition } from "oxalis/model/actions/proofread_actions";
+import { api } from "oxalis/singletons";
+import {
+  minCutAgglomerateWithPositionAction,
+  proofreadAtPosition,
+  proofreadMerge,
+} from "oxalis/model/actions/proofread_actions";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
+import { V3 } from "libs/mjs";
+import {
+  hideMeasurementTooltipAction,
+  setQuickSelectStateAction,
+  setLastMeasuredPositionAction,
+  setIsMeasuringAction,
+} from "oxalis/model/actions/ui_actions";
+import ArbitraryView from "oxalis/view/arbitrary_view";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -70,7 +100,7 @@ export class MoveTool {
           }
 
           case "alt":
-          case "ctrl": {
+          case "ctrlOrMeta": {
             MoveHandlers.zoomPlanes(Utils.clamp(-1, delta, 1), true);
             break;
           }
@@ -111,7 +141,15 @@ export class MoveTool {
 
         handleClickSegment(pos);
       },
-      pinch: (delta: number) => MoveHandlers.zoom(delta, true),
+      middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
+        if (event.shiftKey) {
+          handleAgglomerateSkeletonAtClick(pos);
+        }
+      },
+      pinch: (delta: number, center: Point2) => {
+        MoveHandlers.setMousePosition(center);
+        MoveHandlers.zoom(delta, true);
+      },
       mouseMove: MoveHandlers.moveWhenAltIsPressed,
       out: () => {
         MoveHandlers.setMousePosition(null);
@@ -148,13 +186,17 @@ export class MoveTool {
     _activeTool: AnnotationTool,
     useLegacyBindings: boolean,
     shiftKey: boolean,
-    _ctrlKey: boolean,
-    _altKey: boolean,
+    _ctrlOrMetaKey: boolean,
+    altKey: boolean,
   ): ActionDescriptor {
     // In legacy mode, don't display a hint for
-    // left click as it would be equal to left drag
+    // left click as it would be equal to left drag.
+    // We also don't show a hint when the alt key was pressed,
+    // as this mostly happens when the user presses alt in another tool
+    // to move around while moving the mouse. In that case, clicking won't
+    // select anything.
     const leftClickInfo =
-      useLegacyBindings && !shiftKey
+      (useLegacyBindings && !shiftKey) || altKey
         ? {}
         : {
             leftClick: "Select Node",
@@ -188,13 +230,14 @@ export class SkeletonTool {
           showNodeContextMenuAt,
         );
       } else {
-        SkeletonHandlers.handleCreateNode(planeView, position, event.ctrlKey);
+        SkeletonHandlers.handleCreateNode(position, event.ctrlKey || event.metaKey);
       }
     };
 
     let draggingNodeId: number | null | undefined = null;
+    let didDragNode: boolean = false;
     return {
-      leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+      leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent, isTouch: boolean) => {
         const { useLegacyBindings } = Store.getState().userConfiguration;
 
         if (useLegacyBindings) {
@@ -210,11 +253,15 @@ export class SkeletonTool {
         );
       },
       leftMouseUp: () => {
+        if (draggingNodeId != null && didDragNode) {
+          SkeletonHandlers.finishNodeMovement(draggingNodeId);
+        }
         draggingNodeId = null;
+        didDragNode = false;
       },
       leftDownMove: (
         delta: Point2,
-        pos: Point2,
+        _pos: Point2,
         _id: string | null | undefined,
         event: MouseEvent,
       ) => {
@@ -223,34 +270,24 @@ export class SkeletonTool {
 
         if (
           tracing.skeleton != null &&
-          (draggingNodeId != null || (useLegacyBindings && event.ctrlKey))
+          (draggingNodeId != null || (useLegacyBindings && (event.ctrlKey || event.metaKey)))
         ) {
-          SkeletonHandlers.moveNode(delta.x, delta.y, draggingNodeId);
+          didDragNode = true;
+          SkeletonHandlers.moveNode(delta.x, delta.y, draggingNodeId, true);
         } else {
           MoveHandlers.handleMovePlane(delta);
         }
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        const { useLegacyBindings } = Store.getState().userConfiguration;
-
-        if (useLegacyBindings) {
-          this.onLegacyLeftClick(
-            planeView,
-            pos,
-            event.shiftKey,
-            event.altKey,
-            event.ctrlKey,
-            plane,
-            isTouch,
-          );
-          return;
-        }
-
-        const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
-
-        if (!didSelectNode) {
-          SkeletonHandlers.handleCreateNode(planeView, pos, event.ctrlKey);
-        }
+        this.onLeftClick(
+          planeView,
+          pos,
+          event.shiftKey,
+          event.altKey,
+          event.ctrlKey || event.metaKey,
+          plane,
+          isTouch,
+        );
       },
       rightClick: (position: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         const { useLegacyBindings } = Store.getState().userConfiguration;
@@ -269,22 +306,18 @@ export class SkeletonTool {
           showNodeContextMenuAt,
         );
       },
-      middleClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        if (event.shiftKey) {
-          handleAgglomerateSkeletonAtClick(pos);
-        }
-      },
     };
   }
 
-  static onLegacyLeftClick(
-    planeView: PlaneView,
+  static onLeftClick(
+    planeView: PlaneView | ArbitraryView,
     position: Point2,
     shiftPressed: boolean,
     altPressed: boolean,
     ctrlPressed: boolean,
-    plane: OrthoView,
+    plane: Viewport,
     isTouch: boolean,
+    allowNodeCreation: boolean = true,
   ): void {
     const { useLegacyBindings } = Store.getState().userConfiguration;
 
@@ -292,10 +325,20 @@ export class SkeletonTool {
     // (At least, in the XY/XZ/YZ viewports).
     if (shiftPressed && altPressed) {
       SkeletonHandlers.handleMergeTrees(planeView, position, plane, isTouch);
+      return;
     } else if (shiftPressed && ctrlPressed) {
       SkeletonHandlers.handleDeleteEdge(planeView, position, plane, isTouch);
-    } else if (shiftPressed || !useLegacyBindings) {
-      SkeletonHandlers.handleSelectNode(planeView, position, plane, isTouch);
+      return;
+    }
+
+    let didSelectNode;
+    if (shiftPressed || !useLegacyBindings) {
+      didSelectNode = SkeletonHandlers.handleSelectNode(planeView, position, plane, isTouch);
+    }
+
+    if (allowNodeCreation && !didSelectNode && !useLegacyBindings && !shiftPressed) {
+      // Will only have an effect, when not in 3D viewport
+      SkeletonHandlers.handleCreateNode(position, ctrlPressed);
     }
   }
 
@@ -303,16 +346,34 @@ export class SkeletonTool {
     _activeTool: AnnotationTool,
     useLegacyBindings: boolean,
     shiftKey: boolean,
-    _ctrlKey: boolean,
-    _altKey: boolean,
+    ctrlOrMetaKey: boolean,
+    altKey: boolean,
   ): ActionDescriptor {
     // In legacy mode, don't display a hint for
     // left click as it would be equal to left drag
-    const leftClickInfo = useLegacyBindings
-      ? {}
-      : {
-          leftClick: "Place/Select Node",
-        };
+    let leftClickInfo = {};
+    if (shiftKey && altKey) {
+      leftClickInfo = {
+        leftClick: "Create edge between nodes",
+      };
+    } else if (shiftKey && ctrlOrMetaKey) {
+      leftClickInfo = {
+        leftClick: "Delete edge between nodes",
+      };
+    } else if (shiftKey) {
+      leftClickInfo = {
+        leftClick: "Select node",
+      };
+    } else if (!useLegacyBindings && ctrlOrMetaKey && !shiftKey && !altKey) {
+      leftClickInfo = {
+        leftClick: "Place Node without Activating",
+      };
+    } else if (!useLegacyBindings && !ctrlOrMetaKey && !shiftKey && !altKey) {
+      leftClickInfo = {
+        leftClick: "Place/Select Node",
+      };
+    }
+
     return {
       ...leftClickInfo,
       leftDrag: "Move",
@@ -329,16 +390,17 @@ export class DrawTool {
     showNodeContextMenuAt: ShowContextMenuFunction,
   ): any {
     return {
-      leftDownMove: (delta: Point2, pos: Point2) => {
+      leftDownMove: (_delta: Point2, pos: Point2) => {
         VolumeHandlers.handleMoveForDrawOrErase(pos);
       },
       leftMouseDown: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        if (event.shiftKey && !event.ctrlKey) {
+        const ctrlOrMetaPressed = event.ctrlKey || event.metaKey;
+        if (event.shiftKey && !ctrlOrMetaPressed) {
           // Should select cell. Do nothing, since case is covered by leftClick.
           return;
         }
 
-        if (event.ctrlKey && event.shiftKey) {
+        if (ctrlOrMetaPressed && event.shiftKey) {
           VolumeHandlers.handleEraseStart(pos, plane);
           return;
         }
@@ -348,7 +410,7 @@ export class DrawTool {
       leftMouseUp: () => {
         VolumeHandlers.handleEndForDrawOrErase();
       },
-      rightDownMove: (delta: Point2, pos: Point2) => {
+      rightDownMove: (_delta: Point2, pos: Point2) => {
         const { useLegacyBindings } = Store.getState().userConfiguration;
 
         if (!useLegacyBindings) {
@@ -383,9 +445,10 @@ export class DrawTool {
 
         VolumeHandlers.handleEndForDrawOrErase();
       },
-      leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        const shouldPickCell = event.shiftKey && !event.ctrlKey;
-        const shouldErase = event.shiftKey && event.ctrlKey;
+      leftClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
+        const ctrlOrMetaPressed = event.ctrlKey || event.metaKey;
+        const shouldPickCell = event.shiftKey && !ctrlOrMetaPressed;
+        const shouldErase = event.shiftKey && ctrlOrMetaPressed;
 
         if (shouldPickCell) {
           VolumeHandlers.handlePickCell(pos);
@@ -420,7 +483,7 @@ export class DrawTool {
     activeTool: AnnotationTool,
     useLegacyBindings: boolean,
     _shiftKey: boolean,
-    _ctrlKey: boolean,
+    _ctrlOrMetaKey: boolean,
     _altKey: boolean,
   ): ActionDescriptor {
     let rightClick;
@@ -446,7 +509,7 @@ export class EraseTool {
     showNodeContextMenuAt: ShowContextMenuFunction,
   ): any {
     return {
-      leftDownMove: (delta: Point2, pos: Point2) => {
+      leftDownMove: (_delta: Point2, pos: Point2) => {
         VolumeHandlers.handleMoveForDrawOrErase(pos);
       },
       leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent) => {
@@ -475,7 +538,7 @@ export class EraseTool {
     activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
-    _ctrlKey: boolean,
+    _ctrlOrMetaKey: boolean,
     _altKey: boolean,
   ): ActionDescriptor {
     return {
@@ -499,7 +562,7 @@ export class PickCellTool {
     _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
-    _ctrlKey: boolean,
+    _ctrlOrMetaKey: boolean,
     _altKey: boolean,
   ): ActionDescriptor {
     return {
@@ -514,7 +577,7 @@ export class FillCellTool {
   static getPlaneMouseControls(_planeId: OrthoView): any {
     return {
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
-        const shouldPickCell = event.shiftKey && !event.ctrlKey;
+        const shouldPickCell = event.shiftKey && !(event.ctrlKey || event.metaKey);
 
         if (shouldPickCell) {
           VolumeHandlers.handlePickCell(pos);
@@ -529,7 +592,7 @@ export class FillCellTool {
     _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
-    _ctrlKey: boolean,
+    _ctrlOrMetaKey: boolean,
     _altKey: boolean,
   ): ActionDescriptor {
     return {
@@ -562,10 +625,17 @@ export class BoundingBoxTool {
         }
       },
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
-        const hoveredEdgesInfo = getClosestHoveredBoundingBox(pos, planeId);
+        let hoveredEdgesInfo = getClosestHoveredBoundingBox(pos, planeId);
 
         if (hoveredEdgesInfo) {
           [primarySelectedEdge, secondarySelectedEdge] = hoveredEdgesInfo;
+        } else {
+          hoveredEdgesInfo = createBoundingBoxAndGetEdges(pos, planeId);
+          if (hoveredEdgesInfo) {
+            [primarySelectedEdge, secondarySelectedEdge] = hoveredEdgesInfo;
+          }
+        }
+        if (primarySelectedEdge) {
           getSceneController().highlightUserBoundingBox(primarySelectedEdge.boxId);
         }
       },
@@ -581,7 +651,7 @@ export class BoundingBoxTool {
       mouseMove: (delta: Point2, position: Point2, _id: any, event: MouseEvent) => {
         if (primarySelectedEdge == null && planeId !== OrthoViews.TDView) {
           MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
-          highlightAndSetCursorOnHoveredBoundingBox(delta, position, planeId);
+          highlightAndSetCursorOnHoveredBoundingBox(position, planeId);
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
@@ -601,11 +671,11 @@ export class BoundingBoxTool {
     _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
-    _ctrlKey: boolean,
+    _ctrlOrMetaKey: boolean,
     _altKey: boolean,
   ): ActionDescriptor {
     return {
-      leftDrag: "Resize Bounding Boxes",
+      leftDrag: "Create/Resize Bounding Boxes",
       rightClick: "Context Menu",
     };
   }
@@ -619,6 +689,335 @@ export class BoundingBoxTool {
     getSceneController().highlightUserBoundingBox(null);
   }
 }
+
+export class QuickSelectTool {
+  static getPlaneMouseControls(
+    _planeId: OrthoView,
+    planeView: PlaneView,
+    showNodeContextMenuAt: ShowContextMenuFunction,
+  ): any {
+    let startPos: Vector3 | null = null;
+    let currentPos: Vector3 | null = null;
+    let isDragging = false;
+    const SceneController = getSceneController();
+    const { quickSelectGeometry } = SceneController;
+    return {
+      leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        // Potentially confirm earlier quick select actions. That way, the user
+        // can draw multiple rectangles even in preview mode. When starting a new
+        // rectangle, the old one is confirmed. If no quick select rectangle exists,
+        // this is a noop effectively.
+        Store.dispatch(confirmQuickSelectAction());
+        quickSelectGeometry.detachTextureMask();
+
+        Store.dispatch(setQuickSelectStateAction("drawing"));
+
+        const state = Store.getState();
+        quickSelectGeometry.rotateToViewport();
+        // Only show the center marker when using the heuristic
+        // approach since the center will be used as a seed for the "floodfill".
+        // For the ML-based approach, the center marker doesn't have any relevance.
+        quickSelectGeometry.setCenterMarkerVisibility(
+          Store.getState().userConfiguration.quickSelect.useHeuristic,
+        );
+
+        const volumeTracing = getActiveSegmentationTracing(state);
+        if (!volumeTracing) {
+          return;
+        }
+
+        const [h, s, l] = getSegmentColorAsHSLA(state, volumeTracing.activeCellId);
+        const activeCellColor = new THREE.Color().setHSL(h, s, l);
+        quickSelectGeometry.setColor(activeCellColor);
+        startPos = V3.floor(calculateGlobalPos(state, pos));
+        currentPos = startPos;
+        isDragging = true;
+
+        Store.dispatch(maybePrefetchEmbeddingAction(startPos));
+      },
+      leftMouseUp: () => {
+        isDragging = false;
+        // Identity equality is enough, since we want to catch the case
+        // in which the user didn't move the mouse at all
+        if (
+          startPos === currentPos ||
+          Store.getState().uiInformation.quickSelectState === "inactive"
+        ) {
+          // clear rectangle because user didn't drag
+          return;
+        }
+        if (startPos != null && currentPos != null) {
+          Store.dispatch(
+            computeQuickSelectForRectAction(startPos, currentPos, quickSelectGeometry),
+          );
+        }
+      },
+      leftDownMove: (
+        _delta: Point2,
+        pos: Point2,
+        _id: string | null | undefined,
+        event: MouseEvent,
+      ) => {
+        if (
+          !isDragging ||
+          startPos == null ||
+          Store.getState().uiInformation.quickSelectState === "inactive"
+        ) {
+          return;
+        }
+        const newCurrentPos = V3.floor(calculateGlobalPos(Store.getState(), pos));
+        if (event.shiftKey) {
+          // If shift is held, the rectangle is resized on topLeft and bottomRight
+          // so that the center is constant.
+          // We don't use the passed _delta variable, because that is given in pixel-space
+          // instead of the physical space.
+          if (currentPos) {
+            const delta3D = V3.sub(newCurrentPos, currentPos);
+            // Pseudo: startPos -= delta3D;
+            V3.sub(startPos, delta3D, startPos);
+          }
+        }
+
+        currentPos = newCurrentPos;
+
+        quickSelectGeometry.setCoordinates(startPos, currentPos);
+      },
+      rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
+        SkeletonHandlers.handleOpenContextMenu(
+          planeView,
+          pos,
+          plane,
+          isTouch,
+          event,
+          showNodeContextMenuAt,
+        );
+      },
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    shiftKey: boolean,
+    _ctrlOrMetaKey: boolean,
+    _altKey: boolean,
+  ): ActionDescriptor {
+    return {
+      leftDrag: shiftKey ? "Resize Rectangle symmetrically" : "Draw Rectangle around Segment",
+      rightClick: "Context Menu",
+    };
+  }
+
+  static onToolDeselected() {}
+}
+
+function getDoubleClickGuard() {
+  const DOUBLE_CLICK_TIME_THRESHOLD = 600;
+  const MAX_MOUSE_MOVEMENT_FOR_DOUBLE_CLICK = 6;
+  let lastLeftClickTime = 0;
+  let lastClickPosition: Point2 = { x: -100, y: -100 };
+  const doubleClickGuard = (pos: Point2, onDoubleClick: () => void) => {
+    const currentTime = Date.now();
+    if (
+      currentTime - lastLeftClickTime <= DOUBLE_CLICK_TIME_THRESHOLD &&
+      Math.abs(pos.x - lastClickPosition.x) + Math.abs(pos.y - lastClickPosition.y) <
+        MAX_MOUSE_MOVEMENT_FOR_DOUBLE_CLICK
+    ) {
+      // A double click should also terminate measuring.
+      onDoubleClick();
+      return true;
+    }
+    lastLeftClickTime = currentTime;
+    lastClickPosition = pos;
+    return false;
+  };
+  return doubleClickGuard;
+}
+
+export class LineMeasurementTool {
+  static initialPlane: OrthoView = OrthoViews.PLANE_XY;
+  static isMeasuring = false;
+  static getPlaneMouseControls(): any {
+    const doubleClickGuard = getDoubleClickGuard();
+    const SceneController = getSceneController();
+    const { lineMeasurementGeometry } = SceneController;
+    const mouseMove = (
+      _delta: Point2,
+      pos: Point2,
+      plane: OrthoView | null | undefined,
+      evt: MouseEvent,
+    ) => {
+      // In case the tool was reset by the user, abort measuring.
+      if (lineMeasurementGeometry.wasReset && this.isMeasuring) {
+        this.isMeasuring = false;
+        Store.dispatch(setIsMeasuringAction(false));
+      }
+      const isAltPressed = evt.altKey;
+      if (isAltPressed || plane !== this.initialPlane || !this.isMeasuring) {
+        MoveHandlers.moveWhenAltIsPressed(_delta, pos, plane, evt);
+        return;
+      }
+      const state = Store.getState();
+      const newPos = V3.floor(calculateGlobalPos(state, pos, this.initialPlane));
+      lineMeasurementGeometry.updateLatestPointPosition(newPos);
+      Store.dispatch(setLastMeasuredPositionAction(newPos));
+    };
+    const rightClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      // In case the tool was reset by the user, abort measuring.
+      if (lineMeasurementGeometry.wasReset && this.isMeasuring) {
+        this.isMeasuring = false;
+        Store.dispatch(setIsMeasuringAction(false));
+        return;
+      }
+      if (plane !== this.initialPlane) {
+        return;
+      }
+      if (this.isMeasuring) {
+        // Set the last point of the measurement and stop measuring.
+        mouseMove({ x: 0, y: 0 }, pos, plane, event);
+        this.isMeasuring = false;
+        Store.dispatch(setIsMeasuringAction(false));
+      } else {
+        // If the tool already stopped measuring, reset the tool.
+        lineMeasurementGeometry.resetAndHide();
+        Store.dispatch(hideMeasurementTooltipAction());
+      }
+    };
+    const leftClick = (pos: Point2, plane: OrthoView, event: MouseEvent) => {
+      // In case the tool was reset by the user, abort measuring.
+      if (lineMeasurementGeometry.wasReset && this.isMeasuring) {
+        this.isMeasuring = false;
+        Store.dispatch(setIsMeasuringAction(false));
+        return;
+      }
+      if (
+        doubleClickGuard(pos, () => {
+          rightClick(pos, plane, event);
+        }) ||
+        (this.isMeasuring && plane !== this.initialPlane)
+      ) {
+        return;
+      }
+      // Set a new measurement point.
+      const state = Store.getState();
+      const position = V3.floor(calculateGlobalPos(state, pos, plane));
+      if (!this.isMeasuring) {
+        this.initialPlane = plane;
+        lineMeasurementGeometry.setStartPoint(position, plane);
+        this.isMeasuring = true;
+        Store.dispatch(setIsMeasuringAction(true));
+      } else {
+        lineMeasurementGeometry.addPoint(position);
+      }
+      Store.dispatch(setLastMeasuredPositionAction(position));
+    };
+    return {
+      mouseMove,
+      rightClick,
+      leftClick,
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlOrMetaKey: boolean,
+    _altKey: boolean,
+  ): ActionDescriptor {
+    return {
+      leftClick: "Left Click to measure distance",
+      rightClick: "Finish Measurement",
+    };
+  }
+
+  static onToolDeselected() {
+    const { lineMeasurementGeometry } = getSceneController();
+    lineMeasurementGeometry.reset();
+    lineMeasurementGeometry.hide();
+    Store.dispatch(hideMeasurementTooltipAction());
+    this.isMeasuring = false;
+    this.initialPlane = OrthoViews.PLANE_XY;
+  }
+}
+
+export class AreaMeasurementTool {
+  static initialPlane: OrthoView = OrthoViews.PLANE_XY;
+  static isMeasuring = false;
+  static getPlaneMouseControls(): any {
+    const SceneController = getSceneController();
+    const { areaMeasurementGeometry } = SceneController;
+    const doubleClickGuard = getDoubleClickGuard();
+    const onRightClick = () => {
+      areaMeasurementGeometry.reset();
+      Store.dispatch(hideMeasurementTooltipAction());
+    };
+    return {
+      leftDownMove: (
+        _delta: Point2,
+        pos: Point2,
+        id: string | null | undefined,
+        evt: MouseEvent,
+      ) => {
+        if (evt.altKey) {
+          MoveHandlers.moveWhenAltIsPressed(_delta, pos, id, evt);
+          return;
+        }
+        if (id == null) {
+          return;
+        }
+        if (!this.isMeasuring) {
+          this.initialPlane = id as OrthoView;
+          this.isMeasuring = true;
+          areaMeasurementGeometry.reset();
+          areaMeasurementGeometry.show();
+          areaMeasurementGeometry.setViewport(id as OrthoView);
+        }
+        if (id !== this.initialPlane) {
+          return;
+        }
+        const state = Store.getState();
+        const position = V3.floor(calculateGlobalPos(state, pos, this.initialPlane));
+        areaMeasurementGeometry.addEdgePoint(position);
+        Store.dispatch(setLastMeasuredPositionAction(position));
+      },
+      leftMouseUp: () => {
+        if (!this.isMeasuring) {
+          return;
+        }
+        // Stop drawing area and close the drawn area if still measuring.
+        this.isMeasuring = false;
+        areaMeasurementGeometry.connectToStartPoint();
+      },
+      rightClick: onRightClick,
+      leftClick: (pos: Point2) => {
+        doubleClickGuard(pos, onRightClick);
+      },
+    };
+  }
+
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _useLegacyBindings: boolean,
+    _shiftKey: boolean,
+    _ctrlOrMetaKey: boolean,
+    _altKey: boolean,
+  ): ActionDescriptor {
+    return {
+      leftDrag: "Drag to measure area",
+      rightClick: "Reset Measurement",
+    };
+  }
+
+  static onToolDeselected() {
+    const { areaMeasurementGeometry } = getSceneController();
+    areaMeasurementGeometry.resetAndHide();
+    Store.dispatch(hideMeasurementTooltipAction());
+    this.isMeasuring = false;
+    this.initialPlane = OrthoViews.PLANE_XY;
+  }
+}
+
 export class ProofreadTool {
   static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
     return {
@@ -629,37 +1028,50 @@ export class ProofreadTool {
   }
 
   static onLeftClick(
-    planeView: PlaneView,
+    _planeView: PlaneView,
     pos: Point2,
     plane: OrthoView,
-    _event: MouseEvent,
-    isTouch: boolean,
+    event: MouseEvent,
+    _isTouch: boolean,
   ) {
-    const didSelectNode = SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch);
-    if (didSelectNode) {
-      // Don't do anything else
-      return;
-    }
-
     if (plane === OrthoViews.TDView) {
       // The click position cannot be mapped to a 3D coordinate in the
-      // 3D viewport (unless a node was clicked which is already handled above).
+      // 3D viewport.
       return;
     }
 
-    const globalPosition = calculateGlobalPos(Store.getState(), pos);
-    Store.dispatch(proofreadAtPosition(globalPosition));
+    const state = Store.getState();
+    const globalPosition = calculateGlobalPos(state, pos);
+
+    if (event.shiftKey) {
+      Store.dispatch(proofreadMerge(globalPosition));
+    } else if (event.ctrlKey || event.metaKey) {
+      Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition));
+    } else {
+      Store.dispatch(
+        proofreadAtPosition(globalPosition, state.flycam.additionalCoordinates || undefined),
+      );
+      VolumeHandlers.handlePickCell(pos);
+    }
   }
 
   static getActionDescriptors(
     _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
-    _shiftKey: boolean,
-    _ctrlKey: boolean,
+    shiftKey: boolean,
+    ctrlOrMetaKey: boolean,
     _altKey: boolean,
   ): ActionDescriptor {
+    let leftClick = "Select Segment to Proofread";
+
+    if (shiftKey) {
+      leftClick = "Merge with active Segment";
+    } else if (ctrlOrMetaKey) {
+      leftClick = "Split from active Segment";
+    }
+
     return {
-      leftClick: "Select Segment to Proofread",
+      leftClick,
       rightClick: "Context Menu",
     };
   }
@@ -670,6 +1082,7 @@ const toolToToolClass = {
   [AnnotationToolEnum.MOVE]: MoveTool,
   [AnnotationToolEnum.SKELETON]: SkeletonTool,
   [AnnotationToolEnum.BOUNDING_BOX]: BoundingBoxTool,
+  [AnnotationToolEnum.QUICK_SELECT]: QuickSelectTool,
   [AnnotationToolEnum.PROOFREAD]: ProofreadTool,
   [AnnotationToolEnum.BRUSH]: DrawTool,
   [AnnotationToolEnum.TRACE]: DrawTool,
@@ -677,6 +1090,8 @@ const toolToToolClass = {
   [AnnotationToolEnum.ERASE_BRUSH]: EraseTool,
   [AnnotationToolEnum.FILL_CELL]: FillCellTool,
   [AnnotationToolEnum.PICK_CELL]: PickCellTool,
+  [AnnotationToolEnum.LINE_MEASUREMENT]: LineMeasurementTool,
+  [AnnotationToolEnum.AREA_MEASUREMENT]: AreaMeasurementTool,
 };
 export function getToolClassForAnnotationTool(activeTool: AnnotationTool) {
   return toolToToolClass[activeTool];

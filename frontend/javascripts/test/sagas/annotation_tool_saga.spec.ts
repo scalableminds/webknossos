@@ -1,4 +1,6 @@
+import "test/mocks/lz4";
 import test from "ava";
+import _ from "lodash";
 import { AnnotationToolEnum, AnnotationTool } from "oxalis/constants";
 import mockRequire from "mock-require";
 import { initialState } from "test/fixtures/volumetracing_object";
@@ -13,6 +15,18 @@ Object.values(AnnotationToolEnum).forEach((annotationTool) => {
 mockRequire("oxalis/model/accessors/tool_accessor", {
   getDisabledInfoForTools: () => disabledInfoMock,
 });
+mockRequire("oxalis/controller/scene_controller_provider", () => ({
+  lineMeasurementGeometry: {
+    hide: _.noop,
+    reset: _.noop,
+    resetAndHide: _.noop,
+  },
+  areaMeasurementGeometry: {
+    hide: _.noop,
+    reset: _.noop,
+    resetAndHide: _.noop,
+  },
+}));
 const {
   MoveTool,
   SkeletonTool,
@@ -21,7 +35,10 @@ const {
   EraseTool,
   FillCellTool,
   PickCellTool,
+  QuickSelectTool,
   ProofreadTool,
+  LineMeasurementTool,
+  AreaMeasurementTool,
 } = mockRequire.reRequire("oxalis/controller/combinations/tool_controls");
 const UiReducer = mockRequire.reRequire("oxalis/model/reducers/ui_reducer").default;
 const { wkReadyAction } = mockRequire.reRequire("oxalis/model/actions/actions");
@@ -35,7 +52,10 @@ const allTools = [
   EraseTool,
   FillCellTool,
   PickCellTool,
+  QuickSelectTool,
   ProofreadTool,
+  LineMeasurementTool,
+  AreaMeasurementTool,
 ];
 const spies = allTools.map((tool) => sinon.spy(tool, "onToolDeselected"));
 test.beforeEach(() => {
@@ -74,9 +94,15 @@ test.serial(
     cycleTool();
     t.true(PickCellTool.onToolDeselected.calledOnce);
     cycleTool();
+    t.true(QuickSelectTool.onToolDeselected.calledOnce);
+    cycleTool();
     t.true(BoundingBoxTool.onToolDeselected.calledOnce);
     cycleTool();
     t.true(ProofreadTool.onToolDeselected.calledOnce);
+    cycleTool();
+    t.true(LineMeasurementTool.onToolDeselected.calledOnce);
+    cycleTool();
+    t.true(AreaMeasurementTool.onToolDeselected.calledOnce);
     cycleTool();
     t.true(MoveTool.onToolDeselected.calledTwice);
   },
@@ -113,8 +139,12 @@ test.serial("Selecting another tool should trigger a deselection of the previous
   t.true(PickCellTool.onToolDeselected.calledOnce);
   cycleTool(AnnotationToolEnum.PROOFREAD);
   t.true(BoundingBoxTool.onToolDeselected.calledOnce);
-  cycleTool(AnnotationToolEnum.MOVE);
+  cycleTool(AnnotationToolEnum.LINE_MEASUREMENT);
   t.true(ProofreadTool.onToolDeselected.calledOnce);
+  cycleTool(AnnotationToolEnum.AREA_MEASUREMENT);
+  t.true(LineMeasurementTool.onToolDeselected.calledOnce);
+  cycleTool(AnnotationToolEnum.MOVE);
+  t.true(AreaMeasurementTool.onToolDeselected.calledOnce);
   cycleTool(AnnotationToolEnum.SKELETON);
   t.true(MoveTool.onToolDeselected.calledTwice);
 });

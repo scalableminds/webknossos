@@ -311,13 +311,15 @@ class PolyhedronRasterizer {
       x += incX;
 
       switch (mode) {
-        case 0:
+        case 0: {
           drawFunction(x, y, z, buffer, shiftZ);
           break;
+        }
 
-        case 1:
+        case 1: {
           drawFunction(y, x, z, buffer, shiftZ);
           break;
+        }
 
         default:
           drawFunction(z, y, x, buffer, shiftZ);
@@ -385,8 +387,7 @@ class PolyhedronRasterizer {
     // edges of that polygon is then drawn into the buffer.
     // After that, we know all line segments that belong to
     // the polyhedron.
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { deltaX, deltaY, deltaZ, shiftZ, buffer, pointsBuffer } = this;
+    const { deltaY, deltaZ, shiftZ, buffer, pointsBuffer } = this;
 
     // build and rasterize convex hull of all xy-planes
     for (let z = 0; z < deltaZ; z++) {

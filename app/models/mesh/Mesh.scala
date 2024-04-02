@@ -3,15 +3,16 @@ package models.mesh
 import com.google.common.io.BaseEncoding
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 
 import javax.inject.Inject
 import play.api.libs.json.Json._
 import play.api.libs.json._
-import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -20,7 +21,7 @@ case class MeshInfo(
     _annotation: ObjectId,
     description: String,
     position: Vec3Int,
-    created: Long = System.currentTimeMillis,
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
@@ -52,30 +53,30 @@ class MeshService @Inject()()(implicit ec: ExecutionContext) {
       ))
 }
 
-class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MeshInfo, MeshesRow, Meshes](sqlClient) {
-  val collection = Meshes
+  protected val collection = Meshes
 
-  def idColumn(x: Meshes): Rep[String] = x._Id
+  protected def idColumn(x: Meshes): Rep[String] = x._Id
 
-  def isDeletedColumn(x: Meshes): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: Meshes): Rep[Boolean] = x.isdeleted
 
-  private val infoColumns = (columnsList diff Seq("data")).mkString(", ")
-  type InfoTuple = (String, String, String, String, java.sql.Timestamp, Boolean)
+  private val infoColumns = SqlToken.raw((columnsList diff Seq("data")).mkString(", "))
+  type InfoTuple = (ObjectId, ObjectId, String, String, Instant, Boolean)
 
-  override def parse(r: MeshesRow): Fox[MeshInfo] =
+  override protected def parse(r: MeshesRow): Fox[MeshInfo] =
     Fox.failure("not implemented, use parseInfo or get the data directly")
 
-  def parseInfo(r: InfoTuple): Fox[MeshInfo] =
+  private def parseInfo(r: InfoTuple): Fox[MeshInfo] =
     for {
-      position <- Vec3Int.fromList(parseArrayTuple(r._4).map(_.toInt)) ?~> "could not parse mesh position"
+      position <- Vec3Int.fromList(parseArrayLiteral(r._4).map(_.toInt)) ?~> "could not parse mesh position"
     } yield {
       MeshInfo(
-        ObjectId(r._1), //_id
-        ObjectId(r._2), //_annotation
+        r._1, //_id
+        r._2, //_annotation
         r._3, // description
         position,
-        r._5.getTime, //created
+        r._5, //created
         r._6 //isDeleted
       )
     }
@@ -83,42 +84,40 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[MeshInfo] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(
-        sql"select #$infoColumns from #$existingCollectionName where _id = ${id.id} and #$accessQuery".as[InfoTuple])
+      rList <- run(q"select $infoColumns from $existingCollectionName where _id = $id and $accessQuery".as[InfoTuple])
       r <- rList.headOption.toFox
       parsed <- parseInfo(r)
     } yield parsed
 
-  def findAllWithAnnotation(_annotation: ObjectId)(implicit ctx: DBAccessContext): Fox[List[MeshInfo]] =
+  def findAllWithAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[MeshInfo]] =
     for {
       accessQuery <- readAccessQuery
       resultTuples <- run(
-        sql"select #$infoColumns from #$existingCollectionName where _annotation = ${_annotation} and #$accessQuery"
+        q"select $infoColumns from $existingCollectionName where _annotation = $annotationId and $accessQuery"
           .as[InfoTuple])
       resultsParsed <- Fox.serialCombined(resultTuples.toList)(parseInfo)
     } yield resultsParsed
 
   def insertOne(m: MeshInfo): Fox[Unit] =
     for {
-      _ <- run(sqlu"""insert into webknossos.meshes(_id, _annotation, description, position, created, isDeleted)
-                   values(${m._id.id}, ${m._annotation.id}, ${m.description}, '#${writeStructTuple(
-        m.position.toList.map(_.toString))}',
-                          ${new java.sql.Timestamp(m.created)}, ${m.isDeleted})
-        """)
+      _ <- run(q"""insert into webknossos.meshes(_id, _annotation, description, position, created, isDeleted)
+                   values(${m._id}, ${m._annotation}, ${m.description}, ${m.position}, ${m.created}, ${m.isDeleted})
+                """.asUpdate)
     } yield ()
 
-  def updateOne(id: ObjectId, _annotation: ObjectId, description: String, position: Vec3Int)(
+  def updateOne(id: ObjectId, annotationId: ObjectId, description: String, position: Vec3Int)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"""update webknossos.meshes set _annotation = ${_annotation}, description = $description,
-                            position = '#${writeStructTuple(position.toList.map(_.toString))}' where _id = $id""")
+      _ <- run(q"""update webknossos.meshes
+                   set _annotation = $annotationId, description = $description, position = $position
+                   where _id = $id""".asUpdate)
     } yield ()
 
   def getData(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Array[Byte]] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select data from webknossos.meshes where _id = $id and #$accessQuery".as[Option[String]])
+      rList <- run(q"select data from webknossos.meshes where _id = $id and $accessQuery".as[Option[String]])
       r <- rList.headOption.flatten.toFox
       binary = BaseEncoding.base64().decode(r)
     } yield binary
@@ -126,7 +125,7 @@ class MeshDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def updateData(id: ObjectId, data: Array[Byte])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.meshes set data = ${BaseEncoding.base64().encode(data)} where _id = $id")
+      _ <- run(q"update webknossos.meshes set data = ${BaseEncoding.base64().encode(data)} where _id = $id".asUpdate)
     } yield ()
 
 }

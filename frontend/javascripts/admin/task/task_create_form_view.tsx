@@ -10,22 +10,23 @@ import {
   Card,
   Radio,
   Upload,
-  Modal,
   InputNumber,
   Input,
   Spin,
   RadioChangeEvent,
+  Tooltip,
+  Modal,
 } from "antd";
 import { FormInstance } from "antd/lib/form";
 import Toast from "libs/toast";
 import React from "react";
-import { InboxOutlined, WarningOutlined } from "@ant-design/icons";
+import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import _ from "lodash";
 import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
-import type {
-  TaskCreationResponse,
-  TaskCreationResponseContainer,
+import {
+  type TaskCreationResponse,
+  type TaskCreationResponseContainer,
 } from "admin/task/task_create_bulk_view";
 import { normFile, NUM_TASKS_PER_BATCH } from "admin/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
@@ -46,6 +47,7 @@ import SelectExperienceDomain from "components/select_experience_domain";
 import messages from "messages";
 import { saveAs } from "file-saver";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
+import { AsyncButton } from "components/async_clickables";
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
 const fullWidth = {
@@ -53,7 +55,7 @@ const fullWidth = {
 };
 const maxDisplayedTasksCount = 50;
 const TASK_CSV_HEADER =
-  "taskId,dataSet,taskType,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
+  "taskId,dataSet,taskTypeId,experienceDomain,minExperience,x,y,z,rotX,rotY,rotZ,instances,minX,minY,minZ,width,height,depth,project,scriptId,creationInfo";
 type Props = {
   taskId: string | null | undefined;
   history: RouteComponentProps["history"];
@@ -95,7 +97,7 @@ export function taskToText(task: APITask) {
   const [editPositionAsString, editRotationAsString] = [editPosition, editRotation].map((vector3) =>
     vector3.join(","),
   );
-  const totalNumberOfInstances = status.open + status.active + status.finished;
+  const totalNumberOfInstances = status.pending + status.active + status.finished;
   const boundingBoxAsString = boundingBoxVec6 ? boundingBoxVec6.join(",") : "0,0,0,0,0,0";
   const scriptId = script ? `${script.id}` : "";
   const creationInfoOrEmpty = creationInfo || "";
@@ -123,8 +125,10 @@ export function downloadTasksAsCSV(tasks: Array<APITask>) {
   });
   saveAs(blob, filename);
 }
+
 export function handleTaskCreationResponse(response: TaskCreationResponseContainer) {
   const { tasks, warnings } = response;
+
   const successfulTasks: APITask[] = [];
   const failedTasks: string[] = [];
   let teamName: string | null = null;
@@ -162,7 +166,7 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
         <div style={subHeadingStyle}>
           <WarningOutlined
             style={{
-              color: "var(--ant-warning)",
+              color: "var(--ant-color-warning)",
             }}
           />{" "}
           There were warnings during task creation:
@@ -252,7 +256,39 @@ export function handleTaskCreationResponse(response: TaskCreationResponseContain
     width: 600,
   });
 }
-
+export function CreateResourceButton({ text, link }: { text: string; link: string }) {
+  return (
+    <Col span={4} style={{ marginTop: 11 }}>
+      <Button block href={link} target="_blank" rel="noreferrer">
+        <span
+          style={{
+            display: "block",
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {text}
+        </span>
+      </Button>
+    </Col>
+  );
+}
+export function ReloadResourceButton({
+  tooltip,
+  onReload,
+}: {
+  tooltip: string;
+  onReload: () => Promise<void>;
+}) {
+  return (
+    <Col flex="40px">
+      <Tooltip title={tooltip}>
+        <AsyncButton style={{ marginTop: 7 }} icon={<ReloadOutlined />} onClick={onReload} />
+      </Tooltip>
+    </Col>
+  );
+}
 class TaskCreateFormView extends React.PureComponent<Props, State> {
   formRef = React.createRef<FormInstance>();
   state: State = {
@@ -303,12 +339,13 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
         taskTypeId: task.type.id,
         boundingBox: task.boundingBox ? task.boundingBoxVec6 : null,
         scriptId: task.script ? task.script.id : null,
-        openInstances: task.status.open,
+        pendingInstances: task.status.pending,
       });
 
       const validFormValues = _.omitBy(defaultValues, _.isNull);
 
       // The task type is not needed for the form and leads to antd errors if it contains null values
+      // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
       const { type, ...neededFormValues } = validFormValues;
       form.setFieldsValue(neededFormValues);
     }
@@ -420,7 +457,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   required: true,
                 },
                 {
-                  validator: async (rule, value) => {
+                  validator: async (_rule, value) => {
                     const newestForm = this.formRef.current;
 
                     if (!newestForm || value === "") {
@@ -439,7 +476,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                         }),
                       ));
 
-                    if (annotationResponse != null && annotationResponse.dataSetName != null) {
+                    if (annotationResponse?.dataSetName != null) {
                       newestForm.setFieldsValue({
                         dataSet: annotationResponse.dataSetName,
                       });
@@ -453,10 +490,9 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     );
 
                     if (
-                      taskResponse != null &&
-                      taskResponse.dataSet != null &&
+                      taskResponse?.dataSet != null &&
                       _.isEqual(taskResponse.status, {
-                        open: 0,
+                        pending: 0,
                         active: 0,
                         finished: 1,
                       })
@@ -479,35 +515,49 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
             </FormItem>
           ) : null}
 
-          <FormItem
-            name="dataSet"
-            label="Dataset"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-            ]}
-          >
-            <Select
-              showSearch
-              placeholder={
-                this.state.specificationType === SpecificationEnum.BaseAnnotation
-                  ? "The dataset is inferred from the base annotation."
-                  : "Select a Dataset"
+          <Row gutter={8} align="middle" wrap={false}>
+            <Col flex="auto">
+              <FormItem
+                name="dataSet"
+                label="Dataset"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
+              >
+                <Select
+                  showSearch
+                  placeholder={
+                    this.state.specificationType === SpecificationEnum.BaseAnnotation
+                      ? "The dataset is inferred from the base annotation."
+                      : "Select a Dataset"
+                  }
+                  optionFilterProp="label"
+                  style={fullWidth}
+                  disabled={
+                    isEditingMode ||
+                    this.state.specificationType === SpecificationEnum.BaseAnnotation
+                  }
+                  loading={this.state.isFetchingData}
+                  options={this.state.datasets.map((dataset: APIDataset) => ({
+                    label: dataset.name,
+                    value: dataset.name,
+                  }))}
+                />
+              </FormItem>
+            </Col>
+            <ReloadResourceButton
+              tooltip="Reload to show new Datasets"
+              onReload={async () =>
+                this.setState({
+                  datasets: await getActiveDatasetsOfMyOrganization(),
+                })
               }
-              optionFilterProp="label"
-              style={fullWidth}
-              disabled={
-                isEditingMode || this.state.specificationType === SpecificationEnum.BaseAnnotation
-              }
-              notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-              options={this.state.datasets.map((dataset: APIDataset) => ({
-                label: dataset.name,
-                value: dataset.name,
-              }))}
             />
-          </FormItem>
+            <CreateResourceButton text="Upload Dataset" link="/datasets/upload" />
+          </Row>
 
           <FormItem
             name="editPosition"
@@ -561,32 +611,45 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 editRotation: [0, 0, 0],
               }}
             >
-              <FormItem
-                name="taskTypeIdOrSummary"
-                label="TaskType"
-                hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                ]}
-              >
-                <Select
-                  showSearch
-                  placeholder="Select a TaskType"
-                  optionFilterProp="label"
-                  style={fullWidth}
-                  disabled={isEditingMode}
-                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  options={this.state.taskTypes.map((taskType: APITaskType) => ({
-                    value: taskType.id,
-                    label: taskType.summary,
-                  }))}
+              <Row gutter={8} align="middle" wrap={false}>
+                <Col flex="auto">
+                  <FormItem
+                    name="taskTypeId"
+                    label="Task Type"
+                    hasFeedback
+                    rules={[
+                      {
+                        required: true,
+                      },
+                    ]}
+                  >
+                    <Select
+                      showSearch
+                      placeholder="Select a Task Type"
+                      optionFilterProp="label"
+                      style={fullWidth}
+                      disabled={isEditingMode}
+                      loading={this.state.isFetchingData}
+                      options={this.state.taskTypes.map((taskType: APITaskType) => ({
+                        value: taskType.id,
+                        label: taskType.summary,
+                      }))}
+                    />
+                  </FormItem>
+                </Col>
+                <ReloadResourceButton
+                  tooltip="Reload to show new Task Types"
+                  onReload={async () =>
+                    this.setState({
+                      taskTypes: await getTaskTypes(),
+                    })
+                  }
                 />
-              </FormItem>
+                <CreateResourceButton text="Create new Task Type" link="/taskTypes/create" />
+              </Row>
 
-              <Row gutter={8}>
-                <Col span={12}>
+              <Row gutter={8} align="middle" wrap={false}>
+                <Col span={10}>
                   <FormItem
                     name={["neededExperience", "domain"]}
                     label="Experience Domain"
@@ -606,7 +669,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     />
                   </FormItem>
                 </Col>
-                <Col span={12}>
+                <Col flex="auto">
                   <FormItem
                     name={["neededExperience", "value"]}
                     label="Experience Value"
@@ -623,10 +686,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     <InputNumber style={fullWidth} disabled={isEditingMode} />
                   </FormItem>
                 </Col>
+                <CreateResourceButton text="Assign Experience" link="/users" />
               </Row>
 
               <FormItem
-                name="openInstances"
+                name="pendingInstances"
                 label={instancesLabel}
                 hasFeedback
                 rules={[
@@ -641,44 +705,70 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 <InputNumber style={fullWidth} min={0} />
               </FormItem>
 
-              <FormItem
-                name="projectName"
-                label="Project"
-                hasFeedback
-                rules={[
-                  {
-                    required: true,
-                  },
-                ]}
-              >
-                <Select
-                  showSearch
-                  placeholder="Select a Project"
-                  optionFilterProp="label"
-                  style={fullWidth}
-                  disabled={isEditingMode}
-                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  options={this.state.projects.map((project: APIProject) => ({
-                    value: project.name,
-                    label: project.name,
-                  }))}
+              <Row gutter={8} align="middle" wrap={false}>
+                <Col flex="auto">
+                  <FormItem
+                    name="projectName"
+                    label="Project"
+                    hasFeedback
+                    rules={[
+                      {
+                        required: true,
+                      },
+                    ]}
+                  >
+                    <Select
+                      showSearch
+                      placeholder="Select a Project"
+                      optionFilterProp="label"
+                      style={fullWidth}
+                      disabled={isEditingMode}
+                      loading={this.state.isFetchingData}
+                      options={this.state.projects.map((project: APIProject) => ({
+                        value: project.name,
+                        label: project.name,
+                      }))}
+                    />
+                  </FormItem>
+                </Col>
+                <ReloadResourceButton
+                  tooltip="Reload to show new Projects"
+                  onReload={async () =>
+                    this.setState({
+                      projects: await getProjects(),
+                    })
+                  }
                 />
-              </FormItem>
+                <CreateResourceButton text="Create new Project" link="/projects/create" />
+              </Row>
 
-              <FormItem name="scriptId" label="Script" hasFeedback>
-                <Select
-                  showSearch
-                  placeholder="Select a Script"
-                  optionFilterProp="label"
-                  style={fullWidth}
-                  disabled={isEditingMode}
-                  notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
-                  options={this.state.scripts.map((script: APIScript) => ({
-                    value: script.id,
-                    label: script.name,
-                  }))}
+              <Row gutter={8} align="middle" wrap={false}>
+                <Col flex="auto">
+                  <FormItem name="scriptId" label="Script" hasFeedback>
+                    <Select
+                      showSearch
+                      placeholder="Select a Script"
+                      optionFilterProp="label"
+                      style={fullWidth}
+                      disabled={isEditingMode}
+                      loading={this.state.isFetchingData}
+                      options={this.state.scripts.map((script: APIScript) => ({
+                        value: script.id,
+                        label: script.name,
+                      }))}
+                    />
+                  </FormItem>
+                </Col>
+                <ReloadResourceButton
+                  tooltip="Reload to show new Scripts"
+                  onReload={async () =>
+                    this.setState({
+                      scripts: await getScripts(),
+                    })
+                  }
                 />
-              </FormItem>
+                <CreateResourceButton text="Create new Script" link="/scripts/create" />
+              </Row>
 
               <FormItem
                 name="boundingBox"
@@ -694,7 +784,9 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   value={this.state.specificationType}
                   onChange={(evt: RadioChangeEvent) =>
                     this.setState({
-                      specificationType: coalesce(SpecificationEnum, evt.target.value),
+                      specificationType:
+                        coalesce(SpecificationEnum, evt.target.value) ||
+                        this.state.specificationType,
                     })
                   }
                 >

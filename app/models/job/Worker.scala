@@ -1,73 +1,83 @@
 package models.job
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Formatter
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
-import javax.inject.Inject
-import oxalis.telemetry.SlackNotificationService
+import models.dataset.DataStoreDAO
+import models.job.JobCommand.JobCommand
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
-import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
+import telemetry.SlackNotificationService
+import utils.sql.{SQLDAO, SqlClient}
+import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 case class Worker(_id: ObjectId,
                   _dataStore: String,
                   key: String,
-                  maxParallelJobs: Int,
+                  maxParallelHighPriorityJobs: Int,
+                  maxParallelLowPriorityJobs: Int,
+                  supportedJobCommands: Set[JobCommand],
                   lastHeartBeat: Long = 0,
-                  created: Long = System.currentTimeMillis,
+                  created: Instant = Instant.now,
                   isDeleted: Boolean = false)
 
-class WorkerDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Worker, WorkersRow, Workers](sqlClient) {
-  val collection = Workers
+  protected val collection = Workers
 
-  def idColumn(x: Workers): Rep[String] = x._Id
+  protected def idColumn(x: Workers): Rep[String] = x._Id
 
-  def isDeletedColumn(x: Workers): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: Workers): Rep[Boolean] = x.isdeleted
 
-  def parse(r: WorkersRow): Fox[Worker] =
-    Fox.successful(
+  protected def parse(r: WorkersRow): Fox[Worker] =
+    for {
+      supportedJobCommands <- Fox.serialCombined(parseArrayLiteral(r.supportedjobcommands)) { s =>
+        JobCommand.fromString(s).toFox ?~> f"$s is not a valid job command"
+      }
+    } yield
       Worker(
         ObjectId(r._Id),
         r._Datastore,
         r.key,
-        r.maxparalleljobs,
+        r.maxparallelhighpriorityjobs,
+        r.maxparallellowpriorityjobs,
+        supportedJobCommands.toSet,
         r.lastheartbeat.getTime,
-        r.created.getTime,
+        Instant.fromSql(r.created),
         r.isdeleted
       )
-    )
 
   def findOneByKey(key: String): Fox[Worker] =
     for {
-      r: Seq[WorkersRow] <- run(sql"select #$columns from #$existingCollectionName where key = $key".as[WorkersRow])
+      r: Seq[WorkersRow] <- run(q"SELECT $columns FROM $existingCollectionName WHERE key = $key".as[WorkersRow])
       parsed <- parseFirst(r, "key")
     } yield parsed
 
-  def findOneByDataStore(dataStoreName: String): Fox[Worker] =
+  def findAllByDataStore(dataStoreName: String): Fox[List[Worker]] =
     for {
       r: Seq[WorkersRow] <- run(
-        sql"select #$columns from #$existingCollectionName where _dataStore = $dataStoreName".as[WorkersRow])
-      parsed <- parseFirst(r, "dataStoreName")
+        q"SELECT $columns FROM $existingCollectionName WHERE _dataStore = $dataStoreName".as[WorkersRow])
+      parsed <- parseAll(r)
     } yield parsed
 
   def updateHeartBeat(_id: ObjectId): Unit = {
-    run(sqlu"update webknossos.workers set lastHeartBeat = NOW() where _id = ${_id}")
+    run(q"UPDATE webknossos.workers SET lastHeartBeat = NOW() WHERE _id = ${_id}".asUpdate)
     // Note that this should not block the jobs polling operation, failures here are not critical
     ()
   }
 }
 
-class WorkerService @Inject()(conf: WkConf) {
+class WorkerService @Inject()(conf: WkConf, dataStoreDAO: DataStoreDAO, workerDAO: WorkerDAO) {
 
   def lastHeartBeatIsRecent(worker: Worker): Boolean =
     System.currentTimeMillis() - worker.lastHeartBeat < conf.Jobs.workerLivenessTimeout.toMillis
@@ -75,7 +85,9 @@ class WorkerService @Inject()(conf: WkConf) {
   def publicWrites(worker: Worker): JsObject =
     Json.obj(
       "id" -> worker._id.id,
-      "maxParallelJobs" -> worker.maxParallelJobs,
+      "maxParallelHighPriorityJobs" -> worker.maxParallelHighPriorityJobs,
+      "maxParallelLowPriorityJobs" -> worker.maxParallelLowPriorityJobs,
+      "supportedJobCommands" -> worker.supportedJobCommands,
       "created" -> worker.created,
       "lastHeartBeat" -> worker.lastHeartBeat,
       "lastHeartBeatIsRecent" -> lastHeartBeatIsRecent(worker)
@@ -87,7 +99,7 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
                                       workerDAO: WorkerDAO,
                                       slackNotificationService: SlackNotificationService,
                                       val lifecycle: ApplicationLifecycle,
-                                      val system: ActorSystem)
+                                      val system: ActorSystem)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with Formatter
     with LazyLogging {

@@ -1,0 +1,17 @@
+syntax = "proto2";
+
+package com.scalableminds.webknossos.datastore;
+
+import "geometry.proto";
+
+message AgglomerateEdge { // Note that the edges are stored directed but semantically undirected. When testing for an edge, check both directions.
+  required int64 source = 1;
+  required int64 target = 2;
+}
+
+message AgglomerateGraph {
+  repeated int64 segments = 1;
+  repeated AgglomerateEdge edges = 2;
+  repeated Vec3IntProto positions = 3;
+  repeated float affinities = 4;
+}

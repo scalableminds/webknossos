@@ -1,5 +1,5 @@
 import { CopyOutlined } from "@ant-design/icons";
-import { Modal, Input, Button, Row, Col, Dropdown } from "antd";
+import { Modal, Input, Button, Row, Col, Dropdown, Space } from "antd";
 import { useSelector } from "react-redux";
 import React from "react";
 import { makeComponentLazy } from "libs/react_helpers";
@@ -11,12 +11,12 @@ import { useZarrLinkMenu } from "./private_links_view";
 const sharingActiveNode = false;
 
 type Props = {
-  isVisible: boolean;
+  isOpen: boolean;
   onOk: () => any;
 };
 
 function _ShareViewDatasetModalView(props: Props) {
-  const { isVisible, onOk } = props;
+  const { isOpen, onOk } = props;
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const sharingToken = useDatasetSharingToken(dataset);
   const longUrl = getUrl(sharingToken, !dataset.isPublic);
@@ -26,7 +26,7 @@ function _ShareViewDatasetModalView(props: Props) {
   return (
     <Modal
       title="Share this Dataset"
-      visible={isVisible}
+      open={isOpen}
       width={800}
       okText="Ok"
       onOk={onOk}
@@ -42,7 +42,7 @@ function _ShareViewDatasetModalView(props: Props) {
           Sharing Link
         </Col>
         <Col span={18}>
-          <CopyableSharingLink isVisible={isVisible} longUrl={longUrl} />
+          <CopyableSharingLink isVisible={isOpen} longUrl={longUrl} />
 
           <div
             style={{
@@ -68,7 +68,7 @@ function _ShareViewDatasetModalView(props: Props) {
             Zarr Link
           </Col>
           <Col span={18}>
-            <Input.Group compact>
+            <Space.Compact>
               <Input
                 style={{
                   width: "85%",
@@ -76,7 +76,7 @@ function _ShareViewDatasetModalView(props: Props) {
                 value={zarrBaseUrl}
                 readOnly
               />
-              <Dropdown overlay={copyLayerUrlMenu}>
+              <Dropdown menu={copyLayerUrlMenu}>
                 <Button
                   style={{
                     width: "15%",
@@ -86,7 +86,7 @@ function _ShareViewDatasetModalView(props: Props) {
                   Copy
                 </Button>
               </Dropdown>
-            </Input.Group>
+            </Space.Compact>
             <div
               style={{
                 marginBottom: 12,

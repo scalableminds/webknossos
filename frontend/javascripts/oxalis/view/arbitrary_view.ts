@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
@@ -11,22 +9,20 @@ import {
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
-import type { OrthoViewMap } from "oxalis/constants";
-import Constants, { ArbitraryViewport, OrthoViews } from "oxalis/constants";
+import type { OrthoViewMap, Viewport } from "oxalis/constants";
+import Constants, { ARBITRARY_CAM_DISTANCE, ArbitraryViewport, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
 import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea, renderToTexture } from "oxalis/view/rendering_utils";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 type GeometryLike = {
   addToScene: (obj: THREE.Object3D) => void;
 };
 
 class ArbitraryView {
-  // Copied form backbone events (TODO: handle this better)
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
-  trigger: (...args: Array<any>) => any;
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: ArbitraryPlane;
@@ -36,7 +32,6 @@ class ArbitraryView {
   additionalInfo: string = "";
   isRunning: boolean = false;
   animationRequestId: number | null | undefined = null;
-  camDistance: number;
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Perspective... Remove this comment to see the full error message
   camera: THREE.PerspectiveCamera = null;
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Orthographi... Remove this comment to see the full error message
@@ -45,18 +40,13 @@ class ArbitraryView {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'group' has no initializer and is not def... Remove this comment to see the full error message
   group: THREE.Object3D;
   cameraPosition: Array<number>;
+  unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
     this.animate = this.animateImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
 
-    _.extend(this, BackboneEvents);
-
     const { scene } = getSceneController();
-    // camDistance has to be calculated such that with cam
-    // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
-    // viewport.
-    this.camDistance = Constants.VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
     // Initialize main THREE.js components
     this.camera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
     // This name can be used to retrieve the camera from the scene
@@ -68,27 +58,15 @@ class ArbitraryView {
     tdCamera.up = new THREE.Vector3(0, 0, -1);
     tdCamera.matrixAutoUpdate = true;
     this.tdCamera = tdCamera;
-    const dummyCamera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
+    const dummyCamera = new THREE.OrthographicCamera(45, 1, 50, 1000);
     this.cameras = {
       TDView: tdCamera,
-      // @ts-expect-error ts-migrate(2739) FIXME: Type 'PerspectiveCamera' is missing the following ... Remove this comment to see the full error message
       PLANE_XY: dummyCamera,
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'PerspectiveCamera' is not assignable to type... Remove this comment to see the full error message
       PLANE_YZ: dummyCamera,
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'PerspectiveCamera' is not assignable to type... Remove this comment to see the full error message
       PLANE_XZ: dummyCamera,
     };
-    this.cameraPosition = [0, 0, this.camDistance];
+    this.cameraPosition = [0, 0, ARBITRARY_CAM_DISTANCE];
     this.needsRerender = true;
-    app.vent.on("rerender", () => {
-      this.needsRerender = true;
-    });
-    Store.subscribe(() => {
-      // Render in the next frame after the change propagated everywhere
-      window.requestAnimationFrame(() => {
-        this.needsRerender = true;
-      });
-    });
   }
 
   getCameras(): OrthoViewMap<THREE.OrthographicCamera> {
@@ -98,6 +76,21 @@ class ArbitraryView {
   start(): void {
     if (!this.isRunning) {
       this.isRunning = true;
+
+      this.unsubscribeFunctions.push(
+        app.vent.on("rerender", () => {
+          this.needsRerender = true;
+        }),
+      );
+      this.unsubscribeFunctions.push(
+        Store.subscribe(() => {
+          // Render in the next frame after the change propagated everywhere
+          window.requestAnimationFrame(() => {
+            this.needsRerender = true;
+          });
+        }),
+      );
+
       this.group = new THREE.Object3D();
       this.group.add(this.camera);
       getSceneController().rootGroup.add(this.group);
@@ -106,6 +99,13 @@ class ArbitraryView {
       this.animationRequestId = window.requestAnimationFrame(this.animate);
       // Dont forget to handle window resizing!
       window.addEventListener("resize", this.resizeThrottled);
+      this.unsubscribeFunctions.push(
+        listenToStoreProperty(
+          (storeState) => storeState.uiInformation.navbarHeight,
+          () => this.resizeThrottled(),
+          true,
+        ),
+      );
     }
   }
 
@@ -120,20 +120,27 @@ class ArbitraryView {
 
       getSceneController().rootGroup.remove(this.group);
       window.removeEventListener("resize", this.resizeThrottled);
+
+      for (const fn of this.unsubscribeFunctions) {
+        fn();
+      }
+      this.unsubscribeFunctions = [];
     }
   }
 
   animateImpl(): void {
-    this.animationRequestId = null;
-
     if (!this.isRunning) {
       return;
     }
+    this.renderFunction();
+    this.animationRequestId = window.requestAnimationFrame(this.animate);
+  }
 
+  renderFunction() {
+    this.animationRequestId = null;
     TWEEN.update();
 
-    if (this.needsRerender || window.needsRerender) {
-      this.trigger("render");
+    if (this.needsRerender) {
       const { camera, geometries } = this;
       const { renderer, scene } = getSceneController();
 
@@ -146,23 +153,12 @@ class ArbitraryView {
       }
 
       const m = getZoomedMatrix(Store.getState().flycam);
+      // biome-ignore format: don't format array
       camera.matrix.set(
-        m[0],
-        m[4],
-        m[8],
-        m[12],
-        m[1],
-        m[5],
-        m[9],
-        m[13],
-        m[2],
-        m[6],
-        m[10],
-        m[14],
-        m[3],
-        m[7],
-        m[11],
-        m[15],
+        m[0], m[4], m[8], m[12],
+        m[1], m[5], m[9], m[13],
+        m[2], m[6], m[10], m[14],
+        m[3], m[7], m[11], m[15],
       );
       camera.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
       // @ts-expect-error ts-migrate(2556) FIXME: Expected 3 arguments, but got 0 or more.
@@ -196,11 +192,7 @@ class ArbitraryView {
       }
 
       this.needsRerender = false;
-      // @ts-ignore
-      window.needsRerender = false;
     }
-
-    this.animationRequestId = window.requestAnimationFrame(this.animate);
   }
 
   draw(): void {
@@ -243,10 +235,7 @@ class ArbitraryView {
     const usedBuckets = [];
 
     while (index < buffer.length) {
-      const bucketAddress = buffer
-        .subarray(index, index + 4)
-        // @ts-expect-error ts-migrate(2339) FIXME: Property 'currentAnchorPoint' does not exist on ty... Remove this comment to see the full error message
-        .map((el, idx) => (idx < 3 ? window.currentAnchorPoint[idx] + el : el));
+      const bucketAddress = buffer.subarray(index, index + 4);
       index += 4;
       const id = bucketAddress.join(",");
 
@@ -281,12 +270,16 @@ class ArbitraryView {
   resizeThrottled = _.throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
 
   setClippingDistanceImpl(value: number): void {
-    this.camera.near = this.camDistance - value;
+    this.camera.near = ARBITRARY_CAM_DISTANCE - value;
     this.camera.updateProjectionMatrix();
   }
 
   setAdditionalInfo(info: string): void {
     this.additionalInfo = info;
+  }
+
+  getCameraForPlane(_plane: Viewport) {
+    return this.camera;
   }
 }
 

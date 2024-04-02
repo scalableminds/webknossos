@@ -1,15 +1,17 @@
 import { Tag, Tooltip } from "antd";
 import UserLocalStorage from "libs/user_local_storage";
-import React, { useEffect } from "react";
+import React, { MouseEventHandler, useEffect } from "react";
 import { stringToColor } from "libs/format_utils";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 type LabelProps = {
   tag: string;
   kind: string;
-  onClick: (arg0: MouseEvent) => void;
-  onClose: (arg0: MouseEvent) => void;
+  onClick: MouseEventHandler<HTMLSpanElement>;
+  onClose: MouseEventHandler<HTMLSpanElement>;
   closable: boolean;
 };
 type FilterProps = {
+  itemName: string;
   searchTags: Array<string>;
   setTags: (arg0: Array<string>) => void;
   localStorageSavingKey: string;
@@ -19,9 +21,7 @@ export default function CategorizationLabel({ tag, kind, onClick, onClose, closa
     <Tooltip title={`Click to only show ${kind} with this tag.`}>
       <Tag
         color={stringToColor(tag)}
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(arg0: MouseEvent) => void' is not assignabl... Remove this comment to see the full error message
         onClick={onClick}
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '(arg0: MouseEvent) => void' is not assignabl... Remove this comment to see the full error message
         onClose={onClose}
         closable={closable}
         style={{
@@ -33,8 +33,13 @@ export default function CategorizationLabel({ tag, kind, onClick, onClose, closa
     </Tooltip>
   );
 }
-export function CategorizationSearch({ searchTags, setTags, localStorageSavingKey }: FilterProps) {
-  useEffect(() => {
+export function CategorizationSearch({
+  itemName,
+  searchTags,
+  setTags,
+  localStorageSavingKey,
+}: FilterProps) {
+  useEffectOnlyOnce(() => {
     // restore the search query tags from the last session
     const searchTagString = UserLocalStorage.getItem(localStorageSavingKey);
 
@@ -42,15 +47,15 @@ export function CategorizationSearch({ searchTags, setTags, localStorageSavingKe
       try {
         const loadedSearchTags = JSON.parse(searchTagString);
         setTags(loadedSearchTags);
-      } catch (error) {
+      } catch (_error) {
         // pass
       }
     }
-  }, []);
+  });
   useEffect(() => {
     // store newest the search query tags
     UserLocalStorage.setItem(localStorageSavingKey, JSON.stringify(searchTags));
-  }, [searchTags]);
+  }, [searchTags, localStorageSavingKey]);
 
   function removeTag(tag: string) {
     if (searchTags.includes(tag)) {
@@ -58,8 +63,13 @@ export function CategorizationSearch({ searchTags, setTags, localStorageSavingKe
     }
   }
 
+  if (searchTags.length === 0) {
+    return null;
+  }
+
   return (
-    <>
+    <div style={{ marginBottom: 8 }}>
+      <span style={{ marginRight: 6 }}>Only showing {itemName} with these tags:</span>
       {searchTags.map((tag) => (
         <Tag
           key={tag}
@@ -72,6 +82,6 @@ export function CategorizationSearch({ searchTags, setTags, localStorageSavingKe
           {tag}
         </Tag>
       ))}
-    </>
+    </div>
   );
 }

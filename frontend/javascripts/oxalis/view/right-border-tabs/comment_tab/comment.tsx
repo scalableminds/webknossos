@@ -31,11 +31,15 @@ function ActiveCommentPopover({
   children: React.ReactNode;
   isActive: boolean;
 }) {
-  return isActive ? (
+  if (!isActive) {
+    return <>{children}</>;
+  }
+
+  return (
     <Popover
       content={<MarkdownWrapper source={linkify(comment.content)} />}
-      defaultVisible
-      visible
+      defaultOpen
+      open
       autoAdjustOverflow={false}
       placement="rightTop"
       // @ts-expect-error ts-migrate(2322) FIXME: Type '() => HTMLElement | null' is not assignable ... Remove this comment to see the full error message
@@ -47,8 +51,6 @@ function ActiveCommentPopover({
     >
       {children}
     </Popover>
-  ) : (
-    children
   );
 }
 
@@ -64,6 +66,7 @@ export function Comment({ comment, isActive, style }: CommentProps) {
     "fa-angle-right": isActive,
   });
   const isMultiLine = comment.content.indexOf("\n") !== -1;
+
   return (
     <li style={style}>
       <div className={liClassName}>
@@ -80,7 +83,6 @@ export function Comment({ comment, isActive, style }: CommentProps) {
           <MarkdownWrapper source={linkify(comment.content)} singleLine />
         </span>
         {isMultiLine ? (
-          // @ts-expect-error ts-migrate(2786) FIXME: 'ActiveCommentPopover' cannot be used as a JSX com... Remove this comment to see the full error message
           <ActiveCommentPopover comment={comment} isActive={isActive}>
             <span
               style={{

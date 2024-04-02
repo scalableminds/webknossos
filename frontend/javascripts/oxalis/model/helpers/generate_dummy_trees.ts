@@ -1,5 +1,6 @@
 import _ from "lodash";
 import type { ServerSkeletonTracingTree } from "types/api_flow_types"; // This is a quick'n'dirty code to generate a huge amount of mocked trees.
+
 // Since the server cannot handle such big tracings at the moment, we'll
 // use this code to test the front-end performance.
 // By default, this code is not used, but can be used similar to:
@@ -27,6 +28,7 @@ export default function generateDummyTrees(
           y: 3725 + ((currentTreeId - 1) * treeCount) / 10,
           z: 1545,
         },
+        additionalCoordinates: [],
         rotation: {
           x: 0,
           y: 270,

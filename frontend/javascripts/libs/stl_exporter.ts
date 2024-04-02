@@ -1,20 +1,45 @@
-// @ts-nocheck
-
-/* eslint-disable eslint-comments/no-unlimited-disable */
-
 /* eslint-disable */
 import * as THREE from "three";
 
 // Original Source: https://github.com/mrdoob/three.js/blob/master/examples/js/exporters/STLExporter.js
-// Only the `exportToStl` function was added as a wrapper.
+// Manual changes:
+// - the `exportToStl` function was added as a wrapper
+// - the `parse` method was adapted to emit multiple ArrayBuffers
+//   to avoid that one large ArrayBuffer has to be allocated (which can
+//   fail if not enough consecutive memory is available).
+//   (see https://github.com/scalableminds/webknossos/pull/7074.)
+
+class ChunkedDataView {
+  views: DataView[];
+  offset: number;
+
+  constructor(initialBufferLength: number) {
+    this.views = [];
+    this.startNewChunk(initialBufferLength);
+    this.offset = 0;
+  }
+
+  get currentDataView() {
+    return this.views[this.views.length - 1];
+  }
+
+  incrementOffset(n: number) {
+    this.offset += n;
+  }
+
+  startNewChunk(newBufferLength: number) {
+    this.views.push(new DataView(new ArrayBuffer(newBufferLength)));
+    this.offset = 0;
+  }
+}
 
 class STLExporter {
-  parse(scene, options = {}) {
+  parse(scene: THREE.Scene, options: any = {}) {
     const binary = options.binary !== undefined ? options.binary : false; //
 
-    const objects = [];
+    const objects: any[] = [];
     let triangles = 0;
-    scene.traverse(function (object) {
+    scene.traverse(function (object: any) {
       if (object.isMesh) {
         const geometry = object.geometry;
 
@@ -31,18 +56,30 @@ class STLExporter {
         });
       }
     });
-    let output;
-    let offset = 80; // skip header
+    let outputString: string = "";
+    let remainingTriangles = triangles;
+    const emptyHeaderSize = 80;
+    const output = new ChunkedDataView(emptyHeaderSize + 4);
+    output.incrementOffset(emptyHeaderSize);
+
+    // Per triangle, the following bytes are written:
+    // - 1 Uint16 (2 B) for the attribute byte count
+    // - 3 Float32 (3 * 4 B) for the triangle normal
+    // - 3 vertices à 3 Float32 (3 * 3 * 4 B)
+    const bytesPerTriangle = 2 + 3 * 4 + 3 * 3 * 4; //  50
+    const maximumBatchSizeInMiB = 50;
+    const maximumBatchSizeInB = 2 ** 20 * maximumBatchSizeInMiB;
+    const maximumTriangleCountPerBatch = Math.ceil(maximumBatchSizeInB / bytesPerTriangle);
 
     if (binary === true) {
-      const bufferLength = triangles * 2 + triangles * 3 * 4 * 4 + 80 + 4;
-      const arrayBuffer = new ArrayBuffer(bufferLength);
-      output = new DataView(arrayBuffer);
-      output.setUint32(offset, triangles, true);
-      offset += 4;
+      output.currentDataView.setUint32(output.offset, triangles, true);
+      output.incrementOffset(4);
+      const triangleCountForNewChunk = Math.min(remainingTriangles, maximumTriangleCountPerBatch);
+      remainingTriangles -= triangleCountForNewChunk;
+      output.startNewChunk(bytesPerTriangle * triangleCountForNewChunk);
     } else {
-      output = "";
-      output += "solid exported\n";
+      outputString = "";
+      outputString += "solid exported\n";
     }
 
     const vA = new THREE.Vector3();
@@ -78,12 +115,12 @@ class STLExporter {
     }
 
     if (binary === false) {
-      output += "endsolid exported\n";
+      outputString += "endsolid exported\n";
     }
 
-    return output;
+    return binary ? output.views : outputString;
 
-    function writeFace(a, b, c, positionAttribute, object) {
+    function writeFace(a: any, b: any, c: any, positionAttribute: any, object: any) {
       vA.fromBufferAttribute(positionAttribute, a);
       vB.fromBufferAttribute(positionAttribute, b);
       vC.fromBufferAttribute(positionAttribute, c);
@@ -103,52 +140,60 @@ class STLExporter {
       writeVertex(vC);
 
       if (binary === true) {
-        output.setUint16(offset, 0, true);
-        offset += 2;
+        // Set attribute byte count to 0
+        output.currentDataView.setUint16(output.offset, 0, true);
+        output.incrementOffset(2);
       } else {
-        output += "\t\tendloop\n";
-        output += "\tendfacet\n";
+        outputString += "\t\tendloop\n";
+        outputString += "\tendfacet\n";
+      }
+
+      if (output.offset === output.currentDataView.byteLength && remainingTriangles > 0) {
+        const triangleCountForNewChunk = Math.min(remainingTriangles, maximumTriangleCountPerBatch);
+        remainingTriangles -= triangleCountForNewChunk;
+
+        output.startNewChunk(bytesPerTriangle * triangleCountForNewChunk);
       }
     }
 
-    function writeNormal(vA, vB, vC) {
+    function writeNormal(vA: any, vB: any, vC: any) {
       cb.subVectors(vC, vB);
       ab.subVectors(vA, vB);
       cb.cross(ab).normalize();
       normal.copy(cb).normalize();
 
       if (binary === true) {
-        output.setFloat32(offset, normal.x, true);
-        offset += 4;
-        output.setFloat32(offset, normal.y, true);
-        offset += 4;
-        output.setFloat32(offset, normal.z, true);
-        offset += 4;
+        output.currentDataView.setFloat32(output.offset, normal.x, true);
+        output.incrementOffset(4);
+        output.currentDataView.setFloat32(output.offset, normal.y, true);
+        output.incrementOffset(4);
+        output.currentDataView.setFloat32(output.offset, normal.z, true);
+        output.incrementOffset(4);
       } else {
-        output += "\tfacet normal " + normal.x + " " + normal.y + " " + normal.z + "\n";
-        output += "\t\touter loop\n";
+        outputString += "\tfacet normal " + normal.x + " " + normal.y + " " + normal.z + "\n";
+        outputString += "\t\touter loop\n";
       }
     }
 
-    function writeVertex(vertex) {
+    function writeVertex(vertex: any) {
       if (binary === true) {
-        output.setFloat32(offset, vertex.x, true);
-        offset += 4;
-        output.setFloat32(offset, vertex.y, true);
-        offset += 4;
-        output.setFloat32(offset, vertex.z, true);
-        offset += 4;
+        output.currentDataView.setFloat32(output.offset, vertex.x, true);
+        output.incrementOffset(4);
+        output.currentDataView.setFloat32(output.offset, vertex.y, true);
+        output.incrementOffset(4);
+        output.currentDataView.setFloat32(output.offset, vertex.z, true);
+        output.incrementOffset(4);
       } else {
-        output += "\t\t\tvertex " + vertex.x + " " + vertex.y + " " + vertex.z + "\n";
+        outputString += "\t\t\tvertex " + vertex.x + " " + vertex.y + " " + vertex.z + "\n";
       }
     }
   }
 }
 
-export default function exportToStl(mesh): DataView {
+export default function exportToStl(mesh: any): DataView[] {
   const exporter = new STLExporter();
-  const data = exporter.parse(mesh, {
+  const dataViews = exporter.parse(mesh, {
     binary: true,
-  });
-  return data;
+  }) as DataView[];
+  return dataViews;
 }

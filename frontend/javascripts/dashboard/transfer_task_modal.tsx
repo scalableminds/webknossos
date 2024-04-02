@@ -9,7 +9,7 @@ type Props = {
   onChange: (updatedAnnotation: APIAnnotation) => void;
   annotationId: string | null | undefined;
   onCancel: (...args: Array<any>) => any;
-  visible: boolean;
+  isOpen: boolean;
 };
 type State = {
   currentUserIdValue: string;
@@ -42,14 +42,14 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
   };
 
   render() {
-    if (!this.props.visible) {
+    if (!this.props.isOpen) {
       return null;
     }
 
     return (
       <Modal
         title="Transfer a Task"
-        visible={this.props.visible}
+        open={this.props.isOpen}
         onCancel={this.props.onCancel}
         footer={
           <div>

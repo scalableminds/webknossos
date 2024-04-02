@@ -7,6 +7,7 @@ import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_heade
 import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
 import Toast from "libs/toast";
 import handleStatus from "libs/handle_http_status";
+import { ArbitraryObject } from "types/globals";
 
 const fetchBufferViaWorker = createWorker(FetchBufferWorker);
 const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
@@ -32,7 +33,7 @@ export type RequestOptionsWithData<T> = RequestOptions & {
   data: T;
 };
 
-type ServerErrorMessage = {
+export type ServerErrorMessage = {
   error: string;
 };
 
@@ -316,7 +317,7 @@ class Request {
 
               /* eslint-disable-next-line prefer-promise-reject-errors */
               return Promise.reject({ ...json, url: requestedUrl });
-            } catch (jsonError) {
+            } catch (_jsonError) {
               if (showErrorToast) Toast.error(text);
 
               /* eslint-disable-next-line prefer-promise-reject-errors */
@@ -344,7 +345,7 @@ class Request {
     return Promise.reject(error);
   };
 
-  handleEmptyJsonResponse = (response: Response): Promise<{}> =>
+  handleEmptyJsonResponse = (response: Response): Promise<ArbitraryObject> =>
     response.text().then((responseText) => {
       if (responseText.length === 0) {
         return {};
@@ -354,4 +355,7 @@ class Request {
     });
 }
 
-export default new Request();
+const requestSingleton = new Request();
+
+export default requestSingleton;
+export type RequestType = typeof requestSingleton;

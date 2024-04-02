@@ -1,10 +1,10 @@
 import { AutoSizer } from "react-virtualized";
-import { Dropdown, Menu, Tag, Tree } from "antd";
+import { Dropdown, MenuProps, Tag, Tree, TreeProps } from "antd";
 import React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { stringToAntdColorPreset } from "libs/format_utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import type { Vector3 } from "oxalis/constants";
 import type { APIConnectomeFile } from "types/api_flow_types";
 import Store from "oxalis/store";
@@ -26,7 +26,7 @@ type SrcAndDstSynapse = BaseSynapse & {
   src: number;
   dst: number;
 };
-type DirectionCaptionsKeys = keyof typeof directionCaptions;
+export type DirectionCaptionsKeys = keyof typeof directionCaptions;
 export type Synapse = SrcSynapse | DstSynapse | SrcAndDstSynapse;
 export type Agglomerate = Record<DirectionCaptionsKeys, Array<number>>;
 export type ConnectomeData = {
@@ -90,8 +90,8 @@ const noneData: NoneData = {
 
 function _convertConnectomeToTreeData(
   connectomeData: ConnectomeData | null | undefined,
-): TreeData | null | undefined {
-  if (connectomeData == null) return null;
+): TreeData | undefined {
+  if (connectomeData == null) return undefined;
   const { agglomerates, synapses } = connectomeData;
 
   const convertSynapsesForPartner = (
@@ -155,16 +155,8 @@ type State = {
 type Props = {
   checkedKeys: Array<string>;
   expandedKeys: Array<string>;
-  onCheck: (
-    arg0: {
-      checked: Array<string>;
-    },
-    arg1: {
-      node: TreeNode;
-      checked: boolean;
-    },
-  ) => void;
-  onExpand: (arg0: Array<string>) => void;
+  onCheck: TreeProps<TreeNode>["onCheck"];
+  onExpand: TreeProps<TreeNode>["onExpand"];
   onChangeActiveAgglomerateIds: (arg0: Array<number>) => void;
   connectomeData: ConnectomeData | null | undefined;
 };
@@ -174,15 +166,7 @@ class SynapseTree extends React.Component<Props, State> {
     activeSegmentDropdownKey: null,
   };
 
-  handleSelect = (
-    _selectedKeys: Array<string>,
-    evt: {
-      selected: boolean;
-      selectedNodes: Array<TreeNode>;
-      node: TreeNode;
-      event: string;
-    },
-  ) => {
+  handleSelect: TreeProps<TreeNode>["onSelect"] = (_selectedKeys, evt) => {
     const { data } = evt.node;
 
     if (data.type === "synapse" && evt.selected) {
@@ -204,20 +188,22 @@ class SynapseTree extends React.Component<Props, State> {
   };
 
   setHoveredSegmentId(agglomerateId: number | null | undefined) {
-    Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", agglomerateId));
+    Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", agglomerateId || null));
   }
 
-  createSegmentDropdownMenu = (agglomerateId: number) => (
-    <Menu>
-      <Menu.Item
-        key="setActiveAgglomerateId"
-        onClick={() => this.props.onChangeActiveAgglomerateIds([agglomerateId])}
-        title="Show All Synapses of This Segment"
-      >
-        Show All Synapses of This Segment
-      </Menu.Item>
-    </Menu>
-  );
+  createSegmentDropdownMenu = (agglomerateId: number): MenuProps => {
+    return {
+      items: [
+        {
+          key: "setActiveAgglomerateId",
+          onClick: () => this.props.onChangeActiveAgglomerateIds([agglomerateId]),
+          title: "Show All Synapses of This Segment",
+
+          label: "Show All Synapses of This Segment",
+        },
+      ],
+    };
+  };
 
   renderNode = (node: TreeNode) => {
     const { data, key } = node;
@@ -231,14 +217,13 @@ class SynapseTree extends React.Component<Props, State> {
         title = node.title;
       } else {
         title = (
-          <Dropdown // Lazily create the dropdown menu and destroy it again, afterwards
-            overlay={() => this.createSegmentDropdownMenu(data.id)}
+          <Dropdown
+            menu={this.createSegmentDropdownMenu(data.id)}
+            // AutoDestroy is used to remove the menu from DOM and keep up the performance.
             autoDestroy
             placement="bottom"
-            visible={this.state.activeSegmentDropdownKey === key}
-            onVisibleChange={(isVisible) =>
-              this.handleSegmentDropdownMenuVisibility(key, isVisible)
-            }
+            open={this.state.activeSegmentDropdownKey === key}
+            onOpenChange={(isVisible) => this.handleSegmentDropdownMenuVisibility(key, isVisible)}
             // @ts-expect-error ts-migrate(2322) FIXME: Type 'string[]' is not assignable to type '("conte... Remove this comment to see the full error message
             trigger={contextMenuTrigger}
           >
@@ -301,19 +286,14 @@ class SynapseTree extends React.Component<Props, State> {
                 checkStrictly
                 height={height}
                 showLine={showLine}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '(selectedKeys: Array<string>, evt: {    sele... Remove this comment to see the full error message
                 onSelect={this.handleSelect} // Although clicking on some nodes triggers an action, the node should not remain selected
                 // as repeated clicks wouldn't retrigger the action, then
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Key[] | und... Remove this comment to see the full error message
-                selectedKeys={null}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '(arg0: { checked: string[]; }, arg1: { node:... Remove this comment to see the full error message
+                selectedKeys={undefined}
                 onCheck={onCheck}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '(arg0: string[]) => void' is not assignable ... Remove this comment to see the full error message
                 onExpand={onExpand}
                 checkedKeys={checkedKeys}
                 expandedKeys={expandedKeys}
                 titleRender={this.renderNode}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'TreeData | null | undefined' is not assignab... Remove this comment to see the full error message
                 treeData={convertConnectomeToTreeData(connectomeData)}
               />
             </div>

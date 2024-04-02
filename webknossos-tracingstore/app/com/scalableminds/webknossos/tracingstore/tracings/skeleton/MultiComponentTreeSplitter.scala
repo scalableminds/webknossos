@@ -1,16 +1,17 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Tree, TreeGroup}
+import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils
 import org.jgrapht.alg.connectivity.ConnectivityInspector
 import org.jgrapht.graph.{Multigraph, _}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters.ListHasAsScala
 
 object MultiComponentTreeSplitter {
 
   def splitMulticomponentTrees(trees: Seq[Tree], treeGroups: Seq[TreeGroup]): (Seq[Tree], Seq[TreeGroup]) = {
     var largestTreeId = if (trees.isEmpty) 0 else trees.map(_.treeId).max
-    val allGroupIds = TreeUtils.getAllTreeGroupIds(treeGroups)
+    val allGroupIds = GroupUtils.getAllTreeGroupIds(treeGroups)
     var largestGroupId = if (allGroupIds.isEmpty) 0 else allGroupIds.max
     var treeGroupsMutable: Seq[TreeGroup] = treeGroups
     val treeLists = trees.map { tree =>

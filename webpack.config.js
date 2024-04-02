@@ -4,6 +4,8 @@ module.exports = function (env = {}) {
   const path = require("path");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const TerserPlugin = require("terser-webpack-plugin");
+  const browserslistToEsbuild = require("browserslist-to-esbuild");
+  const CopyPlugin = require("copy-webpack-plugin");
 
   const srcPath = path.resolve(__dirname, "frontend/javascripts/");
   const nodePath = "node_modules";
@@ -24,6 +26,15 @@ module.exports = function (env = {}) {
     new MiniCssExtractPlugin({
       filename: "[name].css",
       chunkFilename: "[name].css",
+    }),
+    new CopyPlugin({
+      patterns: [
+        // Use copy plugin to copy *.wasm to output folder.
+        { from: "node_modules/onnxruntime-web/dist/*.wasm", to: "[name][ext]" },
+        { from: "public/models/*.*", to: "models/[name][ext]" },
+        // For CSP, see https://gildas-lormeau.github.io/zip.js/api/interfaces/Configuration.html#workerScripts
+        { from: "node_modules/@zip.js/zip.js/dist/z-worker.js", to: "[name][ext]" },
+      ],
     }),
   ];
 
@@ -47,10 +58,9 @@ module.exports = function (env = {}) {
   };
 
   return {
+    experiments: { asyncWebAssembly: true },
     entry: {
       main: "main.tsx",
-      light: "style_light.ts",
-      dark: "style_dark.ts",
     },
     mode: env.production ? "production" : "development",
     output: {
@@ -67,8 +77,7 @@ module.exports = function (env = {}) {
             {
               loader: "worker-loader",
               options: {
-                // This property crashes webpack for some reason:
-                // filename: "[name].[contenthash].worker.ts",
+                filename: "[name].[contenthash].worker.js",
               },
             },
           ],
@@ -76,7 +85,17 @@ module.exports = function (env = {}) {
         {
           test: /\.tsx?$/,
           exclude: /(node_modules|bower_components)/,
-          use: "babel-loader",
+          loader: "esbuild-loader",
+          options: {
+            loader: "tsx", // also supports 'ts'
+            target: browserslistToEsbuild([
+              "last 3 Chrome versions",
+              "last 3 Firefox versions",
+              "last 2 Edge versions",
+              "last 1 Safari versions",
+              "last 1 iOS versions",
+            ]),
+          },
         },
         {
           test: /\.less$/,
@@ -136,6 +155,13 @@ module.exports = function (env = {}) {
       fallback: {
         // Needed for jsonschema
         url: require.resolve("url/"),
+        // Needed for lz4-wasm-nodejs (which is only used in test context, which is
+        // why we use empty modules)
+        path: false,
+        util: false,
+        fs: false,
+        // Needed for mock-require
+        module: false,
       },
     },
     optimization: {
@@ -144,6 +170,18 @@ module.exports = function (env = {}) {
         chunks: "all",
         // Use a consistent name for the vendors chunk
         name: "vendors~main",
+        cacheGroups: {
+          onnx: {
+            test: /[\\/]node_modules[\\/](onnx.*)[\\/]/,
+            chunks: "all",
+            name: "vendors~onnx",
+          },
+          html2canvas: {
+            test: /[\\/]node_modules[\\/](html2canvas)[\\/]/,
+            chunks: "all",
+            name: "vendors~html2canvas",
+          },
+        },
       },
     },
     // See https://webpack.js.org/configuration/devtool/
@@ -160,10 +198,7 @@ module.exports = function (env = {}) {
       hot: false,
       liveReload: false,
       client: {
-        overlay: {
-          warnings: false,
-          errors: true,
-        },
+        overlay: false,
         logging: "error",
       },
     },

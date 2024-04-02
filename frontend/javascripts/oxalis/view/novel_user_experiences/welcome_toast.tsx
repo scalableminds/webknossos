@@ -1,58 +1,53 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Button, notification } from "antd";
 import { useSelector } from "react-redux";
 import features from "features";
 import UserLocalStorage from "libs/user_local_storage";
 import { OxalisState } from "oxalis/store";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 
 function showWelcomeToast() {
   notification.open({
-    message: (
-      <div>
-        <span className="logo" />
-        Welcome to webKnossos!
-      </div>
-    ),
+    className: "webknossos-welcome-toast",
+    duration: 0,
+    placement: "bottomRight",
+    icon: <i className="logo" />,
+    message: "Welcome to WEBKNOSSOS",
     description: (
       <div>
-        webKnossos is a web-based platform for visualization, annotation, and sharing of large-scale
-        3D image datasets. Try out the annotation features and upload your own data with a free
-        account.
-        <div
-          style={{
-            marginTop: 12,
-          }}
-        >
-          <Button type="primary" href="/auth/signup" target="_blank" rel="noopener noreferrer">
+        <p>
+          WEBKNOSSOS is a web-based platform for visualization, annotation, and sharing of
+          large-scale 3D image datasets.
+        </p>
+        <p>Try out the annotation features and upload your own data with a free account.</p>
+        <div>
+          <Button type="default" href="/auth/signup" target="_blank" rel="noopener noreferrer">
             Create a free account
           </Button>
-          <Button
-            type="default"
-            href="https://webknossos.org/features"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              borderColor: "#eaeaea",
-              marginLeft: 12,
-            }}
-          >
-            Learn More
-          </Button>
+          <span className="drawing-welcome-guy">
+            <Button
+              ghost
+              type="default"
+              href="https://webknossos.org/features"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                marginLeft: 12,
+              }}
+            >
+              Learn More
+            </Button>
+          </span>
         </div>
       </div>
     ),
-    className: "webknossos-welcome-toast",
-    style: {
-      width: 600,
-    },
-    duration: 0,
   });
 }
 
 export default function WelcomeToast() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  useEffect(() => {
-    if (!features().isDemoInstance) {
+  useEffectOnlyOnce(() => {
+    if (!features().isWkorgInstance) {
       return;
     }
     const hasSeenToast = UserLocalStorage.getItem(
@@ -69,6 +64,6 @@ export default function WelcomeToast() {
     // show the toast will still be valid (and important) in the future. For example, the toast
     // should also *not* appear after a registered user logs out.
     UserLocalStorage.setItem("novelUserExperienceInfos.hasSeenWelcomeToast", "true", false);
-  }, []);
+  });
   return null;
 }

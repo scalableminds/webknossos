@@ -17,7 +17,7 @@ trait DBAccessContext {
 }
 
 case class AuthorizedAccessContext(t: DBAccessContextPayload) extends DBAccessContext {
-  override def data = Some(t)
+  override def data: Option[DBAccessContextPayload] = Some(t)
 }
 
 case object UnAuthorizedAccessContext extends DBAccessContext
@@ -25,11 +25,11 @@ case object UnAuthorizedAccessContext extends DBAccessContext
 case object GlobalAccessContext extends DBAccessContext {
   override val globalAccess = true
 
-  override def toStringAnonymous: String = "global"
+  override def toStringAnonymous: String = "Global"
 }
 
 object DBAccessContext {
-  def apply(payload: Option[DBAccessContextPayload]) =
+  def apply(payload: Option[DBAccessContextPayload]): DBAccessContext =
     payload match {
       case Some(p) => AuthorizedAccessContext(p)
       case _       => UnAuthorizedAccessContext

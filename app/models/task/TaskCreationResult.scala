@@ -2,7 +2,7 @@ package models.task
 
 import com.scalableminds.util.mvc.JsonResultAttribues
 import com.scalableminds.util.tools.Fox
-import net.liftweb.common.{Box, Failure, Full, ParamFailure}
+import net.liftweb.common.{Box, Empty, Failure, Full, ParamFailure}
 import play.api.http.Status
 import play.api.libs.json._
 
@@ -29,6 +29,8 @@ object TaskCreationResult extends JsonResultAttribues with Status {
         Json.obj("status" -> errorCode, jsonError -> msg)
       case Failure(msg, _, _) =>
         Json.obj("status" -> BAD_REQUEST, jsonError -> msg)
+      case Empty =>
+        Json.obj("status" -> BAD_REQUEST, jsonError -> "Empty")
     }
     TaskCreationResult(tasks, warnings)
   }

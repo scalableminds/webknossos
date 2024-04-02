@@ -1,9 +1,10 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Dropdown, Menu } from "antd";
+import { Dropdown, MenuProps } from "antd";
 import {
   ShareAltOutlined,
   DownOutlined,
+  VideoCameraOutlined,
   CameraOutlined,
   DownloadOutlined,
 } from "@ant-design/icons";
@@ -13,56 +14,83 @@ import { downloadScreenshot } from "oxalis/view/rendering_utils";
 import {
   setPythonClientModalVisibilityAction,
   setShareModalVisibilityAction,
+  setRenderAnimationModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import Store, { OxalisState } from "oxalis/store";
-import PythonClientModalView from "./python_client_modal_view";
+import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import DownloadModalView from "./download_modal_view";
+import { CreateAnimationModalWrapper as CreateAnimationModal } from "./create_animation_modal";
 
 type Props = {
-  layoutMenu: React.ReactNode;
+  layoutMenu: SubMenuType;
 };
-export const screenshotMenuItem = (
-  <Menu.Item key="screenshot-button" onClick={downloadScreenshot}>
-    <CameraOutlined />
-    Screenshot (Q)
-  </Menu.Item>
-);
+export const screenshotMenuItem: MenuItemType = {
+  key: "screenshot-button",
+  onClick: downloadScreenshot,
+  icon: <CameraOutlined />,
+  label: "Screenshot (Q)",
+};
+
+export const renderAnimationMenuItem: MenuItemType = {
+  key: "create-animation-button",
+  label: "Create Animation",
+  icon: <VideoCameraOutlined />,
+  onClick: () => {
+    Store.dispatch(setRenderAnimationModalVisibilityAction(true));
+  },
+};
+
 export default function ViewDatasetActionsView(props: Props) {
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
   const isPythonClientModalOpen = useSelector(
     (state: OxalisState) => state.uiInformation.showPythonClientModal,
   );
+  const isRenderAnimationModalOpen = useSelector(
+    (state: OxalisState) => state.uiInformation.showRenderAnimationModal,
+  );
+
   const shareDatasetModal = (
     <ShareViewDatasetModalView
-      isVisible={isShareModalOpen}
+      isOpen={isShareModalOpen}
       onOk={() => Store.dispatch(setShareModalVisibilityAction(false))}
     />
   );
   const pythonClientModal = (
-    <PythonClientModalView
-      isVisible={isPythonClientModalOpen}
+    <DownloadModalView
+      isAnnotation={false}
+      initialTab="export"
+      isOpen={isPythonClientModalOpen}
       onClose={() => Store.dispatch(setPythonClientModalVisibilityAction(false))}
     />
   );
-  const overlayMenu = (
-    <Menu>
-      <Menu.Item
-        key="share-button"
-        onClick={() => Store.dispatch(setShareModalVisibilityAction(true))}
-      >
-        <ShareAltOutlined />
-        Share
-      </Menu.Item>
-      {screenshotMenuItem}
-      <Menu.Item
-        key="python-client-button"
-        onClick={() => Store.dispatch(setPythonClientModalVisibilityAction(true))}
-      >
-        <DownloadOutlined />
-        Download
-      </Menu.Item>
-      {props.layoutMenu}
-    </Menu>
+  const overlayMenu: MenuProps = {
+    items: [
+      {
+        key: "share-button",
+        onClick: () => Store.dispatch(setShareModalVisibilityAction(true)),
+        icon: <ShareAltOutlined />,
+        label: "Share",
+      },
+      screenshotMenuItem,
+      renderAnimationMenuItem,
+      {
+        key: "python-client-button",
+        onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
+        icon: <DownloadOutlined />,
+        label: "Download",
+      },
+      props.layoutMenu,
+    ],
+  };
+
+  const renderAnimationModal = (
+    <CreateAnimationModal
+      isOpen={isRenderAnimationModalOpen}
+      onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
+    />
   );
+
   return (
     <div
       style={{
@@ -71,13 +99,14 @@ export default function ViewDatasetActionsView(props: Props) {
     >
       {shareDatasetModal}
       {pythonClientModal}
-      <Dropdown overlay={overlayMenu} trigger={["click"]}>
+      {activeUser?.isSuperUser ? renderAnimationModal : null}
+      <Dropdown menu={overlayMenu} trigger={["click"]}>
         <ButtonComponent
           style={{
             padding: "0 10px",
           }}
         >
-          <DownOutlined />
+          Menu <DownOutlined />
         </ButtonComponent>
       </Dropdown>
     </div>

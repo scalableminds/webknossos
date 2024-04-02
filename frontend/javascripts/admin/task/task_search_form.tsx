@@ -1,10 +1,8 @@
-import { Form, Row, Dropdown, Menu, Col, Button, Input, Select, Spin } from "antd";
+import { Form, Row, Dropdown, Col, Button, Input, Select } from "antd";
 import { FormInstance } from "antd/lib/form";
 import { DownloadOutlined, DownOutlined, RetweetOutlined } from "@ant-design/icons";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
 import React from "react";
 import _ from "lodash";
 import messages from "messages";
@@ -31,7 +29,6 @@ type Props = {
   onChange: (arg0: QueryObject) => Promise<void>;
   initialFieldValues: TaskFormFieldValues | null | undefined;
   isLoading: boolean;
-  history: RouteComponentProps["history"];
   onDownloadAllTasks: (arg0: QueryObject) => Promise<void>;
 };
 type State = {
@@ -67,7 +64,7 @@ class TaskSearchForm extends React.Component<Props, State> {
     this.fetchData();
     // initialize form with default values when navigating from
     // project / taskType list views or when restoring values from persisted state
-    const persistedState = persistence.load(this.props.history);
+    const persistedState = persistence.load();
     const persistedFieldValues =
       persistedState.fieldValues != null ? persistedState.fieldValues : {};
     const fieldValues =
@@ -87,7 +84,7 @@ class TaskSearchForm extends React.Component<Props, State> {
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   async fetchData() {
@@ -222,7 +219,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                 style={{
                   width: "100%",
                 }}
-                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                loading={this.state.isFetchingData}
                 options={this.state.taskTypes.map((taskType: APITaskType) => ({
                   value: taskType.id,
                   label: `${taskType.summary}`,
@@ -242,7 +239,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                 style={{
                   width: "100%",
                 }}
-                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                loading={this.state.isFetchingData}
                 options={this.state.projects.map((project: APIProject) => ({
                   value: project.id,
                   label: `${project.name}`,
@@ -260,7 +257,7 @@ class TaskSearchForm extends React.Component<Props, State> {
                 style={{
                   width: "100%",
                 }}
-                notFoundContent={this.state.isFetchingData ? <Spin size="small" /> : "No Data"}
+                loading={this.state.isFetchingData}
                 options={this.state.users
                   .filter((u) => u.isActive)
                   .map((user: APIUser) => ({
@@ -279,14 +276,16 @@ class TaskSearchForm extends React.Component<Props, State> {
             }}
           >
             <Dropdown
-              overlay={
-                <Menu onClick={() => this.handleSearchFormFinish(true)}>
-                  <Menu.Item key="1">
-                    <RetweetOutlined />
-                    Show random subset
-                  </Menu.Item>
-                </Menu>
-              }
+              menu={{
+                onClick: () => this.handleSearchFormFinish(true),
+                items: [
+                  {
+                    key: "1",
+                    icon: <RetweetOutlined />,
+                    label: "Show random subset",
+                  },
+                ],
+              }}
             >
               <Button
                 type="primary"
@@ -326,4 +325,4 @@ class TaskSearchForm extends React.Component<Props, State> {
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(TaskSearchForm);
+export default TaskSearchForm;

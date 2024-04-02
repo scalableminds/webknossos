@@ -1,10 +1,10 @@
 package com.scalableminds.webknossos.datastore.models
 
 import java.nio._
-
 import com.scalableminds.webknossos.datastore.models.UnsignedInteger.wrongElementClass
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 
+import java.util
 import scala.reflect.ClassTag
 
 /* Wrapper for unsigned integral data types. Currently not a lot of algebra implemented, add functionality as needed */
@@ -152,4 +152,27 @@ object UnsignedIntegerArray {
 
   def filterNonZero(typedArray: Array[UnsignedInteger]): Array[UnsignedInteger] =
     typedArray.filter(!_.isZero)
+
+  // UnsignedInteger objects are only allocated on the (fewer) elements of the set
+  // for Int and Long, primitive Streams are provided by java.util.stream, which are faster than toSet
+  // Most volume annotations are Int or Long anyway
+  def toSetFromByteArray(byteArray: Array[Byte], elementClass: ElementClass.Value): Set[UnsignedInteger] = {
+    lazy val byteBuffer = ByteBuffer.wrap(byteArray).order(ByteOrder.LITTLE_ENDIAN)
+    elementClass match {
+      case ElementClass.uint8 => byteArray.toSet.map(UInt8(_))
+      case ElementClass.uint16 =>
+        fromByteArrayImpl(byteBuffer, DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_))).toSet
+          .map(UInt16(_))
+      case ElementClass.uint32 =>
+        val signedArray = fromByteArrayImpl(byteBuffer, DataTypeFunctors[Int, IntBuffer](_.asIntBuffer, _.get(_)))
+        util.Arrays.stream(signedArray).distinct().toArray.toSet.map(UInt32(_))
+      case ElementClass.uint64 =>
+        val signedArray = fromByteArrayImpl(byteBuffer, DataTypeFunctors[Long, LongBuffer](_.asLongBuffer, _.get(_)))
+        util.Arrays.stream(signedArray).distinct().toArray.toSet.map(UInt64(_))
+      case _ =>
+        wrongElementClass(elementClass)
+        Set()
+    }
+  }
+
 }

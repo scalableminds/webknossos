@@ -1,50 +1,62 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
-import com.scalableminds.webknossos.datastore.datareaders.{
-  AxisOrder,
-  ChunkReader,
-  DatasetArray,
-  DatasetHeader,
-  DatasetPath,
-  FileSystemStore
-}
+import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, ChunkReader, DatasetArray, DatasetHeader}
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.{JsError, JsSuccess, Json}
+import com.scalableminds.util.tools.Fox.box2Fox
+import net.liftweb.common.Box.tryo
+import ucar.ma2.{Array => MultiArray}
 
-import java.io.IOException
-import java.nio.charset.StandardCharsets
-import java.nio.file.Path
+import scala.concurrent.ExecutionContext
 
 object N5Array extends LazyLogging {
-  @throws[IOException]
-  def open(path: Path, axisOrderOpt: Option[AxisOrder]): N5Array = {
-    val store = new FileSystemStore(path)
-    val rootPath = new DatasetPath("")
-    val headerPath = rootPath.resolve(N5Header.FILENAME_ATTRIBUTES_JSON)
-    val headerBytes = store.readBytes(headerPath.storeKey)
-    if (headerBytes.isEmpty)
-      throw new IOException(
-        "'" + N5Header.FILENAME_ATTRIBUTES_JSON + "' expected but is not readable or missing in store.")
-    val headerString = new String(headerBytes.get, StandardCharsets.UTF_8)
-    val header: N5Header =
-      Json.parse(headerString).validate[N5Header] match {
-        case JsSuccess(parsedHeader, _) =>
-          parsedHeader
-        case errors: JsError =>
-          throw new Exception("Validating json as N5 header failed: " + JsError.toJson(errors).toString())
-      }
-    if (header.bytesPerChunk > DatasetArray.chunkSizeLimitBytes) {
-      throw new IllegalArgumentException(
-        f"Chunk size of this N5 Array exceeds limit of ${DatasetArray.chunkSizeLimitBytes}, got ${header.bytesPerChunk}")
-    }
-    new N5Array(rootPath, store, header, axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)))
-  }
+
+  def open(path: VaultPath,
+           dataSourceId: DataSourceId,
+           layerName: String,
+           axisOrderOpt: Option[AxisOrder],
+           channelIndex: Option[Int],
+           additionalAxes: Option[Seq[AdditionalAxis]],
+           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[N5Array] =
+    for {
+      headerBytes <- (path / N5Header.FILENAME_ATTRIBUTES_JSON)
+        .readBytes() ?~> s"Could not read header at ${N5Header.FILENAME_ATTRIBUTES_JSON}"
+      header <- JsonHelper.parseAndValidateJson[N5Header](headerBytes) ?~> "Could not parse array header"
+      _ <- DatasetArray.assertChunkSizeLimit(header.bytesPerChunk)
+      array <- tryo(
+        new N5Array(path,
+                    dataSourceId,
+                    layerName,
+                    header,
+                    axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(header.rank)),
+                    channelIndex,
+                    additionalAxes,
+                    sharedChunkContentsCache)) ?~> "Could not open n5 array"
+    } yield array
 }
 
-class N5Array(relativePath: DatasetPath, store: FileSystemStore, header: DatasetHeader, axisOrder: AxisOrder)
-    extends DatasetArray(relativePath, store, header, axisOrder)
+class N5Array(vaultPath: VaultPath,
+              dataSourceId: DataSourceId,
+              layerName: String,
+              header: DatasetHeader,
+              axisOrder: AxisOrder,
+              channelIndex: Option[Int],
+              additionalAxes: Option[Seq[AdditionalAxis]],
+              sharedChunkContentsCache: AlfuCache[String, MultiArray])
+    extends DatasetArray(vaultPath,
+                         dataSourceId,
+                         layerName,
+                         header,
+                         axisOrder,
+                         channelIndex,
+                         additionalAxes,
+                         sharedChunkContentsCache)
     with LazyLogging {
 
-  override protected val chunkReader: ChunkReader =
-    N5ChunkReader.create(store, header)
+  override protected lazy val chunkReader: ChunkReader =
+    new N5ChunkReader(header)
 }

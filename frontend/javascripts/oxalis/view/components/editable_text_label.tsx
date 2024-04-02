@@ -25,6 +25,8 @@ export type EditableTextLabelProp = {
   width?: string | number;
   isInvalid?: boolean | null | undefined;
   trimValue?: boolean | null | undefined;
+  onRenameStart?: (() => void) | undefined;
+  onRenameEnd?: (() => void) | undefined;
 };
 type State = {
   isEditing: boolean;
@@ -58,9 +60,8 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     }
   }
 
-  handleInputChange = (event: React.SyntheticEvent) => {
+  handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       value: event.target.value,
     });
   };
@@ -72,6 +73,9 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
         this.setState({
           isEditing: false,
         });
+        if (this.props.onRenameEnd) {
+          this.props.onRenameEnd();
+        }
       }
     };
     if (this.props.trimValue) {
@@ -125,14 +129,12 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       },
       size: "small",
       autoFocus: true,
-      // @ts-ignore
-      rows: this.props.rows,
     };
-    const isInvalidStyleMaybe = this.props.isInvalid ? { color: "var(--ant-error)" } : {};
+    const isInvalidStyleMaybe = this.props.isInvalid ? { color: "var(--ant-color-error)" } : {};
 
     if (this.state.isEditing) {
       return (
-        <span>
+        <span style={{ display: "inline-flex", alignItems: "center" }}>
           {this.props.rows === 1 ? (
             <React.Fragment>
               <Input {...inputComponentProps} onBlur={() => this.handleOnChange} />
@@ -149,7 +151,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           ) : (
             <MarkdownModal
               source={this.state.value}
-              visible={this.state.isEditing}
+              isOpen={this.state.isEditing}
               onChange={this.handleInputChange}
               onOk={this.handleOnChange}
               label={this.props.label}
@@ -159,56 +161,54 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       );
     } else {
       return (
-        /* @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message */
-        <span className={this.props.markdown ? "flex-container" : null}>
-          <span
-            style={{
-              margin,
-              display: "inline-block",
-            }}
-            /* @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message */
-            className={this.props.onClick != null ? "clickable-text" : null}
-            onClick={this.props.onClick}
-            onContextMenu={this.props.onContextMenu}
-          >
-            {this.props.markdown ? (
-              <Markdown
-                className="flex-item"
-                source={this.props.value}
-                options={{
-                  html: false,
-                  breaks: true,
-                  linkify: true,
+        <div
+          style={{
+            margin,
+            display: "inline-flex",
+            alignItems: "center",
+          }}
+          className={this.props.onClick != null ? "clickable-text" : undefined}
+          onClick={this.props.onClick}
+          onContextMenu={this.props.onContextMenu}
+        >
+          {this.props.markdown ? (
+            <Markdown
+              className="flex-item"
+              source={this.props.value}
+              options={{
+                html: false,
+                breaks: true,
+                linkify: true,
+              }}
+              container="span"
+              style={isInvalidStyleMaybe}
+            />
+          ) : (
+            <span style={isInvalidStyleMaybe}>{this.props.value}</span>
+          )}
+          {this.props.disableEditing ? null : (
+            <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
+              <EditOutlined
+                className={this.props.markdown ? "flex-item" : undefined}
+                style={{
+                  ...iconStyle,
+                  marginLeft: 5,
+                  display: "inline",
+                  whiteSpace: "nowrap",
                 }}
-                container="span"
-                style={isInvalidStyleMaybe}
+                onClick={(evt) => {
+                  evt.stopPropagation();
+                  this.setState({
+                    isEditing: true,
+                  });
+                  if (this.props.onRenameStart) {
+                    this.props.onRenameStart();
+                  }
+                }}
               />
-            ) : (
-              <span style={isInvalidStyleMaybe}>{this.props.value}</span>
-            )}
-            {this.props.disableEditing ? null : (
-              <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
-                <EditOutlined
-                  /* @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message */
-                  className={this.props.markdown ? "flex-item" : null}
-                  style={{
-                    /* @ts-expect-error ts-migrate(2322) FIXME: Type '{ iconStyle: { cursor: string; }; marginLeft... Remove this comment to see the full error message */
-                    iconStyle,
-                    marginLeft: 5,
-                    display: "inline",
-                    whiteSpace: "nowrap",
-                  }}
-                  onClick={(evt) => {
-                    evt.stopPropagation();
-                    this.setState({
-                      isEditing: true,
-                    });
-                  }}
-                />
-              </Tooltip>
-            )}
-          </span>
-        </span>
+            </Tooltip>
+          )}
+        </div>
       );
     }
   }

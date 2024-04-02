@@ -15,6 +15,7 @@ import {
 } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import { TreeTypeEnum } from "oxalis/constants";
 import {
   createEdge,
   createNode,
@@ -23,6 +24,7 @@ import {
   deleteNode,
   deleteTree,
   updateTreeVisibility,
+  updateTreeEdgesVisibility,
   updateNode,
   updateSkeletonTracing,
   updateUserBoundingBoxes,
@@ -35,7 +37,6 @@ import {
   deleteBranchPointAction,
   setTreeNameAction,
   addTreesAndGroupsAction,
-  deleteTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   generateTreeName,
@@ -47,9 +48,15 @@ import {
   enforceSkeletonTracing,
   findTreeByName,
   getTreeNameForAgglomerateSkeleton,
+  getTreesWithType,
+  getNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import {
+  setAdditionalCoordinatesAction,
+  setPositionAction,
+  setRotationAction,
+} from "oxalis/model/actions/flycam_actions";
 import { setVersionRestoreVisibilityAction } from "oxalis/model/actions/ui_actions";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
@@ -67,7 +74,7 @@ import Store from "oxalis/store";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/admin_rest_api";
@@ -95,17 +102,24 @@ function* centerActiveNode(action: Action): Saga<void> {
     }
   }
 
-  getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
-    (activeNode) => {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'suppressAnimation' does not exist on typ... Remove this comment to see the full error message
-      if (action.suppressAnimation === true) {
-        Store.dispatch(setPositionAction(activeNode.position));
-        Store.dispatch(setRotationAction(activeNode.rotation));
-      } else {
-        api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
-      }
-    },
+  const activeNode = Utils.toNullable(
+    getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))),
   );
+
+  if (activeNode != null) {
+    const activeNodePosition = yield* select((state: OxalisState) =>
+      getNodePosition(activeNode, state),
+    );
+    if ("suppressAnimation" in action && action.suppressAnimation) {
+      Store.dispatch(setPositionAction(activeNodePosition));
+      Store.dispatch(setRotationAction(activeNode.rotation));
+    } else {
+      api.tracing.centerPositionAnimated(activeNodePosition, false, activeNode.rotation);
+    }
+    if (activeNode.additionalCoordinates) {
+      Store.dispatch(setAdditionalCoordinatesAction(activeNode.additionalCoordinates));
+    }
+  }
 }
 
 function* watchBranchPointDeletion(): Saga<void> {
@@ -163,8 +177,7 @@ function* watchTracingConsistency(): Saga<void> {
   const state = yield* select((_state) => _state);
   const invalidTreeDetails = [];
 
-  // @ts-expect-error ts-migrate(2483) FIXME: The left-hand side of a 'for...of' statement canno... Remove this comment to see the full error message
-  for (const tree: Tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
+  for (const tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
     const edgeCount = tree.edges.size();
     const nodeCount = tree.nodes.size();
 
@@ -195,8 +208,7 @@ export function* watchTreeNames(): Saga<void> {
   const state = yield* select((_state) => _state);
 
   // rename trees with an empty/default tree name
-  // @ts-expect-error ts-migrate(2483) FIXME: The left-hand side of a 'for...of' statement canno... Remove this comment to see the full error message
-  for (const tree: Tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
+  for (const tree of _.values(enforceSkeletonTracing(state.tracing).trees)) {
     if (tree.name === "") {
       const newName = generateTreeName(state, tree.timestamp, tree.treeId);
       yield* put(setTreeNameAction(newName, tree.treeId));
@@ -216,7 +228,6 @@ export function* watchAgglomerateLoading(): Saga<void> {
   yield* take("INITIALIZE_SKELETONTRACING");
   yield* take("WK_READY");
   yield* takeEvery(channel, loadAgglomerateSkeletonWithId);
-  yield* takeEvery("REMOVE_AGGLOMERATE_SKELETON", removeAgglomerateSkeletonWithId);
 }
 export function* watchConnectomeAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_READY
@@ -346,8 +357,10 @@ export function* loadAgglomerateSkeletonWithId(
   }
 
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-  const trees = yield* select((state) => enforceSkeletonTracing(state.tracing).trees);
-  const maybeTree = findTreeByName(trees, treeName).getOrElse(null);
+  const trees = yield* select((state) =>
+    getTreesWithType(enforceSkeletonTracing(state.tracing), TreeTypeEnum.AGGLOMERATE),
+  );
+  const maybeTree = findTreeByName(trees, treeName);
 
   if (maybeTree != null) {
     console.warn(
@@ -427,16 +440,6 @@ function* loadConnectomeAgglomerateSkeletonWithId(
   }
 }
 
-function* removeAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
-  const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-  if (!allowUpdate) return;
-  const { mappingName, agglomerateId } = action;
-  const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-  const trees = yield* select((state) => enforceSkeletonTracing(state.tracing).trees);
-  // @ts-expect-error ts-migrate(2552) FIXME: Cannot find name '_all'. Did you mean 'all'?
-  yield _all(findTreeByName(trees, treeName).map((tree) => put(deleteTreeAction(tree.treeId))));
-}
-
 function* removeConnectomeAgglomerateSkeletonWithId(
   action: LoadAgglomerateSkeletonAction,
 ): Saga<void> {
@@ -447,11 +450,10 @@ function* removeConnectomeAgglomerateSkeletonWithId(
   );
   if (skeleton == null) return;
   const { trees } = skeleton;
-  yield* all(
-    findTreeByName(trees, treeName).map((tree) =>
-      put(deleteConnectomeTreesAction([tree.treeId], layerName)),
-    ),
-  );
+  const tree = findTreeByName(trees, treeName);
+  if (tree) {
+    yield* put(deleteConnectomeTreesAction([tree.treeId], layerName));
+  }
 }
 
 export function* watchSkeletonTracingAsync(): Saga<void> {
@@ -466,7 +468,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
       "DELETE_BRANCHPOINT",
       "SELECT_NEXT_TREE",
       "DELETE_TREE",
-      "DELETE_GROUP_AND_TREES",
+      "BATCH_UPDATE_GROUPS_AND_TREES",
       "CENTER_ACTIVE_NODE",
     ],
     centerActiveNode,
@@ -545,7 +547,8 @@ function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
     prevTree.name !== tree.name ||
     !_.isEqual(prevTree.comments, tree.comments) ||
     prevTree.timestamp !== tree.timestamp ||
-    prevTree.groupId !== tree.groupId
+    prevTree.groupId !== tree.groupId ||
+    prevTree.type !== tree.type
   );
 }
 
@@ -592,6 +595,9 @@ export function* diffTrees(
       if (prevTree.isVisible !== tree.isVisible) {
         yield updateTreeVisibility(tree);
       }
+      if (prevTree.edgesAreVisible !== tree.edgesAreVisible) {
+        yield updateTreeEdgesVisibility(tree);
+      }
     }
   }
 }
@@ -620,6 +626,7 @@ export function* diffSkeletonTracing(
     yield updateSkeletonTracing(
       skeletonTracing,
       V3.floor(getPosition(flycam)),
+      flycam.additionalCoordinates,
       getRotation(flycam),
       flycam.zoomStep,
     );

@@ -2,22 +2,22 @@ package com.scalableminds.util.tools
 
 import java.io.FileNotFoundException
 import java.nio.file._
-
 import com.scalableminds.util.io.FileIO
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box.tryo
 import net.liftweb.common._
 import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.json.Writes._
-import scala.concurrent.ExecutionContext.Implicits._
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.duration._
 import scala.io.{BufferedSource, Source}
 
 object JsonHelper extends BoxImplicits with LazyLogging {
 
-  def jsonToFile[A: Writes](path: Path, value: A) =
+  def jsonToFile[A: Writes](path: Path, value: A): Box[Unit] =
     FileIO.printToFile(path.toFile) { printer =>
       printer.print(Json.prettyPrint(Json.toJson(value)))
     }
@@ -35,23 +35,19 @@ object JsonHelper extends BoxImplicits with LazyLogging {
     var buffer: BufferedSource = null
     try {
       buffer = Source.fromFile(path.toFile)
-      Full(Json.parse(buffer.getLines.mkString))
+      Full(Json.parse(buffer.getLines().mkString))
     } catch {
-      case e: java.io.EOFException =>
-        logger.error(
+      case _: java.io.EOFException =>
+        logger.warn(
           s"EOFException in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
         Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString}")
       case _: AccessDeniedException | _: FileNotFoundException =>
-        logger.error(
+        logger.warn(
           s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
         Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Access denied.")
-      case e: com.fasterxml.jackson.databind.JsonMappingException =>
-        logger.warn(s"Exception in JsonHelper while trying to extract json from file. Path: $path. Json Mapping issue.")
-        Failure(s"Json mapping issue in '${rootPath.relativize(path).toString}'. Cause: ${e.getCause}")
       case e: Exception =>
-        logger.error(
-          s"Exception in JsonHelper while trying to extract json from file. Path: $path. Cause: ${e.getCause}")
-        Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Cause: ${e.getCause}")
+        logger.warn(s"Json mapping issue in '${rootPath.relativize(path).toString}': $e")
+        Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}': $e")
     } finally {
       if (buffer != null) buffer.close()
     }
@@ -97,25 +93,24 @@ object JsonHelper extends BoxImplicits with LazyLogging {
     override def reads(json: JsValue): JsResult[Option[T]] = json.validateOpt[T]
 
     override def writes(o: Option[T]): JsValue = o match {
-      case Some(t) ⇒ implicitly[Writes[T]].writes(t)
-      case None ⇒ JsNull
+      case Some(t) => implicitly[Writes[T]].writes(t)
+      case None    => JsNull
     }
   }
 
-  def parseJsonToFox[T: Reads](s: String): Box[T] =
-    Json.parse(s).validate[T] match {
+  def parseAndValidateJson[T: Reads](bytes: Array[Byte]): Box[T] =
+    parseAndValidateJson[T](new String(bytes, StandardCharsets.UTF_8))
+
+  def parseAndValidateJson[T: Reads](s: String): Box[T] =
+    tryo(Json.parse(s))
+      .flatMap(parsed => validateJsValue[T](parsed)) ~> "Failed to parse or validate json against data schema"
+
+  def validateJsValue[T: Reads](o: JsValue): Box[T] =
+    o.validate[T] match {
       case JsSuccess(parsed, _) =>
         Full(parsed)
       case errors: JsError =>
         Failure("Validating Json Failed: " + JsError.toJson(errors).toString())
-    }
-
-  def jsResultToFox[T](result: JsResult[T]): Fox[T] =
-    result match {
-      case JsSuccess(parsed, _) =>
-        Fox.successful(parsed)
-      case errors: JsError =>
-        Fox.failure("Validating Json Failed: " + JsError.toJson(errors).toString())
     }
 
   def jsResultToOpt[T](result: JsResult[T]): Option[T] =

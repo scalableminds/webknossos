@@ -1,54 +1,55 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
-import java.nio.file.Path
-import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.requestlogging.RateLimitedErrorLogging
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle, MagLocator}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayHandle, MagLocator}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
-import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Empty
+import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
 
-class ZarrCubeHandle(zarrArray: ZarrArray) extends DataCubeHandle with LazyLogging with RateLimitedErrorLogging {
+class ZarrBucketProvider(layer: ZarrLayer,
+                         dataSourceId: DataSourceId,
+                         val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
+    extends BucketProvider
+    with LazyLogging {
 
-  def cutOutBucket(bucket: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    val shape = Vec3Int.full(bucket.bucketLength)
-    val offset = Vec3Int(bucket.voxelXInMag, bucket.voxelYInMag, bucket.voxelZInMag)
-    zarrArray.readBytesXYZ(shape, offset).recover {
-      case t: Throwable => logError(t); Failure(t.getMessage, Full(t), Empty)
-    }
-  }
-
-  override protected def onFinalize(): Unit = ()
-
-}
-
-class ZarrBucketProvider(layer: ZarrLayer) extends BucketProvider with LazyLogging with RateLimitedErrorLogging {
-
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[ZarrCubeHandle] = {
-    val zarrMagOpt: Option[MagLocator] =
+  override def openDatasetArrayHandle(readInstruction: DataReadInstruction)(
+      implicit ec: ExecutionContext): Fox[DatasetArrayHandle] = {
+    val magLocatorOpt: Option[MagLocator] =
       layer.mags.find(_.mag == readInstruction.bucket.mag)
 
-    zarrMagOpt match {
-      case None => Empty
-      case Some(zarrMag) => {
-        val magPathOpt: Option[Path] =
-          zarrMag.remoteSource match {
-            case Some(remoteSource) => remotePathFrom(remoteSource)
-            case None               => localPathFrom(readInstruction, zarrMag.pathWithFallback)
-          }
-        magPathOpt match {
+    magLocatorOpt match {
+      case None => Fox.empty
+      case Some(magLocator) =>
+        remoteSourceDescriptorServiceOpt match {
+          case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
+            for {
+              magPath: VaultPath <- remoteSourceDescriptorService.vaultPathFor(readInstruction.baseDir,
+                                                                               readInstruction.dataSource.id,
+                                                                               readInstruction.dataLayer.name,
+                                                                               magLocator)
+              chunkContentsCache <- sharedChunkContentsCache.toFox
+              cubeHandle <- ZarrArray
+                .open(magPath,
+                      dataSourceId,
+                      layer.name,
+                      magLocator.axisOrder,
+                      magLocator.channelIndex,
+                      layer.additionalAxes,
+                      chunkContentsCache)
+                .map(new DatasetArrayHandle(_))
+            } yield cubeHandle
           case None => Empty
-          case Some(magPath) =>
-            tryo(onError = e => logError(e))(ZarrArray.open(magPath, zarrMag.axisOrder)).map(new ZarrCubeHandle(_))
         }
-      }
     }
-
   }
+
 }

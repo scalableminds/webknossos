@@ -10,6 +10,7 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import TeamSelectionForm from "./team_selection_form";
+import { EmptyObject } from "types/globals";
 const { Column, ColumnGroup } = Table;
 const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
 
@@ -22,7 +23,7 @@ type State = {
   updatedAt: number | null | undefined;
 };
 
-class ProjectProgressReportView extends React.PureComponent<{}, State> {
+class ProjectProgressReportView extends React.PureComponent<EmptyObject, State> {
   state: State = {
     areSettingsVisible: true,
     data: [],
@@ -31,8 +32,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
     updatedAt: null,
   };
 
-  // @ts-expect-error ts-migrate(1015) FIXME: Parameter cannot have question mark and initialize... Remove this comment to see the full error message
-  async fetchData(suppressLoadingState?: boolean = false) {
+  async fetchData(suppressLoadingState: boolean = false) {
     const { team } = this.state;
 
     if (team == null) {
@@ -49,7 +49,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
           updatedAt: Date.now(),
         });
         Toast.close(errorToastKey);
-      } catch (err) {
+      } catch (_err) {
         Toast.error(messages["project.report.failed_to_refresh"], {
           sticky: true,
           key: errorToastKey,
@@ -202,7 +202,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 dataIndex="finishedInstances"
                 // @ts-expect-error ts-migrate(2322) FIXME: Type 'Comparator<APIProjectProgressReport>' is not... Remove this comment to see the full error message
                 sorter={Utils.compareBy(typeHint, (project) => project.finishedInstances)}
-                render={(text, item) => ({
+                render={(_text, item) => ({
                   props: {
                     colSpan: 3,
                   },
@@ -213,7 +213,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                       // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
                       b={item.activeInstances}
                       // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                      c={item.openInstances}
+                      c={item.pendingInstances}
                     />
                   ),
                 })}
@@ -239,14 +239,14 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               <Column
                 title={
                   <Badge
-                    count="Open"
+                    count="Pending"
                     style={{
                       background: colors.open,
                     }}
                   />
                 }
-                dataIndex="openInstances"
-                sorter={Utils.compareBy(typeHint, (project) => project.openInstances)}
+                dataIndex="pendingInstances"
+                sorter={Utils.compareBy(typeHint, (project) => project.pendingInstances)}
                 render={() => ({
                   props: {
                     colSpan: 0,

@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.storage
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 
 import javax.inject.Inject
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
 class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
@@ -27,7 +27,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
 
   def findAllConditionalWithKey(predicate: K => Boolean): scala.collection.Map[K, V] =
     map.synchronized {
-      map.filterKeys(predicate)
+      map.view.filterKeys(predicate).toMap
     }
 
   def removeAll(): Unit =
@@ -37,7 +37,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
 
   def removeAllExcept(l: Array[K]): collection.Map[K, V] =
     map.synchronized {
-      map.filterKeys(l.contains)
+      map.view.filterKeys(l.contains).toMap
     }
 
   def removeAllConditional(predicate: K => Boolean): Unit =
@@ -47,7 +47,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       }
     }
 
-  def insert(id: K, t: V, to: Option[FiniteDuration] = None): Unit = {
+  def insert(id: K, t: V, to: Option[FiniteDuration] = None)(implicit ec: ExecutionContext): Unit = {
     map.synchronized {
       map += (id -> t)
     }

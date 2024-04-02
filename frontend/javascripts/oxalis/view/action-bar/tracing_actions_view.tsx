@@ -1,4 +1,4 @@
-import { Button, Dropdown, Menu, Modal, Tooltip } from "antd";
+import { Button, Dropdown, Modal, Space, Tooltip } from "antd";
 import {
   HistoryOutlined,
   CheckCircleOutlined,
@@ -25,7 +25,7 @@ import {
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
-import type { APIAnnotationType, APIUser } from "types/api_flow_types";
+import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_flow_types";
 import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
 import { AsyncButton, AsyncButtonProps } from "components/async_clickables";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
@@ -41,6 +41,7 @@ import {
   setVersionRestoreVisibilityAction,
   setDownloadModalVisibilityAction,
   setShareModalVisibilityAction,
+  setRenderAnimationModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -54,14 +55,17 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import SaveButton from "oxalis/view/action-bar/save_button";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
 import DownloadModalView from "oxalis/view/action-bar/download_modal_view";
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
 import messages from "messages";
-import { screenshotMenuItem } from "oxalis/view/action-bar/view_dataset_actions_view";
+import {
+  screenshotMenuItem,
+  renderAnimationMenuItem,
+} from "oxalis/view/action-bar/view_dataset_actions_view";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
 import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
@@ -69,14 +73,15 @@ import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
+import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import { CreateAnimationModalWrapper as CreateAnimationModal } from "./create_animation_modal";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
 );
 
 type OwnProps = {
-  layoutMenu: React.ReactNode;
-  hasVolumeFallback: boolean;
+  layoutMenu: SubMenuType;
 };
 type StateProps = {
   annotationType: APIAnnotationType;
@@ -87,7 +92,10 @@ type StateProps = {
   hasTracing: boolean;
   isDownloadModalOpen: boolean;
   isShareModalOpen: boolean;
+  isRenderAnimationModalOpen: boolean;
   busyBlockingInfo: BusyBlockingInfo;
+  annotationOwner: APIUserBase | null | undefined;
+  othersMayEdit: boolean;
 };
 type Props = OwnProps & StateProps;
 type State = {
@@ -96,8 +104,9 @@ type State = {
   isZarrPrivateLinksModalOpen: boolean;
   isReopenAllowed: boolean;
 };
+
 export type LayoutProps = {
-  storedLayoutNamesForView: Array<string>;
+  storedLayoutNamesForView: string[];
   activeLayout: string;
   layoutKey: LayoutKeys;
   autoSaveLayouts: boolean;
@@ -111,7 +120,8 @@ type LayoutMenuProps = LayoutProps & {
   onDeleteLayout: (arg0: string) => void;
   addNewLayout: () => void;
 };
-export function LayoutMenu(props: LayoutMenuProps) {
+
+export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
   const {
     storedLayoutNamesForView,
     layoutKey,
@@ -123,9 +133,10 @@ export function LayoutMenu(props: LayoutMenuProps) {
     autoSaveLayouts,
     setAutoSaveLayouts,
     saveCurrentLayout,
+    // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
     setCurrentLayout,
-    ...others
   } = props;
+
   const layoutMissingHelpTitle = (
     <React.Fragment>
       <h5
@@ -138,15 +149,15 @@ export function LayoutMenu(props: LayoutMenuProps) {
       <p>{messages["layouting.missing_custom_layout_info"]}</p>
     </React.Fragment>
   );
+
   const customLayoutsItems = storedLayoutNamesForView.map((layout) => {
     const isSelectedLayout = layout === activeLayout;
-    return (
-      <Menu.Item
-        key={layout}
-        className={
-          isSelectedLayout ? "selected-layout-item bullet-point-less-li" : "bullet-point-less-li"
-        }
-      >
+    return {
+      key: layout,
+      className: isSelectedLayout
+        ? "selected-layout-item bullet-point-less-li"
+        : "bullet-point-less-li",
+      label: (
         <div className="layout-dropdown-list-item-container">
           <div className="layout-dropdown-selection-area" onClick={() => onSelectLayout(layout)}>
             {layout}
@@ -162,86 +173,87 @@ export function LayoutMenu(props: LayoutMenuProps) {
             </Tooltip>
           )}
         </div>
-      </Menu.Item>
-    );
+      ),
+    };
   });
-  return (
-    <Menu.SubMenu
-      {...others}
-      title={
-        <span
-          style={{
-            display: "inline-block",
-            minWidth: 120,
-          }}
-        >
-          <LayoutOutlined />
-          Layout
-          <Tooltip placement="top" title={layoutMissingHelpTitle}>
-            <InfoCircleOutlined
-              style={{
-                color: "gray",
-                marginRight: 36,
-              }}
-              className="right-floating-icon"
-            />
-          </Tooltip>
-        </span>
-      }
-    >
-      <Menu.Item
+
+  return {
+    key: "layout-menu",
+    icon: <LayoutOutlined />,
+    label: (
+      <span
         style={{
           display: "inline-block",
+          minWidth: 120,
         }}
-        onClick={addNewLayout}
-        title="Add a new Layout"
       >
-        <PlusOutlined />
-      </Menu.Item>
-      <Menu.Item
-        style={{
+        Layout
+        <Tooltip placement="top" title={layoutMissingHelpTitle}>
+          <InfoCircleOutlined
+            style={{
+              color: "gray",
+              marginRight: 36,
+            }}
+            className="right-floating-icon"
+          />
+        </Tooltip>
+      </span>
+    ),
+    children: [
+      {
+        key: "new-layout",
+        style: {
           display: "inline-block",
-        }}
-        onClick={onResetLayout}
-        title="Reset Layout"
-      >
-        <RollbackOutlined />
-      </Menu.Item>
-      <Menu.Item
-        style={{
+        },
+        onClick: addNewLayout,
+        title: "Add a new Layout",
+        icon: <PlusOutlined />,
+      },
+      {
+        key: "reset-layout",
+        style: {
           display: "inline-block",
-        }}
-        onClick={() => setAutoSaveLayouts(!autoSaveLayouts)}
-        title={`${autoSaveLayouts ? "Disable" : "Enable"} auto-saving of current layout`}
-      >
-        {autoSaveLayouts ? <DisconnectOutlined /> : <LinkOutlined />}
-      </Menu.Item>
-      {autoSaveLayouts ? null : (
-        <Menu.Item
-          style={{
-            display: "inline-block",
-          }}
-          onClick={saveCurrentLayout}
-          title="Save current layout"
-        >
-          <SaveOutlined />
-        </Menu.Item>
-      )}
-      <Menu.Divider />
-      <Menu.ItemGroup
-        className="available-layout-list"
-        title={
+        },
+        onClick: onResetLayout,
+        title: "Reset Layout",
+        icon: <RollbackOutlined />,
+      },
+      {
+        key: "autosave-layout",
+        style: {
+          display: "inline-block",
+        },
+        onClick: () => setAutoSaveLayouts(!autoSaveLayouts),
+        title: `${autoSaveLayouts ? "Disable" : "Enable"} auto-saving of current layout`,
+        icon: autoSaveLayouts ? <DisconnectOutlined /> : <LinkOutlined />,
+      },
+      autoSaveLayouts
+        ? null
+        : {
+            key: "save-layout",
+            style: {
+              display: "inline-block",
+            },
+            onClick: saveCurrentLayout,
+            title: "Save current layout",
+            icon: <SaveOutlined />,
+          },
+      { key: "divider", type: "divider" },
+      {
+        key: "available-layouts",
+        type: "group",
+        className: "available-layout-list",
+        label: (
           <span
             style={{
               fontSize: 14,
             }}
           >{`Layouts for ${mapLayoutKeysToLanguage[layoutKey]}`}</span>
-        }
-      >
-        {customLayoutsItems}
-      </Menu.ItemGroup>
-    </Menu.SubMenu>
-  );
+        ),
+        children: customLayoutsItems,
+      },
+    ],
+  };
 }
 
 class TracingActionsView extends React.PureComponent<Props, State> {
@@ -320,7 +332,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       this.props.annotationId,
       this.props.annotationType,
     );
-    location.href = `/annotations/${newAnnotation.id}`;
+    window.open(`/annotations/${newAnnotation.id}`, "_blank", "noopener,noreferrer");
   };
 
   handleCopySandboxToAccount = async () => {
@@ -337,7 +349,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     // volume tracings
     const fallbackLayer =
       sandboxTracing.volumes.length > 0 ? sandboxTracing.volumes[0].fallbackLayer : null;
-    const newAnnotation = await createExplorational(dataset, tracingType, fallbackLayer);
+    const newAnnotation = await createExplorational(dataset, tracingType, false, fallbackLayer);
     UrlManager.changeBaseUrl(`/annotations/${newAnnotation.typ}/${newAnnotation.id}`);
     await api.tracing.restart(null, newAnnotation.id, ControlModeEnum.TRACE, undefined, true);
     const sandboxSkeletonTracing = enforceSkeletonTracing(sandboxTracing);
@@ -424,20 +436,15 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     });
   };
 
-  handleMergeClose = () => {
-    this.setState({
-      isMergeModalOpen: false,
-    });
-  };
-
   handleUserScriptsOpen = () => {
     this.setState({
       isUserScriptsModalOpen: true,
     });
   };
 
-  handleUserScriptsClose = () => {
+  handleModalClose = () => {
     this.setState({
+      isMergeModalOpen: false,
       isUserScriptsModalOpen: false,
     });
   };
@@ -449,13 +456,21 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       hasTracing,
       restrictions,
       task,
-      hasVolumeFallback,
       annotationType,
       annotationId,
       activeUser,
       layoutMenu,
       busyBlockingInfo,
+      othersMayEdit,
+      annotationOwner,
     } = this.props;
+    const copyAnnotationText =
+      !restrictions.allowUpdate &&
+      activeUser != null &&
+      annotationOwner?.id === activeUser.id &&
+      othersMayEdit
+        ? "Duplicate"
+        : "Copy To My Account";
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
     const saveButton = restrictions.allowUpdate
       ? [
@@ -502,7 +517,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
                 key="copy-sandbox-button"
                 icon={<FileAddOutlined />}
                 onClick={this.handleCopySandboxToAccount}
-                title="Copy To My Account"
+                title={copyAnnotationText}
               >
                 <span className="hide-on-small-screen">Copy To My Account</span>
               </AsyncButtonWithAuthentication>,
@@ -515,7 +530,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
             danger
             disabled
             style={{
-              backgroundColor: "var(--ant-warning-dark-5)",
+              backgroundColor: "var(--ant-color-warning)",
             }}
           >
             Read only
@@ -526,9 +541,9 @@ class TracingActionsView extends React.PureComponent<Props, State> {
             key="copy-button"
             icon={<FileAddOutlined />}
             onClick={this.handleCopyToAccount}
-            title="Copy To My Account"
+            title={copyAnnotationText}
           >
-            <span className="hide-on-small-screen">Copy To My Account</span>
+            <span className="hide-on-small-screen">{copyAnnotationText}</span>
           </AsyncButtonWithAuthentication>,
         ];
     const finishAndNextTaskButton =
@@ -551,57 +566,53 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         Undo Finish
       </ButtonComponent>
     ) : null;
-    const elements = [];
+    const menuItems: ItemType[] = [];
     const modals = [];
 
     if (restrictions.allowFinish) {
-      elements.push(
-        <Menu.Item key="finish-button" onClick={this.handleFinish}>
-          <CheckCircleOutlined />
-          {archiveButtonText}
-        </Menu.Item>,
-      );
+      menuItems.push({
+        key: "finish-button",
+        onClick: this.handleFinish,
+        icon: <CheckCircleOutlined />,
+        label: archiveButtonText,
+      });
     }
 
     if (restrictions.allowDownload) {
-      elements.push(
-        <Menu.Item key="download-button" onClick={this.handleDownloadOpen}>
-          <DownloadOutlined />
-          Download
-        </Menu.Item>,
-      );
+      menuItems.push({
+        key: "download-button",
+        onClick: this.handleDownloadOpen,
+        icon: <DownloadOutlined />,
+        label: "Download",
+      });
       modals.push(
         <DownloadModalView
           key="download-modal"
-          isVisible={this.props.isDownloadModalOpen}
+          isAnnotation
+          isOpen={this.props.isDownloadModalOpen}
           onClose={this.handleDownloadClose}
-          annotationType={annotationType}
-          annotationId={annotationId}
-          hasVolumeFallback={hasVolumeFallback}
         />,
       );
     }
 
-    elements.push(
-      <Menu.Item key="share-button" onClick={this.handleShareOpen}>
-        <ShareAltOutlined />
-        Share
-      </Menu.Item>,
-    );
-    elements.push(
-      <Menu.Item
-        key="zarr-links-button"
-        onClick={() => this.setState({ isZarrPrivateLinksModalOpen: true })}
-      >
-        <LinkOutlined />
-        Zarr Links
-      </Menu.Item>,
-    );
+    menuItems.push({
+      key: "share-button",
+      onClick: this.handleShareOpen,
+      icon: <ShareAltOutlined />,
+      label: "Share",
+    });
+    menuItems.push({
+      key: "zarr-links-button",
+      onClick: () => this.setState({ isZarrPrivateLinksModalOpen: true }),
+
+      icon: <LinkOutlined />,
+      label: "Zarr Links",
+    });
 
     modals.push(
       <ShareModalView
         key="share-modal"
-        isVisible={this.props.isShareModalOpen}
+        isOpen={this.props.isShareModalOpen}
         onOk={this.handleShareClose}
         annotationType={annotationType}
         annotationId={annotationId}
@@ -610,84 +621,97 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     modals.push(
       <PrivateLinksModal
         key="private-links-modal"
-        isVisible={this.state.isZarrPrivateLinksModalOpen}
+        isOpen={this.state.isZarrPrivateLinksModalOpen}
         onOk={() => this.setState({ isZarrPrivateLinksModalOpen: false })}
         annotationId={annotationId}
       />,
     );
     if (activeUser != null) {
-      elements.push(
-        <Menu.Item key="duplicate-button" onClick={this.handleDuplicate}>
-          <CopyOutlined />
-          Duplicate
-        </Menu.Item>,
-      );
+      menuItems.push({
+        key: "duplicate-button",
+        onClick: this.handleDuplicate,
+        icon: <CopyOutlined />,
+        label: "Duplicate",
+      });
     }
-    elements.push(screenshotMenuItem);
-    elements.push(
-      <Menu.Item key="user-scripts-button" onClick={this.handleUserScriptsOpen}>
-        <SettingOutlined />
-        Add Script
-      </Menu.Item>,
+
+    menuItems.push(screenshotMenuItem);
+
+    menuItems.push(renderAnimationMenuItem);
+    modals.push(
+      <CreateAnimationModal
+        key="render-animation-modal"
+        isOpen={this.props.isRenderAnimationModalOpen}
+        onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
+      />,
     );
+
+    menuItems.push({
+      key: "user-scripts-button",
+      onClick: this.handleUserScriptsOpen,
+      icon: <SettingOutlined />,
+      label: "Add Script",
+    });
     modals.push(
       <UserScriptsModalView
         key="user-scripts-modal"
-        isVisible={this.state.isUserScriptsModalOpen}
-        onOK={this.handleUserScriptsClose}
+        isOpen={this.state.isUserScriptsModalOpen}
+        onOK={this.handleModalClose}
       />,
     );
 
     if (restrictions.allowSave && isSkeletonMode && activeUser != null) {
-      elements.push(
-        <Menu.Item key="merge-button" onClick={this.handleMergeOpen}>
-          <FolderOpenOutlined />
-          Merge Annotation
-        </Menu.Item>,
-      );
+      menuItems.push({
+        key: "merge-button",
+        onClick: this.handleMergeOpen,
+        icon: <FolderOpenOutlined />,
+        label: "Merge Annotation",
+      });
       modals.push(
         <MergeModalView
           key="merge-modal"
-          isVisible={this.state.isMergeModalOpen}
-          onOk={this.handleMergeClose}
+          isOpen={this.state.isMergeModalOpen}
+          onOk={this.handleModalClose}
         />,
       );
     }
     if (controlMode !== ControlModeEnum.SANDBOX) {
-      elements.push(
-        <Menu.Item key="restore-button" onClick={this.handleRestore}>
-          <HistoryOutlined />
-          Restore Older Version
-        </Menu.Item>,
-      );
+      menuItems.push({
+        key: "restore-button",
+        onClick: this.handleRestore,
+        icon: <HistoryOutlined />,
+        label: "Restore Older Version",
+      });
     }
 
-    elements.push(layoutMenu);
+    menuItems.push(layoutMenu);
 
     if (restrictions.allowSave && !task) {
-      elements.push(
-        <Menu.Item key="disable-saving" onClick={this.handleDisableSaving}>
-          <StopOutlined />
-          Disable saving
-        </Menu.Item>,
-      );
+      menuItems.push({
+        key: "disable-saving",
+        onClick: this.handleDisableSaving,
+        icon: <StopOutlined />,
+        label: "Disable saving",
+      });
     }
 
-    const menu = <Menu>{elements}</Menu>;
     return (
-      <div>
-        <div className="antd-legacy-group">
+      <>
+        <Space.Compact>
           {saveButton}
           {finishAndNextTaskButton}
           {reopenTaskButton}
-          {modals}
-          <Dropdown overlay={menu} trigger={["click"]}>
+        </Space.Compact>
+        {modals}
+        <div>
+          <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
             <ButtonComponent className="narrow">
+              Menu
               <DownOutlined />
             </ButtonComponent>
           </Dropdown>
         </div>
-      </div>
+      </>
     );
   }
 }
@@ -697,12 +721,15 @@ function mapStateToProps(state: OxalisState): StateProps {
     annotationType: state.tracing.annotationType,
     annotationId: state.tracing.annotationId,
     restrictions: state.tracing.restrictions,
+    annotationOwner: state.tracing.owner,
     task: state.task,
     activeUser: state.activeUser,
     hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
     isDownloadModalOpen: state.uiInformation.showDownloadModal,
     isShareModalOpen: state.uiInformation.showShareModal,
+    isRenderAnimationModalOpen: state.uiInformation.showRenderAnimationModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
+    othersMayEdit: state.tracing.othersMayEdit,
   };
 }
 

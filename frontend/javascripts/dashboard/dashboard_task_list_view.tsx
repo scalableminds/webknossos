@@ -1,4 +1,4 @@
-import { Button, Modal, Tag, Card, Row, Col, List } from "antd";
+import { Button, Modal, Tag, Card, Row, Col, List, Tooltip } from "antd";
 import {
   CheckCircleOutlined,
   DeleteOutlined,
@@ -9,8 +9,7 @@ import {
   TeamOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import type { RouteComponentProps } from "react-router-dom";
-import { Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { connect } from "react-redux";
@@ -42,6 +41,8 @@ import Toast from "libs/toast";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
 const typeHint: APITaskWithAnnotation[] = [];
 const pageLength: number = 1000;
@@ -59,13 +60,11 @@ type StateProps = {
   activeUser: APIUser;
 };
 type Props = OwnProps & StateProps;
-type PropsWithRouter = Props & {
-  history: RouteComponentProps["history"];
-};
+
 type State = {
   showFinishedTasks: boolean;
   isLoading: boolean;
-  isTransferModalVisible: boolean;
+  isTransferModalOpen: boolean;
   currentAnnotationId: string | null | undefined;
   finishedModeState: TaskModeState;
   unfinishedModeState: TaskModeState;
@@ -106,11 +105,11 @@ const convertAnnotationToTaskWithAnnotationType = (
   return newTask;
 };
 
-class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> {
+class DashboardTaskListView extends React.PureComponent<Props, State> {
   state: State = {
     showFinishedTasks: false,
     isLoading: false,
-    isTransferModalVisible: false,
+    isTransferModalOpen: false,
     currentAnnotationId: null,
     finishedModeState: {
       tasks: [],
@@ -126,12 +125,12 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
 
   componentDidMount() {
     // @ts-ignore
-    this.setState(persistence.load(this.props.history));
+    this.setState(persistence.load());
     this.fetchNextPage(0);
   }
 
   componentDidUpdate() {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
   }
 
   getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
@@ -178,8 +177,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
     });
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'pageNumber' implicitly has an 'any' typ... Remove this comment to see the full error message
-  fetchNextPage = async (pageNumber) => {
+  fetchNextPage = async (pageNumber: number) => {
     // this refers not to the pagination of antd but to the pagination of querying data from SQL
     const isFinished = this.state.showFinishedTasks;
     const previousTasks = this.getCurrentModeState().tasks;
@@ -223,7 +221,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
 
   openTransferModal(annotationId: string) {
     this.setState({
-      isTransferModalVisible: true,
+      isTransferModalOpen: true,
       currentAnnotationId: annotationId,
     });
   }
@@ -238,18 +236,18 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         .includes(task.team);
     const label = this.props.isAdminView ? (
       <span>
-        <EyeOutlined />
+        <EyeOutlined className="icon-margin-right" />
         View
       </span>
     ) : (
       <span>
-        <PlayCircleOutlined />
+        <PlayCircleOutlined className="icon-margin-right" />
         Open
       </span>
     );
     return task.annotation.state === "Finished" ? (
       <div>
-        <CheckCircleOutlined />
+        <CheckCircleOutlined className="icon-margin-right" />
         Finished
         <br />
       </div>
@@ -260,7 +258,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
         {isAdmin || this.props.isAdminView ? (
           <div>
             <LinkButton onClick={() => this.openTransferModal(annotation.id)}>
-              <TeamOutlined />
+              <TeamOutlined className="icon-margin-right" />
               Transfer
             </LinkButton>
             <br />
@@ -274,26 +272,30 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
                 const isVolumeIncluded = getVolumeDescriptors(annotation).length > 0;
                 return downloadAnnotation(annotation.id, "Task", isVolumeIncluded);
               }}
-              icon={<DownloadOutlined />}
+              icon={<DownloadOutlined className="icon-margin-right" />}
             >
               Download
             </AsyncLink>
             <br />
             <LinkButton onClick={() => this.resetTask(annotation)}>
-              <RollbackOutlined />
-              Reset
+              <Tooltip title={messages["task.tooltip_explain_reset"]} placement="left">
+                <RollbackOutlined className="icon-margin-right" />
+                Reset
+              </Tooltip>
             </LinkButton>
             <br />
             <LinkButton onClick={() => this.cancelAnnotation(annotation)}>
-              <DeleteOutlined />
-              Reset and Cancel
+              <Tooltip title={messages["task.tooltip_explain_reset_cancel"]} placement="left">
+                <DeleteOutlined className="icon-margin-right" />
+                Reset and Cancel
+              </Tooltip>
             </LinkButton>
             <br />
           </div>
         ) : null}
         {this.props.isAdminView ? null : (
           <LinkButton onClick={() => this.confirmFinish(task)}>
-            <CheckCircleOutlined />
+            <CheckCircleOutlined className="icon-margin-right" />
             Finish
           </LinkButton>
         )}
@@ -363,7 +365,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
           ]),
         },
       }));
-    } catch (ex) {
+    } catch (_ex) {
       // catch exception so that promise does not fail and the modal will close
     } finally {
       this.setState({
@@ -374,7 +376,7 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
 
   handleTransferredTask() {
     this.setState({
-      isTransferModalVisible: false,
+      isTransferModalOpen: false,
     });
 
     const removeTransferredTask = (
@@ -393,31 +395,47 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
 
   renderPlaceholder() {
     return this.state.isLoading ? null : (
-      <>
-        <p>
-          You have no assigned tasks. Request a new task by clicking on the{" "}
-          <strong>Get a New Task</strong> button.
-        </p>
-        {this.props.activeUser.isAdmin && (
-          <>
-            <p>
-              Tasks are a powerful way to distribute annotation jobs among groups of users.{" "}
-              <Link to="/tasks">Create new tasks from the admin menu</Link>.
-            </p>
-            <p>
-              To learn more about the task system in webKnossos,{" "}
-              <a
-                href="https://docs.webknossos.org/webknossos/tasks.html"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                check out the documentation
-              </a>
-              .
-            </p>
-          </>
-        )}
-      </>
+      <Row gutter={32} justify="center">
+        <Col span="7">
+          <Card
+            bordered={false}
+            cover={<i className="drawing drawing-empty-list-tasks" style={{ translate: "15%" }} />}
+            style={{ maxWidth: 460 }}
+          >
+            <Card.Meta
+              title="Request a New Task"
+              description={
+                <>
+                  <p style={{ marginTop: 20 }}>
+                    You have no tasks assigned to you. Request a new task by clicking on the{" "}
+                    <strong>Get a New Task</strong> button above.
+                  </p>
+                  {this.props.activeUser.isAdmin && (
+                    <>
+                      <p style={{ marginBottom: 30 }}>
+                        Tasks are a powerful way to distribute annotation jobs among groups of users
+                        as part of the WEBKNOSSOS project management.{" "}
+                      </p>
+                      <a
+                        href="https://docs.webknossos.org/webknossos/tasks.html"
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        <Button>Learn more</Button>
+                      </a>
+                      <Link to="/tasks">
+                        <Button type="primary" style={{ marginLeft: 20 }}>
+                          Create new Tasks
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+                </>
+              }
+            />
+          </Card>
+        </Col>
+      </Row>
     );
   }
 
@@ -528,33 +546,16 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
   render() {
     return (
       <div>
-        <div className="pull-right">
-          <AsyncButton
-            type="primary"
-            icon={<UserAddOutlined />}
-            onClick={() => this.confirmGetNewTask()}
-            disabled={this.props.isAdminView && this.props.userId != null}
-          >
-            Get a New Task
-          </AsyncButton>
-          <Button
-            onClick={this.toggleShowFinished}
-            style={{
-              marginLeft: 20,
-            }}
-          >
-            Show {this.getFinishVerb()} Tasks Only
-          </Button>
-        </div>
+        <TopBar
+          confirmGetNewTask={() => this.confirmGetNewTask()}
+          isAdminView={this.props.isAdminView}
+          userId={this.props.userId}
+          toggleShowFinished={this.toggleShowFinished}
+          getFinishVerb={this.getFinishVerb}
+        />
         <h3 id="tasksHeadline" className="TestTasksHeadline">
           {this.state.showFinishedTasks ? "My Finished Tasks" : null}
         </h3>
-        <div
-          className="clearfix"
-          style={{
-            margin: "20px 0px",
-          }}
-        />
         {this.renderTaskList()}
         <div
           style={{
@@ -571,11 +572,11 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
           ) : null}
         </div>
         <TransferTaskModal
-          visible={this.state.isTransferModalVisible}
+          isOpen={this.state.isTransferModalOpen}
           annotationId={this.state.currentAnnotationId}
           onCancel={() =>
             this.setState({
-              isTransferModalVisible: false,
+              isTransferModalOpen: false,
             })
           }
           onChange={() => this.handleTransferredTask()}
@@ -585,9 +586,53 @@ class DashboardTaskListView extends React.PureComponent<PropsWithRouter, State> 
   }
 }
 
+function TopBar({
+  confirmGetNewTask,
+  isAdminView,
+  userId,
+  toggleShowFinished,
+  getFinishVerb,
+}: {
+  confirmGetNewTask: () => Promise<void>;
+  isAdminView: boolean;
+  userId: string | null | undefined;
+  toggleShowFinished: () => void;
+  getFinishVerb: () => string;
+}) {
+  const activeTab = React.useContext(ActiveTabContext);
+  const renderingTab = React.useContext(RenderingTabContext);
+
+  const content = (
+    <div className="pull-right">
+      <AsyncButton
+        type="primary"
+        icon={<UserAddOutlined />}
+        onClick={confirmGetNewTask}
+        disabled={isAdminView && userId != null}
+      >
+        Get a New Task
+      </AsyncButton>
+      <Button
+        onClick={toggleShowFinished}
+        style={{
+          marginLeft: 20,
+        }}
+      >
+        Show {getFinishVerb()} Tasks Only
+      </Button>
+    </div>
+  );
+
+  return (
+    <RenderToPortal portalId="dashboard-TabBarExtraContent">
+      {activeTab === renderingTab ? content : null}
+    </RenderToPortal>
+  );
+}
+
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: enforceActiveUser(state.activeUser),
 });
 
 const connector = connect(mapStateToProps);
-export default connector(withRouter<RouteComponentProps & Props, any>(DashboardTaskListView));
+export default connector(DashboardTaskListView);

@@ -1,93 +1,97 @@
 package controllers
 
-import akka.util.Timeout
-import com.mohiva.play.silhouette.api.Silhouette
+import org.apache.pekko.util.Timeout
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
+import com.scalableminds.webknossos.datastore.models.annotation.{
+  AnnotationLayer,
+  AnnotationLayerStatistics,
+  AnnotationLayerType
+}
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
-import io.swagger.annotations._
-
-import javax.inject.Inject
+import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
-import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
 import models.annotation.AnnotationState.Cancelled
 import models.annotation._
-import models.binary.{DataSetDAO, DataSetService}
+import models.dataset.{DatasetDAO, DatasetService}
+import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.time._
 import models.user.{User, UserDAO, UserService}
-import oxalis.security.{URLSharing, WkEnv}
+import net.liftweb.common.Box
 import play.api.i18n.{Messages, MessagesProvider}
+import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.{URLSharing, UserAwareRequestLogging, WkEnv}
+import telemetry.SlackNotificationService
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
-import models.analytics.{AnalyticsService, CreateAnnotationEvent, OpenAnnotationEvent}
-import models.organization.OrganizationDAO
-import oxalis.mail.{MailchimpClient, MailchimpTag}
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 case class AnnotationLayerParameters(typ: AnnotationLayerType,
                                      fallbackLayerName: Option[String],
+                                     autoFallbackLayer: Boolean = false,
+                                     mappingName: Option[String] = None,
                                      resolutionRestrictions: Option[ResolutionRestrictions],
-                                     name: String)
+                                     name: Option[String],
+                                     additionalAxes: Option[Seq[AdditionalAxis]])
 object AnnotationLayerParameters {
-  implicit val jsonFormat: OFormat[AnnotationLayerParameters] = Json.format[AnnotationLayerParameters]
+  implicit val jsonFormat: OFormat[AnnotationLayerParameters] =
+    Json.using[WithDefaultValues].format[AnnotationLayerParameters]
 }
 
-@Api
 class AnnotationController @Inject()(
     annotationDAO: AnnotationDAO,
     annotationLayerDAO: AnnotationLayerDAO,
     taskDAO: TaskDAO,
     userDAO: UserDAO,
     organizationDAO: OrganizationDAO,
-    dataSetDAO: DataSetDAO,
-    dataSetService: DataSetService,
+    datasetDAO: DatasetDAO,
+    tracingStoreDAO: TracingStoreDAO,
+    datasetService: DatasetService,
     annotationService: AnnotationService,
+    annotationMutexService: AnnotationMutexService,
     userService: UserService,
     teamService: TeamService,
     projectDAO: ProjectDAO,
     teamDAO: TeamDAO,
-    annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
     timeSpanService: TimeSpanService,
     annotationMerger: AnnotationMerger,
     tracingStoreService: TracingStoreService,
     provider: AnnotationInformationProvider,
     annotationRestrictionDefaults: AnnotationRestrictionDefaults,
     analyticsService: AnalyticsService,
+    slackNotificationService: SlackNotificationService,
     mailchimpClient: MailchimpClient,
+    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore,
     conf: WkConf,
+    rpc: RPC,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
+    with UserAwareRequestLogging
     with FoxImplicits {
 
   implicit val timeout: Timeout = Timeout(5 seconds)
-  private val taskReopenAllowed = (conf.Features.taskReopenAllowed + (10 seconds)).toMillis
+  private val taskReopenAllowed = conf.Features.taskReopenAllowed + (10 seconds)
 
-  @ApiOperation(value = "Information about an annotation, supplying the type explicitly",
-                nickname = "annotationInfoByType")
-  @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
-          new ApiResponse(code = 400, message = badRequestLabel)))
-  def info(
-      @ApiParam(value =
-                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
-                example = "Explorational") typ: String,
-      @ApiParam(
-        value =
-          "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
-      id: String,
-      @ApiParam(value = "Timestamp in milliseconds (time at which the request is sent)", required = true) timestamp: Long)
-    : Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def info( // Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType
+           typ: String,
+           // For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id
+           id: String,
+           // Timestamp in milliseconds (time at which the request is sent)
+           timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     log() {
       val notFoundMessage =
         if (request.identity.isEmpty) "annotation.notFound.considerLoggingIn" else "annotation.notFound"
@@ -101,7 +105,8 @@ class AnnotationController @Inject()(
           .publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"
         _ <- Fox.runOptional(request.identity) { user =>
           if (typedTyp == AnnotationType.Task || typedTyp == AnnotationType.Explorational) {
-            timeSpanService.logUserInteraction(timestamp, user, annotation) // log time when a user starts working
+            timeSpanService
+              .logUserInteraction(Instant(timestamp), user, annotation) // log time when a user starts working
           } else Fox.successful(())
         }
         _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
@@ -112,25 +117,18 @@ class AnnotationController @Inject()(
     }
   }
 
-  @ApiOperation(value = "Information about an annotation", nickname = "annotationInfo")
-  @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "JSON object containing information about this annotation."),
-          new ApiResponse(code = 400, message = badRequestLabel)))
-  def infoWithoutType(@ApiParam(value = "Id of the stored annotation")
-                      id: String,
-                      @ApiParam(value = "Timestamp in milliseconds (time at which the request is sent)",
-                                required = true) timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async {
-    implicit request =>
-      log() {
-        for {
-          annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
-          result <- info(annotation.typ.toString, id, timestamp)(request)
-        } yield result
+  def infoWithoutType(id: String,
+                      // Timestamp in milliseconds (time at which the request is sent
+                      timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    log() {
+      for {
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        result <- info(annotation.typ.toString, id, timestamp)(request)
+      } yield result
 
-      }
+    }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -144,7 +142,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(js, Messages("annotation.merge.success"))
     }
 
-  @ApiOperation(hidden = true, value = "")
   def mergeWithoutType(id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -153,26 +150,6 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  @ApiOperation(hidden = true, value = "")
-  def loggedTime(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
-      restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
-      _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-      loggedTimeAsMap <- timeSpanService
-        .loggedTimeOfAnnotation(annotation._id, TimeSpan.groupByMonth) ?~> "annotation.timelogging.read.failed"
-    } yield {
-      Ok(
-        Json.arr(
-          loggedTimeAsMap.map {
-            case (month, duration) =>
-              Json.obj("interval" -> month, "durationInSeconds" -> duration.toSeconds)
-          }
-        ))
-    }
-  }
-
-  @ApiOperation(hidden = true, value = "")
   def reset(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
@@ -183,14 +160,13 @@ class AnnotationController @Inject()(
     } yield JsonOk(json, Messages("annotation.reset.success"))
   }
 
-  @ApiOperation(hidden = true, value = "")
   def reopen(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     def isReopenAllowed(user: User, annotation: Annotation) =
       for {
         isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, annotation._team)
         _ <- bool2Fox(annotation.state == AnnotationState.Finished) ?~> "annotation.reopen.notFinished"
         _ <- bool2Fox(isAdminOrTeamManager || annotation._user == user._id) ?~> "annotation.reopen.notAllowed"
-        _ <- bool2Fox(isAdminOrTeamManager || System.currentTimeMillis - annotation.modified < taskReopenAllowed) ?~> "annotation.reopen.tooLate"
+        _ <- bool2Fox(isAdminOrTeamManager || (annotation.modified + taskReopenAllowed).isPast) ?~> "annotation.reopen.tooLate"
       } yield ()
 
     for {
@@ -207,8 +183,10 @@ class AnnotationController @Inject()(
   def addAnnotationLayer(typ: String, id: String): Action[AnnotationLayerParameters] =
     sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
         annotation <- provider.provideAnnotation(typ, id, request.identity)
+        newLayerName = request.body.name.getOrElse(AnnotationLayer.defaultNameForType(request.body.typ))
+        _ <- bool2Fox(!annotation.annotationLayers.exists(_.name == newLayerName)) ?~> "annotation.addLayer.nameInUse"
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- annotationService.addAnnotationLayer(annotation, organization.name, request.body)
         updated <- provider.provideAnnotation(typ, id, request.identity)
@@ -216,7 +194,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  @ApiOperation(hidden = true, value = "")
   def addAnnotationLayerWithoutType(id: String): Action[AnnotationLayerParameters] =
     sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       for {
@@ -225,19 +202,42 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  @ApiOperation(hidden = true, value = "")
-  def createExplorational(organizationName: String, dataSetName: String): Action[List[AnnotationLayerParameters]] =
+  def deleteAnnotationLayer(typ: String, id: String, layerName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.deleteLayer.explorationalsOnly"
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+        layer <- annotation.annotationLayers.find(annotationLayer => annotationLayer.name == layerName) ?~> Messages(
+          "annotation.layer.notFound",
+          layerName)
+        _ <- bool2Fox(annotation.annotationLayers.length != 1) ?~> "annotation.deleteLayer.onlyLayer"
+        _ = logger.info(
+          s"Deleting annotation layer $layerName (tracing id ${layer.tracingId}, typ ${layer.typ}) for annotation $id")
+        _ <- annotationService.deleteAnnotationLayer(annotation, layerName)
+      } yield Ok
+    }
+
+  def deleteAnnotationLayerWithoutType(id: String, layerName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+        result <- deleteAnnotationLayer(annotation.typ.toString, id, layerName)(request)
+      } yield result
+    }
+
+  def createExplorational(organizationName: String, datasetName: String): Action[List[AnnotationLayerParameters]] =
     sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           organizationName) ~> NOT_FOUND
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id) ?~> Messages(
-          "dataSet.notFound",
-          dataSetName) ~> NOT_FOUND
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
+          "dataset.notFound",
+          datasetName) ~> NOT_FOUND
         annotation <- annotationService.createExplorationalFor(
           request.identity,
-          dataSet._id,
+          dataset._id,
           request.body
         ) ?~> "annotation.create.failed"
         _ = analyticsService.track(CreateAnnotationEvent(request.identity: User, annotation: Annotation))
@@ -246,9 +246,8 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  @ApiOperation(hidden = true, value = "")
   def getSandbox(organizationName: String,
-                 dataSetName: String,
+                 datasetName: String,
                  typ: String,
                  sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
@@ -257,31 +256,31 @@ class AnnotationController @Inject()(
         organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           organizationName) ~> NOT_FOUND
-        dataSet <- dataSetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx) ?~> Messages(
-          "dataSet.notFound",
-          dataSetName) ~> NOT_FOUND
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id)(ctx) ?~> Messages(
+          "dataset.notFound",
+          datasetName) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox
         _ <- bool2Fox(tracingType == TracingType.skeleton) ?~> "annotation.sandbox.skeletonOnly"
         annotation = Annotation(
           ObjectId.dummyId,
-          dataSet._id,
+          dataset._id,
           None,
           ObjectId.dummyId,
           ObjectId.dummyId,
           List(
             AnnotationLayer(TracingIds.dummyTracingId,
                             AnnotationLayerType.Skeleton,
-                            AnnotationLayer.defaultSkeletonLayerName))
+                            AnnotationLayer.defaultSkeletonLayerName,
+                            AnnotationLayerStatistics.unknown))
         )
         json <- annotationService.publicWrites(annotation, request.identity) ?~> "annotation.write.failed"
       } yield JsonOk(json)
     }
 
-  @ApiOperation(hidden = true, value = "")
   def makeHybrid(typ: String, id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.makeHybrid.explorationalsOnly"
+        _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- annotationService.makeAnnotationHybrid(annotation, organization.name, fallbackLayerName) ?~> "annotation.makeHybrid.failed"
@@ -290,7 +289,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  @ApiOperation(hidden = true, value = "")
   def makeHybridWithoutType(id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
@@ -299,7 +297,6 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  @ApiOperation(hidden = true, value = "")
   def downsample(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
@@ -314,7 +311,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
   }
 
-  @ApiOperation(hidden = true, value = "")
   def downsampleWithoutType(id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
@@ -323,7 +319,84 @@ class AnnotationController @Inject()(
       } yield result
   }
 
-  private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Long)(
+  def addSegmentIndex(id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      annotation <- provider.provideAnnotation(id, request.identity)
+      _ <- bool2Fox(AnnotationType.Explorational == annotation.typ) ?~> "annotation.addSegmentIndex.explorationalsOnly"
+      annotationLayer <- annotation.annotationLayers
+        .find(_.tracingId == tracingId)
+        .toFox ?~> "annotation.addSegmentIndex.layerNotFound"
+      _ <- annotationService.addSegmentIndex(annotation, annotationLayer) ?~> "annotation.addSegmentIndex.failed"
+      updated <- provider.provideAnnotation(id, request.identity)
+      json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
+    } yield JsonOk(json)
+  }
+
+  def addSegmentIndicesToAll(parallelBatchCount: Int,
+                             dryRun: Boolean,
+                             skipTracings: Option[String]): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      {
+        for {
+          _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
+          _ = logger.info("Running migration to add segment index to all volume annotation layers...")
+          skipTracingsSet = skipTracings.map(_.split(",").toSet).getOrElse(Set())
+          _ = if (skipTracingsSet.nonEmpty) {
+            logger.info(f"Skipping these tracings: ${skipTracingsSet.mkString(",")}")
+          }
+          _ = logger.info("Gathering list of volume tracings...")
+          annotationLayers <- annotationLayerDAO.findAllVolumeLayers
+          annotationLayersFiltered = annotationLayers.filter(l => !skipTracingsSet.contains(l.tracingId))
+          totalCount = annotationLayersFiltered.length
+          batches = batch(annotationLayersFiltered, parallelBatchCount)
+          _ = logger.info(f"Processing $totalCount tracings in ${batches.length} batches")
+          before = Instant.now
+          results: Seq[List[Box[Unit]]] <- Fox.combined(batches.zipWithIndex.map {
+            case (batch, index) => addSegmentIndicesToBatch(batch, index, dryRun)
+          })
+          failures = results.flatMap(_.filter(_.isEmpty))
+          failureCount: Int = failures.length
+          successCount: Int = results.map(_.count(_.isDefined)).sum
+          msg = s"All done (dryRun=$dryRun)! Processed $totalCount tracings in ${batches.length} batches. Took ${Instant
+            .since(before)}. $failureCount failures, $successCount successes."
+          _ = if (failures.nonEmpty) {
+            failures.foreach { failedBox =>
+              logger.info(f"Failed: $failedBox")
+            }
+          }
+          _ = logger.info(msg)
+        } yield JsonOk(msg)
+      }
+    }
+
+  private def addSegmentIndicesToBatch(annotationLayerBatch: List[AnnotationLayer], batchIndex: Int, dryRun: Boolean)(
+      implicit ec: ExecutionContext) = {
+    var processedCount = 0
+    for {
+      tracingStore <- tracingStoreDAO.findFirst(GlobalAccessContext) ?~> "tracingStore.notFound"
+      client = new WKRemoteTracingStoreClient(tracingStore, null, rpc, tracingDataSourceTemporaryStore)
+      batchCount = annotationLayerBatch.length
+      results <- Fox.serialSequenceBox(annotationLayerBatch) { annotationLayer =>
+        processedCount += 1
+        logger.info(
+          f"Processing tracing ${annotationLayer.tracingId}. $processedCount of $batchCount in batch $batchIndex (${percent(processedCount, batchCount)})...")
+        client.addSegmentIndex(annotationLayer.tracingId, dryRun) ?~> s"add segment index failed for ${annotationLayer.tracingId}"
+      }
+      _ = logger.info(f"Batch $batchIndex is done. Processed ${annotationLayerBatch.length} tracings.")
+    } yield results
+  }
+
+  private def batch[T](allItems: List[T], batchCount: Int): List[List[T]] = {
+    val batchSize: Int = Math.max(Math.min(allItems.length / batchCount, allItems.length), 1)
+    allItems.grouped(batchSize).toList
+  }
+
+  private def percent(done: Int, todo: Int) = {
+    val value = done.toDouble / todo.toDouble * 100
+    f"$value%1.1f %%"
+  }
+
+  private def finishAnnotation(typ: String, id: String, issuingUser: User, timestamp: Instant)(
       implicit ctx: DBAccessContext): Fox[(Annotation, String)] =
     for {
       annotation <- provider.provideAnnotation(typ, id, issuingUser) ~> NOT_FOUND
@@ -333,25 +406,23 @@ class AnnotationController @Inject()(
       _ <- timeSpanService.logUserInteraction(timestamp, issuingUser, annotation) // log time on tracing end
     } yield (updated, message)
 
-  @ApiOperation(hidden = true, value = "")
   def finish(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       log() {
         for {
-          (updated, message) <- finishAnnotation(typ, id, request.identity, timestamp) ?~> "annotation.finish.failed"
+          (updated, message) <- finishAnnotation(typ, id, request.identity, Instant(timestamp)) ?~> "annotation.finish.failed"
           restrictions <- provider.restrictionsFor(typ, id)
           json <- annotationService.publicWrites(updated, Some(request.identity), Some(restrictions))
         } yield JsonOk(json, Messages(message))
       }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def finishAll(typ: String, timestamp: Long): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       log() {
         withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
           val results = Fox.serialSequence(annotationIds.value.toList) { jsValue =>
-            jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity, timestamp))
+            jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity, Instant(timestamp)))
           }
 
           results.map { _ =>
@@ -361,7 +432,6 @@ class AnnotationController @Inject()(
       }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def editAnnotation(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       for {
@@ -386,7 +456,6 @@ class AnnotationController @Inject()(
       } yield JsonOk(Messages("annotation.edit.success"))
   }
 
-  @ApiOperation(hidden = true, value = "")
   def editAnnotationLayer(typ: String, id: String, tracingId: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       for {
@@ -398,14 +467,7 @@ class AnnotationController @Inject()(
       } yield JsonOk(Messages("annotation.edit.success"))
     }
 
-  @ApiOperation(value = "Information about all annotations for a specific task", nickname = "annotationInfosByTaskId")
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200,
-                      message = "JSON list of objects containing information about the selected annotations."),
-      new ApiResponse(code = 400, message = badRequestLabel)
-    ))
-  def annotationsForTask(@ApiParam(value = "The id of the task") taskId: String): Action[AnyContent] =
+  def annotationsForTask(taskId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         taskIdValidated <- ObjectId.fromString(taskId)
@@ -417,7 +479,6 @@ class AnnotationController @Inject()(
       } yield Ok(JsArray(jsons.flatten))
     }
 
-  @ApiOperation(hidden = true, value = "")
   def cancel(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     def tryToCancel(annotation: Annotation) =
       annotation match {
@@ -438,7 +499,6 @@ class AnnotationController @Inject()(
     } yield result
   }
 
-  @ApiOperation(hidden = true, value = "")
   def cancelWithoutType(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
@@ -446,7 +506,6 @@ class AnnotationController @Inject()(
     } yield result
   }
 
-  @ApiOperation(hidden = true, value = "")
   def transfer(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     for {
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
@@ -458,7 +517,6 @@ class AnnotationController @Inject()(
     } yield JsonOk(json)
   }
 
-  @ApiOperation(hidden = true, value = "")
   def duplicate(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
@@ -470,40 +528,35 @@ class AnnotationController @Inject()(
   }
 
   // Note that this lists both the user’s own explorationals and those shared with the user’s teams
-  @ApiOperation(hidden = true, value = "")
+
   def listExplorationals(isFinished: Option[Boolean],
                          limit: Option[Int],
                          pageNumber: Option[Int] = None,
                          includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        readableAnnotations <- annotationDAO.findAllListableExplorationals(
+        annotationInfos <- annotationDAO.findAllListableExplorationals(
           isFinished,
+          None,
+          isForOwnDashboard = true,
+          AnnotationType.Explorational,
           limit.getOrElse(annotationService.DefaultAnnotationListLimit),
-          pageNumber.getOrElse(0))
+          pageNumber.getOrElse(0)
+        )
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllListableExplorationals(isFinished)) ?~> "annotation.countReadable.failed"
-        jsonList <- Fox.serialCombined(readableAnnotations)(annotationService.compactWrites) ?~> "annotation.compactWrites.failed"
+        annotationInfosJsons = annotationInfos.map(annotationService.writeCompactInfo)
         _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
       } yield {
-        val result = Ok(Json.toJson(jsonList))
+        val result = Ok(Json.toJson(annotationInfosJsons))
         annotationCount match {
           case Some(count) => result.withHeaders("X-Total-Count" -> count.toString)
           case None        => result
         }
       }
+
     }
 
-  @ApiOperation(hidden = true, value = "")
-  def sharedAnnotations: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      userTeams <- userService.teamIdsFor(request.identity._id)
-      sharedAnnotations <- annotationService.sharedAnnotationsFor(userTeams)
-      json <- Fox.serialCombined(sharedAnnotations)(annotationService.compactWrites)
-    } yield Ok(Json.toJson(json))
-  }
-
-  @ApiOperation(hidden = true, value = "")
   def getSharedTeams(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)
@@ -513,7 +566,6 @@ class AnnotationController @Inject()(
     } yield Ok(Json.toJson(json))
   }
 
-  @ApiOperation(hidden = true, value = "")
   def updateSharedTeams(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       withJsonBodyAs[List[String]] { teams =>
@@ -528,11 +580,11 @@ class AnnotationController @Inject()(
       }
   }
 
-  @ApiOperation(hidden = true, value = "")
   def updateOthersMayEdit(typ: String, id: String, othersMayEdit: Boolean): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- bool2Fox(annotation.typ == AnnotationType.Explorational || annotation.typ == AnnotationType.Task) ?~> "annotation.othersMayEdit.onlyExplorationalOrTask"
         _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
         _ <- annotationDAO.updateOthersMayEdit(annotation._id, othersMayEdit)
       } yield Ok(Json.toJson(othersMayEdit))
@@ -542,12 +594,12 @@ class AnnotationController @Inject()(
                                                                       m: MessagesProvider): Fox[Annotation] =
     for {
       // GlobalAccessContext is allowed here because the user was already allowed to see the annotation
-      dataSet <- dataSetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFoundForAnnotation" ~> NOT_FOUND
-      _ <- bool2Fox(dataSet.isUsable) ?~> Messages("dataSet.notImported", dataSet.name)
+      dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
+      _ <- bool2Fox(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
       dataSource <- if (annotation._task.isDefined)
-        dataSetService.dataSourceFor(dataSet).flatMap(_.toUsable).map(Some(_))
+        datasetService.dataSourceFor(dataset).flatMap(_.toUsable).map(Some(_))
       else Fox.successful(None)
-      tracingStoreClient <- tracingStoreService.clientFor(dataSet)
+      tracingStoreClient <- tracingStoreService.clientFor(dataset)
       newAnnotationLayers <- Fox.serialCombined(annotation.annotationLayers) { annotationLayer =>
         duplicateAnnotationLayer(annotationLayer,
                                  annotation._task.isDefined,
@@ -555,7 +607,7 @@ class AnnotationController @Inject()(
                                  tracingStoreClient)
       }
       clonedAnnotation <- annotationService.createFrom(user,
-                                                       dataSet,
+                                                       dataset,
                                                        newAnnotationLayers,
                                                        AnnotationType.Explorational,
                                                        None,
@@ -564,15 +616,30 @@ class AnnotationController @Inject()(
 
   private def duplicateAnnotationLayer(annotationLayer: AnnotationLayer,
                                        isFromTask: Boolean,
-                                       dataSetBoundingBox: Option[BoundingBox],
+                                       datasetBoundingBox: Option[BoundingBox],
                                        tracingStoreClient: WKRemoteTracingStoreClient): Fox[AnnotationLayer] =
     for {
 
       newTracingId <- if (annotationLayer.typ == AnnotationLayerType.Skeleton) {
         tracingStoreClient.duplicateSkeletonTracing(annotationLayer.tracingId, None, isFromTask) ?~> "Failed to duplicate skeleton tracing."
       } else {
-        tracingStoreClient.duplicateVolumeTracing(annotationLayer.tracingId, isFromTask, dataSetBoundingBox) ?~> "Failed to duplicate volume tracing."
+        tracingStoreClient.duplicateVolumeTracing(annotationLayer.tracingId, isFromTask, datasetBoundingBox) ?~> "Failed to duplicate volume tracing."
       }
     } yield annotationLayer.copy(tracingId = newTracingId)
+
+  def tryAcquiringAnnotationMutex(id: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
+        for {
+          idValidated <- ObjectId.fromString(id)
+          annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
+          _ <- bool2Fox(annotation.othersMayEdit) ?~> "notAllowed" ~> FORBIDDEN
+          restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, idValidated)) ?~> "restrictions.notFound" ~> NOT_FOUND
+          _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+          mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id) ?~> "annotation.mutex.failed"
+          resultJson <- annotationMutexService.publicWrites(mutexResult)
+        } yield Ok(resultJson)
+      }
+    }
 
 }

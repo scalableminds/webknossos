@@ -12,7 +12,7 @@ assignees: ''
 <!--- Providing context helps us come up with a solution that is most useful. -->
 
 ## Expected Behavior
-<!--- What should should happen instead of the bug / error message. -->
+<!--- What should happen instead of the bug / error message. -->
 
 ## Current Behavior
 <!--- What happens instead of the expected behavior? -->
@@ -31,6 +31,6 @@ assignees: ''
 <!--- In what environment did the bug occur? -->
 - Browser name and version: e.g. Chrome 39
 - Operating System and version: e.g. Windows 10
-- Version of WebKnossos (Release or Commit):
+- Version of WEBKNOSSOS (Release or Commit):
 - [ ] Specific to long-running jobs (set `jobsEnabled=true` in `application.conf`)
-- [ ] Specific to webKnossos.org (set `isDemoInstance=true` in `application.conf`)
+- [ ] Specific to webknossos.org (set `isDemoInstance=true` in `application.conf`)

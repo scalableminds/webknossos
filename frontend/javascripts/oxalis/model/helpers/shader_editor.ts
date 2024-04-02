@@ -1,5 +1,7 @@
 // @ts-nocheck
 import window, { document } from "libs/window";
+import app from "app";
+
 export default {
   addBucketManagers(textureBucketManager) {
     window.managers = window.managers || [];
@@ -23,7 +25,7 @@ window._setupShaderEditor = (identifier, _shaderType) => {
   function overrideShader() {
     window.materials[identifier][shaderType] = input.value;
     window.materials[identifier].needsUpdate = true;
-    window.needsRerender = true;
+    app.vent.emit("rerender");
   }
 
   button.addEventListener("click", () => overrideShader());
@@ -34,7 +36,7 @@ window._setupShaderEditor = (identifier, _shaderType) => {
   input.setAttribute(
     "style",
     `position: absolute;
-        top: 0;
+        top: ${shaderType === "fragmentShader" ? 0 : "50%"};
         right: 0px;
         z-index: 10000;
         background: white;
@@ -42,7 +44,7 @@ window._setupShaderEditor = (identifier, _shaderType) => {
         `,
   );
   input.addEventListener("keydown", (evt) => {
-    if ((evt.keyCode === 10 || evt.keyCode === 13) && evt.ctrlKey) {
+    if ((evt.keyCode === 10 || evt.keyCode === 13) && (evt.ctrlKey || event.metaKey)) {
       evt.preventDefault();
       overrideShader();
     }
@@ -51,10 +53,48 @@ window._setupShaderEditor = (identifier, _shaderType) => {
   buttonContainer.setAttribute(
     "style",
     `position: absolute;
-        top: 0;
+        top: 40px;
         left: 300px;
         z-index: 10000000;`,
   );
   outer.appendChild(input);
   document.body.appendChild(outer);
 };
+
+window._setupShaderReporting = () => {
+  const oldError = console.error;
+
+  console.error = (...args) => {
+    if (args.length === 1 && typeof args[0] === "string") {
+      const errorsByLineNum: Record<string, string> = {};
+      const linesByLineNum: Record<string, string> = {};
+      for (const line of args[0].split("\n")) {
+        if (line.startsWith("ERROR")) {
+          const lineNum = line.split(":")[2];
+          errorsByLineNum[lineNum] = line;
+        }
+      }
+      for (const line of args[0].split("\n")) {
+        const maybeLineNum = line.split(":")[0];
+        if (!isNaN(parseInt(maybeLineNum))) {
+          linesByLineNum[maybeLineNum] = line;
+        }
+      }
+
+      for (const errorLineNum of Object.keys(errorsByLineNum)) {
+        oldError(
+          `Error ${errorsByLineNum[errorLineNum]}. Context:\n\n${linesByLineNum[errorLineNum]}`,
+        );
+      }
+      if (Object.keys(errorsByLineNum).length > 0) {
+        return;
+      }
+    }
+
+    oldError(...args);
+  };
+};
+
+if (process.env.NODE_ENV !== "production") {
+  window._setupShaderReporting();
+}

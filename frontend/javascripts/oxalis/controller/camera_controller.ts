@@ -11,21 +11,22 @@ import {
   getDatasetExtentInLength,
   getDatasetCenter,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getInputCatcherAspectRatio } from "oxalis/model/accessors/view_mode_accessor";
 import {
+  getInputCatcherAspectRatio,
   getPlaneExtentInVoxelFromStore,
-  getPosition,
-} from "oxalis/model/accessors/flycam_accessor";
+} from "oxalis/model/accessors/view_mode_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setTDCameraWithoutTimeTrackingAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 import type { CameraData } from "oxalis/store";
 import Store from "oxalis/store";
-import api from "oxalis/api/internal_api";
+import { api } from "oxalis/singletons";
+
 type Props = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   onCameraPositionChanged: () => void;
-  onTDCameraChanged: () => void;
+  onTDCameraChanged: (userTriggered?: boolean) => void;
   setTargetAndFixPosition: () => void;
 };
 
@@ -34,7 +35,7 @@ function getQuaternionFromCamera(_up: Vector3, position: Vector3, center: Vector
   const forward = V3.normalize(V3.sub(center, position));
   const right = V3.normalize(V3.cross(up, forward));
   const rotationMatrix = new THREE.Matrix4();
-  // prettier-ignore
+  // biome-ignore format: don't format
   rotationMatrix.set(right[0], up[0], forward[0], 0, right[1], up[1], forward[1], 0, right[2], up[2], forward[2], 0, 0, 0, 0, 1);
   const quat = new THREE.Quaternion();
   quat.setFromRotationMatrix(rotationMatrix);
@@ -150,7 +151,7 @@ class CameraController extends React.PureComponent<Props> {
       tdCamera.left = oldMid - newWidth / 2;
       tdCamera.right = oldMid + newWidth / 2;
       tdCamera.updateProjectionMatrix();
-      this.props.onTDCameraChanged();
+      this.props.onTDCameraChanged(false);
     }
   }
 

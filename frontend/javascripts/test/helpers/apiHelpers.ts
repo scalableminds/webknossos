@@ -1,15 +1,17 @@
 // @ts-nocheck
+import { createNanoEvents } from "nanoevents";
 import { ExecutionContext } from "ava";
-import BackboneEvents from "backbone-events-standalone";
 import Maybe from "data.maybe";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
-import type { Tracing, VolumeTracing } from "oxalis/store";
+import { type Tracing, type VolumeTracing } from "oxalis/store";
 import { sleep } from "libs/utils";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import window from "libs/window";
 import dummyUser from "test/fixtures/dummy_user";
+import dummyOrga from "test/fixtures/dummy_organization";
+import { setSceneController } from "oxalis/controller/scene_controller_provider";
 import {
   tracing as SKELETON_TRACING,
   annotation as SKELETON_ANNOTATION,
@@ -33,7 +35,7 @@ const Request = {
   always: () => Promise.resolve(),
 };
 export function createBucketResponseFunction(TypedArrayClass, fillValue, delay = 0) {
-  return async function getBucketData(url, payload) {
+  return async function getBucketData(_url, payload) {
     const bucketCount = payload.data.length;
     await sleep(delay);
     return {
@@ -54,7 +56,7 @@ const ErrorHandling = {
   notify: _.noop,
 };
 const app = {
-  vent: Object.assign({}, BackboneEvents),
+  vent: createNanoEvents(),
 };
 const protoHelpers = {
   parseProtoTracing: sinon.stub(),
@@ -67,6 +69,7 @@ mockRequire("libs/date", DateMock);
 export const KeyboardJS = {
   bind: _.noop,
   unbind: _.noop,
+  withContext: (_arg0: string, arg1: () => void) => arg1(),
 };
 mockRequire("libs/keyboard", KeyboardJS);
 mockRequire("libs/toast", {
@@ -100,9 +103,12 @@ const { setSlowCompression } = mockRequire.reRequire(
 );
 // Avoid node caching and make sure all mockRequires are applied
 const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
-const wkstoreAdapter = mockRequire.reRequire("oxalis/model/bucket_data_handling/wkstore_adapter");
+let wkstoreAdapter = mockRequire.reRequire("oxalis/model/bucket_data_handling/wkstore_adapter");
 
-wkstoreAdapter.requestFromStore = () => new Uint8Array();
+wkstoreAdapter = {
+  ...wkstoreAdapter,
+  requestFromStore: () => new Uint8Array(),
+};
 
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", wkstoreAdapter);
 
@@ -125,6 +131,20 @@ const modelData = {
     annotation: TASK_ANNOTATION,
   },
 };
+
+const { default: Store, startSagas } = require("oxalis/store");
+const rootSaga = require("oxalis/model/sagas/root_saga").default;
+const { setStore, setModel } = require("oxalis/singletons");
+const { setupApi } = require("oxalis/api/internal_api");
+const { setActiveOrganizationAction } = mockRequire.reRequire(
+  "oxalis/model/actions/organization_actions",
+);
+
+setModel(Model);
+setStore(Store);
+setupApi();
+startSagas(rootSaga);
+
 export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
   if (tracing.volumes.length > 0) {
     return Maybe.Just(tracing.volumes[0]);
@@ -144,6 +164,7 @@ export function __setupOxalis(
   mode: keyof typeof modelData,
   apiVersion?: number,
 ) {
+  Store.dispatch(setActiveOrganizationAction(dummyOrga));
   UrlManager.initialState = {
     position: [1, 2, 3],
   };
@@ -200,6 +221,11 @@ export function __setupOxalis(
     .withArgs(sinon.match((arg) => arg === `/api/users/${dummyUser.id}/taskTypeId`))
     .returns(Promise.resolve(dummyUser));
 
+  setSceneController({
+    name: "This is a dummy scene controller so that getSceneController works in the tests.",
+    segmentMeshController: { meshesGroupsPerSegmentationId: {} },
+  });
+
   return Model.fetch(
     ANNOTATION_TYPE,
     {
@@ -210,7 +236,7 @@ export function __setupOxalis(
   )
     .then(() => {
       // Trigger the event ourselves, as the OxalisController is not instantiated
-      app.vent.trigger("webknossos:ready");
+      app.vent.emit("webknossos:ready");
       webknossos.apiReady(apiVersion).then((apiObject) => {
         t.context.api = apiObject;
       });

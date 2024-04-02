@@ -5,7 +5,6 @@ import Dropzone, { DropzoneInputProps } from "react-dropzone";
 import * as React from "react";
 import prettyBytes from "pretty-bytes";
 import type { Dispatch } from "redux";
-import { navbarHeight } from "navbar";
 import type { OxalisState } from "oxalis/store";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import FormattedDate from "components/formatted_date";
@@ -26,6 +25,7 @@ type OwnProps = {
 type StateProps = {
   showDropzoneModal: boolean;
   hideDropzoneModal: () => void;
+  navbarHeight: number;
 };
 type Props = StateProps & OwnProps;
 
@@ -59,15 +59,15 @@ function NmlDropArea({
         <InboxOutlined
           style={{
             fontSize: 180,
-            color: "var(--ant-primary)",
+            color: "var(--ant-color-primary)",
           }}
         />
       </div>
       {isUpdateAllowed ? (
-        <h5>Drop NML files here{isClickAllowed ? " or click to select files" : null}...</h5>
+        <h5>Drop NML or zip files here{isClickAllowed ? " or click to select files" : null}...</h5>
       ) : (
         <h5>
-          Drop NML files here to <b>create a new tracing</b>.
+          Drop NML or zip files here to <b>create a new annotation</b>.
         </h5>
       )}
     </div>
@@ -132,7 +132,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
                   size="large"
                   icon={<FileOutlined />}
                   style={{
-                    backgroundColor: "var(--ant-primary)",
+                    backgroundColor: "var(--ant-color-primary)",
                   }}
                 />
               }
@@ -182,7 +182,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
 
   renderDropzoneModal() {
     return (
-      <Modal visible footer={null} onCancel={this.props.hideDropzoneModal}>
+      <Modal open footer={null} onCancel={this.props.hideDropzoneModal}>
         {this.props.isUpdateAllowed ? (
           <Alert
             message="Did you know that you do can just drag-and-drop NML files directly into this view? You don't have to explicitly open this dialog first."
@@ -215,7 +215,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
     return (
       <Modal
         title={`Import ${this.state.files.length} Annotation${pluralS}`}
-        visible={this.state.files.length > 0}
+        open={this.state.files.length > 0}
         onCancel={() =>
           this.setState({
             files: [],
@@ -272,8 +272,9 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             {...getRootProps()}
             style={{
               position: "relative",
-              minHeight: `calc(100vh - ${navbarHeight}px)`,
+              height: `calc(100vh - ${this.props.navbarHeight}px)`,
             }}
+            className="flex-column"
           >
             {
               // While dragging files over the view, the OverlayDropZone is rendered
@@ -309,6 +310,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState) => ({
   showDropzoneModal: state.uiInformation.showDropzoneModal,
+  navbarHeight: state.uiInformation.navbarHeight,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

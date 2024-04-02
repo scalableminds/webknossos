@@ -126,7 +126,7 @@ class ConnectomeFilters extends React.Component<Props> {
                   width: "100%",
                 }}
               >
-                {availableConnectomeFiles != null && availableConnectomeFiles.length ? (
+                {availableConnectomeFiles?.length ? (
                   availableConnectomeFiles.map((connectomeFile) => (
                     <Option
                       key={connectomeFile.connectomeFileName}
@@ -155,8 +155,6 @@ class ConnectomeFilters extends React.Component<Props> {
               min={userSettings.particleSize.minimum}
               max={userSettings.particleSize.maximum}
               step={0.1}
-              // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-              roundTo={1}
               value={particleSize}
               onChange={this.updateParticleSize}
             />

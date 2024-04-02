@@ -42,13 +42,14 @@ export function handleGenericError(
   error: Error & {
     messages?: unknown;
   },
+  fallbackMessage?: string | null,
 ) {
   if (error.messages) {
     // The user was already notified about this error
     return;
   }
 
-  Toast.error(messages.unknown_error);
+  Toast.error(fallbackMessage || messages.unknown_error);
   console.warn(error);
 }
 
@@ -69,7 +70,6 @@ class ErrorHandling {
     }
 
     this.throwAssertions = options.throwAssertions;
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'querySelector' does not exist on type 'D... Remove this comment to see the full error message
     const metaElement = document.querySelector("meta[name='commit-hash']");
     this.commitHash = metaElement ? metaElement.getAttribute("content") : null;
     this.initializeAirbrake();
@@ -78,12 +78,13 @@ class ErrorHandling {
   initializeAirbrake() {
     // read Airbrake config from DOM
     // config is inject from backend
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'querySelector' does not exist on type 'D... Remove this comment to see the full error message
     const scriptTag = document.querySelector("[data-airbrake-project-id]");
     if (!scriptTag) throw new Error("failed to initialize airbrake");
-    const projectId = scriptTag.dataset.airbrakeProjectId;
-    const projectKey = scriptTag.dataset.airbrakeProjectKey;
-    const envName = scriptTag.dataset.airbrakeEnvironmentName;
+    // @ts-ignore
+    const { dataset } = scriptTag;
+    const projectId = dataset.airbrakeProjectId;
+    const projectKey = dataset.airbrakeProjectKey;
+    const envName = dataset.airbrakeEnvironmentName;
     this.airbrake = new Notifier({
       projectId,
       projectKey,
@@ -138,8 +139,31 @@ class ErrorHandling {
       });
     });
 
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'onerror' does not exist on type '(Window... Remove this comment to see the full error message
-    window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {
+    // Report Content Security Policy (CSP) errors
+    document.addEventListener("securitypolicyviolation", (e: SecurityPolicyViolationEvent) => {
+      const additionalProperties = _.pick(e, [
+        "blockedURI",
+        "violatedDirective",
+        "originalPolicy",
+        "documentURI",
+        "sourceFile",
+        "lineNumber",
+        "columnNumber",
+      ]);
+      this.notify(
+        new Error(`Content Security Policy Violation while loading ${e.blockedURI}.`),
+        additionalProperties,
+      );
+    });
+
+    window.onerror = (
+      message: Event | string,
+      _file?: string,
+      _line?: number,
+      _colno?: number,
+      error?: Error,
+    ) => {
+      message = message.toString();
       if (BLACKLISTED_ERROR_MESSAGES.indexOf(message) > -1) {
         console.warn("Ignoring", message);
         return;
@@ -173,7 +197,7 @@ class ErrorHandling {
     optParams: Record<string, any> = {},
     severity: "error" | "warning" = "error",
   ) {
-    if (process.env.BABEL_ENV === "test") {
+    if (process.env.IS_TESTING) {
       return;
     }
 

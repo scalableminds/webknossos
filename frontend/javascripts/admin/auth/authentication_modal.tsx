@@ -4,21 +4,21 @@ import React, { useState } from "react";
 import Toast from "libs/toast";
 import messages from "messages";
 import features from "features";
-import SpotlightRegistrationForm from "admin/auth/spotlight_registration_form";
+import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
 import LinkButton from "components/link_button";
-import RegistrationForm from "./registration_form";
+import RegistrationFormGeneric from "./registration_form_generic";
 import LoginForm from "./login_form";
 type Props = {
   onLoggedIn: (userJustRegistered: boolean) => unknown;
   onCancel: () => void;
-  visible: boolean;
+  isOpen: boolean;
   alertMessage: string;
   inviteToken?: string;
 };
 export default function AuthenticationModal({
   onLoggedIn,
   onCancel,
-  visible,
+  isOpen,
   alertMessage,
   inviteToken,
 }: Props) {
@@ -38,16 +38,16 @@ export default function AuthenticationModal({
     showLogin();
   };
 
-  // SpotlightRegistrationForm always creates a new organization. If an inviteToken
-  // exists, a normal RegistrationForm needs to be used.
+  // RegistrationFormWKOrg always creates a new organization.
+  // If an inviteToken exists, a normal RegistrationFormGeneric needs to be used.
   const registrationForm =
-    inviteToken == null && features().isDemoInstance ? (
-      <SpotlightRegistrationForm onRegistered={onRegistered} />
+    inviteToken == null && features().isWkorgInstance ? (
+      <RegistrationFormWKOrg onRegistered={onRegistered} />
     ) : (
-      <RegistrationForm onRegistered={onRegistered} inviteToken={inviteToken} />
+      <RegistrationFormGeneric onRegistered={onRegistered} inviteToken={inviteToken} />
     );
   return (
-    <Modal title={step} onCancel={onCancel} visible={visible} footer={null} maskClosable={false}>
+    <Modal title={step} onCancel={onCancel} open={isOpen} footer={null} maskClosable={false}>
       <Alert
         message={alertMessage}
         type="info"
@@ -81,7 +81,7 @@ export function withAuthentication<P, C extends ComponentType<P>>(
   WrappedComponent: C,
 ): ComponentType<AuthenticationProps<P>> {
   return function Wrapper(props: AuthenticationProps<P>) {
-    const [isAuthenticationModalVisible, setIsAuthenticationModalVisible] = useState(false);
+    const [isAuthenticationModalOpen, setIsAuthenticationModalOpen] = useState(false);
     const { activeUser, authenticationMessage, onClick: originalOnClick, ...rest } = props;
 
     if (activeUser != null) {
@@ -91,15 +91,15 @@ export function withAuthentication<P, C extends ComponentType<P>>(
       return (
         <>
           {/* @ts-expect-error ts-migrate(2322) FIXME: Type 'Omit<AuthenticationProps<P>, "activeUser" | ... Remove this comment to see the full error message */}
-          <WrappedComponent {...rest} onClick={() => setIsAuthenticationModalVisible(true)} />
+          <WrappedComponent {...rest} onClick={() => setIsAuthenticationModalOpen(true)} />
           <AuthenticationModal
             alertMessage={authenticationMessage}
             onLoggedIn={() => {
-              setIsAuthenticationModalVisible(false);
+              setIsAuthenticationModalOpen(false);
               originalOnClick();
             }}
-            onCancel={() => setIsAuthenticationModalVisible(false)}
-            visible={isAuthenticationModalVisible}
+            onCancel={() => setIsAuthenticationModalOpen(false)}
+            isOpen={isAuthenticationModalOpen}
           />
         </>
       );

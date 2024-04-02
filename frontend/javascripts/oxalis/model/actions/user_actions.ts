@@ -1,6 +1,6 @@
 import type { APIUser } from "types/api_flow_types";
 
-type SetActiveUser = ReturnType<typeof setActiveUserAction>;
+export type SetActiveUser = ReturnType<typeof setActiveUserAction>;
 type LogoutUser = ReturnType<typeof logoutUserAction>;
 
 export type UserAction = SetActiveUser | LogoutUser;
@@ -9,9 +9,9 @@ export const setActiveUserAction = (user: APIUser) =>
   ({
     type: "SET_ACTIVE_USER",
     user,
-  } as const);
+  }) as const;
 
 export const logoutUserAction = () =>
   ({
     type: "LOGOUT_USER",
-  } as const);
+  }) as const;

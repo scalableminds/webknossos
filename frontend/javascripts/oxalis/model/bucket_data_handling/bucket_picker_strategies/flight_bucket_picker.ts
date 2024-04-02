@@ -6,16 +6,16 @@ import {
   globalPositionToBucketPositionFloat,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { BucketAddress, Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import { map3, map4, mod } from "libs/utils";
 
 const aggregatePerDimension = (
   aggregateFn: (...args: number[]) => number,
-  buckets: Vector4[],
-): Vector3 => map3((dim) => aggregateFn(...buckets.map((pos) => pos[dim])), [0, 1, 2]);
+  buckets: BucketAddress[],
+): Vector3 => map3((dim) => aggregateFn(...buckets.map((pos) => pos[dim] as number)), [0, 1, 2]);
 
-const getBBox = (buckets: Vector4[]) => ({
+const getBBox = (buckets: BucketAddress[]) => ({
   cornerMin: aggregatePerDimension(Math.min, buckets),
   cornerMax: aggregatePerDimension(Math.max, buckets),
 });
@@ -116,7 +116,10 @@ export default function determineBucketsForFlight(
   ];
   const planePointsGlobal = planePoints.map((vec) => transformAndApplyMatrix(vec));
   const planeBuckets = planePointsGlobal.map((position: Vector3) =>
-    globalPositionToBucketPosition(position, resolutions, logZoomStep),
+    // null is passed as additionalCoordinates, since the bucket picker doesn't care about the
+    // additional coordinates. It simply sticks to 3D and the caller is responsible for augmenting
+    // potential other coordinates.
+    globalPositionToBucketPosition(position, resolutions, logZoomStep, null),
   );
 
   const traverseFallbackBBox = (boundingBoxBuckets: {

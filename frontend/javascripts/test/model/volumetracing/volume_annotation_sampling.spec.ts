@@ -1,4 +1,4 @@
-import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import "test/mocks/lz4";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { tracing as volumetracingServerObject } from "test/fixtures/volumetracing_server_objects";
 import type { Vector3, Vector4 } from "oxalis/constants";
@@ -8,7 +8,11 @@ import anyTest from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
-mockRequire.stopAll();
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
+import { assertNonNullBucket } from "oxalis/model/bucket_data_handling/bucket";
+
 const StoreMock = {
   getState: () => ({
     dataset: datasetServerObject,
@@ -29,14 +33,16 @@ mockRequire("oxalis/model/sagas/root_saga", function* () {
 });
 type LabeledVoxelsMapAsArray = Array<[Vector4, Uint8Array]>;
 // Avoid node caching and make sure all mockRequires are applied
-const Cube = mockRequire.reRequire("oxalis/model/bucket_data_handling/data_cube").default;
+const DataCube: typeof DataCubeType = mockRequire.reRequire(
+  "oxalis/model/bucket_data_handling/data_cube",
+).default;
 const { default: sampleVoxelMapToResolution, applyVoxelMap } = mockRequire.reRequire(
   "oxalis/model/volumetracing/volume_annotation_sampling",
 );
 // Ava's recommendation for Flow types
 // https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
 const test: TestInterface<{
-  cube: typeof Cube;
+  cube: DataCubeType;
 }> = anyTest as any;
 test.beforeEach((t) => {
   const mockedLayer = {
@@ -47,11 +53,17 @@ test.beforeEach((t) => {
       [8, 8, 8],
       [16, 16, 16],
       [32, 32, 32],
-    ],
+    ] as Vector3[],
   };
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number[][]' is not assignable to... Remove this comment to see the full error message
   const resolutionInfo = new ResolutionInfo(mockedLayer.resolutions);
-  const cube = new Cube([1024, 1024, 1024], resolutionInfo, "uint32", false);
+  const cube = new DataCube(
+    new BoundingBox({ min: [0, 0, 0], max: [1024, 1024, 1024] }),
+    [],
+    resolutionInfo,
+    "uint32",
+    false,
+    "layerName",
+  );
   const pullQueue = {
     add: sinon.stub(),
     pull: sinon.stub(),
@@ -60,6 +72,7 @@ test.beforeEach((t) => {
     insert: sinon.stub(),
     push: sinon.stub(),
   };
+  // @ts-expect-error
   cube.initializeWithQueues(pullQueue, pushQueue);
   t.context = {
     cube,
@@ -109,6 +122,7 @@ test("Upsampling an annotation should work in the top left part of a bucket", (t
     [13, 13],
   ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
   const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
+  assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
   const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
     labeledVoxelsMap,
@@ -125,7 +139,7 @@ test("Upsampling an annotation should work in the top left part of a bucket", (t
   const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
   t.deepEqual(
     bucketZoomedAddress,
-    [0, 0, 0, 0],
+    [0, 0, 0, 0, []],
     "The bucket of the upsampled map should be correct.",
   );
 
@@ -170,6 +184,7 @@ test("Upsampling an annotation should work in the top right part of a bucket", (
     [13, 13],
   ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
   const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
+  assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
   const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
     labeledVoxelsMap,
@@ -186,7 +201,7 @@ test("Upsampling an annotation should work in the top right part of a bucket", (
   const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
   t.deepEqual(
     bucketZoomedAddress,
-    [1, 0, 0, 0],
+    [1, 0, 0, 0, []],
     "The bucket of the upsampled map should be correct.",
   );
 
@@ -231,6 +246,7 @@ test("Upsampling an annotation should work in the bottom left part of a bucket",
     [13, 13],
   ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
   const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
+  assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
   const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
     labeledVoxelsMap,
@@ -247,7 +263,7 @@ test("Upsampling an annotation should work in the bottom left part of a bucket",
   const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
   t.deepEqual(
     bucketZoomedAddress,
-    [0, 1, 0, 0],
+    [0, 1, 0, 0, []],
     "The bucket of the upsampled map should be correct.",
   );
 
@@ -292,6 +308,7 @@ test("Upsampling an annotation should work in the bottom right part of a bucket"
     [13, 13],
   ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
   const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
+  assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
   const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
     labeledVoxelsMap,
@@ -308,7 +325,7 @@ test("Upsampling an annotation should work in the bottom right part of a bucket"
   const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
   t.deepEqual(
     bucketZoomedAddress,
-    [1, 1, 0, 0],
+    [1, 1, 0, 0, []],
     "The bucket of the upsampled map should be correct.",
   );
 
@@ -353,6 +370,7 @@ test("Upsampling an annotation where the annotation slice is in the lower part o
     [13, 13],
   ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, goalVoxelMap));
   const bucket = cube.getOrCreateBucket([0, 0, 0, 1]);
+  assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
   const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
     labeledVoxelsMap,
@@ -369,7 +387,7 @@ test("Upsampling an annotation where the annotation slice is in the lower part o
   const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
   t.deepEqual(
     bucketZoomedAddress,
-    [0, 0, 1, 0],
+    [0, 0, 1, 0, []],
     "The bucket of the upsampled map should be correct.",
   );
 
@@ -402,6 +420,7 @@ test("Upsampling an annotation should work across more than one resolution", (t)
   }
 
   const bucket = cube.getOrCreateBucket([0, 0, 0, 2]);
+  assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map([[bucket.zoomedAddress, sourceVoxelMap]]);
   const upsampledVoxelMapPerBucket = sampleVoxelMapToResolution(
     labeledVoxelsMap,
@@ -418,7 +437,7 @@ test("Upsampling an annotation should work across more than one resolution", (t)
   const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
   t.deepEqual(
     bucketZoomedAddress,
-    [1, 1, 0, 0],
+    [1, 1, 0, 0, []],
     "The bucket of the upsampled map should be correct.",
   );
 
@@ -435,12 +454,14 @@ test("Upsampling an annotation should work across more than one resolution", (t)
 test("Downsampling annotation of neighbour buckets should result in one downsampled voxelMap", (t) => {
   const { cube } = t.context;
   const labeledVoxelsMap = new Map();
-  [
-    [0, 0, 0],
-    [1, 0, 0],
-    [0, 1, 0],
-    [1, 1, 0],
-  ].forEach((zoomedAddress) => {
+  (
+    [
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+      [1, 1, 0],
+    ] as Vector3[]
+  ).forEach((zoomedAddress) => {
     const voxelMap = getEmptyVoxelMap();
     [
       [10, 10],
@@ -463,6 +484,7 @@ test("Downsampling annotation of neighbour buckets should result in one downsamp
       [13, 13],
     ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, voxelMap));
     const bucket = cube.getOrCreateBucket([...zoomedAddress, 0]);
+    assertNonNullBucket(bucket);
     labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
   });
   const goalVoxelMap = getEmptyVoxelMap();
@@ -496,7 +518,7 @@ test("Downsampling annotation of neighbour buckets should result in one downsamp
   const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
   t.deepEqual(
     bucketZoomedAddress,
-    [0, 0, 0, 1],
+    [0, 0, 0, 1, []],
     "The bucket of the downsampled map should be correct.",
   );
 
@@ -517,12 +539,14 @@ test("Downsampling annotation of neighbour buckets should result in one downsamp
 test("Downsampling annotation should work across more than one resolution", (t) => {
   const { cube } = t.context;
   const labeledVoxelsMap = new Map();
-  [
-    [0, 0, 0],
-    [1, 0, 0],
-    [0, 1, 0],
-    [1, 1, 0],
-  ].forEach((zoomedAddress) => {
+  (
+    [
+      [0, 0, 0],
+      [1, 0, 0],
+      [0, 1, 0],
+      [1, 1, 0],
+    ] as Vector3[]
+  ).forEach((zoomedAddress) => {
     const voxelMap = getEmptyVoxelMap();
     [
       [10, 10],
@@ -545,6 +569,7 @@ test("Downsampling annotation should work across more than one resolution", (t) 
       [13, 13],
     ].forEach(([firstDim, secondDim]) => labelVoxelInVoxelMap(firstDim, secondDim, voxelMap));
     const bucket = cube.getOrCreateBucket([...zoomedAddress, 0]);
+    assertNonNullBucket(bucket);
     labeledVoxelsMap.set(bucket.zoomedAddress, voxelMap);
   });
   const goalVoxelMap = getEmptyVoxelMap();
@@ -578,7 +603,7 @@ test("Downsampling annotation should work across more than one resolution", (t) 
   const upsampledVoxelMap = upsampledVoxelMapAsArray[0][1];
   t.deepEqual(
     bucketZoomedAddress,
-    [0, 0, 0, 2],
+    [0, 0, 0, 2, []],
     "The bucket of the downsampled map should be correct.",
   );
 
@@ -599,6 +624,7 @@ test("Downsampling annotation should work across more than one resolution", (t) 
 test("A labeledVoxelMap should be applied correctly", (t) => {
   const { cube } = t.context;
   const bucket = cube.getOrCreateBucket([0, 0, 0, 0]);
+  assertNonNullBucket(bucket);
   const labeledVoxelsMap = new Map();
   const voxelMap = getEmptyVoxelMap();
   const voxelsToLabel = [

@@ -1,7 +1,9 @@
 // This file is only for documentation:
 // Types which were used for creating the datasource.schema.js
 // The `flow2schema` node module has been used for conversion.
+
 // Please note that some manual changes to the schema are required.
+type Vector2 = [number, number];
 type Vector3 = [number, number, number];
 type BoundingBox = {
   topLeft: Vector3;
@@ -19,14 +21,31 @@ type DataLayerWKWPartial = {
 };
 
 type AxisKey = "x" | "y" | "z" | "c";
-type DataLayerZarrPartial = {
-  dataFormat: "zarr";
+type BaseRemoteLayer = {
   boundingBox: BoundingBox;
+  numChannels: number;
   mags: Array<{
     mag: Vector3;
     path: string;
     axisOrder: Record<AxisKey, number>;
   }>;
+  additionalCoordinates?: Array<{
+    name: string;
+    index: number;
+    bounds: Vector2;
+  }>;
+};
+type DataLayerZarrPartial = BaseRemoteLayer & {
+  dataFormat: "zarr";
+};
+type DataLayerN5Partial = BaseRemoteLayer & {
+  dataFormat: "n5";
+};
+type DataLayerPrecomputedPartial = BaseRemoteLayer & {
+  dataFormat: "neuroglancerPrecomputed";
+};
+type DataLayerZarr3Partial = BaseRemoteLayer & {
+  dataFormat: "zarr3";
 };
 export type DataLayer = {
   name: string;
@@ -53,7 +72,13 @@ export type DataLayer = {
       mappings: Array<string>;
     }
 ) &
-  (DataLayerWKWPartial | DataLayerZarrPartial);
+  (
+    | DataLayerWKWPartial
+    | DataLayerZarrPartial
+    | DataLayerN5Partial
+    | DataLayerPrecomputedPartial
+    | DataLayerZarr3Partial
+  );
 export type DatasourceConfiguration = {
   id: {
     name: string;

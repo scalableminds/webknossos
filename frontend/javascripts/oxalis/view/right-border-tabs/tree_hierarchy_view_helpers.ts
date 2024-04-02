@@ -1,5 +1,6 @@
 import _ from "lodash";
-import type { Tree, TreeMap, TreeGroup } from "oxalis/store";
+import { mapGroupsWithRoot } from "oxalis/model/accessors/skeletontracing_accessor";
+import type { Tree, TreeGroup, SegmentMap, Segment, TreeMap, SegmentGroup } from "oxalis/store";
 export const MISSING_GROUP_ID = -1;
 export const TYPE_GROUP = "GROUP";
 export const TYPE_TREE = "TREE";
@@ -7,6 +8,7 @@ const GroupTypeEnum = {
   [TYPE_GROUP]: TYPE_GROUP,
   [TYPE_TREE]: TYPE_TREE,
 };
+
 type TreeOrGroup = keyof typeof GroupTypeEnum;
 export type TreeNode = {
   name: string;
@@ -37,20 +39,18 @@ function makeTreeNode(
   type: TreeOrGroup,
   optionalProperties: Partial<TreeNode>,
 ): TreeNode {
-  return _.extend(
-    {
-      id,
-      type,
-      name,
-      timestamp: 0,
-      isChecked: false,
-      isIndeterminate: false,
-      containsTrees: false,
-      children: [],
-      expanded: true,
-    },
-    optionalProperties,
-  );
+  return {
+    id,
+    type,
+    name,
+    timestamp: 0,
+    isChecked: false,
+    isIndeterminate: false,
+    containsTrees: false,
+    children: [],
+    expanded: true,
+    ...optionalProperties,
+  };
 }
 
 function makeTreeNodeFromTree(tree: Tree): TreeNode {
@@ -113,10 +113,10 @@ export function callDeep(
   groups: Array<TreeGroup>,
   groupId: number,
   callback: (
-    arg0: TreeGroup,
-    arg1: number,
-    arg2: Array<TreeGroup>,
-    arg3: number | null | undefined,
+    group: TreeGroup,
+    index: number,
+    treeGroups: Array<TreeGroup>,
+    parentGroupId: number | null | undefined,
   ) => void,
   parentGroupId: number | null | undefined = MISSING_GROUP_ID,
 ) {
@@ -124,9 +124,7 @@ export function callDeep(
   groups.forEach((group: TreeGroup, index: number, array: Array<TreeGroup>) => {
     if (group.groupId === groupId) {
       callback(group, index, array, parentGroupId);
-    }
-
-    if (group.children) {
+    } else if (group.children) {
       callDeep(group.children, groupId, callback, group.groupId);
     }
   });
@@ -135,10 +133,10 @@ export function callDeepWithChildren(
   groups: Array<TreeGroup>,
   groupId: number | undefined,
   callback: (
-    arg0: TreeGroup,
-    arg1: number,
-    arg2: Array<TreeGroup>,
-    arg3: number | null | undefined,
+    group: TreeGroup,
+    index: number,
+    treeGroups: Array<TreeGroup>,
+    parentGroupId: number | null | undefined,
   ) => void,
   parentGroupId: number | null | undefined = MISSING_GROUP_ID,
   isWithinTargetGroup: boolean = false,
@@ -156,13 +154,26 @@ export function callDeepWithChildren(
     }
   });
 }
+
 export function findGroup(groups: Array<TreeGroup>, groupId: number): TreeGroup | null | undefined {
   let foundGroup = null;
-  callDeep(groups, groupId, (group) => {
+  callDeep(groups, groupId, (group, _index, _groups) => {
     foundGroup = group;
   });
   return foundGroup;
 }
+
+export function findParentIdForGroupId(
+  groups: Array<TreeGroup>,
+  groupId: number,
+): number | undefined | null {
+  let foundParentGroupId: number | undefined | null = null;
+  callDeep(groups, groupId, (_group, _index, _groups, parentGroupId) => {
+    foundParentGroupId = parentGroupId;
+  });
+  return foundParentGroupId;
+}
+
 export function forEachTreeNode(groups: Array<TreeNode>, callback: (arg0: TreeNode) => void) {
   for (const group of groups) {
     callback(group);
@@ -200,9 +211,24 @@ export function findTreeNode(
     }
   }
 }
+
 export function createGroupToTreesMap(trees: TreeMap): Record<number, Array<Tree>> {
   return _.groupBy(trees, (tree) => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
 }
+
+export function createGroupToSegmentsMap(segments: SegmentMap): Record<number, Segment[]> {
+  const groupToSegments: Record<number, Segment[]> = {};
+  for (const segment of segments.values()) {
+    const { groupId } = segment;
+    const keyId = groupId || MISSING_GROUP_ID;
+
+    groupToSegments[keyId] ||= [];
+    groupToSegments[keyId].push(segment);
+  }
+
+  return groupToSegments;
+}
+
 export function getGroupByIdWithSubgroups(
   treeGroups: Array<TreeGroup>,
   groupId: number | undefined,
@@ -212,4 +238,28 @@ export function getGroupByIdWithSubgroups(
     groupWithSubgroups.push(treeGroup.groupId);
   });
   return groupWithSubgroups;
+}
+
+export function moveGroupsHelper(
+  groups: TreeGroup[] | SegmentGroup[],
+  groupId: number,
+  targetGroupId: number | null | undefined,
+): TreeGroup[] | SegmentGroup[] {
+  const movedGroup = findGroup(groups, groupId);
+  if (!movedGroup) {
+    throw new Error("Could not find group to move");
+  }
+
+  const groupsWithoutDraggedGroup = mapGroupsWithRoot(groups, (parentGroup) => ({
+    ...parentGroup,
+    children: parentGroup.children.filter((subgroup) => subgroup.groupId !== movedGroup.groupId),
+  }));
+  const newGroups = mapGroupsWithRoot(groupsWithoutDraggedGroup, (parentGroup) => ({
+    ...parentGroup,
+    children:
+      parentGroup.groupId === targetGroupId
+        ? parentGroup.children.concat([movedGroup])
+        : parentGroup.children,
+  }));
+  return newGroups;
 }

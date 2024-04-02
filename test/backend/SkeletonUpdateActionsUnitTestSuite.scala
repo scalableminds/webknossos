@@ -11,13 +11,12 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
   private def applyUpdateAction(action: UpdateAction.SkeletonUpdateAction): SkeletonTracing =
     action.applyOn(Dummies.skeletonTracing)
 
-  def listConsistsOfLists[T](joinedList: Seq[T], sublist1: Seq[T], sublist2: Seq[T]): Boolean = {
+  def listConsistsOfLists[T](joinedList: Seq[T], sublist1: Seq[T], sublist2: Seq[T]): Boolean =
     // assuming sublist1 & sublist2 are different
     if (joinedList.length != sublist1.length + sublist2.length)
       false
     else
       joinedList.forall(el => sublist1.contains(el) || sublist2.contains(el))
-  }
 
   "CreateTreeSkeletonAction" should {
     "add the specified tree" in {
@@ -29,7 +28,8 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         timestamp = Dummies.timestamp,
         comments = List[UpdateActionComment](),
         groupId = None,
-        isVisible = Option(true)
+        isVisible = Option(true),
+        edgesAreVisible = Option(true)
       )
       val result = applyUpdateAction(createTreeAction)
 
@@ -40,6 +40,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       assert(tree.comments == createTreeAction.comments)
       assert(tree.name === createTreeAction.name)
       assert(tree.isVisible == createTreeAction.isVisible)
+      assert(tree.edgesAreVisible == createTreeAction.edgesAreVisible)
     }
   }
 
@@ -152,7 +153,8 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         Option(newNode.bitDepth),
         Option(newNode.interpolation),
         treeId = 1,
-        Dummies.timestamp
+        Dummies.timestamp,
+        None
       )
       val result = applyUpdateAction(createNodeSkeletonAction)
       assert(result.trees.length == Dummies.skeletonTracing.trees.length)
@@ -200,7 +202,8 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         Option(newNode.bitDepth),
         Option(newNode.interpolation),
         treeId = 1,
-        Dummies.timestamp
+        Dummies.timestamp,
+        None
       )
       val deleteNodeSkeletonAction = new DeleteNodeSkeletonAction(newNode.id, treeId = 1)
       val result = deleteNodeSkeletonAction.applyOn(createNodeSkeletonAction.applyOn(Dummies.skeletonTracing))

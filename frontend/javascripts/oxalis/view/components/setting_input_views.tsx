@@ -1,10 +1,20 @@
-import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select, Popover } from "antd";
+import {
+  Row,
+  Col,
+  Slider,
+  InputNumber,
+  Switch,
+  Tooltip,
+  Input,
+  Select,
+  Popover,
+  PopoverProps,
+} from "antd";
 import { DeleteOutlined, DownloadOutlined, EditOutlined, ScanOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
-import features from "features";
 import messages from "messages";
 
 const ROW_GUTTER = 1;
@@ -29,21 +39,23 @@ type NumberSliderSettingProps = {
   min: number;
   step: number;
   disabled: boolean;
+  spans: Vector3;
 };
 export class NumberSliderSetting extends React.PureComponent<NumberSliderSettingProps> {
   static defaultProps = {
     min: 1,
     step: 1,
     disabled: false,
+    spans: [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
   };
 
-  _onChange = (_value: number) => {
-    if (this.isValueValid(_value)) {
+  _onChange = (_value: number | null) => {
+    if (_value != null && this.isValueValid(_value)) {
       this.props.onChange(_value);
     }
   };
 
-  isValueValid = (_value: number) =>
+  isValueValid = (_value: number | null) =>
     _.isNumber(_value) && _value >= this.props.min && _value <= this.props.max;
 
   render() {
@@ -54,10 +66,10 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     const value = this.isValueValid(originalValue) ? originalValue : Math.floor((min + max) / 2);
     return (
       <Row align="middle" gutter={ROW_GUTTER}>
-        <Col span={SETTING_LEFT_SPAN}>
+        <Col span={this.props.spans[0]}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={SETTING_MIDDLE_SPAN}>
+        <Col span={this.props.spans[1]}>
           <Slider
             min={min}
             max={max}
@@ -67,10 +79,9 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             disabled={disabled}
           />
         </Col>
-        <Col span={SETTING_VALUE_SPAN}>
+        <Col span={this.props.spans[2]}>
           <InputNumber
             controls={false}
-            bordered={false}
             min={min}
             max={max}
             style={{
@@ -80,6 +91,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             onChange={this._onChange}
             size="small"
             disabled={disabled}
+            variant="borderless"
           />
         </Col>
       </Row>
@@ -95,6 +107,8 @@ type LogSliderSettingProps = {
   min: number;
   roundTo: number;
   disabled?: boolean;
+  spans: Vector3;
+  precision?: number;
 };
 
 const LOG_SLIDER_MIN = -100;
@@ -104,9 +118,13 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
   static defaultProps = {
     disabled: false,
     roundTo: 3,
+    spans: [SETTING_LEFT_SPAN, SETTING_MIDDLE_SPAN, SETTING_VALUE_SPAN],
   };
 
-  onChangeInput = (value: number) => {
+  onChangeInput = (value: number | null) => {
+    if (value == null) {
+      return;
+    }
     if (this.props.min <= value && value <= this.props.max) {
       this.props.onChange(value);
     } else {
@@ -127,7 +145,10 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     return Math.exp((value - b) / a);
   }
 
-  formatTooltip = (value: number) => {
+  formatTooltip = (value: number | undefined) => {
+    if (value == null) {
+      return "invalid";
+    }
     const calculatedValue = this.calculateValue(value);
     return calculatedValue >= 10000
       ? calculatedValue.toExponential()
@@ -147,31 +168,30 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     const { label, roundTo, value, min, max, disabled } = this.props;
     return (
       <Row align="middle" gutter={ROW_GUTTER}>
-        <Col span={SETTING_LEFT_SPAN}>
+        <Col span={this.props.spans[0]}>
           <label className="setting-label">{label}</label>
         </Col>
-        <Col span={SETTING_MIDDLE_SPAN}>
+        <Col span={this.props.spans[1]}>
           <Slider
             min={LOG_SLIDER_MIN}
             max={LOG_SLIDER_MAX}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(value: number) => string | number' is not a... Remove this comment to see the full error message
-            tipFormatter={this.formatTooltip}
+            tooltip={{ formatter: this.formatTooltip }}
             onChange={this.onChangeSlider}
             value={this.getSliderValue()}
             disabled={disabled}
           />
         </Col>
-        <Col span={SETTING_VALUE_SPAN}>
+        <Col span={this.props.spans[2]}>
           <InputNumber
             controls={false}
-            bordered={false}
+            variant={"borderless"}
             min={min}
             max={max}
             style={{
               width: "100%",
             }}
             step={value / 10}
-            precision={2}
+            precision={this.props.precision ?? 2}
             value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
             onChange={this.onChangeInput}
             disabled={disabled}
@@ -182,7 +202,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     );
   }
 }
-type SwitchSettingProps = {
+export type SwitchSettingProps = {
   onChange: (value: boolean) => void | Promise<void>;
   value: boolean;
   label: string | React.ReactNode;
@@ -190,16 +210,20 @@ type SwitchSettingProps = {
   tooltipText: string | null | undefined;
   loading: boolean;
   labelSpan?: number | null;
+  postSwitchIcon: React.ReactNode | null | undefined;
+  disabledReason?: string | null;
 };
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   static defaultProps = {
     disabled: false,
     tooltipText: null,
     loading: false,
+    postSwitchIcon: null,
   };
 
   render() {
-    const { label, onChange, value, disabled, tooltipText, loading, labelSpan } = this.props;
+    const { label, onChange, value, disabled, tooltipText, loading, labelSpan, postSwitchIcon } =
+      this.props;
     const leftSpanValue = labelSpan || SETTING_LEFT_SPAN;
     const rightSpanValue = labelSpan != null ? ANTD_TOTAL_SPAN - leftSpanValue : SETTING_RIGHT_SPAN;
     return (
@@ -212,25 +236,31 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
             {/* This div is necessary for the tooltip to be displayed */}
             <div
               style={{
-                display: "inline-block",
+                display: "inline-flex",
+                justifyContent: "center",
+                alignItems: "center",
               }}
             >
-              <Switch
-                onChange={onChange}
-                checked={value}
-                defaultChecked={value}
-                disabled={disabled}
-                loading={loading}
-              />
+              <Tooltip title={this.props.disabledReason}>
+                <Switch
+                  onChange={onChange}
+                  checked={value}
+                  defaultChecked={value}
+                  disabled={disabled}
+                  loading={loading}
+                />
+              </Tooltip>
+              {postSwitchIcon}
             </div>
           </Tooltip>
+          {this.props.children}
         </Col>
       </Row>
     );
   }
 }
 type NumberInputSettingProps = {
-  onChange: (value: number) => void;
+  onChange: (value: number | null) => void;
   value: number | "";
   label: string;
   max?: number;
@@ -263,6 +293,7 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
             value={value}
             step={step}
             size="small"
+            variant="borderless"
           />
         </Col>
       </Row>
@@ -274,14 +305,19 @@ type NumberInputPopoverSettingProps = {
   value: number | null | undefined;
   label: string | React.ReactNode;
   detailedLabel: string | React.ReactNode;
-  placement?: string;
+  placement?: PopoverProps["placement"];
   max?: number;
   min?: number;
   step?: number;
 };
 export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps) {
   const { min, max, onChange, step, value, label, detailedLabel } = props;
-  const placement = props.placement || "top";
+  const placement: PopoverProps["placement"] = props.placement || "top";
+  const onChangeGuarded = (val: number | null) => {
+    if (val != null) {
+      onChange(val);
+    }
+  };
   const numberInput = (
     <div>
       <div
@@ -293,22 +329,20 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
       </div>
       <InputNumber
         controls={false}
-        bordered={false}
         style={{
           width: 140,
         }}
         min={min}
         max={max}
-        onChange={onChange}
-        // @ts-expect-error ts-migrate(2322) FIXME: Type 'number | null | undefined' is not assignable... Remove this comment to see the full error message
+        onChange={onChangeGuarded}
         value={value}
         step={step}
         size="small"
+        variant="borderless"
       />
     </div>
   );
   return (
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'TooltipPl... Remove this comment to see the full error message
     <Popover content={numberInput} trigger="click" placement={placement}>
       <span
         style={{
@@ -349,6 +383,7 @@ type State = {
   text: string;
   name: string;
 };
+
 export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
   constructor(props: UserBoundingBoxInputProps) {
     super(props);
@@ -395,8 +430,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     });
   };
 
-  handleChange = (evt: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+  handleChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     const text = evt.target.value;
     // only numbers, commas and whitespace is allowed
     const isValidInput = /^[\d\s,]*$/g.test(text);
@@ -455,7 +489,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const exportButtonTooltip = isExportEnabled
       ? "Export data from this bounding box."
       : messages["data.bounding_box_export_not_supported"];
-    const exportColumn = features().jobsEnabled ? (
+    const exportColumn = isExportEnabled ? (
       <Col span={2}>
         <Tooltip title={exportButtonTooltip} placement="topRight">
           <DownloadOutlined onClick={onExport} style={exportIconStyle} />
@@ -488,8 +522,8 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                   placeholder="Bounding Box Name"
                   size="small"
                   value={name}
-                  onChange={(evt: React.SyntheticEvent) => {
-                    this.setState({ name: (evt.target as HTMLInputElement).value });
+                  onChange={(evt: React.ChangeEvent<HTMLInputElement>) => {
+                    this.setState({ name: evt.target.value });
                   }}
                   onPressEnter={this.handleNameChanged}
                   onBlur={this.handleNameChanged}
@@ -579,8 +613,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
     disabled: false,
   };
 
-  onColorChange = (evt: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
+  onColorChange = (evt: React.ChangeEvent<HTMLInputElement>) => {
     this.props.onChange(Utils.hexToRgb(evt.target.value));
   };
 
@@ -619,6 +652,8 @@ type DropdownSettingProps = {
   label: React.ReactNode | string;
   value: number | string;
   options: Array<Record<string, any>>;
+  disabled?: boolean;
+  disabledReason?: string | null;
 };
 export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
   render() {
@@ -629,16 +664,19 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={SETTING_RIGHT_SPAN}>
-          <Select
-            onChange={onChange}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
-            value={value.toString()}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
-            defaultValue={value.toString()}
-            size="small"
-            dropdownMatchSelectWidth={false}
-            options={this.props.options}
-          />
+          <Tooltip title={this.props.disabledReason}>
+            <Select
+              onChange={onChange}
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
+              value={value.toString()}
+              // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
+              defaultValue={value.toString()}
+              size="small"
+              popupMatchSelectWidth={false}
+              options={this.props.options}
+              disabled={this.props.disabled}
+            />
+          </Tooltip>
         </Col>
       </Row>
     );

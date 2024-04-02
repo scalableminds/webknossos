@@ -30,15 +30,19 @@ import {
   getActiveNodeFromTree,
   getTree,
   getActiveTree,
-  getActiveGroup,
+  getActiveTreeGroup,
   findTreeByNodeId,
+  mapGroupsToGenerator,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
-import type { Vector3 } from "oxalis/constants";
+import { TreeType, TreeTypeEnum, Vector3 } from "oxalis/constants";
 import Constants, { NODE_ID_REF_REGEX } from "oxalis/constants";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import * as Utils from "libs/utils";
+import { V3 } from "libs/mjs";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
 
@@ -92,20 +96,8 @@ function getNearestTreeId(treeId: number, trees: TreeMap): number {
   return sortedTreeIds[higherOrNearestId];
 }
 
-export function* mapGroups<R>(
-  groups: Array<TreeGroup>,
-  callback: (arg0: TreeGroup) => R,
-): Generator<R, void, void> {
-  for (const group of groups) {
-    yield callback(group);
-
-    if (group.children) {
-      yield* mapGroups(group.children, callback);
-    }
-  }
-}
 export function getMaximumGroupId(groups: Array<TreeGroup>): number {
-  const maxGroupId = _.max(Array.from(mapGroups(groups, (group) => group.groupId)));
+  const maxGroupId = _.max(Array.from(mapGroupsToGenerator(groups, (group) => group.groupId)));
 
   return maxGroupId != null && maxGroupId >= 0 ? maxGroupId : 0;
 }
@@ -124,7 +116,8 @@ export function createNode(
   state: OxalisState,
   skeletonTracing: SkeletonTracing,
   tree: Tree,
-  position: Vector3,
+  positionFloat: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   viewport: number,
   resolution: number,
@@ -143,9 +136,11 @@ export function createNode(
     .getOrElse(Constants.DEFAULT_NODE_RADIUS);
   // Find new node id by increasing the max node id.
   const nextNewId = skeletonTracing.cachedMaxNodeId + 1;
+  const position = V3.trunc(positionFloat);
   // Create the new node
   const node: Node = {
-    position,
+    untransformedPosition: position,
+    additionalCoordinates,
     radius,
     rotation,
     viewport,
@@ -213,7 +208,10 @@ export function deleteNode(
 
     const newActiveNodeId = neighborIds.length > 0 ? Math.min(...neighborIds) : null;
     const newActiveTree =
-      newActiveNodeId != null ? findTreeByNodeId(newTrees, newActiveNodeId).get() : activeTree;
+      newActiveNodeId != null ? findTreeByNodeId(newTrees, newActiveNodeId) : activeTree;
+    if (newActiveTree == null) {
+      throw new Error(`Could not find node with id ${newActiveNodeId}`);
+    }
     const newActiveTreeId = newActiveTree.treeId;
     return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
   });
@@ -225,7 +223,7 @@ export function deleteEdge(
   targetTree: Tree,
   targetNode: Node,
   timestamp: number,
-): Maybe<[TreeMap, number | null]> {
+): Maybe<[TreeMap, number | null | undefined]> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     if (sourceTree.treeId !== targetTree.treeId) {
       // The two selected nodes are in different trees
@@ -255,9 +253,7 @@ export function deleteEdge(
     );
     // The treeId of the tree the active node belongs to could have changed
     const activeNodeId = skeletonTracing.activeNodeId;
-    const newActiveTreeId = activeNodeId
-      ? findTreeByNodeId(newTrees, activeNodeId).get().treeId
-      : null;
+    const newActiveTreeId = activeNodeId ? findTreeByNodeId(newTrees, activeNodeId)?.treeId : null;
     return Maybe.Just([newTrees, newActiveTreeId]);
   });
 }
@@ -363,9 +359,17 @@ function splitTreeByNodes(
             treeId: activeTree.treeId,
             isVisible: true,
             groupId: activeTree.groupId,
+            type: activeTree.type,
+            edgesAreVisible: true,
           };
         } else {
-          const immutableNewTree = createTree(intermediateState, timestamp).get();
+          const immutableNewTree = createTree(
+            intermediateState,
+            timestamp,
+            true,
+            undefined,
+            activeTree.type,
+          ).get();
           // Cast to mutable tree type since we want to mutably do the split
           // in this reducer for performance reasons.
           newTree = immutableNewTree as any as Tree;
@@ -415,7 +419,6 @@ function splitTreeByNodes(
 }
 
 export function createBranchPoint(
-  skeletonTracing: SkeletonTracing,
   tree: Tree,
   node: Node,
   timestamp: number,
@@ -479,6 +482,8 @@ export function createTree(
   timestamp: number,
   addToActiveGroup: boolean = true,
   name?: string,
+  type: TreeType = TreeTypeEnum.DEFAULT,
+  edgesAreVisible: boolean = true,
 ): Maybe<Tree> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name
@@ -488,7 +493,7 @@ export function createTree(
 
     if (addToActiveGroup) {
       const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map((tree) => tree.groupId);
-      const groupIdOfActiveGroupMaybe = getActiveGroup(skeletonTracing).map(
+      const groupIdOfActiveGroupMaybe = getActiveTreeGroup(skeletonTracing).map(
         (group) => group.groupId,
       );
       groupId = Utils.toNullable(groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe));
@@ -506,6 +511,8 @@ export function createTree(
       comments: [],
       isVisible: true,
       groupId,
+      type,
+      edgesAreVisible,
     };
     return Maybe.Just(tree);
   });
@@ -515,8 +522,9 @@ export function getOrCreateTree(
   skeletonTracing: SkeletonTracing,
   treeId: number | null | undefined,
   timestamp: number,
+  type?: TreeType | null | undefined,
 ): Maybe<Tree> {
-  return getTree(skeletonTracing, treeId).orElse(() => {
+  return getTree(skeletonTracing, treeId, type).orElse(() => {
     // Only create a new tree if there are no trees
     // Specifically, this means that no new tree is created just because
     // the activeTreeId is temporarily null
@@ -640,13 +648,12 @@ export function deleteTree(
   return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
 }
 export function mergeTrees(
-  skeletonTracing: SkeletonTracing,
+  trees: TreeMap,
   sourceNodeId: number,
   targetNodeId: number,
 ): Maybe<[TreeMap, number, number]> {
-  const { trees } = skeletonTracing;
-  const sourceTree = findTreeByNodeId(trees, sourceNodeId).get();
-  const targetTree = findTreeByNodeId(trees, targetNodeId).get(); // should be activeTree
+  const sourceTree = findTreeByNodeId(trees, sourceNodeId);
+  const targetTree = findTreeByNodeId(trees, targetNodeId); // should be activeTree
 
   if (sourceTree == null || targetTree == null || sourceTree === targetTree) {
     return Maybe.Nothing();
@@ -692,7 +699,7 @@ export function shuffleTreeColor(
   return setTreeColorIndex(skeletonTracing, tree, randomId);
 }
 export function setTreeColorIndex(
-  skeletonTracing: SkeletonTracing,
+  _skeletonTracing: SkeletonTracing,
   tree: Tree,
   colorIndex: number,
 ): Maybe<[Tree, number]> {
@@ -704,7 +711,7 @@ export function setTreeColorIndex(
   return Maybe.Just([newTree, tree.treeId]);
 }
 export function createComment(
-  skeletonTracing: SkeletonTracing,
+  _skeletonTracing: SkeletonTracing,
   tree: Tree,
   node: Node,
   commentText: string,
@@ -720,7 +727,7 @@ export function createComment(
   return Maybe.Just(newComments);
 }
 export function deleteComment(
-  skeletonTracing: SkeletonTracing,
+  _skeletonTracing: SkeletonTracing,
   tree: Tree,
   node: Node,
 ): Maybe<Array<CommentType>> {
@@ -764,7 +771,7 @@ export function toggleTreeGroupReducer(
   });
   if (toggledGroup == null) return state;
   // Assemble a list that contains the toggled groupId and the groupIds of all child groups
-  const affectedGroupIds = new Set(mapGroups([toggledGroup], (group) => group.groupId));
+  const affectedGroupIds = new Set(mapGroupsToGenerator([toggledGroup], (group) => group.groupId));
   // Let's make all trees visible if there is one invisible tree in one of the affected groups
   const shouldBecomeVisible =
     targetVisibility != null
@@ -800,7 +807,8 @@ export function toggleTreeGroupReducer(
 function serverNodeToMutableNode(n: ServerNode): MutableNode {
   return {
     id: n.id,
-    position: Utils.point3ToVector3(n.position),
+    untransformedPosition: Utils.point3ToVector3(n.position),
+    additionalCoordinates: n.additionalCoordinates,
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
@@ -839,6 +847,8 @@ export function createMutableTreeMapFromTreeArray(
         isVisible: tree.isVisible != null ? tree.isVisible : true,
         timestamp: tree.createdTimestamp,
         groupId: tree.groupId,
+        type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
+        edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
       }),
     ),
     "treeId",
@@ -852,12 +862,12 @@ export function removeMissingGroupsFromTrees(
   treeGroups: Array<TreeGroup>,
 ): TreeMap {
   // Change the groupId of trees for groups that no longer exist
-  const groupIds = Array.from(mapGroups(treeGroups, (group) => group.groupId));
+  const groupIds = new Set(mapGroupsToGenerator(treeGroups, (group) => group.groupId));
   const changedTrees: TreeMap = {};
   Object.keys(skeletonTracing.trees).forEach((treeId) => {
     const tree = skeletonTracing.trees[Number(treeId)];
 
-    if (tree.groupId != null && !groupIds.includes(tree.groupId)) {
+    if (tree.groupId != null && !groupIds.has(tree.groupId)) {
       // @ts-expect-error ts-migrate(7015) FIXME: Element implicitly has an 'any' type because index... Remove this comment to see the full error message
       changedTrees[treeId] = { ...tree, groupId: null };
     }

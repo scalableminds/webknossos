@@ -1,3 +1,7 @@
+// Whenever possible try to customize antd v5 components through their "Design Tokens" and builtin themeing
+// See theme.tsx for details
+// https://ant.design/docs/react/customize-theme
+
 h1 {
   font-size: 36px;
 }
@@ -23,7 +27,7 @@ p {
 .ant-layout-sider,
 .ant-collapse-borderless,
 .ant-layout {
-  background-color: @body-background;
+  background-color: var(--ant-color-bg-base);
 }
 
 .ant-layout-header {
@@ -38,12 +42,7 @@ p {
   }
 }
 
-.ant-tag {
-  margin-bottom: 8px;
-}
-
 .ant-notification {
-  z-index: 1040; // make sure we are above nav bar
   width: auto;
   max-width: 80vw;
 }
@@ -150,42 +149,37 @@ label.ant-checkbox-wrapper {
 .ant-alert {
   font-family: @font-family;
 }
+.ant-alert-message {
+  margin-left: 5px;
+}
+
+.ant-alert-banner {
+  position: absolute;
+  z-index: 1000;
+  width: 100%;
+}
 .ant-card {
   font-family: @font-family;
+}
+
+.ant-radio-button-wrapper.aIJobSelection {
+  width: auto; 
+  height: auto; 
+  padding: 0px; 
+  div.ant-card-body {
+    line-height: 0.9;
+  }
 }
 
 .antd-no-border-list .ant-list-item {
   border-bottom: none;
 }
 
-.sub-menu-without-padding .ant-menu-submenu-title {
-  padding: 0;
-}
-
-.ant-menu-submenu.vertical-center-flex-fix {
-  .ant-menu-submenu-title {
-    display: flex;
-  }
-  display: flex;
-}
-
-.collapsed-nav-header {
+.collapsed-nav-header .ant-menu:not(.right-navbar) {
   .ant-menu-item,
   .ant-menu-submenu-title,
   li.ant-menu-submenu {
     padding: 0 4px !important;
-  }
-
-  .sub-menu-without-padding.ant-menu-submenu {
-    padding: 0 !important;
-  }
-
-  .sub-menu-without-padding {
-    .ant-menu-item,
-    .ant-menu-submenu-title,
-    li.ant-menu-submenu {
-      padding: 0 !important;
-    }
   }
 
   .anticon {
@@ -205,32 +199,6 @@ label.ant-checkbox-wrapper {
   pointer-events: none;
 }
 
-// The rules below are needed to have the row expand icon for tables of antd version 3.
-// The icon in version 4 does not work correctly in firefox.
-// See: https://github.com/ant-design/ant-design/issues/29303#issue-804593263
-.ant-table-row-expand-icon::after {
-  display: none;
-}
-.ant-table-row-expand-icon-expanded::before {
-  content: "-";
-}
-.ant-table-row-expand-icon-collapsed::before {
-  content: "+";
-}
-.ant-table-row-expand-icon::before {
-  position: unset;
-  transform: none;
-  background: inherit;
-  height: 100%;
-}
-
-.ant-table-row-expand-icon {
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  line-height: 13px;
-}
-
 // Custom component `LinkButton` renders a button that looks like a link.
 // Antd’s `button type="link"` only gets us halfway there, though, hence, this:
 .link-button {
@@ -241,4 +209,76 @@ label.ant-checkbox-wrapper {
 .link-button > .anticon + span,
 .link-button > span + .anticon {
   margin-left: initial;
+}
+
+.hide-checkbox-selection {
+  .ant-table-selection,
+  .ant-table-selection-col,
+  .ant-table-selection-column {
+    display: none;
+  }
+}
+
+#segment-list {
+  .ant-tree-title {
+    // Make the tree elements in the segment list full-width
+    width: 100%;
+  }
+}
+
+.ant-tree-directory .ant-tree-title {
+  // Make the directory tree element full-width (subtract the width of the
+  // directory icon)
+  width: calc(100% - 24px);
+  display: flex;
+}
+
+.ant-tree-directory {
+  background: transparent;
+  display: flex;
+}
+
+.ant-tree-node-content-wrapper {
+  display: flex;
+}
+
+.ant-tree.ant-tree-directory .ant-tree-treenode-selected:hover::before,
+.ant-tree.ant-tree-directory .ant-tree-treenode-selected::before {
+  border-radius: 4px;
+}
+
+.anticon.anticon-sync.anticon-spin {
+  line-height: 0;
+}
+
+.ant-table-empty .ant-table-tbody > tr.ant-table-placeholder,
+.ant-list-empty-text {
+  color: var(--ant-color-text-tertiary)
+}
+
+.action-bar {
+  // UI for additional coordinates should always be in dark mode
+  // since it is located in the navbar's action bar.
+  .ant-input-group-addon {
+    background-color: rgb(58, 61, 72);
+    border-color: #585867;
+    color: #f1f1f1 !important;
+  }
+}
+
+.ant-dropdown-menu-item-icon.fa-icon {
+  margin-right: 5px;
+}
+
+.ant-dropdown-menu-item-icon > svg {
+  width: 15px;
+}
+
+.ant-message,
+.ant-message * {
+  pointer-events: none;
+}
+
+.ant-radio-button-wrapper-disabled:first-child{
+  opacity: 0.5;
 }

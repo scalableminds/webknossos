@@ -4,6 +4,14 @@ export default {
   $schema: "http://json-schema.org/draft-06/schema#",
   ...baseDatasetViewConfiguration,
   definitions: {
+    "types::Vector2": {
+      type: "array",
+      items: {
+        type: "number",
+      },
+      minItems: 2,
+      maxItems: 2,
+    },
     "types::Vector3": {
       type: "array",
       items: {
@@ -74,6 +82,176 @@ export default {
         },
         boundingBox: {
           $ref: "#/definitions/types::BoundingBox",
+        },
+        numChannels: {
+          type: "number",
+        },
+        additionalAxes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              name: {
+                type: "string",
+              },
+              bounds: {
+                $ref: "#/definitions/types::Vector2",
+              },
+              index: {
+                type: "number",
+              },
+            },
+          },
+        },
+        mags: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              mag: {
+                anyOf: [
+                  {
+                    type: "number",
+                  },
+                  {
+                    $ref: "#/definitions/types::Vector3",
+                  },
+                ],
+              },
+              path: {
+                type: "string",
+              },
+              credentials: {
+                type: "object",
+                properties: {
+                  user: { type: "string" },
+                  password: { type: "string" },
+                },
+                required: ["user", "password"],
+              },
+              axisOrder: {
+                type: "object",
+                additionalProperties: { type: "number" },
+              },
+            },
+            required: ["mag"],
+          },
+        },
+      },
+      required: ["dataFormat", "mags"],
+    },
+    "types::DataLayerN5Partial": {
+      title: "DataLayerN5",
+      type: "object",
+      properties: {
+        dataFormat: {
+          const: "n5",
+        },
+        boundingBox: {
+          $ref: "#/definitions/types::BoundingBox",
+        },
+        numChannels: {
+          type: "number",
+        },
+        mags: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              mag: {
+                anyOf: [
+                  {
+                    type: "number",
+                  },
+                  {
+                    $ref: "#/definitions/types::Vector3",
+                  },
+                ],
+              },
+              path: {
+                type: "string",
+              },
+              credentials: {
+                type: "object",
+                properties: {
+                  user: { type: "string" },
+                  password: { type: "string" },
+                },
+                required: ["user", "password"],
+              },
+              axisOrder: {
+                type: "object",
+                additionalProperties: { type: "number" },
+              },
+            },
+            required: ["mag"],
+          },
+        },
+      },
+      required: ["dataFormat", "mags"],
+    },
+    "types::DataLayerPrecomputedPartial": {
+      title: "DataLayerPrecomputed",
+      type: "object",
+      properties: {
+        dataFormat: {
+          const: "neuroglancerPrecomputed",
+        },
+        boundingBox: {
+          $ref: "#/definitions/types::BoundingBox",
+        },
+        numChannels: {
+          type: "number",
+        },
+        mags: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              mag: {
+                anyOf: [
+                  {
+                    type: "number",
+                  },
+                  {
+                    $ref: "#/definitions/types::Vector3",
+                  },
+                ],
+              },
+              path: {
+                type: "string",
+              },
+              credentials: {
+                type: "object",
+                properties: {
+                  user: { type: "string" },
+                  password: { type: "string" },
+                },
+                required: ["user", "password"],
+              },
+              axisOrder: {
+                type: "object",
+                additionalProperties: { type: "number" },
+              },
+            },
+            required: ["mag"],
+          },
+        },
+      },
+      required: ["dataFormat", "mags"],
+    },
+    "types::DataLayerZarr3Partial": {
+      title: "DataLayerZarr3",
+      type: "object",
+      properties: {
+        dataFormat: {
+          const: "zarr3",
+        },
+        boundingBox: {
+          $ref: "#/definitions/types::BoundingBox",
+        },
+        numChannels: {
+          type: "number",
         },
         mags: {
           type: "array",
@@ -189,6 +367,15 @@ export default {
             },
             {
               $ref: "#/definitions/types::DataLayerZarrPartial",
+            },
+            {
+              $ref: "#/definitions/types::DataLayerN5Partial",
+            },
+            {
+              $ref: "#/definitions/types::DataLayerPrecomputedPartial",
+            },
+            {
+              $ref: "#/definitions/types::DataLayerZarr3Partial",
             },
           ],
         },

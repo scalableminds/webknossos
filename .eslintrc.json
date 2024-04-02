@@ -1,13 +1,6 @@
 {
-  "extends": [
-    "airbnb",
-    "airbnb-typescript",
-    "plugin:@typescript-eslint/eslint-recommended",
-    "plugin:eslint-comments/recommended",
-    "plugin:react/recommended",
-    "prettier"
-  ],
-  "plugins": ["@typescript-eslint", "react", "react-hooks", "import", "ava"],
+  "extends": [],
+  "plugins": ["@typescript-eslint", "react-hooks"],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 8,
@@ -33,101 +26,6 @@
     "Generator": false
   },
   "rules": {
-    "array-callback-return": "warn",
-    "class-methods-use-this": "off",
-    "no-constant-condition": "error",
-    "eslint-comments/disable-enable-pair": ["error", { "allowWholeFile": true }],
-    "eslint-comments/no-unused-disable": "error",
-    "flowtype/no-types-missing-file-annotation": "off",
-    "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
-    "import/prefer-default-export": ["warn"],
-    "import/no-cycle": "off",
-    "import/no-extraneous-dependencies": [
-      "error",
-      { "devDependencies": ["frontend/javascripts/test/**"] }
-    ],
-    "import/no-named-as-default-member": "warn",
-    "import/no-unresolved": "off",
-    "jsx-a11y/anchor-is-valid": "off",
-    "jsx-a11y/click-events-have-key-events": "off",
-    "jsx-a11y/no-static-element-interactions": "off",
-    "jsx-a11y/label-has-associated-control": "off",
-    "jsx-a11y/label-has-for": "off",
-    "lines-between-class-members": ["warn", "always", { "exceptAfterSingleLine": true }],
-    "max-len": ["off", 100],
-    "no-bitwise": "off",
-    "no-confusing-arrow": "off",
-    "no-continue": "warn",
-    "no-duplicate-imports": "off",
-    "no-else-return": "off",
-    "no-mixed-operators": "off",
-    "no-multi-str": "off",
-    "no-param-reassign": "warn",
-    "no-plusplus": "off",
-    "no-restricted-properties": ["off", { "object": "Math", "property": "pow" }],
-    "no-restricted-syntax": "warn",
-    "no-restricted-syntax": ["error", "ForInStatement"],
-    "no-restricted-globals": "warn",
-    "no-underscore-dangle": "off",
-    "@typescript-eslint/no-unused-vars": [
-      "error",
-      { "argsIgnorePattern": "^_", "ignoreRestSiblings": true }
-    ],
-    "@typescript-eslint/no-use-before-define": ["error", { "functions": false, "classes": false }],
-    "no-console": "off",
-    "one-var": ["error", "never"],
-    "operator-assignment": "warn",
-    "prefer-destructuring": "off",
-    "quote-props": ["error", "as-needed", { "numbers": true }],
-    "quotes": ["error", "double", { "avoidEscape": true }],
-    "radix": "off",
-    "react/default-props-match-prop-types": ["error", { "allowRequiredDefaults": true }],
-    "react/destructuring-assignment": "off",
-    "react/jsx-filename-extension": "off",
-    "react/no-multi-comp": "off",
-    "react/prop-types": "off",
-    "react/require-default-props": "off",
-    "react-hooks/rules-of-hooks": "error",
-    "import/newline-after-import": "off",
-    "spaced-comment": "off",
-    "react/sort-comp": [
-      "error",
-      {
-        "order": [
-          "type-annotations",
-          "instance-variables",
-          "static-methods",
-          "lifecycle",
-          "everything-else",
-          "render"
-        ]
-      }
-    ],
-    "ava/no-only-test": "error",
-
-    // reconsider rules after finishing Typescript conversion
-    "react/static-property-placement": "off",
-    "react/jsx-props-no-spreading": "warn", // no opinion
-    "react/state-in-constructor": "off", // probably want "never",
-    "react/default-props-match-prop-types": "warn", // probably should be enabled
-    "react/jsx-fragments": "off", // debateable. could be autofixed with eslint --fix ...
-    "max-classes-per-file": "off", // seems useful, but requires some refactoring, set to off because it's visually distracting
-    "prefer-object-spread": "off", // debateable. could be autofixed with eslint --fix ...
-    "@typescript-eslint/lines-between-class-members": "off",
-    "@typescript-eslint/naming-convention": [
-      "off",
-      {
-        "leadingUnderscore": "allow",
-        "format": ["camelCase", "UPPER_CASE"],
-        "selector": ["variable", "function"]
-      }
-    ], // interesting but hard to finetune for all cases
-    "react/no-unstable-nested-components": "warn", // probably should do something about it
-    "react/no-array-index-key": "error", // maybe sensible, maybe not
-    "prefer-exponentiation-operator": "off", // I find Math.pow() more readble than **
-    "eqeqeq": "error", // == vs ===
-    "react/jsx-no-bind": "off", // no opinion
-    "react/function-component-definition": "warn", // probably should do this. can be autofixed with eslint --fix
-    "@typescript-eslint/no-throw-literal": "warn" // probably should do this.
+    "react-hooks/rules-of-hooks": "error"
   }
 }

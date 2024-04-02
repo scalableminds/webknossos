@@ -42,7 +42,9 @@ import {
 } from "./flex_layout_helper";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import BorderToggleButton from "../components/border_toggle_button";
+
 const { Footer } = Layout;
+
 type Model = InstanceType<typeof FlexLayout.Model>;
 type Action = InstanceType<typeof FlexLayout.Action>;
 type StateProps = {
@@ -122,6 +124,11 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     this.unbindListeners.push(
       layoutEmitter.on("toggleBorder", (side) => {
         this.toggleBorder(side);
+      }),
+    );
+    this.unbindListeners.push(
+      layoutEmitter.on("toggleMaximize", () => {
+        this.toggleMaximize();
       }),
     );
     this.unbindListeners.push(this.attachKeyboardShortcuts());
@@ -210,23 +217,23 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
     }
   }
 
+  toggleMaximize = () => {
+    const { model } = this.state;
+    const activeNode = model.getActiveTabset();
+
+    if (activeNode == null) {
+      return;
+    }
+
+    const toggleMaximiseAction = FlexLayout.Actions.maximizeToggle(activeNode.getId());
+    model.doAction(toggleMaximiseAction);
+    this.onAction(toggleMaximiseAction);
+  };
+
   attachKeyboardShortcuts() {
-    const toggleMaximize = () => {
-      const { model } = this.state;
-      const activeNode = model.getActiveTabset();
-
-      if (activeNode == null) {
-        return;
-      }
-
-      const toggleMaximiseAction = FlexLayout.Actions.maximizeToggle(activeNode.getId());
-      model.doAction(toggleMaximiseAction);
-      this.onAction(toggleMaximiseAction);
-    };
-
     const keyboardNoLoop = new InputKeyboardNoLoop(
       {
-        ".": toggleMaximize,
+        ".": this.toggleMaximize,
         k: () => this.toggleBorder("left"),
         l: () => this.toggleBorder("right"),
       },
@@ -340,7 +347,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         return (
           <InputCatcher
             busyBlockingInfo={busyBlockingInfo}
-            // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
             viewportID={ArbitraryViews.arbitraryViewport}
           >
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}

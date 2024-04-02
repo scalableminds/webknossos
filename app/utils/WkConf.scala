@@ -4,6 +4,7 @@ import com.scalableminds.util.tools.ConfigReader
 import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
 
+import java.time.Instant
 import javax.inject.Inject
 import scala.concurrent.duration._
 
@@ -29,14 +30,31 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
     object User {
       val timeTrackingPause: FiniteDuration = get[FiniteDuration]("webKnossos.user.timeTrackingPause")
-      val inviteExpiry: Duration = get[Duration]("webKnossos.user.inviteExpiry")
+      val timeTrackingOnlyWithSignificantChanges: Boolean =
+        get[Boolean]("webKnossos.user.timeTrackingOnlyWithSignificantChanges")
+      val inviteExpiry: FiniteDuration = get[FiniteDuration]("webKnossos.user.inviteExpiry")
       val ssoKey: String = get[String]("webKnossos.user.ssoKey")
+
+      object EmailVerification {
+        val activated: Boolean = get[Boolean]("webKnossos.user.emailVerification.activated")
+        val required: Boolean = get[Boolean]("webKnossos.user.emailVerification.required")
+        val gracePeriod: FiniteDuration = get[FiniteDuration]("webKnossos.user.emailVerification.gracePeriod")
+        val linkExpiry: Option[FiniteDuration] =
+          getOptional[FiniteDuration]("webKnossos.user.emailVerification.linkExpiry")
+      }
+
     }
 
     val newOrganizationMailingList: String = get[String]("webKnossos.newOrganizationMailingList")
 
     object Tasks {
       val maxOpenPerUser: Int = get[Int]("webKnossos.tasks.maxOpenPerUser")
+    }
+
+    object Annotation {
+      object Mutex {
+        val expiryTime: FiniteDuration = get[FiniteDuration]("webKnossos.annotation.mutex.expiryTime")
+      }
     }
 
     object Cache {
@@ -52,6 +70,7 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
       object User {
         val email: String = get[String]("webKnossos.sampleOrganization.user.email")
+        val email2: String = get[String]("webKnossos.sampleOrganization.user.email2")
         val password: String = get[String]("webKnossos.sampleOrganization.user.password")
         val token: String = get[String]("webKnossos.sampleOrganization.user.token")
         val isSuperUser: Boolean = get[Boolean]("webKnossos.sampleOrganization.user.isSuperUser")
@@ -60,12 +79,40 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val children = List(User)
     }
 
+    object FetchUsedStorage {
+      val rescanInterval: FiniteDuration = get[FiniteDuration]("webKnossos.fetchUsedStorage.rescanInterval")
+      val tickerInterval: FiniteDuration = get[FiniteDuration]("webKnossos.fetchUsedStorage.tickerInterval")
+      val scansPerTick: Int = get[Int]("webKnossos.fetchUsedStorage.scansPerTick")
+    }
+
+    object TermsOfService {
+      val enabled: Boolean = get[Boolean]("webKnossos.termsOfService.enabled")
+      val url: String = get[String]("webKnossos.termsOfService.url")
+      val acceptanceDeadline: Instant = get[Instant]("webKnossos.termsOfService.acceptanceDeadline")
+      val version: Int = get[Int]("webKnossos.termsOfService.version")
+    }
+
+    object SecurityTxt {
+      val enabled: Boolean = get[Boolean]("webKnossos.securityTxt.enabled")
+      val content: String = get[String]("webKnossos.securityTxt.content")
+    }
+
     val operatorData: String = get[String]("webKnossos.operatorData")
-    val children = List(User, Tasks, Cache, SampleOrganization)
+    val children = List(User, Tasks, Cache, SampleOrganization, FetchUsedStorage, TermsOfService)
+  }
+
+  object SingleSignOn {
+    object OpenIdConnect {
+      val providerUrl: String = get[String]("singleSignOn.openIdConnect.providerUrl")
+      val clientId: String = get[String]("singleSignOn.openIdConnect.clientId")
+      val clientSecret: String = get[String]("singleSignOn.openIdConnect.clientSecret")
+      val scope: String = get[String]("singleSignOn.openIdConnect.scope")
+      val verboseLoggingEnabled: Boolean = get[Boolean]("singleSignOn.openIdConnect.verboseLoggingEnabled")
+    }
   }
 
   object Features {
-    val isDemoInstance: Boolean = get[Boolean]("features.isDemoInstance")
+    val isWkorgInstance: Boolean = get[Boolean]("features.isWkorgInstance")
     val jobsEnabled: Boolean = get[Boolean]("features.jobsEnabled")
     val voxelyticsEnabled: Boolean = get[Boolean]("features.voxelyticsEnabled")
     val taskReopenAllowed: FiniteDuration = get[Int]("features.taskReopenAllowedInSeconds") seconds
@@ -73,12 +120,15 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val publicDemoDatasetUrl: String = get[String]("features.publicDemoDatasetUrl")
     val exportTiffMaxVolumeMVx: Long = get[Long]("features.exportTiffMaxVolumeMVx")
     val exportTiffMaxEdgeLengthVx: Long = get[Long]("features.exportTiffMaxEdgeLengthVx")
+    val openIdConnectEnabled: Boolean = get[Boolean]("features.openIdConnectEnabled")
+    val segmentAnythingEnabled: Boolean = get[Boolean]("features.segmentAnythingEnabled")
   }
 
   object Datastore {
     val key: String = get[String]("datastore.key")
     val name: String = get[String]("datastore.name")
     val publicUri: Option[String] = getOptional[String]("datastore.publicUri")
+    val localFolderWhitelist: List[String] = getList[String]("datastore.localFolderWhitelist")
   }
 
   object Tracingstore {
@@ -118,10 +168,11 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
   object Silhouette {
     object TokenAuthenticator {
-      val resetPasswordExpiry: Duration = get[Duration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
-      val dataStoreExpiry: Duration = get[Duration]("silhouette.tokenAuthenticator.dataStoreExpiry")
-      val authenticatorExpiry: Duration = get[Duration]("silhouette.tokenAuthenticator.authenticatorExpiry")
-      val authenticatorIdleTimeout: Duration = get[Duration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
+      val resetPasswordExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.resetPasswordExpiry")
+      val dataStoreExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.dataStoreExpiry")
+      val authenticatorExpiry: FiniteDuration = get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorExpiry")
+      val authenticatorIdleTimeout: FiniteDuration =
+        get[FiniteDuration]("silhouette.tokenAuthenticator.authenticatorIdleTimeout")
     }
 
     object CookieAuthenticator {
@@ -130,8 +181,10 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       val secureCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.secureCookie")
       val httpOnlyCookie: Boolean = get[Boolean]("silhouette.cookieAuthenticator.httpOnlyCookie")
       val useFingerprinting: Boolean = get[Boolean]("silhouette.cookieAuthenticator.useFingerprinting")
-      val authenticatorExpiry: Duration = get[Duration]("silhouette.cookieAuthenticator.authenticatorExpiry")
-      val cookieMaxAge: Duration = get[Duration]("silhouette.cookieAuthenticator.cookieMaxAge")
+      val authenticatorExpiry: FiniteDuration =
+        get[FiniteDuration]("silhouette.cookieAuthenticator.authenticatorExpiry")
+      val cookieMaxAge: FiniteDuration = get[FiniteDuration]("silhouette.cookieAuthenticator.cookieMaxAge")
+      val signerSecret: String = get[String]("silhouette.cookieAuthenticator.signerSecret")
     }
 
     val children = List(TokenAuthenticator, CookieAuthenticator)
@@ -139,16 +192,6 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
 
   object Jobs {
     val workerLivenessTimeout: FiniteDuration = get[FiniteDuration]("jobs.workerLivenessTimeout")
-  }
-
-  object Braintracing {
-    val enabled: Boolean = get[Boolean]("braintracing.enabled")
-    val organizationName: String = get[String]("braintracing.organizationName")
-    val uri: String = get[String]("braintracing.uri")
-    val createUserScript: String = get[String]("braintracing.createUserScript")
-    val user: String = get[String]("braintracing.user")
-    val password: String = get[String]("braintracing.password")
-    val license: String = get[String]("braintracing.license")
   }
 
   object Airbrake {
@@ -170,19 +213,38 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
     val uri: String = get[String]("backendAnalytics.uri")
     val key: String = get[String]("backendAnalytics.key")
     val sessionPause: FiniteDuration = get[FiniteDuration]("backendAnalytics.sessionPause")
+    val saveToDatabaseEnabled: Boolean = get[Boolean]("backendAnalytics.saveToDatabaseEnabled")
     val verboseLoggingEnabled: Boolean = get[Boolean]("backendAnalytics.verboseLoggingEnabled")
+    val wellKnownUris: List[String] = getList[String]("backendAnalytics.wellKnownUris")
+  }
+
+  object Slick {
+    val checkSchemaOnStartup: Boolean = get[Boolean]("slick.checkSchemaOnStartup")
+
+    object Db {
+      val url: String = get[String]("slick.db.url")
+      val user: String = get[String]("slick.db.user")
+      val password: String = get[String]("slick.db.password")
+    }
+
+    val children = List(Db)
   }
 
   object Voxelytics {
     val staleTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.staleTimeout")
 
-    object Elasticsearch {
-      val uri: String = get[String]("voxelytics.elasticsearch.uri")
-      val index: String = get[String]("voxelytics.elasticsearch.index")
-      val startupTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.elasticsearch.startupTimeout")
+    object Loki {
+      val uri: String = get[String]("voxelytics.loki.uri")
+      val startupTimeout: FiniteDuration = get[FiniteDuration]("voxelytics.loki.startupTimeout")
     }
 
-    val children = List(Elasticsearch)
+    val children = List(Loki)
+  }
+
+  object SegmentAnything {
+    val uri: String = get[String]("segmentAnything.uri")
+    val user: String = get[String]("segmentAnything.user")
+    val password: String = get[String]("segmentAnything.password")
   }
 
   val children =
@@ -196,64 +258,12 @@ class WkConf @Inject()(configuration: Configuration) extends ConfigReader with L
       Mail,
       Silhouette,
       Jobs,
-      Braintracing,
       Airbrake,
       GoogleAnalytics,
       BackendAnalytics,
-      Voxelytics
+      Slick,
+      Voxelytics,
+      SegmentAnything
     )
 
-  val removedConfigKeys = List(
-    "actor.defaultTimeout",
-    "js.defaultTimeout",
-    "application.name",
-    "application.branch",
-    "application.version",
-    "application.title",
-    "application.insertInitialData",
-    "application.insertLocalConnectDatastore",
-    "application.authentication.defaultuser.email",
-    "application.authentication.defaultUser.password",
-    "application.authentication.defaultUser.token",
-    "application.authentication.defaultUser.isSuperUser",
-    "application.authentication.ssoKey",
-    "application.authentication.inviteExpiry",
-    "webKnossos.user.time.tracingPauseInSeconds",
-    "webKnossos.query.maxResults",
-    "user.cacheTimeoutInMinutes",
-    "tracingstore.enabled",
-    "datastore.enabled",
-    "datastore.webKnossos.pingIntervalMinutes",
-    "braingames.binary.cacheMaxSize",
-    "braingames.binary.mappingCacheMaxSize",
-    "braingames.binary.agglomerateFileCacheMaxSize",
-    "braingames.binary.agglomerateCacheMaxSize",
-    "braingames.binary.agglomerateStandardBlockSize",
-    "braingames.binary.agglomerateMaxReaderRange",
-    "braingames.binary.loadTimeout",
-    "braingames.binary.saveTimeout",
-    "braingames.binary.isosurfaceTimeout",
-    "braingames.binary.isosurfaceActorPoolSize",
-    "braingames.binary.baseFolder",
-    "braingames.binary.agglomerateSkeletonEdgeLimit",
-    "braingames.binary.changeHandler.enabled",
-    "braingames.binary.tickerInterval",
-    "mail.enabled",
-    "jobs.username",
-    "braintracing.active",
-    "braintracing.url",
-    "airbrake.apiKey",
-    "airbrake.ssl",
-    "airbrake.enabled",
-    "airbrake.endpoint",
-    "slackNotifications.url",
-    "google.analytics.trackingId",
-    "operatorData"
-  )
-
-  def warnIfOldKeysPresent(): Unit = removedConfigKeys.foreach { key =>
-    if (getOptional[String](key).isDefined) {
-      logger.warn(s"Removed config key $key is still supplied. Did you migrate your config?")
-    }
-  }
 }

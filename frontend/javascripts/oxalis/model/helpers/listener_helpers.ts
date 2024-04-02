@@ -1,9 +1,10 @@
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
+
 // Allows to listen on a certain property of the store.
-// This function should only be used for converting legacy code to redux
-// (especially as a replacement for backbone's listenTo calls).
-// Try not to use this for new code.
+// This function should only be used when listening to the Store
+// via react components (+ redux) is not an option.
+//
 // Usage:
 // const unsubscribe = listenToStoreProperty(
 //   (state) => state.someProperty.weWantToListenOn,

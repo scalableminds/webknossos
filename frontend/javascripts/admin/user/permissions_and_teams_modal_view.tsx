@@ -23,7 +23,7 @@ enum PERMISSIONS {
 type TeamRoleModalProp = {
   onChange: (...args: Array<any>) => any;
   onCancel: (...args: Array<any>) => any;
-  visible: boolean;
+  isOpen: boolean;
   selectedUserIds: Key[];
   users: Array<APIUser>;
   activeUser: APIUser;
@@ -271,7 +271,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
     } as React.CSSProperties;
     const explanationStyle = {
       paddingBottom: 12,
-      color: "var(--ant-text-secondary)",
+      color: "var(--ant-color-text-secondary)",
     } as React.CSSProperties;
     return (
       <React.Fragment>
@@ -340,7 +340,7 @@ class PermissionsAndTeamsModalView extends React.PureComponent<TeamRoleModalProp
       <Modal
         maskClosable={false}
         closable={false}
-        visible={this.props.visible}
+        open={this.props.isOpen}
         onCancel={this.props.onCancel}
         footer={
           <div>

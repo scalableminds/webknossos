@@ -1,25 +1,34 @@
-import { Select, Card, Form, Row, Col, DatePicker, Spin } from "antd";
+import { Select, Card, Form, Row, Col, Spin, DatePicker, Space } from "antd";
 import * as React from "react";
 import ReactDOMServer from "react-dom/server";
 import { connect } from "react-redux";
 import _ from "lodash";
-import moment from "moment";
+import dayjs from "dayjs";
+import antddayjs from "antd/node_modules/dayjs";
 import FormattedDate from "components/formatted_date";
-import type { OxalisState } from "oxalis/store";
-import type { APIUser, APITimeTracking } from "types/api_flow_types";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
 import TimeTrackingChart from "./time_line_chart_view";
+
+import type { APIUser, APITimeTracking } from "types/api_flow_types";
+import type { OxalisState } from "oxalis/store";
+import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
+import * as Utils from "libs/utils";
+import ProjectAndAnnotationTypeDropdown, {
+  AnnotationTypeFilterEnum,
+} from "admin/statistic/project_and_annotation_type_dropdown";
+
 const FormItem = Form.Item;
 const { RangePicker } = DatePicker;
+
 const dayFormat = "dd, MMM, YYYY";
 const hourFormat = "HH:mm";
 const hourFormatPrecise = "HH:mm:ss";
+
 type TimeTrackingStats = {
   totalTime: number;
   numberTasks: number;
@@ -37,6 +46,9 @@ type State = {
   stats: TimeTrackingStats;
   isLoading: boolean;
   isFetchingUsers: boolean;
+  initialUserId: string | null;
+  selectedProjectIds: string[];
+  annotationType: AnnotationTypeFilterEnum;
 };
 
 // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'logs' implicitly has an 'any' type.
@@ -48,7 +60,7 @@ function compressTimeLogs(logs) {
 
   for (const timeLog of logs) {
     // If the current log is within 1s of the previous log, merge these two logs
-    const previousDuration = previousLog != null ? moment.duration(previousLog.time) : null;
+    const previousDuration = previousLog != null ? dayjs.duration(previousLog.time) : null;
 
     if (
       previousDuration != null &&
@@ -57,7 +69,7 @@ function compressTimeLogs(logs) {
         1000 &&
       timeLog.task_id === previousLog.task_id
     ) {
-      const newDuration = previousDuration.add(moment.duration(timeLog.time));
+      const newDuration = previousDuration.add(dayjs.duration(timeLog.time));
       // @ts-expect-error ts-migrate(7022) FIXME: 'copiedLog' implicitly has type 'any' because it d... Remove this comment to see the full error message
       const copiedLog = { ...compressedLogs[compressedLogs.length - 1] };
       copiedLog.time = newDuration.toISOString();
@@ -76,7 +88,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
   state: State = {
     user: null,
     users: [],
-    dateRange: [moment().startOf("day"), moment().endOf("day")],
+    dateRange: [dayjs().startOf("day"), dayjs().endOf("day")],
     timeTrackingData: [],
     stats: {
       totalTime: 0,
@@ -85,15 +97,67 @@ class TimeLineView extends React.PureComponent<Props, State> {
     },
     isLoading: false,
     isFetchingUsers: false,
+    initialUserId: null,
+    selectedProjectIds: [],
+    annotationType: AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY,
   };
 
-  componentDidMount() {
-    const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
+  parseQueryParams(callbackFn: () => void) {
+    const params = Utils.getUrlParamsObject();
+    let dateRange: DateRange = [dayjs().startOf("day"), dayjs().endOf("day")];
+    if (params == null) return { initialUserId: null };
+    const hasStart = _.has(params, "start");
+    const hasEnd = _.has(params, "end");
+    // if either start or end is provided, use one week as default range
+    if (!hasStart && hasEnd) {
+      const end = dayjs(+params.end); // + leads to the timestamp being parsed as number; omitting it leads to wrong parsing
+      dateRange = [end.subtract(7, "d"), end];
+    } else if (hasStart && !hasEnd) {
+      const start = dayjs(+params.start);
+      dateRange = [start, start.add(7, "d")];
+    } else if (hasStart && hasEnd) {
+      dateRange = [dayjs(+params.start), dayjs(+params.end)];
+    }
+    let selectedProjectIds: Array<string> = [];
+    let annotationType = AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY;
+    if (_.has(params, "projectsOrType")) {
+      const projectsOrTypeParam = params.projectsOrType;
+      if (Object.values<string>(AnnotationTypeFilterEnum).includes(projectsOrTypeParam)) {
+        annotationType = projectsOrTypeParam as AnnotationTypeFilterEnum;
+      } else {
+        selectedProjectIds = params.projectsOrType.split(",");
+      }
+    }
+    this.handleDateChange(dateRange);
+    this.setState(
+      {
+        initialUserId: _.has(params, "user") ? params.user : null,
+        annotationType,
+        selectedProjectIds,
+      },
+      callbackFn,
+    );
+  }
 
-    if (isAdminOrTeamManger) {
-      this.fetchData();
-    } else {
-      this.fetchDataFromLoggedInUser();
+  async componentDidMount() {
+    const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
+    this.parseQueryParams(async () => {
+      if (isAdminOrTeamManger) {
+        await this.fetchData();
+      } else {
+        this.fetchDataFromLoggedInUser();
+      }
+    });
+  }
+
+  async componentDidUpdate(_prevProps: Props, prevState: State) {
+    if (
+      prevState.annotationType !== this.state.annotationType ||
+      prevState.selectedProjectIds !== this.state.selectedProjectIds ||
+      prevState.dateRange !== this.state.dateRange ||
+      prevState.user !== this.state.user
+    ) {
+      await this.fetchTimeTrackingData();
     }
   }
 
@@ -102,24 +166,30 @@ class TimeLineView extends React.PureComponent<Props, State> {
       isFetchingUsers: true,
     });
     const users = await getEditableUsers();
+    const currentUser =
+      this.state.initialUserId != null && isUserAdminOrTeamManager(this.props.activeUser)
+        ? users.find((users) => users.id === this.state.initialUserId)
+        : this.props.activeUser;
     this.setState({
+      user: currentUser,
       users,
       isFetchingUsers: false,
     });
   }
 
-  async fetchTimeTrackingData() {
+  fetchTimeTrackingData = async () => {
     this.setState({
       isLoading: true,
     });
 
     if (this.state.user != null) {
-      /* eslint-disable react/no-access-state-in-setstate */
       const timeTrackingData = compressTimeLogs(
         await getTimeTrackingForUser(
           this.state.user.id,
           this.state.dateRange[0],
           this.state.dateRange[1],
+          this.state.annotationType,
+          this.state.selectedProjectIds,
         ),
       );
       this.setState(
@@ -128,18 +198,17 @@ class TimeLineView extends React.PureComponent<Props, State> {
         },
         this.calculateStats,
       );
-      /* eslint-enable react/no-access-state-in-setstate */
     }
 
     this.setState({
       isLoading: false,
     });
-  }
+  };
 
   calculateStats() {
     this.setState((prevState) => {
       const totalTime = _.sumBy(prevState.timeTrackingData, (timeSpan) =>
-        moment.duration(timeSpan.time).asMilliseconds(),
+        dayjs.duration(timeSpan.time).asMilliseconds(),
       );
 
       const numberTasks = _.uniq(
@@ -158,49 +227,45 @@ class TimeLineView extends React.PureComponent<Props, State> {
     });
   }
 
-  fetchDataFromLoggedInUser = async () => {
-    await this.setState({
+  fetchDataFromLoggedInUser = () => {
+    this.setState({
       user: this.props.activeUser,
     });
-    this.fetchTimeTrackingData();
   };
 
-  handleUserChange = async (userId: number) => {
-    await this.setState((prevState) => ({
-      // @ts-expect-error ts-migrate(2367) FIXME: This condition will always return 'false' since th... Remove this comment to see the full error message
+  handleUserChange = (userId: string) => {
+    this.setState((prevState) => ({
       user: prevState.users.find((u) => u.id === userId),
     }));
-    this.fetchTimeTrackingData();
   };
 
-  handleDateChange = async (dates: DateRange) => {
-    // to ease the load on the server restrict date range selection to a month
-    if (Math.abs(dates[0].diff(dates[1], "days")) > 31) {
+  handleDateChange = async (antdDates: [antddayjs.Dayjs | null, antddayjs.Dayjs | null]) => {
+    if (antdDates[0] == null || antdDates[1] == null) return;
+    // to ease the load on the server restrict date range selection to three month
+    if (Math.abs(antdDates[0].diff(antdDates[1], "days")) > 3 * 31) {
       Toast.error(messages["timetracking.date_range_too_long"]);
       return;
     }
 
+    const dates: DateRange = [this.getDayJsObject(antdDates[0]), this.getDayJsObject(antdDates[1])];
     // Force an interval of at least one minute.
-    const dateRange = dates[0].isSame(dates[1], "minute")
+    const dateRange: DateRange = dates[0].isSame(dates[1], "minute")
       ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
       : dates;
-    await this.setState({
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'any[]' is not assignable to type 'DateRange'... Remove this comment to see the full error message
+    this.setState({
       dateRange,
     });
-    this.fetchTimeTrackingData();
   };
 
-  getTooltipForEntry(taskId: string, start: Date, end: Date) {
+  getTooltipForEntry(annotationOrTaskLabel: string, start: Date, end: Date) {
     const isSameDay = start.getUTCDate() === end.getUTCDate();
-    // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
-    const duration = end - start;
+    const duration = end.getTime() - start.getTime();
     const durationAsString = formatDurationToMinutesAndSeconds(duration);
-    const dayFormatForMomentJs = "DD MMM, YYYY";
+    const dayFormatForDayJs = "DD MMM, YYYY";
     const tooltip = (
       <div>
         <div className="highlighted">
-          Task ID: {taskId}
+          {annotationOrTaskLabel}
           <div className="striped-border" />
         </div>
 
@@ -210,11 +275,11 @@ class TimeLineView extends React.PureComponent<Props, State> {
               <td className="highlighted">Date:</td>
               <td>
                 {isSameDay ? (
-                  <FormattedDate timestamp={start} format={dayFormatForMomentJs} />
+                  <FormattedDate timestamp={start} format={dayFormatForDayJs} />
                 ) : (
                   <React.Fragment>
-                    <FormattedDate timestamp={start} format={dayFormatForMomentJs} /> –{" "}
-                    <FormattedDate timestamp={end} format={dayFormatForMomentJs} />
+                    <FormattedDate timestamp={start} format={dayFormatForDayJs} /> –{" "}
+                    <FormattedDate timestamp={end} format={dayFormatForDayJs} />
                   </React.Fragment>
                 )}
               </td>
@@ -236,6 +301,10 @@ class TimeLineView extends React.PureComponent<Props, State> {
     );
     return ReactDOMServer.renderToStaticMarkup(tooltip);
   }
+
+  getDayJsObject = (antdDate: antddayjs.Dayjs) => {
+    return dayjs(antdDate.valueOf());
+  };
 
   render() {
     const columns: Array<ColumnDefinition> = [
@@ -270,15 +339,17 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const timeTrackingRowTotal: Array<RowContent> = []; // show all times spans in a single row
 
     const totalSumColumnLabel = "Sum Tracking Time";
-    this.state.timeTrackingData.forEach((datum: APITimeTracking) => {
-      const duration = moment.duration(datum.time).asMilliseconds();
+    for (const datum of this.state.timeTrackingData) {
+      const duration = dayjs.duration(datum.time).asMilliseconds();
       const start = new Date(datum.timestamp);
       const end = new Date(datum.timestamp + duration);
-      const individualTooltipAsString = this.getTooltipForEntry(datum.task_id, start, end);
+      const tooltipTitle =
+        datum.task_id != null ? `Task: ${datum.task_id}` : `Annotation: ${datum.annotation}`;
+      const individualTooltipAsString = this.getTooltipForEntry(tooltipTitle, start, end);
       const totalTooltipAsString = this.getTooltipForEntry(totalSumColumnLabel, start, end);
-      timeTrackingRowGrouped.push([datum.task_id, "", individualTooltipAsString, start, end]);
+      timeTrackingRowGrouped.push([tooltipTitle, "", individualTooltipAsString, start, end]);
       timeTrackingRowTotal.push([totalSumColumnLabel, "", totalTooltipAsString, start, end]);
-    });
+    }
     const rows = timeTrackingRowTotal.concat(timeTrackingRowGrouped);
     const formItemLayout = {
       labelCol: {
@@ -295,6 +366,12 @@ class TimeLineView extends React.PureComponent<Props, State> {
     const timeAxisFormat = displayInDays ? dayFormat : hourFormat;
     const { firstName, lastName, email } = this.props.activeUser;
     const isAdminOrTeamManger = isUserAdminOrTeamManager(this.props.activeUser);
+
+    const listStyle = {
+      display: "inline-block",
+      width: 300,
+    };
+
     return (
       <div className="container">
         <h3>Time Tracking</h3>
@@ -312,13 +389,14 @@ class TimeLineView extends React.PureComponent<Props, State> {
                       width: "100%",
                     }}
                     onChange={this.handleUserChange}
-                    notFoundContent={this.state.isFetchingUsers ? <Spin size="small" /> : "No Data"}
+                    loading={this.state.isFetchingUsers}
                     options={this.state.users
                       .filter((u) => u.isActive)
                       .map((user: APIUser) => ({
                         value: user.id,
                         label: `${user.lastName}, ${user.firstName} (${user.email})`,
                       }))}
+                    value={this.state.user?.id}
                   />
                 ) : (
                   <table
@@ -360,30 +438,50 @@ class TimeLineView extends React.PureComponent<Props, State> {
                     width: "100%",
                   }}
                   value={dateRange}
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type '(dates: DateRange) => Promise<void>' is not ... Remove this comment to see the full error message
                   onChange={this.handleDateChange}
+                />
+              </FormItem>
+              <FormItem {...formItemLayout} label="Type / Project">
+                <ProjectAndAnnotationTypeDropdown
+                  selectedProjectIds={this.state.selectedProjectIds}
+                  setSelectedProjectIds={(selectedProjectIds: string[]) =>
+                    this.setState({ selectedProjectIds })
+                  }
+                  setSelectedAnnotationType={(annotationType: AnnotationTypeFilterEnum) =>
+                    this.setState({ annotationType })
+                  }
+                  selectedAnnotationType={this.state.annotationType}
                 />
               </FormItem>
             </Col>
             <Col span={12}>
               <Row>
-                <Col span={8}>
+                <Col span={24}>
                   <ul>
-                    <li style={paddingBottom}>Total Time:</li>
-                    <li style={paddingBottom}>Number of Tasks:</li>
-                    <li>Average Time per Task:</li>
-                  </ul>
-                </Col>
-                <Col span={16}>
-                  <ul>
-                    <li>{formatMilliseconds(this.state.stats.totalTime)}</li>
-                    <li style={paddingBottom}>{this.state.stats.numberTasks}</li>
-                    <li>{formatMilliseconds(this.state.stats.averageTimePerTask)}</li>
+                    <li style={paddingBottom}>
+                      <div style={listStyle}>
+                        Total Time:
+                        <Space />
+                      </div>
+                      {formatMilliseconds(this.state.stats.totalTime)}
+                    </li>
+                    <li style={paddingBottom}>
+                      <div style={listStyle}>
+                        Number of Tasks / Annotations:
+                        <Space />
+                      </div>
+                      {this.state.stats.numberTasks}
+                    </li>
+                    <li style={paddingBottom}>
+                      <div style={listStyle}>
+                        Average Time per Task / Annotation:
+                        <Space />
+                      </div>
+                      {formatMilliseconds(this.state.stats.averageTimePerTask)}
+                    </li>
                   </ul>
                 </Col>
               </Row>
-              The time tracking information displayed here only includes data acquired when working
-              on &quot;tasks&quot; and not explorative annotations.
             </Col>
           </Row>
         </Card>
@@ -405,8 +503,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
                 rows={rows}
                 timeAxisFormat={timeAxisFormat}
                 dateRange={dateRange}
-                // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-                timeTrackingData={timeTrackingData}
               />
             </div>
           ) : (

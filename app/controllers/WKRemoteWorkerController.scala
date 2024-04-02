@@ -2,12 +2,14 @@ package controllers
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
+import models.job.JobCommand.JobCommand
+
+import javax.inject.Inject
 import models.job._
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.ObjectId
 
-import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService, workerDAO: WorkerDAO)(
@@ -19,7 +21,7 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
     for {
       worker <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
       _ = workerDAO.updateHeartBeat(worker._id)
-      _ <- reserveNextJobs(worker)
+      _ <- reserveNextJobs(worker, pendingIterationCount = 10)
       assignedUnfinishedJobs: List[Job] <- jobDAO.findAllUnfinishedByWorker(worker._id)
       jobsToCancel: List[Job] <- jobDAO.findAllCancellingByWorker(worker._id)
       // make sure that the jobs to run have not already just been cancelled
@@ -31,17 +33,35 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO, jobService: JobService,
     } yield Ok(Json.obj("to_run" -> assignedUnfinishedJs, "to_cancel" -> toCancelJs))
   }
 
-  private def reserveNextJobs(worker: Worker): Fox[Unit] =
+  private def reserveNextJobs(worker: Worker, pendingIterationCount: Int): Fox[Unit] =
     for {
-      unfinishedCount <- jobDAO.countUnfinishedByWorker(worker._id)
-      pendingCount <- jobDAO.countUnassignedPendingForDataStore(worker._dataStore)
-      _ <- if (unfinishedCount >= worker.maxParallelJobs || pendingCount == 0) Fox.successful(())
+      unfinishedHighPriorityCount <- jobDAO.countUnfinishedByWorker(worker._id, JobCommand.highPriorityJobs)
+      unfinishedLowPriorityCount <- jobDAO.countUnfinishedByWorker(worker._id, JobCommand.lowPriorityJobs)
+      pendingHighPriorityCount <- jobDAO.countUnassignedPendingForDataStore(
+        worker._dataStore,
+        JobCommand.highPriorityJobs.intersect(worker.supportedJobCommands))
+      pendingLowPriorityCount <- jobDAO.countUnassignedPendingForDataStore(
+        worker._dataStore,
+        JobCommand.lowPriorityJobs.intersect(worker.supportedJobCommands))
+      mayAssignHighPriorityJob = unfinishedHighPriorityCount < worker.maxParallelHighPriorityJobs && pendingHighPriorityCount > 0
+      mayAssignLowPriorityJob = unfinishedLowPriorityCount < worker.maxParallelLowPriorityJobs && pendingLowPriorityCount > 0
+      currentlyAssignableJobCommands = assignableJobCommands(mayAssignHighPriorityJob, mayAssignLowPriorityJob)
+        .intersect(worker.supportedJobCommands)
+      _ <- if ((!mayAssignHighPriorityJob && !mayAssignLowPriorityJob) || pendingIterationCount == 0)
+        Fox.successful(())
       else {
-        jobDAO.reserveNextJob(worker).flatMap { _ =>
-          reserveNextJobs(worker)
+        jobDAO.reserveNextJob(worker, currentlyAssignableJobCommands).flatMap { _ =>
+          reserveNextJobs(worker, pendingIterationCount - 1)
         }
       }
     } yield ()
+
+  private def assignableJobCommands(mayAssignHighPriorityJob: Boolean,
+                                    mayAssignLowPriorityJob: Boolean): Set[JobCommand] = {
+    val lowPriorityOrEmpty = if (mayAssignLowPriorityJob) JobCommand.lowPriorityJobs else Set()
+    val highPriorityOrEmpty = if (mayAssignHighPriorityJob) JobCommand.highPriorityJobs else Set()
+    lowPriorityOrEmpty ++ highPriorityOrEmpty
+  }
 
   def updateJobStatus(key: String, id: String): Action[JobStatus] = Action.async(validateJson[JobStatus]) {
     implicit request =>

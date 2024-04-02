@@ -1,16 +1,16 @@
 import { Tooltip } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
-import { OrthoViews } from "oxalis/constants";
+import { AltOrOptionKey, OrthoViews } from "oxalis/constants";
 import {
   getVisibleSegmentationLayer,
   hasVisibleUint64Segmentation,
 } from "oxalis/model/accessors/dataset_accessor";
 import { NumberInputPopoverSetting } from "oxalis/view/components/setting_input_views";
 import { useKeyPress } from "libs/react_hooks";
-import { getCurrentResolution } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveResolutionInfo } from "oxalis/model/accessors/flycam_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import {
   setActiveNodeAction,
@@ -28,11 +28,18 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { V3 } from "libs/mjs";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import { OxalisState } from "oxalis/store";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getReadableNameForLayerName,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { useInterval } from "libs/react_helpers";
+import _ from "lodash";
+import { AdditionalCoordinate } from "types/api_flow_types";
+import { EmptyObject } from "types/globals";
+
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
   height: 14,
@@ -43,8 +50,12 @@ const moreLinkStyle = {
   marginRight: "auto",
 };
 
-function getPosString(pos: Vector3) {
-  return V3.floor(pos).join(",");
+function getPosString(
+  pos: Vector3,
+  optAdditionalCoordinates: AdditionalCoordinate[] | null | undefined,
+) {
+  const additionalCoordinates = (optAdditionalCoordinates || []).map((coord) => coord.value);
+  return V3.floor(pos).concat(additionalCoordinates).join(",");
 }
 
 function ZoomShortcut() {
@@ -65,7 +76,7 @@ function ZoomShortcut() {
             top: -2,
           }}
         >
-          Alt
+          {AltOrOptionKey}
         </span>
       </span>{" "}
       +
@@ -148,21 +159,10 @@ function ShortcutsInfo() {
   );
   const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const isShiftPressed = useKeyPress("Shift");
-  const isControlPressed = useKeyPress("Control");
+  const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
-  const adaptedTool = adaptActiveToolToShortcuts(
-    activeTool,
-    isShiftPressed,
-    isControlPressed,
-    isAltPressed,
-  );
-  const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
-    adaptedTool,
-    useLegacyBindings,
-    isShiftPressed,
-    isControlPressed,
-    isAltPressed,
-  );
+  const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+
   const moreShortcutsLink = (
     <a
       target="_blank"
@@ -177,24 +177,40 @@ function ShortcutsInfo() {
   );
 
   if (!isPlaneMode) {
+    let actionDescriptor = null;
+    if (hasSkeleton && isShiftPressed) {
+      actionDescriptor = getToolClassForAnnotationTool("SKELETON").getActionDescriptors(
+        "SKELETON",
+        useLegacyBindings,
+        isShiftPressed,
+        isControlOrMetaPressed,
+        isAltPressed,
+      );
+    }
+
     return (
       <React.Fragment>
-        <span
-          style={{
-            marginRight: "auto",
-            textTransform: "capitalize",
-          }}
-        >
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-left-drag.svg"
-            alt="Mouse Left Drag"
-          />
-          Move
-        </span>
-        <span key="zoom" className="shortcut-info-element">
+        {actionDescriptor != null ? (
+          <LeftClickShortcut actionDescriptor={actionDescriptor} />
+        ) : (
           <span
-            key="zoom-i"
+            className="shortcut-info-element"
+            style={{
+              textTransform: "capitalize",
+            }}
+          >
+            <img
+              className="keyboard-mouse-icon"
+              src="/assets/images/icon-statusbar-mouse-left-drag.svg"
+              alt="Mouse Left Drag"
+            />
+            Move
+          </span>
+        )}
+
+        <span className="shortcut-info-element">
+          <span
+            key="space-forward-i"
             className="keyboard-key-icon-small"
             style={{
               borderColor: lineColor,
@@ -213,10 +229,102 @@ function ShortcutsInfo() {
           </span>{" "}
           Trace forward
         </span>
+        <span className="shortcut-info-element">
+          <span
+            key="ctrl-back-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+            <span
+              style={{
+                position: "relative",
+                top: -2,
+              }}
+            >
+              CTRL
+            </span>
+          </span>{" "}
+          <span
+            key="space-back-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+            <span
+              style={{
+                position: "relative",
+                top: -2,
+              }}
+            >
+              Space
+            </span>
+          </span>{" "}
+          Trace backward
+        </span>
+        <span className="shortcut-info-element">
+          <span
+            key="arrow-left-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+            <span
+              style={{
+                position: "relative",
+                top: -2,
+              }}
+            >
+              ◀
+            </span>
+          </span>{" "}
+          <span
+            key="arrow-right-i"
+            className="keyboard-key-icon-small"
+            style={{
+              borderColor: lineColor,
+              marginTop: -1,
+            }}
+          >
+            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
+            <span
+              style={{
+                position: "relative",
+                top: -2,
+              }}
+            >
+              ▶
+            </span>
+          </span>{" "}
+          Rotation
+        </span>
         {moreShortcutsLink}
       </React.Fragment>
     );
   }
+
+  const adaptedTool = adaptActiveToolToShortcuts(
+    activeTool,
+    isShiftPressed,
+    isControlOrMetaPressed,
+    isAltPressed,
+  );
+  const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
+    adaptedTool,
+    useLegacyBindings,
+    isShiftPressed,
+    isControlOrMetaPressed,
+    isAltPressed,
+  );
 
   return (
     <React.Fragment>
@@ -228,7 +336,7 @@ function ShortcutsInfo() {
           src="/assets/images/icon-statusbar-mouse-wheel.svg"
           alt="Mouse Wheel"
         />
-        {isAltPressed || isControlPressed ? "Zoom in/out" : "Move along 3rd axis"}
+        {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
       </span>
       <span className="shortcut-info-element">
         <img
@@ -265,7 +373,7 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
       <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
         <WarningOutlined
           style={{
-            color: "var(--ant-warning)",
+            color: "var(--ant-color-warning)",
           }}
         />
       </Tooltip>
@@ -276,11 +384,11 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 }
 
 function Infos() {
-  const activeResolution = useSelector((state: OxalisState) => getCurrentResolution(state));
-  const mousePosition = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.mousePosition,
-  );
-  const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const { representativeResolution, activeMagOfEnabledLayers, isActiveResolutionGlobal } =
+    useSelector((state: OxalisState) => getActiveResolutionInfo(state));
+
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const activeVolumeTracing = useSelector((state: OxalisState) =>
     getActiveSegmentationTracing(state),
@@ -302,42 +410,31 @@ function Infos() {
   );
   const dispatch = useDispatch();
 
-  const onChangeActiveCellId = (id: number) => dispatch(setActiveCellAction(id));
-  const onChangeActiveNodeId = (id: number) => dispatch(setActiveNodeAction(id));
-  const onChangeActiveTreeId = (id: number) => dispatch(setActiveTreeAction(id));
-
-  const hasVisibleSegmentation = useSelector(
-    (state: OxalisState) => getVisibleSegmentationLayer(state) != null,
+  const onChangeActiveCellId = useCallback(
+    (id: number) => dispatch(setActiveCellAction(id)),
+    [dispatch],
   );
+  const onChangeActiveNodeId = useCallback(
+    (id: number) => dispatch(setActiveNodeAction(id)),
+    [dispatch],
+  );
+  const onChangeActiveTreeId = useCallback(
+    (id: number) => dispatch(setActiveTreeAction(id)),
+    [dispatch],
+  );
+
   const isUint64SegmentationVisible = useSelector(hasVisibleUint64Segmentation);
-  const globalMousePosition = useSelector((state: OxalisState) => {
-    const { activeViewport } = state.viewModeData.plane;
 
-    if (mousePosition && activeViewport !== OrthoViews.TDView) {
-      const [x, y] = mousePosition;
-      return calculateGlobalPos(state, {
-        x,
-        y,
-      });
-    }
-
-    return undefined;
-  });
   return (
     <React.Fragment>
-      {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
-      {isPlaneMode ? (
-        <span className="info-element">
-          Pos [{globalMousePosition ? getPosString(globalMousePosition) : "-,-,-"}]
-        </span>
-      ) : null}
+      <SegmentAndMousePosition />
       <span className="info-element">
         <Tooltip
           title={`Downloaded ${formatCountToDataAmountUnit(
             totalDownloadedByteCount,
           )} of Image Data (after decompression)`}
         >
-          <DownloadOutlined />
+          <DownloadOutlined className="icon-margin-right" />
           {formatCountToDataAmountUnit(currentBucketDownloadSpeed)}/s
         </Tooltip>
       </span>
@@ -375,19 +472,81 @@ function Infos() {
           />
         </span>
       ) : null}
-      <span className="info-element">
-        <img
-          src="/assets/images/icon-statusbar-downsampling.svg"
-          className="resolution-status-bar-icon"
-          alt="Resolution"
-        />{" "}
-        {activeResolution.join("-")}{" "}
-      </span>
+      {representativeResolution && (
+        <span className="info-element">
+          <img
+            src="/assets/images/icon-statusbar-downsampling.svg"
+            className="resolution-status-bar-icon"
+            alt="Resolution"
+          />{" "}
+          <Tooltip
+            title={
+              <>
+                Rendered magnification per layer:
+                <ul>
+                  {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+                    const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
+
+                    return (
+                      <li key={layerName}>
+                        {readableName}: {mag ? mag.join("-") : "none"}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            }
+          >
+            {representativeResolution.join("-")}
+            {isActiveResolutionGlobal ? "" : "*"}{" "}
+          </Tooltip>
+        </span>
+      )}
     </React.Fragment>
   );
 }
 
-class Statusbar extends React.PureComponent<{}, {}> {
+function SegmentAndMousePosition() {
+  // This component depends on the mouse position which is a fast-changing property.
+  // For the sake of performance, it is isolated as a single component.
+  const hasVisibleSegmentation = useSelector(
+    (state: OxalisState) => getVisibleSegmentationLayer(state) != null,
+  );
+  const mousePosition = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.mousePosition,
+  );
+  const additionalCoordinates = useSelector(
+    (state: OxalisState) => state.flycam.additionalCoordinates,
+  );
+  const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
+  const globalMousePosition = useSelector((state: OxalisState) => {
+    const { activeViewport } = state.viewModeData.plane;
+
+    if (mousePosition && activeViewport !== OrthoViews.TDView) {
+      const [x, y] = mousePosition;
+      return calculateGlobalPos(state, {
+        x,
+        y,
+      });
+    }
+
+    return undefined;
+  });
+  return (
+    <>
+      {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
+      {isPlaneMode ? (
+        <span className="info-element">
+          Pos [
+          {globalMousePosition ? getPosString(globalMousePosition, additionalCoordinates) : "-,-,-"}
+          ]
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+class Statusbar extends React.PureComponent<EmptyObject, EmptyObject> {
   render() {
     return (
       <span className="statusbar">

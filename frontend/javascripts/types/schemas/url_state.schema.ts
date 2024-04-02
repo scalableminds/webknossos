@@ -15,6 +15,15 @@ export default {
         },
       ],
     },
+    "types::AdditionalCoordinates": {
+      type: "array",
+      items: [
+        {
+          type: "object",
+          properties: { name: { type: "string" }, value: { type: "number" } },
+        },
+      ],
+    },
     "types::ViewMode": {
       enum: ["orthogonal", "oblique", "flight", "volume"],
     },
@@ -147,6 +156,9 @@ export default {
             additionalProperties: false,
             required: ["connectomeName"],
           },
+          isDisabled: {
+            type: "boolean",
+          },
         },
         additionalProperties: false,
       },
@@ -156,6 +168,9 @@ export default {
       properties: {
         position: {
           $ref: "#/definitions/types::Vector3",
+        },
+        additionalCoordinates: {
+          $ref: "#/definitions/types::AdditionalCoordinates",
         },
         mode: {
           $ref: "#/definitions/types::ViewMode",

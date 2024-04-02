@@ -1,5 +1,5 @@
 import _ from "lodash";
-import type { Vector3, LabeledVoxelsMap, Vector4 } from "oxalis/constants";
+import type { Vector3, LabeledVoxelsMap, BucketAddress } from "oxalis/constants";
 import constants from "oxalis/constants";
 import { map3 } from "libs/utils";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -68,19 +68,20 @@ function upsampleVoxelMap(
         secondDimBucketOffset < numberOfBucketWithinSourceBucket[dimensionIndices[1]];
         secondDimBucketOffset++
       ) {
-        const currentGoalBucketAddress = [...goalBaseBucketAddress];
+        const currentGoalBucketAddress: Vector3 = [...goalBaseBucketAddress];
         currentGoalBucketAddress[dimensionIndices[0]] += firstDimBucketOffset;
         currentGoalBucketAddress[dimensionIndices[1]] += secondDimBucketOffset;
         // The inner bucket of whose the voxelMap will be created.
         let annotatedAtleastOneVoxel = false;
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '[...number[], number]' is not as... Remove this comment to see the full error message
+
         const currentGoalBucket = dataCube.getOrCreateBucket([
           ...currentGoalBucketAddress,
           targetZoomStep,
+          labeledBucket.getAdditionalCoordinates() || [],
         ]);
 
         if (currentGoalBucket.type === "null") {
-          console.warn(warnAboutCouldNotCreate([...currentGoalBucketAddress, targetZoomStep]));
+          warnAboutCouldNotCreate([...currentGoalBucketAddress, targetZoomStep]);
           continue;
         }
 
@@ -188,7 +189,12 @@ function downsampleVoxelMap(
       (value, index) => Math.floor(value * scaleToGoal[index]),
       labeledBucket.getAddress(),
     );
-    const goalBucket = dataCube.getOrCreateBucket([...goalBucketAddress, targetZoomStep]);
+
+    const goalBucket = dataCube.getOrCreateBucket([
+      ...goalBucketAddress,
+      targetZoomStep,
+      labeledBucket.getAdditionalCoordinates() || [],
+    ]);
 
     if (goalBucket.type === "null") {
       warnAboutCouldNotCreate([...goalBucketAddress, targetZoomStep]);
@@ -249,9 +255,8 @@ function downsampleVoxelMap(
               const secondDimInGoalBucket =
                 Math.floor(secondDim * scaleToGoal[dimensionIndices[1]]) +
                 voxelOffset[dimensionIndices[1]];
-              goalVoxelMap[
-                firstDimInGoalBucket * constants.BUCKET_WIDTH + secondDimInGoalBucket
-              ] = 1;
+              goalVoxelMap[firstDimInGoalBucket * constants.BUCKET_WIDTH + secondDimInGoalBucket] =
+                1;
               foundVoxel = true;
             }
           }
@@ -303,14 +308,14 @@ export default function sampleVoxelMapToResolution(
 export function applyVoxelMap(
   labeledVoxelMap: LabeledVoxelsMap,
   dataCube: DataCube,
-  cellId: number,
+  segmentId: number,
   get3DAddress: (arg0: number, arg1: number, arg2: Vector3 | Float32Array) => void,
   numberOfSlicesToApply: number,
   thirdDimensionIndex: 0 | 1 | 2, // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
   shouldOverwrite: boolean = true,
   overwritableValue: number = 0,
-) {
+): boolean {
   function preprocessBucket(bucket: Bucket) {
     if (bucket.type === "null") {
       return;
@@ -327,6 +332,7 @@ export function applyVoxelMap(
     bucket.endDataMutation();
   }
 
+  let wroteVoxels = false;
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     let bucket: Bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
 
@@ -344,7 +350,7 @@ export function applyVoxelMap(
 
       if (sliceCount > 0 && newThirdDimValue % constants.BUCKET_WIDTH === 0) {
         // The current slice is in the next bucket in the third direction.
-        const nextBucketZoomedAddress: Vector4 = [...labeledBucketZoomedAddress];
+        const nextBucketZoomedAddress: BucketAddress = [...labeledBucketZoomedAddress];
         nextBucketZoomedAddress[thirdDimensionIndex]++;
         postprocessBucket(bucket);
         bucket = dataCube.getOrCreateBucket(nextBucketZoomedAddress);
@@ -355,18 +361,20 @@ export function applyVoxelMap(
         continue;
       }
 
-      bucket.applyVoxelMap(
-        voxelMap,
-        cellId,
-        get3DAddress,
-        sliceCount,
-        thirdDimensionIndex,
-        shouldOverwrite,
-        overwritableValue,
-      );
+      wroteVoxels =
+        bucket.applyVoxelMap(
+          voxelMap,
+          segmentId,
+          get3DAddress,
+          sliceCount,
+          thirdDimensionIndex,
+          shouldOverwrite,
+          overwritableValue,
+        ) || wroteVoxels;
     }
 
     // Post-processing: add to pushQueue and notify about labeling
     postprocessBucket(bucket);
   }
+  return wroteVoxels;
 }

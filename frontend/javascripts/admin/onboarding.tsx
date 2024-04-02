@@ -1,5 +1,5 @@
 import React from "react";
-import { Form, Modal, Input, Button, Row, Col, Steps, Card, AutoComplete } from "antd";
+import { Form, Modal, Input, Button, Row, Col, Steps, Card, AutoComplete, Alert } from "antd";
 import {
   CloudUploadOutlined,
   TeamOutlined,
@@ -12,9 +12,9 @@ import {
   CodeOutlined,
   CustomerServiceOutlined,
   PlusOutlined,
+  UserAddOutlined,
 } from "@ant-design/icons";
-import type { RouteComponentProps } from "react-router-dom";
-import { withRouter } from "react-router-dom";
+import { Link, RouteComponentProps, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import type { APIUser, APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -23,10 +23,11 @@ import LinkButton from "components/link_button";
 import { getDatastores, sendInvitesForOrganization } from "admin/admin_rest_api";
 import DatasetSettingsView from "dashboard/dataset/dataset_settings_view";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
-import RegistrationForm from "admin/auth/registration_form";
+import RegistrationFormGeneric from "admin/auth/registration_form_generic";
 import CreditsFooter from "components/credits_footer";
 import Toast from "libs/toast";
 import features from "features";
+import { maxInludedUsersInBasicPlan } from "admin/organization/pricing_plan_utils";
 
 const { Step } = Steps;
 const FormItem = Form.Item;
@@ -160,23 +161,24 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
     >
       <Card
         bordered={false}
-        bodyStyle={{
-          textAlign: "center",
-          height,
-          width: 350,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-around",
-          boxShadow: "var(--ant-box-shadow-base)",
-          borderRadius: 3,
-          border: 0,
+        styles={{
+          body: {
+            textAlign: "center",
+            height,
+            width: 350,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-around",
+            boxShadow: "var(--ant-box-shadow)",
+            borderRadius: 3,
+            border: 0,
+          },
         }}
       >
         <div
-          className="without-icon-margin"
           style={{
             fontSize: 32,
-            background: "var(--ant-primary)",
+            background: "var(--ant-color-primary)",
             borderRadius: "30px",
             padding: "6px 14px",
             color: "white",
@@ -201,7 +203,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           style={{
             fontSize: 14,
             lineHeight: "18px",
-            color: "var(--ant-text-secondary)",
+            color: "var(--ant-color-text-secondary)",
             margin: 0,
           }}
         >
@@ -219,25 +221,33 @@ type InviteUsersModalState = {
 
 export class InviteUsersModal extends React.Component<
   {
-    visible?: boolean;
+    isOpen?: boolean;
     handleVisibleChange?: (...args: Array<any>) => any;
     destroy?: (...args: Array<any>) => any;
+    organizationName: string;
+    currentUserCount: number;
+    maxUserCountPerOrganization: number;
   },
   InviteUsersModalState
 > {
   state: InviteUsersModalState = {
     inviteesString: "",
   };
-  sendInvite = async () => {
-    const addresses = this.state.inviteesString.split(/[,\s]+/);
-    const incorrectAddresses = addresses.filter((address) => !address.includes("@"));
 
-    if (incorrectAddresses.length > 0) {
-      Toast.error(
-        `Couldn't recognize this email address: ${incorrectAddresses[0]}. No emails were sent.`,
-      );
-      return;
-    }
+  static defaultProps = {
+    currentUserCount: 1,
+    maxUserCountPerOrganization: maxInludedUsersInBasicPlan, // default for Basic Plan
+  };
+
+  extractEmailAddresses(): string[] {
+    return this.state.inviteesString
+      .split(/[,\s]+/)
+      .map((a) => a.trim())
+      .filter((lines) => lines.includes("@"));
+  }
+
+  sendInvite = async () => {
+    const addresses = this.extractEmailAddresses();
 
     await sendInvitesForOrganization(addresses, true);
     Toast.success("An invitation was sent to the provided email addresses.");
@@ -248,11 +258,36 @@ export class InviteUsersModal extends React.Component<
     if (this.props.destroy != null) this.props.destroy();
   };
 
-  getContent() {
+  getContent(isInvitesDisabled: boolean) {
+    const exceedingUserLimitAlert = isInvitesDisabled ? (
+      <Alert
+        showIcon
+        type="warning"
+        description="Inviting more users will exceed your organization's user limit. Consider upgrading your WEBKNOSSOS plan."
+        style={{ marginBottom: 10 }}
+        action={
+          <Link to={`/organizations/${this.props.organizationName}`}>
+            <Button size="small" type="primary">
+              Upgrade Now
+            </Button>
+          </Link>
+        }
+      />
+    ) : null;
+
     return (
       <React.Fragment>
-        Send invites to the following email addresses. Multiple addresses should be separated with a
-        comma, a space or a new line:
+        <p>
+          Send an email to invite your colleagues and collaboration partners to your organization.
+          Share datasets, collaboratively work on annotations, and organize complex analysis
+          projects.
+        </p>
+        <p>Multiple email addresses should be separated with a comma, a space or a new line.</p>
+        <p>
+          Note that new users have limited access permissions by default. Please doublecheck their
+          roles and team assignments after they join your organization.
+        </p>
+        {exceedingUserLimitAlert}
         <Input.TextArea
           spellCheck={false}
           autoSize={{
@@ -271,22 +306,31 @@ export class InviteUsersModal extends React.Component<
   }
 
   render() {
+    const isInvitesDisabled =
+      this.props.currentUserCount + this.extractEmailAddresses().length >
+      this.props.maxUserCountPerOrganization;
+
     return (
       <Modal
-        visible={this.props.visible == null ? true : this.props.visible}
-        title="Invite Users"
+        open={this.props.isOpen == null ? true : this.props.isOpen}
+        title={
+          <>
+            <UserAddOutlined /> Invite Users
+          </>
+        }
         width={600}
         footer={
-          <Button onClick={this.sendInvite} type="primary">
-            Send Invites
+          <Button onClick={this.sendInvite} type="primary" disabled={isInvitesDisabled}>
+            Send Invite Emails
           </Button>
         }
         onCancel={() => {
           if (this.props.handleVisibleChange != null) this.props.handleVisibleChange(false);
           if (this.props.destroy != null) this.props.destroy();
         }}
+        closable
       >
-        {this.getContent()}
+        {this.getContent(isInvitesDisabled)}
       </Modal>
     );
   }
@@ -374,7 +418,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   }
 
   async fetchDatastores() {
-    const datastores = (await getDatastores()).filter((ds) => !ds.isConnector);
+    const datastores = await getDatastores();
     this.setState({
       datastores,
     });
@@ -393,7 +437,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       header="Create or Join an Organization"
       subheader={
         <React.Fragment>
-          Welcome to webKnossos! This guide will help you get started.
+          Welcome to WEBKNOSSOS! This guide will help you get started.
           <br />
           Setup your organization to manage users and datasets. Example names: &ldquo;University of
           Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
@@ -423,7 +467,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       }
       icon={<UserOutlined className="icon-big" />}
     >
-      <RegistrationForm
+      <RegistrationFormGeneric
         hidePrivacyStatement
         organizationNameToCreate={this.state.organizationName}
         onRegistered={() => {
@@ -450,12 +494,12 @@ class OnboardingView extends React.PureComponent<Props, State> {
   renderUploadDatasets = () => (
     <StepHeader
       header="Add the first dataset to your organization."
-      subheader={<React.Fragment>Upload your dataset via drag and drop.</React.Fragment>}
+      subheader="Upload your dataset via drag and drop"
       icon={<FileAddOutlined className="icon-big" />}
     >
       {this.state.isDatasetUploadModalVisible && (
         <Modal
-          visible
+          open
           width="85%"
           footer={null}
           maskClosable={false}
@@ -487,7 +531,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
         </Modal>
       )}
       {this.state.datasetNameToImport != null && (
-        <Modal visible width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
+        <Modal open width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
           <DatasetSettingsView
             isEditingMode={false}
             datasetId={{
@@ -540,7 +584,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           You&apos;ve completed the initial setup.
           <br />
           <a href="/dashboard">Start to explore and annotate your data now</a> or learn more about
-          the features and concepts of webKnossos.
+          the features and concepts of WEBKNOSSOS.
         </React.Fragment>
       }
       icon={<RocketOutlined className="icon-big" />}
@@ -548,12 +592,12 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <Row gutter={50}>
         <FeatureCard header="Data Annotation" icon={<PlayCircleOutlined />}>
           <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
-          <a href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s">watch this video</a>.
+          <a href="https://www.youtube.com/watch?v=iw2C7XB6wP4">watch this video</a>.
         </FeatureCard>
         <FeatureCard header="More Datasets" icon={<CloudUploadOutlined />}>
           <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
           <a href="https://docs.webknossos.org/webknossos/data_formats.html">Learn more</a> about
-          the formats and upload processes webKnossos supports.
+          the formats and upload processes WEBKNOSSOS supports.
         </FeatureCard>
         <FeatureCard header="User & Team Management" icon={<TeamOutlined />}>
           <LinkButton
@@ -563,10 +607,11 @@ class OnboardingView extends React.PureComponent<Props, State> {
               })
             }
           >
-            Invite users
+            Invite users to work collaboratively
           </LinkButton>{" "}
           <InviteUsersModal
-            visible={this.state.isInviteModalVisible}
+            organizationName={this.state.organizationName}
+            isOpen={this.state.isInviteModalVisible}
             handleVisibleChange={(isInviteModalVisible) =>
               this.setState({
                 isInviteModalVisible,
@@ -579,12 +624,14 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <FeatureCard header="Project Management" icon={<PaperClipOutlined />}>
           Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
           accomplish your research goals.{" "}
-          <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn more.
+          <a href="https://www.youtube.com/watch?v=G6AumzpIzR0">Watch this short video</a> to learn
+          more.
         </FeatureCard>
         <FeatureCard header="Scripting" icon={<CodeOutlined />}>
-          Use the <a href="/assets/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
-          <a href="/scripts">scriptable workflows</a>.{" "}
-          <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn more.
+          Use the <a href="https://docs.webknossos.org/webknossos-py">WEBKNOSSOS Python library</a>{" "}
+          to create automated workflows.
+          <a href="https://www.youtube.com/watch?v=JABaGvqg2-g">Watch this short video</a> to learn
+          more.
         </FeatureCard>
         <FeatureCard header="Contact Us" icon={<CustomerServiceOutlined />}>
           <a href="mailto:hello@webknossos.org">Get in touch</a> or{" "}
@@ -598,7 +645,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   );
 
   getAvailableSteps() {
-    if (features().isDemoInstance) {
+    if (features().isWkorgInstance) {
       return [
         {
           title: "Create Organization",

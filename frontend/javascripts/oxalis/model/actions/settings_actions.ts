@@ -5,10 +5,10 @@ import type {
   DatasetLayerConfiguration,
   TemporaryConfiguration,
   Mapping,
-  HistogramDataForAllLayers,
   MappingType,
 } from "oxalis/store";
-import Deferred from "libs/deferred";
+import Deferred from "libs/async/deferred";
+import { APIHistogramData } from "types/api_flow_types";
 
 export type UpdateUserSettingAction = ReturnType<typeof updateUserSettingAction>;
 type UpdateDatasetSettingAction = ReturnType<typeof updateDatasetSettingAction>;
@@ -17,7 +17,8 @@ export type ToggleTemporarySettingAction = ReturnType<typeof toggleTemporarySett
 type UpdateLayerSettingAction = ReturnType<typeof updateLayerSettingAction>;
 export type InitializeSettingsAction = ReturnType<typeof initializeSettingsAction>;
 type SetViewModeAction = ReturnType<typeof setViewModeAction>;
-type SetHistogramDataAction = ReturnType<typeof setHistogramDataAction>;
+type SetHistogramDataForLayerAction = ReturnType<typeof setHistogramDataForLayerAction>;
+export type ReloadHistogramAction = ReturnType<typeof reloadHistogramAction>;
 export type ClipHistogramAction = ReturnType<typeof clipHistogramAction>;
 type SetFlightmodeRecordingAction = ReturnType<typeof setFlightmodeRecordingAction>;
 type SetControlModeAction = ReturnType<typeof setControlModeAction>;
@@ -41,50 +42,57 @@ export type SettingAction =
   | SetMappingAction
   | SetMappingNameAction
   | SetHideUnmappedIdsAction
-  | SetHistogramDataAction
+  | SetHistogramDataForLayerAction
+  | ReloadHistogramAction
   | InitializeGpuSetupAction;
 
-export const updateUserSettingAction = (propertyName: keyof UserConfiguration, value: any) =>
+export const updateUserSettingAction = <Key extends keyof UserConfiguration>(
+  propertyName: Key,
+  value: UserConfiguration[Key],
+) =>
   ({
     type: "UPDATE_USER_SETTING",
     propertyName,
     value,
-  } as const);
+  }) as const;
 
-export const updateDatasetSettingAction = (propertyName: keyof DatasetConfiguration, value: any) =>
+export const updateDatasetSettingAction = <Key extends keyof DatasetConfiguration>(
+  propertyName: Key,
+  value: DatasetConfiguration[Key],
+) =>
   ({
     type: "UPDATE_DATASET_SETTING",
     propertyName,
     value,
-  } as const);
+  }) as const;
 
-export const updateTemporarySettingAction = (
-  propertyName: keyof TemporaryConfiguration,
-  value: any,
+export const updateTemporarySettingAction = <Key extends keyof TemporaryConfiguration>(
+  propertyName: Key,
+  value: TemporaryConfiguration[Key],
 ) =>
   ({
     type: "UPDATE_TEMPORARY_SETTING",
     propertyName,
     value,
-  } as const);
+  }) as const;
 
 export const toggleTemporarySettingAction = (propertyName: keyof TemporaryConfiguration) =>
   ({
     type: "TOGGLE_TEMPORARY_SETTING",
     propertyName,
-  } as const);
+  }) as const;
 
-export const updateLayerSettingAction = (
+export const updateLayerSettingAction = <Key extends keyof DatasetLayerConfiguration>(
   layerName: string,
-  propertyName: keyof DatasetLayerConfiguration,
-  value: any,
+  propertyName: Key,
+  value: DatasetLayerConfiguration[Key],
 ) =>
   ({
     type: "UPDATE_LAYER_SETTING",
     layerName,
     propertyName,
     value,
-  } as const);
+  }) as const;
 
 export const initializeSettingsAction = (
   initialUserSettings: UserConfiguration,
@@ -96,19 +104,23 @@ export const initializeSettingsAction = (
     initialUserSettings,
     initialDatasetSettings,
     originalDatasetSettings,
-  } as const);
+  }) as const;
 
 export const setViewModeAction = (viewMode: ViewMode) =>
   ({
     type: "SET_VIEW_MODE",
     viewMode,
-  } as const);
+  }) as const;
 
-export const setHistogramDataAction = (histogramData: HistogramDataForAllLayers) =>
+export const setHistogramDataForLayerAction = (
+  layerName: string,
+  histogramData: APIHistogramData | null | undefined,
+) =>
   ({
-    type: "SET_HISTOGRAM_DATA",
+    type: "SET_HISTOGRAM_DATA_FOR_LAYER",
+    layerName,
     histogramData,
-  } as const);
+  }) as const;
 
 export const clipHistogramAction = (
   layerName: string,
@@ -120,7 +132,7 @@ export const clipHistogramAction = (
     layerName,
     shouldAdjustClipRange,
     callback,
-  } as const);
+  }) as const;
 
 export const dispatchClipHistogramAsync = async (
   layerName: string,
@@ -134,28 +146,34 @@ export const dispatchClipHistogramAsync = async (
   dispatch(action);
   await readyDeferred.promise();
 };
+
+export const reloadHistogramAction = (layerName: string) =>
+  ({
+    type: "RELOAD_HISTOGRAM",
+    layerName,
+  }) as const;
+
 export const setFlightmodeRecordingAction = (value: boolean) =>
   ({
     type: "SET_FLIGHTMODE_RECORDING",
     value,
-  } as const);
+  }) as const;
 
 export const setControlModeAction = (controlMode: ControlMode) =>
   ({
     type: "SET_CONTROL_MODE",
     controlMode,
-  } as const);
+  }) as const;
 
 export const setMappingEnabledAction = (layerName: string, isMappingEnabled: boolean) =>
   ({
     type: "SET_MAPPING_ENABLED",
     layerName,
     isMappingEnabled,
-  } as const);
+  }) as const;
 
 export type OptionalMappingProperties = {
   mapping?: Mapping;
-  mappingKeys?: Array<number>;
   mappingColors?: Array<number>;
   hideUnmappedIds?: boolean;
   showLoadingIndicator?: boolean;
@@ -164,13 +182,7 @@ export const setMappingAction = (
   layerName: string,
   mappingName: string | null | undefined,
   mappingType: MappingType = "JSON",
-  {
-    mapping,
-    mappingKeys,
-    mappingColors,
-    hideUnmappedIds,
-    showLoadingIndicator,
-  }: OptionalMappingProperties = {},
+  { mapping, mappingColors, hideUnmappedIds, showLoadingIndicator }: OptionalMappingProperties = {},
 ) =>
   ({
     type: "SET_MAPPING",
@@ -178,11 +190,10 @@ export const setMappingAction = (
     mappingName,
     mappingType,
     mapping,
-    mappingKeys,
     mappingColors,
     hideUnmappedIds,
     showLoadingIndicator,
-  } as const);
+  }) as const;
 
 export const setMappingNameAction = (
   layerName: string,
@@ -194,14 +205,14 @@ export const setMappingNameAction = (
     layerName,
     mappingName,
     mappingType,
-  } as const);
+  }) as const;
 
 export const setHideUnmappedIdsAction = (layerName: string, hideUnmappedIds: boolean) =>
   ({
     type: "SET_HIDE_UNMAPPED_IDS",
     hideUnmappedIds,
     layerName,
-  } as const);
+  }) as const;
 
 export const initializeGpuSetupAction = (
   bucketCapacity: number,
@@ -213,4 +224,4 @@ export const initializeGpuSetupAction = (
     bucketCapacity,
     gpuFactor,
     maximumLayerCountToRender,
-  } as const);
+  }) as const;

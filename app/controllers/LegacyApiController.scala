@@ -1,18 +1,21 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
-import com.mohiva.play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import play.silhouette.api.Silhouette
+import play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import models.dataset.DatasetService
+import models.organization.OrganizationDAO
+
 import javax.inject.Inject
 import models.project.ProjectDAO
 import models.task.{TaskDAO, TaskService}
 import models.user.User
-import oxalis.security.WkEnv
 import play.api.http.HttpEntity
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
+import security.WkEnv
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -29,10 +32,22 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     userController: UserController,
                                     projectController: ProjectController,
                                     projectDAO: ProjectDAO,
+                                    organizationDAO: OrganizationDAO,
+                                    datasetService: DatasetService,
                                     taskDAO: TaskDAO,
                                     taskService: TaskService,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
+
+  def assertValidNewNameV5(organizationName: String, datasetName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        organization <- organizationDAO.findOneByName(organizationName)
+        _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
+        _ <- datasetService.assertValidDatasetName(datasetName)
+        _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
+      } yield Ok
+    }
 
   /* to provide v4
    - replace new annotation layers by old tracing ids (changed in v5)
@@ -157,11 +172,11 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   }
 
   def annotationCreateExplorationalV4(organizationName: String,
-                                      dataSetName: String): Action[LegacyCreateExplorationalParameters] =
+                                      datasetName: String): Action[LegacyCreateExplorationalParameters] =
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.createExplorational(organizationName, dataSetName)(
+        result <- annotationController.createExplorational(organizationName, datasetName)(
           request.withBody(replaceCreateExplorationalParameters(request)))
         adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -336,11 +351,11 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     }
 
   def annotationCreateExplorationalV1(organizationName: String,
-                                      dataSetName: String): Action[LegacyCreateExplorationalParameters] =
+                                      datasetName: String): Action[LegacyCreateExplorationalParameters] =
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.createExplorational(organizationName, dataSetName)(
+        result <- annotationController.createExplorational(organizationName, datasetName)(
           request.withBody(replaceCreateExplorationalParameters(request)))
         adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
       } yield adaptedResult
@@ -407,11 +422,10 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def annotationEditV1(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
       logVersioned(request)
-      val oldRequest = request.request
+      val oldRequest = request
       val newRequest =
         if (request.body.as[JsObject].keys.contains("isPublic"))
-          request.copy(
-            request = oldRequest.withBody(Json.toJson(insertVisibilityInJsObject(oldRequest.body.as[JsObject]))))
+          request.withBody(Json.toJson(insertVisibilityInJsObject(oldRequest.body.as[JsObject])))
         else request
 
       for {
@@ -426,18 +440,28 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
       if (request.body.typ == "volume") None
       else
         Some(
-          AnnotationLayerParameters(AnnotationLayerType.Skeleton,
-                                    request.body.fallbackLayerName,
-                                    request.body.resolutionRestrictions,
-                                    name = AnnotationLayer.defaultSkeletonLayerName))
+          AnnotationLayerParameters(
+            AnnotationLayerType.Skeleton,
+            request.body.fallbackLayerName,
+            autoFallbackLayer = false,
+            None,
+            request.body.resolutionRestrictions,
+            name = Some(AnnotationLayer.defaultSkeletonLayerName),
+            None
+          ))
     val volumeParameters =
       if (request.body.typ == "skeleton") None
       else
         Some(
-          AnnotationLayerParameters(AnnotationLayerType.Volume,
-                                    request.body.fallbackLayerName,
-                                    request.body.resolutionRestrictions,
-                                    name = AnnotationLayer.defaultVolumeLayerName))
+          AnnotationLayerParameters(
+            AnnotationLayerType.Volume,
+            request.body.fallbackLayerName,
+            autoFallbackLayer = false,
+            None,
+            request.body.resolutionRestrictions,
+            name = Some(AnnotationLayer.defaultVolumeLayerName),
+            None
+          ))
     List(skeletonParameters, volumeParameters).flatten
   }
 

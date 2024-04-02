@@ -1,15 +1,16 @@
 import React from "react";
 import _ from "lodash";
 import { document } from "libs/window";
-import type { Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import type { ElementClass } from "types/api_flow_types";
 import Toast from "libs/toast";
+import ErrorHandling from "libs/error_handling";
+
 type GpuSpecs = {
   supportedTextureSize: number;
   maxTextureCount: number;
 };
-const lookupTextureCountPerLayer = 1;
+const lookupTextureCount = 1;
 export function getSupportedTextureSpecs(): GpuSpecs {
   // @ts-ignore
   const canvas = document.createElement("canvas");
@@ -26,6 +27,7 @@ export function getSupportedTextureSpecs(): GpuSpecs {
                 "0": 4096,
                 "1": 16,
                 "4": "debugInfo.UNMASKED_RENDERER_WEBGL",
+                "7937": "Radeon R9 200 Series",
               };
               return dummyValues[param];
             }
@@ -65,7 +67,7 @@ export function getSupportedTextureSpecs(): GpuSpecs {
   const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
   const maxTextureImageUnits = gl.getParameter(gl.MAX_TEXTURE_IMAGE_UNITS);
 
-  if (process.env.BABEL_ENV !== "test") {
+  if (!process.env.IS_TESTING) {
     console.log("maxTextureImageUnits", maxTextureImageUnits);
   }
 
@@ -77,13 +79,24 @@ export function getSupportedTextureSpecs(): GpuSpecs {
 
 function guardAgainstMesaLimit(maxSamplers: number, gl: any) {
   // Adapted from here: https://github.com/pixijs/pixi.js/pull/6354/files
-  const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
-  const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
 
-  // Mesa drivers may crash with more than 16 samplers and Firefox
-  // will actively refuse to create shaders with more than 16 samplers.
-  if (renderer.slice(0, 4).toUpperCase() === "MESA") {
-    maxSamplers = Math.min(16, maxSamplers);
+  try {
+    let renderer = gl.getParameter(gl.RENDERER);
+    if (renderer == null) {
+      const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+
+      if (debugInfo != null) {
+        renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+      }
+    }
+
+    // Mesa drivers may crash with more than 16 samplers and Firefox
+    // will actively refuse to create shaders with more than 16 samplers.
+    if (renderer && renderer.slice(0, 4).toUpperCase() === "MESA") {
+      maxSamplers = Math.min(16, maxSamplers);
+    }
+  } catch (exception) {
+    ErrorHandling.notify(exception as Error, {}, "warning");
   }
 
   return maxSamplers;
@@ -92,7 +105,7 @@ function guardAgainstMesaLimit(maxSamplers: number, gl: any) {
 export function validateMinimumRequirements(specs: GpuSpecs): void {
   if (specs.supportedTextureSize < 4096 || specs.maxTextureCount < 8) {
     const msg =
-      "Your GPU is not able to render datasets in webKnossos. The graphic card should support at least a texture size of 4096 and 8 textures.";
+      "Your GPU is not able to render datasets in WEBKNOSSOS. The graphic card should support at least a texture size of 4096 and 8 textures.";
     Toast.error(msg, {
       sticky: true,
     });
@@ -156,6 +169,7 @@ function getDataTextureCount(
   );
 }
 
+// Only exported for testing
 export function calculateTextureSizeAndCountForLayer(
   specs: GpuSpecs,
   byteCount: number,
@@ -166,7 +180,8 @@ export function calculateTextureSizeAndCountForLayer(
   const packingDegree = getPackingDegree(byteCount, elementClass);
 
   // Try to half the texture size as long as it does not require more
-  // data textures
+  // data textures. This ensures that we maximize the number of simultaneously
+  // renderable layers.
   while (
     getDataTextureCount(textureSize / 2, packingDegree, requiredBucketCapacity) <=
     getDataTextureCount(textureSize, packingDegree, requiredBucketCapacity)
@@ -185,6 +200,7 @@ export function calculateTextureSizeAndCountForLayer(
 function buildTextureInformationMap<
   Layer extends {
     elementClass: ElementClass;
+    category: "color" | "segmentation";
   },
 >(
   layers: Array<Layer>,
@@ -223,6 +239,7 @@ function getSmallestCommonBucketCapacity<
 function getRenderSupportedLayerCount<
   Layer extends {
     elementClass: ElementClass;
+    category: "color" | "segmentation";
   },
 >(
   specs: GpuSpecs,
@@ -244,11 +261,18 @@ function getRenderSupportedLayerCount<
   // and two for mappings.
   const textureCountForSegmentation = hasSegmentation ? 3 : 0;
   const maximumLayerCountToRender = Math.floor(
-    (specs.maxTextureCount - textureCountForSegmentation) /
-      (lookupTextureCountPerLayer + maximumTextureCountForLayer),
+    (specs.maxTextureCount - textureCountForSegmentation - lookupTextureCount) /
+      maximumTextureCountForLayer,
   );
+
+  // Without any GPU restrictions, WK would be able to render all color layers
+  // plus one segmentation layer. Use that as the upper layer count limit to avoid
+  // compiling too complex shaders.
+  const maximumLayerCount =
+    Array.from(textureInformationPerLayer.keys()).filter((l) => l.category === "color").length +
+    (hasSegmentation ? 1 : 0);
   return {
-    maximumLayerCountToRender,
+    maximumLayerCountToRender: Math.min(maximumLayerCountToRender, maximumLayerCount),
     maximumTextureCountForLayer,
   };
 }
@@ -256,6 +280,7 @@ function getRenderSupportedLayerCount<
 export function computeDataTexturesSetup<
   Layer extends {
     elementClass: ElementClass;
+    category: "color" | "segmentation";
   },
 >(
   specs: GpuSpecs,
@@ -263,7 +288,7 @@ export function computeDataTexturesSetup<
   getByteCountForLayer: (arg0: Layer) => number,
   hasSegmentation: boolean,
   requiredBucketCapacity: number,
-): any {
+) {
   const textureInformationPerLayer = buildTextureInformationMap(
     layers,
     getByteCountForLayer,
@@ -277,7 +302,7 @@ export function computeDataTexturesSetup<
     hasSegmentation,
   );
 
-  if (process.env.BABEL_ENV !== "test") {
+  if (!process.env.IS_TESTING) {
     console.log("maximumLayerCountToRender", maximumLayerCountToRender);
   }
 
@@ -288,41 +313,13 @@ export function computeDataTexturesSetup<
     maximumTextureCountForLayer,
   };
 }
+
 export function getGpuFactorsWithLabels() {
   return [
     ["12", "Very High"],
     ["6", "High"],
-    ["3", "Medium"],
-    ["1", "Low"],
+    ["4", "Medium"],
+    ["2", "Low"],
+    ["1", "Very Low"],
   ];
-}
-export function getLookupBufferSize(gpuMultiplier: number): number {
-  switch (gpuMultiplier) {
-    case 1:
-    case 3:
-      return 256;
-
-    case 6:
-      return 512;
-
-    case 12:
-      return 1024;
-
-    default:
-      return 512;
-  }
-}
-// A look up buffer with the size [key]**2 is able to represent
-// a volume with the dimensions of [value].
-// The values were chosen so that value[0]*value[1]*value[2] / key**2
-// approaches ~ 1 (i.e., the utilization ratio of the buffer is close to
-// 100%).
-const addressSpaceDimensionsTable: Record<string, Vector3> = {
-  "256": [36, 36, 50],
-  "512": [61, 61, 70],
-  "1024": [96, 96, 112],
-};
-export function getAddressSpaceDimensions(gpuMultiplier: number): Vector3 {
-  const lookupBufferSize = getLookupBufferSize(gpuMultiplier);
-  return addressSpaceDimensionsTable[lookupBufferSize] || addressSpaceDimensionsTable["256"];
 }

@@ -38,9 +38,9 @@ case class UpdateActionGroup[T <: GeneratedMessage](
     actions: List[UpdateAction[T]],
     stats: Option[JsObject],
     info: Option[String],
-    transactionId: Option[String],
-    transactionGroupCount: Option[Int],
-    transactionGroupIndex: Option[Int]
+    transactionId: String,
+    transactionGroupCount: Int,
+    transactionGroupIndex: Int
 ) {
   def significantChangesCount: Int = actions.count(!_.isViewOnlyChange)
   def viewChangesCount: Int = actions.count(_.isViewOnlyChange)
@@ -58,9 +58,9 @@ object UpdateActionGroup {
         actions <- json.validate((JsPath \ "actions").read[List[UpdateAction[T]]])
         stats <- json.validate((JsPath \ "stats").readNullable[JsObject])
         info <- json.validate((JsPath \ "info").readNullable[String])
-        transactionId <- json.validate((JsPath \ "transactionId").readNullable[String])
-        transactionGroupCount <- json.validate((JsPath \ "transactionGroupCount").readNullable[Int])
-        transactionGroupIndex <- json.validate((JsPath \ "transactionGroupIndex").readNullable[Int])
+        transactionId <- json.validate((JsPath \ "transactionId").read[String])
+        transactionGroupCount <- json.validate((JsPath \ "transactionGroupCount").read[Int])
+        transactionGroupIndex <- json.validate((JsPath \ "transactionGroupIndex").read[Int])
       } yield {
         UpdateActionGroup[T](version,
                              timestamp,

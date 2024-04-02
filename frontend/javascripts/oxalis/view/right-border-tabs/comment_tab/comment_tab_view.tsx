@@ -1,6 +1,6 @@
 import { AutoSizer, List } from "react-virtualized";
 import type { Dispatch } from "redux";
-import { Input, Menu, Dropdown, Tooltip } from "antd";
+import { Dropdown, Tooltip, Space } from "antd";
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
@@ -36,15 +36,17 @@ import Store from "oxalis/store";
 import TreeWithComments from "oxalis/view/right-border-tabs/comment_tab/tree_with_comments";
 import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
-const InputGroup = Input.Group;
+import type { MenuProps } from "rc-menu";
+
 const treeTypeHint = [] as Array<Tree>;
 const commentTypeHint = [] as Array<CommentType>;
 const commentTabId = "commentTabId";
-const enum SortByEnum {
+enum SortByEnum {
   NAME = "NAME",
   ID = "ID",
   NATURAL = "NATURAL",
 }
+
 type SortByEnumType = keyof typeof SortByEnum;
 type SortOptions = {
   sortBy: SortByEnumType;
@@ -88,7 +90,7 @@ type CommentTabState = {
   isSortedAscending: boolean;
   sortBy: SortByEnumType;
   collapsedTreeIds: Record<number, boolean>;
-  isMarkdownModalVisible: boolean;
+  isMarkdownModalOpen: boolean;
 };
 const RELEVANT_ACTIONS_FOR_COMMENTS = [
   "updateTree",
@@ -142,7 +144,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     isSortedAscending: true,
     sortBy: SortByEnum.NAME,
     collapsedTreeIds: {},
-    isMarkdownModalVisible: false,
+    isMarkdownModalOpen: false,
   };
 
   componentDidMount() {
@@ -241,7 +243,10 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     this.nextComment(false);
   };
 
-  handleChangeInput = (evt: React.SyntheticEvent, insertLineBreaks: boolean = false) => {
+  handleChangeInput = (
+    evt: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    insertLineBreaks: boolean = false,
+  ) => {
     // @ts-ignore
     const commentText = evt.target.value;
 
@@ -311,7 +316,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
 
   setMarkdownModalVisibility = (visible: boolean) => {
     this.setState({
-      isMarkdownModalVisible: visible,
+      isMarkdownModalOpen: visible,
     });
   };
 
@@ -328,7 +333,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
         <MarkdownModal
           key={comment.nodeId}
           source={comment.content}
-          visible={this.state.isMarkdownModalVisible}
+          isOpen={this.state.isMarkdownModalOpen}
           onChange={this.handleChangeInput}
           onOk={onOk}
           label="Comment"
@@ -344,20 +349,27 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     return <i className={iconClass} />;
   }
 
-  renderSortDropdown() {
-    return (
-      <Menu selectedKeys={[this.state.sortBy]} onClick={this.handleChangeSorting}>
-        <Menu.Item key={SortByEnum.NAME}>by name</Menu.Item>
-        <Menu.Item key={SortByEnum.ID}>by creation time</Menu.Item>
-        <Menu.Item key={SortByEnum.NATURAL}>
-          by name (natural sort)
-          <Tooltip title={messages["tracing.natural_sorting"]} placement="bottomLeft">
-            {" "}
-            <InfoCircleOutlined />
-          </Tooltip>
-        </Menu.Item>
-      </Menu>
-    );
+  getSortDropdown(): MenuProps {
+    return {
+      selectedKeys: [this.state.sortBy],
+      onClick: this.handleChangeSorting,
+      items: [
+        { key: SortByEnum.NAME, label: "by name" },
+        { key: SortByEnum.ID, label: "by creation time" },
+        {
+          key: SortByEnum.NATURAL,
+          label: (
+            <>
+              by name (natural sort)
+              <Tooltip title={messages["tracing.natural_sorting"]} placement="bottomLeft">
+                {" "}
+                <InfoCircleOutlined />
+              </Tooltip>
+            </>
+          ),
+        },
+      ],
+    };
   }
 
   getData(): Array<Tree | CommentType> {
@@ -420,7 +432,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       >
         <DomVisibilityObserver targetId={commentTabId}>
           {(isVisibleInDom) => {
-            if (!isVisibleInDom && !this.state.isMarkdownModalVisible) {
+            if (!isVisibleInDom && !this.state.isMarkdownModalOpen) {
               return null;
             }
 
@@ -434,7 +446,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
             return (
               <React.Fragment>
                 {this.renderMarkdownModal()}
-                <InputGroup compact className="compact-items compact-icons">
+                <Space.Compact className="compact-items compact-icons">
                   <AdvancedSearchPopover
                     onSelect={(comment) => this.props.setActiveNode(comment.nodeId)}
                     data={_.flatMap(this.props.skeletonTracing.trees, (tree) => tree.comments)}
@@ -456,8 +468,12 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                         ? undefined
                         : messages["tracing.read_only_mode_notification"]
                     }
-                    onChange={(evt) => this.handleChangeInput(evt, true)}
-                    onPressEnter={(evt) => (evt.target as HTMLElement).blur()}
+                    onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
+                      this.handleChangeInput(evt, true)
+                    }
+                    onPressEnter={(evt: React.KeyboardEvent<HTMLInputElement>) =>
+                      (evt.target as HTMLElement).blur()
+                    }
                     placeholder="Add comment"
                     style={{
                       width: "50%",
@@ -479,7 +495,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     onClick={() => this.nextComment()}
                     icon={<ArrowRightOutlined />}
                   />
-                  <Dropdown overlay={this.renderSortDropdown()} trigger={["click"]}>
+                  <Dropdown menu={this.getSortDropdown()} trigger={["click"]}>
                     <ButtonComponent title="Sort" onClick={this.toggleSortingDirection}>
                       {this.renderSortIcon()}
                     </ButtonComponent>
@@ -489,7 +505,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     icon={<ShrinkOutlined />}
                     title="Collapse or expand groups"
                   />
-                </InputGroup>
+                </Space.Compact>
                 <div
                   style={{
                     flex: "1 1 auto",

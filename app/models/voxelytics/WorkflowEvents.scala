@@ -1,9 +1,8 @@
 package models.voxelytics
 
+import com.scalableminds.util.time.Instant
 import models.voxelytics.VoxelyticsRunState.VoxelyticsRunState
 import play.api.libs.json._
-
-import java.time.Instant
 
 trait WorkflowEvent {}
 

@@ -1,11 +1,11 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.util.Base64
-
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
+import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.VolumeUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, UpdateAction}
 import play.api.libs.json._
@@ -18,6 +18,9 @@ trait VolumeUpdateActionHelper {
     tracing.segments.map((segment: Segment) =>
       if (segment.segmentId == segmentId) transformSegment(segment) else segment)
 
+  protected def convertSegmentGroup(aSegmentGroup: UpdateActionSegmentGroup): SegmentGroup =
+    SegmentGroup(aSegmentGroup.name, aSegmentGroup.groupId, aSegmentGroup.children.map(convertSegmentGroup))
+
 }
 
 trait ApplyableVolumeAction extends VolumeUpdateAction
@@ -28,7 +31,8 @@ case class UpdateBucketVolumeAction(position: Vec3Int,
                                     base64Data: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None)
+                                    info: Option[String] = None,
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
     extends VolumeUpdateAction {
   lazy val data: Array[Byte] = Base64.getDecoder.decode(base64Data)
 
@@ -52,7 +56,8 @@ case class UpdateTracingVolumeAction(
     zoomLevel: Double,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[String] = None,
-    info: Option[String] = None
+    info: Option[String] = None,
+    editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
 ) extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
@@ -186,6 +191,26 @@ object ImportVolumeData {
   implicit val jsonFormat: OFormat[ImportVolumeData] = Json.format[ImportVolumeData]
 }
 
+case class AddSegmentIndex(actionTimestamp: Option[Long] = None,
+                           actionAuthorId: Option[String] = None,
+                           info: Option[String] = None)
+    extends ApplyableVolumeAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+
+  override def transformToCompact: CompactVolumeUpdateAction =
+    CompactVolumeUpdateAction("addSegmentIndex", actionTimestamp, actionAuthorId, Json.obj())
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.copy(hasSegmentIndex = Some(true))
+}
+
+object AddSegmentIndex {
+  implicit val jsonFormat: OFormat[AddSegmentIndex] = Json.format[AddSegmentIndex]
+}
+
 case class UpdateTdCamera(actionTimestamp: Option[Long] = None,
                           actionAuthorId: Option[String] = None,
                           info: Option[String] = None)
@@ -210,9 +235,11 @@ case class CreateSegmentVolumeAction(id: Long,
                                      anchorPosition: Option[Vec3Int],
                                      name: Option[String],
                                      color: Option[com.scalableminds.util.image.Color],
+                                     groupId: Option[Int],
                                      creationTime: Option[Long],
                                      actionTimestamp: Option[Long] = None,
-                                     actionAuthorId: Option[String] = None)
+                                     actionAuthorId: Option[String] = None,
+                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
     extends ApplyableVolumeAction
     with ProtoGeometryImplicits {
 
@@ -225,7 +252,14 @@ case class CreateSegmentVolumeAction(id: Long,
     CompactVolumeUpdateAction("createSegment", actionTimestamp, actionAuthorId, Json.obj("id" -> id))
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing = {
-    val newSegment = Segment(id, anchorPosition.map(vec3IntToProto), name, creationTime, colorOptToProto(color))
+    val newSegment =
+      Segment(id,
+              anchorPosition.map(vec3IntToProto),
+              name,
+              creationTime,
+              colorOptToProto(color),
+              groupId,
+              AdditionalCoordinate.toProto(additionalCoordinates))
     tracing.addSegments(newSegment)
   }
 }
@@ -239,8 +273,10 @@ case class UpdateSegmentVolumeAction(id: Long,
                                      name: Option[String],
                                      color: Option[com.scalableminds.util.image.Color],
                                      creationTime: Option[Long],
+                                     groupId: Option[Int],
                                      actionTimestamp: Option[Long] = None,
-                                     actionAuthorId: Option[String] = None)
+                                     actionAuthorId: Option[String] = None,
+                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
     extends ApplyableVolumeAction
     with ProtoGeometryImplicits
     with VolumeUpdateActionHelper {
@@ -259,7 +295,9 @@ case class UpdateSegmentVolumeAction(id: Long,
         anchorPosition = anchorPosition.map(vec3IntToProto),
         name = name,
         creationTime = creationTime,
-        color = colorOptToProto(color)
+        color = colorOptToProto(color),
+        groupId = groupId,
+        anchorPositionAdditionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
       )
     tracing.withSegments(mapSegments(tracing, id, segmentTransform))
   }
@@ -291,8 +329,26 @@ object DeleteSegmentVolumeAction {
   implicit val jsonFormat: OFormat[DeleteSegmentVolumeAction] = Json.format[DeleteSegmentVolumeAction]
 }
 
+case class DeleteSegmentDataVolumeAction(id: Long,
+                                         actionTimestamp: Option[Long] = None,
+                                         actionAuthorId: Option[String] = None)
+    extends VolumeUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+
+  override def transformToCompact: CompactVolumeUpdateAction =
+    CompactVolumeUpdateAction("deleteSegmentData", actionTimestamp, actionAuthorId, Json.obj())
+}
+
+object DeleteSegmentDataVolumeAction {
+  implicit val jsonFormat: OFormat[DeleteSegmentDataVolumeAction] = Json.format[DeleteSegmentDataVolumeAction]
+}
+
 case class UpdateMappingNameAction(mappingName: Option[String],
                                    isEditable: Option[Boolean],
+                                   isLocked: Option[Boolean],
                                    actionTimestamp: Option[Long],
                                    actionAuthorId: Option[String] = None)
     extends ApplyableVolumeAction {
@@ -306,7 +362,11 @@ case class UpdateMappingNameAction(mappingName: Option[String],
                               Json.obj("mappingName" -> mappingName))
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.copy(mappingName = mappingName, mappingIsEditable = Some(isEditable.getOrElse(false)))
+    if (tracing.mappingIsLocked.getOrElse(false)) tracing // cannot change mapping name if it is locked
+    else
+      tracing.copy(mappingName = mappingName,
+                   mappingIsEditable = Some(isEditable.getOrElse(false)),
+                   mappingIsLocked = Some(isLocked.getOrElse(false)))
 }
 
 object UpdateMappingNameAction {
@@ -334,6 +394,26 @@ object CompactVolumeUpdateAction {
   }
 }
 
+case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegmentGroup],
+                                           actionTimestamp: Option[Long] = None,
+                                           actionAuthorId: Option[String] = None,
+                                           info: Option[String] = None)
+    extends ApplyableVolumeAction
+    with VolumeUpdateActionHelper {
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.withSegmentGroups(segmentGroups.map(convertSegmentGroup))
+
+  override def addTimestamp(timestamp: Long): UpdateAction[VolumeTracing] =
+    this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): UpdateAction[VolumeTracing] =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction[VolumeTracing] = this.copy(info = info)
+}
+
+object UpdateSegmentGroupsVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateSegmentGroupsVolumeAction] = Json.format[UpdateSegmentGroupsVolumeAction]
+}
+
 object VolumeUpdateAction {
 
   implicit object volumeUpdateActionFormat extends Format[VolumeUpdateAction] {
@@ -349,7 +429,9 @@ object VolumeUpdateAction {
         case "updateTdCamera"                  => (json \ "value").validate[UpdateTdCamera]
         case "createSegment"                   => (json \ "value").validate[CreateSegmentVolumeAction]
         case "updateSegment"                   => (json \ "value").validate[UpdateSegmentVolumeAction]
+        case "updateSegmentGroups"             => (json \ "value").validate[UpdateSegmentGroupsVolumeAction]
         case "deleteSegment"                   => (json \ "value").validate[DeleteSegmentVolumeAction]
+        case "deleteSegmentData"               => (json \ "value").validate[DeleteSegmentDataVolumeAction]
         case "updateMappingName"               => (json \ "value").validate[UpdateMappingNameAction]
         case unknownAction: String             => JsError(s"Invalid update action s'$unknownAction'")
       }
@@ -378,6 +460,8 @@ object VolumeUpdateAction {
         Json.obj("name" -> "updateSegment", "value" -> Json.toJson(s)(UpdateSegmentVolumeAction.jsonFormat))
       case s: DeleteSegmentVolumeAction =>
         Json.obj("name" -> "deleteSegment", "value" -> Json.toJson(s)(DeleteSegmentVolumeAction.jsonFormat))
+      case s: UpdateSegmentGroupsVolumeAction =>
+        Json.obj("name" -> "updateSegmentGroups", "value" -> Json.toJson(s)(UpdateSegmentGroupsVolumeAction.jsonFormat))
       case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
     }
   }

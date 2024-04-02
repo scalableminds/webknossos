@@ -1,7 +1,9 @@
 import Maybe from "data.maybe";
 import { updateKey } from "oxalis/model/helpers/deep_update";
 import type {
+  AdditionalAxis,
   APIAnnotation,
+  ServerAdditionalAxis,
   ServerBoundingBox,
   UserBoundingBoxFromServer,
 } from "types/api_flow_types";
@@ -12,16 +14,15 @@ import type {
   UserBoundingBoxToServer,
   OxalisState,
 } from "oxalis/store";
-import type { Boundary } from "oxalis/model/accessors/dataset_accessor";
 import { AnnotationToolEnum } from "oxalis/constants";
 import type { BoundingBoxType, AnnotationTool } from "oxalis/constants";
-import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import {
   isVolumeTool,
   isVolumeAnnotationDisallowedForZoom,
 } from "oxalis/model/accessors/volumetracing_accessor";
+
 export function convertServerBoundingBoxToBoundingBox(
   boundingBox: ServerBoundingBox,
 ): BoundingBoxType {
@@ -58,7 +59,6 @@ export function convertUserBoundingBoxesFromServerToFrontend(
 export function convertUserBoundingBoxesFromFrontendToServer(
   boundingBoxes: Array<UserBoundingBox>,
 ): Array<UserBoundingBoxToServer> {
-  // The exact spreading is needed for flow to grasp that the conversion is correct.
   return boundingBoxes.map((bb) => {
     const { boundingBox, ...rest } = bb;
     return { ...rest, boundingBox: Utils.computeBoundingBoxObjectFromBoundingBox(boundingBox) };
@@ -74,15 +74,7 @@ export function convertFrontendBoundingBoxToServer(
     depth: boundingBox.max[2] - boundingBox.min[2],
   };
 }
-export function convertBoundariesToBoundingBox(boundary: Boundary): BoundingBoxObject {
-  const [width, height, depth] = V3.sub(boundary.upperBoundary, boundary.lowerBoundary);
-  return {
-    width,
-    height,
-    depth,
-    topLeft: boundary.lowerBoundary,
-  };
-}
+
 // Currently unused.
 export function convertPointToVecInBoundingBox(boundingBox: ServerBoundingBox): BoundingBoxObject {
   return {
@@ -101,7 +93,6 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     name,
     typ: annotationType,
     tracingStore,
-    meshes,
     owner,
     contributors,
     othersMayEdit,
@@ -117,13 +108,23 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     name,
     annotationType,
     tracingStore,
-    meshes,
     owner,
     contributors,
     othersMayEdit,
     annotationLayers,
+    blockedByUser: null,
   };
 }
+
+export function convertServerAdditionalAxesToFrontEnd(
+  additionalAxes: ServerAdditionalAxis[],
+): AdditionalAxis[] {
+  return additionalAxes.map((coords) => ({
+    ...coords,
+    bounds: [coords.bounds.x, coords.bounds.y],
+  }));
+}
+
 export function getNextTool(state: OxalisState): AnnotationTool | null {
   const disabledToolInfo = getDisabledInfoForTools(state);
   const tools = Object.keys(AnnotationToolEnum) as AnnotationTool[];

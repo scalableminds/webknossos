@@ -1,8 +1,9 @@
 package utils
 
+import com.scalableminds.util.tools.TextUtils.parseCommaSeparated
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
+import reactivemongo.api.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext
 
@@ -11,9 +12,11 @@ case class ObjectId(id: String) {
 }
 
 object ObjectId extends FoxImplicits {
-  def generate: ObjectId = fromBsonId(BSONObjectID.generate)
+  def generate: ObjectId = fromBsonId(BSONObjectID.generate())
   def fromString(input: String)(implicit ec: ExecutionContext): Fox[ObjectId] =
     fromStringSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
+  def fromCommaSeparated(idsStrOpt: Option[String])(implicit ec: ExecutionContext): Fox[List[ObjectId]] =
+    parseCommaSeparated(idsStrOpt)(fromString)
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   private def fromStringSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
   def dummyId: ObjectId = ObjectId("dummyObjectId")

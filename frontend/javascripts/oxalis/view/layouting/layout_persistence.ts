@@ -61,7 +61,7 @@ function readStoredLayoutConfigs() {
     }
 
     return defaultLayoutConfig;
-  } catch (ex) {
+  } catch (_ex) {
     // This should only happen if someone tinkers with localStorage manually
     console.warn("Layout config could not be deserialized.");
   }
@@ -116,7 +116,7 @@ export function getLayoutConfig(layoutKey: LayoutKeys, activeLayoutName: string)
 export function getLastActiveLayout(layoutKey: LayoutKeys) {
   const { storedLayouts } = Store.getState().uiInformation;
 
-  if (storedLayouts.LastActiveLayouts && storedLayouts.LastActiveLayouts[layoutKey]) {
+  if (storedLayouts.LastActiveLayouts?.[layoutKey]) {
     return storedLayouts.LastActiveLayouts[layoutKey];
   } else {
     // added as a fallback when there are no stored last active layouts
@@ -137,7 +137,7 @@ export function storeLayoutConfig(
 ) {
   const newLayouts = getDeepCopyOfStoredLayouts();
 
-  if (newLayouts[layoutKey] && newLayouts[layoutKey][layoutName]) {
+  if (newLayouts[layoutKey]?.[layoutName]) {
     newLayouts[layoutKey][layoutName] = layoutConfig;
   }
 
@@ -161,7 +161,7 @@ export function addNewLayout(
 ): boolean {
   const newLayouts = getDeepCopyOfStoredLayouts();
 
-  if (newLayouts[layoutKey] && newLayouts[layoutKey][newLayoutName]) {
+  if (newLayouts[layoutKey]?.[newLayoutName]) {
     Toast.info("This layout name is already used.");
     return false;
   }
@@ -180,7 +180,7 @@ export function addNewLayout(
 export function setActiveLayout(layoutKey: LayoutKeys, activeLayout: string) {
   const newLayouts = getDeepCopyOfStoredLayouts();
 
-  if (newLayouts[layoutKey] && newLayouts[layoutKey][activeLayout]) {
+  if (newLayouts[layoutKey]?.[activeLayout]) {
     newLayouts.LastActiveLayouts[layoutKey] = activeLayout;
     Store.dispatch(setStoredLayoutsAction(newLayouts));
     persistLayoutConfigsDebounced();

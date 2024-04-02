@@ -1,4 +1,4 @@
-import { Form, Input, Select, Button, Card, Spin } from "antd";
+import { Form, Input, Select, Button, Card } from "antd";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
@@ -116,7 +116,7 @@ function ScriptCreateView({ scriptId, activeUser, history }: PropsWithRouter) {
               style={{
                 width: "100%",
               }}
-              notFoundContent={isFetchingData ? <Spin size="small" /> : "No Data"}
+              loading={isFetchingData}
               options={users.map((user: APIUser) => ({
                 value: user.id,
                 label: `${user.lastName}, ${user.firstName} (${user.email})`,

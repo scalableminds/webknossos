@@ -1,17 +1,12 @@
-FROM scalableminds/sbt:master__113
-ARG VERSION_NODE="16.x"
+FROM scalableminds/sbt:master__7830403826
+ARG VERSION_NODE="18.x"
 
 ENV DEBIAN_FRONTEND noninteractive
+ENV SBT_OPTS "${SBT_OPTS} -XX:MaxMetaspaceSize=512m -Xms1024m -Xmx1024m"
 
 # Fixes "The method driver /usr/lib/apt/methods/https could not be found."
 # See https://unix.stackexchange.com/a/478009
 RUN apt-get update && apt-get install apt-transport-https
-
-# Fixes "The repository 'https://deb.nodesource.com/node_12.x stretch Release' does no longer have a Release file."
-# https://github.com/nodesource/distributions/issues/1266#issuecomment-931467582
-# https://github.com/nodesource/distributions/issues/1266#issuecomment-931481002
-# https://github.com/nodesource/distributions/issues/1266#issuecomment-933102213
-RUN apt-get install openssl ca-certificates libgnutls30 && rm /usr/share/ca-certificates/mozilla/DST_Root_CA_X3.crt && update-ca-certificates
 
 # add node package source
 RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash -
@@ -23,13 +18,17 @@ RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.lis
 # Install sbt, node & build-essentials
 RUN apt-get update \
   && apt-get install -y \
-      build-essential \
-      findutils \
-      nodejs \
-      postgresql-client \
-      yarn \
+  build-essential \
+  findutils \
+  nodejs \
+  postgresql-client \
+  yarn \
+  cmake \
+  git \
+  libdraco-dev \
+  libblosc1 \
   # The following packages are necessary to run headless-gl
   && apt-get install -y \
-      mesa-utils xvfb libgl1-mesa-dri libglapi-mesa libosmesa6 pkg-config x11proto-xext-dev xserver-xorg-dev libxext-dev libxi-dev \
+  mesa-utils xvfb libgl1-mesa-dri libglapi-mesa libosmesa6 pkg-config x11proto-xext-dev xserver-xorg-dev libxext-dev libxi-dev \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

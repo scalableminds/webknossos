@@ -1,13 +1,14 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import akka.actor.{ActorSystem, Cancellable}
+import org.apache.pekko.actor.{ActorSystem, Cancellable}
 import play.api.inject.ApplicationLifecycle
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 trait IntervalScheduler {
+
+  implicit protected def ec: ExecutionContext
 
   protected def lifecycle: ApplicationLifecycle
 

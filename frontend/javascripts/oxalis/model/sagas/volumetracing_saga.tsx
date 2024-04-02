@@ -21,14 +21,19 @@ import Constants, {
   FillModeEnum,
   OrthoViews,
   Unicode,
+  OverwriteModeEnum,
 } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/contourgeometry";
-import Model from "oxalis/model";
-import { getBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "oxalis/geometries/helper_geometries";
+
+import {
+  getDatasetBoundingBox,
+  getMaximumSegmentIdForLayer,
+  getResolutionInfo,
+} from "oxalis/model/accessors/dataset_accessor";
 import {
   getPosition,
-  getRequestLogZoomStep,
+  getActiveMagIndexForLayer,
   getRotation,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -48,11 +53,10 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Action } from "oxalis/model/actions/actions";
 import type {
-  AddAdHocIsosurfaceAction,
-  AddPrecomputedIsosurfaceAction,
+  AddAdHocMeshAction,
+  AddPrecomputedMeshAction,
 } from "oxalis/model/actions/annotation_actions";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import type { UpdateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
   updateTemporarySettingAction,
   updateUserSettingAction,
@@ -61,10 +65,13 @@ import { setBusyBlockingInfoAction, setToolAction } from "oxalis/model/actions/u
 import type {
   ClickSegmentAction,
   SetActiveCellAction,
+  CreateCellAction,
+  DeleteSegmentDataAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   finishAnnotationStrokeAction,
   registerLabelPointAction,
+  setSelectedSegmentsOrGroupAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -73,8 +80,16 @@ import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
-import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
+import {
+  ensureMaybeActiveMappingIsLocked,
+  takeEveryUnlessBusy,
+} from "oxalis/model/sagas/saga_helpers";
+import {
+  deleteSegmentDataVolumeAction,
+  UpdateAction,
+  updateSegmentGroups,
+} from "oxalis/model/sagas/update_actions";
 import {
   createSegmentVolumeAction,
   deleteSegmentVolumeAction,
@@ -85,16 +100,21 @@ import {
   updateMappingName,
 } from "oxalis/model/sagas/update_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
+import { Model, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
-import { getBBoxNameForPartialFloodfill } from "oxalis/view/right-border-tabs/bounding_box_tab";
 import React from "react";
 import { actionChannel, call, fork, put, takeEvery, takeLatest } from "typed-redux-saga";
 import {
   applyLabeledVoxelMapToAllMissingResolutions,
   createVolumeLayer,
   labelWithVoxelBuffer2D,
+  BooleanBox,
 } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
+import messages from "messages";
+import { pushSaveQueueTransaction } from "../actions/save_actions";
+
+const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
 export function* watchVolumeTracingAsync(): Saga<void> {
   yield* take("WK_READY");
@@ -130,12 +150,37 @@ function* warnOfTooLowOpacity(): Saga<void> {
   }
 }
 
+function* warnTooLargeSegmentId(): Saga<void> {
+  yield* take("INITIALIZE_VOLUMETRACING");
+  while (true) {
+    const action = (yield* take(["SET_ACTIVE_CELL", "CREATE_CELL"]) as any) as
+      | SetActiveCellAction
+      | CreateCellAction;
+    const newSegmentId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
+    if (
+      (action.type === "CREATE_CELL" && action.newSegmentId === newSegmentId) ||
+      (action.type === "SET_ACTIVE_CELL" && action.segmentId === newSegmentId)
+    ) {
+      continue;
+    }
+    const dataset = yield* select((state) => state.dataset);
+    const volumeTracing = yield* select(enforceActiveVolumeTracing);
+    const segmentationLayer = yield* call(
+      [Model, Model.getSegmentationTracingLayer],
+      volumeTracing.tracingId,
+    );
+    const maxSegmentId = getMaximumSegmentIdForLayer(dataset, segmentationLayer.name);
+    Toast.warning(messages["tracing.segment_id_out_of_bounds"]({ maxSegmentId }));
+  }
+}
+
 export function* editVolumeLayerAsync(): Saga<any> {
   yield* take("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
 
   while (allowUpdate) {
     const startEditingAction = yield* take("START_EDITING");
+    const wroteVoxelsBox = { value: false };
     const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
 
     if (busyBlockingInfo.isBusy) {
@@ -177,6 +222,14 @@ export function* editVolumeLayerAsync(): Saga<any> {
     }
 
     const activeCellId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
+    // As changes to the volume layer will be applied, the potentially existing mapping should be locked to ensure a consistent state.
+    const { isMappingLockedIfNeeded } = yield* call(
+      ensureMaybeActiveMappingIsLocked,
+      volumeTracing,
+    );
+    if (!isMappingLockedIfNeeded) {
+      continue;
+    }
 
     if (isDrawing && activeCellId === 0) {
       yield* call(
@@ -186,12 +239,14 @@ export function* editVolumeLayerAsync(): Saga<any> {
       );
       continue;
     }
+    const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
 
     yield* put(
       updateSegmentAction(
         activeCellId,
         {
           somePosition: startEditingAction.position,
+          someAdditionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -214,6 +269,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
         overwriteMode,
         labeledZoomStep,
         initialViewport,
+        wroteVoxelsBox,
       );
     }
 
@@ -259,6 +315,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
             overwriteMode,
             labeledZoomStep,
             activeViewport,
+            wroteVoxelsBox,
           );
         }
 
@@ -269,6 +326,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
           overwriteMode,
           labeledZoomStep,
           activeViewport,
+          wroteVoxelsBox,
         );
       }
 
@@ -283,6 +341,7 @@ export function* editVolumeLayerAsync(): Saga<any> {
       overwriteMode,
       labeledZoomStep,
       initialViewport,
+      wroteVoxelsBox,
     );
     // Update the position of the current segment to the last position of the most recent annotation stroke.
     yield* put(
@@ -290,12 +349,25 @@ export function* editVolumeLayerAsync(): Saga<any> {
         activeCellId,
         {
           somePosition: lastPosition,
+          someAdditionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
     );
 
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+
+    if (!wroteVoxelsBox.value) {
+      const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
+      if (overwriteMode === OverwriteModeEnum.OVERWRITE_EMPTY)
+        yield* call(
+          [Toast, Toast.warning],
+          "No voxels were changed. You might want to change the overwrite-mode to “Overwrite everything” in the toolbar. Otherwise, only empty voxels will be changed.",
+          { key: OVERWRITE_EMPTY_WARNING_KEY },
+        );
+    } else {
+      yield* call([Toast, Toast.close], OVERWRITE_EMPTY_WARNING_KEY);
+    }
   }
 }
 
@@ -318,15 +390,10 @@ function* getBoundingBoxForFloodFill(
     currentViewportBounding.max[thirdDimension] = position[thirdDimension] + numberOfSlices;
   }
 
-  const { lowerBoundary, upperBoundary } = yield* select((state) => getBoundaries(state.dataset));
+  const datasetBoundingBox = yield* select((state) => getDatasetBoundingBox(state.dataset));
   const { min: clippedMin, max: clippedMax } = new BoundingBox(
     currentViewportBounding,
-  ).intersectedWith(
-    new BoundingBox({
-      min: lowerBoundary,
-      max: upperBoundary,
-    }),
-  );
+  ).intersectedWith(datasetBoundingBox);
   return {
     min: clippedMin,
     max: clippedMax,
@@ -355,10 +422,18 @@ export function* floodFill(): Saga<void> {
     const seedPosition = Dimensions.roundCoordinate(positionFloat);
     const activeCellId = volumeTracing.activeCellId;
     const dimensionIndices = Dimensions.getIndices(planeId);
-    const requestedZoomStep = yield* select((state) => getRequestLogZoomStep(state));
+    const requestedZoomStep = yield* select((state) =>
+      getActiveMagIndexForLayer(state, segmentationLayer.name),
+    );
     const resolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
     const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
-    const oldSegmentIdAtSeed = cube.getDataValue(seedPosition, null, labeledZoomStep);
+    const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+    const oldSegmentIdAtSeed = cube.getDataValue(
+      seedPosition,
+      additionalCoordinates,
+      null,
+      labeledZoomStep,
+    );
 
     if (activeCellId === oldSegmentIdAtSeed) {
       Toast.warning("The clicked voxel's id is already equal to the active segment id.");
@@ -371,7 +446,15 @@ export function* floodFill(): Saga<void> {
       console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "unknown"})`);
       continue;
     }
-
+    // As the flood fill will be applied to the volume layer,
+    // the potentially existing mapping should be locked to ensure a consistent state.
+    const { isMappingLockedIfNeeded } = yield* call(
+      ensureMaybeActiveMappingIsLocked,
+      volumeTracing,
+    );
+    if (!isMappingLockedIfNeeded) {
+      continue;
+    }
     yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
     const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
     const progressCallback = createProgressCallback({
@@ -384,6 +467,7 @@ export function* floodFill(): Saga<void> {
     yield* call(progressCallback, false, "Performing floodfill...");
     console.time("cube.floodFill");
     const fillMode = yield* select((state) => state.userConfiguration.fillMode);
+
     const {
       bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
       wasBoundingBoxExceeded,
@@ -391,6 +475,7 @@ export function* floodFill(): Saga<void> {
     } = yield* call(
       { context: cube, fn: cube.floodFill },
       seedPosition,
+      additionalCoordinates,
       activeCellId,
       dimensionIndices,
       boundingBoxForFloodFill,
@@ -434,6 +519,17 @@ export function* floodFill(): Saga<void> {
     }
 
     yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+    yield* put(
+      updateSegmentAction(
+        volumeTracing.activeCellId,
+        {
+          somePosition: seedPosition,
+          someAdditionalCoordinates: additionalCoordinates || undefined,
+        },
+        volumeTracing.tracingId,
+      ),
+    );
+
     console.timeEnd("applyLabeledVoxelMapToAllMissingResolutions");
 
     if (wasBoundingBoxExceeded) {
@@ -455,7 +551,9 @@ export function* floodFill(): Saga<void> {
       yield* put(
         addUserBoundingBoxAction({
           boundingBox: coveredBoundingBox,
-          name: getBBoxNameForPartialFloodfill(oldSegmentIdAtSeed, activeCellId, seedPosition),
+          name: `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
+            ",",
+          )}, timestamp=${new Date().getTime()})`,
           color: Utils.getRandomColor(),
           isVisible: true,
         }),
@@ -480,6 +578,7 @@ export function* finishLayer(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
   activeViewport: OrthoView,
+  wroteVoxelsBox: BooleanBox,
 ): Saga<void> {
   if (layer == null || layer.isEmpty()) {
     return;
@@ -493,6 +592,7 @@ export function* finishLayer(
       overwriteMode,
       labeledZoomStep,
       activeViewport,
+      wroteVoxelsBox,
     );
   }
 
@@ -548,7 +648,13 @@ function* uncachedDiffSegmentLists(
 
   for (const segmentId of addedSegmentIds) {
     const segment = newSegments.get(segmentId);
-    yield createSegmentVolumeAction(segment.id, segment.somePosition, segment.name, segment.color);
+    yield createSegmentVolumeAction(
+      segment.id,
+      segment.somePosition,
+      segment.name,
+      segment.color,
+      segment.groupId,
+    );
   }
 
   for (const segmentId of bothSegmentIds) {
@@ -559,8 +665,10 @@ function* uncachedDiffSegmentLists(
       yield updateSegmentVolumeAction(
         segment.id,
         segment.somePosition,
+        segment.someAdditionalCoordinates,
         segment.name,
         segment.color,
+        segment.groupId,
         segment.creationTime,
       );
     }
@@ -576,6 +684,7 @@ export function* diffVolumeTracing(
     yield updateVolumeTracing(
       volumeTracing,
       V3.floor(getPosition(flycam)),
+      flycam.additionalCoordinates,
       getRotation(flycam),
       flycam.zoomStep,
     );
@@ -585,31 +694,42 @@ export function* diffVolumeTracing(
     yield updateUserBoundingBoxes(volumeTracing.userBoundingBoxes);
   }
 
-  if (prevVolumeTracing.segments !== volumeTracing.segments) {
-    for (const action of cachedDiffSegmentLists(
-      prevVolumeTracing.segments,
-      volumeTracing.segments,
-    )) {
+  if (prevVolumeTracing !== volumeTracing) {
+    if (prevVolumeTracing.segments !== volumeTracing.segments) {
+      for (const action of cachedDiffSegmentLists(
+        prevVolumeTracing.segments,
+        volumeTracing.segments,
+      )) {
+        yield action;
+      }
+    }
+
+    if (prevVolumeTracing.segmentGroups !== volumeTracing.segmentGroups) {
+      yield updateSegmentGroups(volumeTracing.segmentGroups);
+    }
+
+    if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
+      yield removeFallbackLayer();
+    }
+
+    if (
+      prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
+      prevVolumeTracing.mappingIsLocked !== volumeTracing.mappingIsLocked
+    ) {
+      // Once the first volume action is performed on a volume layer, the mapping state is locked.
+      // In case no mapping is active, this is denoted by setting the mapping name to null.
+      const action = updateMappingName(
+        volumeTracing.mappingName || null,
+        volumeTracing.mappingIsEditable || null,
+        volumeTracing.mappingIsLocked,
+      );
       yield action;
     }
-  }
-
-  if (prevVolumeTracing.fallbackLayer != null && volumeTracing.fallbackLayer == null) {
-    yield removeFallbackLayer();
-  }
-
-  if (prevVolumeTracing.mappingName !== volumeTracing.mappingName) {
-    yield updateMappingName(volumeTracing.mappingName, volumeTracing.mappingIsEditable);
   }
 }
 
 function* ensureSegmentExists(
-  action:
-    | AddAdHocIsosurfaceAction
-    | AddPrecomputedIsosurfaceAction
-    | SetActiveCellAction
-    | UpdateTemporarySettingAction
-    | ClickSegmentAction,
+  action: AddAdHocMeshAction | AddPrecomputedMeshAction | SetActiveCellAction | ClickSegmentAction,
 ): Saga<void> {
   const layer = yield* select((store) =>
     getRequestedOrVisibleSegmentationLayer(store, "layerName" in action ? action.layerName : null),
@@ -620,69 +740,61 @@ function* ensureSegmentExists(
   }
 
   const layerName = layer.name;
-  const segments = yield* select((store) => getSegmentsForLayer(store, layerName));
-  const cellId = action.type === "UPDATE_TEMPORARY_SETTING" ? action.value : action.cellId;
+  const segmentId = action.segmentId;
 
-  if (
-    cellId === 0 ||
-    cellId == null ||
-    // If the segment was already registered with a position, don't do anything
-    segments.getNullable(cellId)?.somePosition != null
-  ) {
+  if (segmentId === 0 || segmentId == null) {
     return;
   }
 
-  if (action.type === "ADD_AD_HOC_ISOSURFACE" || action.type === "ADD_PRECOMPUTED_ISOSURFACE") {
-    const { seedPosition } = action;
+  if (action.type === "ADD_AD_HOC_MESH" || action.type === "ADD_PRECOMPUTED_MESH") {
+    const { seedPosition, seedAdditionalCoordinates } = action;
     yield* put(
       updateSegmentAction(
-        cellId,
+        segmentId,
         {
           somePosition: seedPosition,
+          someAdditionalCoordinates: seedAdditionalCoordinates,
         },
         layerName,
       ),
     );
   } else if (action.type === "SET_ACTIVE_CELL" || action.type === "CLICK_SEGMENT") {
-    const { somePosition } = action;
+    // Update the position even if the cell is already registered with a position.
+    // This way the most up-to-date position of a cell is used to jump to when a
+    // segment is selected in the segment list. Also, the position of the active
+    // cell is used in the proofreading mode.
+    const { somePosition, someAdditionalCoordinates } = action;
 
     if (somePosition == null) {
-      // Not all SetActiveCell provide a position (e.g., when simply setting the ID)
+      // Not all SetActiveCell actions provide a position (e.g., when simply setting the ID)
       // via the UI.
       return;
     }
 
+    const doesSegmentExist = yield* select((state) =>
+      getSegmentsForLayer(state, layerName).has(segmentId),
+    );
+
     yield* put(
       updateSegmentAction(
-        cellId,
+        segmentId,
         {
           somePosition,
+          someAdditionalCoordinates: someAdditionalCoordinates,
         },
         layerName,
+        undefined,
+        !doesSegmentExist,
       ),
     );
-  } else if (action.type === "UPDATE_TEMPORARY_SETTING") {
-    const globalMousePosition = yield* call(getGlobalMousePosition);
 
-    if (globalMousePosition == null) {
-      return;
-    }
-
-    yield* put(
-      updateSegmentAction(
-        cellId,
-        {
-          somePosition: globalMousePosition,
-        },
-        layerName,
-      ),
-    );
+    yield* call(updateClickedSegments, action);
   }
 }
 
 function* maintainSegmentsMap(): Saga<void> {
   yield* takeEvery(
-    ["ADD_AD_HOC_ISOSURFACE", "ADD_PRECOMPUTED_ISOSURFACE", "SET_ACTIVE_CELL", "CLICK_SEGMENT"],
+    ["ADD_AD_HOC_MESH", "ADD_PRECOMPUTED_MESH", "SET_ACTIVE_CELL", "CLICK_SEGMENT"],
     ensureSegmentExists,
   );
 }
@@ -722,6 +834,25 @@ function* updateHoveredSegmentId(): Saga<void> {
 
   if (oldHoveredSegmentId !== id) {
     yield* put(updateTemporarySettingAction("hoveredSegmentId", id));
+  }
+}
+
+export function* updateClickedSegments(
+  action: ClickSegmentAction | SetActiveCellAction,
+): Saga<void> {
+  // If one or zero segments are selected, update selected segments in store
+  // Otherwise, the multiselection is kept.
+  const { segmentId } = action;
+  const segmentationLayer = yield* call([Model, Model.getVisibleSegmentationLayer]);
+  const layerName = segmentationLayer?.name;
+  if (layerName == null) return;
+  const clickedSegmentId = segmentId;
+  const selectedSegmentsOrGroup = yield* select(
+    (state) => state.localSegmentationData[layerName]?.selectedIds,
+  );
+  const numberOfSelectedSegments = selectedSegmentsOrGroup.segments.length;
+  if (numberOfSelectedSegments < 2) {
+    yield* put(setSelectedSegmentsOrGroupAction([clickedSegmentId], null, layerName));
   }
 }
 
@@ -791,15 +922,44 @@ function* ensureValidBrushSize(): Saga<void> {
   );
 }
 
+function* handleDeleteSegmentData(): Saga<void> {
+  yield* take("WK_READY");
+  while (true) {
+    const action = (yield* take("DELETE_SEGMENT_DATA")) as DeleteSegmentDataAction;
+
+    yield* put(setBusyBlockingInfoAction(true, "Segment is being deleted."));
+    yield* put(
+      pushSaveQueueTransaction(
+        [deleteSegmentDataVolumeAction(action.segmentId)],
+        "volume",
+        action.layerName,
+      ),
+    );
+    yield* call([Model, Model.ensureSavedState]);
+
+    yield* call([api.data, api.data.reloadBuckets], action.layerName, (bucket) =>
+      bucket.containsValue(action.segmentId),
+    );
+
+    yield* put(setBusyBlockingInfoAction(false));
+    if (action.callback) {
+      action.callback();
+    }
+  }
+}
+
 export default [
   editVolumeLayerAsync,
+  handleDeleteSegmentData,
   ensureToolIsAllowedInResolution,
   floodFill,
   watchVolumeTracingAsync,
   maintainSegmentsMap,
   maintainHoveredSegmentId,
   listenToMinCut,
+  listenToQuickSelect,
   maintainContourGeometry,
   maintainVolumeTransactionEnds,
   ensureValidBrushSize,
+  warnTooLargeSegmentId,
 ];

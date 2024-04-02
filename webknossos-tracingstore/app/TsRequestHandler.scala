@@ -15,7 +15,12 @@ class TsRequestHandler @Inject()(webCommands: WebCommands,
                                  configuration: HttpConfiguration,
                                  filters: HttpFilters,
                                  conf: TracingStoreConfig)
-    extends DefaultHttpRequestHandler(webCommands, optionalDevContext, router, errorHandler, configuration, filters)
+    extends DefaultHttpRequestHandler(webCommands,
+                                      optionalDevContext,
+                                      () => router,
+                                      errorHandler,
+                                      configuration,
+                                      filters)
     with InjectedController
     with AdditionalHeaders
     with LazyLogging {

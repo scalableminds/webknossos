@@ -35,7 +35,9 @@ services:
     volumes:
       - ./binaryData:/webknossos/binaryData
     environment:
-      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      POSTGRES_URL: jdbc:postgresql://postgres/webknossos
+      POSTGRES_USER: webknossos_user
+      POSTGRES_PASSWORD: secret_password
     user: ${USER_UID:-1000}:${USER_GID:-1000}
 
   webknossos-datastore:
@@ -95,6 +97,8 @@ services:
       - COVERALLS_REPO_TOKEN
       - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      - POSTGRES_USER=webknossos_user
+      - POSTGRES_PASSWORD=secret_password
       - HOME=/root
       - CIRCLE_TAG=${CIRCLE_TAG}
       - CIRCLE_BUILD_NUM=${CIRCLE_BUILD_NUM}
@@ -133,7 +137,9 @@ services:
       fossildb-dev:
         condition: service_healthy
     environment:
-      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      POSTGRES_URL: jdbc:postgresql://postgres/webknossos
+      POSTGRES_USER: webknossos_user
+      POSTGRES_PASSWORD: secret_password
     command:
       - bash
       - -c
@@ -175,7 +181,9 @@ services:
       fossildb:
         condition: service_healthy
     environment:
-      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
+      POSTGRES_URL: jdbc:postgresql://postgres/webknossos_testing
+      POSTGRES_USER: webknossos_user
+      POSTGRES_PASSWORD: secret_password
     command:
       - bash
       - -c
@@ -201,19 +209,13 @@ services:
       - ".:/home/pptruser/webknossos"
     user: ${USER_UID:-1000}:${USER_GID:-1000}
 
-  # webKnossos-connect
-  webknossos-connect:
-    image: scalableminds/webknossos-connect:master__205
-    volumes:
-      - "./conf/connect:/app/data"
-
   # Postgres
   postgres:
     image: postgres:10-alpine
     environment:
       POSTGRES_DB: webknossos
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: webknossos_user
+      POSTGRES_PASSWORD: secret_password
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432"]
       interval: 2s
@@ -238,35 +240,35 @@ services:
 
   psql:
     extends: postgres
-    command: psql -h postgres -U postgres webknossos
+    command: psql -h postgres -U webknossos_user webknossos
     links:
       - "postgres-persisted:postgres"
     depends_on:
       postgres-persisted:
         condition: service_healthy
     environment:
-      PGPASSWORD: postgres
+      PGPASSWORD: secret_password
     volumes:
       - ./conf/evolutions/:/evolutions/
 
   drop-db:
     extends: postgres
-    command: psql -h postgres -U postgres postgres -c "DROP DATABASE webknossos"
+    command: psql -h postgres -U webknossos_user postgres -c "DROP DATABASE webknossos"
     links:
       - "postgres-persisted:postgres"
     depends_on:
       postgres-dev:
         condition: service_healthy
     environment:
-      PGPASSWORD: postgres
+      PGPASSWORD: secret_password
 
   # FossilDB
   fossildb:
-    image: scalableminds/fossildb:master__410
+    image: scalableminds/fossildb:master__484
     command:
       - fossildb
       - -c
-      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates,editableMappings,editableMappingUpdates
+      - skeletons,skeletonUpdates,volumes,volumeData,volumeUpdates,volumeSegmentIndex,editableMappings,editableMappingUpdates,editableMappingsInfo,editableMappingsAgglomerateToGraph,editableMappingsSegmentToAgglomerate
     user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
 
   fossildb-persisted:

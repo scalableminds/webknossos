@@ -58,7 +58,7 @@ case class Vec3Double(x: Double, y: Double, z: Double) {
 
   def toVec3Int: Vec3Int = Vec3Int(x.toInt, y.toInt, z.toInt)
 
-  def round: Vec3Double = Vec3Double(x.round, y.round, z.round)
+  def round: Vec3Double = Vec3Double(x.round.toDouble, y.round.toDouble, z.round.toDouble)
 
   def °(o: Vec3Double): Double = x * o.x + y * o.y + z * o.z
 
@@ -66,7 +66,7 @@ case class Vec3Double(x: Double, y: Double, z: Double) {
 
   def toTuple: (Double, Double, Double) = (x, y, z)
 
-  def toList = List(x, y, z)
+  def toList: List[Double] = List(x, y, z)
 
   def isStrictlyPositive: Boolean = x > 0 && y > 0 && z > 0
 
@@ -85,7 +85,7 @@ object Vec3Double {
   def apply(from: Vec3Int, to: Vec3Int): Vec3Double =
     Vec3Double(to) - Vec3Double(from)
 
-  def fromArray[T <% Double](array: Array[T]): Option[Vec3Double] =
+  def fromArray(array: Array[Double]): Option[Vec3Double] =
     if (array.length >= 3)
       Some(Vec3Double(array(0), array(1), array(2)))
     else
@@ -100,6 +100,10 @@ object Vec3Double {
     } catch {
       case _: NumberFormatException => None
     }
+
+  def ones: Vec3Double = Vec3Double(1.0, 1.0, 1.0)
+
+  def zeros: Vec3Double = Vec3Double(0.0, 0.0, 0.0)
 
   implicit object Vector3DReads extends Format[Vec3Double] {
     def reads(json: JsValue): JsResult[Vec3Double] = json match {

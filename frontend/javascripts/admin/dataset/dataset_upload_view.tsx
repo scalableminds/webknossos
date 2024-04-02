@@ -1,30 +1,24 @@
-import {
-  Popover,
-  Avatar,
-  Form,
-  Button,
-  Col,
-  Row,
-  Tooltip,
-  Modal,
-  Progress,
-  Alert,
-  List,
-  Spin,
-} from "antd";
+import { Popover, Avatar, Form, Button, Col, Row, Modal, Progress, Alert, List, Spin } from "antd";
 import { Location as HistoryLocation, Action as HistoryAction } from "history";
 import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
-import moment from "moment";
+import dayjs from "dayjs";
 
 import classnames from "classnames";
 import _ from "lodash";
 import { useDropzone, FileWithPath } from "react-dropzone";
 import ErrorHandling from "libs/error_handling";
-import type { RouteComponentProps } from "react-router-dom";
+import { Link, RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import type { APITeam, APIDataStore, APIUser, APIDatasetId } from "types/api_flow_types";
+import {
+  type APITeam,
+  type APIDataStore,
+  type APIUser,
+  type APIDatasetId,
+  type APIOrganization,
+  APIJobType,
+} from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import {
   reserveDatasetUpload,
@@ -39,20 +33,23 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
-// @ts-expect-error ts-migrate(2306) FIXME: File ... Remove this comment to see the full error message
-import { createReader, BlobReader, ZipReader, Entry } from "zip-js-webpack";
+import Zip from "libs/zipjs_wrapper";
 import {
+  AllowedTeamsFormItem,
   CardContainer,
   DatasetNameFormItem,
   DatastoreFormItem,
 } from "admin/dataset/dataset_components";
 import { Vector3Input } from "libs/vector_input";
-import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import features from "features";
 import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";
 import type { Vector3 } from "oxalis/constants";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
+import FolderSelection from "dashboard/folders/folder_selection";
+import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
+import { enforceActiveOrganization } from "oxalis/model/accessors/organization_accessors";
+
 const FormItem = Form.Item;
 const REPORT_THROTTLE_THRESHOLD = 1 * 60 * 1000; // 1 min
 
@@ -67,6 +64,7 @@ type OwnProps = {
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
+  organization: APIOrganization;
 };
 type Props = OwnProps & StateProps;
 type PropsWithFormAndRouter = Props & {
@@ -158,7 +156,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   unblock: ((...args: Array<any>) => any) | null | undefined;
   blockTimeoutId: number | null = null;
-  formRef = React.createRef<FormInstance>();
+  formRef: React.RefObject<FormInstance<any>> = React.createRef<FormInstance>();
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");
@@ -181,6 +179,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         currentFormRef.setFieldsValue({
           datastoreUrl: uploadableDatastores[0].url,
         });
+        this.setState({ datastoreUrl: uploadableDatastores[0].url });
       }
     }
   }
@@ -257,7 +256,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         return Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join("");
       };
 
-      const uploadId = `${moment(Date.now()).format("YYYY-MM-DD_HH-mm")}__${
+      const uploadId = `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${
         datasetId.name
       }__${getRandomString()}`;
       const reserveUploadInformation = {
@@ -267,6 +266,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         totalFileCount: formValues.zipFile.length,
         layersToLink: [],
         initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
+        folderId: formValues.targetFolderId,
       };
       const datastoreUrl = formValues.datastoreUrl;
       await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
@@ -293,8 +293,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         finishDatasetUpload(datastoreUrl, uploadInfo).then(
           async () => {
             trackAction("Upload dataset");
-            await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-
             Toast.success(messages["dataset.upload_success"]);
             let maybeError;
 
@@ -310,7 +308,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   formValues.name,
                   activeUser.organization,
                   formValues.scale,
-                  datastore.name,
                 );
               } catch (error) {
                 maybeError = error;
@@ -429,7 +426,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const { isRetrying, isFinishing, uploadProgress, isUploading } = this.state;
     return (
       <Modal
-        visible={isUploading}
+        open={isUploading}
         keyboard={false}
         maskClosable={false}
         className="no-footer-modal"
@@ -452,80 +449,93 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             flexDirection: "column",
           }}
         >
-          <FolderOutlined
-            style={{
-              fontSize: 50,
-            }}
-          />
-          <br />
-          {isRetrying
-            ? `Upload of dataset ${form.getFieldValue("name")} froze.`
-            : `Uploading Dataset ${form.getFieldValue("name")}.`}
-          <br />
-          {isRetrying ? "Retrying to continue the upload …" : null}
-          <br />
-          <Progress // Round to 1 digit after the comma.
-            percent={Math.round(uploadProgress * 1000) / 10}
-            status="active"
-          />
-          {isFinishing ? <Spin tip="Processing uploaded files …" /> : null}
+          <Spin spinning={isFinishing} style={{ marginTop: 4 }} tip="Processing uploaded files …">
+            <FolderOutlined
+              style={{
+                fontSize: 50,
+              }}
+            />
+            <br />
+            {isRetrying
+              ? `Upload of dataset ${form.getFieldValue("name")} froze.`
+              : `Uploading Dataset ${form.getFieldValue("name")}.`}
+            <br />
+            {isRetrying ? "Retrying to continue the upload …" : null}
+            <br />
+            <Progress // Round to 1 digit after the comma.
+              percent={Math.round(uploadProgress * 1000) / 10}
+              status="active"
+            />
+          </Spin>
         </div>
       </Modal>
     );
   };
 
-  validateFiles = (files: FileWithPath[]) => {
+  validateFiles = async (files: FileWithPath[]) => {
     if (files.length === 0) {
       return;
     }
 
-    let needsConversion = true;
     const fileExtensions = [];
+    const fileNames = [];
 
     for (const file of files) {
-      const filenameParts = file.name.split(".");
-      const fileExtension = filenameParts[filenameParts.length - 1].toLowerCase();
+      fileNames.push(file.name);
+      const fileExtension = Utils.getFileExtension(file.name);
       fileExtensions.push(fileExtension);
       sendAnalyticsEvent("add_files_to_upload", {
         fileExtension,
       });
 
       if (fileExtension === "zip") {
-        createReader(
-          new BlobReader(file),
-          (reader: ZipReader) => {
-            reader.getEntries((entries: Array<Entry>) => {
-              const wkwFile = entries.find((entry: Entry) =>
-                Utils.isFileExtensionEqualTo(entry.filename, "wkw"),
-              );
-              const hasArchiveWkwFile = wkwFile != null;
-              this.handleNeedsConversionInfo(!hasArchiveWkwFile);
-            });
-          },
-          () => {
-            Modal.error({
-              content: messages["dataset.upload_invalid_zip"],
-            });
-            const form = this.formRef.current;
+        try {
+          const reader = new Zip.ZipReader(new Zip.BlobReader(file));
+          const entries = await reader.getEntries();
+          await reader.close();
+          for (const entry of entries) {
+            fileNames.push(entry.filename);
+            fileExtensions.push(Utils.getFileExtension(entry.filename));
+          }
+        } catch (e) {
+          console.error(e);
+          ErrorHandling.notify(e as Error);
+          Modal.error({
+            content: messages["dataset.upload_invalid_zip"],
+          });
+          const form = this.formRef.current;
+          if (!form) {
+            return;
+          }
 
-            if (!form) {
-              return;
-            }
-
-            form.setFieldsValue({
-              zipFile: [],
-            });
-          },
-        );
-        // We return here since not more than 1 zip archive is supported anyway.
+          form.setFieldsValue({
+            zipFile: [],
+          });
+        }
+        // We return here since not more than 1 zip archive is supported anyway. This is guarded
+        // against via form validation.
         return;
-      } else if (fileExtension === "wkw") {
-        needsConversion = false;
       }
     }
 
     const countedFileExtensions = _.countBy(fileExtensions, (str) => str);
+    const containsExtension = (extension: string) => countedFileExtensions[extension] > 0;
 
+    if (containsExtension("nml")) {
+      Modal.error({
+        content: messages["dataset.upload_zip_with_nml"],
+      });
+    }
+
+    let needsConversion = true;
+    if (
+      containsExtension("wkw") ||
+      containsExtension("zarray") ||
+      fileNames.includes("datasource-properties.json") ||
+      fileNames.includes("zarr.json")
+    ) {
+      needsConversion = false;
+    }
     Object.entries(countedFileExtensions).map(([fileExtension, count]) =>
       sendAnalyticsEvent("add_files_to_upload", {
         fileExtension,
@@ -546,23 +556,27 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       needsConversion,
     });
 
-    if (needsConversion && !features().jobsEnabled) {
+    if (needsConversion && !this.isDatasetConversionEnabled()) {
       form.setFieldsValue({
         zipFile: [],
       });
       Modal.info({
         content: (
           <div>
-            The selected dataset does not seem to be in the WKW format. Please convert the dataset
-            using{" "}
+            The selected dataset does not seem to be in the WKW or Zarr format. Please convert the
+            dataset using the{" "}
+            <a target="_blank" href="https://docs.webknossos.org/cli" rel="noopener noreferrer">
+              webknossos CLI
+            </a>
+            , the{" "}
             <a
               target="_blank"
-              href="https://github.com/scalableminds/webknossos-cuber/"
+              href="https://docs.webknossos.org/webknossos-py"
               rel="noopener noreferrer"
             >
-              webknossos-cuber
+              webknossos Python library
             </a>{" "}
-            or use a webKnossos instance which integrates a conversion service, such as{" "}
+            or use a WEBKNOSSOS instance which integrates a conversion service, such as{" "}
             <a target="_blank" href="http://webknossos.org/" rel="noopener noreferrer">
               webknossos.org
             </a>
@@ -590,6 +604,22 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
   };
 
+  isDatasetConversionEnabled = () => {
+    const uploadableDatastores = this.props.datastores.filter(
+      (datastore) => datastore.allowsUpload,
+    );
+    const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
+
+    const selectedDatastore = hasOnlyOneDatastoreOrNone
+      ? uploadableDatastores[0]
+      : this.getDatastoreForUrl(this.state.datastoreUrl);
+
+    return (
+      selectedDatastore?.jobsSupportedByAvailableWorkers.includes(APIJobType.CONVERT_TO_WKW) ||
+      false
+    );
+  };
+
   render() {
     const form = this.formRef.current;
     const { activeUser, withoutCard, datastores } = this.props;
@@ -598,6 +628,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const { needsConversion } = this.state;
     const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
     const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
+
     return (
       <div
         className="dataset-administration"
@@ -606,17 +637,36 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         }}
       >
         <CardContainer withoutCard={withoutCard} title="Upload Dataset">
+          {hasPricingPlanExceededStorage(this.props.organization) ? (
+            <Alert
+              type="error"
+              message={
+                <>
+                  Your organization has exceeded the available storage. Uploading new datasets is
+                  disabled. Visit the{" "}
+                  <Link to={`/organizations/${this.props.organization.name}`}>
+                    organization page
+                  </Link>{" "}
+                  for details.
+                </>
+              }
+              style={{ marginBottom: 8 }}
+            />
+          ) : null}
+
           <Form
             onFinish={this.handleSubmit}
+            onValuesChange={(_, { datastoreUrl }) => this.setState({ datastoreUrl })}
             layout="vertical"
             ref={this.formRef}
             initialValues={{
               initialTeams: [],
               scale: [0, 0, 0],
               zipFile: [],
+              targetFolderId: new URLSearchParams(location.search).get("to"),
             }}
           >
-            {features().isDemoInstance && (
+            {features().isWkorgInstance && (
               <Alert
                 message={
                   <>
@@ -638,73 +688,37 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <DatasetNameFormItem activeUser={activeUser} />
               </Col>
               <Col span={12}>
-                <FormItem
-                  name="initialTeams"
-                  label="Teams allowed to access this dataset"
-                  hasFeedback
-                  rules={[
-                    {
-                      required: !isDatasetManagerOrAdmin,
-                      // @ts-expect-error ts-migrate(2322) FIXME: Type 'string | null' is not assignable to type 'st... Remove this comment to see the full error message
-                      message: !isDatasetManagerOrAdmin
-                        ? messages["dataset.import.required.initialTeam"]
-                        : null,
-                    },
-                  ]}
-                >
-                  <Tooltip title="Except for administrators and dataset managers, only members of the teams defined here will be able to view this dataset.">
-                    <TeamSelectionComponent
-                      mode="multiple"
-                      value={this.state.selectedTeams}
-                      allowNonEditableTeams={isDatasetManagerOrAdmin}
-                      onChange={(selectedTeams) => {
-                        if (this.formRef.current == null) return;
-
-                        if (!Array.isArray(selectedTeams)) {
-                          // Making sure that we always have an array even when only one team is selected.
-                          selectedTeams = [selectedTeams];
-                        }
-
-                        this.formRef.current.setFieldsValue({
-                          initialTeams: selectedTeams,
-                        });
-                        this.setState({
-                          selectedTeams,
-                        });
-                      }}
-                      afterFetchedTeams={(fetchedTeams) => {
-                        if (!features().isDemoInstance) {
-                          return;
-                        }
-
-                        const teamOfOrganisation = fetchedTeams.find(
-                          (team) => team.name === team.organization,
-                        );
-
-                        if (teamOfOrganisation == null) {
-                          return;
-                        }
-
-                        if (this.formRef.current == null) return;
-                        this.formRef.current.setFieldsValue({
-                          initialTeams: [teamOfOrganisation],
-                        });
-                        this.setState({
-                          selectedTeams: [teamOfOrganisation],
-                        });
-                      }}
-                    />
-                  </Tooltip>
-                </FormItem>
+                <AllowedTeamsFormItem
+                  isDatasetManagerOrAdmin={isDatasetManagerOrAdmin}
+                  selectedTeams={this.state.selectedTeams}
+                  setSelectedTeams={(selectedTeams) => this.setState({ selectedTeams })}
+                  formRef={this.formRef}
+                />
               </Col>
             </Row>
+
+            <FormItemWithInfo
+              name="targetFolderId"
+              label="Target Folder"
+              info="The folder into which the dataset will be uploaded. The dataset can be moved after upload. Note that teams that have access to the specified folder will be able to see the uploaded dataset."
+              valuePropName="folderId"
+              rules={[
+                {
+                  required: true,
+                  message: messages["dataset.import.required.folder"],
+                },
+              ]}
+            >
+              <FolderSelection width="50%" disableNotEditableFolders />
+            </FormItemWithInfo>
+
             <DatastoreFormItem
               // @ts-expect-error ts-migrate(2322) FIXME: Type '{ form: FormInstance<any> | null; datastores... Remove this comment to see the full error message
               form={form}
               datastores={uploadableDatastores}
               hidden={hasOnlyOneDatastoreOrNone}
             />
-            {features().jobsEnabled && needsConversion ? (
+            {this.isDatasetConversionEnabled() && needsConversion ? (
               <FormItemWithInfo
                 name="scale"
                 label="Voxel Size"
@@ -719,7 +733,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   },
                   {
                     validator: syncValidator(
-                      (value: Vector3) => value && value.every((el) => el > 0),
+                      (value: Vector3) => value?.every((el) => el > 0),
                       "Each component of the scale must be larger than 0.",
                     ),
                   },
@@ -730,7 +744,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     width: 400,
                   }}
                   allowDecimals
-                  onChange={(scale) => {
+                  onChange={(scale: Vector3) => {
                     if (this.formRef.current == null) return;
                     this.formRef.current.setFieldsValue({
                       scale,
@@ -773,6 +787,14 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                         Utils.isFileExtensionEqualTo(file.path, ["ply", "stl", "obj"]),
                       ).length === 0,
                     "PLY, STL and OBJ files are not supported. Please upload image files instead of 3D geometries.",
+                  ),
+                },
+                {
+                  validator: syncValidator(
+                    (files: FileWithPath[]) =>
+                      files.filter((file) => Utils.isFileExtensionEqualTo(file.path, ["nml"]))
+                        .length === 0,
+                    "An NML file is an annotation of a dataset and not an independent dataset. Please upload the NML file into the Annotations page in the dashboard or into an open dataset.",
                   ),
                 },
                 {
@@ -823,6 +845,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   this.validateFiles(files);
                 }}
                 fileList={[]}
+                isDatasetConversionEnabled={this.isDatasetConversionEnabled()}
               />
             </FormItem>
             <FormItem
@@ -834,6 +857,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 size="large"
                 type="primary"
                 htmlType="submit"
+                disabled={hasPricingPlanExceededStorage(this.props.organization)}
                 style={{
                   width: "100%",
                 }}
@@ -853,9 +877,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 function FileUploadArea({
   fileList,
   onChange,
+  isDatasetConversionEnabled,
 }: {
   fileList: FileWithPath[];
   onChange: (files: FileWithPath[]) => void;
+  isDatasetConversionEnabled: boolean;
 }) {
   const onDropAccepted = (acceptedFiles: FileWithPath[]) => {
     // file.path should be set by react-dropzone (which uses file-selector::toFileWithPath).
@@ -874,6 +900,7 @@ function FileUploadArea({
     <li key={file.path}>{file.path}</li>
   ));
   const showSmallFileList = files.length > 10;
+
   const list = (
     <List
       itemLayout="horizontal"
@@ -911,6 +938,7 @@ function FileUploadArea({
       )}
     />
   );
+
   return (
     <div>
       <div
@@ -926,7 +954,7 @@ function FileUploadArea({
         <InboxOutlined
           style={{
             fontSize: 48,
-            color: "var(--ant-primary)",
+            color: "var(--ant-color-primary)",
           }}
         />
         <p
@@ -938,7 +966,7 @@ function FileUploadArea({
         >
           Drag your file(s) to this area to upload them. Either add individual image files, a zip
           archive or a folder.{" "}
-          {features().jobsEnabled ? (
+          {isDatasetConversionEnabled ? (
             <>
               <br />
               <br />
@@ -982,13 +1010,78 @@ function FileUploadArea({
                       />
                     </Popover>
                   </li>
-
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/zarr.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      OME-Zarr 0.4+ (NGFF) datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/neuroglancer_precomputed.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      Neuroglancer Precomputed datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
+                  <li>
+                    <Popover
+                      content={
+                        <a
+                          href="https://docs.webknossos.org/webknossos/n5.html"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Read more in docs
+                        </a>
+                      }
+                      trigger="hover"
+                    >
+                      N5 datasets{" "}
+                      <InfoCircleOutlined
+                        style={{
+                          marginLeft: 4,
+                        }}
+                      />
+                    </Popover>
+                  </li>
                   <li>Single-file images (tif, czi, nifti, raw)</li>
 
                   <li>KNOSSOS file hierarchy</li>
                 </ul>
                 Have a look at{" "}
-                <a href="https://docs.webknossos.org/webknossos/data_formats.html#conversion-with-webknossos-org">
+                <a href="https://docs.webknossos.org/webknossos/data_formats.html">
                   our documentation
                 </a>{" "}
                 to learn more.
@@ -1021,6 +1114,7 @@ function FileUploadArea({
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
+  organization: enforceActiveOrganization(state.activeOrganization),
 });
 
 const connector = connect(mapStateToProps);

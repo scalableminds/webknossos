@@ -1,0 +1,50 @@
+@(name: String, datasetName: String, jobLink: String, jobTitle: String)
+
+@emailBaseTemplate() {
+<p>Hi @{name},</p>
+
+<p>
+  Your @{jobTitle} is ready for exploration. 
+  WEBKNOSSOS sucessfully applied our machine learning models on the specific subset of the <i>@{datasetName}</i> dataset. 
+  Click the button below to open the dataset or find it amongst your other dataset in the WEBKNOSSOS dashboard.
+</p>
+
+<div style="text-align: center;">
+  <a href="@{jobLink}" style="
+      color: #fff;
+      padding: 4px 15px;
+      height: 32px;
+      background: #5660ff;
+      border: 1px solid #808cff;
+      text-align: center;
+      font-weight: 400;
+      font-size: 14px;
+      line-height: 2.1;
+      text-decoration: none;
+      border-radius: 4px;
+      display: inline-block;
+    ">
+    Open in WEBKNOSSOS
+  </a>
+</div>
+
+<p>
+  Do you like what you see? Expand the segmentation to the whole dataset. <a href="mailto://hello@@webknossos.com">Contact us to get a quote. We can also fine-tune the segmentation models for higher quality results.</a>.
+</p>
+<div style="text-align: center; margin-top: 10px; margin-bottom: 6px;">
+  <img src="https://static.webknossos.org/mails/email-expand-segmentation-preview.600.jpg"
+    alt="A preview of a full, automated segmentation of a WEBKNOSSOS dataset"
+    style="width: 600px; height: 300px;"/>
+</div>
+
+<p>
+  Do you want to make corrections to the automated segmentation? Use the easy-to-use, built-in <a href="https://docs.webknossos.org/webknossos/proof_reading.html#proofreading-tool">proof-reading tools in WEBKNOSSOS</a> (requires Power plan).
+</p>
+<div style="text-align: center; margin-bottom: 20px;">
+  <img src="https://static.webknossos.org/mails/email-proofreading-preview.600.jpg" 
+    alt="A preview of the proofreading tools for a segmentation of a WEBKNOSSOS dataset"
+    style="width: 600px; height: 300px;" />
+</div>
+
+<p>With best regards,<br />the WEBKNOSSOS team</p>
+}

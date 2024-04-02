@@ -6,6 +6,7 @@ import {
 } from "oxalis/constants";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { getMaximumBrushSize } from "oxalis/model/accessors/volumetracing_accessor";
+
 export const userSettings = {
   clippingDistance: {
     type: "number",
@@ -103,6 +104,9 @@ export const userSettings = {
   tdViewDisplayDatasetBorders: {
     type: "boolean",
   },
+  tdViewDisplayLayerBorders: {
+    type: "boolean",
+  },
   hideTreeRemovalWarning: {
     type: "boolean",
   },
@@ -116,6 +120,9 @@ export const userSettings = {
     dynamicMaximumFn: getMaximumBrushSize,
   },
   autoSaveLayouts: {
+    type: "boolean",
+  },
+  autoRenderMeshInProofreading: {
     type: "boolean",
   },
   gpuMemoryFactor: {

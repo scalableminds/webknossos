@@ -1,4 +1,4 @@
-import { Input, Tooltip } from "antd";
+import { Space, Tooltip } from "antd";
 import { PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -16,24 +16,29 @@ import type { ViewMode, Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import message from "messages";
 import { ShareButton } from "oxalis/view/action-bar/share_modal_view";
+
 type Props = {
   flycam: Flycam;
   viewMode: ViewMode;
   dataset: APIDataset;
   task: Task | null | undefined;
 };
-const positionIconStyle = {
+const positionIconStyle: React.CSSProperties = {
   transform: "rotate(-45deg)",
+  marginRight: 0,
 };
-const warningColors = {
+const warningColors: React.CSSProperties = {
   color: "rgb(255, 155, 85)",
   borderColor: "rgb(241, 122, 39)",
 };
-const iconErrorStyle = { ...warningColors };
-const positionInputDefaultStyle = {
+const iconErrorStyle: React.CSSProperties = { ...warningColors };
+const positionInputDefaultStyle: React.CSSProperties = {
   textAlign: "center",
 };
-const positionInputErrorStyle = { ...positionInputDefaultStyle, ...warningColors };
+const positionInputErrorStyle: React.CSSProperties = {
+  ...positionInputDefaultStyle,
+  ...warningColors,
+};
 
 class DatasetPositionView extends PureComponent<Props> {
   copyPositionToClipboard = async () => {
@@ -71,7 +76,7 @@ class DatasetPositionView extends PureComponent<Props> {
     const isOutOfDatasetBounds = isPositionOutOfBounds(datasetMin, datasetMax);
     let isOutOfTaskBounds = false;
 
-    if (task && task.boundingBox) {
+    if (task?.boundingBox) {
       const bbox = task.boundingBox;
       const bboxMax = [
         bbox.topLeft[0] + bbox.width,
@@ -112,8 +117,7 @@ class DatasetPositionView extends PureComponent<Props> {
           display: "flex",
         }}
       >
-        <Input.Group
-          compact
+        <Space.Compact
           style={{
             whiteSpace: "nowrap",
           }}
@@ -129,18 +133,15 @@ class DatasetPositionView extends PureComponent<Props> {
           </Tooltip>
           <Vector3Input
             value={position}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(position: Vector3) => void' is not assignab... Remove this comment to see the full error message
             onChange={this.handleChangePosition}
             autoSize
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ textAlign: string; }' is not assignable to... Remove this comment to see the full error message
             style={positionInputStyle}
             allowDecimals
           />
           <ShareButton dataset={this.props.dataset} style={iconColoringStyle} />
-        </Input.Group>
+        </Space.Compact>
         {isArbitraryMode ? (
-          <Input.Group
-            compact
+          <Space.Compact
             style={{
               whiteSpace: "nowrap",
               marginLeft: 10,
@@ -159,7 +160,6 @@ class DatasetPositionView extends PureComponent<Props> {
             </Tooltip>
             <Vector3Input
               value={rotation}
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '(rotation: Vector3) => void' is not assignab... Remove this comment to see the full error message
               onChange={this.handleChangeRotation}
               style={{
                 textAlign: "center",
@@ -167,7 +167,7 @@ class DatasetPositionView extends PureComponent<Props> {
               }}
               allowDecimals
             />
-          </Input.Group>
+          </Space.Compact>
         ) : null}
       </div>
     );

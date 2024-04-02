@@ -3,19 +3,24 @@ import type { ModifierKeys } from "libs/input";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import type { Matrix4x4 } from "libs/mjs";
 import { V3 } from "libs/mjs";
-import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getActiveNode,
+  getMaxNodeId,
+  getNodePosition,
+  untransformNodePosition,
+} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getRotation, getPosition, getMoveOffset3d } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
   setActiveNodeAction,
-  deleteActiveNodeAsUserAction,
+  deleteNodeAsUserAction,
   createNodeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
+  createTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   setFlightmodeRecordingAction,
@@ -35,12 +40,14 @@ import Store from "oxalis/store";
 import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
-import api from "oxalis/api/internal_api";
-import type { ViewMode, Point2, Vector3 } from "oxalis/constants";
+import { api } from "oxalis/singletons";
+import type { ViewMode, Point2, Vector3, Viewport } from "oxalis/constants";
 import constants, { ArbitraryViewport } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import { SkeletonTool } from "../combinations/tool_controls";
+
 const arbitraryViewportId = "inputcatcher_arbitraryViewport";
 type Props = {
   viewMode: ViewMode;
@@ -85,34 +92,53 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   initMouse(): void {
     Utils.waitForElementWithId(arbitraryViewportId).then(() => {
-      this.input.mouseController = new InputMouse(arbitraryViewportId, {
-        leftDownMove: (delta: Point2) => {
-          if (this.props.viewMode === constants.MODE_ARBITRARY) {
-            Store.dispatch(
-              yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
+      this.input.mouseController = new InputMouse(
+        arbitraryViewportId,
+        {
+          leftClick: (pos: Point2, viewport: string, event: MouseEvent, isTouch: boolean) => {
+            SkeletonTool.onLeftClick(
+              this.arbitraryView,
+              pos,
+              event.shiftKey,
+              event.altKey,
+              event.ctrlKey || event.metaKey,
+              viewport as Viewport,
+              isTouch,
+              false,
             );
-            Store.dispatch(
-              pitchFlycamAction(
-                delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
-                true,
-              ),
-            );
-          } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-            const [scaleX, scaleY] = getViewportScale(Store.getState(), ArbitraryViewport);
-            const fx = Store.getState().flycam.zoomStep / scaleX;
-            const fy = Store.getState().flycam.zoomStep / scaleY;
-            Store.dispatch(moveFlycamAction([delta.x * fx, delta.y * fy, 0]));
-          }
+          },
+          leftDownMove: (delta: Point2) => {
+            if (this.props.viewMode === constants.MODE_ARBITRARY) {
+              Store.dispatch(
+                yawFlycamAction(
+                  delta.x * Store.getState().userConfiguration.mouseRotateValue,
+                  true,
+                ),
+              );
+              Store.dispatch(
+                pitchFlycamAction(
+                  delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
+                  true,
+                ),
+              );
+            } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
+              const [scaleX, scaleY] = getViewportScale(Store.getState(), ArbitraryViewport);
+              const fx = Store.getState().flycam.zoomStep / scaleX;
+              const fy = Store.getState().flycam.zoomStep / scaleY;
+              Store.dispatch(moveFlycamAction([delta.x * fx, delta.y * fy, 0]));
+            }
+          },
+          scroll: this.scroll,
+          pinch: (delta: number) => {
+            if (delta < 0) {
+              Store.dispatch(zoomOutAction());
+            } else {
+              Store.dispatch(zoomInAction());
+            }
+          },
         },
-        scroll: this.scroll,
-        pinch: (delta: number) => {
-          if (delta < 0) {
-            Store.dispatch(zoomOutAction());
-          } else {
-            Store.dispatch(zoomInAction());
-          }
-        },
-      });
+        ArbitraryViewport,
+      );
     });
   }
 
@@ -191,6 +217,16 @@ class ArbitraryController extends React.PureComponent<Props> {
       "2": () => {
         Store.dispatch(toggleInactiveTreesAction());
       },
+      // Delete active node
+      delete: () => {
+        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
+      },
+      backspace: () => {
+        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
+      },
+      c: () => {
+        Store.dispatch(createTreeAction());
+      },
       // Branches
       b: () => this.pushBranch(),
       j: () => {
@@ -198,14 +234,19 @@ class ArbitraryController extends React.PureComponent<Props> {
       },
       // Recenter active node
       s: () => {
-        const skeletonTracing = Store.getState().tracing.skeleton;
+        const state = Store.getState();
+        const skeletonTracing = state.tracing.skeleton;
 
         if (!skeletonTracing) {
           return;
         }
 
         getActiveNode(skeletonTracing).map((activeNode) =>
-          api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation),
+          api.tracing.centerPositionAnimated(
+            getNodePosition(activeNode, state),
+            false,
+            activeNode.rotation,
+          ),
         );
       },
       ".": () => this.nextNode(true),
@@ -213,8 +254,6 @@ class ArbitraryController extends React.PureComponent<Props> {
       // Rotate view by 180 deg
       r: () => {
         Store.dispatch(yawFlycamAction(Math.PI));
-        // @ts-ignore
-        window.needsRerender = true;
       },
       // Delete active node and recenter last node
       "shift + space": () => {
@@ -224,7 +263,7 @@ class ArbitraryController extends React.PureComponent<Props> {
           return;
         }
 
-        Store.dispatch(deleteActiveNodeAsUserAction(Store.getState()));
+        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
       },
       q: downloadScreenshot,
     });
@@ -255,19 +294,11 @@ class ArbitraryController extends React.PureComponent<Props> {
     );
   }
 
-  getVoxelOffset(timeFactor: number): number {
-    const state = Store.getState();
-    const { moveValue3d } = state.userConfiguration;
-    const baseVoxel = getBaseVoxel(state.dataset.dataSource.scale);
-    return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
-  }
-
   move(timeFactor: number): void {
     if (!this.isStarted) {
       return;
     }
-
-    Store.dispatch(moveFlycamAction([0, 0, this.getVoxelOffset(timeFactor)]));
+    Store.dispatch(moveFlycamAction([0, 0, getMoveOffset3d(Store.getState(), timeFactor)]));
     this.moved();
   }
 
@@ -367,10 +398,19 @@ class ArbitraryController extends React.PureComponent<Props> {
     if (!Store.getState().temporaryConfiguration.flightmodeRecording) {
       return;
     }
-
-    const position = getPosition(Store.getState().flycam);
-    const rotation = getRotation(Store.getState().flycam);
-    Store.dispatch(createNodeAction(position, rotation, constants.ARBITRARY_VIEW, 0));
+    const state = Store.getState();
+    const position = getPosition(state.flycam);
+    const rotation = getRotation(state.flycam);
+    const additionalCoordinates = state.flycam.additionalCoordinates;
+    Store.dispatch(
+      createNodeAction(
+        untransformNodePosition(position, state),
+        additionalCoordinates,
+        rotation,
+        constants.ARBITRARY_VIEW,
+        0,
+      ),
+    );
   }
 
   changeMoveValue(delta: number): void {

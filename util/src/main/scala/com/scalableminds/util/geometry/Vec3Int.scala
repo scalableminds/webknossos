@@ -8,11 +8,20 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def scale(s: Int): Vec3Int =
     Vec3Int(x * s, y * s, z * s)
 
+  def +(that: Vec3Int): Vec3Int =
+    Vec3Int(x + that.x, y + that.y, z + that.z)
+
   def *(that: Vec3Int): Vec3Int =
     Vec3Int(x * that.x, y * that.y, z * that.z)
 
   def *(that: Int): Vec3Int =
     Vec3Int(x * that, y * that, z * that)
+
+  def -(that: Vec3Int): Vec3Int =
+    Vec3Int(x - that.x, y - that.y, z - that.z)
+
+  def /(that: Vec3Int): Vec3Int =
+    Vec3Int(x / that.x, y / that.y, z / that.z)
 
   def scale(s: Float): Vec3Int =
     Vec3Int((x * s).toInt, (y * s).toInt, (z * s).toInt)
@@ -32,7 +41,11 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
 
   def toList: List[Int] = List(x, y, z)
 
+  def toArray: Array[Int] = toList.toArray
+
   def toVec3Float: Vec3Float = Vec3Float(x.toFloat, y.toFloat, z.toFloat)
+
+  def toVec3Double: Vec3Double = Vec3Double(x.toDouble, y.toDouble, z.toDouble)
 
   def move(dx: Int, dy: Int, dz: Int): Vec3Int =
     Vec3Int(x + dx, y + dy, z + dz)
@@ -58,6 +71,13 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
     } yield Vec3Int(x, y, z)
 
   def product: Int = x * y * z
+
+  def alignWithGridFloor(gridCellSize: Vec3Int): Vec3Int =
+    this / gridCellSize * gridCellSize
+
+  def sorted: Vec3Int = Vec3Int.fromList(toList.sorted).get
+
+  def hasNegativeComponent: Boolean = x < 0 || y < 0 || z < 0
 }
 
 object Vec3Int {
@@ -93,6 +113,12 @@ object Vec3Int {
   def fromList(l: List[Int]): Option[Vec3Int] =
     if (l.length >= 3)
       Some(Vec3Int(l.head, l(1), l(2)))
+    else
+      None
+
+  def fromArray(a: Array[Int]): Option[Vec3Int] =
+    if (a.length >= 3)
+      Some(Vec3Int(a(0), a(1), a(2)))
     else
       None
 

@@ -1,0 +1,12 @@
+syntax = "proto2";
+
+package com.scalableminds.webknossos.datastore;
+
+message SegmentAgglomeratePair {
+  required int64 segmentId = 1;
+  required int64 agglomerateId = 2;
+}
+
+message SegmentToAgglomerateProto {
+  repeated SegmentAgglomeratePair segmentToAgglomerate = 1;
+}

@@ -1,11 +1,10 @@
 package models.task
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.annotation.{Annotation, AnnotationDAO, AnnotationType}
-import models.binary.DataSetDAO
+import models.dataset.DatasetDAO
 import models.project.ProjectDAO
 import models.team.TeamDAO
 import models.user.{User, UserService}
@@ -16,7 +15,7 @@ import utils.{ObjectId, WkConf}
 import scala.concurrent.ExecutionContext
 
 class TaskService @Inject()(conf: WkConf,
-                            dataSetDAO: DataSetDAO,
+                            datasetDAO: DatasetDAO,
                             scriptDAO: ScriptDAO,
                             userService: UserService,
                             annotationDAO: AnnotationDAO,
@@ -30,8 +29,8 @@ class TaskService @Inject()(conf: WkConf,
   def publicWrites(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       annotationBase <- annotationBaseFor(task._id)
-      dataSet <- dataSetDAO.findOne(annotationBase._dataSet)
-      status <- statusOf(task).getOrElse(CompletionStatus(-1, -1, -1))
+      dataset <- datasetDAO.findOne(annotationBase._dataset)
+      status <- statusOf(task).getOrElse(TaskStatus(-1, -1, -1))
       taskType <- taskTypeDAO.findOne(task._taskType)(GlobalAccessContext)
       taskTypeJs <- taskTypeService.publicWrites(taskType)
       scriptInfo <- task._script.toFox.flatMap(sid => scriptDAO.findOne(sid)).futureBox
@@ -41,12 +40,11 @@ class TaskService @Inject()(conf: WkConf,
     } yield {
       Json.obj(
         "id" -> task._id.toString,
-        "formattedHash" -> Formatter.formatHash(task._id.toString),
         "projectId" -> project._id.id,
         "projectName" -> project.name,
         "team" -> team.name,
         "type" -> taskTypeJs,
-        "dataSet" -> dataSet.name,
+        "dataSet" -> dataset.name,
         "neededExperience" -> task.neededExperience,
         "created" -> task.created,
         "status" -> status,
@@ -77,14 +75,14 @@ class TaskService @Inject()(conf: WkConf,
       result <- annotationDAO.countActiveAnnotationsFor(user._id, AnnotationType.Task, teamManagerTeamIds)
     } yield result
 
-  def annotationBaseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
+  private def annotationBaseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
     (for {
       list <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.TracingBase)
     } yield list.headOption.toFox).flatten
 
-  def statusOf(task: Task)(implicit ctx: DBAccessContext): Fox[CompletionStatus] =
+  private def statusOf(task: Task)(implicit ctx: DBAccessContext): Fox[TaskStatus] =
     for {
       activeCount <- annotationDAO.countActiveByTask(task._id, AnnotationType.Task).getOrElse(0)
-    } yield CompletionStatus(task.openInstances, activeCount, task.totalInstances - (activeCount + task.openInstances))
+    } yield TaskStatus(task.pendingInstances, activeCount, task.totalInstances - (activeCount + task.pendingInstances))
 
 }

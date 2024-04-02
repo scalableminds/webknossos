@@ -2,41 +2,25 @@ import { isFlightMode, getW } from "oxalis/shaders/utils.glsl";
 import type { ShaderModule } from "./shader_module_system";
 export const getResolution: ShaderModule = {
   code: `
-    vec3 getResolution(float zoomStep) {
-      if (zoomStep == 0.0) {
-        return <%= formatVector3AsVec3(resolutions[0]) %>;
-      } <% _.range(1, resolutions.length).forEach(resolutionIdx => { %>
-      else if (zoomStep == <%= formatNumberAsGLSLFloat(resolutionIdx) %>) {
-        return <%= formatVector3AsVec3(resolutions[resolutionIdx]) %>;
-      }
-      <% }) %>
-      else {
-        return vec3(0.0, 0.0, 0.0);
-      }
+    vec3 getResolution(uint zoomStep, uint globalLayerIndex) {
+      return allResolutions[zoomStep + resolutionCountCumSum[globalLayerIndex]];
     }
   `,
 };
 export const getResolutionFactors: ShaderModule = {
   requirements: [getResolution],
   code: `
-    vec3 getResolutionFactors(float zoomStepA, float zoomStepB) {
-      return getResolution(zoomStepA) / getResolution(zoomStepB);
+    vec3 getResolutionFactors(uint zoomStepA, uint zoomStepB, uint globalLayerIndex) {
+      return getResolution(zoomStepA, globalLayerIndex) / getResolution(zoomStepB, globalLayerIndex);
     }
   `,
 };
-export const getRelativeCoords: ShaderModule = {
+export const getAbsoluteCoords: ShaderModule = {
   requirements: [getResolution],
   code: `
-    vec3 getRelativeCoords(vec3 worldCoordUVW, float usedZoomStep) {
-      vec3 resolution = getResolution(usedZoomStep);
-      vec3 resolutionUVW = transDim(resolution);
-
-      vec3 anchorPointUVW = transDim(anchorPoint);
-      vec3 anchorPointAsGlobalPositionUVW =
-        anchorPointUVW * resolutionUVW * bucketWidth;
-      vec3 relativeCoords = (worldCoordUVW - anchorPointAsGlobalPositionUVW) / resolutionUVW;
-
-      vec3 coords = transDim(relativeCoords);
+    vec3 getAbsoluteCoords(vec3 worldCoordUVW, uint usedZoomStep, uint globalLayerIndex) {
+      vec3 resolution = getResolution(usedZoomStep, globalLayerIndex);
+      vec3 coords = transDim(worldCoordUVW) / resolution;
       return coords;
     }
   `,

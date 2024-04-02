@@ -1,15 +1,19 @@
+import constants from "oxalis/constants";
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
+import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
 // Adapted from: https://usehooks.com/usePrevious/
-export function usePrevious<T>(value: T): T | null | undefined {
+export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false): T | null {
   // The ref object is a generic container whose current property is mutable ...
   // ... and can hold any value, similar to an instance property on a class
-  const ref = useRef<T | null | undefined>(null);
+  const ref = useRef<T | null>(null);
   // Store current value in ref
   useEffect(() => {
-    ref.current = value;
-  }, [value]);
+    if (!ignoreNullAndUndefined || value != null) {
+      ref.current = value;
+    }
+  }, [value, ignoreNullAndUndefined]);
   // Only re-run if value changes
   // Return previous value (happens before update in useEffect above)
   return ref.current;
@@ -19,13 +23,13 @@ const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEvent
   // @ts-ignore
   Shift: event.shiftKey,
   // @ts-ignore
-  Alt: event.altKey,
+  Alt: event.altKey, // This is the option key ⌥ on MacOS
   // @ts-ignore
-  Control: event.ctrlKey,
+  ControlOrMeta: event.ctrlKey || event.metaKey,
 });
 
 // Adapted from: https://gist.github.com/gragland/b61b8f46114edbcf2a9e4bd5eb9f47f5
-export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
+export function useKeyPress(targetKey: "Shift" | "Alt" | "ControlOrMeta") {
   // State for keeping track of whether key is pressed
   const [keyPressed, setKeyPressed] = useState(false);
 
@@ -75,7 +79,7 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
   };
 
   // Add event listeners
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     window.addEventListener("keydown", downHandler);
     window.addEventListener("keyup", upHandler);
     // Remove event listeners on cleanup
@@ -83,9 +87,55 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
       window.removeEventListener("keydown", downHandler);
       window.removeEventListener("keyup", upHandler);
     };
-  }, []);
+  });
   // Empty array ensures that effect is only run on mount and unmount
   return keyPressed;
+}
+
+export function useRepeatedButtonTrigger(
+  triggerCallback: (timeFactor: number, isFirst: boolean) => void,
+  repeatDelay: number = KEYBOARD_BUTTON_LOOP_INTERVAL,
+) {
+  const [isPressed, setIsPressed] = useState(false);
+  const lastTrigger = useRef<number | null>(null);
+
+  useEffect(() => {
+    let timerId: ReturnType<typeof setTimeout>;
+
+    if (isPressed) {
+      const trigger = () => {
+        timerId = setTimeout(() => {
+          // The timeFactor calculation was adapted from buttonLoop() in input.ts
+          const curTime = Date.now();
+          // If no lastTime, assume that desired FPS is met
+          const lastTime = lastTrigger.current ?? curTime - 1000 / constants.FPS;
+          const elapsed = curTime - lastTime;
+
+          triggerCallback((elapsed / 1000) * constants.FPS, lastTrigger.current == null);
+          lastTrigger.current = curTime;
+          trigger();
+        }, repeatDelay);
+      };
+
+      trigger();
+    }
+
+    return () => {
+      lastTrigger.current = null;
+      clearTimeout(timerId);
+    };
+  }, [isPressed, triggerCallback, repeatDelay]);
+
+  const onTouchStart = () => setIsPressed(true);
+  const onTouchEnd = () => setIsPressed(false);
+
+  return {
+    // Don't do anything on click to avoid that the trigger
+    // is called twice on touch start.
+    onClick: () => {},
+    onTouchStart,
+    onTouchEnd,
+  };
 }
 
 export function useSearchParams() {
@@ -142,4 +192,11 @@ export function usePolling(
       if (timeoutId != null) clearTimeout(timeoutId);
     };
   }, [delay, ...dependencies]);
+}
+
+export function useEffectOnlyOnce(callback: () => void | (() => void)) {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Explicitly run only once.
+  useEffect(() => {
+    return callback();
+  }, []);
 }

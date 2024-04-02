@@ -9,11 +9,7 @@ import Constants, {
   Vector2,
   Vector3,
 } from "oxalis/constants";
-import {
-  getBoundaries,
-  getResolutionInfo,
-  ResolutionInfo,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getDatasetBoundingBox, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
@@ -24,18 +20,23 @@ import sampleVoxelMapToResolution, {
 } from "oxalis/model/volumetracing/volume_annotation_sampling";
 import Dimensions, { DimensionMap } from "oxalis/model/dimensions";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import VolumeLayer, { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { VolumeTracing } from "oxalis/store";
+import { BoundingBoxObject, VolumeTracing } from "oxalis/store";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   for (let i = 0; i < arr.length - 1; i++) {
     yield [arr[i], arr[i + 1]];
   }
 }
+
+export type BooleanBox = {
+  value: boolean;
+};
 
 export function* getBoundingBoxForViewport(
   position: Vector3,
@@ -57,13 +58,21 @@ export function* getBoundingBoxForViewport(
     ),
   };
 
-  const { lowerBoundary, upperBoundary } = yield* select((state) => getBoundaries(state.dataset));
-  return new BoundingBox(currentViewportBounding).intersectedWith(
-    new BoundingBox({
-      min: lowerBoundary,
-      max: upperBoundary,
-    }),
-  );
+  const datasetBoundingBox = yield* select((state) => getDatasetBoundingBox(state.dataset));
+  return new BoundingBox(currentViewportBounding).intersectedWith(datasetBoundingBox);
+}
+
+export function getBoundingBoxInMag1(boudingBox: BoundingBoxObject, magOfBB: Vector3) {
+  return {
+    topLeft: [
+      boudingBox.topLeft[0] * magOfBB[0],
+      boudingBox.topLeft[1] * magOfBB[1],
+      boudingBox.topLeft[2] * magOfBB[2],
+    ] as Vector3,
+    width: boudingBox.width * magOfBB[0],
+    height: boudingBox.height * magOfBB[1],
+    depth: boudingBox.depth * magOfBB[2],
+  };
 }
 
 export function applyLabeledVoxelMapToAllMissingResolutions(
@@ -72,7 +81,7 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
   dimensionIndices: DimensionMap,
   resolutionInfo: ResolutionInfo,
   segmentationCube: DataCube,
-  cellId: number,
+  segmentId: number,
   thirdDimensionOfSlice: number, // this value is specified in global (mag1) coords
   // If shouldOverwrite is false, a voxel is only overwritten if
   // its old value is equal to overwritableValue.
@@ -135,7 +144,7 @@ export function applyLabeledVoxelMapToAllMissingResolutions(
       applyVoxelMap(
         currentLabeledVoxelMap,
         segmentationCube,
-        cellId,
+        segmentId,
         get3DAddressCreator(targetResolution),
         numberOfSlices,
         thirdDim,
@@ -161,8 +170,10 @@ export function* labelWithVoxelBuffer2D(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
   viewport: OrthoView,
+  wroteVoxelsBox?: BooleanBox,
 ): Saga<void> {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (!allowUpdate) return;
   if (voxelBuffer.isEmpty()) return;
   const volumeTracing = yield* select(enforceActiveVolumeTracing);
@@ -190,11 +201,13 @@ export function* labelWithVoxelBuffer2D(
     min: topLeft3DCoord,
     max: bottomRight3DCoord,
   });
-  const bucketBoundingBoxes = outerBoundingBox.chunkIntoBuckets();
-
-  for (const boundingBoxChunk of bucketBoundingBoxes) {
+  for (const boundingBoxChunk of outerBoundingBox.chunkIntoBuckets()) {
     const { min, max } = boundingBoxChunk;
-    const bucketZoomedAddress = zoomedPositionToZoomedAddress(min, labeledZoomStep);
+    const bucketZoomedAddress = zoomedPositionToZoomedAddress(
+      min,
+      labeledZoomStep,
+      additionalCoordinates,
+    );
 
     if (currentLabeledVoxelMap.get(bucketZoomedAddress)) {
       throw new Error("When iterating over the buckets, we shouldn't visit the same bucket twice");
@@ -235,7 +248,7 @@ export function* labelWithVoxelBuffer2D(
   const isDeleting = contourTracingMode === ContourModeEnum.DELETE;
   const newCellIdValue = isDeleting ? 0 : activeCellId;
   const overwritableValue = isDeleting ? activeCellId : 0;
-  applyVoxelMap(
+  const wroteVoxels = applyVoxelMap(
     currentLabeledVoxelMap,
     cube,
     newCellIdValue,
@@ -245,20 +258,27 @@ export function* labelWithVoxelBuffer2D(
     shouldOverwrite,
     overwritableValue,
   );
-  // thirdDimensionOfSlice needs to be provided in global coordinates
-  const thirdDimensionOfSlice =
-    topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
-  applyLabeledVoxelMapToAllMissingResolutions(
-    currentLabeledVoxelMap,
-    labeledZoomStep,
-    dimensionIndices,
-    resolutionInfo,
-    cube,
-    newCellIdValue,
-    thirdDimensionOfSlice,
-    shouldOverwrite,
-    overwritableValue,
-  );
+
+  if (wroteVoxels) {
+    // thirdDimensionOfSlice needs to be provided in global coordinates
+    const thirdDimensionOfSlice =
+      topLeft3DCoord[dimensionIndices[2]] * labeledResolution[dimensionIndices[2]];
+    applyLabeledVoxelMapToAllMissingResolutions(
+      currentLabeledVoxelMap,
+      labeledZoomStep,
+      dimensionIndices,
+      resolutionInfo,
+      cube,
+      newCellIdValue,
+      thirdDimensionOfSlice,
+      shouldOverwrite,
+      overwritableValue,
+    );
+  }
+
+  if (wroteVoxelsBox != null) {
+    wroteVoxelsBox.value = wroteVoxels || wroteVoxelsBox.value;
+  }
 }
 
 export function* createVolumeLayer(

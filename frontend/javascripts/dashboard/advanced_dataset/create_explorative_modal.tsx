@@ -5,20 +5,21 @@ import React, { useEffect, useState } from "react";
 import type { APIDataset, APIDatasetId, APISegmentationLayer } from "types/api_flow_types";
 import {
   doesSupportVolumeWithFallback,
-  getDatasetResolutionInfo,
+  getSomeResolutionInfoForDataset,
   getSegmentationLayers,
   getResolutionInfo,
-  ResolutionInfo,
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getDataset } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
+import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+
 type Props = {
   datasetId: APIDatasetId;
   onClose: () => void;
 };
 type RestrictResolutionSliderProps = {
-  datasetResolutionInfo: ResolutionInfo;
+  resolutionInfo: ResolutionInfo;
   selectedSegmentationLayer: APISegmentationLayer | null;
   resolutionIndices: number[];
   setResolutionIndices: (userIndices: number[]) => void;
@@ -34,7 +35,7 @@ export function NewVolumeLayerSelection({
   dataset: APIDataset;
   selectedSegmentationLayerName: string | undefined;
   setSelectedSegmentationLayerName: (arg0: string | undefined) => void;
-  disableLayerSelection: boolean | undefined;
+  disableLayerSelection?: boolean | undefined;
 }) {
   const selectedSegmentationLayerIndex =
     selectedSegmentationLayerName != null
@@ -65,43 +66,44 @@ export function NewVolumeLayerSelection({
         value={selectedSegmentationLayerIndex}
         disabled={disableLayerSelection ?? false}
       >
-        <Radio key={-1} value={-1}>
-          Create empty layer
-        </Radio>
         {segmentationLayers.map((segmentationLayer, index) => (
           <Radio
             key={segmentationLayer.name}
             value={index}
             disabled={!doesSupportVolumeWithFallback(dataset, segmentationLayer)}
           >
-            {segmentationLayer.name}
+            “{segmentationLayer.name}” layer
           </Radio>
         ))}
+        <Radio key={-1} value={-1}>
+          Create empty layer
+        </Radio>
       </Radio.Group>
     </div>
   );
 }
 
 export function RestrictResolutionSlider({
-  datasetResolutionInfo,
+  resolutionInfo,
   selectedSegmentationLayer,
   resolutionIndices,
   setResolutionIndices,
 }: RestrictResolutionSliderProps) {
-  let highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();
-  let lowestResolutionIndex = datasetResolutionInfo.getClosestExistingIndex(0);
+  let highestResolutionIndex = resolutionInfo.getCoarsestResolutionIndex();
+  let lowestResolutionIndex = resolutionInfo.getFinestResolutionIndex();
 
   if (selectedSegmentationLayer != null) {
     const datasetFallbackLayerResolutionInfo = getResolutionInfo(
       selectedSegmentationLayer.resolutions,
     );
-    highestResolutionIndex = datasetFallbackLayerResolutionInfo.getHighestResolutionIndex();
-    lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getClosestExistingIndex(0);
+    highestResolutionIndex = datasetFallbackLayerResolutionInfo.getCoarsestResolutionIndex();
+    lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getFinestResolutionIndex();
   }
 
   const highResolutionIndex = Math.min(highestResolutionIndex, resolutionIndices[1]);
   const lowResolutionIndex = Math.max(lowestResolutionIndex, resolutionIndices[0]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: setResolutionIndices should also be added to the dependencies. Consider fixing this.
   useEffect(() => {
     setResolutionIndices([lowestResolutionIndex, highestResolutionIndex]);
   }, [lowestResolutionIndex, highestResolutionIndex]);
@@ -132,13 +134,13 @@ export function RestrictResolutionSlider({
       >
         <div
           style={{
-            width: "5em",
+            marginRight: 20,
           }}
         >
-          {datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
+          {resolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex).join("-")}
         </div>
         <Slider
-          tooltipVisible={false}
+          tooltip={{ open: false }}
           onChange={(value) => setResolutionIndices(value)}
           range
           step={1}
@@ -151,11 +153,11 @@ export function RestrictResolutionSlider({
         />
         <div
           style={{
-            width: "6.5em",
+            marginLeft: 20,
             textAlign: "right",
           }}
         >
-          {datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
+          {resolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex).join("-")}
         </div>
       </div>
     </React.Fragment>
@@ -166,7 +168,18 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
   const dataset = useFetch(() => getDataset(datasetId), null, [datasetId]);
   const [annotationType, setAnnotationType] = useState("hybrid");
   const [userDefinedResolutionIndices, setUserDefinedResolutionIndices] = useState([0, 10000]);
-  const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState(undefined);
+  const [selectedSegmentationLayerName, setSelectedSegmentationLayerName] = useState<
+    string | undefined
+  >(undefined);
+
+  useEffect(() => {
+    if (dataset !== null) {
+      const segmentationLayers = getSegmentationLayers(dataset);
+      if (segmentationLayers.length > 0)
+        setSelectedSegmentationLayerName(segmentationLayers[0].name);
+    }
+  }, [dataset]);
+
   let modalContent = <Spin />;
 
   if (dataset !== null) {
@@ -181,24 +194,19 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
       selectedSegmentationLayer != null
         ? `&fallbackLayerName=${selectedSegmentationLayer.name}`
         : "";
-    const datasetResolutionInfo = getDatasetResolutionInfo(dataset);
-    let highestResolutionIndex = datasetResolutionInfo.getHighestResolutionIndex();
-    let lowestResolutionIndex = datasetResolutionInfo.getClosestExistingIndex(0);
-
-    if (selectedSegmentationLayer != null) {
-      const datasetFallbackLayerResolutionInfo = getResolutionInfo(
-        selectedSegmentationLayer.resolutions,
-      );
-      highestResolutionIndex = datasetFallbackLayerResolutionInfo.getHighestResolutionIndex();
-      lowestResolutionIndex = datasetFallbackLayerResolutionInfo.getClosestExistingIndex(0);
-    }
+    const resolutionInfo =
+      selectedSegmentationLayer == null
+        ? getSomeResolutionInfoForDataset(dataset)
+        : getResolutionInfo(selectedSegmentationLayer.resolutions);
+    const highestResolutionIndex = resolutionInfo.getCoarsestResolutionIndex();
+    const lowestResolutionIndex = resolutionInfo.getFinestResolutionIndex();
 
     const highResolutionIndex = Math.min(highestResolutionIndex, userDefinedResolutionIndices[1]);
     const lowResolutionIndex = Math.max(lowestResolutionIndex, userDefinedResolutionIndices[0]);
     const resolutionSlider =
       annotationType !== "skeleton" ? (
         <RestrictResolutionSlider
-          datasetResolutionInfo={datasetResolutionInfo}
+          resolutionInfo={resolutionInfo}
           selectedSegmentationLayer={selectedSegmentationLayer}
           resolutionIndices={userDefinedResolutionIndices}
           setResolutionIndices={setUserDefinedResolutionIndices}
@@ -223,7 +231,6 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
             segmentationLayers={segmentationLayers}
             dataset={dataset}
             selectedSegmentationLayerName={selectedSegmentationLayerName}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'Dispatch<SetStateAction<null>>' is not assig... Remove this comment to see the full error message
             setSelectedSegmentationLayerName={setSelectedSegmentationLayerName}
           />
         ) : null}
@@ -238,9 +245,9 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
             to={`/datasets/${dataset.owningOrganization}/${
               dataset.name
             }/createExplorative/${annotationType}/?minRes=${Math.max(
-              ...datasetResolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex),
+              ...resolutionInfo.getResolutionByIndexOrThrow(lowResolutionIndex),
             )}&maxRes=${Math.max(
-              ...datasetResolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex),
+              ...resolutionInfo.getResolutionByIndexOrThrow(highResolutionIndex),
             )}${fallbackLayerGetParameter}`}
             title="Create new annotation with selected properties"
           >
@@ -256,7 +263,7 @@ function CreateExplorativeModal({ datasetId, onClose }: Props) {
   return (
     <Modal
       title={`Create New Annotation for Dataset “${datasetId.name}”`}
-      visible
+      open
       width={500}
       footer={null}
       onCancel={onClose}

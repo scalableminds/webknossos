@@ -1,12 +1,9 @@
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import * as React from "react";
 import _ from "lodash";
-import api from "oxalis/api/internal_api";
 import dimensions from "oxalis/model/dimensions";
 import {
-  deleteActiveNodeAsUserAction,
+  deleteNodeAsUserAction,
   createTreeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
@@ -14,16 +11,19 @@ import {
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
+import { InputKeyboard, InputKeyboardNoLoop, InputMouse, MouseBindingMap } from "libs/input";
 import { document } from "libs/window";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPosition,
+  getActiveMagIndexForLayer,
+  getMoveOffset,
+} from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setViewportAction } from "oxalis/model/actions/view_mode_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import Model from "oxalis/model";
+import { Model, api } from "oxalis/singletons";
 import PlaneView from "oxalis/view/plane_view";
-import type { OxalisState, Tracing } from "oxalis/store";
+import type { BrushPresets, OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
 import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
@@ -32,7 +32,12 @@ import {
   createCellAction,
   interpolateSegmentationLayerAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { cycleToolAction } from "oxalis/model/actions/ui_actions";
+import {
+  cycleToolAction,
+  enterAction,
+  escapeAction,
+  setToolAction,
+} from "oxalis/model/actions/ui_actions";
 import {
   MoveTool,
   SkeletonTool,
@@ -41,7 +46,10 @@ import {
   PickCellTool,
   FillCellTool,
   BoundingBoxTool,
+  QuickSelectTool,
   ProofreadTool,
+  LineMeasurementTool,
+  AreaMeasurementTool,
 } from "oxalis/controller/combinations/tool_controls";
 import type {
   ShowContextMenuFunction,
@@ -49,19 +57,20 @@ import type {
   OrthoViewMap,
   AnnotationTool,
 } from "oxalis/constants";
-import constants, {
-  OrthoViewValuesWithoutTDView,
-  OrthoViews,
-  AnnotationToolEnum,
-} from "oxalis/constants";
+import { OrthoViewValuesWithoutTDView, OrthoViews, AnnotationToolEnum } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import * as VolumeHandlers from "oxalis/controller/combinations/volume_handlers";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
-import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getMaximumBrushSize,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { showToastWarningForLargestSegmentIdMissing } from "oxalis/view/largest_segment_id_modal";
+import { getDefaultBrushSizes } from "oxalis/view/action-bar/toolbar_view";
+import { userSettings } from "types/schemas/user_settings.schema";
 
 function ensureNonConflictingHandlers(
   skeletonControls: Record<string, any>,
@@ -93,6 +102,10 @@ const cycleToolsBackwards = () => {
   Store.dispatch(cycleToolAction(true));
 };
 
+const setTool = (tool: AnnotationTool) => {
+  Store.dispatch(setToolAction(tool));
+};
+
 type StateProps = {
   tracing: Tracing;
   activeTool: AnnotationTool;
@@ -105,7 +118,8 @@ class SkeletonKeybindings {
       "1": () => Store.dispatch(toggleAllTreesAction()),
       "2": () => Store.dispatch(toggleInactiveTreesAction()),
       // Delete active node
-      delete: () => Store.dispatch(deleteActiveNodeAsUserAction(Store.getState())),
+      delete: () => Store.dispatch(deleteNodeAsUserAction(Store.getState())),
+      backspace: () => Store.dispatch(deleteNodeAsUserAction(Store.getState())),
       c: () => Store.dispatch(createTreeAction()),
       e: () => SkeletonHandlers.moveAlongDirection(),
       r: () => SkeletonHandlers.moveAlongDirection(true),
@@ -130,27 +144,46 @@ class SkeletonKeybindings {
       "ctrl + down": () => SkeletonHandlers.moveNode(0, 1),
     };
   }
+
+  static getExtendedKeyboardControls() {
+    return { s: () => setTool(AnnotationToolEnum.SKELETON) };
+  }
 }
 
 class VolumeKeybindings {
   static getKeyboardControls() {
     return {
       c: () => {
-        const volumeLayer = getActiveSegmentationTracing(Store.getState());
+        const volumeTracing = getActiveSegmentationTracing(Store.getState());
 
-        if (volumeLayer == null || volumeLayer.tracingId == null) {
+        if (volumeTracing == null || volumeTracing.tracingId == null) {
           return;
         }
 
-        if (volumeLayer.largestSegmentId != null) {
-          Store.dispatch(createCellAction(volumeLayer.largestSegmentId));
+        if (volumeTracing.largestSegmentId != null) {
+          Store.dispatch(
+            createCellAction(volumeTracing.activeCellId, volumeTracing.largestSegmentId),
+          );
         } else {
-          showToastWarningForLargestSegmentIdMissing(volumeLayer);
+          showToastWarningForLargestSegmentIdMissing(volumeTracing);
         }
       },
       v: () => {
         Store.dispatch(interpolateSegmentationLayerAction());
       },
+    };
+  }
+
+  static getExtendedKeyboardControls() {
+    return {
+      b: () => setTool(AnnotationToolEnum.BRUSH),
+      e: () => setTool(AnnotationToolEnum.ERASE_BRUSH),
+      l: () => setTool(AnnotationToolEnum.TRACE),
+      r: () => setTool(AnnotationToolEnum.ERASE_TRACE),
+      f: () => setTool(AnnotationToolEnum.FILL_CELL),
+      p: () => setTool(AnnotationToolEnum.PICK_CELL),
+      q: () => setTool(AnnotationToolEnum.QUICK_SELECT),
+      o: () => setTool(AnnotationToolEnum.PROOFREAD),
     };
   }
 }
@@ -161,22 +194,17 @@ class BoundingBoxKeybindings {
       c: () => Store.dispatch(addUserBoundingBoxAction()),
     };
   }
-}
 
-const getMoveValue = (timeFactor: number) => {
-  const state = Store.getState();
-  return (
-    (state.userConfiguration.moveValue * timeFactor) /
-    getBaseVoxel(state.dataset.dataSource.scale) /
-    constants.FPS
-  );
-};
+  static getExtendedKeyboardControls() {
+    return { x: () => setTool(AnnotationToolEnum.BOUNDING_BOX) };
+  }
+}
 
 function createDelayAwareMoveHandler(multiplier: number) {
   // The multiplier can be used for inverting the direction as well as for
   // speeding up the movement as it's done for shift+f, for example.
   const fn = (timeFactor: number, first: boolean) =>
-    MoveHandlers.moveW(getMoveValue(timeFactor) * multiplier, first);
+    MoveHandlers.moveW(getMoveOffset(Store.getState(), timeFactor) * multiplier, first);
 
   fn.customAdditionalDelayFn = () => {
     // Depending on the float fraction of the current position, we want to
@@ -233,22 +261,8 @@ class PlaneController extends React.PureComponent<Props> {
     keyboardLoopDelayed?: InputKeyboard;
   };
 
-  storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
+  storePropertyUnsubscribers: Array<(...args: Array<any>) => any> = [];
   isStarted: boolean = false;
-  // Copied from backbone events (TODO: handle this better)
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'listenTo' has no initializer and is not ... Remove this comment to see the full error message
-  listenTo: (...args: Array<any>) => any;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'stopListening' has no initializer and is... Remove this comment to see the full error message
-  stopListening: (...args: Array<any>) => any;
-
-  constructor(...args: any) {
-    // @ts-expect-error ts-migrate(2556) FIXME: Expected 1-2 arguments, but got 0 or more.
-    super(...args);
-
-    _.extend(this, BackboneEvents);
-
-    this.storePropertyUnsubscribers = [];
-  }
 
   componentDidMount() {
     this.input = {
@@ -275,7 +289,6 @@ class PlaneController extends React.PureComponent<Props> {
     OrthoViewValuesWithoutTDView.forEach((id) => {
       const inputcatcherId = `inputcatcher_${OrthoViews[id]}`;
       Utils.waitForElementWithId(inputcatcherId).then((el) => {
-        // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
         if (!document.body.contains(el)) {
           console.error("el is not attached anymore");
         }
@@ -290,7 +303,7 @@ class PlaneController extends React.PureComponent<Props> {
     });
   }
 
-  getPlaneMouseControls(planeId: OrthoView): Record<string, any> {
+  getPlaneMouseControls(planeId: OrthoView): MouseBindingMap {
     const moveControls = MoveTool.getMouseControls(
       planeId,
       this.planeView,
@@ -317,7 +330,14 @@ class PlaneController extends React.PureComponent<Props> {
       this.planeView,
       this.props.showContextMenuAt,
     );
+    const quickSelectControls = QuickSelectTool.getPlaneMouseControls(
+      planeId,
+      this.planeView,
+      this.props.showContextMenuAt,
+    );
     const proofreadControls = ProofreadTool.getPlaneMouseControls(planeId, this.planeView);
+    const lineMeasurementControls = LineMeasurementTool.getPlaneMouseControls();
+    const areaMeasurementControls = AreaMeasurementTool.getPlaneMouseControls();
 
     const allControlKeys = _.union(
       Object.keys(moveControls),
@@ -327,10 +347,13 @@ class PlaneController extends React.PureComponent<Props> {
       Object.keys(fillCellControls),
       Object.keys(pickCellControls),
       Object.keys(boundingBoxControls),
+      Object.keys(quickSelectControls),
       Object.keys(proofreadControls),
+      Object.keys(lineMeasurementControls),
+      Object.keys(areaMeasurementControls),
     );
 
-    const controls: Record<string, any> = {};
+    const controls: MouseBindingMap = {};
 
     for (const controlKey of allControlKeys) {
       controls[controlKey] = this.createToolDependentMouseHandler({
@@ -344,7 +367,10 @@ class PlaneController extends React.PureComponent<Props> {
         [AnnotationToolEnum.PICK_CELL]: pickCellControls[controlKey],
         [AnnotationToolEnum.FILL_CELL]: fillCellControls[controlKey],
         [AnnotationToolEnum.BOUNDING_BOX]: boundingBoxControls[controlKey],
+        [AnnotationToolEnum.QUICK_SELECT]: quickSelectControls[controlKey],
         [AnnotationToolEnum.PROOFREAD]: proofreadControls[controlKey],
+        [AnnotationToolEnum.LINE_MEASUREMENT]: lineMeasurementControls[controlKey],
+        [AnnotationToolEnum.AREA_MEASUREMENT]: areaMeasurementControls[controlKey],
       });
     }
 
@@ -363,12 +389,15 @@ class PlaneController extends React.PureComponent<Props> {
     });
     this.input.keyboard = new InputKeyboard({
       // Move
-      left: (timeFactor) => MoveHandlers.moveU(-getMoveValue(timeFactor)),
-      right: (timeFactor) => MoveHandlers.moveU(getMoveValue(timeFactor)),
-      up: (timeFactor) => MoveHandlers.moveV(-getMoveValue(timeFactor)),
-      down: (timeFactor) => MoveHandlers.moveV(getMoveValue(timeFactor)),
+      left: (timeFactor) => MoveHandlers.moveU(-getMoveOffset(Store.getState(), timeFactor)),
+      right: (timeFactor) => MoveHandlers.moveU(getMoveOffset(Store.getState(), timeFactor)),
+      up: (timeFactor) => MoveHandlers.moveV(-getMoveOffset(Store.getState(), timeFactor)),
+      down: (timeFactor) => MoveHandlers.moveV(getMoveOffset(Store.getState(), timeFactor)),
     });
-    const notLoopedKeyboardControls = this.getNotLoopedKeyboardControls();
+    const {
+      baseControls: notLoopedKeyboardControls,
+      extendedControls: extendedNotLoopedKeyboardControls,
+    } = this.getNotLoopedKeyboardControls();
     const loopedKeyboardControls = this.getLoopedKeyboardControls();
     ensureNonConflictingHandlers(notLoopedKeyboardControls, loopedKeyboardControls);
     this.input.keyboardLoopDelayed = new InputKeyboard(
@@ -380,6 +409,8 @@ class PlaneController extends React.PureComponent<Props> {
         "shift + d": createDelayAwareMoveHandler(-5),
         "shift + space": createDelayAwareMoveHandler(-1),
         "ctrl + space": createDelayAwareMoveHandler(-1),
+        enter: () => Store.dispatch(enterAction()),
+        esc: () => Store.dispatch(escapeAction()),
         space: createDelayAwareMoveHandler(1),
         f: createDelayAwareMoveHandler(1),
         d: createDelayAwareMoveHandler(-1),
@@ -394,7 +425,11 @@ class PlaneController extends React.PureComponent<Props> {
         delay: Store.getState().userConfiguration.keyboardDelay,
       },
     );
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop(notLoopedKeyboardControls);
+    this.input.keyboardNoLoop = new InputKeyboardNoLoop(
+      notLoopedKeyboardControls,
+      {},
+      extendedNotLoopedKeyboardControls,
+    );
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (state) => state.userConfiguration.keyboardDelay,
@@ -409,10 +444,42 @@ class PlaneController extends React.PureComponent<Props> {
     );
   }
 
+  getBrushPresetsOrSetDefault(): BrushPresets {
+    const brushPresetsFromStore = Store.getState().userConfiguration.presetBrushSizes;
+    if (brushPresetsFromStore != null) {
+      return brushPresetsFromStore;
+    } else {
+      const maximumBrushSize = getMaximumBrushSize(Store.getState());
+      const defaultBrushSizes = getDefaultBrushSizes(
+        maximumBrushSize,
+        userSettings.brushSize.minimum,
+      );
+      Store.dispatch(updateUserSettingAction("presetBrushSizes", defaultBrushSizes));
+      return defaultBrushSizes;
+    }
+  }
+
+  handleUpdateBrushSize(size: "small" | "medium" | "large") {
+    const brushPresets = this.getBrushPresetsOrSetDefault();
+    switch (size) {
+      case "small":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.small));
+        break;
+      case "medium":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.medium));
+        break;
+      case "large":
+        Store.dispatch(updateUserSettingAction("brushSize", brushPresets.large));
+        break;
+    }
+    return;
+  }
+
   getNotLoopedKeyboardControls(): Record<string, any> {
     const baseControls = {
       "ctrl + i": (event: React.KeyboardEvent) => {
         const segmentationLayer = Model.getVisibleSegmentationLayer();
+        const { additionalCoordinates } = Store.getState().flycam;
 
         if (!segmentationLayer) {
           return;
@@ -430,8 +497,9 @@ class PlaneController extends React.PureComponent<Props> {
           const mapping = event.altKey ? cube.getMapping() : null;
           const hoveredId = cube.getDataValue(
             globalMousePosition,
+            additionalCoordinates,
             mapping,
-            getRequestLogZoomStep(Store.getState()),
+            getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
           );
           navigator.clipboard
             .writeText(String(hoveredId))
@@ -444,6 +512,15 @@ class PlaneController extends React.PureComponent<Props> {
       w: cycleTools,
       "shift + w": cycleToolsBackwards,
     };
+
+    let extendedControls = {
+      m: () => setTool(AnnotationToolEnum.MOVE),
+      1: () => this.handleUpdateBrushSize("small"),
+      2: () => this.handleUpdateBrushSize("medium"),
+      3: () => this.handleUpdateBrushSize("large"),
+      ...BoundingBoxKeybindings.getExtendedKeyboardControls(),
+    };
+
     // TODO: Find a nicer way to express this, while satisfying flow
     const emptyDefaultHandler = {
       c: null,
@@ -458,16 +535,29 @@ class PlaneController extends React.PureComponent<Props> {
         : emptyDefaultHandler;
     const { c: boundingBoxCHandler } = BoundingBoxKeybindings.getKeyboardControls();
     ensureNonConflictingHandlers(skeletonControls, volumeControls);
+    const extendedSkeletonControls =
+      this.props.tracing.skeleton != null ? SkeletonKeybindings.getExtendedKeyboardControls() : {};
+    const extendedVolumeControls =
+      this.props.tracing.volumes.length > 0 != null
+        ? VolumeKeybindings.getExtendedKeyboardControls()
+        : {};
+    ensureNonConflictingHandlers(extendedSkeletonControls, extendedVolumeControls);
+    const extendedAnnotationControls = { ...extendedSkeletonControls, ...extendedVolumeControls };
+    ensureNonConflictingHandlers(extendedAnnotationControls, extendedControls);
+    extendedControls = { ...extendedControls, ...extendedAnnotationControls };
 
     return {
-      ...baseControls,
-      ...skeletonControls,
-      ...volumeControls,
-      c: this.createToolDependentKeyboardHandler(
-        skeletonCHandler,
-        volumeCHandler,
-        boundingBoxCHandler,
-      ),
+      baseControls: {
+        ...baseControls,
+        ...skeletonControls,
+        ...volumeControls,
+        c: this.createToolDependentKeyboardHandler(
+          skeletonCHandler,
+          volumeCHandler,
+          boundingBoxCHandler,
+        ),
+      },
+      extendedControls,
     };
   }
 
@@ -485,7 +575,6 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   start(): void {
-    this.bindToEvents();
     getSceneController().startPlaneMode();
     this.planeView.start();
     this.initKeyboard();
@@ -501,16 +590,7 @@ class PlaneController extends React.PureComponent<Props> {
 
     getSceneController().stopPlaneMode();
     this.planeView.stop();
-    this.stopListening();
     this.isStarted = false;
-  }
-
-  bindToEvents(): void {
-    this.listenTo(this.planeView, "render", this.onPlaneViewRender);
-  }
-
-  onPlaneViewRender(): void {
-    getSceneController().update();
   }
 
   changeMoveValue(delta: number): void {
@@ -627,6 +707,6 @@ export function mapStateToProps(state: OxalisState): StateProps {
     activeTool: state.uiInformation.activeTool,
   };
 }
-export { PlaneController as PlaneControllerClass };
+
 const connector = connect(mapStateToProps);
 export default connector(PlaneController);

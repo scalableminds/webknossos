@@ -2,7 +2,7 @@ import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
-import constants, { Vector3 } from "oxalis/constants";
+import constants, { Identity4x4, Vector3 } from "oxalis/constants";
 import test from "ava";
 import defaultState from "oxalis/default_state";
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
@@ -65,16 +65,19 @@ const initialState: OxalisState = {
 test("Flycam Accessors should calculate the max zoom step", (t) => {
   t.is(getMaxZoomStep(initialState.dataset), 16);
 });
+
 test("Flycam Accessors should calculate the request log zoom step (1/2)", (t) => {
-  t.is(accessors.getRequestLogZoomStep(initialState), 0);
+  t.is(accessors.getActiveMagIndexForLayer(initialState, "layer1"), 0);
 });
+
 test("Flycam Accessors should calculate the request log zoom step (2/2)", (t) => {
   const state = _.cloneDeep(initialState);
 
   // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'zoomStep' because it is a read-o... Remove this comment to see the full error message
   state.flycam.zoomStep = 8;
-  t.is(accessors.getRequestLogZoomStep(state), 3);
+  t.is(accessors.getActiveMagIndexForLayer(state, "layer1"), 3);
 });
+
 test("Flycam Accessors should calculate appropriate zoom factors for datasets with many magnifications.", (t) => {
   const scale: Vector3 = [4, 4, 35];
   const resolutions: Vector3[] = [
@@ -112,16 +115,28 @@ test("Flycam Accessors should calculate appropriate zoom factors for datasets wi
     resolutions,
     rects,
     DEFAULT_REQUIRED_BUCKET_CAPACITY,
-    DEFAULT_GPU_MEMORY_FACTOR,
+    Identity4x4,
+    accessors._getDummyFlycamMatrix(scale),
   );
 
   // If this test case should fail at some point, the following values may be updated appropriately
   // to make it pass again. However, it should be validated that zooming out works as expected for
   // datasets with many magnifications (> 12). Small variations in these numbers shouldn't matter much.
+  // biome-ignore format: don't format array
   const expectedZoomValues = [
-    1.3309999999999997, 2.593742460100001, 4.177248169415654, 7.400249944258169, 15.863092971714945,
-    30.912680532870745, 60.24006916124236, 117.39085287969571, 251.63771862927217,
-    490.3707252978515, 955.5938177273264, 2048.400214585478, 4390.927778387033,
+    1.9487171,
+    3.4522712143931016,
+    5.559917313492236,
+    9.849732675807626,
+    21.113776745352595,
+    41.144777789250966,
+    80.1795320536136,
+    156.24722518287504,
+    334.9298034955614,
+    652.6834353714405,
+    1271.8953713950718,
+    2726.4206856132723,
+    6428.757360336458,
   ];
   t.deepEqual(maximumZoomPerResolution, expectedZoomValues);
 });

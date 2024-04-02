@@ -1,4 +1,4 @@
-import { Button, Tooltip } from "antd";
+import { Tooltip, Typography } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useState } from "react";
@@ -10,40 +10,19 @@ import {
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
-import { StartGlobalizeFloodfillsModal } from "oxalis/view/right-border-tabs/starting_job_modals";
-import { getActiveSegmentationTracingLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import ExportBoundingBoxModal from "oxalis/view/right-border-tabs/export_bounding_box_modal";
 import * as Utils from "libs/utils";
-import features from "features";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
-import { APISegmentationLayer, APIUser } from "types/api_flow_types";
-
-// NOTE: The regexp and getBBoxNameForPartialFloodfill need to stay in sync.
-// That way, bboxes created by the floodfill can be detected as such and
-// a job for globalizing floodfills can be started.
-const GLOBALIZE_FLOODFILL_REGEX =
-  /Limits of flood-fill \(source_id=(\d+), target_id=(\d+), seed=([\d,]+), timestamp=(\d+)\)/;
-export function getBBoxNameForPartialFloodfill(
-  oldSegmentIdAtSeed: number,
-  activeCellId: number,
-  seedPosition: Vector3,
-) {
-  return `Limits of flood-fill (source_id=${oldSegmentIdAtSeed}, target_id=${activeCellId}, seed=${seedPosition.join(
-    ",",
-  )}, timestamp=${new Date().getTime()})`;
-}
+import DownloadModalView from "../action-bar/download_modal_view";
+import { APIJobType } from "types/api_flow_types";
 
 export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
-  const [isGlobalizeFloodfillsModalVisible, setIsGlobalizeFloodfillsModalVisible] = useState(false);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const allowUpdate = tracing.restrictions.allowUpdate;
   const dataset = useSelector((state: OxalisState) => state.dataset);
-  const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const activeSegmentationTracingLayer = useSelector(getActiveSegmentationTracingLayer);
   const { userBoundingBoxes } = getSomeTracing(tracing);
   const dispatch = useDispatch();
 
@@ -101,12 +80,6 @@ export default function BoundingBoxTab() {
     setPosition(center);
   }
 
-  const globalizeFloodfillsButtonDisabledReason = getInfoForGlobalizeFloodfill(
-    userBoundingBoxes,
-    activeSegmentationTracingLayer,
-    activeUser,
-  );
-
   const isViewMode = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
@@ -119,6 +92,10 @@ export default function BoundingBoxTab() {
       "Copy this annotation to your account to adapt the bounding boxes.";
   }
 
+  const isExportEnabled = dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+    APIJobType.EXPORT_TIFF,
+  );
+
   return (
     <div
       className="padded-tab-content"
@@ -126,27 +103,6 @@ export default function BoundingBoxTab() {
         minWidth: 300,
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-        }}
-      >
-        <Tooltip title={globalizeFloodfillsButtonDisabledReason.title}>
-          <Button
-            size="small"
-            style={{
-              marginBottom: 8,
-            }}
-            disabled={globalizeFloodfillsButtonDisabledReason.disabled}
-            onClick={() => setIsGlobalizeFloodfillsModalVisible(true)}
-          >
-            <i className="fas fa-fill-drip" />
-            Globalize Flood-Fills
-          </Button>
-        </Tooltip>
-      </div>
-
       {/* In view mode, it's okay to render an empty list, since there will be
           an explanation below, anyway.
       */}
@@ -158,13 +114,11 @@ export default function BoundingBoxTab() {
             value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
             color={bb.color}
             name={bb.name}
-            isExportEnabled={dataset.jobsEnabled}
+            isExportEnabled={isExportEnabled}
             isVisible={bb.isVisible}
             onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
             onDelete={_.partial(deleteBoundingBox, bb.id)}
-            onExport={
-              dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
-            }
+            onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
             onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
             onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
             onNameChange={_.partial(setBoundingBoxName, bb.id)}
@@ -175,7 +129,7 @@ export default function BoundingBoxTab() {
       ) : (
         <div>No Bounding Boxes created yet.</div>
       )}
-      <div style={{ color: "rgba(0,0,0,0.25)" }}>{maybeUneditableExplanation}</div>
+      <Typography.Text type="secondary">{maybeUneditableExplanation}</Typography.Text>
       {allowUpdate ? (
         <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
           <Tooltip title="Click to add another bounding box.">
@@ -190,53 +144,14 @@ export default function BoundingBoxTab() {
         </div>
       ) : null}
       {selectedBoundingBoxForExport != null ? (
-        <ExportBoundingBoxModal
-          dataset={dataset}
-          tracing={tracing}
-          boundingBox={selectedBoundingBoxForExport.boundingBox}
-          handleClose={() => setSelectedBoundingBoxForExport(null)}
-        />
-      ) : null}
-      {isGlobalizeFloodfillsModalVisible ? (
-        <StartGlobalizeFloodfillsModal
-          handleClose={() => setIsGlobalizeFloodfillsModalVisible(false)}
+        <DownloadModalView
+          isOpen
+          isAnnotation
+          onClose={() => setSelectedBoundingBoxForExport(null)}
+          initialBoundingBoxId={selectedBoundingBoxForExport.id}
+          initialTab="export"
         />
       ) : null}
     </div>
   );
-}
-
-function getInfoForGlobalizeFloodfill(
-  userBoundingBoxes: UserBoundingBox[],
-  activeSegmentationTracingLayer: APISegmentationLayer | null | undefined,
-  activeUser: APIUser | null | undefined,
-) {
-  if (!userBoundingBoxes.some((bbox) => bbox.name.match(GLOBALIZE_FLOODFILL_REGEX) != null)) {
-    return { disabled: true, title: "No partial floodfills to globalize." };
-  }
-  if (activeSegmentationTracingLayer == null) {
-    return {
-      disabled: true,
-      title:
-        "Partial floodfills can only be globalized when a segmentation annotation layer exists.",
-    };
-  }
-  if (activeUser == null) {
-    return {
-      disabled: true,
-      title: "Partial floodfills can only be globalized as a registered user.",
-    };
-  }
-  if (!features().jobsEnabled) {
-    return {
-      disabled: true,
-      title: "Partial floodfills can only be globalized when a webknossos-worker was set up.",
-    };
-  }
-
-  return {
-    disabled: false,
-    title:
-      "For this annotation some floodfill operations have not run to completion, because they covered a too large volume. webKnossos can finish these operations via a long-running job.",
-  };
 }

@@ -1,55 +1,52 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DataCubeHandle}
-import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayHandle, MagLocator}
+import com.scalableminds.webknossos.datastore.datareaders.wkw.WKWArray
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.wrap.WKWFile
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty}
+import net.liftweb.common.Empty
+import ucar.ma2.{Array => MultiArray}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
-class WKWCubeHandle(wkwFile: WKWFile) extends DataCubeHandle with FoxImplicits {
+class WKWBucketProvider(layer: WKWLayer,
+                        dataSourceId: DataSourceId,
+                        val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                        sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
+    extends BucketProvider
+    with LazyLogging {
 
-  def cutOutBucket(bucket: BucketPosition)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
-    val numBlocksPerCubeDimension = wkwFile.header.numBlocksPerCubeDimension
-    val blockOffsetX = bucket.bucketX % numBlocksPerCubeDimension
-    val blockOffsetY = bucket.bucketY % numBlocksPerCubeDimension
-    val blockOffsetZ = bucket.bucketZ % numBlocksPerCubeDimension
-    Fox(Future.successful(wkwFile.readBlock(blockOffsetX, blockOffsetY, blockOffsetZ)))
-  }
+  override def openDatasetArrayHandle(readInstruction: DataReadInstruction)(
+      implicit ec: ExecutionContext): Fox[DatasetArrayHandle] = {
+    val magLocatorOpt: Option[MagLocator] =
+      layer.wkwResolutions.find(_.resolution == readInstruction.bucket.mag).map(wkwResolutionToMagLocator)
 
-  override protected def onFinalize(): Unit =
-    wkwFile.close()
-}
-
-class WKWBucketProvider(layer: WKWLayer) extends BucketProvider with WKWDataFormatHelper with LazyLogging {
-
-  override def loadFromUnderlying(readInstruction: DataReadInstruction): Box[WKWCubeHandle] = {
-    val wkwFile = wkwFilePath(
-      readInstruction.cube,
-      Some(readInstruction.dataSource.id),
-      Some(readInstruction.dataLayer.name),
-      readInstruction.baseDir,
-      resolutionAsTriple = Some(false)
-    ).toFile
-
-    if (wkwFile.exists()) {
-      WKWFile(wkwFile).map(new WKWCubeHandle(_))
-    } else {
-      val wkwFileAnisotropic = wkwFilePath(
-        readInstruction.cube,
-        Some(readInstruction.dataSource.id),
-        Some(readInstruction.dataLayer.name),
-        readInstruction.baseDir,
-        resolutionAsTriple = Some(true)
-      ).toFile
-      if (wkwFileAnisotropic.exists) {
-        WKWFile(wkwFileAnisotropic).map(new WKWCubeHandle(_))
-      } else {
-        Empty
-      }
+    magLocatorOpt match {
+      case None => Fox.empty
+      case Some(magLocator) =>
+        remoteSourceDescriptorServiceOpt match {
+          case Some(remoteSourceDescriptorService: RemoteSourceDescriptorService) =>
+            for {
+              magPath: VaultPath <- remoteSourceDescriptorService.vaultPathFor(readInstruction.baseDir,
+                                                                               readInstruction.dataSource.id,
+                                                                               readInstruction.dataLayer.name,
+                                                                               magLocator)
+              chunkContentsCache <- sharedChunkContentsCache.toFox
+              cubeHandle <- WKWArray
+                .open(magPath, dataSourceId, layer.name, chunkContentsCache)
+                .map(new DatasetArrayHandle(_))
+            } yield cubeHandle
+          case None => Empty
+        }
     }
   }
+
+  private def wkwResolutionToMagLocator(wkwResolution: WKWResolution): MagLocator =
+    MagLocator(wkwResolution.resolution)
+
 }

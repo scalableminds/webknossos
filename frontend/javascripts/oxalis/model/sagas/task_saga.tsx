@@ -96,17 +96,16 @@ function* maybeShowRecommendedConfiguration(taskType: APITaskType): Saga<void> {
   if (confirmed) {
     for (const key of Object.keys(recommendedConfiguration)) {
       if (key === "zoom") {
-        // @ts-ignore
-        yield* put(setZoomStepAction(recommendedConfiguration[key]));
+        const newZoom = recommendedConfiguration[key];
+        if (newZoom != null) {
+          yield* put(setZoomStepAction(newZoom));
+        }
       } else if (key === "segmentationOpacity") {
-        for (const segmentationLayer of segmentationLayers) {
-          yield* put(
-            updateLayerSettingAction(
-              segmentationLayer.name,
-              "alpha",
-              recommendedConfiguration[key],
-            ),
-          );
+        const alphaValue = recommendedConfiguration[key];
+        if (alphaValue != null) {
+          for (const segmentationLayer of segmentationLayers) {
+            yield* put(updateLayerSettingAction(segmentationLayer.name, "alpha", alphaValue));
+          }
         }
       } else if (key in userConfiguration) {
         // @ts-ignore
@@ -173,10 +172,17 @@ export function* warnAboutMagRestriction(): Saga<void> {
         Store.dispatch(setZoomStepAction(newZoomValue));
       };
 
+      let constraintString = `between ${min.toFixed(2)} and ${max.toFixed(2)}`;
+      if (min === 0) {
+        constraintString = `lower than ${max.toFixed(2)}`;
+      } else if (max === Infinity) {
+        constraintString = `greater than ${min.toFixed(2)}`;
+      }
+
       const message = (
         <React.Fragment>
           Annotating data is restricted to a certain zoom range. Please adapt the zoom value so that
-          it is between {min.toFixed(2)} and {max.toFixed(2)}. Alternatively, click{" "}
+          it is {constraintString}. Alternatively, click{" "}
           <Button
             type="link"
             onClick={clampZoom}

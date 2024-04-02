@@ -2,10 +2,12 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
+import net.liftweb.common.Full
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
@@ -62,4 +64,15 @@ class AnnotationInformationProvider @Inject()(
   private def handlerForTyp(typ: AnnotationType) =
     annotationInformationHandlerSelector.informationHandlers(typ)
 
+  def annotationForTracing(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    val annotationFox = annotationDAO.findOneByTracingId(tracingId)
+    for {
+      annotationBox <- annotationFox.futureBox
+    } yield {
+      annotationBox match {
+        case Full(_) => annotationBox
+        case _       => annotationStore.findCachedByTracingId(tracingId)
+      }
+    }
+  }
 }

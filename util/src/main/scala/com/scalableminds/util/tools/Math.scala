@@ -30,4 +30,14 @@ object Math {
 
   def stdDev[T: Numeric](xs: Iterable[T]): Double = math.sqrt(variance(xs))
 
+  def ceilDiv(num: Long, divisor: Long): Long = {
+    val sign = num.sign * divisor.sign
+    sign * (num.abs + divisor.abs - 1) / divisor.abs
+  }
+
+  def ceilDiv(num: Int, divisor: Int): Int = {
+    val sign = num.sign * divisor.sign
+    sign * (num.abs + divisor.abs - 1) / divisor.abs
+  }
+
 }

@@ -9,6 +9,7 @@ const dummyUser: APIUser = {
   teams: [],
   isAdmin: false,
   isDatasetManager: false,
+  isOrganizationOwner: true,
   created: 1,
   experiences: {},
   isSuperUser: false,
@@ -19,6 +20,7 @@ const dummyUser: APIUser = {
   organization: "sample_organization",
   novelUserExperienceInfos: {},
   selectedTheme: "auto",
+  isEmailVerified: true,
 };
 
 export default dummyUser;

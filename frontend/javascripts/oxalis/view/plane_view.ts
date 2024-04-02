@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'twee... Remove this comment to see the full error message
 import TWEEN from "tween.js";
@@ -7,13 +5,17 @@ import _ from "lodash";
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import type { OrthoViewMap, Vector3 } from "oxalis/constants";
+import type { OrthoViewMap, Vector3, Viewport } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
 import app from "app";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import window from "libs/window";
 import { clearCanvas, setupRenderArea } from "oxalis/view/rendering_utils";
+import VisibilityAwareRaycaster, {
+  type RaycastIntersection,
+} from "libs/visibility_aware_raycaster";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 const createDirLight = (
   position: Vector3,
@@ -30,33 +32,29 @@ const createDirLight = (
   return dirLight;
 };
 
-const raycaster = new THREE.Raycaster();
+const raycaster = new VisibilityAwareRaycaster();
 let oldRaycasterHit: THREE.Object3D | null = null;
-const ISOSURFACE_HOVER_THROTTLING_DELAY = 150;
+const MESH_HOVER_THROTTLING_DELAY = 150;
 
 class PlaneView {
-  // Copied form backbone events (TODO: handle this better)
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
-  trigger: (...args: Array<any>) => any;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'listenTo' has no initializer and is not ... Remove this comment to see the full error message
-  listenTo: (...args: Array<any>) => any;
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
-  throttledPerformIsosurfaceHitTest: (arg0: [number, number]) => THREE.Vector3 | null | undefined;
+  throttledPerformMeshHitTest: (
+    arg0: [number, number],
+  ) => RaycastIntersection<THREE.Object3D> | null | undefined;
 
   running: boolean;
   needsRerender: boolean;
+  unsubscribeFunctions: Array<() => void> = [];
 
   constructor() {
-    _.extend(this, BackboneEvents);
-
-    this.throttledPerformIsosurfaceHitTest = _.throttle(
-      this.performIsosurfaceHitTest,
-      ISOSURFACE_HOVER_THROTTLING_DELAY,
+    this.throttledPerformMeshHitTest = _.throttle(
+      this.performMeshHitTest,
+      MESH_HOVER_THROTTLING_DELAY,
     );
     this.running = false;
     const { scene } = getSceneController();
     // Initialize main THREE.js components
-    const cameras: any = {};
+    const cameras = {} as OrthoViewMap<THREE.OrthographicCamera>;
 
     for (const plane of OrthoViewValues) {
       // Let's set up cameras
@@ -83,15 +81,6 @@ class PlaneView {
     }
 
     this.needsRerender = true;
-    app.vent.on("rerender", () => {
-      this.needsRerender = true;
-    });
-    Store.subscribe(() => {
-      // Render in the next frame after the change propagated everywhere
-      window.requestAnimationFrame(() => {
-        this.needsRerender = true;
-      });
-    });
   }
 
   animate(): void {
@@ -113,10 +102,9 @@ class PlaneView {
     // This prevents the GPU/CPU from constantly
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
-    if (forceRender || this.needsRerender || window.needsRerender) {
-      window.needsRerender = false;
+    if (forceRender || this.needsRerender) {
       const { renderer, scene } = SceneController;
-      this.trigger("render");
+      SceneController.update();
       const storeState = Store.getState();
       const viewport = {
         [OrthoViews.PLANE_XY]: getInputCatcherRect(storeState, "PLANE_XY"),
@@ -141,14 +129,16 @@ class PlaneView {
     }
   }
 
-  performIsosurfaceHitTest(mousePosition: [number, number]): THREE.Vector3 | null | undefined {
+  performMeshHitTest(
+    mousePosition: [number, number],
+  ): RaycastIntersection<THREE.Object3D> | null | undefined {
     const storeState = Store.getState();
     const SceneController = getSceneController();
-    const { isosurfacesRootGroup } = SceneController;
+    const { meshesLODRootGroup } = SceneController.segmentMeshController;
     const tdViewport = getInputCatcherRect(storeState, "TDView");
     const { hoveredSegmentId } = storeState.temporaryConfiguration;
 
-    // Outside of the 3D viewport, we don't do isosurface hit tests
+    // Outside of the 3D viewport, we don't do mesh hit tests
     if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
       if (hoveredSegmentId !== 0) {
         // Reset hoveredSegmentId if we are outside of the 3D viewport,
@@ -166,21 +156,20 @@ class PlaneView {
       ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
     );
     raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+    const intersectableObjects = meshesLODRootGroup.children;
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
-    // @ts-ignore
-    const intersectableObjects = isosurfacesRootGroup.children.filter((obj) => !obj.passive);
     const intersections = raycaster.intersectObjects(intersectableObjects, true);
     const hitObject = intersections.length > 0 ? intersections[0].object : null;
 
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
     if (hitObject === oldRaycasterHit) {
-      return intersections.length > 0 ? intersections[0].point : null;
+      return intersections.length > 0 ? intersections[0] : null;
     }
 
     // Undo highlighting of old hit
-    if (oldRaycasterHit != null && oldRaycasterHit.parent != null) {
+    if (oldRaycasterHit?.parent != null) {
       oldRaycasterHit.parent.children.forEach((meshPart) => {
         // @ts-ignore
         meshPart.material.emissive.setHex("#000000");
@@ -200,7 +189,7 @@ class PlaneView {
       });
       // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", hitObject.parent.cellId));
-      return intersections[0].point;
+      return intersections[0];
     } else {
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));
       return null;
@@ -208,7 +197,7 @@ class PlaneView {
   }
 
   draw(): void {
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   resizeThrottled = _.throttle((): void => {
@@ -234,13 +223,46 @@ class PlaneView {
     }
 
     window.removeEventListener("resize", this.resizeThrottled);
+
+    for (const fn of this.unsubscribeFunctions) {
+      fn();
+    }
+    this.unsubscribeFunctions = [];
   }
 
   start(): void {
+    this.unsubscribeFunctions.push(
+      app.vent.on("rerender", () => {
+        this.needsRerender = true;
+      }),
+    );
+    this.unsubscribeFunctions.push(
+      Store.subscribe(() => {
+        // Render in the next frame after the change propagated everywhere
+        window.requestAnimationFrame(() => {
+          this.needsRerender = true;
+        });
+      }),
+    );
+
     this.running = true;
     this.resize();
     this.animate();
     window.addEventListener("resize", this.resizeThrottled);
+    this.unsubscribeFunctions.push(
+      listenToStoreProperty(
+        (storeState) => storeState.uiInformation.navbarHeight,
+        () => this.resizeThrottled(),
+        true,
+      ),
+    );
+  }
+
+  getCameraForPlane(plane: Viewport) {
+    if (plane === "arbitraryViewport") {
+      throw new Error("Cannot access camera for arbitrary viewport.");
+    }
+    return this.getCameras()[plane];
   }
 }
 

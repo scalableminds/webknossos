@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
+import com.google.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -7,7 +8,7 @@ import com.scalableminds.webknossos.datastore.geometry.{ColorProto, NamedBoundin
 import net.liftweb.common.Full
 import scalapb.GeneratedMessage
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext
 
 trait ColorGenerator {
   private def getRandomComponent: Double =
@@ -18,8 +19,10 @@ trait ColorGenerator {
 }
 
 trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
+  implicit protected def ec: ExecutionContext
+
   // Each migration transforms a tracing and additionally returns whether the tracing was modified
-  def migrations: List[T => Fox[(T, Boolean)]]
+  protected def migrations: List[T => Fox[(T, Boolean)]]
 
   def migrateTracing(tracing: Fox[T]): Fox[(T, Boolean)] = {
     def migrateIter(tracingAndChanged: Fox[(T, Boolean)], migrations: List[T => Fox[(T, Boolean)]]): Fox[(T, Boolean)] =
@@ -37,10 +40,13 @@ trait TracingMigrationService[T <: GeneratedMessage] extends FoxImplicits {
   }
 }
 
-object SkeletonTracingMigrationService extends TracingMigrationService[SkeletonTracing] with ColorGenerator {
-  override val migrations = List(removeSingleUserBoundingBox)
+class SkeletonTracingMigrationService @Inject()()(implicit val ec: ExecutionContext)
+    extends TracingMigrationService[SkeletonTracing]
+    with ColorGenerator {
+  override protected val migrations: List[SkeletonTracing => Fox[(SkeletonTracing, Boolean)]] = List(
+    removeSingleUserBoundingBox)
 
-  def removeSingleUserBoundingBox(tracing: SkeletonTracing): Fox[(SkeletonTracing, Boolean)] = {
+  private def removeSingleUserBoundingBox(tracing: SkeletonTracing): Fox[(SkeletonTracing, Boolean)] = {
     val newUserBoundingBox: Option[ProtoBox] = tracing.userBoundingBox.map { bb =>
       val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
       ProtoBox(newId, color = Some(getRandomColor), boundingBox = bb)
@@ -50,10 +56,13 @@ object SkeletonTracingMigrationService extends TracingMigrationService[SkeletonT
   }
 }
 
-object VolumeTracingMigrationService extends TracingMigrationService[VolumeTracing] with ColorGenerator {
-  override val migrations = List(removeSingleUserBoundingBox)
+class VolumeTracingMigrationService @Inject()()(implicit val ec: ExecutionContext)
+    extends TracingMigrationService[VolumeTracing]
+    with ColorGenerator {
+  override protected val migrations: List[VolumeTracing => Fox[(VolumeTracing, Boolean)]] = List(
+    removeSingleUserBoundingBox)
 
-  def removeSingleUserBoundingBox(tracing: VolumeTracing): Fox[(VolumeTracing, Boolean)] = {
+  private def removeSingleUserBoundingBox(tracing: VolumeTracing): Fox[(VolumeTracing, Boolean)] = {
     val newUserBoundingBox: Option[ProtoBox] = tracing.userBoundingBox.map { bb =>
       val newId = if (tracing.userBoundingBoxes.isEmpty) 1 else tracing.userBoundingBoxes.map(_.id).max + 1
       ProtoBox(newId, color = Some(getRandomColor), boundingBox = bb)

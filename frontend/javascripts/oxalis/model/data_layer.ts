@@ -1,5 +1,5 @@
 import type { Vector3 } from "oxalis/constants";
-import { getLayerBoundaries, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getLayerBoundingBox, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
 import LayerRenderingManager from "oxalis/model/bucket_data_handling/layer_rendering_manager";
@@ -38,7 +38,8 @@ class DataLayer {
     ErrorHandling.assert(this.resolutions.length > 0, "Resolutions for layer cannot be empty");
 
     this.cube = new DataCube(
-      getLayerBoundaries(dataset, this.name).upperBoundary,
+      getLayerBoundingBox(dataset, this.name),
+      layerInfo.additionalAxes || [],
       getResolutionInfo(this.resolutions),
       layerInfo.elementClass,
       this.isSegmentation,

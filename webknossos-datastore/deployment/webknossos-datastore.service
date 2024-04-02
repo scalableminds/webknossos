@@ -1,5 +1,5 @@
 [Unit]
-Description=webKnossos datastore
+Description=WEBKNOSSOS datastore
 Requires=docker.service
 After=docker.service
 

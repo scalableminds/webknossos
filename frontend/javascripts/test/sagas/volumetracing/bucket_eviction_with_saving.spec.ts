@@ -1,6 +1,7 @@
 import test from "ava";
 import mockRequire from "mock-require";
 import { waitForCondition } from "libs/utils";
+import "test/mocks/lz4";
 import "test/sagas/saga_integration.mock";
 import { __setupOxalis, createBucketResponseFunction } from "test/helpers/apiHelpers";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";

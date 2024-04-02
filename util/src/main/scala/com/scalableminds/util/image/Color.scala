@@ -1,11 +1,13 @@
 package com.scalableminds.util.image
 
 import com.scalableminds.util.tools.ExtendedTypes._
+import net.liftweb.common.Box.tryo
 import play.api.libs.json.Json._
 import play.api.libs.json.{Format, JsValue, _}
 
 case class Color(r: Double, g: Double, b: Double, a: Double) {
-  def toHtml = "#%02x%02x%02x".format((r * 255).toInt, (g * 255).toInt, (b * 255).toInt)
+  def toHtml: String = "#%02x%02x%02x".format((r * 255).toInt, (g * 255).toInt, (b * 255).toInt)
+  def toArrayOfInts: Array[Int] = Array((r * 255).toInt, (g * 255).toInt, (b * 255).toInt)
 }
 
 object Color {
@@ -20,6 +22,15 @@ object Color {
       1
     )
   }
+
+  def fromHTML(htmlCode: String): Option[Color] =
+    tryo({
+      val code = if (!htmlCode.startsWith("#")) s"#$htmlCode" else htmlCode
+      val r = Integer.valueOf(code.substring(1, 3), 16) / 255d
+      val g = Integer.valueOf(code.substring(3, 5), 16) / 255d
+      val b = Integer.valueOf(code.substring(5, 7), 16) / 255d
+      Color(r, g, b, 0)
+    }).toOption
 
   implicit object ColorFormat extends Format[Color] {
 

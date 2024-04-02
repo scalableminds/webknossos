@@ -13,7 +13,9 @@ import {
 import type { APIUser } from "types/api_flow_types";
 import Toast from "libs/toast";
 import { location } from "libs/window";
+
 const { Content } = Layout;
+
 export default function AcceptInviteView({
   token,
   activeUser,
@@ -22,7 +24,7 @@ export default function AcceptInviteView({
   activeUser: APIUser | null | undefined;
 }) {
   const history = useHistory();
-  const [isAuthenticationModalVisible, setIsAuthenticationModalVisible] = useState(false);
+  const [isAuthenticationModalOpen, setIsAuthenticationModalOpen] = useState(false);
   const [targetOrganization, exception] = useFetch(
     async () => {
       try {
@@ -78,7 +80,7 @@ export default function AcceptInviteView({
         Join this Organization
       </AsyncButton>
     ) : (
-      <Button type="primary" onClick={() => setIsAuthenticationModalVisible(true)} size="large">
+      <Button type="primary" onClick={() => setIsAuthenticationModalOpen(true)} size="large">
         Log in / Register
       </Button>
     );
@@ -94,7 +96,7 @@ export default function AcceptInviteView({
         alertMessage={`Please register or login to join ${targetOrganizationName}.`}
         inviteToken={token}
         onLoggedIn={async (userJustRegistered) => {
-          setIsAuthenticationModalVisible(false);
+          setIsAuthenticationModalOpen(false);
 
           if (!userJustRegistered) {
             await onClickJoin();
@@ -104,8 +106,8 @@ export default function AcceptInviteView({
             onSuccessfulJoin(userJustRegistered);
           }
         }}
-        onCancel={() => setIsAuthenticationModalVisible(false)}
-        visible={isAuthenticationModalVisible}
+        onCancel={() => setIsAuthenticationModalOpen(false)}
+        isOpen={isAuthenticationModalOpen}
       />
       <Spin spinning={targetOrganization == null}>
         <Result

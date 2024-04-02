@@ -1,19 +1,21 @@
 import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import type { Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
-import type { Matrix4x4 } from "libs/mjs";
-import { M4x4, V3 } from "libs/mjs";
-import { ZOOM_STEP_INTERVAL } from "oxalis/model/reducers/flycam_reducer";
-import { getAddressSpaceDimensions } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getInputCatcherRect, getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
+import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
+import { Matrix4x4 } from "libs/mjs";
+import { M4x4 } from "libs/mjs";
+import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
+  getColorLayers,
+  getDataLayers,
+  getEnabledLayers,
+  getLayerByName,
   getMaxZoomStep,
-  getResolutionByMax,
-  getResolutions,
+  getResolutionInfo,
+  getTransformsForLayer,
+  invertAndTranspose,
 } from "oxalis/model/accessors/dataset_accessor";
 import { map3, mod } from "libs/utils";
-import { userSettings } from "types/schemas/user_settings.schema";
 import Dimensions from "oxalis/model/dimensions";
 import type {
   OrthoView,
@@ -27,47 +29,50 @@ import type {
 import constants, { OrthoViews } from "oxalis/constants";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
-import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import * as scaleInfo from "oxalis/model/scaleinfo";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
+import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
+import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
+import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
+import { SmallerOrHigherInfo } from "../helpers/resolution_info";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { AdditionalCoordinate } from "types/api_flow_types";
+
+export const ZOOM_STEP_INTERVAL = 1.1;
 
 function calculateTotalBucketCountForZoomLevel(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
-  datasetScale: Vector3,
   resolutions: Array<Vector3>,
   logZoomStep: number,
   zoomFactor: number,
   viewportRects: OrthoViewRects,
+  unzoomedMatrix: Matrix4x4,
   abortLimit: number,
-  initializedGpuFactor: number,
 ) {
   let counter = 0;
-  let minPerDim: Vector3 = [Infinity, Infinity, Infinity];
-  let maxPerDim: Vector3 = [0, 0, 0];
 
+  const addresses = [];
   const enqueueFunction = (bucketAddress: Vector4) => {
-    minPerDim = minPerDim.map((el, index) => Math.min(el, bucketAddress[index])) as Vector3;
-    maxPerDim = maxPerDim.map((el, index) => Math.max(el, bucketAddress[index])) as Vector3;
     counter++;
+    addresses.push(bucketAddress);
   };
 
   // Define dummy values
   const position: Vector3 = [0, 0, 0];
-  const anchorPoint: Vector4 = [0, 0, 0, 0];
-  const subBucketLocality: Vector3 = [1, 1, 1];
   const sphericalCapRadius = constants.DEFAULT_SPHERICAL_CAP_RADIUS;
-  const areas = getAreas(viewportRects, position, zoomFactor, datasetScale);
-  const dummyMatrix: Matrix4x4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-  const matrix = M4x4.scale1(zoomFactor, dummyMatrix);
+  const matrix = M4x4.scale1(zoomFactor, unzoomedMatrix);
 
   if (viewMode === constants.MODE_ARBITRARY_PLANE) {
     determineBucketsForOblique(
+      viewMode,
+      loadingStrategy,
       resolutions,
       position,
       enqueueFunction,
       matrix,
       logZoomStep,
+      viewportRects,
       abortLimit,
     );
   } else if (viewMode === constants.MODE_ARBITRARY) {
@@ -81,28 +86,17 @@ function calculateTotalBucketCountForZoomLevel(
       abortLimit,
     );
   } else {
-    determineBucketsForOrthogonal(
-      resolutions,
-      enqueueFunction,
+    determineBucketsForOblique(
+      viewMode,
       loadingStrategy,
+      resolutions,
+      position,
+      enqueueFunction,
+      matrix,
       logZoomStep,
-      anchorPoint,
-      areas,
-      subBucketLocality,
+      viewportRects,
       abortLimit,
-      initializedGpuFactor,
     );
-  }
-
-  const addressSpaceDimensions = getAddressSpaceDimensions(initializedGpuFactor);
-  const volumeDimension = V3.sub(maxPerDim, minPerDim);
-
-  if (
-    volumeDimension[0] > addressSpaceDimensions[0] ||
-    volumeDimension[1] > addressSpaceDimensions[1] ||
-    volumeDimension[2] > addressSpaceDimensions[2]
-  ) {
-    return Infinity;
   }
 
   return counter;
@@ -126,8 +120,11 @@ export function _getMaximumZoomForAllResolutions(
   resolutions: Array<Vector3>,
   viewportRects: OrthoViewRects,
   maximumCapacity: number,
-  initializedGpuFactor: number,
+  layerMatrix: Matrix4x4,
+  flycamMatrix: Matrix4x4,
 ): Array<number> {
+  const unzoomedMatrix = M4x4.mul(layerMatrix, flycamMatrix);
+
   // This function determines which zoom value ranges are valid for the given magnifications.
   // The calculation iterates through several zoom values and checks the required bucket capacity
   // against the capacity supported by the GPU.
@@ -155,6 +152,12 @@ export function _getMaximumZoomForAllResolutions(
   let currentResolutionIndex = 0;
   const maxZoomValueThresholds = [];
 
+  if (typeof maximumCapacity !== "number" || isNaN(maximumCapacity)) {
+    // If maximumCapacity is NaN for some reason, the following loop will
+    // never terminate (causing webKnossos to hang).
+    throw new Error("Internal error: Invalid maximum capacity provided.");
+  }
+
   while (
     currentIterationCount < maximumIterationCount &&
     currentResolutionIndex < resolutions.length
@@ -163,15 +166,15 @@ export function _getMaximumZoomForAllResolutions(
     const nextCapacity = calculateTotalBucketCountForZoomLevel(
       viewMode,
       loadingStrategy,
-      datasetScale,
       resolutions,
       currentResolutionIndex,
       nextZoomValue,
-      viewportRects, // The bucket picker will stop after reaching the maximum capacity.
+      viewportRects,
+      unzoomedMatrix,
+      // The bucket picker will stop after reaching the maximum capacity.
       // Increment the limit by one, so that rendering is still possible
       // when exactly meeting the limit.
       maximumCapacity + 1,
-      initializedGpuFactor,
     );
 
     if (nextCapacity > maximumCapacity) {
@@ -185,18 +188,73 @@ export function _getMaximumZoomForAllResolutions(
 
   return maxZoomValueThresholds;
 }
-const getMaximumZoomForAllResolutions = memoizeOne(_getMaximumZoomForAllResolutions);
 
-function getMaximumZoomForAllResolutionsFromStore(state: OxalisState): Array<number> {
+// todo: make this cleaner. since the maximum zoom depends on the layer name and the right matrix,
+// a memoization cache size of one doesn't work anymore. move cache to store and update explicitly?
+const perLayerFnCache: Map<string, typeof _getMaximumZoomForAllResolutions> = new Map();
+
+// Only exported for testing.
+export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
+  const scaleMatrix = getMatrixScale(scale);
+  return rotateOnAxis(M4x4.scale(scaleMatrix, M4x4.identity, []), Math.PI, [0, 0, 1]);
+});
+
+export function getMoveOffset(state: OxalisState, timeFactor: number) {
+  return (
+    (state.userConfiguration.moveValue * timeFactor) /
+    getBaseVoxel(state.dataset.dataSource.scale) /
+    constants.FPS
+  );
+}
+
+export function getMoveOffset3d(state: OxalisState, timeFactor: number) {
+  const { moveValue3d } = state.userConfiguration;
+  const baseVoxel = getBaseVoxel(state.dataset.dataSource.scale);
+  return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
+}
+
+function getMaximumZoomForAllResolutionsFromStore(
+  state: OxalisState,
+  layerName: string,
+): Array<number> {
   const { viewMode } = state.temporaryConfiguration;
-  return getMaximumZoomForAllResolutions(
+
+  const layer = getLayerByName(state.dataset, layerName);
+  const layerMatrix = invertAndTranspose(
+    getTransformsForLayer(
+      state.dataset,
+      layer,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ).affineMatrix,
+  );
+
+  let fn = perLayerFnCache.get(layerName);
+  if (fn == null) {
+    fn = memoizeOne(_getMaximumZoomForAllResolutions);
+    perLayerFnCache.set(layerName, fn);
+  }
+
+  const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale);
+
+  return fn(
     viewMode,
     state.datasetConfiguration.loadingStrategy,
     state.dataset.dataSource.scale,
-    getResolutions(state.dataset),
+    getResolutionInfo(layer.resolutions).getDenseResolutions(),
     getViewportRects(state),
-    state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
-    state.temporaryConfiguration.gpuSetup.initializedGpuFactor,
+    Math.min(
+      state.temporaryConfiguration.gpuSetup.smallestCommonBucketCapacity,
+      constants.GPU_FACTOR_MULTIPLIER * state.userConfiguration.gpuMemoryFactor,
+    ),
+    layerMatrix,
+    // Theoretically, the following parameter should be state.flycam.currentMatrix.
+    // However, that matrix changes on each move which means that the raanges would need
+    // to be recalculate on each move. At least, for orthogonal mode, the actual matrix
+    // should only differ in its translation which can be ignored for gauging the maximum
+    // zoom here.
+    // However, for oblique and flight mode this is not really accurate. As a heuristic,
+    // this already proved to be fine, though.
+    dummyFlycamMatrix,
   );
 }
 
@@ -213,6 +271,24 @@ function _getLeft(flycam: Flycam): Vector3 {
 function _getPosition(flycam: Flycam): Vector3 {
   const matrix = flycam.currentMatrix;
   return [matrix[12], matrix[13], matrix[14]];
+}
+
+export function hasAdditionalCoordinates(
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+): boolean {
+  return (additionalCoordinates?.length || 0) > 0;
+}
+
+export function getAdditionalCoordinatesAsString(
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  separator: string = ";",
+): string {
+  if (additionalCoordinates != null && additionalCoordinates.length > 0) {
+    return additionalCoordinates
+      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+      .join(separator);
+  }
+  return "";
 }
 
 function _getFlooredPosition(flycam: Flycam): Vector3 {
@@ -241,37 +317,69 @@ export const getPosition = memoizeOne(_getPosition);
 export const getFlooredPosition = memoizeOne(_getFlooredPosition);
 export const getRotation = memoizeOne(_getRotation);
 export const getZoomedMatrix = memoizeOne(_getZoomedMatrix);
-export function getRequestLogZoomStep(state: OxalisState): number {
-  const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
-  const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
 
-  // Linearly search for the resolution index, for which the zoomFactor
-  // is acceptable.
-  const zoomStep = _.findIndex(
-    maximumZoomSteps,
-    (maximumZoomStep) => state.flycam.zoomStep <= maximumZoomStep,
-  );
+function _getActiveMagIndicesForLayers(state: OxalisState): { [layerName: string]: number } {
+  const magIndices: { [layerName: string]: number } = {};
 
-  if (zoomStep === -1) {
-    return maxLogZoomStep;
+  for (const layer of getDataLayers(state.dataset)) {
+    const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state, layer.name);
+    const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
+
+    // Linearly search for the resolution index, for which the zoomFactor
+    // is acceptable.
+    const zoomStep = _.findIndex(
+      maximumZoomSteps,
+      (maximumZoomStep) => state.flycam.zoomStep <= maximumZoomStep,
+    );
+
+    if (zoomStep === -1) {
+      magIndices[layer.name] = maxLogZoomStep;
+    } else {
+      magIndices[layer.name] = Math.min(zoomStep, maxLogZoomStep);
+    }
   }
 
-  return Math.min(zoomStep, maxLogZoomStep);
+  return magIndices;
 }
 
-export function getCurrentResolution(state: OxalisState): Vector3 {
-  const resolutions = getResolutions(state.dataset);
-  const logZoomStep = getRequestLogZoomStep(state);
-  return resolutions[logZoomStep] || [1, 1, 1];
+export const getActiveMagIndicesForLayers = reuseInstanceOnEquality(_getActiveMagIndicesForLayers);
+
+/*
+  Note that the return value indicates which mag can be rendered theoretically for the given layer
+   (ignoring which mags actually exist). This means the return mag index might not exist for the given layer.
+ */
+export function getActiveMagIndexForLayer(state: OxalisState, layerName: string): number {
+  return getActiveMagIndicesForLayers(state)[layerName];
+}
+
+/*
+  Returns the resolution that is supposed to be rendered for the given layer. The return resolution
+  is independent of the actually loaded data. If null is returned, the layer cannot be rendered,
+  because no appropriate mag exists.
+ */
+export function getCurrentResolution(
+  state: OxalisState,
+  layerName: string,
+): Vector3 | null | undefined {
+  const resolutionInfo = getResolutionInfo(getLayerByName(state.dataset, layerName).resolutions);
+  const magIndex = getActiveMagIndexForLayer(state, layerName);
+  const existingMagIndex = resolutionInfo.getIndexOrClosestHigherIndex(magIndex);
+  if (existingMagIndex == null) {
+    return null;
+  }
+  return resolutionInfo.getResolutionByIndex(existingMagIndex);
 }
 
 function _getValidZoomRangeForUser(state: OxalisState): [number, number] {
-  const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
-
-  const lastZoomStep = _.last(maximumZoomSteps);
+  const maxOfLayers = _.max(
+    getDataLayers(state.dataset).map((layer) => {
+      const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state, layer.name);
+      return _.last(maximumZoomSteps);
+    }),
+  );
 
   const [min, taskAwareMax] = getValidTaskZoomRange(state);
-  const max = lastZoomStep != null ? Math.min(taskAwareMax, lastZoomStep) : 1;
+  const max = maxOfLayers != null ? Math.min(taskAwareMax, maxOfLayers) : 1;
   return [min, max];
 }
 
@@ -279,19 +387,32 @@ export const getValidZoomRangeForUser = reuseInstanceOnEquality(_getValidZoomRan
 
 export function getMaxZoomValueForResolution(
   state: OxalisState,
+  layerName: string,
   targetResolution: Vector3,
 ): number {
+  const targetResolutionIdentifier = Math.max(...targetResolution);
   // Extract the max value from the range
-  return getValidZoomRangeForResolution(state, targetResolution)[1];
+  const maxZoom = getValidZoomRangeForResolution(state, layerName, targetResolutionIdentifier)[1];
+  if (maxZoom == null) {
+    // This should never happen as long as a valid target resolution is passed to this function.
+    throw new Error("Zoom range could not be determined for target resolution.");
+  }
+  return maxZoom;
 }
 
-function getValidZoomRangeForResolution(state: OxalisState, targetResolution: Vector3): Vector2 {
-  const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state);
-  const resolutions = getResolutions(state.dataset);
+function getValidZoomRangeForResolution(
+  state: OxalisState,
+  layerName: string,
+  resolutionIdentifier: number,
+): Vector2 | [null, null] {
+  const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state, layerName);
+  // maximumZoomSteps is densely defined for all resolutions starting from resolution 1,1,1.
+  // Therefore, we can use log2 as an index.
+  const targetResolutionIndex = Math.log2(resolutionIdentifier);
 
-  const targetResolutionIndex = _.findIndex(resolutions, (resolution) =>
-    _.isEqual(resolution, targetResolution),
-  );
+  if (targetResolutionIndex > maximumZoomSteps.length) {
+    return [null, null];
+  }
 
   const max = maximumZoomSteps[targetResolutionIndex];
   const min = targetResolutionIndex > 0 ? maximumZoomSteps[targetResolutionIndex - 1] : 0;
@@ -307,21 +428,27 @@ export function getValidTaskZoomRange(
   state: OxalisState,
   respectRestriction: boolean = false,
 ): [number, number] {
-  const defaultRange = [userSettings.zoom.minimum, Infinity];
+  const defaultRange = [baseDatasetViewConfiguration.zoom.minimum, Infinity] as Vector2;
   const { resolutionRestrictions } = state.tracing.restrictions;
+  // We use the first color layer as a heuristic to check the validity of the zoom range,
+  // as we don't know to which layer a restriction is meant to be applied.
+  // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
+  // Tracked in #6926.
+  const firstColorLayerNameMaybe = _.first(getColorLayers(state.dataset))?.name;
 
-  if (!respectRestriction) {
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type '[number... Remove this comment to see the full error message
+  if (!respectRestriction || !firstColorLayerNameMaybe) {
     return defaultRange;
   }
 
-  // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'value' implicitly has an 'any' type.
-  function getMinMax(value, isMin) {
+  const firstColorLayerName = firstColorLayerNameMaybe;
+
+  function getMinMax(magIdentifier: number | undefined, isMin: boolean) {
     const idx = isMin ? 0 : 1;
     return (
-      (value == null
+      (magIdentifier == null
         ? defaultRange[idx]
-        : getValidZoomRangeForResolution(state, getResolutionByMax(state.dataset, value))[idx]) || // If the value is defined, but doesn't match any resolution, we default to the defaultRange values
+        : // If the magIdentifier is defined, but doesn't match any resolution, we default to the defaultRange values
+          getValidZoomRangeForResolution(state, firstColorLayerName, magIdentifier)[idx]) ||
       defaultRange[idx]
     );
   }
@@ -330,9 +457,18 @@ export function getValidTaskZoomRange(
   const max = getMinMax(resolutionRestrictions.max, false);
   return [min, max];
 }
+
 export function isMagRestrictionViolated(state: OxalisState): boolean {
   const { resolutionRestrictions } = state.tracing.restrictions;
-  const zoomStep = getRequestLogZoomStep(state);
+  // We use the first color layer as a heuristic to check the validity of the zoom range,
+  // as we don't know to which layer a restriction is meant to be applied.
+  // If the layers don't have any transforms, the layer choice doesn't matter, anyway.
+  // Tracked in #6926.
+  const firstColorLayerName = _.first(getColorLayers(state.dataset))?.name;
+  if (!firstColorLayerName) {
+    return false;
+  }
+  const zoomStep = getActiveMagIndexForLayer(state, firstColorLayerName);
 
   if (resolutionRestrictions.min != null && zoomStep < Math.log2(resolutionRestrictions.min)) {
     return true;
@@ -344,22 +480,7 @@ export function isMagRestrictionViolated(state: OxalisState): boolean {
 
   return false;
 }
-export function getPlaneScalingFactor(
-  state: OxalisState,
-  flycam: Flycam,
-  planeID: OrthoView,
-): [number, number] {
-  const [width, height] = getPlaneExtentInVoxelFromStore(state, flycam.zoomStep, planeID);
-  return [width / constants.VIEWPORT_WIDTH, height / constants.VIEWPORT_WIDTH];
-}
-export function getPlaneExtentInVoxelFromStore(
-  state: OxalisState,
-  zoomStep: number,
-  planeID: OrthoView,
-): [number, number] {
-  const { width, height } = getInputCatcherRect(state, planeID);
-  return [width * zoomStep, height * zoomStep];
-}
+
 export function getPlaneExtentInVoxel(
   rects: OrthoViewRects,
   zoomStep: number,
@@ -440,3 +561,111 @@ export function getAreasFromState(state: OxalisState): OrthoViewMap<Area> {
   const datasetScale = state.dataset.dataSource.scale;
   return getAreas(rects, position, zoomStep, datasetScale);
 }
+
+type UnrenderableLayersInfos = {
+  layer: DataLayerType;
+  smallerOrHigherInfo: SmallerOrHigherInfo;
+};
+
+/*
+  This function returns layers that cannot be rendered (since the current resolution is missing),
+  even though they should be rendered (since they are enabled). For each layer, this method
+  additionally returns whether data of this layer can be rendered by zooming in or out.
+  The function takes fallback resolutions into account if renderMissingDataBlack is disabled.
+ */
+function _getUnrenderableLayerInfosForCurrentZoom(
+  state: OxalisState,
+): Array<UnrenderableLayersInfos> {
+  const { dataset } = state;
+  const activeMagIndices = getActiveMagIndicesForLayers(state);
+  const { renderMissingDataBlack } = state.datasetConfiguration;
+  const unrenderableLayers = getEnabledLayers(dataset, state.datasetConfiguration)
+    .map((layer: DataLayerType) => ({
+      layer,
+      activeMagIdx: activeMagIndices[layer.name],
+      resolutionInfo: getResolutionInfo(layer.resolutions),
+    }))
+    .filter(({ activeMagIdx, resolutionInfo }) => {
+      const isPresent = resolutionInfo.hasIndex(activeMagIdx);
+
+      if (isPresent) {
+        // The layer exists. Thus, it is not unrenderable.
+        return false;
+      }
+
+      if (renderMissingDataBlack) {
+        // We already know that the layer is missing. Since `renderMissingDataBlack`
+        // is enabled, the fallback resolutions don't matter. The layer cannot be
+        // rendered.
+        return true;
+      }
+
+      // The current resolution is missing and fallback rendering
+      // is activated. Thus, check whether one of the fallback
+      // zoomSteps can be rendered.
+      return !_.range(1, MAX_ZOOM_STEP_DIFF + 1).some((diff) => {
+        const fallbackZoomStep = activeMagIdx + diff;
+        return resolutionInfo.hasIndex(fallbackZoomStep);
+      });
+    })
+    .map<UnrenderableLayersInfos>(({ layer, resolutionInfo, activeMagIdx }) => {
+      const smallerOrHigherInfo = resolutionInfo.hasSmallerAndOrHigherIndex(activeMagIdx);
+      return {
+        layer,
+        smallerOrHigherInfo,
+      };
+    });
+  return unrenderableLayers;
+}
+
+export const getUnrenderableLayerInfosForCurrentZoom = reuseInstanceOnEquality(
+  _getUnrenderableLayerInfosForCurrentZoom,
+);
+
+function _getActiveResolutionInfo(state: OxalisState) {
+  const enabledLayers = getEnabledLayers(state.dataset, state.datasetConfiguration);
+  const activeMagIndices = getActiveMagIndicesForLayers(state);
+  const activeMagIndicesOfEnabledLayers = Object.fromEntries(
+    enabledLayers.map((l) => [l.name, activeMagIndices[l.name]]),
+  );
+  const activeMagOfEnabledLayers = Object.fromEntries(
+    enabledLayers.map((l) => [
+      l.name,
+      getResolutionInfo(l.resolutions).getResolutionByIndex(activeMagIndices[l.name]),
+    ]),
+  );
+
+  const isActiveResolutionGlobal =
+    _.uniqBy(Object.values(activeMagOfEnabledLayers), (mag) => (mag != null ? mag.join("-") : null))
+      .length === 1;
+  let representativeResolution: Vector3 | undefined | null;
+  if (isActiveResolutionGlobal) {
+    representativeResolution = Object.values(activeMagOfEnabledLayers)[0];
+  } else {
+    const activeMags = Object.values(activeMagOfEnabledLayers).filter((mag) => !!mag) as Vector3[];
+
+    // Find the "best" mag by sorting by the best magnification factor (use the second-best and third-best
+    // factor as a tie breaker).
+    // That way, having the mags [[4, 4, 1], [2, 2, 1], [8, 8, 1]] will yield [2, 2, 1] as a representative,
+    // even though all mags have the same minimum.
+    const activeMagsWithSorted = activeMags.map((mag) => ({
+      mag, // e.g., 4, 4, 1
+      sortedMag: _.sortBy(mag), // e.g., 1, 4, 4
+    }));
+    representativeResolution = _.sortBy(
+      activeMagsWithSorted,
+      ({ sortedMag }) => sortedMag[0],
+      ({ sortedMag }) => sortedMag[1],
+      ({ sortedMag }) => sortedMag[2],
+    )[0]?.mag;
+  }
+
+  return {
+    representativeResolution,
+    activeMagIndicesOfEnabledLayers,
+    activeMagOfEnabledLayers,
+    isActiveResolutionGlobal,
+  };
+}
+
+export const getActiveResolutionInfo = reuseInstanceOnEquality(_getActiveResolutionInfo);

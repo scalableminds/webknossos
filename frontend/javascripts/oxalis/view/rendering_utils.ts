@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { saveAs } from "file-saver";
 import Store from "oxalis/store";
-import type { OrthoView } from "oxalis/constants";
+import { OrthoView } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
   OrthoViewColors,
@@ -39,7 +39,8 @@ export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
 export function renderToTexture(
   plane: OrthoView | typeof ArbitraryViewport,
   scene?: THREE.Scene,
-  camera?: THREE.OrthographicCamera, // When withFarClipping is true, the user-specified clipping distance is used.
+  camera?: THREE.OrthographicCamera | THREE.PerspectiveCamera,
+  // When withFarClipping is true, the user-specified clipping distance is used.
   // Note that the data planes might not be included in the rendered texture, since
   // these are exactly offset by the clipping distance. Currently, `withFarClipping`
   // is only used for node picking (which does not render the data planes), which is why
@@ -51,19 +52,32 @@ export function renderToTexture(
   const { renderer, scene: defaultScene } = SceneController;
   const state = Store.getState();
   scene = scene || defaultScene;
-  camera = (camera || scene.getObjectByName(plane)) as THREE.OrthographicCamera;
+  camera = (camera || scene.getObjectByName(plane)) as
+    | THREE.OrthographicCamera
+    | THREE.PerspectiveCamera;
 
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
   // nodes there.
   if (withFarClipping && plane !== OrthoViews.TDView) {
-    const isArbitraryMode = constants.MODES_ARBITRARY.includes(
-      state.temporaryConfiguration.viewMode,
-    );
-    camera = camera.clone() as THREE.OrthographicCamera;
-    camera.far = isArbitraryMode
-      ? state.userConfiguration.clippingDistanceArbitrary
-      : state.userConfiguration.clippingDistance;
-    camera.updateProjectionMatrix();
+    function adaptCameraToCurrentClippingDistance(
+      camera: THREE.OrthographicCamera | THREE.PerspectiveCamera,
+    ) {
+      const isArbitraryMode = constants.MODES_ARBITRARY.includes(
+        state.temporaryConfiguration.viewMode,
+      );
+      camera = camera.clone();
+      if (isArbitraryMode) {
+        camera.far = state.userConfiguration.clippingDistanceArbitrary;
+      } else {
+        // The near value is already set in the camera (done in the CameraController).
+        // The far value has to be set, since in normal rendering the far clipping is
+        // achieved by offsetting the plane instead of setting the far property.
+        camera.far = state.userConfiguration.clippingDistance;
+      }
+      camera.updateProjectionMatrix();
+    }
+
+    adaptCameraToCurrentClippingDistance(camera);
   }
 
   clearColor = clearColor != null ? clearColor : 0x000000;
@@ -87,27 +101,80 @@ export function renderToTexture(
   renderer.setRenderTarget(null);
   return buffer;
 }
+
+function getScreenshotLogoImage(): Promise<HTMLImageElement> {
+  const logo = document.createElement("img");
+  logo.src = "/assets/images/logo-screenshot.svg";
+  return new Promise((resolve) => {
+    logo.onload = () => resolve(logo);
+  });
+}
+
 export async function downloadScreenshot() {
-  const { dataset, flycam, temporaryConfiguration } = Store.getState();
+  const { dataset, flycam, temporaryConfiguration, userConfiguration } = Store.getState();
+  const { renderWatermark } = userConfiguration;
   const { viewMode } = temporaryConfiguration;
   const datasetName = dataset.name;
   const [x, y, z] = getFlooredPosition(flycam);
   const baseName = `${datasetName}__${x}_${y}_${z}`;
   const planeIds: Array<OrthoView | typeof ArbitraryViewport> =
     viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [ArbitraryViewport];
+  const logo = renderWatermark ? await getScreenshotLogoImage() : null;
 
   for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
     if (width === 0 || height === 0) continue;
-    // @ts-ignore planeId cannot be arbitraryViewport in OrthoViewColors access
-    const clearColor = OrthoViewValues.includes(planeId) ? OrthoViewColors[planeId] : 0xffffff;
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
-    const buffer = renderToTexture(planeId, null, null, false, clearColor);
+    const clearColor = planeId !== "arbitraryViewport" ? OrthoViewColors[planeId] : 0xffffff;
+
+    const buffer = renderToTexture(planeId, undefined, undefined, false, clearColor);
+
+    const inputCatcherElement = document.querySelector(`#inputcatcher_${planeId}`);
+    const drawImageIntoCanvasCallback =
+      renderWatermark && logo != null
+        ? (ctx: CanvasRenderingContext2D) => {
+            const scalebarDistanceToRightBorder = constants.SCALEBAR_OFFSET;
+            const scalebarDistanceToTopBorder =
+              ctx.canvas.height - constants.SCALEBAR_OFFSET - constants.SCALEBAR_HEIGHT;
+            const logoHeight = constants.SCALEBAR_HEIGHT;
+            const logoWidth = (logoHeight / logo.height) * logo.width;
+            ctx.drawImage(
+              logo,
+              scalebarDistanceToRightBorder,
+              scalebarDistanceToTopBorder,
+              logoWidth,
+              logoHeight,
+            );
+          }
+        : null;
+    const canvas =
+      inputCatcherElement != null
+        ? await import("html2canvas").then((html2canvas) =>
+            html2canvas.default(inputCatcherElement as HTMLElement, {
+              backgroundColor: null,
+              // Since the viewports do not honor devicePixelRation yet, always use a scale of 1
+              // as otherwise the two images would not fit together on a HiDPI screen.
+              // Can be removed once https://github.com/scalableminds/webknossos/issues/5116 is fixed.
+              scale: 1,
+              ignoreElements: (element) => element.id === "TDViewControls",
+            }),
+          )
+        : null;
+
     // eslint-disable-next-line no-await-in-loop
-    const blob = await convertBufferToImage(buffer, width, height);
+    const blob = await convertBufferToImage(
+      buffer,
+      width,
+      height,
+      canvas,
+      drawImageIntoCanvasCallback,
+      true,
+    );
     if (blob != null) {
       const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
       saveAs(blob, `${baseName}__${planeDescriptor}.png`);
     }
+  }
+  if (logo) {
+    logo.remove();
   }
 }

@@ -1,28 +1,51 @@
 import * as THREE from "three";
 import { document } from "libs/window";
-// @ts-expect-error ts-migrate(7034) FIXME: Variable 'renderer' implicitly has type 'any' in s... Remove this comment to see the full error message
-let renderer = null;
+import { Store } from "oxalis/singletons";
+let renderer: THREE.WebGLRenderer | null = null;
 
-function getRenderer() {
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'renderer' implicitly has an 'any' type.
+function getRenderer(): THREE.WebGLRenderer {
   if (renderer != null) {
-    // @ts-expect-error ts-migrate(7005) FIXME: Variable 'renderer' implicitly has an 'any' type.
     return renderer;
   }
 
   const renderCanvasElement = document.getElementById("render-canvas");
-  renderer =
+  renderer = (
     renderCanvasElement != null
       ? // Create a WebGL2 renderer
         new THREE.WebGLRenderer({
           canvas: renderCanvasElement,
           // This prevents flickering when rendering to a buffer instead of the canvas
           preserveDrawingBuffer: true,
-          antialias: true,
+          // Apparently, there's a bug in the antialias implementation of browsers so that
+          // varyings that are marked with a flat modifier are still being interpolated.
+          // This caused 1-fragment-wide stripes in the rendering output. Debugging the shader code
+          // showed that the bucket addresses which are passed from vertex to fragment shader
+          // were interpolated sometimes. Disabling antialiasing helped a bit for that, but there
+          // were still problems which is why the fragment shader doesn't use the flat varying
+          // for texels close to the bucket borders. Consequently, antialiasing can be enabled
+          // without problems (probably) apart from a potential performance drop.
+          antialias: Store.getState().userConfiguration.antialiasRendering,
         })
-      : {};
+      : {}
+  ) as THREE.WebGLRenderer;
 
   return renderer;
+}
+
+if (typeof window !== "undefined") {
+  // Call window.testContextLoss() in the console
+  // to test the context loss recovery.
+  function testContextLoss() {
+    const renderer = getRenderer();
+    const ext = renderer.getContext().getExtension("WEBGL_lose_context");
+    if (ext == null) {
+      return;
+    }
+    ext.loseContext();
+    setTimeout(() => ext.restoreContext(), 2500);
+  }
+  // @ts-ignore
+  window.testContextLoss = testContextLoss;
 }
 
 export { getRenderer };

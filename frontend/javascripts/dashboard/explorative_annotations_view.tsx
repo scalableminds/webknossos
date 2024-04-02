@@ -1,7 +1,7 @@
-import { RouteComponentProps, Link, withRouter } from "react-router-dom";
+import { Link } from "react-router-dom";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Table, Button, Modal, Tooltip, Tag } from "antd";
+import { Spin, Input, Table, Button, Modal, Tooltip, Tag, Row, Col, Card } from "antd";
 import {
   DownloadOutlined,
   FolderOpenOutlined,
@@ -19,7 +19,7 @@ import update from "immutability-helper";
 import { AsyncLink } from "components/async_clickables";
 import {
   annotationToCompact,
-  APIAnnotationCompact,
+  APIAnnotationInfo,
   APIUser,
   APIUserCompact,
 } from "types/api_flow_types";
@@ -49,21 +49,25 @@ import messages from "messages";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import TextWithDescription from "components/text_with_description";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
+import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
+import { SearchProps } from "antd/lib/input";
+import { getCombinedStatsFromServerAnnotation } from "oxalis/model/accessors/annotation_accessor";
+import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 
 const { Column } = Table;
 const { Search } = Input;
-const typeHint: APIAnnotationCompact[] = [];
+const typeHint: APIAnnotationInfo[] = [];
 const pageLength: number = 1000;
 
 type TracingModeState = {
-  tracings: Array<APIAnnotationCompact>;
+  tracings: Array<APIAnnotationInfo>;
   lastLoadedPage: number;
   loadedAllTracings: boolean;
 };
 type Props = {
   userId: string | null | undefined;
   isAdminView: boolean;
-  history: RouteComponentProps["history"];
   activeUser: APIUser;
 };
 type State = {
@@ -117,16 +121,16 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   // Other than that, the value should not be changed. It can be used to
   // retrieve the items of the currently rendered page (while respecting
   // the active search and filters).
-  currentPageData: Readonly<APIAnnotationCompact[]> = [];
+  currentPageData: Readonly<APIAnnotationInfo[]> = [];
 
   componentDidMount() {
-    this.setState(persistence.load(this.props.history) as PartialState, () => {
+    this.setState(persistence.load() as PartialState, () => {
       this.fetchNextPage(0);
     });
   }
 
   componentDidUpdate(_prevProps: Props, prevState: State) {
-    persistence.persist(this.props.history, this.state);
+    persistence.persist(this.state);
 
     if (this.state.shouldShowArchivedTracings !== prevState.shouldShowArchivedTracings) {
       this.fetchNextPage(0);
@@ -212,7 +216,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   };
 
-  finishOrReopenAnnotation = async (type: "finish" | "reopen", tracing: APIAnnotationCompact) => {
+  finishOrReopenAnnotation = async (type: "finish" | "reopen", tracing: APIAnnotationInfo) => {
     const shouldFinish = type === "finish";
     const newTracing = annotationToCompact(
       shouldFinish
@@ -250,33 +254,35 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   _updateAnnotationWithArchiveAction = (
-    annotation: APIAnnotationCompact,
+    annotation: APIAnnotationInfo,
     type: "finish" | "reopen",
-  ): APIAnnotationCompact => ({
+  ): APIAnnotationInfo => ({
     ...annotation,
     state: type === "reopen" ? "Active" : "Finished",
   });
 
-  renderActions = (tracing: APIAnnotationCompact) => {
+  renderActions = (tracing: APIAnnotationInfo) => {
     if (tracing.typ !== "Explorational") {
       return null;
     }
 
-    const hasVolumeTracing = getVolumeDescriptors(tracing).length > 0;
     const { typ, id, state } = tracing;
 
     if (state === "Active") {
       return (
         <div>
           <Link to={`/annotations/${id}`}>
-            <PlayCircleOutlined />
+            <PlayCircleOutlined className="icon-margin-right" />
             Open
           </Link>
           <br />
           <AsyncLink
             href="#"
-            onClick={() => downloadAnnotation(id, typ, hasVolumeTracing)}
-            icon={<DownloadOutlined key="download" />}
+            onClick={() => {
+              const hasVolumeTracing = getVolumeDescriptors(tracing).length > 0;
+              return downloadAnnotation(id, typ, hasVolumeTracing);
+            }}
+            icon={<DownloadOutlined key="download" className="icon-margin-right" />}
           >
             Download
           </AsyncLink>
@@ -285,7 +291,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <AsyncLink
               href="#"
               onClick={() => this.finishOrReopenAnnotation("finish", tracing)}
-              icon={<InboxOutlined key="inbox" />}
+              icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
             >
               Archive
             </AsyncLink>
@@ -299,7 +305,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           <AsyncLink
             href="#"
             onClick={() => this.finishOrReopenAnnotation("reopen", tracing)}
-            icon={<FolderOpenOutlined key="folder" />}
+            icon={<FolderOpenOutlined key="folder" className="icon-margin-right" />}
           >
             Reopen
           </AsyncLink>
@@ -309,18 +315,17 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     }
   };
 
-  getCurrentTracings(): Array<APIAnnotationCompact> {
+  getCurrentTracings(): Array<APIAnnotationInfo> {
     return this.getCurrentModeState().tracings;
   }
 
-  handleSearch = (event: React.SyntheticEvent): void => {
+  handleSearchChanged = (event: React.ChangeEvent<HTMLInputElement>): void => {
     this.setState({
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
       searchQuery: event.target.value,
     });
   };
 
-  renameTracing(tracing: APIAnnotationCompact, name: string) {
+  renameTracing(tracing: APIAnnotationInfo, name: string) {
     const tracings = this.getCurrentTracings();
     const newTracings = tracings.map((currentTracing) => {
       if (currentTracing.id !== tracing.id) {
@@ -348,7 +353,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   archiveAll = () => {
     const selectedAnnotations = this.currentPageData.filter(
-      (annotation: APIAnnotationCompact) => annotation.owner?.id === this.props.activeUser.id,
+      (annotation: APIAnnotationInfo) => annotation.owner?.id === this.props.activeUser.id,
     );
 
     if (selectedAnnotations.length === 0) {
@@ -391,7 +396,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   editTagFromAnnotation = (
-    annotation: APIAnnotationCompact,
+    annotation: APIAnnotationInfo,
     shouldAddTag: boolean,
     tag: string,
     event: React.SyntheticEvent,
@@ -438,13 +443,42 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     });
   };
 
-  handleSearchPressEnter = (event: React.SyntheticEvent) => {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
-    const { value } = event.target;
+  getEmptyListPlaceholder = () => {
+    return this.state.isLoading ? null : (
+      <Row gutter={32} justify="center" style={{ padding: 50 }}>
+        <Col span="6">
+          <Card
+            bordered={false}
+            cover={
+              <div style={{ display: "flex", justifyContent: "center" }}>
+                <i className="drawing drawing-empty-list-annotations" />
+              </div>
+            }
+            style={{ background: "transparent" }}
+          >
+            <Card.Meta
+              title="Create an Annotation"
+              style={{ textAlign: "center" }}
+              description={
+                <>
+                  <p>Create your first annotation by opening a dataset from the datasets page.</p>
+                  <Link to="/dashboard/datasets">
+                    <Button type="primary" style={{ marginTop: 30 }}>
+                      Open Datasets Page
+                    </Button>
+                  </Link>
+                </>
+              }
+            />
+          </Card>
+        </Col>
+      </Row>
+    );
+  };
 
+  handleOnSearch: SearchProps["onSearch"] = (value, _event) => {
     if (value !== "") {
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'value' does not exist on type 'EventTarg... Remove this comment to see the full error message
-      this.addTagToSearch(event.target.value);
+      this.addTagToSearch(value);
       this.setState({
         searchQuery: "",
       });
@@ -457,14 +491,22 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     // (e.g., filtering by owner in the column header).
     // Use `this.currentPageData` if you need all currently visible
     // items of the active page.
-    return Utils.filterWithSearchQueryAND(
+    const filteredTracings = Utils.filterWithSearchQueryAND(
       this.getCurrentTracings(),
       ["id", "name", "modified", "tags", "owner"],
-      `${this.state.searchQuery} ${this.state.tags.join(" ")}`,
+      this.state.searchQuery,
     );
+
+    if (this.state.tags.length === 0) {
+      // This check is not strictly necessary, but serves
+      // as an early-out to save some computations.
+      return filteredTracings;
+    }
+
+    return filteredTracings.filter((el) => _.intersection(this.state.tags, el.tags).length > 0);
   }
 
-  renderIdAndCopyButton(tracing: APIAnnotationCompact) {
+  renderIdAndCopyButton(tracing: APIAnnotationInfo) {
     const copyIdToClipboard = async () => {
       await navigator.clipboard.writeText(tracing.id);
       Toast.success("ID copied to clipboard");
@@ -475,7 +517,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Tooltip title="Copy long ID" placement="bottom">
           <Button
             onClick={copyIdToClipboard}
-            icon={<CopyOutlined className="without-icon-margin" />}
+            icon={<CopyOutlined />}
             style={{
               boxShadow: "none",
               backgroundColor: "transparent",
@@ -488,7 +530,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
-  renderNameWithDescription(tracing: APIAnnotationCompact) {
+  renderNameWithDescription(tracing: APIAnnotationInfo) {
     return (
       <div style={{ color: tracing.name ? "inherit" : "#7c7c7c" }}>
         <TextWithDescription
@@ -502,7 +544,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     );
   }
 
-  isTracingEditable(tracing: APIAnnotationCompact): boolean {
+  isTracingEditable(tracing: APIAnnotationInfo): boolean {
     return tracing.owner?.id === this.props.activeUser.id || tracing.othersMayEdit;
   }
 
@@ -554,6 +596,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       },
     ];
 
+    if (filteredAndSortedTracings.length === 0) {
+      return this.getEmptyListPlaceholder();
+    }
+
     return (
       <Table
         dataSource={filteredAndSortedTracings}
@@ -575,20 +621,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           this.currentPageData = currentPageData;
           return null;
         }}
-        locale={{
-          emptyText: (
-            <p>
-              Create annotations by opening a dataset from{" "}
-              <Link to="/dashboard/datasets">the datasets page</Link>.
-            </p>
-          ),
-        }}
       >
         <Column
           title="ID"
           dataIndex="id"
           width={100}
-          render={(__, tracing: APIAnnotationCompact) => (
+          render={(__, tracing: APIAnnotationInfo) => (
             <>
               <div className="monospace-id">{this.renderIdAndCopyButton(tracing)}</div>
 
@@ -607,7 +645,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           width={280}
           dataIndex="name"
           sorter={Utils.localeCompareBy(typeHint, (annotation) => annotation.name)}
-          render={(name: string, tracing: APIAnnotationCompact) =>
+          render={(_name: string, tracing: APIAnnotationInfo) =>
             this.renderNameWithDescription(tracing)
           }
         />
@@ -617,7 +655,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           width={300}
           filters={ownerAndTeamsFilters}
           filterMode="tree"
-          onFilter={(value: string | number | boolean, tracing: APIAnnotationCompact) =>
+          onFilter={(value: string | number | boolean, tracing: APIAnnotationInfo) =>
             (tracing.owner != null && tracing.owner.id === value.toString()) ||
             tracing.teams.some((team) => team.id === value)
           }
@@ -625,7 +663,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             typeHint,
             (annotation) => annotation.owner?.firstName || "",
           )}
-          render={(owner: APIUser | null, tracing: APIAnnotationCompact) => {
+          render={(owner: APIUser | null, tracing: APIAnnotationInfo) => {
             const ownerName = owner != null ? renderOwner(owner) : null;
             const teamTags = tracing.teams.map((t) => (
               <Tag key={t.id} color={stringToColor(t.name)}>
@@ -652,58 +690,23 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Stats"
           width={150}
-          render={(__, annotation: APIAnnotationCompact) =>
-            "treeCount" in annotation.stats &&
-            "nodeCount" in annotation.stats &&
-            "edgeCount" in annotation.stats ? (
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "30% auto",
-                }}
-              >
-                <span
-                  title="Trees"
-                  style={{
-                    margin: "auto",
-                  }}
-                >
-                  <i className="fas fa-sitemap" />
-                </span>
-                <span>{annotation.stats.treeCount}</span>
-                <span
-                  title="Nodes"
-                  style={{
-                    margin: "auto",
-                  }}
-                >
-                  <i className="fas fa-circle fa-sm" />
-                </span>
-                <span>{annotation.stats.nodeCount}</span>
-                <span
-                  title="Edges"
-                  style={{
-                    margin: "auto",
-                  }}
-                >
-                  <i className="fas fa-arrows-alt-h" />
-                </span>
-                <span>{annotation.stats.edgeCount}</span>
-              </div>
-            ) : null
-          }
+          render={(__, annotation: APIAnnotationInfo) => (
+            <AnnotationStats
+              stats={getCombinedStatsFromServerAnnotation(annotation)}
+              asInfoBlock={false}
+            />
+          )}
         />
         <Column
           title="Tags"
           dataIndex="tags"
-          render={(tags: Array<string>, annotation: APIAnnotationCompact) => (
+          render={(tags: Array<string>, annotation: APIAnnotationInfo) => (
             <div>
               {tags.map((tag) => (
                 <CategorizationLabel
                   key={tag}
                   kind="annotations"
                   onClick={_.partial(this.addTagToSearch, tag)}
-                  // @ts-expect-error ts-migrate(2322) FIXME: Type 'Function1<SyntheticEvent<Element, Event>, vo... Remove this comment to see the full error message
                   onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
                   tag={tag}
                   closable={
@@ -734,7 +737,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Actions"
           className="nowrap"
           key="action"
-          render={(__, tracing: APIAnnotationCompact) => this.renderActions(tracing)}
+          render={(__, tracing: APIAnnotationInfo) => this.renderActions(tracing)}
         />
       </Table>
     );
@@ -743,6 +746,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   renderSearchTags() {
     return (
       <CategorizationSearch
+        itemName="annotations"
         searchTags={this.state.tags}
         setTags={(tags) =>
           this.setState({
@@ -755,51 +759,18 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const marginRight = {
-      marginRight: 8,
-    };
-    const search = (
-      <Search
-        style={{
-          width: 200,
-          float: "right",
-        }}
-        onPressEnter={this.handleSearchPressEnter}
-        onChange={this.handleSearch}
-        value={this.state.searchQuery}
-      />
-    );
     return (
       <div className="TestExplorativeAnnotationsView">
-        {this.props.isAdminView ? (
-          search
-        ) : (
-          <div className="pull-right">
-            <Button
-              icon={<UploadOutlined />}
-              style={marginRight}
-              onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
-            >
-              Upload Annotation(s)
-            </Button>
-            <Button onClick={this.toggleShowArchived} style={marginRight}>
-              Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Annotations
-            </Button>
-            {!this.state.shouldShowArchivedTracings ? (
-              <Button onClick={this.archiveAll} style={marginRight}>
-                Archive All
-              </Button>
-            ) : null}
-            {search}
-          </div>
-        )}
-        {this.renderSearchTags()}
-        <div
-          className="clearfix"
-          style={{
-            margin: "20px 0px",
-          }}
+        <TopBar
+          isAdminView={this.props.isAdminView}
+          handleOnSearch={this.handleOnSearch}
+          handleSearchChanged={this.handleSearchChanged}
+          searchQuery={this.state.searchQuery}
+          toggleShowArchived={this.toggleShowArchived}
+          shouldShowArchivedTracings={this.state.shouldShowArchivedTracings}
+          archiveAll={this.archiveAll}
         />
+        {this.renderSearchTags()}
         <Spin spinning={this.state.isLoading} size="large">
           {this.renderTable()}
         </Spin>
@@ -822,4 +793,69 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter<RouteComponentProps & Props, any>(ExplorativeAnnotationsView);
+function TopBar({
+  isAdminView,
+  handleOnSearch,
+  handleSearchChanged,
+  searchQuery,
+  toggleShowArchived,
+  shouldShowArchivedTracings,
+  archiveAll,
+}: {
+  isAdminView: boolean;
+  handleOnSearch: SearchProps["onSearch"];
+  handleSearchChanged: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  searchQuery: string;
+  toggleShowArchived: () => void;
+  shouldShowArchivedTracings: boolean;
+  archiveAll: () => void;
+}) {
+  const activeTab = React.useContext(ActiveTabContext);
+  const renderingTab = React.useContext(RenderingTabContext);
+
+  const marginRight = {
+    marginRight: 8,
+  };
+  const search = (
+    <Search
+      style={{
+        width: 200,
+        float: "right",
+      }}
+      onSearch={handleOnSearch}
+      onChange={handleSearchChanged}
+      value={searchQuery}
+    />
+  );
+
+  const content = isAdminView ? (
+    search
+  ) : (
+    <div className="pull-right">
+      <Button
+        icon={<UploadOutlined />}
+        style={marginRight}
+        onClick={() => Store.dispatch(setDropzoneModalVisibilityAction(true))}
+      >
+        Upload Annotation(s)
+      </Button>
+      <Button onClick={toggleShowArchived} style={marginRight}>
+        Show {shouldShowArchivedTracings ? "Open" : "Archived"} Annotations
+      </Button>
+      {!shouldShowArchivedTracings ? (
+        <Button onClick={archiveAll} style={marginRight}>
+          Archive All
+        </Button>
+      ) : null}
+      {search}
+    </div>
+  );
+
+  return (
+    <RenderToPortal portalId="dashboard-TabBarExtraContent">
+      {activeTab === renderingTab ? content : null}
+    </RenderToPortal>
+  );
+}
+
+export default ExplorativeAnnotationsView;

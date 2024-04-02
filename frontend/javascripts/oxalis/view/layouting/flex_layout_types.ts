@@ -12,8 +12,8 @@ export type TabsetNode = {
   selected?: number;
   children: Array<TabNode>;
 };
-// Using TabsetNode | RowNode does not work as flow is to pessimistic.
-export type RowOrTabsetNode = Record<string, any>;
+
+export type RowOrTabsetNode = TabsetNode | RowNode;
 export type RowNode = {
   type: "row";
   weight?: number;

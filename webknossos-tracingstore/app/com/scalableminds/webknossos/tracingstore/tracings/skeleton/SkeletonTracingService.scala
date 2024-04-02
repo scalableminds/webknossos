@@ -6,11 +6,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
-import com.scalableminds.webknossos.tracingstore.tracings.{TracingType, _}
+import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
-import net.liftweb.common.{Empty, Full}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
+import net.liftweb.common.{Box, Empty, Full}
 import play.api.libs.json.{JsObject, JsValue, Json}
 
 import scala.concurrent.ExecutionContext
@@ -20,7 +22,8 @@ class SkeletonTracingService @Inject()(
     val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing],
     val handledGroupIdStore: TracingStoreRedisStore,
     val temporaryTracingIdStore: TracingStoreRedisStore,
-    val uncommittedUpdatesStore: TracingStoreRedisStore)(implicit ec: ExecutionContext)
+    val uncommittedUpdatesStore: TracingStoreRedisStore,
+    val tracingMigrationService: SkeletonTracingMigrationService)(implicit val ec: ExecutionContext)
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
     with ProtoGeometryImplicits
@@ -29,8 +32,6 @@ class SkeletonTracingService @Inject()(
   val tracingType: TracingType.Value = TracingType.skeleton
 
   val tracingStore: FossilDBClient = tracingDataStore.skeletons
-
-  val tracingMigrationService: SkeletonTracingMigrationService.type = SkeletonTracingMigrationService
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 
@@ -44,7 +45,8 @@ class SkeletonTracingService @Inject()(
 
   def handleUpdateGroup(tracingId: String,
                         updateActionGroup: UpdateActionGroup[SkeletonTracing],
-                        previousVersion: Long): Fox[_] =
+                        previousVersion: Long,
+                        userToken: Option[String]): Fox[_] =
     tracingDataStore.skeletonUpdates.put(
       tracingId,
       updateActionGroup.version,
@@ -158,33 +160,41 @@ class SkeletonTracingService @Inject()(
     save(finalTracing, None, finalTracing.version)
   }
 
-  def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing =
-    tracings
-      .reduceLeft(mergeTwo)
-      .copy(
+  def merge(tracings: Seq[SkeletonTracing],
+            mergedVolumeStats: MergedVolumeStats,
+            newEditableMappingIdOpt: Option[String]): Box[SkeletonTracing] =
+    for {
+      tracing <- tracings.map(Full(_)).reduceLeft(mergeTwo)
+    } yield
+      tracing.copy(
         createdTimestamp = System.currentTimeMillis(),
         version = 0L,
       )
 
-  private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing): SkeletonTracing = {
-    val nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
-    val groupMapping = TreeUtils.calculateGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
-    val mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)
-    val mergedGroups = TreeUtils.mergeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMapping)
-    val mergedBoundingBox = combineBoundingBoxes(tracingA.boundingBox, tracingB.boundingBox)
-    val userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
-                                                     tracingB.userBoundingBox,
-                                                     tracingA.userBoundingBoxes,
-                                                     tracingB.userBoundingBoxes)
-
-    tracingA.copy(
-      trees = mergedTrees,
-      treeGroups = mergedGroups,
-      boundingBox = mergedBoundingBox,
-      userBoundingBox = None,
-      userBoundingBoxes = userBoundingBoxes
-    )
-  }
+  private def mergeTwo(tracingA: Box[SkeletonTracing], tracingB: Box[SkeletonTracing]): Box[SkeletonTracing] =
+    for {
+      tracingA <- tracingA
+      tracingB <- tracingB
+      mergedAdditionalAxes <- AdditionalAxis.mergeAndAssertSameAdditionalAxes(
+        Seq(tracingA, tracingB).map(t => AdditionalAxis.fromProtosAsOpt(t.additionalAxes)))
+      nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
+      groupMapping = GroupUtils.calculateTreeGroupMapping(tracingA.treeGroups, tracingB.treeGroups)
+      mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping, groupMapping)
+      mergedGroups = GroupUtils.mergeTreeGroups(tracingA.treeGroups, tracingB.treeGroups, groupMapping)
+      mergedBoundingBox = combineBoundingBoxes(tracingA.boundingBox, tracingB.boundingBox)
+      userBoundingBoxes = combineUserBoundingBoxes(tracingA.userBoundingBox,
+                                                   tracingB.userBoundingBox,
+                                                   tracingA.userBoundingBoxes,
+                                                   tracingB.userBoundingBoxes)
+    } yield
+      tracingA.copy(
+        trees = mergedTrees,
+        treeGroups = mergedGroups,
+        boundingBox = mergedBoundingBox,
+        userBoundingBox = None,
+        userBoundingBoxes = userBoundingBoxes,
+        additionalAxes = AdditionalAxis.toProto(mergedAdditionalAxes)
+      )
 
   // Can be removed again when https://github.com/scalableminds/webknossos/issues/5009 is fixed
   override def remapTooLargeTreeIds(skeletonTracing: SkeletonTracing): SkeletonTracing =
@@ -196,8 +206,9 @@ class SkeletonTracingService @Inject()(
   def mergeVolumeData(tracingSelectors: Seq[TracingSelector],
                       tracings: Seq[SkeletonTracing],
                       newId: String,
-                      newTracing: SkeletonTracing,
-                      toCache: Boolean): Fox[Unit] = Fox.successful(())
+                      newVersion: Long,
+                      toCache: Boolean,
+                      userToken: Option[String]): Fox[MergedVolumeStats] = Fox.successful(MergedVolumeStats.empty())
 
   def updateActionLog(tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject =
@@ -237,4 +248,7 @@ class SkeletonTracingService @Inject()(
     }
 
   def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
+
+  def mergeEditableMappings(tracingsWithIds: List[(SkeletonTracing, String)], userToken: Option[String]): Fox[String] =
+    Fox.empty
 }

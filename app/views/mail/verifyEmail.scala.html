@@ -1,0 +1,32 @@
+@( name: String, url: String, linkExpiry: String )
+
+@emailBaseTemplate() {
+  <p>Hi @name,</p>
+
+  <p>
+    To continue setting up your WEBKNOSSOS account, please verify that this is your email address.
+  </p>
+  <div style="text-align: center;">
+    <a href="@{url}" style="
+        color: #fff;
+        padding: 4px 15px;
+        height: 32px;
+        background: #5660ff;
+        border: 1px solid #808cff;
+        text-align: center;
+        font-weight: 400;
+        font-size: 14px;
+        line-height: 2.1;
+        text-decoration: none;
+        border-radius: 4px;
+        display: inline-block;
+      ">
+      Verify email address
+    </a>
+  </div>
+  <p>With best regards,<br />your WEBKNOSSOS team</p>
+  <p style="margin-top: 20px; color: #888; font-size: 0.6rem;">
+    @{linkExpiry}If you did not make this request, please disregard this email.
+  </p>
+}
+

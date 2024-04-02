@@ -8,7 +8,15 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, Za
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, Json, OFormat}
+
+case class EditableMappingSegmentListResult(
+    segmentIds: List[Long],
+    agglomerateIdIsPresent: Boolean
+)
+object EditableMappingSegmentListResult {
+  implicit val jsonFormat: OFormat[EditableMappingSegmentListResult] = Json.format[EditableMappingSegmentListResult]
+}
 
 class DSRemoteTracingstoreClient @Inject()(
     rpc: RPC,
@@ -40,7 +48,7 @@ class DSRemoteTracingstoreClient @Inject()(
                      cxyz: String,
                      tracingStoreUri: String,
                      token: Option[String]): Fox[Array[Byte]] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/$cxyz")
+    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/$cxyz").silent
       .addQueryStringOptional("token", token)
       .getWithBytesResponse
 
@@ -61,4 +69,14 @@ class DSRemoteTracingstoreClient @Inject()(
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/.zgroup")
       .addQueryStringOptional("token", token)
       .getWithJsonResponse[JsObject]
+
+  def getEditableMappingSegmentIdsForAgglomerate(tracingStoreUri: String,
+                                                 tracingId: String,
+                                                 agglomerateId: Long,
+                                                 token: Option[String]): Fox[EditableMappingSegmentListResult] =
+    rpc(s"$tracingStoreUri/tracings/mapping/$tracingId/segmentsForAgglomerate")
+      .addQueryString("agglomerateId" -> agglomerateId.toString)
+      .addQueryStringOptional("token", token)
+      .silent
+      .getWithJsonResponse[EditableMappingSegmentListResult]
 }

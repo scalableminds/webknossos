@@ -10,9 +10,11 @@ export function getMeshfileChunksForSegment(
   meshFile: string,
   segmentId: number,
 ): Promise<Array<Vector3>> {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/chunks?token=${token}`,
+  return doWithToken((token) => {
+    const params = new URLSearchParams();
+    params.append("token", token);
+    return Request.sendJSONReceiveJSON(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/meshes/chunks?${params}`,
       {
         data: {
           meshFile,
@@ -20,8 +22,8 @@ export function getMeshfileChunksForSegment(
         },
         showErrorToast: false,
       },
-    ),
-  );
+    );
+  });
 }
 
 export function getMeshfileChunkData(

@@ -1,4 +1,4 @@
-import { Select } from "antd";
+import { Button, Dropdown, MenuProps, Space } from "antd";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import React, { PureComponent } from "react";
@@ -9,9 +9,10 @@ import {
 import type { OxalisState, AllowedMode } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
-import type { ViewMode } from "oxalis/constants";
+import { ViewMode, ViewModeValues } from "oxalis/constants";
 import constants from "oxalis/constants";
-const { Option } = Select;
+import { EmptyObject } from "types/globals";
+
 type StateProps = {
   viewMode: ViewMode;
   allowedModes: Array<AllowedMode>;
@@ -21,7 +22,15 @@ type DispatchProps = {
 };
 type Props = StateProps & DispatchProps;
 
-class ViewModesView extends PureComponent<Props, {}> {
+const VIEW_MODE_TO_ICON = {
+  [constants.MODE_PLANE_TRACING]: <i className="fas fa-th-large" />,
+  [constants.MODE_ARBITRARY]: <i className="fas fa-globe" />,
+  [constants.MODE_ARBITRARY_PLANE]: (
+    <i className="fas fa-square-full" style={{ transform: "scale(0.8, 1) rotate(-45deg)" }} />
+  ),
+};
+
+class ViewModesView extends PureComponent<Props, EmptyObject> {
   handleChange = (mode: ViewMode) => {
     // If we switch back from any arbitrary mode we stop recording.
     // This prevents that when the user switches back to any arbitrary mode,
@@ -51,24 +60,40 @@ class ViewModesView extends PureComponent<Props, {}> {
   }
 
   render() {
+    const handleMenuClick: MenuProps["onClick"] = (args) => {
+      if (ViewModeValues.includes(args.key as ViewMode)) {
+        this.handleChange(args.key as ViewMode);
+      }
+    };
+
+    const MENU_ITEMS: MenuProps["items"] = [
+      {
+        key: "1",
+        type: "group",
+        label: "Select View Mode",
+        children: ViewModeValues.map((mode) => ({
+          label: Utils.capitalize(mode),
+          key: mode,
+          disabled: this.isDisabled(mode),
+          icon: <span style={{ marginRight: 8 }}>{VIEW_MODE_TO_ICON[mode]}</span>,
+        })),
+      },
+    ];
+
+    const menuProps = {
+      items: MENU_ITEMS,
+      onClick: handleMenuClick,
+    };
+
     return (
-      <Select
-        value={this.props.viewMode}
-        style={{
-          width: 120,
-        }}
-        onChange={this.handleChange}
-      >
-        {[
-          constants.MODE_PLANE_TRACING,
-          constants.MODE_ARBITRARY,
-          constants.MODE_ARBITRARY_PLANE,
-        ].map((mode) => (
-          <Option key={mode} disabled={this.isDisabled(mode)} value={mode}>
-            {Utils.capitalize(mode)}
-          </Option>
-        ))}
-      </Select>
+      // The outer div is necessary for proper spacing.
+      <div>
+        <Dropdown menu={menuProps}>
+          <Button>
+            <Space>{VIEW_MODE_TO_ICON[this.props.viewMode]}</Space>
+          </Button>
+        </Dropdown>
+      </div>
     );
   }
 }

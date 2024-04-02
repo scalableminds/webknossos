@@ -4,7 +4,6 @@ import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
 import ndarray, { NdArray } from "ndarray";
-import api from "oxalis/api/internal_api";
 import {
   ContourModeEnum,
   InterpolationModeEnum,
@@ -13,9 +12,12 @@ import {
   TypedArrayWithoutBigInt,
   Vector3,
 } from "oxalis/constants";
-import Model from "oxalis/model";
+import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { getFlooredPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getActiveMagIndexForLayer,
+  getFlooredPosition,
+} from "oxalis/model/accessors/flycam_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
@@ -32,9 +34,11 @@ import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import { Model, api } from "oxalis/singletons";
 import { OxalisState } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
+import { ensureMaybeActiveMappingIsLocked } from "../saga_helpers";
 
 /*
  * This saga is capable of doing segment interpolation between two slices.
@@ -52,7 +56,7 @@ import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } 
 
 export const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
-export function getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
+function _getInterpolationInfo(state: OxalisState, explanationPrefix: string) {
   const isAllowed = state.tracing.restrictions.volumeInterpolationAllowed;
   const onlyExtrude = state.userConfiguration.interpolationMode === InterpolationModeEnum.EXTRUDE;
   const volumeTracing = getActiveSegmentationTracing(state);
@@ -78,8 +82,8 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
   const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
   const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);
 
-  const requestedZoomStep = getRequestLogZoomStep(state);
   const segmentationLayer = Model.getSegmentationTracingLayer(volumeTracing.tracingId);
+  const requestedZoomStep = getActiveMagIndexForLayer(state, segmentationLayer.name);
   const resolutionInfo = getResolutionInfo(segmentationLayer.resolutions);
   const labeledZoomStep = resolutionInfo.getClosestExistingIndex(requestedZoomStep);
   const labeledResolution = resolutionInfo.getResolutionByIndexOrThrow(labeledZoomStep);
@@ -146,6 +150,8 @@ export function getInterpolationInfo(state: OxalisState, explanationPrefix: stri
   };
 }
 
+export const getInterpolationInfo = reuseInstanceOnEquality(_getInterpolationInfo);
+
 const isEqual = cwise({
   args: ["array", "scalar"],
   body: function body(a: number, b: number) {
@@ -156,10 +162,11 @@ const isEqual = cwise({
 const isEqualFromBigUint64: (
   output: NdArray<TypedArrayWithoutBigInt>,
   a: NdArray<BigUint64Array>,
-  b: BigInt,
+  b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  body: function body(output: number, a: BigInt, b: BigInt) {
+  // biome-ignore lint/correctness/noUnusedVariables: output is needed for the assignment
+  body: function body(output: number, a: bigint, b: bigint) {
     output = a === b ? 1 : 0;
   },
 });
@@ -201,14 +208,18 @@ const absMax = cwise({
 
 const assign = cwise({
   args: ["array", "array"],
+  // biome-ignore lint/correctness/noUnusedVariables: a is needed for the assignment
   body: function body(a: number, b: number) {
     a = b;
   },
 });
 
-function copy(Constructor: Float32ArrayConstructor, arr: ndarray.NdArray): ndarray.NdArray {
+export function copyNdArray(
+  Constructor: Uint8ArrayConstructor | Float32ArrayConstructor,
+  arr: ndarray.NdArray,
+): ndarray.NdArray {
   const { shape } = arr;
-  let stride;
+  let stride: number[];
 
   if (arr.shape.length === 3) {
     stride = [1, shape[0], shape[0] * shape[1]];
@@ -231,8 +242,8 @@ function copy(Constructor: Float32ArrayConstructor, arr: ndarray.NdArray): ndarr
  */
 function signedDist(arr: ndarray.NdArray) {
   // Copy the input twice to avoid mutating it
-  arr = copy(Float32Array, arr) as NdArray<Float32Array>;
-  const negatedArr = copy(Float32Array, arr) as NdArray<Float32Array>;
+  arr = copyNdArray(Float32Array, arr) as NdArray<Float32Array>;
+  const negatedArr = copyNdArray(Float32Array, arr) as NdArray<Float32Array>;
 
   // Normal distance transform for arr
   distanceTransform(arr);
@@ -324,15 +335,17 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     .paddedWithSignedMargins(
       transpose([0, 0, -directionFactor * interpolationDepth * labeledResolution[thirdDim]]),
     )
-    .alignWithMag(labeledResolution, true)
+    .alignWithMag(labeledResolution, "grow")
     .rounded();
   const relevantBoxCurrentMag = relevantBoxMag1.fromMag1ToMag(labeledResolution);
 
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   const inputData = yield* call(
     [api.data, api.data.getDataForBoundingBox],
     volumeTracingLayer.name,
     relevantBoxMag1,
     labeledZoomStep,
+    additionalCoordinates,
   );
 
   const size = relevantBoxCurrentMag.getSize();
@@ -376,8 +389,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   // These two variables will be initialized with binary masks (representing whether
   // a voxel contains the active segment id).
-  let firstSlice;
-  let lastSlice;
+  let firstSlice: NdArray<TypedArrayWithoutBigInt>;
+  let lastSlice: NdArray<TypedArrayWithoutBigInt>;
 
   const isBigUint64 = inputNd.data instanceof BigUint64Array;
   if (isBigUint64) {
@@ -421,6 +434,11 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     Toast.warning(
       `Could not interpolate segment, because id ${activeCellId} was not found in source/target slice.`,
     );
+    return;
+  }
+  // As the interpolation will be applied, the potentially existing mapping should be locked to ensure a consistent state.
+  const { isMappingLockedIfNeeded } = yield* call(ensureMaybeActiveMappingIsLocked, volumeTracing);
+  if (!isMappingLockedIfNeeded) {
     return;
   }
 

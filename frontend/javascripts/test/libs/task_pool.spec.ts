@@ -1,6 +1,6 @@
 import { call, type Saga } from "oxalis/model/sagas/effect-generators";
 import { runSaga } from "redux-saga";
-import processTaskWithPool from "libs/task_pool";
+import processTaskWithPool from "libs/async/task_pool";
 import * as Utils from "libs/utils";
 import test from "ava";
 
@@ -43,7 +43,7 @@ test.serial(
     try {
       await runSaga({}, processTaskWithPool, tasks, 1).toPromise();
       t.fail("processTaskWithPool should fail");
-    } catch (exception) {
+    } catch (_exception) {
       t.deepEqual(protocol, [1]);
     }
   },

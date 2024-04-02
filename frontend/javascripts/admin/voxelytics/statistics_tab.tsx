@@ -1,12 +1,19 @@
 import React, { useState } from "react";
-import { Button } from "antd";
+import { Button, Tooltip } from "antd";
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsChunkStatistics } from "admin/admin_rest_api";
 import { usePolling } from "libs/react_hooks";
-import { formatBytes, formatCPU, formatDistanceStrict } from "libs/format_utils";
+import {
+  formatCountToDataAmountUnit,
+  formatCPU,
+  formatDistanceStrict,
+  formatDurationStrict,
+  formatNumber,
+} from "libs/format_utils";
 import { VoxelyticsChunkStatistics } from "types/api_flow_types";
-import { Result } from "./task_view";
-import { VX_POLLING_INTERVAL } from "./workflow_view";
+import { Result } from "./utils";
+import dayjs from "dayjs";
+import { pluralize } from "libs/utils";
 
 type StatisticsResult = Result<Array<VoxelyticsChunkStatistics>>;
 
@@ -30,10 +37,9 @@ export default function StatisticsTab({
   workflowHash,
   runId,
   taskName,
-  isRunning,
 }: {
   workflowHash: string;
-  runId: string;
+  runId: string | null;
   taskName: string;
   isRunning: boolean;
 }) {
@@ -57,7 +63,7 @@ export default function StatisticsTab({
     }
   }
 
-  usePolling(loadStatistics, isRunning ? VX_POLLING_INTERVAL : null);
+  usePolling(loadStatistics, null, [runId, taskName]);
 
   function renderContent() {
     if (statisticsResult.type === "LOADING") {
@@ -82,118 +88,144 @@ export default function StatisticsTab({
           </tr>
         </thead>
         <tbody>
-          {statisticsResult.value.map((row: VoxelyticsChunkStatistics) => (
-            <tr key={row.executionId}>
-              <td>
-                {row.executionId}
-                <br />
-                <span className="stats-label">
-                  {row.countFinished !== row.countTotal && <>{row.countFinished} of </>}
-                  {row.countTotal} chunk{row.countTotal !== 1 && "s"} completed
-                </span>
-              </td>
-              <td>
-                {row.memory?.max != null && (
-                  <>
-                    <span className="stats-label">Max</span>{" "}
-                    {formatBytes(row.memory.max * 1024 * 1024)}
-                  </>
-                )}
-                <br />
-                {row.memory?.median != null && (
-                  <>
-                    <span className="stats-label">Median</span>{" "}
-                    {formatBytes(row.memory.median * 1024 * 1024)}
-                  </>
-                )}
-                <br />
-                {row.memory?.stddev != null && (
-                  <>
-                    <span className="stats-label">Stddev</span>{" "}
-                    {formatBytes(row.memory.stddev * 1024 * 1024)}
-                  </>
-                )}
-              </td>
-              <td>
-                {row.cpuUser?.max != null && (
-                  <>
-                    <span className="stats-label">Max</span> {formatCPU(row.cpuUser.max)}
-                  </>
-                )}
-                <br />
-                {row.cpuUser?.median != null && (
-                  <>
-                    <span className="stats-label">Median</span> {formatCPU(row.cpuUser.median)}
-                  </>
-                )}
-                <br />
-                {row.cpuUser?.stddev != null && (
-                  <>
-                    <span className="stats-label">Stddev</span> {formatCPU(row.cpuUser.stddev)}
-                  </>
-                )}
-              </td>
-              <td>
-                {row.cpuSystem?.max != null && (
-                  <>
-                    <span className="stats-label">Max</span> {formatCPU(row.cpuSystem.max)}
-                  </>
-                )}
-                <br />
-                {row.cpuSystem?.median != null && (
-                  <>
-                    <span className="stats-label">Median</span> {formatCPU(row.cpuSystem.median)}
-                  </>
-                )}
-                <br />
-                {row.cpuSystem?.stddev != null && (
-                  <>
-                    <span className="stats-label">Stddev</span> {formatCPU(row.cpuSystem.stddev)}
-                  </>
-                )}
-              </td>
-              <td>
-                {row.countTotal === 1 ? (
-                  row.duration?.max != null && (
+          {statisticsResult.value.map((row: VoxelyticsChunkStatistics) => {
+            const remainingCount =
+              row.chunkCounts.total -
+              row.chunkCounts.complete -
+              row.chunkCounts.failed -
+              row.chunkCounts.cancelled -
+              row.chunkCounts.skipped;
+            const runnableCount = row.chunkCounts.total - row.chunkCounts.skipped;
+            return (
+              <tr key={row.executionId}>
+                <td>
+                  <Tooltip
+                    overlay={
+                      <>
+                        {formatNumber(remainingCount)} remaining •{" "}
+                        {formatNumber(row.chunkCounts.complete)} complete •{" "}
+                        {formatNumber(row.chunkCounts.cancelled)} cancelled •{" "}
+                        {formatNumber(row.chunkCounts.failed)} failed •{" "}
+                        {formatNumber(row.chunkCounts.skipped)} skipped •{" "}
+                        {formatNumber(row.chunkCounts.total)} total
+                      </>
+                    }
+                  >
+                    <span>
+                      {row.executionId}
+                      <br />
+                      <span className="stats-label">
+                        {row.chunkCounts.complete !== runnableCount && (
+                          <>{formatNumber(row.chunkCounts.complete)} of </>
+                        )}
+                        {formatNumber(runnableCount)} {pluralize("chunk", runnableCount)} completed
+                      </span>
+                    </span>
+                  </Tooltip>
+                </td>
+                <td>
+                  {row.memory?.max != null && (
                     <>
-                      <span className="stats-label">Sum</span>{" "}
-                      {formatDistanceStrict(row.duration.max * 1000, 0)}
+                      <span className="stats-label">Max</span>{" "}
+                      {formatCountToDataAmountUnit(row.memory.max * 1024 * 1024)}
                     </>
-                  )
-                ) : (
-                  <>
-                    {row.duration?.max != null && (
-                      <>
-                        <span className="stats-label">Max</span>{" "}
-                        {formatDistanceStrict(row.duration.max * 1000, 0)}
-                      </>
-                    )}
-                    <br />
-                    {row.duration?.median != null && (
-                      <>
-                        <span className="stats-label">Median</span>{" "}
-                        {formatDistanceStrict(row.duration.median * 1000, 0)}
-                      </>
-                    )}
-                    <br />{" "}
-                    {row.duration?.sum != null && (
+                  )}
+                  <br />
+                  {row.memory?.median != null && (
+                    <>
+                      <span className="stats-label">Median</span>{" "}
+                      {formatCountToDataAmountUnit(row.memory.median * 1024 * 1024)}
+                    </>
+                  )}
+                  <br />
+                  {row.memory?.stddev != null && (
+                    <>
+                      <span className="stats-label">Stddev</span>{" "}
+                      {formatCountToDataAmountUnit(row.memory.stddev * 1024 * 1024)}
+                    </>
+                  )}
+                </td>
+                <td>
+                  {row.cpuUser?.max != null && (
+                    <>
+                      <span className="stats-label">Max</span> {formatCPU(row.cpuUser.max)}
+                    </>
+                  )}
+                  <br />
+                  {row.cpuUser?.median != null && (
+                    <>
+                      <span className="stats-label">Median</span> {formatCPU(row.cpuUser.median)}
+                    </>
+                  )}
+                  <br />
+                  {row.cpuUser?.stddev != null && (
+                    <>
+                      <span className="stats-label">Stddev</span> {formatCPU(row.cpuUser.stddev)}
+                    </>
+                  )}
+                </td>
+                <td>
+                  {row.cpuSystem?.max != null && (
+                    <>
+                      <span className="stats-label">Max</span> {formatCPU(row.cpuSystem.max)}
+                    </>
+                  )}
+                  <br />
+                  {row.cpuSystem?.median != null && (
+                    <>
+                      <span className="stats-label">Median</span> {formatCPU(row.cpuSystem.median)}
+                    </>
+                  )}
+                  <br />
+                  {row.cpuSystem?.stddev != null && (
+                    <>
+                      <span className="stats-label">Stddev</span> {formatCPU(row.cpuSystem.stddev)}
+                    </>
+                  )}
+                </td>
+                <td>
+                  {row.chunkCounts.total === 1 ? (
+                    row.duration?.max != null && (
                       <>
                         <span className="stats-label">Sum</span>{" "}
-                        {formatDistanceStrict(row.duration.sum * 1000, 0)}
+                        {formatDistanceStrict(row.duration.max * 1000, 0)}
                       </>
-                    )}
-                  </>
-                )}
-                <br />
-                {row.beginTime != null && row.endTime != null && (
-                  <>
-                    <span className="stats-label">Wall</span>{" "}
-                    {formatDistanceStrict(row.endTime, row.beginTime)}
-                  </>
-                )}
-              </td>
-            </tr>
-          ))}
+                    )
+                  ) : (
+                    <>
+                      {row.duration?.max != null && (
+                        <>
+                          <span className="stats-label">Max</span>{" "}
+                          {formatDistanceStrict(row.duration.max * 1000, 0)}
+                        </>
+                      )}
+                      <br />
+                      {row.duration?.median != null && (
+                        <>
+                          <span className="stats-label">Median</span>{" "}
+                          {formatDistanceStrict(row.duration.median * 1000, 0)}
+                        </>
+                      )}
+                      <br />{" "}
+                      {row.duration?.sum != null && (
+                        <>
+                          <span className="stats-label">Sum</span>{" "}
+                          {formatDistanceStrict(row.duration.sum * 1000, 0)}
+                        </>
+                      )}
+                    </>
+                  )}
+                  <br />
+                  {row.wallTime != null && (
+                    <>
+                      <span className="stats-label">Wall</span>{" "}
+                      {formatDurationStrict(dayjs.duration(row.wallTime, "seconds"))}
+                    </>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     );

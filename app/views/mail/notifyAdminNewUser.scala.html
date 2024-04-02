@@ -1,9 +1,9 @@
-@( username: String, brainDBresult: Option[String], uri: String, autoActivate: Boolean )
+@( username: String, uri: String, autoActivate: Boolean )
 
 @emailBaseTemplate() {
   <p>Hi,</p>
 
-  <p>A new user - @username - just registered a webKnossos account for your <a href="@uri">organization.</a></p>
+  <p>A new user - @username - just registered a WEBKNOSSOS account for your <a href="@uri">organization.</a></p>
   <p>
     @if(autoActivate) {
     As this user joined via invite link, they are automatically activated. To manage their permissions and assign them to a team within your organization, visit  <a href="@{uri}/users">@{uri}/users</a>.
@@ -12,11 +12,5 @@
     }
   </p>
 
-  <p>
-  @if(brainDBresult.isDefined) {
-    Result when trying to register the new user on braintracing.org: @brainDBresult.get
-  }
-  </p>
-
-  <p>With best regards,<br />Your webKnossos Team</p>
+  <p>With best regards,<br />your WEBKNOSSOS team</p>
 }

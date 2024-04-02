@@ -1,5 +1,3 @@
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'back... Remove this comment to see the full error message
-import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Date from "libs/date";
 import Hammer from "libs/hammerjs_wrapper";
@@ -9,6 +7,7 @@ import * as Utils from "libs/utils";
 import type { Point2 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import window, { document } from "libs/window";
+import { createNanoEvents, Emitter } from "nanoevents";
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
 // the controller, this is were the magic happens.
@@ -19,12 +18,13 @@ import window, { document } from "libs/window";
 // Each input method is contained in its own module. We tried to
 // provide similar public interfaces for the input methods.
 // In most cases the heavy lifting is done by libraries in the background.
-const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
+export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 5;
-export type ModifierKeys = "alt" | "shift" | "ctrl";
+export type ModifierKeys = "alt" | "shift" | "ctrlOrMeta";
 type KeyboardKey = string;
+type MouseButton = string;
 type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
-// Callable Object, see https://flow.org/en/docs/types/functions/#toc-callable-objects
+// Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
 type KeyboardLoopHandler = {
   (arg0: number, isOriginalEvent: boolean): void;
   delayed?: boolean;
@@ -33,13 +33,15 @@ type KeyboardLoopHandler = {
 };
 type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
-type BindingMap<T extends (...args: Array<any>) => any> = Record<KeyboardKey, T>;
+type KeyBindingMap = Record<KeyboardKey, KeyboardHandler>;
+type KeyBindingLoopMap = Record<KeyboardKey, KeyboardLoopHandler>;
+export type MouseBindingMap = Record<MouseButton, MouseHandler>;
 type MouseButtonWhich = 1 | 2 | 3;
 type MouseButtonString = "left" | "middle" | "right";
-type MouseHandler =
+export type MouseHandler =
   | ((deltaYorX: number, modifier: ModifierKeys | null | undefined) => void)
-  | ((position: Point2, id: string | null | undefined, event: MouseEvent) => void)
-  | ((delta: Point2, position: Point2, id: string | null | undefined, event: MouseEvent) => void);
+  | ((position: Point2, id: string, event: MouseEvent, isTouch: boolean) => void)
+  | ((delta: Point2, position: Point2, id: string, event: MouseEvent) => void);
 type HammerJsEvent = {
   center: Point2;
   pointers: Array<Record<string, any>>;
@@ -67,19 +69,42 @@ function shouldIgnore(event: KeyboardEvent, key: KeyboardKey) {
 // This keyboard hook directly passes a keycombo and callback
 // to the underlying KeyboadJS library to do its dirty work.
 // Pressing a button will only fire an event once.
+const EXTENDED_COMMAND_KEYS = "ctrl + k";
+const EXTENDED_COMMAND_DURATION = 3000;
 export class InputKeyboardNoLoop {
   bindings: Array<KeyboardBindingPress> = [];
   isStarted: boolean = true;
   supportInputElements: boolean = false;
+  hasExtendedBindings: boolean = false;
+  cancelExtendedModeTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    initialBindings: BindingMap<KeyboardHandler>,
+    initialBindings: KeyBindingMap,
     options?: {
       supportInputElements?: boolean;
     },
+    extendedCommands?: KeyBindingMap,
   ) {
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
+    }
+
+    if (extendedCommands != null && initialBindings[EXTENDED_COMMAND_KEYS] != null) {
+      console.warn(
+        `Extended commands are enabled, but the keybinding for it is already in use. Please change the keybinding for '${EXTENDED_COMMAND_KEYS}'.`,
+      );
+    }
+
+    if (extendedCommands) {
+      this.hasExtendedBindings = true;
+      document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);
+      this.attach(EXTENDED_COMMAND_KEYS, this.toggleExtendedMode);
+      // Add empty callback in extended mode to deactivate the extended mode via the same EXTENDED_COMMAND_KEYS.
+      this.attach(EXTENDED_COMMAND_KEYS, _.noop, true);
+      for (const key of Object.keys(extendedCommands)) {
+        const callback = extendedCommands[key];
+        this.attach(key, callback, true);
+      }
     }
 
     for (const key of Object.keys(initialBindings)) {
@@ -88,7 +113,35 @@ export class InputKeyboardNoLoop {
     }
   }
 
-  attach(key: KeyboardKey, callback: KeyboardHandler) {
+  toggleExtendedMode = (evt: KeyboardEvent) => {
+    evt.preventDefault();
+    const isInExtendedMode = KeyboardJS.getContext() === "extended";
+    if (isInExtendedMode) {
+      this.cancelExtendedModeTimeout();
+      KeyboardJS.setContext("default");
+      return;
+    }
+    KeyboardJS.setContext("extended");
+    this.cancelExtendedModeTimeoutId = setTimeout(() => {
+      KeyboardJS.setContext("default");
+    }, EXTENDED_COMMAND_DURATION);
+  };
+
+  preventBrowserSearchbarShortcut = (evt: KeyboardEvent) => {
+    if ((evt.ctrlKey || evt.metaKey) && evt.key === "k") {
+      evt.preventDefault();
+      evt.stopPropagation();
+    }
+  };
+
+  cancelExtendedModeTimeout() {
+    if (this.cancelExtendedModeTimeoutId != null) {
+      clearTimeout(this.cancelExtendedModeTimeoutId);
+      this.cancelExtendedModeTimeoutId = null;
+    }
+  }
+
+  attach(key: KeyboardKey, callback: KeyboardHandler, isExtendedCommand: boolean = false) {
     const binding = [
       key,
       (event: KeyboardEvent) => {
@@ -103,6 +156,11 @@ export class InputKeyboardNoLoop {
         if (shouldIgnore(event, key)) {
           return;
         }
+        const isInExtendedMode = KeyboardJS.getContext() === "extended";
+        if (isInExtendedMode) {
+          this.cancelExtendedModeTimeout();
+          KeyboardJS.setContext("default");
+        }
 
         if (!event.repeat) {
           callback(event);
@@ -113,7 +171,15 @@ export class InputKeyboardNoLoop {
       },
       _.noop,
     ];
-    KeyboardJS.bind(...binding);
+    if (isExtendedCommand) {
+      KeyboardJS.withContext("extended", () => {
+        KeyboardJS.bind(...binding);
+      });
+    } else {
+      KeyboardJS.withContext("default", () => {
+        KeyboardJS.bind(...binding);
+      });
+    }
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(string | ((...args: any[]) => v... Remove this comment to see the full error message
     return this.bindings.push(binding);
   }
@@ -124,13 +190,16 @@ export class InputKeyboardNoLoop {
     for (const binding of this.bindings) {
       KeyboardJS.unbind(...binding);
     }
+    if (this.hasExtendedBindings) {
+      document.removeEventListener("keydown", this.preventBrowserSearchbarShortcut);
+    }
   }
 }
 // This module is "main" keyboard handler.
 // It is able to handle key-presses and will continuously
 // fire the attached callback.
 export class InputKeyboard {
-  keyCallbackMap: Record<string, KeyboardLoopHandler> = {};
+  keyCallbackMap: KeyBindingLoopMap = {};
   keyPressedCount: number = 0;
   bindings: Array<KeyboardBindingDownUp> = [];
   isStarted: boolean = true;
@@ -138,7 +207,7 @@ export class InputKeyboard {
   supportInputElements: boolean = false;
 
   constructor(
-    initialBindings: BindingMap<KeyboardLoopHandler>,
+    initialBindings: KeyBindingLoopMap,
     options?: {
       delay?: number;
       supportInputElements?: boolean;
@@ -221,7 +290,9 @@ export class InputKeyboard {
         }
       },
     ];
-    KeyboardJS.bind(...binding);
+    KeyboardJS.withContext("default", () => {
+      KeyboardJS.bind(...binding);
+    });
     this.bindings.push(binding);
   }
 
@@ -265,17 +336,12 @@ class InputMouseButton {
   mouse: InputMouse;
   name: MouseButtonString;
   which: MouseButtonWhich;
-  id: string | null | undefined;
+  id: string;
   down: boolean = false;
   drag: boolean = false;
   moveDelta: number = 0;
 
-  constructor(
-    name: MouseButtonString,
-    which: MouseButtonWhich,
-    mouse: InputMouse,
-    id: string | null | undefined,
-  ) {
+  constructor(name: MouseButtonString, which: MouseButtonWhich, mouse: InputMouse, id: string) {
     this.name = name;
     this.which = which;
     this.mouse = mouse;
@@ -292,7 +358,7 @@ class InputMouseButton {
       document.activeElement.blur();
       this.down = true;
       this.moveDelta = 0;
-      this.mouse.trigger(`${this.name}MouseDown`, this.mouse.lastPosition, this.id, event);
+      this.mouse.emitter.emit(`${this.name}MouseDown`, this.mouse.lastPosition, this.id, event);
     }
   }
 
@@ -302,10 +368,10 @@ class InputMouseButton {
     const eventWhich = event.which !== 0 ? event.which : 1;
 
     if (eventWhich === this.which && this.down) {
-      this.mouse.trigger(`${this.name}MouseUp`, event);
+      this.mouse.emitter.emit(`${this.name}MouseUp`, event);
 
       if (this.moveDelta <= MOUSE_MOVE_DELTA_THRESHOLD) {
-        this.mouse.trigger(
+        this.mouse.emitter.emit(
           `${this.name}Click`,
           this.mouse.lastPosition,
           this.id,
@@ -321,16 +387,17 @@ class InputMouseButton {
   handleMouseMove(event: MouseEvent, delta: Point2): void {
     if (this.down) {
       this.moveDelta += Math.abs(delta.x) + Math.abs(delta.y);
-      this.mouse.trigger(`${this.name}DownMove`, delta, this.mouse.position, this.id, event);
+      this.mouse.emitter.emit(`${this.name}DownMove`, delta, this.mouse.position, this.id, event);
     }
   }
 }
 
 let isDragging = false;
 export class InputMouse {
+  emitter: Emitter;
   targetId: string;
   hammerManager: typeof Hammer;
-  id: string | null | undefined;
+  id: string;
   leftMouseButton: InputMouseButton;
   middleMouseButton: InputMouseButton;
   rightMouseButton: InputMouseButton;
@@ -344,21 +411,14 @@ export class InputMouse {
   };
 
   ignoreScrollingWhileDragging: boolean;
-  // Copied from backbone events (TODO: handle this better)
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'on' has no initializer and is not defini... Remove this comment to see the full error message
-  on: (bindings: BindingMap<MouseHandler>) => void;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'off' has no initializer and is not defin... Remove this comment to see the full error message
-  off: (...args: Array<any>) => any;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'trigger' has no initializer and is not d... Remove this comment to see the full error message
-  trigger: (...args: Array<any>) => any;
 
   constructor(
     targetId: string,
-    initialBindings: BindingMap<MouseHandler> = {},
-    id: string | null | undefined = null,
+    initialBindings: MouseBindingMap,
+    id: string,
     ignoreScrollingWhileDragging: boolean = false,
   ) {
-    _.extend(this, BackboneEvents);
+    this.emitter = createNanoEvents();
 
     this.targetId = targetId;
     const targetSelector = `#${targetId}`;
@@ -373,52 +433,36 @@ export class InputMouse {
     this.middleMouseButton = new InputMouseButton("middle", 2, this, this.id);
     this.rightMouseButton = new InputMouseButton("right", 3, this, this.id);
     this.lastPosition = null;
-    this.delegatedEvents = {};
     this.ignoreScrollingWhileDragging = ignoreScrollingWhileDragging;
-    // @ts-ignore
     document.addEventListener("mousemove", this.mouseMove);
-    // @ts-ignore
     document.addEventListener("mouseup", this.mouseUp);
-    // @ts-ignore
     document.addEventListener("touchend", this.touchEnd);
 
-    _.extend(
-      this.delegatedEvents,
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Document | { getElementById: () ... Remove this comment to see the full error message
-      Utils.addEventListenerWithDelegation(document, "mousedown", targetSelector, this.mouseDown),
-    );
-
-    _.extend(
-      this.delegatedEvents,
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Document | { getElementById: () ... Remove this comment to see the full error message
-      Utils.addEventListenerWithDelegation(document, "mouseover", targetSelector, this.mouseOver),
-    );
-
-    _.extend(
-      this.delegatedEvents,
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Document | { getElementById: () ... Remove this comment to see the full error message
-      Utils.addEventListenerWithDelegation(document, "mouseout", targetSelector, this.mouseOut),
-    );
-
-    _.extend(
-      this.delegatedEvents,
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Document | { getElementById: () ... Remove this comment to see the full error message
-      Utils.addEventListenerWithDelegation(document, "touchstart", targetSelector, this.mouseOver),
-    );
-
-    _.extend(
-      this.delegatedEvents,
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Document | { getElementById: () ... Remove this comment to see the full error message
-      Utils.addEventListenerWithDelegation(document, "touchend", targetSelector, this.mouseOut),
-    );
-
-    _.extend(
-      this.delegatedEvents,
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Document | { getElementById: () ... Remove this comment to see the full error message
-      Utils.addEventListenerWithDelegation(document, "wheel", targetSelector, this.mouseWheel, {
+    this.delegatedEvents = {
+      ...Utils.addEventListenerWithDelegation(
+        document,
+        "mousedown",
+        targetSelector,
+        this.mouseDown,
+      ),
+      ...Utils.addEventListenerWithDelegation(
+        document,
+        "mouseover",
+        targetSelector,
+        this.mouseOver,
+      ),
+      ...Utils.addEventListenerWithDelegation(document, "mouseout", targetSelector, this.mouseOut),
+      ...Utils.addEventListenerWithDelegation(
+        document,
+        "touchstart",
+        targetSelector,
+        this.mouseOver,
+      ),
+      ...Utils.addEventListenerWithDelegation(document, "touchend", targetSelector, this.mouseOut),
+      ...Utils.addEventListenerWithDelegation(document, "wheel", targetSelector, this.mouseWheel, {
         passive: false,
       }),
-    );
+    };
 
     this.hammerManager = new Hammer(domElement, {
       inputClass: Hammer.TouchInput,
@@ -435,8 +479,10 @@ export class InputMouse {
     this.hammerManager.on("pinchstart", (evt: HammerJsEvent) => this.pinchStart(evt));
     this.hammerManager.on("pinch", (evt: HammerJsEvent) => this.pinch(evt));
     this.hammerManager.on("pinchend", () => this.pinchEnd());
-    // @ts-expect-error ts-migrate(2565) FIXME: Property 'on' is used before being assigned.
-    this.on(initialBindings);
+
+    for (const [eventName, eventHandler] of Object.entries(initialBindings)) {
+      this.emitter.on(eventName, eventHandler);
+    }
   }
 
   destroy() {
@@ -448,13 +494,24 @@ export class InputMouse {
       document.removeEventListener(eventName, eventHandler);
     }
 
-    this.off();
+    // Remove all event handlers (see https://github.com/ai/nanoevents#remove-all-listeners)
+    this.emitter.events = {};
     // Unbinds all events and input events
     this.hammerManager.destroy();
   }
 
   isHit(event: MouseEvent) {
     const { pageX, pageY } = event;
+    // Check that the mouse event acts on the specified
+    // target (as an example, this avoids that mouse events
+    // for input catchers are dispatched when a modal is above
+    // the input catchers).
+    // @ts-ignore The `id` property exists on DOM elements
+    if (event?.target?.id !== this.targetId) {
+      return false;
+    }
+    // Check that the mouse event is in the bounding box of the
+    // target element.
     const { left, top, width, height } = this.getElementOffset();
     return left <= pageX && pageX <= left + width && top <= pageY && pageY <= top + height;
   }
@@ -510,7 +567,7 @@ export class InputMouse {
       this.rightMouseButton.handleMouseMove(event, delta);
 
       if (this.isHit(event)) {
-        this.trigger("mouseMove", delta, this.position, this.id, event);
+        this.emitter.emit("mouseMove", delta, this.position, this.id, event);
       }
     }
 
@@ -520,14 +577,14 @@ export class InputMouse {
   mouseOver = (evt?: MouseEvent): void => {
     if (evt == null || !this.isButtonPressed(evt)) {
       this.isMouseOver = true;
-      this.trigger("over");
+      this.emitter.emit("over");
     }
   };
 
   mouseOut = (evt?: MouseEvent): void => {
     if (evt == null || !this.isButtonPressed(evt)) {
       this.isMouseOver = false;
-      this.trigger("out");
+      this.emitter.emit("out");
     }
   };
 
@@ -558,7 +615,7 @@ export class InputMouse {
     if (this.lastScale != null) {
       const delta = evt.scale - this.lastScale;
       this.lastScale = evt.scale;
-      this.trigger("pinch", 10 * delta);
+      this.emitter.emit("pinch", 10 * delta, this.position);
     }
   };
 
@@ -581,11 +638,11 @@ export class InputMouse {
       modifier = "shift";
     } else if (event.altKey) {
       modifier = "alt";
-    } else if (event.ctrlKey) {
-      modifier = "ctrl";
+    } else if (event.ctrlKey || event.metaKey) {
+      modifier = "ctrlOrMeta";
     }
 
-    this.trigger("scroll", delta, modifier);
+    this.emitter.emit("scroll", delta, modifier);
   };
 
   getRelativeMousePosition = (pagePosition: {
@@ -611,8 +668,14 @@ export class InputMouse {
 
   getElementOffset() {
     // Return the bounding rectangle relative to the top-left corner of the document
-    // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-    const boundingRect = document.getElementById(this.targetId).getBoundingClientRect();
+    const boundingRect = document.getElementById(this.targetId)?.getBoundingClientRect() || {
+      left: 0,
+      top: 0,
+      width: 0,
+      height: 0,
+    };
+    // Don't use {...boundingRect, }, because boundingRect is a DOMRect
+    // which isn't compatible with the spreading, apparently.
     return _.extend({}, boundingRect, {
       left: boundingRect.left + window.scrollX,
       top: boundingRect.top + window.scrollY,

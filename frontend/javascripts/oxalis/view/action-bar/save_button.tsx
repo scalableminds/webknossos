@@ -1,11 +1,11 @@
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
-import Store from "oxalis/store";
+import Store, { SaveState } from "oxalis/store";
 import type { OxalisState, IsBusyInfo } from "oxalis/store";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Model from "oxalis/model";
+import { Model } from "oxalis/singletons";
 import window from "libs/window";
 import { Tooltip } from "antd";
 import {
@@ -17,7 +17,7 @@ import {
 import ErrorHandling from "libs/error_handling";
 import * as Utils from "libs/utils";
 type OwnProps = {
-  onClick: (arg0: React.SyntheticEvent<HTMLButtonElement>) => Promise<any>;
+  onClick: (arg0: React.MouseEvent<HTMLButtonElement, MouseEvent>) => Promise<any>;
   className?: string;
 };
 type StateProps = {
@@ -29,6 +29,7 @@ type State = {
   isStateSaved: boolean;
   showUnsavedWarning: boolean;
   saveInfo: {
+    outstandingBucketDownloadCount: number;
     compressingBucketCount: number;
     waitingForCompressionBucketCount: number;
   };
@@ -55,6 +56,7 @@ class SaveButton extends React.PureComponent<Props, State> {
     isStateSaved: false,
     showUnsavedWarning: false,
     saveInfo: {
+      outstandingBucketDownloadCount: 0,
       compressingBucketCount: 0,
       waitingForCompressionBucketCount: 0,
     },
@@ -72,20 +74,27 @@ class SaveButton extends React.PureComponent<Props, State> {
   _forceUpdate = () => {
     const isStateSaved = Model.stateSaved();
     const oldestUnsavedTimestamp = getOldestUnsavedTimestamp(Store.getState().save.queue);
-    const unsavedDuration =
-      // @ts-expect-error ts-migrate(2362) FIXME: The left-hand side of an arithmetic operation must... Remove this comment to see the full error message
-      oldestUnsavedTimestamp != null ? new Date() - oldestUnsavedTimestamp : 0;
+
+    const unsavedDuration = Math.max(
+      oldestUnsavedTimestamp != null ? Date.now() - oldestUnsavedTimestamp : 0,
+      Model.getLongestPushQueueWaitTime(),
+    );
     const showUnsavedWarning = unsavedDuration > UNSAVED_WARNING_THRESHOLD;
 
     if (showUnsavedWarning) {
       reportUnsavedDurationThresholdExceeded();
     }
 
-    const { compressingBucketCount, waitingForCompressionBucketCount } = Model.getPushQueueStats();
+    const {
+      compressingBucketCount,
+      waitingForCompressionBucketCount,
+      outstandingBucketDownloadCount,
+    } = Model.getPushQueueStats();
     this.setState({
       isStateSaved,
       showUnsavedWarning,
       saveInfo: {
+        outstandingBucketDownloadCount,
         compressingBucketCount,
         waitingForCompressionBucketCount,
       },
@@ -109,11 +118,12 @@ class SaveButton extends React.PureComponent<Props, State> {
   render() {
     const { progressFraction } = this.props;
     const { showUnsavedWarning } = this.state;
+    const { outstandingBucketDownloadCount } = this.state.saveInfo;
+
     const totalBucketsToCompress =
       this.state.saveInfo.waitingForCompressionBucketCount +
       this.state.saveInfo.compressingBucketCount;
     return (
-      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       <ButtonComponent
         key="save-button"
         type="primary"
@@ -121,14 +131,21 @@ class SaveButton extends React.PureComponent<Props, State> {
         icon={this.getSaveButtonIcon()}
         className={this.props.className}
         style={{
-          background: showUnsavedWarning ? "var(--ant-error)" : null,
+          background: showUnsavedWarning ? "var(--ant-color-error)" : undefined,
         }}
       >
         <Tooltip
           title={
-            totalBucketsToCompress > 0
-              ? `${totalBucketsToCompress} items remaining to compress...`
-              : null
+            // Downloading the buckets often takes longer and the progress
+            // is visible (as the count will decrease continually).
+            // If lots of buckets need compression, this can also take a bit.
+            // Don't show both labels at the same time, because the compression
+            // usually can only start after the download is finished.
+            outstandingBucketDownloadCount > 0
+              ? `${outstandingBucketDownloadCount} items remaining to download...`
+              : totalBucketsToCompress > 0
+                ? `${totalBucketsToCompress} items remaining to compress...`
+                : null
           }
         >
           {this.shouldShowProgress() ? (
@@ -145,7 +162,7 @@ class SaveButton extends React.PureComponent<Props, State> {
         </Tooltip>
         {showUnsavedWarning ? (
           <Tooltip
-            visible
+            open
             title={`There are unsaved changes which are older than ${Math.ceil(
               UNSAVED_WARNING_THRESHOLD / 1000 / 60,
             )} minutes. Please ensure that your Internet connection works and wait until this warning disappears.`}
@@ -159,8 +176,7 @@ class SaveButton extends React.PureComponent<Props, State> {
   }
 }
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'saveQueue' implicitly has an 'any' type... Remove this comment to see the full error message
-function getOldestUnsavedTimestamp(saveQueue): number | null | undefined {
+function getOldestUnsavedTimestamp(saveQueue: SaveState["queue"]): number | null | undefined {
   let oldestUnsavedTimestamp;
 
   if (saveQueue.skeleton.length > 0) {
@@ -168,9 +184,7 @@ function getOldestUnsavedTimestamp(saveQueue): number | null | undefined {
   }
 
   for (const volumeQueue of Utils.values(saveQueue.volumes)) {
-    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
     if (volumeQueue.length > 0) {
-      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
       const oldestVolumeTimestamp = volumeQueue[0].timestamp;
       oldestUnsavedTimestamp = Math.min(
         oldestUnsavedTimestamp != null ? oldestUnsavedTimestamp : Infinity,

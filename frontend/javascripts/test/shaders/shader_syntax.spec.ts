@@ -1,11 +1,8 @@
-import { getLookupBufferSize } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import constants from "oxalis/constants";
-import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
+import "test/mocks/lz4";
+import getMainFragmentShader from "oxalis/shaders/main_data_shaders.glsl";
 import resolutions from "test/fixtures/resolutions";
 import test, { ExecutionContext } from "ava";
 import { parser } from "@shaderfrog/glsl-parser";
-
-const DEFAULT_LOOK_UP_TEXTURE_WIDTH = getLookupBufferSize(constants.DEFAULT_GPU_MEMORY_FACTOR);
 
 test.beforeEach((t: ExecutionContext<any>) => {
   t.context.originalWarn = console.warn;
@@ -22,17 +19,18 @@ test.afterEach(async (t: ExecutionContext<any>) => {
 
 test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
-    packingDegreeLookup: {
-      color_layer_1: 4.0,
-      color_layer_2: 4.0,
+    textureLayerInfos: {
+      ["color_layer_1"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["color_layer_2"]: { packingDegree: 4.0, dataTextureCount: 1 },
     },
+    orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
     segmentationLayerNames: [],
-    dataTextureCountPerLayer: 3,
-    resolutions,
+    resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
+    tpsTransformPerLayer: {},
   });
 
   /*
@@ -47,18 +45,19 @@ test("Shader syntax: Ortho Mode", (t: ExecutionContext<any>) => {
 
 test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
-    packingDegreeLookup: {
-      color_layer_1: 4.0,
-      color_layer_2: 4.0,
-      segmentationLayer: 1.0,
+    textureLayerInfos: {
+      ["color_layer_1"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["color_layer_2"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["segmentationLayer"]: { packingDegree: 1.0, dataTextureCount: 4 },
     },
+    orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
     segmentationLayerNames: ["segmentationLayer"],
-    dataTextureCountPerLayer: 3,
-    resolutions,
+    resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
+    tpsTransformPerLayer: {},
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
@@ -66,18 +65,19 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", (t: ExecutionContext<
 
 test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
-    packingDegreeLookup: {
-      color_layer_1: 4.0,
-      color_layer_2: 4.0,
-      segmentationLayer: 1.0,
+    textureLayerInfos: {
+      ["color_layer_1"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["color_layer_2"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["segmentationLayer"]: { packingDegree: 1.0, dataTextureCount: 4 },
     },
+    orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
     segmentationLayerNames: ["segmentationLayer"],
-    dataTextureCountPerLayer: 3,
-    resolutions,
+    resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
+    tpsTransformPerLayer: {},
   });
 
   parser.parse(code);
@@ -86,17 +86,18 @@ test("Shader syntax: Ortho Mode + Segmentation + Mapping", (t: ExecutionContext<
 
 test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
-    packingDegreeLookup: {
-      color_layer_1: 4.0,
-      color_layer_2: 4.0,
+    textureLayerInfos: {
+      ["color_layer_1"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["color_layer_2"]: { packingDegree: 4.0, dataTextureCount: 1 },
     },
+    orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
     segmentationLayerNames: [],
-    dataTextureCountPerLayer: 3,
-    resolutions,
+    resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
+    tpsTransformPerLayer: {},
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
@@ -104,18 +105,19 @@ test("Shader syntax: Arbitrary Mode (no segmentation available)", (t: ExecutionC
 
 test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
-    packingDegreeLookup: {
-      color_layer_1: 4.0,
-      color_layer_2: 4.0,
-      segmentationLayer: 1.0,
+    textureLayerInfos: {
+      ["color_layer_1"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["color_layer_2"]: { packingDegree: 4.0, dataTextureCount: 1 },
+      ["segmentationLayer"]: { packingDegree: 1.0, dataTextureCount: 4 },
     },
+    orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
     segmentationLayerNames: ["segmentationLayer"],
-    dataTextureCountPerLayer: 3,
-    resolutions,
+    resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: false,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
+    tpsTransformPerLayer: {},
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);
@@ -123,17 +125,18 @@ test("Shader syntax: Arbitrary Mode (segmentation available)", (t: ExecutionCont
 
 test("Shader syntax: Ortho Mode (rgb and float layer)", (t: ExecutionContext<any>) => {
   const code = getMainFragmentShader({
+    globalLayerCount: 2,
     colorLayerNames: ["color_layer_1", "color_layer_2"],
-    packingDegreeLookup: {
-      color_layer_1: 1.0,
-      color_layer_2: 4.0,
+    textureLayerInfos: {
+      ["color_layer_1"]: { packingDegree: 1.0, dataTextureCount: 1 },
+      ["color_layer_2"]: { packingDegree: 4.0, dataTextureCount: 1 },
     },
+    orderedColorLayerNames: ["color_layer_1", "color_layer_2"],
     segmentationLayerNames: [],
-    dataTextureCountPerLayer: 3,
-    resolutions,
+    resolutionsCount: resolutions.length,
     datasetScale: [1, 1, 1],
     isOrthogonal: true,
-    lookupTextureWidth: DEFAULT_LOOK_UP_TEXTURE_WIDTH,
+    tpsTransformPerLayer: {},
   });
   parser.parse(code);
   t.true(t.context.warningEmittedCount === 0);

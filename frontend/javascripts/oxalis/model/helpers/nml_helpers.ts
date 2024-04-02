@@ -25,8 +25,20 @@ import type {
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import messages from "messages";
 import * as Utils from "libs/utils";
-import type { BoundingBoxType, Vector3 } from "oxalis/constants";
+import {
+  BoundingBoxType,
+  IdentityTransform,
+  TreeType,
+  TreeTypeEnum,
+  Vector3,
+} from "oxalis/constants";
 import Constants from "oxalis/constants";
+import { location } from "libs/window";
+import { coalesce } from "libs/utils";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+import { getNodePosition } from "../accessors/skeletontracing_accessor";
+import { getTransformsForSkeletonLayer } from "../accessors/dataset_accessor";
+
 // NML Defaults
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];
 const TASK_BOUNDING_BOX_COLOR: Vector3 = [0, 1, 0];
@@ -85,10 +97,22 @@ function serializeTag(
   properties: Record<string, (string | number | boolean) | null | undefined>,
   closed: boolean = true,
 ): string {
-  return `<${name} ${Object.keys(properties)
-    // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
-    .map((key) => `${key}="${properties[key] != null ? escape(properties[key].toString()) : ""}"`)
+  const maybeSpace = Object.keys(properties).length > 0 ? " " : "";
+  return `<${name}${maybeSpace}${Object.keys(properties)
+    .map((key) => {
+      let valueStr = "";
+      const value = properties[key];
+      if (value != null) {
+        valueStr = escape(value.toString());
+      }
+
+      return `${key}="${valueStr}"`;
+    })
     .join(" ")}${closed ? " /" : ""}>`;
+}
+
+function serializeXmlComment(comment: string) {
+  return `<!-- ${comment} -->`;
 }
 
 export function getNmlName(state: OxalisState): string {
@@ -110,6 +134,7 @@ export function serializeToNml(
   annotation: Tracing,
   tracing: SkeletonTracing,
   buildInfo: APIBuildInfo,
+  applyTransform: boolean,
 ): string {
   // Only visible trees will be serialized!
   const visibleTrees = Utils.values(tracing.trees).filter((tree) => tree.isVisible);
@@ -118,8 +143,8 @@ export function serializeToNml(
     ...indent(
       _.concat(
         serializeMetaInformation(state, annotation, buildInfo),
-        serializeParameters(state, annotation, tracing),
-        serializeTrees(visibleTrees),
+        serializeParameters(state, annotation, tracing, applyTransform),
+        serializeTrees(state, visibleTrees, applyTransform),
         serializeBranchPoints(visibleTrees),
         serializeComments(visibleTrees),
         "<groups>",
@@ -211,8 +236,12 @@ function serializeParameters(
   state: OxalisState,
   annotation: Tracing,
   skeletonTracing: SkeletonTracing,
+  applyTransform: boolean,
 ): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
+  const editPositionAdditionalCoordinates = state.flycam.additionalCoordinates;
+  const { additionalAxes } = skeletonTracing;
+
   const editRotation = getRotation(state.flycam);
   const userBBoxes = skeletonTracing.userBoundingBoxes;
   const taskBB = skeletonTracing.boundingBox;
@@ -224,6 +253,7 @@ function serializeParameters(
           name: state.dataset.name,
           description: annotation.description,
           organization: state.dataset.owningOrganization,
+          wkUrl: `${location.protocol}//${location.host}`,
         }),
         serializeTag("scale", {
           x: state.dataset.dataSource.scale[0],
@@ -242,6 +272,7 @@ function serializeParameters(
           x: editPosition[0],
           y: editPosition[1],
           z: editPosition[2],
+          ...additionalCoordinatesToObject(editPositionAdditionalCoordinates || []),
         }),
         serializeTag("editRotation", {
           xRot: editRotation[0],
@@ -253,13 +284,81 @@ function serializeParameters(
         }),
         ...userBBoxes.map((userBB) => serializeUserBoundingBox(userBB, "userBoundingBox")),
         serializeTaskBoundingBox(taskBB, "taskBoundingBox"),
+
+        ...(additionalAxes.length > 0
+          ? serializeTagWithChildren(
+              "additionalAxes",
+              {},
+              additionalAxes.map((coord) =>
+                serializeTag("additionalAxis", {
+                  name: coord.name,
+                  index: coord.index,
+                  start: coord.bounds[0],
+                  end: coord.bounds[1],
+                }),
+              ),
+            )
+          : []),
+
+        ...(applyTransform ? serializeTransform(state) : []),
       ]),
     ),
     "</parameters>",
   ];
 }
 
-function serializeTrees(trees: Array<Tree>): Array<string> {
+function serializeTransform(state: OxalisState): string[] {
+  const transform = getTransformsForSkeletonLayer(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+
+  if (transform === IdentityTransform) {
+    return [];
+  }
+
+  if (transform.type === "affine") {
+    return [
+      serializeXmlComment(
+        "The node positions in this file were transformed using the following affine transform:",
+      ),
+      serializeTag("transform", {
+        type: "affine",
+        matrix: `[${transform.affineMatrix.join(",")}]`,
+        positionsAreTransformed: true,
+      }),
+    ];
+  } else {
+    const correspondences = _.zip(
+      transform.scaledTps.unscaledSourcePoints,
+      transform.scaledTps.unscaledTargetPoints,
+    ) as Array<[Vector3, Vector3]>;
+    return [
+      serializeXmlComment(
+        "The node positions in this file were transformed using a thin plate spline that was derived from the following correspondences:",
+      ),
+      ...serializeTagWithChildren(
+        "transform",
+        {
+          type: "thin_plate_spline",
+          positionsAreTransformed: true,
+        },
+        correspondences.map((pair) =>
+          serializeTag("correspondence", {
+            source: `[${pair[0].join(",")}]`,
+            target: `[${pair[1].join(",")}]`,
+          }),
+        ),
+      ),
+    ];
+  }
+}
+
+function serializeTrees(
+  state: OxalisState,
+  trees: Array<Tree>,
+  applyTransform: boolean,
+): Array<string> {
   return _.flatten(
     trees.map((tree) =>
       serializeTagWithChildren(
@@ -269,10 +368,11 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
           ...mapColorToComponents(tree.color),
           name: tree.name,
           groupId: tree.groupId,
+          type: tree.type,
         },
         [
           "<nodes>",
-          ...indent(serializeNodes(tree.nodes)),
+          ...indent(serializeNodes(state, tree.nodes, applyTransform)),
           "</nodes>",
           "<edges>",
           ...indent(serializeEdges(tree.edges)),
@@ -283,15 +383,24 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
   );
 }
 
-function serializeNodes(nodes: NodeMap): Array<string> {
+function serializeNodes(
+  state: OxalisState,
+  nodes: NodeMap,
+  applyTransform: boolean,
+): Array<string> {
   return nodes.map((node) => {
-    const position = node.position.map(Math.floor);
+    const position = (
+      applyTransform ? getNodePosition(node, state) : node.untransformedPosition
+    ).map(Math.floor);
+    const maybeProperties = additionalCoordinatesToObject(node.additionalCoordinates || []);
+
     return serializeTag("node", {
       id: node.id,
       radius: node.radius,
-      x: position[0],
-      y: position[1],
-      z: position[2],
+      x: Math.trunc(position[0]),
+      y: Math.trunc(position[1]),
+      z: Math.trunc(position[2]),
+      ...maybeProperties,
       rotX: node.rotation[0],
       rotY: node.rotation[1],
       rotZ: node.rotation[2],
@@ -302,6 +411,39 @@ function serializeNodes(nodes: NodeMap): Array<string> {
       time: node.timestamp,
     });
   });
+}
+
+function getAdditionalCoordinateLabel(useConciseStyle: boolean) {
+  return useConciseStyle ? "pos" : "additionalCoordinate";
+}
+
+export function additionalCoordinateToKeyValue(
+  coord: AdditionalCoordinate,
+  useConciseStyle: boolean = false,
+): [string, number] {
+  const label = getAdditionalCoordinateLabel(useConciseStyle);
+  return [
+    // Export additional coordinates like this:
+    // additionalCoordinate-t="10"
+    // Don't capitalize coord.name, because it it's not reversible for
+    // names that are already capitalized.
+    `${label}-${coord.name}`,
+    coord.value,
+  ];
+}
+
+export function parseAdditionalCoordinateKey(
+  key: string,
+  expectConciseStyle: boolean = false,
+): string {
+  const label = getAdditionalCoordinateLabel(expectConciseStyle);
+  return key.split(`${label}-`)[1];
+}
+
+function additionalCoordinatesToObject(additionalCoordinates: AdditionalCoordinate[]) {
+  return Object.fromEntries(
+    additionalCoordinates.map((coord) => additionalCoordinateToKeyValue(coord)),
+  );
 }
 
 function serializeEdges(edges: EdgeCollection): Array<string> {
@@ -373,7 +515,7 @@ export class NmlParseError extends Error {
   name = "NmlParseError";
 }
 
-function _parseInt(obj: Record<string, any>, key: string, defaultValue?: number): number {
+function _parseInt(obj: Record<string, string>, key: string, defaultValue?: number): number {
   if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
@@ -385,7 +527,7 @@ function _parseInt(obj: Record<string, any>, key: string, defaultValue?: number)
   return Number.parseInt(obj[key], 10);
 }
 
-function _parseFloat(obj: Record<string, any>, key: string, defaultValue?: number): number {
+function _parseFloat(obj: Record<string, string>, key: string, defaultValue?: number): number {
   if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
@@ -397,7 +539,7 @@ function _parseFloat(obj: Record<string, any>, key: string, defaultValue?: numbe
   return Number.parseFloat(obj[key]);
 }
 
-function _parseTimestamp(obj: Record<string, any>, key: string, defaultValue?: number): number {
+function _parseTimestamp(obj: Record<string, string>, key: string, defaultValue?: number): number {
   const timestamp = _parseInt(obj, key, defaultValue);
 
   const isValid = new Date(timestamp).getTime() > 0;
@@ -413,7 +555,7 @@ function _parseTimestamp(obj: Record<string, any>, key: string, defaultValue?: n
   return timestamp;
 }
 
-function _parseBool(obj: Record<string, any>, key: string, defaultValue?: boolean): boolean {
+function _parseBool(obj: Record<string, string>, key: string, defaultValue?: boolean): boolean {
   if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
@@ -425,7 +567,7 @@ function _parseBool(obj: Record<string, any>, key: string, defaultValue?: boolea
   return obj[key] === "true";
 }
 
-function _parseColor(obj: Record<string, any>, defaultColor: Vector3): Vector3 {
+function _parseColor(obj: Record<string, string>, defaultColor: Vector3): Vector3 {
   const color = [
     _parseFloat(obj, "color.r", defaultColor[0]),
     _parseFloat(obj, "color.g", defaultColor[1]),
@@ -435,7 +577,29 @@ function _parseColor(obj: Record<string, any>, defaultColor: Vector3): Vector3 {
   return color;
 }
 
-function _parseEntities(obj: Record<string, any>, key: string, defaultValue?: string): string {
+function _parseTreeType(
+  obj: Record<string, string>,
+  key: string,
+  defaultValue?: TreeType,
+): TreeType {
+  if (obj[key] == null || obj[key].length === 0) {
+    if (defaultValue == null) {
+      throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    } else {
+      return defaultValue;
+    }
+  }
+
+  const treeType = coalesce(TreeTypeEnum, obj[key]);
+
+  if (treeType != null) {
+    return treeType;
+  } else {
+    throw new NmlParseError(`${messages["nml.invalid_tree_type"]} ${key}`);
+  }
+}
+
+function _parseEntities(obj: Record<string, string>, key: string, defaultValue?: string): string {
   if (obj[key] == null) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
@@ -521,6 +685,8 @@ function splitTreeIntoComponents(
       edges: EdgeCollection.loadFromArray(edges),
       isVisible: tree.isVisible,
       groupId: newGroupId,
+      type: tree.type,
+      edgesAreVisible: tree.edgesAreVisible,
     };
     newTrees.push(newTree);
   }
@@ -603,6 +769,7 @@ function parseBoundingBoxObject(attr: Record<any, any>): BoundingBoxObject {
 export function parseNml(nmlString: string): Promise<{
   trees: MutableTreeMap;
   treeGroups: Array<TreeGroup>;
+  containedVolumes: boolean;
   userBoundingBoxes: Array<UserBoundingBox>;
   datasetName: string | null | undefined;
 }> {
@@ -611,11 +778,14 @@ export function parseNml(nmlString: string): Promise<{
     const trees: MutableTreeMap = {};
     const treeGroups: Array<TreeGroup> = [];
     const existingNodeIds = new Set();
-    const existingGroupIds = new Set();
+    const existingTreeGroupIds = new Set();
     const existingEdges = new Set();
     let currentTree: MutableTree | null | undefined = null;
-    let currentGroup: TreeGroup | null | undefined = null;
-    const groupIdToParent: Record<number, TreeGroup | null | undefined> = {};
+    let currentTreeGroup: TreeGroup | null | undefined = null;
+    let containedVolumes = false;
+    let isParsingVolumeTag = false;
+
+    const treeGroupIdToParent: Record<number, TreeGroup | null | undefined> = {};
     const nodeIdToTreeId: Record<number, number> = {};
     const userBoundingBoxes: UserBoundingBox[] = [];
     let datasetName: string | null = null;
@@ -644,6 +814,8 @@ export function parseNml(nmlString: string): Promise<{
               edges: new EdgeCollection(),
               isVisible: _parseFloat(attr, "color.a") !== 0,
               groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
+              type: _parseTreeType(attr, "type", TreeTypeEnum.DEFAULT),
+              edgesAreVisible: _parseBool(attr, "edgesAreVisible", true),
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
@@ -656,11 +828,19 @@ export function parseNml(nmlString: string): Promise<{
 
             const currentNode = {
               id: nodeId,
-              position: [
-                _parseFloat(attr, "x"),
-                _parseFloat(attr, "y"),
-                _parseFloat(attr, "z"),
+              untransformedPosition: [
+                Math.trunc(_parseFloat(attr, "x")),
+                Math.trunc(_parseFloat(attr, "y")),
+                Math.trunc(_parseFloat(attr, "z")),
               ] as Vector3,
+              // Parse additional coordinates, like additionalCoordinate-t="10"
+              additionalCoordinates: Object.keys(attr)
+                .map((key) => [key, parseAdditionalCoordinateKey(key)])
+                .filter(([_key, name]) => name != null)
+                .map(([key, name]) => ({
+                  name,
+                  value: _parseFloat(attr, key, 0),
+                })) as AdditionalCoordinate[],
               rotation: [
                 _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),
                 _parseFloat(attr, "rotY", DEFAULT_ROTATION[1]),
@@ -744,26 +924,30 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           case "group": {
+            if (isParsingVolumeTag) {
+              return;
+            }
             const newGroup = {
               groupId: _parseInt(attr, "id"),
               name: _parseEntities(attr, "name"),
               children: [],
             };
-            if (existingGroupIds.has(newGroup.groupId))
+            if (existingTreeGroupIds.has(newGroup.groupId)) {
               throw new NmlParseError(`${messages["nml.duplicate_group_id"]} ${newGroup.groupId}`);
+            }
 
-            if (currentGroup != null) {
-              currentGroup.children.push(newGroup);
+            if (currentTreeGroup != null) {
+              currentTreeGroup.children.push(newGroup);
             } else {
               treeGroups.push(newGroup);
             }
 
-            existingGroupIds.add(newGroup.groupId);
+            existingTreeGroupIds.add(newGroup.groupId);
 
             if (!node.isSelfClosing) {
               // If the xml tag is self-closing, there won't be a separate tagclose event!
-              groupIdToParent[newGroup.groupId] = currentGroup;
-              currentGroup = newGroup;
+              treeGroupIdToParent[newGroup.groupId] = currentTreeGroup;
+              currentTreeGroup = newGroup;
             }
 
             break;
@@ -802,6 +986,11 @@ export function parseNml(nmlString: string): Promise<{
             break;
           }
 
+          case "volume": {
+            isParsingVolumeTag = true;
+            containedVolumes = true;
+          }
+
           default:
             break;
         }
@@ -823,23 +1012,31 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           case "group": {
-            if (currentGroup != null) {
-              currentGroup = groupIdToParent[currentGroup.groupId];
+            if (!isParsingVolumeTag) {
+              if (currentTreeGroup != null) {
+                currentTreeGroup = treeGroupIdToParent[currentTreeGroup.groupId];
+              }
             }
 
             break;
           }
 
           case "groups": {
-            _.forEach(trees, (tree) => {
-              if (tree.groupId != null && !existingGroupIds.has(tree.groupId)) {
-                throw new NmlParseError(
-                  `${messages["nml.tree_with_missing_group_id"]} ${tree.groupId}`,
-                );
-              }
-            });
+            if (!isParsingVolumeTag) {
+              _.forEach(trees, (tree) => {
+                if (tree.groupId != null && !existingTreeGroupIds.has(tree.groupId)) {
+                  throw new NmlParseError(
+                    `${messages["nml.tree_with_missing_group_id"]} ${tree.groupId}`,
+                  );
+                }
+              });
+            }
 
             break;
+          }
+
+          case "volume": {
+            isParsingVolumeTag = false;
           }
 
           default:
@@ -872,6 +1069,7 @@ export function parseNml(nmlString: string): Promise<{
           treeGroups,
           datasetName,
           userBoundingBoxes,
+          containedVolumes,
         });
       })
       .on("error", reject);

@@ -1,21 +1,21 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.Silhouette
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.FoxImplicits
-import io.swagger.annotations._
+
 import play.api.libs.json._
 
 import javax.inject.Inject
 import models.annotation._
 import net.liftweb.common.Full
-import oxalis.security.{WkEnv, WkSilhouetteEnvironment}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import security.{WkEnv, WkSilhouetteEnvironment}
 import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
-@Api
 class AnnotationPrivateLinkController @Inject()(
     annotationDAO: AnnotationDAO,
     annotationService: AnnotationService,
@@ -28,7 +28,6 @@ class AnnotationPrivateLinkController @Inject()(
 
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  @ApiOperation(hidden = true, value = "")
   def annotationSource(accessTokenOrId: String, userToken: Option[String]): Action[AnyContent] = Action.async {
     implicit request =>
       for {
@@ -54,14 +53,10 @@ class AnnotationPrivateLinkController @Inject()(
   private def findAnnotationByPrivateLinkIfNotExpired(accessToken: String): Fox[Annotation] =
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessToken(accessToken)
-      _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > System.currentTimeMillis())) ?~> "Token expired" ~> 404
+      _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> "Token expired" ~> 404
       annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
     } yield annotation
 
-  @ApiOperation(value = "List all existing private zarr links for a user", nickname = "listPrivateLinks")
-  @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "JSON object containing string that private link was deleted."),
-          new ApiResponse(code = 400, message = badRequestLabel)))
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       links <- annotationPrivateLinkDAO.findAll
@@ -69,12 +64,7 @@ class AnnotationPrivateLinkController @Inject()(
     } yield Ok(Json.toJson(linksJsonList))
   }
 
-  @ApiOperation(value = "List all existing private zarr links for a user for a given annotation",
-                nickname = "listPrivateLinksByAnnotation")
-  @ApiResponses(
-    Array(new ApiResponse(code = 200, message = "JSON object containing string that private link was deleted."),
-          new ApiResponse(code = 400, message = badRequestLabel)))
-  def listByAnnotation(@ApiParam(value = "The id of the annotation") annotationId: String): Action[AnyContent] =
+  def listByAnnotation(annotationId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotationIdValidated <- ObjectId.fromString(annotationId)
@@ -83,48 +73,18 @@ class AnnotationPrivateLinkController @Inject()(
       } yield Ok(Json.toJson(linksJsonList))
     }
 
-  @ApiOperation(value = "Get the private zarr link for a user for a given id if it exists", nickname = "getPrivateLink")
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200, message = "JSON object containing string that private link was deleted."),
-      new ApiResponse(code = 400, message = badRequestLabel),
-      new ApiResponse(code = 404, message = badRequestLabel)
-    ))
-  def get(@ApiParam(value = "The id of the private link") id: String): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        idValidated <- ObjectId.fromString(id)
+  def get(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      idValidated <- ObjectId.fromString(id)
 
-        annotationPrivateLink <- annotationPrivateLinkDAO.findOne(idValidated)
-        _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > System.currentTimeMillis())) ?~> "Token expired" ~> NOT_FOUND
-        _ <- annotationDAO.findOne(annotationPrivateLink._annotation) ?~> "annotation.notFound" ~> NOT_FOUND
+      annotationPrivateLink <- annotationPrivateLinkDAO.findOne(idValidated)
+      _ <- bool2Fox(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> "Token expired" ~> NOT_FOUND
+      _ <- annotationDAO.findOne(annotationPrivateLink._annotation) ?~> "annotation.notFound" ~> NOT_FOUND
 
-        annotationPrivateLinkJs <- annotationPrivateLinkService.publicWrites(annotationPrivateLink)
-      } yield Ok(annotationPrivateLinkJs)
+      annotationPrivateLinkJs <- annotationPrivateLinkService.publicWrites(annotationPrivateLink)
+    } yield Ok(annotationPrivateLinkJs)
   }
 
-  @ApiOperation(
-    value = """Creates a given private link for an annotation for zarr streaming
-Expects:
- - As JSON object body with keys:
-  - annotation (string): annotation id to create private link for
-  - expirationDateTime (Optional[bool]): optional UNIX timestamp, expiration date and time for the link
-""",
-    nickname = "createPrivateLink"
-  )
-  @ApiImplicitParams(
-    Array(
-      new ApiImplicitParam(name = "annotationPrivateLinkParams",
-                           required = true,
-                           dataTypeClass = classOf[AnnotationPrivateLinkParams],
-                           paramType = "body")))
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200, message = "JSON object containing string that private link was deleted."),
-      new ApiResponse(code = 400, message = badRequestLabel),
-      new ApiResponse(code = 404, message = badRequestLabel),
-      new ApiResponse(code = 403, message = badRequestLabel)
-    ))
   def create: Action[AnnotationPrivateLinkParams] = sil.SecuredAction.async(validateJson[AnnotationPrivateLinkParams]) {
     implicit request =>
       val params = request.body
@@ -140,29 +100,7 @@ Expects:
       } yield Ok(js)
   }
 
-  @ApiOperation(
-    value = """Updates a given private link for an annotation for zarr streaming
-Expects:
- - As JSON object body with keys:
-  - annotation (string): annotation id to create private link for
-  - expirationDateTime (Optional[bool]): optional UNIX timestamp, expiration date and time for the link
-""",
-    nickname = "updatePrivateLink"
-  )
-  @ApiImplicitParams(
-    Array(
-      new ApiImplicitParam(name = "annotationPrivateLinkParams",
-                           required = true,
-                           dataTypeClass = classOf[AnnotationPrivateLinkParams],
-                           paramType = "body")))
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200, message = "JSON object containing string that private link was deleted."),
-      new ApiResponse(code = 400, message = badRequestLabel),
-      new ApiResponse(code = 404, message = badRequestLabel),
-      new ApiResponse(code = 403, message = badRequestLabel)
-    ))
-  def update(@ApiParam(value = "The id of the private link") id: String): Action[AnnotationPrivateLinkParams] =
+  def update(id: String): Action[AnnotationPrivateLinkParams] =
     sil.SecuredAction.async(validateJson[AnnotationPrivateLinkParams]) { implicit request =>
       val params = request.body
       for {
@@ -177,22 +115,12 @@ Expects:
       } yield Ok(js)
     }
 
-  @ApiOperation(value = "Deletes a given private link for an annotation for zarr streaming",
-                nickname = "deletePrivateLink")
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200, message = "JSON object containing string that private link was deleted."),
-      new ApiResponse(code = 400, message = badRequestLabel),
-      new ApiResponse(code = 404, message = badRequestLabel),
-      new ApiResponse(code = 403, message = badRequestLabel)
-    ))
-  def delete(@ApiParam(value = "The id of the private link") id: String): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        idValidated <- ObjectId.fromString(id)
-        aPLInfo <- annotationPrivateLinkDAO.findOne(idValidated) ?~> "notFound" ~> NOT_FOUND
-        _ <- annotationDAO.assertUpdateAccess(aPLInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- annotationPrivateLinkDAO.deleteOne(idValidated) ?~> "delete failed"
-      } yield JsonOk("privateLink deleted")
+  def delete(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      idValidated <- ObjectId.fromString(id)
+      aPLInfo <- annotationPrivateLinkDAO.findOne(idValidated) ?~> "notFound" ~> NOT_FOUND
+      _ <- annotationDAO.assertUpdateAccess(aPLInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
+      _ <- annotationPrivateLinkDAO.deleteOne(idValidated) ?~> "delete failed"
+    } yield JsonOk("privateLink deleted")
   }
 }

@@ -27,7 +27,7 @@ class Cube {
   cube: THREE.Line;
   min: Vector3;
   max: Vector3;
-  showCrossSections: boolean;
+  readonly showCrossSections: boolean;
   initialized: boolean;
   visible: boolean;
   lineWidth: number;
@@ -57,10 +57,12 @@ class Cube {
       this.setCorners(this.min, this.max);
     }
 
-    listenToStoreProperty(
-      (state) => getPosition(state.flycam),
-      (position) => this.updatePositionForCrossSections(position),
-    );
+    if (this.showCrossSections) {
+      listenToStoreProperty(
+        (state) => getPosition(state.flycam),
+        (position) => this.updatePositionForCrossSections(position),
+      );
+    }
   }
 
   getLineMaterial() {
@@ -135,7 +137,7 @@ class Cube {
     this.initialized = true;
     this.updatePositionForCrossSections(getPosition(Store.getState().flycam));
 
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   updatePositionForCrossSections(position: Vector3) {
@@ -176,7 +178,7 @@ class Cube {
     this.getMeshes().forEach((mesh) => {
       mesh.material = this.getLineMaterial();
     });
-    app.vent.trigger("rerender");
+    app.vent.emit("rerender");
   }
 
   updateForCam(id: OrthoView) {
@@ -184,10 +186,9 @@ class Cube {
       return;
     }
 
+    const position = getPosition(Store.getState().flycam);
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const thirdDim = dimensions.thirdDimensionForPlane(planeId);
-      const position = getPosition(Store.getState().flycam);
-
       if (position[thirdDim] >= this.min[thirdDim] && position[thirdDim] < this.max[thirdDim]) {
         this.crossSections[planeId].visible =
           this.visible && planeId === id && this.showCrossSections;

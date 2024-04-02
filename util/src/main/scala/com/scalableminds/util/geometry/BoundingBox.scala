@@ -1,5 +1,6 @@
 package com.scalableminds.util.geometry
 
+import com.scalableminds.util.tools.Math.ceilDiv
 import net.liftweb.common.Full
 
 case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
@@ -52,13 +53,20 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
   def scale(s: Float): BoundingBox =
     BoundingBox(topLeft.scale(s), (width * s).toInt, (height * s).toInt, (depth * s).toInt)
 
+  def *(that: Vec3Int): BoundingBox =
+    BoundingBox(topLeft * that, width * that.x, height * that.y, depth * that.z)
+
+  def /(that: Vec3Int): BoundingBox =
+    // Since floorDiv is used for topLeft, ceilDiv is used for the size to avoid voxels being lost at the border
+    BoundingBox(topLeft / that, ceilDiv(width, that.x), ceilDiv(height, that.y), ceilDiv(depth, that.z))
+
   def toSql: List[Int] =
     List(topLeft.x, topLeft.y, topLeft.z, width, height, depth)
 
   def volume: Long =
     width.toLong * height.toLong * depth.toLong
 
-  def dimensions: Vec3Int =
+  def size: Vec3Int =
     Vec3Int(width, height, depth)
 
   def toLiteral: String = f"${topLeft.x},${topLeft.y},${topLeft.z},$width,$height,$depth"
@@ -68,10 +76,11 @@ object BoundingBox {
 
   import play.api.libs.json._
 
-  private val literalPattern = "\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
+  private val literalPattern =
+    "\\s*((?:\\-)?[0-9]+),\\s*((?:\\-)?[0-9]+),\\s*((?:\\-)?[0-9]+)\\s*,\\s*([0-9]+),\\s*([0-9]+),\\s*([0-9]+)\\s*".r
 
   def empty: BoundingBox =
-    BoundingBox(Vec3Int(0, 0, 0), 0, 0, 0)
+    BoundingBox(Vec3Int.zeros, 0, 0, 0)
 
   def fromLiteral(s: String): Option[BoundingBox] =
     s match {
@@ -102,7 +111,7 @@ object BoundingBox {
       case head :: tail =>
         tail.foldLeft(head)(_ union _)
       case _ =>
-        BoundingBox(Vec3Int(0, 0, 0), 0, 0, 0)
+        BoundingBox.empty
     }
 
   def intersection(bbs: List[BoundingBox]): Option[BoundingBox] =
@@ -113,6 +122,12 @@ object BoundingBox {
         }
       case _ =>
         None
+    }
+
+  def fromTopLeftAndSize(topLeft: Array[Int], size: Array[Int]): Option[BoundingBox] =
+    (size.length, Vec3Int.fromArray(topLeft)) match {
+      case (3, Some(t)) => Some(BoundingBox(t, size(0), size(1), size(2)))
+      case _            => None
     }
 
   implicit val jsonFormat: OFormat[BoundingBox] = Json.format[BoundingBox]

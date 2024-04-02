@@ -1,4 +1,5 @@
 import type { ServerSkeletonTracing, APIAnnotation } from "types/api_flow_types";
+
 export const tracing: ServerSkeletonTracing = {
   typ: "Skeleton",
   trees: [
@@ -11,6 +12,7 @@ export const tracing: ServerSkeletonTracing = {
             y: 0,
             z: 0,
           },
+          additionalCoordinates: [],
           rotation: {
             x: 0,
             y: 0,
@@ -39,7 +41,6 @@ export const tracing: ServerSkeletonTracing = {
       createdTimestamp: 1528811979356,
     },
   ],
-  dataSetName: "ROI2017_wkw",
   treeGroups: [],
   createdTimestamp: 1528811983951,
   userBoundingBoxes: [],
@@ -49,11 +50,13 @@ export const tracing: ServerSkeletonTracing = {
     y: 0,
     z: 0,
   },
+  editPositionAdditionalCoordinates: null,
   editRotation: {
     x: 0,
     y: 0,
     z: 0,
   },
+  additionalAxes: [],
   zoomLevel: 2,
   version: 0,
   id: "e90133de-b2db-4912-8261-8b6f84f7edab",
@@ -67,7 +70,6 @@ export const annotation: APIAnnotation = {
   typ: "Task",
   task: {
     id: "5b1fd1cb97000027049c67ec",
-    formattedHash: "9c67ec",
     projectName: "sampleProject",
     projectId: "dummy-project-id",
     team: "Connectomics department",
@@ -95,7 +97,7 @@ export const annotation: APIAnnotation = {
     },
     created: 1529066010230,
     status: {
-      open: 0,
+      pending: 0,
       active: 1,
       finished: 0,
     },
@@ -106,19 +108,18 @@ export const annotation: APIAnnotation = {
     editPosition: [0, 0, 0],
     editRotation: [0, 0, 0],
   },
-  stats: {},
   restrictions: {
     allowAccess: true,
     allowUpdate: true,
     allowFinish: true,
     allowDownload: true,
   },
-  formattedHash: "9c67ee",
   annotationLayers: [
     {
       name: "Skeleton",
       tracingId: "e90133de-b2db-4912-8261-8b6f84f7edab",
       typ: "Skeleton",
+      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",
@@ -127,8 +128,9 @@ export const annotation: APIAnnotation = {
     name: "localhost",
     url: "http://localhost:9000",
     isScratch: false,
-    isConnector: false,
     allowsUpload: true,
+    jobsEnabled: false,
+    jobsSupportedByAvailableWorkers: [],
   },
   tracingStore: {
     name: "localhost",
@@ -161,7 +163,6 @@ export const annotation: APIAnnotation = {
       },
     ],
   },
-  meshes: [],
   contributors: [],
   othersMayEdit: false,
   teams: [

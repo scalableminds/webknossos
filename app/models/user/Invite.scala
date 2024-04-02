@@ -1,18 +1,20 @@
 package models.user
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+import mail.{DefaultMails, Send}
+
 import javax.inject.Inject
 import models.organization.OrganizationDAO
-import org.joda.time.DateTime
-import oxalis.mail.{DefaultMails, Send}
-import oxalis.security.RandomIDGenerator
+import security.RandomIDGenerator
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO, WkConf}
+import utils.sql.{SqlClient, SQLDAO}
+import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -21,8 +23,8 @@ case class Invite(
     tokenValue: String,
     _organization: ObjectId,
     autoActivate: Boolean,
-    expirationDateTime: DateTime,
-    created: Long = System.currentTimeMillis(),
+    expirationDateTime: Instant,
+    created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
 
@@ -54,7 +56,7 @@ class InviteService @Inject()(conf: WkConf,
         tokenValue,
         organizationID,
         autoActivate,
-        new DateTime(System.currentTimeMillis() + conf.WebKnossos.User.inviteExpiry.toMillis)
+        Instant.in(conf.WebKnossos.User.inviteExpiry)
       )
 
   private def sendInviteMail(recipient: String, sender: User, invite: Invite)(
@@ -81,23 +83,23 @@ class InviteService @Inject()(conf: WkConf,
 
 }
 
-class InviteDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
+class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Invite, InvitesRow, Invites](sqlClient) {
-  val collection = Invites
+  protected val collection = Invites
 
-  def idColumn(x: Invites): Rep[String] = x._Id
+  protected def idColumn(x: Invites): Rep[String] = x._Id
 
-  def isDeletedColumn(x: Invites): Rep[Boolean] = x.isdeleted
+  protected def isDeletedColumn(x: Invites): Rep[Boolean] = x.isdeleted
 
-  def parse(r: InvitesRow): Fox[Invite] =
+  protected def parse(r: InvitesRow): Fox[Invite] =
     Fox.successful(
       Invite(
         ObjectId(r._Id),
         r.tokenvalue,
         ObjectId(r._Organization),
         r.autoactivate,
-        new DateTime(r.expirationdatetime.getTime),
-        r.created.getTime,
+        Instant.fromSql(r.expirationdatetime),
+        Instant.fromSql(r.created),
         r.isdeleted
       ))
 
@@ -111,16 +113,16 @@ class InviteDAO @Inject()(sqlClient: SQLClient)(implicit ec: ExecutionContext)
   def insertOne(i: Invite): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.invites(_id, tokenValue, _organization, autoActivate, expirationDateTime, created, isDeleted)
-                    values(${i._id}, ${i.tokenValue}, ${i._organization}, ${i.autoActivate},
-                    ${new java.sql.Timestamp(i.expirationDateTime.getMillis)}, ${new java.sql.Timestamp(i.created)}, ${i.isDeleted})""")
+        q"""insert into webknossos.invites(_id, tokenValue, _organization, autoActivate, expirationDateTime, created, isDeleted)
+            values(${i._id}, ${i.tokenValue}, ${i._organization}, ${i.autoActivate},
+            ${i.expirationDateTime}, ${i.created}, ${i.isDeleted})""".asUpdate)
     } yield ()
 
   def deleteAllExpired(): Fox[Unit] = {
-    val q = for {
-      row <- collection if notdel(row) && row.expirationdatetime <= new java.sql.Timestamp(System.currentTimeMillis)
+    val query = for {
+      row <- collection if notdel(row) && row.expirationdatetime <= Instant.now.toSql
     } yield isDeletedColumn(row)
-    for { _ <- run(q.update(true)) } yield ()
+    for { _ <- run(query.update(true)) } yield ()
   }
 
 }

@@ -5,7 +5,9 @@ import { M4x4, V3 } from "libs/mjs";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
-import { ResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
+import { ResolutionInfo } from "../helpers/resolution_info";
+import { type AdditionalCoordinate } from "types/api_flow_types";
+
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
   velocityRangeEnd = Infinity;
@@ -57,15 +59,14 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
     position: Vector3,
     resolutions: Array<Vector3>,
     resolutionInfo: ResolutionInfo,
+    additionalCoordinates: AdditionalCoordinate[] | null,
   ): Array<PullQueueItem> {
-    // @ts-expect-error ts-migrate(7034) FIXME: Variable 'pullQueue' implicitly has type 'any[]' i... Remove this comment to see the full error message
-    const pullQueue = [];
+    const pullQueue: PullQueueItem[] = [];
     const zoomStep = resolutionInfo.getIndexOrClosestHigherIndex(activeZoomStep);
 
     if (zoomStep == null) {
       // The layer cannot be rendered at this zoom step, as necessary magnifications
       // are missing. Don't prefetch anything.
-      // @ts-expect-error ts-migrate(7005) FIXME: Variable 'pullQueue' implicitly has an 'any[]' typ... Remove this comment to see the full error message
       return pullQueue;
     }
 
@@ -83,6 +84,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
         position,
         resolutions,
         zoomStep,
+        null,
       );
       const positionBucket: Vector3 = [
         positionBucketWithZoomStep[0],
@@ -91,12 +93,11 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
       ];
       const distanceToPosition = V3.length(V3.sub([bucketX, bucketY, bucketZ], positionBucket));
       pullQueue.push({
-        bucket: [bucketX, bucketY, bucketZ, zoomStep],
+        bucket: [bucketX, bucketY, bucketZ, zoomStep, additionalCoordinates ?? []],
         priority: 1 + distanceToPosition,
       });
     }
 
-    // @ts-expect-error ts-migrate(2322) FIXME: Type '{ bucket: any[]; priority: any; }[]' is not ... Remove this comment to see the full error message
     return pullQueue;
   }
 }

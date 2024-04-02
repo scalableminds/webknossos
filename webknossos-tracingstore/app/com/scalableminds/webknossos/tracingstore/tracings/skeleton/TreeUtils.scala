@@ -1,8 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Tree, TreeGroup}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.Tree
 
-import scala.annotation.tailrec
 import scala.util.matching.Regex
 import scala.util.matching.Regex.Match
 
@@ -82,52 +81,4 @@ object TreeUtils {
       math.max(targetNodeMaxId + 1 - sourceNodeMinId, 0)
     }
 
-  def calculateGroupMapping(sourceGroups: Seq[TreeGroup], targetGroups: Seq[TreeGroup]): Int => Int = {
-    val groupIdOffset = calculateGroupIdOffset(sourceGroups, targetGroups)
-    (groupId: Int) =>
-      groupId + groupIdOffset
-  }
-
-  def maxGroupIdRecursive(groups: Seq[TreeGroup]): Int =
-    if (groups.isEmpty) 0 else (groups.map(_.groupId) ++ groups.map(g => maxGroupIdRecursive(g.children))).max
-
-  def minGroupIdRecursive(groups: Seq[TreeGroup]): Int =
-    if (groups.isEmpty) Int.MaxValue
-    else (groups.map(_.groupId) ++ groups.map(g => minGroupIdRecursive(g.children))).min
-
-  private def calculateGroupIdOffset(sourceGroups: Seq[TreeGroup], targetGroups: Seq[TreeGroup]) =
-    if (targetGroups.isEmpty)
-      0
-    else {
-      val targetGroupMaxId = if (targetGroups.isEmpty) 0 else maxGroupIdRecursive(targetGroups)
-      val sourceGroupMinId = if (sourceGroups.isEmpty) 0 else minGroupIdRecursive(sourceGroups)
-      math.max(targetGroupMaxId + 1 - sourceGroupMinId, 0)
-    }
-
-  def mergeGroups(sourceGroups: Seq[TreeGroup],
-                  targetGroups: Seq[TreeGroup],
-                  groupMapping: FunctionalGroupMapping): Seq[TreeGroup] = {
-    def applyGroupMappingRecursive(groups: Seq[TreeGroup]): Seq[TreeGroup] =
-      groups.map(group =>
-        group.withGroupId(groupMapping(group.groupId)).withChildren(applyGroupMappingRecursive(group.children)))
-
-    applyGroupMappingRecursive(sourceGroups) ++ targetGroups
-  }
-
-  def getAllChildrenGroups(rootGroup: TreeGroup): Seq[TreeGroup] = {
-    def childIter(currentGroup: Seq[TreeGroup]): Seq[TreeGroup] =
-      currentGroup match {
-        case Seq() => Seq.empty
-        case _     => currentGroup ++ currentGroup.flatMap(group => childIter(group.children))
-      }
-
-    childIter(Seq(rootGroup))
-  }
-
-  @tailrec
-  def getAllTreeGroupIds(treeGroups: Seq[TreeGroup], ids: Seq[Int] = Seq[Int]()): Seq[Int] =
-    treeGroups match {
-      case head :: tail => getAllTreeGroupIds(tail ++ head.children, head.groupId +: ids)
-      case _            => ids
-    }
 }

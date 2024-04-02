@@ -34,7 +34,7 @@ const validateWithSchemaSync = (type: string, value: string) => {
   }
 };
 
-const validateWithSchema = (type: string) => (rule: Record<string, any>, value: string) => {
+const validateWithSchema = (type: string) => (_rule: Record<string, any>, value: string) => {
   try {
     return Promise.resolve(validateWithSchemaSync(type, value));
   } catch (e) {
@@ -68,11 +68,11 @@ export const isValidJSON = (json: string) => {
   try {
     JSON.parse(json);
     return true;
-  } catch (ex) {
+  } catch (_ex) {
     return false;
   }
 };
 export function syncValidator<T>(validateValueFn: (arg0: T) => boolean, errMessage: string) {
-  return (rule: Record<string, any>, value: T) =>
+  return (_rule: Record<string, any>, value: T) =>
     validateValueFn(value) ? Promise.resolve() : Promise.reject(new Error(errMessage));
 }

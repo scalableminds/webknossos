@@ -184,7 +184,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
   const sortedItems: Array<PublicationItem> = [
     ...publication.datasets
       .filter((dataset) => dataset.isActive)
-      .map((dataset) => ({ type: PublicationItemType.DATASET, dataset } as PublicationItem)),
+      .map((dataset) => ({ type: PublicationItemType.DATASET, dataset }) as PublicationItem),
     ...publication.annotations
       .filter((annotation) => annotation.dataSet.isActive)
       .map(
@@ -193,24 +193,20 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
             type: PublicationItemType.ANNOTATION,
             annotation,
             dataset: annotation.dataSet,
-          } as PublicationItem),
+          }) as PublicationItem,
       ),
   ];
   sortedItems.sort(compareBy([] as Array<PublicationItem>, (item) => item.dataset.sortingKey));
-  const [activeItem, setActiveItem] = useState<PublicationItem>(sortedItems[0]);
-  // This method will only be called for datasets with a publication, but Flow doesn't know that
-  if (publication == null) throw Error("Assertion Error: Dataset has no associated publication.");
-  const thumbnailURL = getThumbnailURL(activeItem.dataset);
-  const segmentationThumbnailURL = hasSegmentation(activeItem.dataset)
-    ? getSegmentationThumbnailURL(activeItem.dataset)
-    : null;
-  const details = getDetails(activeItem);
+  const [activeItem, setActiveItem] = useState<PublicationItem | null>(sortedItems[0]);
+
   return (
     <Card
-      bodyStyle={{
-        padding: 0,
+      styles={{
+        body: {
+          padding: 0,
+        },
       }}
-      className="spotlight-item-card"
+      className="publication-item-card"
       bordered={false}
     >
       <div
@@ -249,44 +245,72 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
             />
           </div>
         </div>
-        <div className="dataset-thumbnail">
-          <div
-            style={{
-              position: "relative",
-              height: "100%",
-              display: "flex",
-              alignItems: "flex-end",
-            }}
-          >
-            <Link to={getUrl(activeItem)} className="absolute">
-              <div className="dataset-click-hint absolute">Click To View</div>
-            </Link>
-            <div
-              className="dataset-thumbnail-image absolute"
-              style={{
-                backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
-              }}
-            />
-            {segmentationThumbnailURL != null && (
-              <div
-                className="dataset-thumbnail-image absolute segmentation"
-                style={{
-                  backgroundImage: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
-                }}
-              />
-            )}
-            <ThumbnailOverlay details={details} />
-            {sortedItems.length > 1 && (
-              <PublishedDatasetsOverlay
-                items={sortedItems}
-                activeItem={activeItem}
-                setActiveItem={setActiveItem}
-              />
-            )}
-          </div>
-        </div>
+        <PublicationThumbnail
+          activeItem={activeItem}
+          sortedItems={sortedItems}
+          setActiveItem={setActiveItem}
+        />
       </div>
     </Card>
+  );
+}
+
+function PublicationThumbnail({
+  activeItem,
+  sortedItems,
+  setActiveItem,
+}: {
+  activeItem: PublicationItem | null;
+  sortedItems: PublicationItem[];
+  setActiveItem: React.Dispatch<React.SetStateAction<PublicationItem | null>>;
+}) {
+  if (activeItem == null) {
+    return <div className="dataset-thumbnail" />;
+  }
+
+  const thumbnailURL = getThumbnailURL(activeItem.dataset);
+  const segmentationThumbnailURL = hasSegmentation(activeItem.dataset)
+    ? getSegmentationThumbnailURL(activeItem.dataset)
+    : null;
+  const details = getDetails(activeItem);
+
+  return (
+    <div className="dataset-thumbnail">
+      <div
+        style={{
+          position: "relative",
+          height: "100%",
+          display: "flex",
+          alignItems: "flex-end",
+        }}
+      >
+        <Link to={getUrl(activeItem)} className="absolute">
+          <div className="dataset-click-hint absolute">Click To View</div>
+        </Link>
+        <div
+          className="dataset-thumbnail-image absolute"
+          style={{
+            backgroundImage: `url('${thumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+          }}
+        />
+        {segmentationThumbnailURL != null && (
+          <div
+            className="dataset-thumbnail-image absolute segmentation"
+            style={{
+              backgroundImage: `url('${segmentationThumbnailURL}?w=${thumbnailDimension}&h=${thumbnailDimension}')`,
+            }}
+          />
+        )}
+        <ThumbnailOverlay details={details} />
+        {sortedItems.length > 1 && (
+          <PublishedDatasetsOverlay
+            items={sortedItems}
+            activeItem={activeItem}
+            setActiveItem={setActiveItem}
+          />
+        )}
+      </div>
+    </div>
   );
 }
 

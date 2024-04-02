@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
+import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 case class VoxelPosition(
@@ -18,10 +19,12 @@ case class VoxelPosition(
   val voxelZInMag: Int = mag1Z / mag.z
 
   def toBucket: BucketPosition =
-    BucketPosition(mag1X, mag1Y, mag1Z, mag)
+    BucketPosition(mag1X, mag1Y, mag1Z, mag, None)
 
-  def move(dx: Int, dy: Int, dz: Int) =
+  def move(dx: Int, dy: Int, dz: Int): VoxelPosition =
     VoxelPosition(mag1X + dx, mag1Y + dy, mag1Z + dz, mag)
+
+  def toMag1: VoxelPosition = this.copy(mag = Vec3Int.ones) // other properties are already in mag1 and do not change.
 
   override def toString = s"($mag1X, $mag1Y, $mag1Z) / $mag"
 
@@ -44,7 +47,8 @@ case class BucketPosition(
     voxelMag1X: Int,
     voxelMag1Y: Int,
     voxelMag1Z: Int,
-    mag: Vec3Int
+    mag: Vec3Int,
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]]
 ) {
 
   val bucketLength: Int = DataLayer.bucketLength
@@ -75,13 +79,13 @@ case class BucketPosition(
   }
 
   def nextBucketInX: BucketPosition =
-    BucketPosition(voxelMag1X + (bucketLength * mag.x), voxelMag1Y, voxelMag1Z, mag)
+    BucketPosition(voxelMag1X + (bucketLength * mag.x), voxelMag1Y, voxelMag1Z, mag, additionalCoordinates)
 
   def nextBucketInY: BucketPosition =
-    BucketPosition(voxelMag1X, voxelMag1Y + (bucketLength * mag.y), voxelMag1Z, mag)
+    BucketPosition(voxelMag1X, voxelMag1Y + (bucketLength * mag.y), voxelMag1Z, mag, additionalCoordinates)
 
   def nextBucketInZ: BucketPosition =
-    BucketPosition(voxelMag1X, voxelMag1Y, voxelMag1Z + (bucketLength * mag.z), mag)
+    BucketPosition(voxelMag1X, voxelMag1Y, voxelMag1Z + (bucketLength * mag.z), mag, additionalCoordinates)
 
   def toMag1BoundingBox: BoundingBox =
     new BoundingBox(
@@ -91,8 +95,25 @@ case class BucketPosition(
       bucketLength * mag.z
     )
 
+  def hasNegativeComponent: Boolean =
+    voxelMag1X < 0 || voxelMag1Y < 0 || voxelMag1Z < 0 || mag.hasNegativeComponent || AdditionalCoordinate
+      .hasNegativeValue(additionalCoordinates)
+
+  def toVec3IntProto: Vec3IntProto = Vec3IntProto(bucketX, bucketY, bucketZ)
+
+  private def additionalCoordinateString = additionalCoordinates match {
+    case Some(coords) => s", additional coordinates: ${coords.map(_.toString()).mkString(",")}"
+    case None         => ""
+  }
+
+  def hasAdditionalCoordinates: Boolean =
+    additionalCoordinates match {
+      case Some(value) => value.nonEmpty
+      case None        => false
+    }
+
   override def toString: String =
-    s"BucketPosition(voxelMag1 at ($voxelMag1X, $voxelMag1Y, $voxelMag1Z), bucket at ($bucketX,$bucketY,$bucketZ), mag$mag)"
+    s"BucketPosition(voxelMag1 at ($voxelMag1X, $voxelMag1Y, $voxelMag1Z), bucket at ($bucketX,$bucketY,$bucketZ), mag$mag$additionalCoordinateString)"
 }
 
 class CubePosition(

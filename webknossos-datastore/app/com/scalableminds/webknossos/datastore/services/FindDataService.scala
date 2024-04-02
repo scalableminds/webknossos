@@ -52,7 +52,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       dataBucketWise: Seq[Array[Byte]] <- Fox
         .sequenceOfFulls(positions.map(getDataFor(dataSource, dataLayer, _, resolution)))
         .toFox
-      _ <- bool2Fox(dataBucketWise.nonEmpty) ?~> "dataSet.noData"
+      _ <- bool2Fox(dataBucketWise.nonEmpty) ?~> "dataset.noData"
       dataConcatenated = concatenateBuckets(dataBucketWise)
     } yield dataConcatenated
 
@@ -94,7 +94,8 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       }
     }
 
-    positionCreationIter((1 to iterationCount).toList, List[Vec3Int]()) :+ dataLayer.boundingBox.topLeft
+    val positions = positionCreationIter((1 to iterationCount).toList, List[Vec3Int]()) :+ dataLayer.boundingBox.topLeft
+    positions.map(_.alignWithGridFloor(Vec3Int.full(DataLayer.bucketLength))).distinct
   }
 
   private def checkAllPositionsForData(dataSource: DataSource,
@@ -153,11 +154,11 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       for {
         dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution)
         dataAsDoubles = convertNonZeroDataToDouble(dataConcatenated, dataLayer.elementClass)
-        _ <- bool2Fox(dataAsDoubles.nonEmpty) ?~> "dataSet.sampledOnlyBlack"
+        _ <- bool2Fox(dataAsDoubles.nonEmpty) ?~> "dataset.sampledOnlyBlack"
       } yield (Math.mean(dataAsDoubles), Math.stdDev(dataAsDoubles))
 
     for {
-      _ <- bool2Fox(dataLayer.resolutions.nonEmpty) ?~> "dataSet.noResolutions"
+      _ <- bool2Fox(dataLayer.resolutions.nonEmpty) ?~> "dataset.noResolutions"
       meanAndStdDev <- meanAndStdDevForPositions(createPositions(dataLayer, 2).distinct,
                                                  dataLayer.resolutions.minBy(_.maxDim))
     } yield meanAndStdDev
@@ -210,7 +211,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
 
     def histogramForPositions(positions: List[Vec3Int], resolution: Vec3Int) =
       for {
-        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "dataSet.noData"
+        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution) ?~> "dataset.noData"
         isUint24 = dataLayer.elementClass == ElementClass.uint24
         convertedData = toUnsigned(filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24))
       } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, isUint24)
@@ -218,6 +219,6 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     if (dataLayer.resolutions.nonEmpty)
       histogramForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.minBy(_.maxDim))
     else
-      Fox.empty ?~> "dataSet.noResolutions"
+      Fox.empty ?~> "dataset.noResolutions"
   }
 }

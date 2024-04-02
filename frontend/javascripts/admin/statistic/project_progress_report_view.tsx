@@ -48,9 +48,8 @@ function ProjectProgressReportView() {
   }
 
   function handleTeamChange(team: APITeam) {
-    setTeam(team);
+    setTeam(team, () => fetchData());
     setAreSettingsVisible(false);
-    fetchData();
   }
 
   function handleOpenSettings() {

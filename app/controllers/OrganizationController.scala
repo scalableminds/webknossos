@@ -58,10 +58,11 @@ class OrganizationController @Inject()(
       }
     }
 
-  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def list(compact: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       organizations <- organizationDAO.findAll ?~> "organization.list.failed"
-      js <- Fox.serialCombined(organizations)(o => organizationService.publicWrites(o))
+      js <- if (compact.getOrElse(false)) Fox.successful(organizations.map(organizationService.compactWrites))
+      else Fox.serialCombined(organizations)(o => organizationService.publicWrites(o))
     } yield Ok(Json.toJson(js))
   }
 

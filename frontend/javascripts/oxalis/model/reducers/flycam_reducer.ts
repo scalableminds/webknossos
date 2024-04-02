@@ -90,15 +90,15 @@ function rotateReducer(
   });
 }
 
-export function getMatrixScale(dataSetScale: Vector3): Vector3 {
-  const scale = [1 / dataSetScale[0], 1 / dataSetScale[1], 1 / dataSetScale[2]];
+export function getMatrixScale(datasetScale: Vector3): Vector3 {
+  const scale = [1 / datasetScale[0], 1 / datasetScale[1], 1 / datasetScale[2]];
   const maxScale = Math.max(scale[0], scale[1], scale[2]);
   const multi = 1 / maxScale;
   return [multi * scale[0], multi * scale[1], multi * scale[2]];
 }
 
-function resetMatrix(matrix: Matrix4x4, dataSetScale: Vector3) {
-  const scale = getMatrixScale(dataSetScale);
+function resetMatrix(matrix: Matrix4x4, datasetScale: Vector3) {
+  const scale = getMatrixScale(datasetScale);
   // Save position
   const position = [matrix[12], matrix[13], matrix[14]];
   // Reset rotation

@@ -324,6 +324,9 @@ void main() {
         ? v_innerPointSize + 25.0
         : v_innerPointSize * 1.5;
       gl_PointSize = v_outerPointSize;
+
+      // Shift hue to further highlight active node in arbitrary mode.
+      color = shiftHue(color, isOrthogonalMode ? 0. : 0.15);
     }
 
     float isBranchpoint =

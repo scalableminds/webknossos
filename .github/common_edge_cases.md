@@ -10,6 +10,7 @@ Will this also work if
  - User uses dark mode / light mode
  - There is no local datastore/tracingstore module (Compare [instructions to test this locally](https://github.com/scalableminds/webknossos/wiki/Set-up-a-standalone-datastore-locally))
 
- Also check that
-  - Complex SQL queries have no fan out effect due to multiple left joins
-  - SQL `IN` statements are never called with empty list
+Consider SQL pitfalls:
+ - `x IN ()` statements must never called with empty list
+ - `ARRAY_AGG(x)` may have nullable values (use `ARRAY_REMOVE(ARRAY_AGG(x), null)` instead)
+ - Complex SQL queries may have a fanout effect due to multiple left joins, leading to duplicates

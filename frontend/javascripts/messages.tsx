@@ -417,7 +417,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The link is not valid, since the specified organization does not exist. You are being redirected to the general registration form.",
   "request.max_item_count_alert":
     "Your request returned more than 1000 results. More results might be available on the server but were omitted for technical reasons.",
-  "timetracking.date_range_too_long": "Please specify a date range of 31 days or less.",
+  "timetracking.date_range_too_long": "Please specify a date range of three months or less.",
   "nml.node_outside_tree":
     "NML contains <node ...> tag that is not enclosed by a <thing ...> tag: Node with id",
   "nml.edge_outside_tree":

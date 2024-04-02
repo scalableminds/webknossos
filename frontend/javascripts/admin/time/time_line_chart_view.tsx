@@ -137,6 +137,8 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
             },
           },
         ]}
+        // component is always light, even in darkmode. the font color is white in darkmode though, so set it to black instead.
+        style={{ color: "black" }}
       />
     );
   }

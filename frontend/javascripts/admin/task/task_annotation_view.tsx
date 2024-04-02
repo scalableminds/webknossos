@@ -87,28 +87,33 @@ function TaskAnnotationView({ task, activeUser }: Props) {
     setAnnotations(annotations.map((a) => (a.id === updatedAnnotation.id ? updatedAnnotation : a)));
   }
 
-  function getDropdownMenu(annotation: APIAnnotation): MenuProps {
+  function getViewOrOpenLabel(annotation: APIAnnotation) {
+    const iconClassName = "icon-margin-right";
     let doesAnnotationNotBelongToActiveUser = true;
 
     if (annotation.owner && activeUser) {
       doesAnnotationNotBelongToActiveUser = annotation.owner.id !== activeUser.id;
     }
-
     const label =
       annotation.state === "Finished" || doesAnnotationNotBelongToActiveUser ? "View" : "Open";
     const icon =
       annotation.state === "Finished" || doesAnnotationNotBelongToActiveUser ? (
-        <EyeOutlined />
+        <EyeOutlined className={iconClassName} />
       ) : (
-        <PlayCircleOutlined />
+        <PlayCircleOutlined className={iconClassName} />
       );
+
+    return (
+      <a href={`/annotations/Task/${annotation.id}`}>
+        {icon}
+        {label}
+      </a>
+    );
+  }
+
+  function getDropdownMenu(annotation: APIAnnotation): MenuProps {
     return {
       items: [
-        {
-          key: `${annotation.id}-view`,
-          icon: icon,
-          label: <a href={`/annotations/Task/${annotation.id}`}>{label}</a>,
-        },
         {
           key: `${annotation.id}-transfer`,
           onClick: () => {
@@ -173,6 +178,7 @@ function TaskAnnotationView({ task, activeUser }: Props) {
   if (!annotations || annotations.length <= 0) {
     return <p> No users are assigned to this task, yet.</p>;
   }
+
   return (
     <div>
       <table>
@@ -201,6 +207,15 @@ function TaskAnnotationView({ task, activeUser }: Props) {
                   </span>
                 </td>
                 <td className="nowrap">
+                  <div>{getViewOrOpenLabel(annotation)}</div>
+                  <div>
+                    <Dropdown menu={getDropdownMenu(annotation)} trigger={["click"]}>
+                      <a className="ant-dropdown-link" href="#">
+                        Actions <DownOutlined />
+                      </a>
+                    </Dropdown>
+                  </div>
+
                   <Dropdown menu={getDropdownMenu(annotation)} trigger={["click"]}>
                     <a className="ant-dropdown-link" href="#">
                       Actions <DownOutlined />

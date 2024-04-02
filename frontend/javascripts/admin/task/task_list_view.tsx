@@ -446,6 +446,7 @@ function TaskListView({ initialFieldValues }: Props) {
             width={200}
             sorter={Utils.compareBy<APITask>((task) => task.created)}
             render={(created) => <FormattedDate timestamp={created} />}
+            defaultSortOrder={"descend"}
           />
           <Column
             title="Action"

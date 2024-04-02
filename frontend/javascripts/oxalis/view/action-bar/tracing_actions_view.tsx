@@ -332,7 +332,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       this.props.annotationId,
       this.props.annotationType,
     );
-    location.href = `/annotations/${newAnnotation.id}`;
+    window.open(`/annotations/${newAnnotation.id}`, "_blank", "noopener,noreferrer");
   };
 
   handleCopySandboxToAccount = async () => {

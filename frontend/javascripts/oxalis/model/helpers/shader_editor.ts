@@ -44,7 +44,7 @@ window._setupShaderEditor = (identifier, _shaderType) => {
         `,
   );
   input.addEventListener("keydown", (evt) => {
-    if ((evt.keyCode === 10 || evt.keyCode === 13) && evt.ctrlKey) {
+    if ((evt.keyCode === 10 || evt.keyCode === 13) && (evt.ctrlKey || event.metaKey)) {
       evt.preventDefault();
       overrideShader();
     }

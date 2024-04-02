@@ -1896,21 +1896,6 @@ export async function getAgglomeratesForDatasetLayer(
   );
 }
 
-export async function getMeanAndStdDevFromDataset(
-  datastoreUrl: string,
-  datasetId: APIDatasetId,
-  layerName: string,
-): Promise<{
-  mean: number;
-  stdDev: number;
-}> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/colorStatistics?token=${token}`,
-    ),
-  );
-}
-
 // #### Publications
 export async function getPublications(): Promise<Array<APIPublication>> {
   const publications = await Request.receiveJSON("/api/publications");

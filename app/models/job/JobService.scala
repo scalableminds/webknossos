@@ -184,10 +184,11 @@ class JobService @Inject()(wkConf: WkConf,
       owner <- userDAO.findOne(job._owner)
       userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(owner.loginInfo)
     } yield {
-      Json.obj("job_id" -> job._id.id,
-               "command" -> job.command,
-               "job_kwargs" -> job.commandArgs,
-               "user_auth_token" -> userAuthToken.id)
+      Json.obj(
+        "job_id" -> job._id.id,
+        "command" -> job.command,
+        "job_kwargs" -> (job.commandArgs ++ Json.obj("user_auth_token" -> userAuthToken.id))
+      )
     }
 
   def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =

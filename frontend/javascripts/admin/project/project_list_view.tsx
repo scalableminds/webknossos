@@ -45,6 +45,7 @@ import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import FormattedDate from "components/formatted_date";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -77,17 +78,19 @@ function ProjectListView({ initialSearchValue, taskTypeId, activeUser }: Props) 
   );
   const [taskTypeName, setTaskTypeName] = useState<string | undefined>("");
 
-  useEffect(() => {
-    const { searchQuery } = persistence.load();
-    setSearchQuery(searchQuery || "");
-
-    if (initialSearchValue != null && initialSearchValue !== "") {
-      // Only override the persisted value if the provided initialSearchValue is not empty
-      setSearchQuery(initialSearchValue);
-    }
-
-    fetchData(taskTypeId);
-  }, [initialSearchValue, taskTypeId]);
+  useEffectOnlyOnce(() => {  
+    const { searchQuery } = persistence.load();  
+    setSearchQuery(searchQuery || "");  
+    if (initialSearchValue != null && initialSearchValue !== "") {  
+      // Only override the persisted value if the provided initialSearchValue is not empty  
+      setSearchQuery(initialSearchValue);  
+    }  
+    fetchData(taskTypeId);  
+  });  
+  
+  useEffect(() => {  
+    fetchData(taskTypeId);  
+  }, [taskTypeId]);  
 
   useEffect(() => {
     persistence.persist({ searchQuery });

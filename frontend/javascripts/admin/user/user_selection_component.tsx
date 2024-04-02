@@ -4,6 +4,7 @@ import _ from "lodash";
 import { getUsers } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import { useState } from "react";
+import { handleGenericError } from "libs/error_handling";
 
 type Props = {
   handleSelection: (arg0: string) => void;
@@ -15,10 +16,17 @@ export default function UserSelectionComponent({ handleSelection }: Props) {
 
   const users = useFetch(
     async () => {
-      const users = await getUsers();
-      const activeUsers = users.filter((u) => u.isActive);
-      setIsLoading(false);
-      return _.sortBy(activeUsers, "lastName");
+      try {
+        const users = await getUsers();
+        const activeUsers = users.filter((u) => u.isActive);
+
+        return _.sortBy(activeUsers, "lastName");
+      } catch (error) {
+        handleGenericError(error as Error);
+        return [];
+      } finally {
+        setIsLoading(false);
+      }
     },
     [],
     [],

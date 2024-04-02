@@ -208,16 +208,8 @@ function TaskAnnotationView({ task, activeUser }: Props) {
                 </td>
                 <td className="nowrap">
                   <div>{getViewOrOpenLabel(annotation)}</div>
-                  <div>
-                    <Dropdown menu={getDropdownMenu(annotation)} trigger={["click"]}>
-                      <a className="ant-dropdown-link" href="#">
-                        Actions <DownOutlined />
-                      </a>
-                    </Dropdown>
-                  </div>
-
                   <Dropdown menu={getDropdownMenu(annotation)} trigger={["click"]}>
-                    <a className="ant-dropdown-link" href="#">
+                    <a className="ant-dropdown-link">
                       Actions <DownOutlined />
                     </a>
                   </Dropdown>

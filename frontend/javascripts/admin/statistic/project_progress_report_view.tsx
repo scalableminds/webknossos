@@ -21,7 +21,7 @@ function ProjectProgressReportView() {
   const [isLoading, setIsLoading] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<number | undefined>(undefined);
 
-  async function fetchData(suppressLoadingState: boolean = false) {
+  async function fetchData(team: APITeam | undefined, suppressLoadingState: boolean = false) {
     if (team == null) {
       setData([]);
     } else if (suppressLoadingState) {
@@ -46,9 +46,12 @@ function ProjectProgressReportView() {
       setIsLoading(false);
     }
   }
+  React.useEffect(() => {
+    fetchData(team);
+  }, [team]);
 
-  function handleTeamChange(team: APITeam) {
-    setTeam(team, () => fetchData());
+  function handleTeamChange(newTeam: APITeam) {
+    setTeam(newTeam);
     setAreSettingsVisible(false);
   }
 
@@ -57,11 +60,11 @@ function ProjectProgressReportView() {
   }
 
   function handleReload() {
-    fetchData();
+    fetchData(team);
   }
 
   function handleAutoReload() {
-    fetchData(true);
+    fetchData(team, true);
   }
 
   return (

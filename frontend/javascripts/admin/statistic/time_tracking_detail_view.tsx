@@ -17,9 +17,11 @@ type TimeTrackingDetailViewProps = {
   projectIds: string[];
 };
 
-const ANNOTATION_OR_TASK_NAME_SPAN = 10;
+const ANNOTATION_OR_TASK_NAME_SPAN = 12;
 const STATISTICS_SPAN = 8;
-const TIMESPAN_SPAN = 6;
+const TIMESPAN_SPAN = 4;
+
+const STYLING_CLASS_NAME = "time-tracking-details";
 
 const renderRow = (
   userDataPerAnnotation: APITimeTracking[],
@@ -45,12 +47,12 @@ const renderRow = (
       annotationRows = annotationRows.concat(tableRows);
     } else {
       taskRows.push(
-        <Row style={{ fontWeight: "bold", margin: 10 }}>
+        <Row style={{ fontWeight: "bold", margin: 20 }}>
           <Col>{project}</Col>
         </Row>,
       );
       const tableRows = loggedTimes.map((timeEntry) => (
-        <Row>
+        <Row style={{ lineHeight: 3.3 }}>
           <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>Task: {timeEntry.task}</Col>
           <Col span={STATISTICS_SPAN}>
             <AnnotationStats
@@ -79,7 +81,7 @@ function TimeTrackingDetailView(props: TimeTrackingDetailViewProps) {
       );
     },
     [],
-    [],
+    [props],
   );
 
   const [annotationRows, taskRows] = renderRow(userData);
@@ -89,12 +91,12 @@ function TimeTrackingDetailView(props: TimeTrackingDetailViewProps) {
     if (index < rowLength - 1)
       return (
         <>
-          {row} <Divider style={{ margin: 5 }} />
+          {row} <Divider style={{ margin: 0 }} />
         </>
       );
     return row;
   });
-  return <div>{rows}</div>;
+  return <div className={STYLING_CLASS_NAME}>{rows}</div>;
 }
 
 export default TimeTrackingDetailView;

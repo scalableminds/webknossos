@@ -18,6 +18,7 @@ import dayjs, { Dayjs } from "antd/node_modules/dayjs";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
 import LinkButton from "components/link_button";
 import FixedExpandableTable from "components/fixed_expandable_table";
+import * as Utils from "libs/utils";
 const { Column } = Table;
 const { RangePicker } = DatePicker;
 
@@ -181,26 +182,33 @@ function TimeTrackingOverview() {
             dataIndex="user"
             key="user"
             render={(user) => `${user.lastName}, ${user.firstName} (${user.email})`}
-            sorter={true}
+            sorter={Utils.localeCompareBy(
+              filteredTimeEntries,
+              (timeEntry) =>
+                `${timeEntry.user.lastName}, ${timeEntry.user.firstName} (${timeEntry.user.email})`,
+            )}
           />
           <Column
             title="No. tasks / annotations"
             dataIndex="annotationCount"
             key="numberAnn"
-            sorter={true}
+            sorter={Utils.compareBy(filteredTimeEntries, (timeEntry) => timeEntry.annotationCount)}
           />
           <Column
             title="Avg. time per task / annotation"
             key="avgTime"
             render={(item) => formatMilliseconds(item.timeMillis / item.annotationCount)}
-            sorter={true}
+            sorter={Utils.compareBy(
+              filteredTimeEntries,
+              (timeEntry) => timeEntry.timeMillis / timeEntry.annotationCount,
+            )}
           />
           <Column
             title="Total time"
             dataIndex="timeMillis"
             key="tracingTimes"
             render={(tracingTimeInMs) => formatMilliseconds(tracingTimeInMs)}
-            sorter={true}
+            sorter={Utils.compareBy(filteredTimeEntries, (timeEntry) => timeEntry.timeMillis)}
           />
           <Column
             key="details"

@@ -15,8 +15,12 @@ export function TrainAiModelTab() {
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const onFinish = async (values: any) => {
     await runTraining({
-      trainingAnnotationIds: [tracing.annotationId],
-      trainingAnnotationColorLayerNames: [values.imageDataLayer],
+      trainingAnnotations: [{
+        annotationId: tracing.annotationId,
+        colorLayerName: values.imageDataLayer,
+        segmentationLayerName: "Volume",
+        mag: [1, 1, 1],
+      }],
       name: values.modelName,
       aiModelCategory: values.modelCategory,
       // optional comment,

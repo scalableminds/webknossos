@@ -290,9 +290,15 @@ export function startMaterializingVolumeAnnotationJob(
 
 type AiModelCategory = "em_neurons" | "em_nuclei";
 
+type AiModelTrainingAnnotationSpecification = {
+  annotationId: string;
+  colorLayerName: string;
+  segmentationLayerName: string;
+  mag: Vector3;
+};
+
 type RunTrainingParameters = {
-  trainingAnnotationIds: Array<string>;
-  trainingAnnotationColorLayerNames: Array<string>;
+  trainingAnnotations: Array<AiModelTrainingAnnotationSpecification>;
   name: string;
   comment?: string;
   aiModelCategory?: AiModelCategory;

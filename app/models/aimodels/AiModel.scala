@@ -93,6 +93,14 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
+  def countByNameAndOrganization(aiModelName: String, organizationId: ObjectId): Fox[Int] =
+    for {
+      countList <- run(
+        q"SELECT COUNT(*) FROM webknossos.aiModels WHERE name = $aiModelName AND _organization = $organizationId"
+          .as[Int])
+      count <- countList.headOption
+    } yield count
+
   def insertOne(a: AiModel): Fox[Unit] = {
     val insertModelQuery =
       q"""INSERT INTO webknossos.aiModels(

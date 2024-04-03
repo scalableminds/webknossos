@@ -1,13 +1,11 @@
-import Toast from "libs/toast";
+import Toast, { NotificationAPI } from "libs/toast";
 import React from "react";
 
 import { Button, Modal, Progress, Spin, Typography } from "antd";
 import { connect, useDispatch } from "react-redux";
 import type { OxalisState } from "oxalis/store";
 import { hideSkeletonSAMModalAction } from "oxalis/model/actions/ui_actions";
-import renderIndependently from "libs/render_independently";
 import messages from "messages";
-import { useEffectOnlyOnce } from "libs/react_hooks";
 const { Text } = Typography;
 
 type Props = {
@@ -69,69 +67,39 @@ export default connector(SkeletonQuickSelectModal);
 
 const TOAST_KEY = "interpolate-between-sam-slices";
 
-function FollowupInterpolationToast(props: { onOk: () => void; onCancel: () => void }) {
-  const [toastAPI, contextHolder] = Toast.useToastAPI();
-  useEffectOnlyOnce(() =>
-    Toast.info(
-      <div style={{ fontSize: 14 }}>
-        The Skeleton Quick Select is complete. You can now correct the predictions for each slice.
-        After you have finished your corrections, you can perform volume interpolations to annotate
-        the slices without predictions themselves.
-        <Button
-          onClick={() => {
-            Toast.close(TOAST_KEY);
-            props.onOk();
-          }}
-          style={{ marginTop: 12, float: "right" }}
-        >
-          Perform Interpolation
-        </Button>
-      </div>,
-      {
-        sticky: true,
-        key: TOAST_KEY,
-        onClose: () => {
-          Toast.close(TOAST_KEY);
-          props.onCancel();
-        },
-      },
-      toastAPI,
-    ),
-  );
-  // Return empty renderable component for "renderIndependently"
-  return <>{contextHolder}</>;
-}
-
 export async function showFollowupInterpolationToast(): Promise<{
   shouldPerformInterpolation: boolean;
 }> {
   return new Promise((resolve) => {
-    renderIndependently((destroy) => {
-      const closeToast = (shouldPerformInterpolation: boolean) => {
-        destroy();
-        resolve({ shouldPerformInterpolation });
-      };
-      return (
-        <FollowupInterpolationToast
-          onOk={() => closeToast(true)}
-          onCancel={() => closeToast(false)}
-        />
-      );
-    });
+    Toast.info(
+      (toastAPI: NotificationAPI) => (
+        <div style={{ fontSize: 14 }}>
+          The Skeleton Quick Select is complete. You can now correct the predictions for each slice.
+          After you have finished your corrections, you can perform volume interpolations to
+          annotate the slices without predictions themselves.
+          <Button
+            onClick={() => {
+              toastAPI.destroy(TOAST_KEY);
+              resolve({ shouldPerformInterpolation: true });
+            }}
+            style={{ marginTop: 12, float: "right" }}
+          >
+            Perform Interpolation
+          </Button>
+        </div>
+      ),
+      {
+        sticky: true,
+        key: TOAST_KEY,
+        onClose: () => {
+          resolve({ shouldPerformInterpolation: false });
+        },
+      },
+      true,
+    );
   });
-}
-
-function InterpolationFinishedToast({ onClose }: { onClose: () => void }) {
-  const [toastAPI, contextHolder] = Toast.useToastAPI();
-  useEffectOnlyOnce(() =>
-    Toast.success(messages["tracing.skeleton_sam_finished_interpolation"], { onClose }, toastAPI),
-  );
-  // Return empty renderable component for "renderIndependently"
-  return <>{contextHolder}</>;
 }
 
 export function showInterpolationFinishedToast() {
-  renderIndependently((destroy) => {
-    return <InterpolationFinishedToast onClose={() => destroy()} />;
-  });
+  Toast.success(messages["tracing.skeleton_sam_finished_interpolation"], {}, true);
 }

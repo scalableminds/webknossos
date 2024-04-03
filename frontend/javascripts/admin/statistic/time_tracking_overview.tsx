@@ -6,7 +6,6 @@ import React, { useEffect, useState } from "react";
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
-import { Link } from "react-router-dom";
 import ProjectAndAnnotationTypeDropdown, {
   AnnotationTypeFilterEnum,
 } from "./project_and_annotation_type_dropdown";
@@ -17,6 +16,8 @@ import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import dayjs, { Dayjs } from "antd/node_modules/dayjs";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
+import LinkButton from "components/link_button";
+import FixedExpandableTable from "components/fixed_expandable_table";
 const { Column } = Table;
 const { RangePicker } = DatePicker;
 
@@ -30,6 +31,10 @@ type TimeEntry = {
     email: string;
   };
   timeMillis: number;
+};
+
+const downloadTimeSpans = async () => {
+  //TODO
 };
 
 function TimeTrackingOverview() {
@@ -162,9 +167,9 @@ function TimeTrackingOverview() {
         }}
       />
       <Spin spinning={isFetching} size="large">
-        <Table
+        <FixedExpandableTable
           dataSource={filteredTimeEntries}
-          rowKey={(entry) => entry.user.id}
+          rowKey="user"
           style={{
             marginTop: 30,
             marginBottom: 30,
@@ -216,10 +221,15 @@ function TimeTrackingOverview() {
               params.append("start", startDate.valueOf().toString());
               params.append("end", endDate.valueOf().toString());
               params.append("projectsOrType", projectOrTypeQueryParam);
-              return <Link to={`/reports/timetracking?${params}`}>Details</Link>;
+              return (
+                <LinkButton>
+                  <DownloadOutlined className="icon-margin-right" onClick={downloadTimeSpans} />
+                  Download time spans
+                </LinkButton>
+              );
             }}
           />
-        </Table>
+        </FixedExpandableTable>
       </Spin>
       <Button
         type="primary"

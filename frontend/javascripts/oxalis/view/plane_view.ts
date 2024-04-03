@@ -5,7 +5,7 @@ import _ from "lodash";
 import { getGroundTruthLayoutRect } from "oxalis/view/layouting/default_layout_configs";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
-import type { OrthoViewMap, Vector3 } from "oxalis/constants";
+import type { OrthoViewMap, Vector3, Viewport } from "oxalis/constants";
 import Constants, { OrthoViewColors, OrthoViewValues, OrthoViews } from "oxalis/constants";
 import Store from "oxalis/store";
 import app from "app";
@@ -256,6 +256,13 @@ class PlaneView {
         true,
       ),
     );
+  }
+
+  getCameraForPlane(plane: Viewport) {
+    if (plane === "arbitraryViewport") {
+      throw new Error("Cannot access camera for arbitrary viewport.");
+    }
+    return this.getCameras()[plane];
   }
 }
 

@@ -148,7 +148,7 @@ class JobsController @Inject()(
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
           "dataset.notFound",
           datasetName) ~> NOT_FOUND
-        _ <- datasetService.assertValidLayerName(layerName)
+        _ <- datasetService.assertValidLayerNameLax(layerName)
         command = JobCommand.compute_mesh_file
         commandArgs = Json.obj(
           "organization_name" -> organizationName,
@@ -173,7 +173,7 @@ class JobsController @Inject()(
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
           "dataset.notFound",
           datasetName) ~> NOT_FOUND
-        _ <- datasetService.assertValidLayerName(layerName)
+        _ <- datasetService.assertValidLayerNameLax(layerName)
         command = JobCommand.compute_segment_index_file
         commandArgs = Json.obj(
           "organization_name" -> organizationName,
@@ -200,7 +200,7 @@ class JobsController @Inject()(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
           _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerName(layerName)
+          _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -231,8 +231,8 @@ class JobsController @Inject()(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
           _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerName(outputSegmentationLayerName)
-          _ <- datasetService.assertValidLayerName(layerName)
+          _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
+          _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           command = JobCommand.infer_neurons
@@ -265,8 +265,8 @@ class JobsController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
-          _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerName)
-          _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerName)
+          _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
+          _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
@@ -311,12 +311,12 @@ class JobsController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
-          _ <- datasetService.assertValidLayerName(fallbackLayerName)
+          _ <- datasetService.assertValidLayerNameLax(fallbackLayerName)
           userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
             request.identity.loginInfo)
           command = JobCommand.materialize_volume_annotation
           _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerName(outputSegmentationLayerName)
+          _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> datasetName,
@@ -346,7 +346,7 @@ class JobsController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
-          _ <- datasetService.assertValidLayerName(layerName)
+          _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.find_largest_segment_id
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -379,9 +379,9 @@ class JobsController @Inject()(
           _ <- Fox.runIf(userOrganization.pricingPlan == PricingPlan.Basic) {
             bool2Fox(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
-          colorLayerName = animationJobOptions.layerName
-          _ <- datasetService.assertValidLayerName(colorLayerName)
-          exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${datasetName}__$colorLayerName.mp4"
+          layerName = animationJobOptions.layerName
+          _ <- datasetService.assertValidLayerNameLax(layerName)
+          exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${datasetName}__$layerName.mp4"
           command = JobCommand.render_animation
           commandArgs = Json.obj(
             "organization_name" -> organizationName,

@@ -472,6 +472,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               width={200}
               sorter={Utils.compareBy(typeHint, (task) => task.created)}
               render={(created) => <FormattedDate timestamp={created} />}
+              defaultSortOrder={"descend"}
             />
             <Column
               title="Action"

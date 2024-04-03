@@ -12,7 +12,6 @@ import {
   getEffectiveIntensityRange,
   getLayerByName,
   getResolutionInfo,
-  hasFallbackLayer,
   is2dDataset,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -186,7 +185,6 @@ function CreateAnimationModal(props: Props) {
       const meshInfos = state.localSegmentationData[layerName]?.meshes?.[axis] || {};
 
       const layer = getLayerByName(state.dataset, layerName) as APISegmentationLayer;
-      const hasAFallbackLayer = hasFallbackLayer(layer);
       const fullLayerName = layer.fallbackLayerInfo?.name || layerName;
 
       const adhocMagIndex = getResolutionInfo(layer.resolutions).getClosestExistingIndex(
@@ -199,7 +197,7 @@ function CreateAnimationModal(props: Props) {
         .flatMap((meshInfo: MeshInformation) => {
           return {
             layerName: fullLayerName,
-            hasFallbackLayer: hasAFallbackLayer,
+            tracingId: layer.tracingId || null,
             adhocMag,
             ...meshInfo,
           };

@@ -9,11 +9,11 @@ A complete listing of all available keyboard & mouse shortcuts for WEBKNOSSOS ca
 
 | Key Binding                   | Operation                                   |
 | ----------------------------- | ------------------------------------------- |
-| CTRL / CMD + Z                | Undo                                        |
-| CTRL / CMD + Y                | Redo                                        |
-| CTRL / CMD + S                | Save                                        |
-| I or CTRL + Mousewheel        | Zoom In                                     |
-| O or CTRL + Mousewheel        | Zoom Out                                    |
+| CTRL/CMD + Z                | Undo                                        |
+| CTRL/CMD + Y                | Redo                                        |
+| CTRL/CMD + S                | Save                                        |
+| I or CTRL/CMD + Mousewheel        | Zoom In                                     |
+| O or CTRL/CMD + Mousewheel        | Zoom Out                                    |
 | P                             | Select Previous Comment                     |
 | N                             | Select Next Comment                         |
 | 3                             | Toggle Segmentation Opacity                 |
@@ -31,7 +31,7 @@ A complete listing of all available keyboard & mouse shortcuts for WEBKNOSSOS ca
 | 1                             | Toggle Visibility of all Trees              |
 | 2                             | Toggle Visibility of Inactive Trees         |
 | SHIFT + Mousewheel            | Change Node Radius                          |
-| CTRL + SHIFT + F              | Open Tree Search (if Tree List is visible)  |
+| CTRL/CMD + SHIFT + F              | Open Tree Search (if Tree List is visible)  |
 | F or Mousewheel               | Move Forward by a Single Slice              |
 | D or Mousewheel               | Move Backward by a Single Slice             |
 
@@ -48,16 +48,18 @@ Note that skeleton-specific mouse actions are usually only available when the sk
 | Right-Click Drag (3D View)            | Rotate 3D View                              |
 | Left Click                            | Create New Node                             |
 | Left Click                            | Select Node (Mark as Active Node) under cursor  |
-| Left Drag                             | Move node under cursor                |
-| Right Click (on node)                 | Bring up the context-menu with further actions                |
+| Left Drag                             | Move node under cursor                      |
+| Right Click (on node)                 | Bring up the context-menu with further actions  |
+| SHIFT + ALT + Left Click              | Merge Two Nodes and Combine Trees           |
+| SHIFT + CTRL/CMD + Left Click             | Delete Edge / Split Trees                   |
 | C                                     | Create New Tree                             |
-| CTRL + .                              | Navigate to the next Node (Mark as Active)|
-| CTRL + ,                              | Navigate to previous Node (Mark as Active) |
-| CTRL + Left Click / CTRL + Arrow Keys | Move the Active Node                        |
-| Del                           | Delete Node / Split Trees                           |
-| B                             | Mark Node as New Branchpoint                        |
-| J                             | Jump To Last Branchpoint                            |
-| S                             | Center Camera on Active Node                        |
+| CTRL/CMD + .                              | Navigate to the next Node (Mark as Active)  |
+| CTRL/CMD + ,                              | Navigate to previous Node (Mark as Active)  |
+| CTRL/CMD + Left Click / CTRL/CMD + Arrow Keys | Move the Active Node                        |
+| Del                                   | Delete Node / Split Trees                   |
+| B                                     | Mark Node as New Branchpoint                |
+| J                                     | Jump To Last Branchpoint                    |
+| S                                     | Center Camera on Active Node                |
 
 
 Note that you can enable *Classic Controls* which will behave slightly different and more explicit for the mouse actions:
@@ -66,18 +68,16 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | ----------------------------- | -------------                       |
 | Right Click                   | Create New Node                     |
 | SHIFT + Left Click            | Select Node (Mark as Active Node)   |
-| SHIFT + Left Click            | Select Node (Mark as Active Node)   |
-| SHIFT + ALT + Left Click      | Merge Two Nodes and Combine Trees   |
-| SHIFT + CTRL + Left Click     | Delete Edge / Split Trees           |
 
 
 ### Flight / Oblique Mode
 
 | Key Binding                   | Operation                                  |
 | ----------------------------- | ------------------------------------------ |
+| Left Click                    | Select Node (Mark as Active Node) under cursor |
 | Left Mouse Drag or Arrow Keys | Rotation                                   |
 | SPACE                         | Move Forward                               |
-| CTRL + SPACE                  | Move Backward                              |
+| CTRL/CMD + SPACE                  | Move Backward                              |
 | I, O                          | Zoom In And Out                            |
 | SHIFT + Arrow                 | Rotation Around Axis                       |
 | R                             | Invert Direction                           |
@@ -86,8 +86,10 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | S                             | Center Active Node                         |
 | F                             | Forward Without Recording Waypoints        |
 | D                             | Backward Without Recording Waypoints       |
+| Del                           | Delete Node / Split Trees                  |
 | SHIFT + SPACE                 | Delete Active Node, Recenter Previous Node |
-
+| SHIFT + ALT + Left Click      | Merge Two Nodes and Combine Trees          |
+| SHIFT + CTRL/CMD + Left Click     | Delete Edge / Split Trees                  |
 
 ## Volume Mode
 
@@ -96,8 +98,8 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | Left Mouse Drag or Arrow Keys     | Move (Move Mode) / Add To Current Segment (Trace / Brush Mode) |
 | Right Click                       | Bring up context-menu with further actions                     |
 | SHIFT + Left Click                | Select Active Segment                                          |
-| CTRL + Left Mouse Drag            | Add Voxels To Current Segment while inverting the overwrite-mode (see toolbar for overwrite-mode) |
-| CTRL + SHIFT + Left Mouse Drag    | Remove Voxels From Segment                                     |
+| CTRL/CMD + Left Mouse Drag            | Add Voxels To Current Segment while inverting the overwrite-mode (see toolbar for overwrite-mode) |
+| CTRL/CMD + SHIFT + Left Mouse Drag    | Remove Voxels From Segment                                     |
 | Alt + Mouse Move                  | Move                                                        |
 | C                                 | Create New Segment                                             |
 | SHIFT + Mousewheel or SHIFT + I, O | Change Brush Size (Brush Mode)                             |
@@ -108,44 +110,44 @@ Note that you can enable *Classic Controls* which won't open a context menu on r
 | Key Binding                       | Operation                                                   |
 | --------------------------------- | ----------------------------------------------------------- |
 | Right Mouse Drag                  | Remove Voxels                                               |
-| CTRL + Right Mouse Drag           | Remove Voxels while inverting the overwrite-mode (see toolbar for overwrite-mode) |
+| CTRL/CMD + Right Mouse Drag           | Remove Voxels while inverting the overwrite-mode (see toolbar for overwrite-mode) |
 
 ## Tool Switching Shortcuts
 
-Note that you need to first press CTRL + K, release these keys and then press the letter that was assigned to a specific tool in order to switch to it.  
-CTRL + K is not needed for cyclic tool switching via W / SHIFT + W.
+Note that you need to first press CTRL/CMD + K, release these keys and then press the letter that was assigned to a specific tool in order to switch to it.  
+CTRL/CMD + K is not needed for cyclic tool switching via W / SHIFT + W.
 
 | Key Binding                       | Operation                                                                         |
 | --------------------------------- | --------------------------------------------------------------------------------- |
 | W                                 | Cycle Through Tools (Move / Skeleton / Trace / Brush / ...)                       |
 | SHIFT + W                         | Cycle Backwards Through Tools (Move / Proofread / Bounding Box / Pick Cell / ...) |
-| CTRL + K, **M**                       | Move Tool                                                                         |
-| CTRL + K, **S**                       | Skeleton Tool                                                                     |
-| CTRL + K, **B**                       | Brush Tool                                                                        |
-| CTRL + K, **E**                       | Brush Erase Tool                                                                  |
-| CTRL + K, **L**                       | Lasso Tool                                                                        |
-| CTRL + K, **R**                       | Lasso Erase Tool                                                                  |
-| CTRL + K, **P**                       | Segment Picker Tool                                                               |
-| CTRL + K, **Q**                       | Quick Select Tool                                                                 |
-| CTRL + K, **X**                       | Bounding Box Tool                                                                 |
-| CTRL + K, **O**                       | Proofreading Tool                                                                 |
+| CTRL/CMD + K, **M**                       | Move Tool                                                                         |
+| CTRL/CMD + K, **S**                       | Skeleton Tool                                                                     |
+| CTRL/CMD + K, **B**                       | Brush Tool                                                                        |
+| CTRL/CMD + K, **E**                       | Brush Erase Tool                                                                  |
+| CTRL/CMD + K, **L**                       | Lasso Tool                                                                        |
+| CTRL/CMD + K, **R**                       | Lasso Erase Tool                                                                  |
+| CTRL/CMD + K, **P**                       | Segment Picker Tool                                                               |
+| CTRL/CMD + K, **Q**                       | Quick Select Tool                                                                 |
+| CTRL/CMD + K, **X**                       | Bounding Box Tool                                                                 |
+| CTRL/CMD + K, **O**                       | Proofreading Tool                                                                 |
 
 ### Brush Related Shortcuts
 
-Note that you need to first press CTRL + K, release these keys and press the suitable number.
+Note that you need to first press CTRL/CMD + K, release these keys and press the suitable number.
 
 | Key Binding                       | Operation                                                                         |
 | --------------------------------- | --------------------------------------------------------------------------------- |
-| CTRL + K, **1**                       | Switch to small brush                                                             |
-| CTRL + K, **2**                       | Switch to medium sized brush                                                      |
-| CTRL + K, **3**                       | Switch to large brush                                                             |
+| CTRL/CMD + K, **1**                       | Switch to small brush                                                             |
+| CTRL/CMD + K, **2**                       | Switch to medium sized brush                                                      |
+| CTRL/CMD + K, **3**                       | Switch to large brush                                                             |
 
 ## Mesh Related Shortcuts
 
 | Key Binding                                            | Operation                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------- |
 | Shift + Click on a mesh in the 3D viewport          | Move the camera to the clicked position          |
-| Ctrl + Click on a mesh in the 3D viewport           | Unload the mesh from WEBKNOSSOS    |
+| CTRL/CMD + Click on a mesh in the 3D viewport           | Unload the mesh from WEBKNOSSOS    |
 
 ## Agglomerate File Mapping Skeleton
 

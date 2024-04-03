@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.Math
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, ElementClass}
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
@@ -137,32 +136,6 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     for {
       positionAndResolutionOpt <- checkAllPositionsForData(dataSource, dataLayer)
     } yield positionAndResolutionOpt
-
-  def meanAndStdDev(dataSource: DataSource, dataLayer: DataLayer): Fox[(Double, Double)] = {
-    Fox.successful(5.0, 5.0)
-
-    def convertNonZeroDataToDouble(data: Array[Byte], elementClass: ElementClass.Value): Array[Double] =
-      filterZeroes(convertData(data, elementClass)) match {
-        case d: Array[Byte]  => d.map(uByteToLong).map(_.toDouble)
-        case d: Array[Short] => d.map(uShortToLong).map(_.toDouble)
-        case d: Array[Int]   => d.map(uIntToLong).map(_.toDouble)
-        case d: Array[Long]  => d.map(_.toDouble)
-        case d: Array[Float] => d.map(_.toDouble)
-      }
-
-    def meanAndStdDevForPositions(positions: List[Vec3Int], resolution: Vec3Int): Fox[(Double, Double)] =
-      for {
-        dataConcatenated <- getConcatenatedDataFor(dataSource, dataLayer, positions, resolution)
-        dataAsDoubles = convertNonZeroDataToDouble(dataConcatenated, dataLayer.elementClass)
-        _ <- bool2Fox(dataAsDoubles.nonEmpty) ?~> "dataset.sampledOnlyBlack"
-      } yield (Math.mean(dataAsDoubles), Math.stdDev(dataAsDoubles))
-
-    for {
-      _ <- bool2Fox(dataLayer.resolutions.nonEmpty) ?~> "dataset.noResolutions"
-      meanAndStdDev <- meanAndStdDevForPositions(createPositions(dataLayer, 2).distinct,
-                                                 dataLayer.resolutions.minBy(_.maxDim))
-    } yield meanAndStdDev
-  }
 
   def createHistogram(dataSource: DataSource, dataLayer: DataLayer): Fox[List[Histogram]] = {
 

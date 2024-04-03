@@ -23,16 +23,6 @@ const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
 
-type TimeEntry = {
-  user: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  timeMillis: number;
-};
-
 const downloadTimeSpans = async () => {
   //TODO
 };
@@ -73,7 +63,7 @@ function TimeTrackingOverview() {
   const filteredTimeEntries = useFetch(
     async () => {
       setIsFetching(true);
-      const filteredEntries: TimeEntry[] = await getTimeEntries(
+      const filteredEntries = await getTimeEntries(
         startDate.valueOf(),
         endDate.valueOf(),
         selectedTeams,

@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import { Col, Divider, Row } from "antd";
 import { formatMilliseconds } from "libs/format_utils";
 import _ from "lodash";
-import { APITimeTracking } from "types/api_flow_types"; // TODO adjust type based on request
+import { APITimeTrackingPerAnnotation } from "types/api_flow_types"; // TODO adjust type based on request
 import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { aggregateStatsForAllLayers } from "oxalis/model/accessors/annotation_accessor";
 
@@ -24,7 +24,7 @@ const TIMESPAN_SPAN = 4;
 const STYLING_CLASS_NAME = "time-tracking-details";
 
 const renderRow = (
-  userDataPerAnnotation: APITimeTracking[],
+  userDataPerAnnotation: APITimeTrackingPerAnnotation[],
 ): [Array<JSX.Element>, Array<JSX.Element>] => {
   if (userDataPerAnnotation == null) return [[], []];
   const groupedByProject = _.groupBy(userDataPerAnnotation, "projectName");
@@ -34,7 +34,9 @@ const renderRow = (
     if (project === "null") {
       const tableRows = loggedTimes.map((timeEntry) => (
         <Row>
-          <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>Annotation: {timeEntry.annotation} </Col>
+          <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>
+            <a href={`annotations/${timeEntry.annotation}`}>Annotation: {timeEntry.annotation} </a>
+          </Col>
           <Col span={STATISTICS_SPAN}>
             <AnnotationStats
               stats={aggregateStatsForAllLayers(timeEntry.annotationLayerStats)}
@@ -53,7 +55,9 @@ const renderRow = (
       );
       const tableRows = loggedTimes.map((timeEntry) => (
         <Row style={{ lineHeight: 3.3 }}>
-          <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>Task: {timeEntry.task}</Col>
+          <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>
+            <a href={`annotations/${timeEntry.annotation}`}>Task: {timeEntry.task}</a>
+          </Col>
           <Col span={STATISTICS_SPAN}>
             <AnnotationStats
               stats={aggregateStatsForAllLayers(timeEntry.annotationLayerStats)}

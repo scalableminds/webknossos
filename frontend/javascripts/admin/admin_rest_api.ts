@@ -41,7 +41,7 @@ import type {
   APITaskType,
   APITeam,
   APITimeInterval,
-  APITimeTracking,
+  APITimeTrackingPerAnnotation,
   APITracingStore,
   APIUpdateActionBatch,
   APIUser,
@@ -68,6 +68,7 @@ import type {
   AdditionalCoordinate,
   RenderAnimationOptions,
   LayerLink,
+  APITimeTrackingPerUser,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -1962,7 +1963,7 @@ export async function getTimeTrackingForUserSummedPerAnnotation(
   endDate: dayjs.Dayjs,
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
   projectIds?: string[] | null,
-): Promise<Array<APITimeTracking>> {
+): Promise<Array<APITimeTrackingPerAnnotation>> {
   const params = new URLSearchParams({
     start: startDate.valueOf().toString(),
     end: endDate.valueOf().toString(),
@@ -1983,7 +1984,8 @@ export async function getTimeTrackingForUser(
   endDate: dayjs.Dayjs,
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
   projectIds?: string[] | null,
-): Promise<Array<APITimeTracking>> {
+): Promise<Array<APITimeTrackingPerAnnotation>> {
+  // TODO maybe this method can be deleted?
   const params = new URLSearchParams({
     startDate: startDate.valueOf().toString(),
     endDate: endDate.valueOf().toString(),
@@ -2003,7 +2005,7 @@ export async function getTimeEntries(
   teamIds: string[],
   selectedTypes: AnnotationTypeFilterEnum,
   projectIds: string[],
-) {
+): Promise<Array<APITimeTrackingPerUser>> {
   const params = new URLSearchParams({
     start: startMs.toString(),
     end: endMs.toString(),

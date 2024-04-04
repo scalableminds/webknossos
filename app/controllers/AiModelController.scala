@@ -17,6 +17,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.time.Instant
 import models.aimodels.AiModelCategory.AiModelCategory
+import models.organization.OrganizationDAO
 
 case class TrainingAnnotationSpecification(annotationId: ObjectId,
                                            colorLayerName: String,
@@ -60,6 +61,7 @@ class AiModelController @Inject()(
     annotationDAO: AnnotationDAO,
     aiInferenceService: AiInferenceService,
     aiInferenceDAO: AiInferenceDAO,
+    organizationDAO: OrganizationDAO,
     jobService: JobService,
     datasetDAO: DatasetDAO,
     dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -121,15 +123,19 @@ class AiModelController @Inject()(
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- Fox
           .serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> "annotation.notFound"
+        modelId = ObjectId.generate
+        organization <- organizationDAO.findOne(request.identity._organization)
         jobCommand = JobCommand.train_model
-        commandArgs = Json.obj("training_annotations" -> Json.toJson(trainingAnnotations))
+        commandArgs = Json.obj("training_annotations" -> Json.toJson(trainingAnnotations),
+                               "organization_name" -> organization.name,
+                               "model_id" -> modelId)
         newTrainingJob <- jobService
           .submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunTrainModel"
         existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
                                                                        request.identity._organization)
         _ <- bool2Fox(existingAiModelsCount == 0) ?~> "model.nameInUse"
         newAiModel = AiModel(
-          _id = ObjectId.generate,
+          _id = modelId,
           _organization = request.identity._organization,
           _dataStore = dataStore.name,
           _user = request.identity._id,

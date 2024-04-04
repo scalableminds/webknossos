@@ -117,7 +117,7 @@ function TimeTrackingOverview() {
     return (
       <p>
         There is no user activity recorded for the selected time span. Please adjust the time
-        settings and filters above.
+        range and filters above.
       </p>
     );
   };

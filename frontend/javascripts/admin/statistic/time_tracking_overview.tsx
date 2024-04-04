@@ -116,8 +116,8 @@ function TimeTrackingOverview() {
   const renderPlaceholder = () => {
     return (
       <p>
-        There is no user activity recorded for the selected time span. Please adjust the time
-        range and filters above.
+        There is no user activity recorded for the selected time span. Please adjust the time range
+        and filters above.
       </p>
     );
   };

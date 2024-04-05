@@ -275,13 +275,14 @@ function UserListView({ activeUser, activeOrganization }: Props) {
   }
 
   function onSelectUserRow(userId: string) {
-    const indexOfUser = selectedUserIds.indexOf(userId);
-
-    if (indexOfUser >= 0) {
-      setSelectedUserIds(selectedUserIds.splice(indexOfUser, 1));
-    } else {
-      setSelectedUserIds([...selectedUserIds, userId]);
-    }
+    setSelectedUserIds((selectedUserIds) => {
+      const indexOfUser = selectedUserIds.indexOf(userId);
+      if (indexOfUser >= 0) {
+        return selectedUserIds.splice(indexOfUser, 1);
+      } else {
+        return [...selectedUserIds, userId];
+      }
+    });
   }
 
   const hasRowsSelected = selectedUserIds.length > 0;

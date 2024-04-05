@@ -64,7 +64,7 @@ function isValidMagnification(_rule: RuleObject, value: number | undefined) {
 }
 
 function isMinimumMagnifactionLargerThenMaxRule(value: number | undefined, maxMag: number) {
-  if (value && value < maxMag) {
+  if (value && value <= maxMag) {
     return Promise.resolve();
   }
   return Promise.reject(
@@ -72,11 +72,11 @@ function isMinimumMagnifactionLargerThenMaxRule(value: number | undefined, maxMa
   );
 }
 function isMaximumMagnificationSmallerThenMinRule(value: number | undefined, minMag: number) {
-  if (value && value > minMag) {
+  if (value && value >= minMag) {
     return Promise.resolve();
   }
   return Promise.reject(
-    new Error("The maxiumum resolution needs to be larger then the minimum mag."),
+    new Error("The maximum resolution needs to be larger then the minimum mag."),
   );
 }
 
@@ -479,7 +479,7 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
                       },
                     ]}
                   >
-                    <InputNumber min={2} size="small" disabled={isEditingMode} />
+                    <InputNumber min={1} size="small" disabled={isEditingMode} />
                   </FormItem>
                 </div>
               ) : null

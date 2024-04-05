@@ -1099,7 +1099,6 @@ export type RenderAnimationOptions = {
     adhocMag: Vector3;
   } & MeshInformation)[];
   boundingBox: BoundingBoxObject;
-  isViewMode: boolean;
   includeWatermark: boolean;
   intensityMin: number;
   intensityMax: number;

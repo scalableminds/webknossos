@@ -33,7 +33,7 @@ import {
   PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
-import { BoundingBoxType, ControlModeEnum, Vector3 } from "oxalis/constants";
+import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { BoundingBoxSelection, LayerSelection } from "./starting_job_modals";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
@@ -212,7 +212,6 @@ function CreateAnimationModal(props: Props) {
     );
 
     const [magForTextures, _] = selectMagForTextureCreation(colorLayer, boundingBox);
-    const isViewMode = state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     const animationOptions: RenderAnimationOptions = {
       layerName: selectedColorLayerName,
@@ -220,7 +219,6 @@ function CreateAnimationModal(props: Props) {
       intensityMin,
       intensityMax,
       magForTextures,
-      isViewMode,
       boundingBox: computeBoundingBoxObjectFromBoundingBox(boundingBox),
       includeWatermark: isWatermarkEnabled,
       movieResolution: selectedMovieResolution,

@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import net.liftweb.common.{Box, Empty, Full}
+import play.api.i18n.MessagesProvider
 import play.api.libs.json.{JsObject, JsValue, Json}
 
 import scala.concurrent.ExecutionContext
@@ -208,7 +209,8 @@ class SkeletonTracingService @Inject()(
                       newId: String,
                       newVersion: Long,
                       toCache: Boolean,
-                      userToken: Option[String]): Fox[MergedVolumeStats] = Fox.successful(MergedVolumeStats.empty())
+                      userToken: Option[String])(implicit mp: MessagesProvider): Fox[MergedVolumeStats] =
+    Fox.successful(MergedVolumeStats.empty())
 
   def updateActionLog(tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[SkeletonUpdateAction])): JsObject =

@@ -80,6 +80,7 @@ import type {
   MappingType,
   VolumeTracing,
   UserConfiguration,
+  Mapping,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
@@ -2317,14 +2318,14 @@ export function getAgglomerateSkeleton(
   );
 }
 
-export async function getAgglomeratesForSegmentsFromDatastore(
+export async function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
   dataStoreUrl: string,
   datasetId: APIDatasetId,
   layerName: string,
   mappingId: string,
-  segmentIds: Array<number | bigint>,
-): Promise<Record<number, number>> {
-  const segmentIdBuffer = serializeProtoListOfLong(segmentIds);
+  segmentIds: Array<T>,
+): Promise<Mapping> {
+  const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
   const listArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
@@ -2338,14 +2339,14 @@ export async function getAgglomeratesForSegmentsFromDatastore(
     ),
   );
 
-  return _.zipObject(segmentIds, parseProtoListOfLong(listArrayBuffer));
+  return new Map(_.zip(segmentIds, parseProtoListOfLong<T>(listArrayBuffer)) as Array<[T, T]>);
 }
 
-export function getAgglomeratesForSegmentsFromTracingstore(
+export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
   tracingStoreUrl: string,
   tracingId: string,
-  segmentIds: Array<number | bigint>,
-): Promise<Record<number, number>> {
+  segmentIds: Array<T>,
+): Promise<Mapping> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
@@ -2354,6 +2355,7 @@ export function getAgglomeratesForSegmentsFromTracingstore(
       },
     ),
   );
+  // TODO: Convert from object to mapping
 }
 
 export function getEditableAgglomerateSkeleton(

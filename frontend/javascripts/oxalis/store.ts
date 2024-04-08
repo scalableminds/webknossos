@@ -389,7 +389,7 @@ export type RecommendedConfiguration = Partial<
 // A histogram value of undefined indicates that the histogram hasn't been fetched yet
 // whereas a value of null indicates that the histogram couldn't be fetched
 export type HistogramDataForAllLayers = Record<string, APIHistogramData | null>;
-export type Mapping = Map<number, number>;
+export type Mapping = Map<number, number> | Map<bigint, bigint>;
 export type MappingType = "JSON" | "HDF5";
 export type ActiveMappingInfo = {
   readonly mappingName: string | null | undefined;

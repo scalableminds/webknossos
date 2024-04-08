@@ -395,6 +395,7 @@ export class DataBucket {
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
+    this.cube.triggerBucketDataChanged();
   }
 
   uint8ToTypedBuffer(arrayBuffer: Uint8Array | null | undefined) {
@@ -616,6 +617,7 @@ export class DataBucket {
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
+        this.cube.triggerBucketDataChanged();
         break;
       }
 

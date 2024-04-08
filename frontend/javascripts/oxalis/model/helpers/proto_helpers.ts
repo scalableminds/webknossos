@@ -32,7 +32,9 @@ export function parseProtoTracing(
   }) as ServerTracing;
 }
 
-export function serializeProtoListOfLong(numbers: Array<number | bigint>): ArrayBuffer {
+export function serializeProtoListOfLong<T extends number | bigint>(
+  numbers: Array<T>,
+): ArrayBuffer {
   const listOfLong = { items: numbers };
   const protoRoot = Root.fromJSON(ListOfLongProto);
   const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.ListOfLong`);
@@ -42,7 +44,9 @@ export function serializeProtoListOfLong(numbers: Array<number | bigint>): Array
   return messageType.encode(message).finish();
 }
 
-export function parseProtoListOfLong(listArrayBuffer: ArrayBuffer): Array<number | bigint> {
+export function parseProtoListOfLong<T extends number | bigint>(
+  listArrayBuffer: ArrayBuffer,
+): Array<T> {
   const protoRoot = Root.fromJSON(ListOfLongProto);
   const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.ListOfLong`);
   const message = messageType.decode(new Uint8Array(listArrayBuffer));

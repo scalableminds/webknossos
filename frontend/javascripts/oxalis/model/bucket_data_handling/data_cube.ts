@@ -1,4 +1,5 @@
 import _ from "lodash";
+import { createNanoEvents, Emitter } from "nanoevents";
 import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
@@ -78,6 +79,7 @@ class DataCube {
   elementClass: ElementClass;
   resolutionInfo: ResolutionInfo;
   layerName: string;
+  emitter: Emitter;
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
@@ -108,6 +110,7 @@ class DataCube {
     this.resolutionInfo = resolutionInfo;
     this.layerName = layerName;
     this.additionalAxes = _.keyBy(additionalAxes, "name");
+    this.emitter = createNanoEvents();
 
     this.cubes = {};
     this.buckets = [];
@@ -373,14 +376,20 @@ class DataCube {
     this.bucketIterator = notCollectedBuckets.length;
   }
 
+  triggerBucketDataChanged(): void {
+    this.emitter.emit("bucketDataChanged");
+  }
+
   getValueSetForAllBuckets(): Set<number> | Set<bigint> {
     console.time("getValueSets");
     const valueSets = this.buckets
       .filter((bucket) => bucket.state === "LOADED")
       .map((bucket) => bucket.getValueSet());
+    console.timeEnd("getValueSets");
+    console.time("valueUnion");
     // @ts-ignore The buckets of a single layer all have the same element class, so they are all number or all bigint
     const valueSet = union(valueSets);
-    console.timeEnd("getValueSets");
+    console.timeEnd("valueUnion");
     return valueSet;
   }
 

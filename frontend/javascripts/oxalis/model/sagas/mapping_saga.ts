@@ -3,6 +3,8 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import {
   all,
   call,
+  cancel,
+  fork,
   takeEvery,
   takeLatest,
   take,
@@ -10,11 +12,13 @@ import {
   put,
   actionChannel,
 } from "typed-redux-saga";
+import { eventChannel } from "redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { message } from "antd";
 import type {
   OptionalMappingProperties,
   SetMappingAction,
+  SetMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
 import { setMappingAction } from "oxalis/model/actions/settings_actions";
 import {
@@ -46,18 +50,46 @@ import {
 import Toast from "libs/toast";
 import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
-import { FlycamActions } from "../actions/flycam_actions";
+import { MappingStatusEnum } from "oxalis/constants";
+import DataCube from "../bucket_data_handling/data_cube";
 type APIMappings = Record<string, APIMapping>;
+type PreviousMappingObject = { mapping: Mapping };
+
+const takeLatestMappingChange = (previousMappingObject: PreviousMappingObject) =>
+  fork(function* () {
+    let lastTask;
+    let lastLayerName: string | null | undefined;
+    let lastMappingEnabled: boolean = false;
+    while (true) {
+      const action = (yield* take(["SET_MAPPING_ENABLED"])) as SetMappingEnabledAction;
+
+      // Don't cancel the watcher if the enabled state was not changed
+      if (action.layerName === lastLayerName && action.isMappingEnabled === lastMappingEnabled)
+        continue;
+
+      if (lastTask) {
+        console.log("Cancel old bucket watcher");
+        yield cancel(lastTask);
+      }
+
+      // Don't start a new watcher if the mapping was disabled
+      if (action.type === "SET_MAPPING_ENABLED" && !action.isMappingEnabled) continue;
+
+      console.log("Start new bucket watcher for layer", action.layerName);
+      lastTask = yield* fork(watchChangedBucketsForLayer, action.layerName, previousMappingObject);
+      lastLayerName = action.layerName;
+      lastMappingEnabled = action.isMappingEnabled;
+    }
+  });
 
 export default function* watchActivatedMappings(): Saga<void> {
-  const previousMappingProperties = {
-    mapping: {},
-    mappingKeys: [],
+  const previousMappingObject = {
+    mapping: new Map(),
   };
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
   yield* take("WK_READY");
-  yield* takeLatest(setMappingActionChannel, handleSetMapping, previousMappingProperties);
+  yield* takeLatest(setMappingActionChannel, handleSetMapping, previousMappingObject);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
     function* handler(action: EnsureLayerMappingsAreLoadedAction) {
@@ -68,21 +100,44 @@ export default function* watchActivatedMappings(): Saga<void> {
       }
     },
   );
-  yield throttle(500, FlycamActions, function* handler() {
-    const layerName = yield* select((state) => getVisibleSegmentationLayer(state)?.name);
+  yield* takeLatestMappingChange(previousMappingObject);
+}
+
+function createBucketChannel(dataCube: DataCube) {
+  return eventChannel((emit) => {
+    const bucketDataChangedHandler = () => {
+      emit("BUCKET_DATA_CHANGED");
+    };
+
+    const unbind = dataCube.emitter.on("bucketDataChanged", bucketDataChangedHandler);
+    return unbind;
+  });
+}
+
+function* watchChangedBucketsForLayer(
+  layerName: string,
+  previousMappingObject: PreviousMappingObject,
+): Saga<void> {
+  const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
+  const bucketChannel = yield* call(createBucketChannel, dataCube);
+
+  yield throttle(1000, bucketChannel, function* handler() {
     const dataset = yield* select((state) => state.dataset);
     const layerInfo = getLayerByName(dataset, layerName);
     const mappingInfo = yield* select((state) =>
       getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
     );
-    const { mappingName, mappingType } = mappingInfo;
+    const { mappingName, mappingType, mappingStatus } = mappingInfo;
+
+    if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) return;
+
     yield* call(
-      handleSetHdf5Mapping,
+      updateHdf5Mapping,
       layerName,
       layerInfo,
       mappingName,
       mappingType,
-      previousMappingProperties,
+      previousMappingObject,
     );
   });
 }
@@ -118,7 +173,10 @@ function* loadLayerMappings(layerName: string, updateInStore: boolean): Saga<[st
   return [jsonMappings, serverHdf5Mappings];
 }
 
-function* handleSetMapping(previousMappingProperties, action: SetMappingAction): Saga<void> {
+function* handleSetMapping(
+  previousMappingObject: PreviousMappingObject,
+  action: SetMappingAction,
+): Saga<void> {
   console.log("MappingActivation", performance.now());
   const {
     layerName,
@@ -205,7 +263,7 @@ function* handleSetMapping(previousMappingProperties, action: SetMappingAction):
       layerInfo,
       mappingName,
       mappingType,
-      previousMappingProperties,
+      previousMappingObject,
     );
   }
 }
@@ -215,7 +273,7 @@ function* handleSetHdf5Mapping(
   layerInfo: APIDataLayer,
   mappingName: string,
   mappingType: MappingType,
-  previousMappingProperties,
+  previousMappingObject: PreviousMappingObject,
 ): Saga<void> {
   yield* call(
     updateHdf5Mapping,
@@ -223,7 +281,7 @@ function* handleSetHdf5Mapping(
     layerInfo,
     mappingName,
     mappingType,
-    previousMappingProperties,
+    previousMappingObject,
   );
 }
 
@@ -232,7 +290,7 @@ function* updateHdf5Mapping(
   layerInfo: APIDataLayer,
   mappingName: string,
   mappingType: MappingType,
-  previousMappingProperties: { mapping: Record<number, number>; mappingKeys: Array<number> },
+  previousMappingObject: PreviousMappingObject,
 ): Saga<void> {
   const dataset = yield* select((state) => state.dataset);
   const annotation = yield* select((state) => state.tracing);
@@ -250,13 +308,23 @@ function* updateHdf5Mapping(
   const cube = Model.getCubeByLayerName(layerName);
   const valueSet = cube.getValueSetForAllBuckets();
 
-  const { mapping: previousMapping, mappingKeys: previousMappingKeys } = previousMappingProperties;
-  const newValues = new Set([...valueSet].filter((i) => !previousMappingKeys.includes(i)));
+  const { mapping: previousMapping } = previousMappingObject;
+  const newValues = new Set([...valueSet].filter((i) => !previousMapping.has(i))) as
+    | Set<number>
+    | Set<bigint>;
 
   if (newValues.size === 0) return;
 
-  const remainingValues = new Set(previousMappingKeys.filter((i) => valueSet.has(i)));
-  const newUniqueSegmentIds = Array.from(newValues).sort((a, b) => a - b);
+  const remainingValues = new Set([...previousMapping.keys()].filter((i) => valueSet.has(i)));
+  const newUniqueSegmentIds = [...newValues].sort(<T extends number | bigint>(a: T, b: T) => a - b);
+  console.log(
+    "New values",
+    newValues.size,
+    "remaining values",
+    remainingValues.size,
+    "previous size",
+    previousMapping.size,
+  );
 
   const newMapping =
     isEditableMappingActive && editableMapping != null
@@ -275,20 +343,22 @@ function* updateHdf5Mapping(
           newUniqueSegmentIds,
         );
 
-  const remainingMapping = Object.fromEntries(
-    Object.entries(previousMapping).filter(([key, _]) => remainingValues.has(parseInt(key))),
-  );
-  const mapping = { ...remainingMapping, ...newMapping };
+  const chainIterators = <T extends number | bigint>(a: Iterable<T>, b: Iterable<T>): Iterable<T> =>
+    (function* () {
+      yield* a;
+      yield* b;
+    })();
 
-  const mappingProperties = {
-    mapping,
-    mappingKeys: Array.from(valueSet).sort((a, b) => a - b),
-  };
+  const a = [...previousMapping.entries()] as Array<[number, number]> | Array<[bigint, bigint]>;
+  const remainingMapping = new Map(a.filter(([key, _]) => remainingValues.has(key)));
+  const mapping = new Map(chainIterators(remainingMapping.entries(), newMapping.entries())) as
+    | Map<number, number>
+    | Map<bigint, bigint>;
 
-  previousMappingProperties = mappingProperties;
+  previousMappingObject.mapping = mapping;
 
   console.timeEnd("MappingSaga");
-  yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
+  yield* put(setMappingAction(layerName, mappingName, mappingType, { mapping }));
 }
 
 function* handleSetJsonMapping(

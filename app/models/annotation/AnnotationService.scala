@@ -201,11 +201,12 @@ class AnnotationService @Inject()(
     for {
       dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
       dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable) ?~> "dataSource.notFound"
-      newAnnotationLayers <- createTracingsForExplorational(dataset,
-                                                            dataSource,
-                                                            List(annotationLayerParameters),
-                                                            organizationName,
-                                                            annotation.annotationLayers)
+      newAnnotationLayers <- createTracingsForExplorational(
+        dataset,
+        dataSource,
+        List(annotationLayerParameters),
+        organizationName,
+        annotation.annotationLayers) ?~> "annotation.createTracings.failed"
       _ <- annotationLayersDAO.insertForAnnotation(annotation._id, newAnnotationLayers)
     } yield ()
 
@@ -387,10 +388,11 @@ class AnnotationService @Inject()(
       dataSource <- datasetService.dataSourceFor(dataset)
       datasetOrganization <- organizationDAO.findOne(dataset._organization)
       usableDataSource <- dataSource.toUsable ?~> Messages("dataset.notImported", dataSource.id.name)
-      annotationLayers <- createTracingsForExplorational(dataset,
-                                                         usableDataSource,
-                                                         annotationLayerParameters,
-                                                         datasetOrganization.name)
+      annotationLayers <- createTracingsForExplorational(
+        dataset,
+        usableDataSource,
+        annotationLayerParameters,
+        datasetOrganization.name) ?~> "annotation.createTracings.failed"
       teamId <- selectSuitableTeam(user, dataset) ?~> "annotation.create.forbidden"
       annotation = Annotation(ObjectId.generate, datasetId, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)

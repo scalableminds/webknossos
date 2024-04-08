@@ -212,9 +212,13 @@ async function inferFromEmbedding(
   }
   // TODO: Check whether the bounding box tracking slowed down the quick select!!!
   const predictedBounds = new BoundingBox({
-    min: V3.add(embeddingBoxInTargetMag.min, [minX, minY, 0]),
-    max: V3.add(embeddingBoxInTargetMag.min, [maxX, maxY, 0]),
+    min: embeddingBoxInTargetMag.min,
+    max: embeddingBoxInTargetMag.min,
   });
+  predictedBounds.min[maybeAdjustedFirstDim] += minX;
+  predictedBounds.min[maybeAdjustedSecondDim] += minY;
+  predictedBounds.max[maybeAdjustedFirstDim] += maxX;
+  predictedBounds.max[maybeAdjustedSecondDim] += maxY;
   console.log("predicted Area is: ", predictedBounds);
   console.log("markedVoxelCount", markedVoxelCount);
   console.log("fullMaskThreshold", fullMaskThreshold);

@@ -28,7 +28,13 @@ import type {
   UserBoundingBox,
   VolumeTracing,
 } from "oxalis/store";
-import { AnnotationToolEnum, VolumeTools, AltOrOptionKey, CtrlOrCmdKey } from "oxalis/constants";
+import {
+  AnnotationToolEnum,
+  VolumeTools,
+  AltOrOptionKey,
+  CtrlOrCmdKey,
+  OrthoViews,
+} from "oxalis/constants";
 import type { AnnotationTool, Vector3, OrthoView } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
@@ -583,7 +589,8 @@ function getNodeContextMenuOptions({
             ? {
                 key: "annotate-nodes-with-sam",
                 onClick: () => {
-                  Store.dispatch(computeSAMForSkeletonAction(clickedTree.treeId, viewport));
+                  const notTdViewport = viewport !== "TDView" ? viewport : OrthoViews.PLANE_XY;
+                  Store.dispatch(computeSAMForSkeletonAction(clickedTree.treeId, notTdViewport));
                 },
                 label: "Annotate Nodes with SAM",
               }

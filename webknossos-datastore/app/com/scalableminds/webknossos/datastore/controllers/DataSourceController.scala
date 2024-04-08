@@ -33,6 +33,7 @@ import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
+import net.liftweb.common.Full
 import play.api.libs.Files
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -437,9 +438,13 @@ class DataSourceController @Inject()(
           organizationName)
         datasetErrorLoggingService.clearForDataset(organizationName, datasetName)
         for {
-          clearedVaultCacheEntries <- dataSourceService.invalidateVaultCache(reloadedDataSource, layerName)
-          _ = logger.info(
-            s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$datasetName: closed $closedDataCubeHandleCount data shard / array handles, $closedAgglomerateFileHandleCount agglomerate file handles, removed $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
+          clearedVaultCacheEntriesBox <- dataSourceService.invalidateVaultCache(reloadedDataSource, layerName).futureBox
+          _ = clearedVaultCacheEntriesBox match {
+            case Full(clearedVaultCacheEntries) =>
+              logger.info(
+                s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$datasetName: closed $closedDataCubeHandleCount data shard / array handles, $closedAgglomerateFileHandleCount agglomerate file handles, removed $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
+            case _ => ()
+          }
           _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
         } yield Ok(Json.toJson(reloadedDataSource))
       }

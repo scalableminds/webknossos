@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { saveAs } from "file-saver";
 import Store from "oxalis/store";
-import { OrthoView } from "oxalis/constants";
+import { ARBITRARY_CAM_DISTANCE, OrthoView } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
   OrthoViewColors,
@@ -59,25 +59,28 @@ export function renderToTexture(
   // Don't respect withFarClipping for the TDViewport as we don't do any clipping for
   // nodes there.
   if (withFarClipping && plane !== OrthoViews.TDView) {
-    function adaptCameraToCurrentClippingDistance(
-      camera: THREE.OrthographicCamera | THREE.PerspectiveCamera,
-    ) {
+    function adaptCameraToCurrentClippingDistance<
+      T extends THREE.OrthographicCamera | THREE.PerspectiveCamera,
+    >(camera: T): T {
       const isArbitraryMode = constants.MODES_ARBITRARY.includes(
         state.temporaryConfiguration.viewMode,
       );
-      camera = camera.clone();
+      camera = camera.clone() as T;
+      // The near value is already set in the camera (done in the CameraController/ArbitraryView).
       if (isArbitraryMode) {
-        camera.far = state.userConfiguration.clippingDistanceArbitrary;
+        // The far value has to be set, since in normal rendering the far clipping is
+        // achieved by the data plane which is not rendered during node picking
+        camera.far = ARBITRARY_CAM_DISTANCE;
       } else {
-        // The near value is already set in the camera (done in the CameraController).
         // The far value has to be set, since in normal rendering the far clipping is
         // achieved by offsetting the plane instead of setting the far property.
         camera.far = state.userConfiguration.clippingDistance;
       }
       camera.updateProjectionMatrix();
+      return camera;
     }
 
-    adaptCameraToCurrentClippingDistance(camera);
+    camera = adaptCameraToCurrentClippingDistance(camera);
   }
 
   clearColor = clearColor != null ? clearColor : 0x000000;
@@ -134,7 +137,7 @@ export async function downloadScreenshot() {
         ? (ctx: CanvasRenderingContext2D) => {
             const scalebarDistanceToRightBorder = constants.SCALEBAR_OFFSET;
             const scalebarDistanceToTopBorder =
-              ctx.canvas.height + constants.SCALEBAR_OFFSET - constants.SCALEBAR_HEIGHT;
+              ctx.canvas.height - constants.SCALEBAR_OFFSET - constants.SCALEBAR_HEIGHT;
             const logoHeight = constants.SCALEBAR_HEIGHT;
             const logoWidth = (logoHeight / logo.height) * logo.width;
             ctx.drawImage(

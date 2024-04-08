@@ -130,7 +130,10 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
       );
     }
 
-    if (taskType?.settings.resolutionRestrictions)
+    if (
+      taskType?.settings.resolutionRestrictions.min ||
+      taskType?.settings.resolutionRestrictions.max
+    )
       form.setFieldValue(["isResolutionRestricted"], true);
   }
 
@@ -165,7 +168,6 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
     };
 
     if (taskTypeId) {
-      const { resolutionRestrictions: _resolutionRestrictions, ...settings } = newTaskType.settings;
       const updatedTaskType = { ...newTaskType, id: taskTypeId, teamName, settings };
       await updateTaskType(taskTypeId, updatedTaskType);
     } else {

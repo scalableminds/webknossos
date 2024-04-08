@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeSta
 import com.typesafe.scalalogging.LazyLogging
 import play.api.http.Status.CONFLICT
 import net.liftweb.common.Box
+import play.api.i18n.MessagesProvider
 import play.api.libs.json._
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
@@ -187,7 +188,7 @@ trait TracingService[T <: GeneratedMessage]
                       newId: String,
                       newVersion: Long,
                       toCache: Boolean,
-                      userToken: Option[String]): Fox[MergedVolumeStats]
+                      userToken: Option[String])(implicit mp: MessagesProvider): Fox[MergedVolumeStats]
 
   def mergeEditableMappings(tracingsWithIds: List[(T, String)], userToken: Option[String]): Fox[String]
 }

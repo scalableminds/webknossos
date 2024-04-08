@@ -1,6 +1,7 @@
 import { notification, Collapse } from "antd";
 import { CloseCircleOutlined } from "@ant-design/icons";
 import React from "react";
+import { sleep } from "./utils";
 
 export type ToastStyle = "info" | "warning" | "success" | "error";
 export type Message = {
@@ -75,12 +76,12 @@ const Toast = {
     );
   },
 
-  message(
+  async message(
     type: ToastStyle,
     rawMessage: string | React.ReactNode,
     config: ToastConfig,
     details?: string,
-  ): void {
+  ): Promise<void> {
     const message = this.buildContentWithDetails(rawMessage, details);
     const timeout = config.timeout != null ? config.timeout : 6000;
     const key = config.key || (typeof message === "string" ? message : undefined);
@@ -98,7 +99,7 @@ const Toast = {
     let toastConfig = {
       icon: undefined,
       key,
-      duration: sticky ? 0 : timeOutInSeconds,
+      duration: 0, //sticky ? 0 : timeOutInSeconds,
       message: toastMessage,
       style: {},
       className: "",
@@ -112,6 +113,18 @@ const Toast = {
     }
 
     notification[type](toastConfig);
+
+    if (!sticky && key != null) {
+      requestAnimationFrame(async () => { // ensure tab is active
+        console.log(new Date());
+        await sleep(timeout).then(() => {
+          requestAnimationFrame(() => { // ensure tab is active
+            console.log(new Date());
+            this.close(key);
+          });
+        });
+      });
+    }
   },
 
   info(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {

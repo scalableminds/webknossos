@@ -50,7 +50,7 @@ type FormValues = {
     allowedModes: APIAllowedMode[];
     resolutionRestrictions: APIResolutionRestrictions;
   };
-  recommendedConfiguration: string;
+  recommendedConfiguration: string | undefined;
 };
 
 function isValidMagnification(_rule: RuleObject, value: number | undefined) {

@@ -40,7 +40,7 @@ import {
 import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
   NeighborInfo,
-  getAgglomeratesForSegments,
+  getAgglomeratesForSegmentsFromTracingstore,
   getEdgesForAgglomerateMinCut,
   getNeighborsForAgglomerateNode,
   makeMappingEditable,
@@ -603,14 +603,13 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       ),
     );
 
-    const mergedMapping = Object.fromEntries(
-      Object.entries(activeMapping.mapping).map(([key, value]) =>
+    const mergedMapping = new Map(
+      Array.from(activeMapping.mapping, ([key, value]) =>
         value === targetAgglomerateId ? [key, sourceAgglomerateId] : [key, value],
       ),
-    );
+    ) as typeof activeMapping.mapping;
     yield* put(
       setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-        mappingKeys: activeMapping.mappingKeys || undefined,
         mapping: mergedMapping,
       }),
     );
@@ -653,30 +652,29 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       return;
     }
 
-    const splitSegmentIds: number[] = Object.entries(activeMapping.mapping)
+    const splitSegmentIds: number[] = Array.from(activeMapping.mapping)
       .filter(([_segmentId, agglomerateId]) => agglomerateId === sourceAgglomerateId)
-      .map(([segmentId, _agglomerateId]) => parseInt(segmentId));
+      .map(([segmentId, _agglomerateId]) => segmentId);
 
     const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
-    const dictAfterSplit = yield* call(
-      getAgglomeratesForSegments,
+    const mappingAfterSplit = yield* call(
+      getAgglomeratesForSegmentsFromTracingstore,
       tracingStoreHost,
       volumeTracingId,
       splitSegmentIds,
     );
 
-    const splitMapping = Object.fromEntries(
-      Object.entries(activeMapping.mapping).map(([segmentId, agglomerateId]) => {
-        if (segmentId in dictAfterSplit) {
-          return [segmentId, dictAfterSplit[segmentId]];
+    const splitMapping = new Map(
+      Array.from(activeMapping.mapping, ([segmentId, agglomerateId]) => {
+        if (mappingAfterSplit.has(segmentId)) {
+          return [segmentId, mappingAfterSplit.get(segmentId)];
         }
         return [segmentId, agglomerateId];
       }),
-    );
+    ) as typeof activeMapping.mapping;
 
     yield* put(
       setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
-        mappingKeys: activeMapping.mappingKeys || undefined,
         mapping: splitMapping,
       }),
     );
@@ -847,12 +845,12 @@ function* prepareSplitOrMerge(): Saga<{
 
   const getDataValue = async (position: Vector3) => {
     const unmappedId = await getUnmappedDataValue(position);
-    return mapping[unmappedId];
+    return mapping.get(unmappedId);
   };
 
   const getMappedAndUnmapped = async (position: Vector3) => {
     const unmappedId = await getUnmappedDataValue(position);
-    const agglomerateId = mapping[unmappedId];
+    const agglomerateId = mapping.get(unmappedId);
     return { agglomerateId, unmappedId };
   };
 

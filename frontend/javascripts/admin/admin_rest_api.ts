@@ -2327,20 +2327,23 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   return new Map(_.zip(segmentIds, parseProtoListOfLong<T>(listArrayBuffer)) as Array<[T, T]>);
 }
 
-export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
+export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
   tracingStoreUrl: string,
   tracingId: string,
   segmentIds: Array<T>,
 ): Promise<Mapping> {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
-      {
-        data: segmentIds,
-      },
-    ),
+  const mappingObject: Record<string, number> | Record<string, bigint> = await doWithToken(
+    (token) =>
+      Request.sendJSONReceiveJSON(
+        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
+        {
+          data: segmentIds,
+        },
+      ),
   );
-  // TODO: Convert from object to mapping
+  // TODO: parseInt cannot be used in the bigint case. Also, it would be great to avoid having to convert the
+  // object to a map in the first place, to avoid the parseInt. Maybe protobuf can be used here as well?
+  return new Map(Object.entries(mappingObject).map(([key, value]) => [parseInt(key, 10), value]));
 }
 
 export function getEditableAgglomerateSkeleton(
@@ -2515,22 +2518,6 @@ export async function getEdgesForAgglomerateMinCut(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
       {
         data: segmentsInfo,
-      },
-    ),
-  );
-}
-
-export async function getAgglomeratesForSegments(
-  tracingStoreUrl: string,
-  tracingId: string,
-  segmentIds: number[],
-) {
-  return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
-      {
-        data: segmentIds,
-        method: "POST",
       },
     ),
   );

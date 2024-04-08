@@ -113,6 +113,7 @@ export async function requestWithFallback(
       ? getVolumeTracingById(state.tracing, layerInfo.tracingId)
       : null;
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
+  // TODO: Change this back once the tracingstore sends the original segment IDs even if an agglomerate mapping is enabled
   const shouldUseDataStore = true; //maybeVolumeTracing == null;
   const requestUrl = shouldUseDataStore
     ? getDataStoreUrl(maybeVolumeTracing?.fallbackLayer)

@@ -158,7 +158,10 @@ function TaskTypeCreateView({ taskTypeId, history }: Props) {
       ...rest,
       teamId,
       settings,
-      recommendedConfiguration: JSON.parse(recommendedConfiguration),
+      recommendedConfiguration:
+        recommendedConfiguration != null && useRecommendedConfiguration
+          ? JSON.parse(recommendedConfiguration)
+          : null,
     };
 
     if (taskTypeId) {

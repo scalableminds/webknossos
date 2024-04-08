@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import React, { useCallback, useState } from "react";
 import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
-import { OrthoViews } from "oxalis/constants";
+import { AltOrOptionKey, OrthoViews } from "oxalis/constants";
 import {
   getVisibleSegmentationLayer,
   hasVisibleUint64Segmentation,
@@ -76,7 +76,7 @@ function ZoomShortcut() {
             top: -2,
           }}
         >
-          Alt
+          {AltOrOptionKey}
         </span>
       </span>{" "}
       +
@@ -159,21 +159,10 @@ function ShortcutsInfo() {
   );
   const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const isShiftPressed = useKeyPress("Shift");
-  const isControlPressed = useKeyPress("Control");
+  const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
-  const adaptedTool = adaptActiveToolToShortcuts(
-    activeTool,
-    isShiftPressed,
-    isControlPressed,
-    isAltPressed,
-  );
-  const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
-    adaptedTool,
-    useLegacyBindings,
-    isShiftPressed,
-    isControlPressed,
-    isAltPressed,
-  );
+  const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+
   const moreShortcutsLink = (
     <a
       target="_blank"
@@ -188,21 +177,37 @@ function ShortcutsInfo() {
   );
 
   if (!isPlaneMode) {
+    let actionDescriptor = null;
+    if (hasSkeleton && isShiftPressed) {
+      actionDescriptor = getToolClassForAnnotationTool("SKELETON").getActionDescriptors(
+        "SKELETON",
+        useLegacyBindings,
+        isShiftPressed,
+        isControlOrMetaPressed,
+        isAltPressed,
+      );
+    }
+
     return (
       <React.Fragment>
-        <span
-          style={{
-            marginRight: "auto",
-            textTransform: "capitalize",
-          }}
-        >
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-left-drag.svg"
-            alt="Mouse Left Drag"
-          />
-          Move
-        </span>
+        {actionDescriptor != null ? (
+          <LeftClickShortcut actionDescriptor={actionDescriptor} />
+        ) : (
+          <span
+            className="shortcut-info-element"
+            style={{
+              textTransform: "capitalize",
+            }}
+          >
+            <img
+              className="keyboard-mouse-icon"
+              src="/assets/images/icon-statusbar-mouse-left-drag.svg"
+              alt="Mouse Left Drag"
+            />
+            Move
+          </span>
+        )}
+
         <span className="shortcut-info-element">
           <span
             key="space-forward-i"
@@ -307,6 +312,20 @@ function ShortcutsInfo() {
     );
   }
 
+  const adaptedTool = adaptActiveToolToShortcuts(
+    activeTool,
+    isShiftPressed,
+    isControlOrMetaPressed,
+    isAltPressed,
+  );
+  const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
+    adaptedTool,
+    useLegacyBindings,
+    isShiftPressed,
+    isControlOrMetaPressed,
+    isAltPressed,
+  );
+
   return (
     <React.Fragment>
       <LeftClickShortcut actionDescriptor={actionDescriptor} />
@@ -317,7 +336,7 @@ function ShortcutsInfo() {
           src="/assets/images/icon-statusbar-mouse-wheel.svg"
           alt="Mouse Wheel"
         />
-        {isAltPressed || isControlPressed ? "Zoom in/out" : "Move along 3rd axis"}
+        {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
       </span>
       <span className="shortcut-info-element">
         <img

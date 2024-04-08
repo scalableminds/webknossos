@@ -579,7 +579,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     };
 
     const onChange = (value: boolean, event: React.MouseEvent<HTMLButtonElement>) => {
-      if (!event.ctrlKey && !event.altKey && !event.shiftKey) {
+      if (!event.ctrlKey && !event.altKey && !event.shiftKey && !event.metaKey) {
         setSingleLayerVisibility(value);
         return;
       }

@@ -42,6 +42,7 @@ import type {
   APITeam,
   APITimeInterval,
   APITimeTrackingPerAnnotation,
+  APITimeTrackingSpan,
   APITracingStore,
   APIUpdateActionBatch,
   APIUser,
@@ -1963,14 +1964,13 @@ export async function getTimeTrackingForUserSummedPerAnnotation(
   return timeTrackingData;
 }
 
-export async function getTimeTrackingForUser(
+export async function getTimeTrackingForUserSpans(
   userId: string,
   startDate: dayjs.Dayjs,
   endDate: dayjs.Dayjs,
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
   projectIds?: string[] | null,
-): Promise<Array<APITimeTrackingPerAnnotation>> {
-  // TODO maybe this method can be deleted?
+): Promise<Array<APITimeTrackingSpan>> {
   const params = new URLSearchParams({
     startDate: startDate.valueOf().toString(),
     endDate: endDate.valueOf().toString(),
@@ -1978,10 +1978,7 @@ export async function getTimeTrackingForUser(
   if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0)
     params.append("projectIds", projectIds.join(","));
-  const timeTrackingData = await Request.receiveJSON(`/api/time/user/${userId}?${params}`);
-  const { timelogs } = timeTrackingData;
-  assertResponseLimit(timelogs);
-  return timelogs;
+  return await Request.receiveJSON(`/api/time/user/${userId}/spans?${params}`);
 }
 
 export async function getTimeEntries(

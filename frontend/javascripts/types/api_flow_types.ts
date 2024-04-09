@@ -554,6 +554,20 @@ export type APITimeTrackingPerUser = {
   timeMillis: number;
   annotationCount: number;
 };
+export type APITimeTrackingSpan = {
+  userId: string;
+  userEmail: string;
+  datasetOrganization: string;
+  datasetName: string;
+  annotationId: string;
+  taskId: string | undefined;
+  projectName: string | undefined;
+  taskTypeId: string | undefined;
+  taskTypeSummary: string | undefined;
+  timeSpanId: string;
+  timeSpanCreated: number;
+  timeSpanTimeMillis: number;
+};
 export type APIProjectProgressReport = {
   readonly projectName: string;
   readonly paused: boolean;

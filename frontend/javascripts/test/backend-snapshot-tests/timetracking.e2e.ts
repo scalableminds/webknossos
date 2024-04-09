@@ -25,8 +25,8 @@ test.before("Reset database and initialize values", async () => {
 
 // Note: /api/users/:userId/loggedTime is tested in users.e2e.ts
 
-test("getTimeTrackingForUser", async (t) => {
-  const timeTrackingForUser = await api.getTimeTrackingForUser(
+test("getTimeTrackingForUserSpans", async (t) => {
+  const timeTrackingForUser = await api.getTimeTrackingForUserSpans(
     activeUser.id,
     dayjs("20180101", "YYYYMMDD"),
     dayjs("20181001", "YYYYMMDD"),
@@ -40,7 +40,7 @@ test("getTimeTrackingForUser", async (t) => {
 
 test("getTimeTrackingForUser for a user other than the active user", async (t) => {
   const idUserC = "770b9f4d2a7c0e4d008da6ef";
-  const timeTrackingForUser = await api.getTimeTrackingForUser(
+  const timeTrackingForUser = await api.getTimeTrackingForUserSpans(
     idUserC,
     dayjs("20160401", "YYYYMMDD"),
     dayjs("20160420", "YYYYMMDD"),

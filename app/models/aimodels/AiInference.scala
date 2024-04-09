@@ -42,8 +42,8 @@ class AiInferenceService @Inject()(dataStoreDAO: DataStoreDAO,
       inferenceJobJs <- jobService.publicWrites(inferenceJob)
       dataStore <- dataStoreDAO.findOneByName(inferenceJob._dataStore)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
-      aiModel <- aiModelDAO.findOne(aiInference._aiModel)
-      aiModelJs <- aiModelService.publicWrites(aiModel)
+      // aiModel <- aiModelDAO.findOne(aiInference._aiModel)
+      // aiModelJs <- aiModelService.publicWrites(aiModel)
       user <- userDAO.findOne(inferenceJob._owner)
       userJs <- userService.compactWrites(user)
     } yield
@@ -53,7 +53,7 @@ class AiInferenceService @Inject()(dataStoreDAO: DataStoreDAO,
         "newSegmentationLayerName" -> aiInference.newSegmentationLayerName,
         "maskAnnotationLayerName" -> aiInference.maskAnnotationLayerName,
         "inferenceJob" -> inferenceJobJs,
-        "aiModel" -> aiModelJs,
+        // "aiModel" -> aiModelJs,
         "user" -> userJs,
         "created" -> aiInference.created
       )
@@ -99,7 +99,7 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       _ <- run(q"""INSERT INTO webknossos.aiInferences(
                     _id, _organization, _aiModel, _dataset, _annotation, _inferenceJob,
                      newSegmentationLayerName, maskAnnotationLayerName, created, modified, isDeleted)
-                 VALUES(${a._id} ${a._aiModel}, ${a._dataset}, ${a._annotation}, ${a._inferenceJob},
+                 VALUES(${a._id}, ${a._organization}, ${a._aiModel}, ${a._dataset}, ${a._annotation}, ${a._inferenceJob},
                         ${a.newSegmentationLayerName}, ${a.maskAnnotationLayerName}, ${a.created}, ${a.modified}, ${a.isDeleted})""".asUpdate)
     } yield ()
 

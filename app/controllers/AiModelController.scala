@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
 import models.annotation.AnnotationDAO
-import models.dataset.{DataStoreDAO, DatasetDAO}
+import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService}
 import models.job.{JobCommand, JobService}
 import models.user.UserService
 import play.api.libs.json.{Json, OFormat}
@@ -40,7 +40,9 @@ object RunTrainingParameters {
 
 case class RunInferenceParameters(annotationId: ObjectId,
                                   aiModelId: ObjectId,
+                                  coloLayerName: String,
                                   newSegmentationLayerName: String,
+                                  newDatasetName: String,
                                   maskAnnotationLayerName: Option[String])
 
 object RunInferenceParameters {
@@ -62,6 +64,7 @@ class AiModelController @Inject()(
     aiInferenceService: AiInferenceService,
     aiInferenceDAO: AiInferenceDAO,
     organizationDAO: OrganizationDAO,
+    datasetService: DatasetService,
     jobService: JobService,
     datasetDAO: DatasetDAO,
     dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
@@ -155,9 +158,24 @@ class AiModelController @Inject()(
         _ <- userService.assertIsSuperUser(request.identity)
         annotation <- annotationDAO.findOne(request.body.annotationId)
         dataset <- datasetDAO.findOne(annotation._dataset)
+        organization <- organizationDAO.findOne(request.identity._organization)
+        _ <- bool2Fox(dataset._organization == request.identity._organization) ?~> "job.inferWithModel.onlyDatasetsOfYourOrga"
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
+        // _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
+        _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
+        _ <- datasetService.assertNewDatasetName(request.body.newDatasetName, organization._id)
         jobCommand = JobCommand.infer_with_model
-        commandArgs = Json.obj("annotation" -> annotation._id)
+        commandArgs = Json.obj(
+          "organization_name" -> organization.name,
+          "dataset_name" -> dataset.name,
+          "color_layer_name" -> request.body.coloLayerName,
+          "bounding_box" -> "10,10,10,100,100,100",
+          "model_id" -> request.body.aiModelId,
+          "new_segmentation_layer_name" -> request.body.newSegmentationLayerName,
+          "new_dataset_name" -> request.body.newDatasetName
+        )
+        // TODO pass annotation to job? mask?
+        // TODO insert new layer into existing dataset? or link new one?
         newInferenceJob <- jobService.submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunInferWithModel"
         newAiInference = AiInference(
           _id = ObjectId.generate,

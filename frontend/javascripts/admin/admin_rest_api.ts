@@ -1972,8 +1972,8 @@ export async function getTimeTrackingForUserSpans(
   projectIds?: string[] | null,
 ): Promise<Array<APITimeTrackingSpan>> {
   const params = new URLSearchParams({
-    startDate: startDate.valueOf().toString(),
-    endDate: endDate.valueOf().toString(),
+    start: startDate.valueOf().toString(),
+    end: endDate.valueOf().toString(),
   });
   if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0)

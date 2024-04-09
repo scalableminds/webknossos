@@ -5,6 +5,7 @@ import {
   setCurrToken,
   resetDatabase,
   writeTypeCheckingFile,
+  replaceVolatileValues,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
@@ -33,7 +34,7 @@ test("getTimeTrackingForUserSpans", async (t) => {
     "Task",
   );
   t.true(timeTrackingForUser.length > 0);
-  t.snapshot(timeTrackingForUser, {
+  t.snapshot(replaceVolatileValues(timeTrackingForUser), {
     id: "timetracking-timeTrackingForUser",
   });
 });
@@ -47,7 +48,7 @@ test("getTimeTrackingForUser for a user other than the active user", async (t) =
     "Task",
   );
   t.true(timeTrackingForUser.length > 0);
-  t.snapshot(timeTrackingForUser, {
+  t.snapshot(replaceVolatileValues(timeTrackingForUser), {
     id: "timetracking-timeTrackingForUser-C",
   });
 });

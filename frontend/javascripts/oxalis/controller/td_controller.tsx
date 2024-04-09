@@ -39,7 +39,7 @@ import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
-  const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
+  const { position, up, near, far, left, right, top, bottom } = camera;
 
   const objToArr = ({ x, y, z }: { x: number; y: number; z: number }): Vector3 => [x, y, z];
 
@@ -52,8 +52,6 @@ export function threeCameraToCameraData(camera: THREE.OrthographicCamera): Camer
     far,
     position: objToArr(position),
     up: objToArr(up),
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(vector: number | Vector3, y?: n... Remove this comment to see the full error message
-    lookAt: objToArr(lookAt),
   };
 }
 

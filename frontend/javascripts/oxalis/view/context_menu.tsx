@@ -55,6 +55,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { formatNumberToLength, formatLengthAsVx, formatNumberToVolume } from "libs/format_utils";
 import {
+  getActiveCellId,
   getActiveSegmentationTracing,
   getSegmentsForLayer,
   hasAgglomerateMapping,
@@ -360,6 +361,7 @@ function getMaybeMinCutItem(
 }
 
 function getMeshItems(
+  volumeTracing: VolumeTracing | null | undefined,
   maybeClickedMeshId: number | null | undefined,
   maybeMeshIntersectionPosition: Vector3 | null | undefined,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
@@ -374,6 +376,12 @@ function getMeshItems(
   }
 
   return [
+    {
+      key: "activate-segment",
+      onClick: () => Store.dispatch(setActiveCellAction(maybeClickedMeshId, undefined, undefined)),
+      disabled: volumeTracing != null && maybeClickedMeshId === getActiveCellId(volumeTracing),
+      label: `Activate Segment (${maybeClickedMeshId})`,
+    },
     {
       key: "hide-mesh",
       onClick: () =>
@@ -449,6 +457,7 @@ function getNodeContextMenuOptions({
   }
 
   const meshItems = getMeshItems(
+    volumeTracing,
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
     visibleSegmentationLayer,
@@ -1043,6 +1052,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                     setActiveCellAction(segmentIdAtPosition, globalPosition, additionalCoordinates),
                   );
                 },
+                disabled: segmentIdAtPosition === getActiveCellId(volumeTracing),
                 label: (
                   <>
                     Activate Segment ({segmentIdAtPosition}){" "}
@@ -1074,6 +1084,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   let allActions: ItemType[] = [];
 
   const meshRelatedItems = getMeshItems(
+    volumeTracing,
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
     visibleSegmentationLayer,

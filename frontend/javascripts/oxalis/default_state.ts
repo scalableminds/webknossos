@@ -208,7 +208,6 @@ const defaultState: OxalisState = {
         top: 0,
         bottom: 0,
         up: [0, 0, 0],
-        lookAt: [0, 0, 0],
         position: [0, 0, 0],
       },
       inputCatcherRects: {

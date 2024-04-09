@@ -118,9 +118,14 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     else {
       val projectQuery = projectIdsFilterQuery(projectIds)
       for {
-        tuples <- run(q"""SELECT ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
+        tuples <- run(
+          q"""SELECT ts._user, mu.email, o.name, d.name, a._id, t._id, p.name, tt._id, tt.summary, ts._id, ts.created, ts.time
                         FROM webknossos.timespans_ ts
                         JOIN webknossos.annotations_ a on ts._annotation = a._id
+                        JOIN webknossos.users_ u on ts._user = u._id
+                        JOIN webknossos.multiUsers_ mu on u._multiUser = mu._id
+                        JOIN webknossos.datasets_ d on a._dataset = d._id
+                        JOIN webknossos.organizations_ o on d._organization = o._id
                         LEFT JOIN webknossos.tasks_ t on a._task = t._id
                         LEFT JOIN webknossos.projects_ p on t._project = p._id
                         LEFT JOIN webknossos.taskTypes_ tt on t._taskType = tt._id
@@ -130,28 +135,48 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                         AND ts.created < $end
                         AND $projectQuery
                         AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
-            """.as[(Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])])
-      } yield formatTimespanTuples(tuples)
+            """.as[(String,
+                    String,
+                    String,
+                    String,
+                    String,
+                    Option[String],
+                    Option[String],
+                    Option[String],
+                    Option[String],
+                    String,
+                    Instant,
+                    Long)])
+      } yield Json.toJson(tuples.map(formatTimespanTuple))
     }
 
-  private def formatTimespanTuples(tuples: Vector[
-    (Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])]) = {
-
-    def formatTimespanTuple(
-        tuple: (Long, Instant, String, String, Option[String], Option[String], Option[String], Option[String])) =
-      // TODO add user, dataset, +X?
-      Json.obj(
-        "timeMillis" -> tuple._1,
-        "timestamp" -> tuple._2,
-        "annotation" -> tuple._3,
-        "_id" -> tuple._4,
-        "task_id" -> tuple._5,
-        "project_name" -> tuple._6,
-        "tasktype_id" -> tuple._7,
-        "tasktype_summary" -> tuple._8
-      )
-    Json.toJson(tuples.map(formatTimespanTuple))
-  }
+  private def formatTimespanTuple(
+      tuple: (String,
+              String,
+              String,
+              String,
+              String,
+              Option[String],
+              Option[String],
+              Option[String],
+              Option[String],
+              String,
+              Instant,
+              Long)) =
+    Json.obj(
+      "userId" -> tuple._1,
+      "userEmail" -> tuple._2,
+      "datasetOrganization" -> tuple._3,
+      "datasetName" -> tuple._4,
+      "annotationId" -> tuple._5,
+      "taskId" -> tuple._6,
+      "projectName" -> tuple._7,
+      "taskTypeId" -> tuple._8,
+      "taskTypeSummary" -> tuple._9,
+      "timeSpanId" -> tuple._10,
+      "timeSpanCreated" -> tuple._11,
+      "timeSpanTimeMillis" -> tuple._12
+    )
 
   private def projectIdsFilterQuery(projectIds: List[ObjectId]): SqlToken =
     if (projectIds.isEmpty) q"TRUE" // Query did not filter by project, include all

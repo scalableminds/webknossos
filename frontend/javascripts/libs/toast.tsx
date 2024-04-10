@@ -134,7 +134,7 @@ const Toast = {
   },
 
   warning(
-    message: React.ReactNode | string,
+    message: React.ReactNode,
     config: ToastConfig = {},
     details?: string | undefined,
   ): void {

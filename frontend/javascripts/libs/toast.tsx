@@ -95,11 +95,10 @@ const Toast = {
       toastMessage = message;
     }
 
-    const timeOutInSeconds = timeout / 1000;
     let toastConfig = {
       icon: undefined,
       key,
-      duration: 0, //sticky ? 0 : timeOutInSeconds,
+      duration: 0,
       message: toastMessage,
       style: {},
       className: "",
@@ -114,14 +113,17 @@ const Toast = {
 
     notification[type](toastConfig);
 
+    // Make sure that toasts don't just dissapear while user has WK in background tab (e.g. while uploading large dataset).
+    // Most browsers pause requestAnimationFrame() if the current tab is not active, but Firefox does not seem to do that.
     if (!sticky && key != null) {
-      requestAnimationFrame(async () => { // ensure tab is active
-        console.log(new Date());
-        await sleep(timeout).then(() => {
-          requestAnimationFrame(() => { // ensure tab is active
-            console.log(new Date());
-            this.close(key);
-          });
+      requestAnimationFrame(async () => {
+        // ensure tab is active
+        const timeoutAfterTabSwitch = timeout >= 1000 ? 1000 : 0;
+        await sleep(timeout - timeoutAfterTabSwitch);
+        requestAnimationFrame(async () => {
+          // If the user has switched the tab, show the toast for a short time so that the user doesn't just see the toast dissapear.
+          await sleep(timeoutAfterTabSwitch);
+          this.close(key);
         });
       });
     }

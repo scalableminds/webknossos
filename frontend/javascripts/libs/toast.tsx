@@ -133,8 +133,12 @@ const Toast = {
     this.message("info", message, config, details);
   },
 
-  warning(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {
-    console.warn(message, details);
+  warning(
+    message: React.ReactNode | string,
+    config: ToastConfig = {},
+    details?: string | undefined,
+  ): void {
+    if (typeof message === "string") console.warn(message);
     this.message("warning", message, config, details);
   },
 
@@ -151,7 +155,7 @@ const Toast = {
     config: ToastConfig = {},
     details?: string | undefined,
   ): void {
-    console.error(message, details);
+    if (typeof message === "string") console.error(message);
     this.message("error", message, config, details);
   },
 

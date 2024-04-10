@@ -50,20 +50,19 @@ export default function DiskUsageList({
   }
 
   const dataSource = _.flatten(tasksWithHierarchy.map(taskToTableEntry));
-  const typeHint: Array<ArtifactTableEntry> = [];
 
   const columns: ColumnsType<ArtifactTableEntry> = [
     {
       title: "Task Name",
       dataIndex: "taskName",
       key: "taskName",
-      sorter: localeCompareBy(typeHint, (artifact: ArtifactTableEntry) => artifact.taskName),
+      sorter: localeCompareBy((artifact: ArtifactTableEntry) => artifact.taskName),
     },
     {
       title: "Artifact Name",
       dataIndex: "artifactName",
       key: "artifactName",
-      sorter: localeCompareBy(typeHint, (artifact: ArtifactTableEntry) => artifact.artifactName),
+      sorter: localeCompareBy((artifact: ArtifactTableEntry) => artifact.artifactName),
     },
     {
       title: "File Size",
@@ -83,7 +82,7 @@ export default function DiskUsageList({
       title: "Artifact Path",
       dataIndex: "filePathComponent",
       key: "filePath",
-      sorter: localeCompareBy(typeHint, (artifact: ArtifactTableEntry) => artifact.filePath),
+      sorter: localeCompareBy((artifact: ArtifactTableEntry) => artifact.filePath),
     },
   ];
   return <Table dataSource={dataSource} columns={columns} />;

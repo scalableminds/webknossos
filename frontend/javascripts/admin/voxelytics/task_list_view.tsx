@@ -51,7 +51,8 @@ import { addAfterPadding, addBeforePadding } from "./utils";
 import { LOG_LEVELS } from "oxalis/constants";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
-import { ArrayElement, notEmpty } from "libs/utils";
+import { notEmpty } from "libs/utils";
+import { ArrayElement } from "types/globals";
 
 const { Search } = Input;
 

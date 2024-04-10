@@ -23,7 +23,6 @@ import {
   HourglassOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import type { APIJob, APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";

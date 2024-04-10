@@ -553,10 +553,10 @@ function StartJobForm(props: StartJobFormProps) {
       );
       handleClose();
     } catch (error) {
-      console.error(error);
       Toast.error(
         `The ${jobName} job could not be started. Please contact an administrator or look in the console for more details.`,
       );
+      console.error(error);
       handleClose();
     }
   };

@@ -1089,8 +1089,8 @@ function* downloadMeshCellById(cellName: string, segmentId: number, layerName: s
     yield* call(saveAs, blob, `${cellName}-${segmentId}.stl`);
   } catch (exception) {
     ErrorHandling.notify(exception as Error);
-    console.error(exception);
     Toast.error("Could not export to STL. See console for details");
+    console.error(exception);
   }
 }
 
@@ -1123,8 +1123,8 @@ function* downloadMeshCellsAsZIP(
     yield* call(saveAs, result as Blob, "mesh-export.zip");
   } catch (exception) {
     ErrorHandling.notify(exception as Error);
-    console.error(exception);
     Toast.error("Could not export meshes as STL files. See console for details");
+    console.error(exception);
   }
 }
 

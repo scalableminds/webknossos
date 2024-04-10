@@ -196,10 +196,10 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         // eslint-disable-next-line no-eval
         eval(content);
       } catch (error) {
-        console.error(error);
         Toast.error(
           `Error executing the task script "${script.name}". See console for more information.`,
         );
+        console.error(error);
       }
     }
   }

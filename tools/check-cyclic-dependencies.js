@@ -22,6 +22,7 @@ const KNOWN_CYCLES = [
 ];
 
 madge("frontend/javascripts/main.tsx", {
+  tsConfig: "./tsconfig.json",
   detectiveOptions: {
     ts: {
       skipTypeImports: true,

@@ -38,6 +38,7 @@
     "css-loader": "^6.5.1",
     "documentation": "^14.0.2",
     "domexception": "^2.0.1",
+    "dpdm": "^3.14.0",
     "enzyme": "^3.7.0",
     "enzyme-adapter-react-16": "^1.9.1",
     "espree": "^3.5.4",
@@ -48,7 +49,6 @@
     "less": "^4.0.0",
     "less-loader": "^10.2.0",
     "lz4-wasm-nodejs": "^0.9.2",
-    "madge": "^7.0.0",
     "merge-img": "^2.1.2",
     "mock-require": "^1.2.1",
     "node-fetch": "^2.6.7",
@@ -117,7 +117,7 @@
     "ts": "yarn tsc",
     "ts-watch": "yarn tsc --watch",
     "ts-coverage": "typescript-coverage-report",
-    "find-cyclic-dependencies": "madge --circular --extensions ts,tsx frontend/javascripts/main.tsx",
+    "find-cyclic-dependencies": "yarn run dpdm -T --tree false --warning false --extensions .ts,.tsx frontend/javascripts/main.tsx",
     "check-cyclic-dependencies": "node ./tools/check-cyclic-dependencies.js",
     "startf": "yarn rm-fossil-lock; yarn kill-listeners; yarn start"
   },
@@ -239,16 +239,5 @@
       "frontend/javascripts/test/**/*.*"
     ],
     "reporter": "lcov"
-  },
-  "madge": {
-    "tsConfig": "./tsconfig.json",
-    "detectiveOptions": {
-      "ts": {
-        "skipTypeImports": true
-      },
-      "tsx": {
-        "skipTypeImports": true
-      }
-    }
   }
 }

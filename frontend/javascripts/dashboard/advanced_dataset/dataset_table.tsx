@@ -42,7 +42,6 @@ type RowRenderer = DatasetRenderer | FolderRenderer;
 
 const { ThinSpace } = Unicode;
 const { Column } = Table;
-const typeHint: RowRenderer[] = [];
 const useLruRank = true;
 
 const THUMBNAIL_SIZE = 100;
@@ -735,10 +734,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             title="Name"
             dataIndex="name"
             key="name"
-            sorter={Utils.localeCompareBy<RowRenderer>(
-              typeHint,
-              (rowRenderer) => rowRenderer.data.name,
-            )}
+            sorter={Utils.localeCompareBy<RowRenderer>((rowRenderer) => rowRenderer.data.name)}
             sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
             render={(_name: string, renderer: RowRenderer) => renderer.renderNameColumn()}
           />
@@ -747,7 +743,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
             title="Creation Date"
             dataIndex="created"
             key="created"
-            sorter={Utils.compareBy<RowRenderer>(typeHint, (rowRenderer) =>
+            sorter={Utils.compareBy<RowRenderer>((rowRenderer) =>
               isRecordADataset(rowRenderer.data) ? rowRenderer.data.created : 0,
             )}
             sortOrder={sortedInfo.columnKey === "created" ? sortedInfo.order : undefined}

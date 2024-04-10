@@ -110,6 +110,15 @@ function TimeTrackingOverview() {
     { label: "Last 30 Days", value: [dayjs().subtract(30, "d").startOf("day"), currentTime] },
   ];
 
+  const renderPlaceholder = () => {
+    return (
+      <p>
+        There is no user activity recorded for the selected time span. Please adjust the time range
+        and filters above.
+      </p>
+    );
+  };
+
   return mayUserAccessView ? (
     <Card
       title={"Annotation Time per User"}
@@ -175,6 +184,9 @@ function TimeTrackingOverview() {
                 projectIds={selectedProjectIds}
               />
             ),
+          }}
+          locale={{
+            emptyText: renderPlaceholder(),
           }}
         >
           <Column

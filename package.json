@@ -29,7 +29,6 @@
     "@types/react-virtualized": "^9.21.21",
     "@types/sinon": "^10.0.11",
     "@types/url-join": "^4.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.17.0",
     "abort-controller": "^3.0.0",
     "ava": "^3.13.0",
     "browserslist-to-esbuild": "^1.2.0",

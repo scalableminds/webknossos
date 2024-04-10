@@ -28,7 +28,7 @@ import Toast from "libs/toast";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
-import { ArrayElement } from "libs/utils";
+import { ArrayElement } from "types/globals";
 
 type ControlsAndRenderingSettingsTabProps = {
   activeUser: APIUser | null | undefined;

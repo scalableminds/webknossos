@@ -67,14 +67,14 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
       activeTool === AnnotationToolEnum.PROOFREAD
         ? ProofreadTool.onLeftClick(planeView, pos, plane, event, isTouch)
         : SkeletonTool.onLeftClick(
-            planeView,
-            pos,
-            event.shiftKey,
-            event.altKey,
-            event.ctrlKey || event.metaKey,
-            OrthoViews.TDView,
-            isTouch,
-          ),
+          planeView,
+          pos,
+          event.shiftKey,
+          event.altKey,
+          event.ctrlKey || event.metaKey,
+          OrthoViews.TDView,
+          isTouch,
+        ),
   };
 }
 
@@ -251,7 +251,12 @@ class TDController extends React.PureComponent<Props> {
         if (this.props.planeView == null || this.props.showContextMenuAt == null) return;
         const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
         // @ts-expect-error ts-migrate(2339) FIXME: Object is possibly 'null'.
-        const meshId = intersection ? intersection.object.parent?.cellId : null;
+        const meshId = intersection ? intersection.object.parent?.segmentId : null;
+        // todop: also extract unmappedSegmentId
+        if (intersection) {
+          console.log("intersection.object.unmappedSegmentId", intersection.object.unmappedSegmentId);
+        }
+
         const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;
         handleOpenContextMenu(
           this.props.planeView,

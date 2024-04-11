@@ -89,10 +89,61 @@ export default class SegmentMeshController {
       .onUpdate(function onUpdate() {
         // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
         meshMaterial.opacity = this.opacity;
+
         app.vent.emit("rerender");
       })
       .start();
     return mesh;
+  }
+
+  addMeshFromGeometries(
+    geometries: THREE.BufferGeometry[],
+    segmentationId: number, // todop: rename to segmentId?
+    offset: Vector3 | null = null,
+    scale: Vector3 | null = null,
+    lod: number,
+    layerName: string,
+    additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  ): void {
+    const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
+    const keys = [additionalCoordinatesString, layerName, segmentationId, lod];
+    const isNewlyAddedMesh =
+      this.meshesGroupsPerSegmentationId[additionalCoordinatesString]?.[layerName]?.[
+        segmentationId
+      ]?.[lod] == null;
+    const targetGroup = _.get(this.meshesGroupsPerSegmentationId, keys, new THREE.Group());
+    _.set(
+      this.meshesGroupsPerSegmentationId,
+      keys,
+      _.get(this.meshesGroupsPerSegmentationId, keys, targetGroup),
+    );
+    if (isNewlyAddedMesh) {
+      if (lod === NO_LOD_MESH_INDEX) {
+        this.meshesLODRootGroup.addNoLODSupportedMesh(targetGroup);
+      } else {
+        this.meshesLODRootGroup.addLODMesh(targetGroup, lod);
+      }
+      targetGroup.segmentId = segmentationId;
+      if (scale != null) {
+        targetGroup.scale.copy(new THREE.Vector3(...scale));
+      }
+    }
+    const meshes = geometries.map((geometry) => {
+      const mesh = this.constructMesh(segmentationId, layerName, geometry);
+      mesh.unmappedSegmentId = geometry.unmappedSegmentId;
+      if (offset) {
+        mesh.translateX(offset[0]);
+        mesh.translateY(offset[1]);
+        mesh.translateZ(offset[2]);
+      }
+      return mesh;
+    });
+    const group = new THREE.Group();
+    for (const mesh of meshes) {
+      group.add(mesh);
+    }
+    group.segmentId = segmentationId;
+    this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentationId, lod, group);
   }
 
   addMeshFromGeometry(
@@ -122,7 +173,7 @@ export default class SegmentMeshController {
       } else {
         this.meshesLODRootGroup.addLODMesh(targetGroup, lod);
       }
-      targetGroup.cellId = segmentationId;
+      targetGroup.segmentId = segmentationId;
       if (scale != null) {
         targetGroup.scale.copy(new THREE.Vector3(...scale));
       }
@@ -255,7 +306,9 @@ export default class SegmentMeshController {
     layerName: string,
     segmentationId: number,
     lod: number,
-    mesh: THREE.Mesh<THREE.BufferGeometry, THREE.MeshLambertMaterial>,
+    mesh:
+      | THREE.Mesh<THREE.BufferGeometry, THREE.MeshLambertMaterial | THREE.MeshLambertMaterial[]>
+      | THREE.Group,
   ) {
     this.meshesGroupsPerSegmentationId[additionalCoordKey][layerName][segmentationId][lod].add(
       mesh,

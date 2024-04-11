@@ -969,26 +969,27 @@ function _getLoadChunksTasks(
                     const chunk = chunksForPosition[chunkIdx];
                     try {
                       const bufferGeometry = yield* call(loader.decodeDracoFileAsync, chunk.data);
+                      bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
                       bufferGeometries.push(bufferGeometry);
                     } catch (error) {
                       errorsWithDetails.push({ error, chunk });
                     }
                   }
 
-                  const geometry = mergeBufferGeometries(bufferGeometries);
+                  // const geometry = mergeBufferGeometries(bufferGeometries, true);
 
                   // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
-                  if (geometry == null) continue;
+                  // if (geometry == null) continue;
 
                   // Compute vertex normals to achieve smooth shading
-                  geometry.computeVertexNormals();
+                  bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
 
                   yield* call(
                     {
                       context: segmentMeshController,
-                      fn: segmentMeshController.addMeshFromGeometry,
+                      fn: segmentMeshController.addMeshFromGeometries,
                     },
-                    geometry,
+                    bufferGeometries,
                     id,
                     position,
                     // Apply the scale from the segment info, which includes dataset scale and mag

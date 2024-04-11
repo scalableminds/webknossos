@@ -170,25 +170,30 @@ class PlaneView {
 
     // Undo highlighting of old hit
     if (oldRaycasterHit?.parent != null) {
-      oldRaycasterHit.parent.children.forEach((meshPart) => {
-        // @ts-ignore
-        meshPart.material.emissive.setHex("#000000");
-      });
+      // oldRaycasterHit.parent.children.forEach((meshPart) => {
+      //   // @ts-ignore
+      //   meshPart.material.emissive.setHex("#FF00FF");
+      // });
+      // @ts-ignore
+      oldRaycasterHit.material.emissive.setHex("#FF00FF");
+      oldRaycasterHit.material.color.setHex(oldRaycasterHit.material.savedHex);
       oldRaycasterHit = null;
     }
 
     oldRaycasterHit = hitObject;
 
     // Highlight new hit
-    if (hitObject != null) {
+    if (hitObject?.parent != null) {
       const hoveredColor = [0.7, 0.5, 0.1];
+      // hitObject.parent.children.forEach((meshPart) => {
+      //   // @ts-ignore
+      //   meshPart.material.emissive.setHSL(...hoveredColor);
+      // });
+      hitObject.material.emissive.setHSL(...hoveredColor);
+      hitObject.material.savedHex = hitObject.material.color.getHex();
+      hitObject.material.color.setHSL(...hoveredColor);
       // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-      hitObject.parent.children.forEach((meshPart) => {
-        // @ts-ignore
-        meshPart.material.emissive.setHSL(...hoveredColor);
-      });
-      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", hitObject.parent.cellId));
+      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", hitObject.parent.segmentId));
       return intersections[0];
     } else {
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));

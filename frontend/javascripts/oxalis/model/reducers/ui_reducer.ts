@@ -159,11 +159,11 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
         contextMenuPosition: action.contextMenuPosition,
         clickedNodeId: action.clickedNodeId,
         clickedBoundingBoxId: action.clickedBoundingBoxId,
-        contextMenuGlobalPosition: action.contextMenuGlobalPosition,
-        contextMenuViewport: action.contextMenuViewport,
-        contextMenuMeshId: action.contextMenuMeshId,
-        contextMenuMeshIntersectionPosition: action.contextMenuMeshIntersectionPosition,
-        contextUnmappedSegmentId: action.contextUnmappedSegmentId,
+        globalPosition: action.globalPosition,
+        viewport: action.viewport,
+        meshId: action.meshId,
+        meshIntersectionPosition: action.meshIntersectionPosition,
+        unmappedSegmentId: action.unmappedSegmentId,
       });
     }
 
@@ -172,11 +172,11 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
         contextMenuPosition: null,
         clickedNodeId: null,
         clickedBoundingBoxId: null,
-        contextMenuGlobalPosition: null,
-        contextMenuViewport: null,
-        contextMenuMeshId: null,
-        contextMenuMeshIntersectionPosition: null,
-        contextUnmappedSegmentId: null,
+        globalPosition: null,
+        viewport: null,
+        meshId: null,
+        meshIntersectionPosition: null,
+        unmappedSegmentId: null,
       });
     }
 

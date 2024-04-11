@@ -538,12 +538,12 @@ type UiInformation = {
   readonly contextInfo: {
     readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
     readonly clickedNodeId: number | null | undefined;
-    readonly contextMenuMeshId: number | null | undefined;
-    readonly contextMenuMeshIntersectionPosition: Vector3 | null | undefined;
+    readonly meshId: number | null | undefined;
+    readonly meshIntersectionPosition: Vector3 | null | undefined;
     readonly clickedBoundingBoxId: number | null | undefined;
-    readonly contextMenuGlobalPosition: Vector3 | null | undefined;
-    readonly contextMenuViewport: OrthoView | null | undefined;
-    readonly contextUnmappedSegmentId?: number | null;
+    readonly globalPosition: Vector3 | null | undefined;
+    readonly viewport: OrthoView | null | undefined;
+    readonly unmappedSegmentId?: number | null;
   };
 };
 type BaseMeshInformation = {

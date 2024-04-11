@@ -1223,12 +1223,12 @@ function WkContextMenu() {
       mappingInfo,
       maybeClickedNodeId: contextInfo.clickedNodeId,
       clickedBoundingBoxId: contextInfo.clickedBoundingBoxId,
-      globalPosition: contextInfo.contextMenuGlobalPosition,
+      globalPosition: contextInfo.globalPosition,
       additionalCoordinates: state.flycam.additionalCoordinates || undefined,
       contextMenuPosition: contextInfo.contextMenuPosition,
-      maybeViewport: contextInfo.contextMenuViewport,
-      maybeClickedMeshId: contextInfo.contextMenuMeshId,
-      maybeMeshIntersectionPosition: contextInfo.contextMenuMeshIntersectionPosition,
+      maybeViewport: contextInfo.viewport,
+      maybeClickedMeshId: contextInfo.meshId,
+      maybeMeshIntersectionPosition: contextInfo.meshIntersectionPosition,
       hideContextMenu,
     };
   });

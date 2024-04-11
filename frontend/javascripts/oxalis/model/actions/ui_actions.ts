@@ -199,11 +199,11 @@ export const showContextMenuAction = (
     contextMenuPosition: [xPos, yPos],
     clickedNodeId: nodeId,
     clickedBoundingBoxId: boundingBoxId,
-    contextMenuGlobalPosition: globalPosition,
-    contextMenuViewport: viewport,
-    contextMenuMeshId: meshId,
-    contextMenuMeshIntersectionPosition: meshIntersectionPosition,
-    contextUnmappedSegmentId: unmappedSegmentId,
+    globalPosition,
+    viewport,
+    meshId,
+    meshIntersectionPosition,
+    unmappedSegmentId,
   }) as const;
 
 export const hideContextMenuAction = () =>

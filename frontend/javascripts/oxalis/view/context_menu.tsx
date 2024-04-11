@@ -1234,7 +1234,10 @@ function WkContextMenu() {
   });
 
   return (
-    <GenericContextMenuContainer {...props}>
+    <GenericContextMenuContainer
+      hideContextMenu={hideContextMenu}
+      contextMenuPosition={props.contextMenuPosition}
+    >
       <ContextMenuInner {...props} />
     </GenericContextMenuContainer>
   );

@@ -9,7 +9,7 @@ function importComlink() {
   if (!isNodeContext) {
     // Comlink should only be imported in a browser context, since it makes use of functionality
     // which does not exist in node
-    // eslint-disable-next-line global-require
+
     const { wrap, transferHandlers, expose: _expose, transfer: _transfer } = require("comlink");
 
     return {

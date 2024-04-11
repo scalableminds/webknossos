@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { Spin, Input, Table, Button, Modal, Tooltip, Tag, Row, Col, Card } from "antd";
 import {

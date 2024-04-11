@@ -1,7 +1,7 @@
 import { notification, Collapse } from "antd";
 import { CloseCircleOutlined } from "@ant-design/icons";
 import React from "react";
-import { sleep } from "./utils";
+import { animationFrame, sleep } from "./utils";
 
 export type ToastStyle = "info" | "warning" | "success" | "error";
 export type Message = {
@@ -113,19 +113,16 @@ const Toast = {
 
     notification[type](toastConfig);
 
-    // Make sure that toasts don't just dissapear while user has WK in background tab (e.g. while uploading large dataset).
+    // Make sure that toasts don't just disappear while the user has WK in a background tab (e.g. while uploading large dataset).
     // Most browsers pause requestAnimationFrame() if the current tab is not active, but Firefox does not seem to do that.
     if (!sticky && key != null) {
-      requestAnimationFrame(async () => {
-        // ensure tab is active
-        const timeoutAfterTabSwitch = timeout >= 1000 ? 1000 : 0;
-        await sleep(timeout - timeoutAfterTabSwitch);
-        requestAnimationFrame(async () => {
-          // If the user has switched the tab, show the toast for a short time so that the user doesn't just see the toast dissapear.
-          await sleep(timeoutAfterTabSwitch);
-          this.close(key);
-        });
-      });
+      await animationFrame(); // ensure tab is active
+      const splitTimeout = timeout / 2;
+      await sleep(splitTimeout);
+      await animationFrame();
+      // If the user has switched the tab, show the toast again so that the user doesn't just see the toast dissapear.
+      await sleep(splitTimeout);
+      this.close(key);
     }
   },
 

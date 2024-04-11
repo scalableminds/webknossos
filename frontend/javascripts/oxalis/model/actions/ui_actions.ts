@@ -1,4 +1,4 @@
-import type { AnnotationTool, Vector3 } from "oxalis/constants";
+import type { AnnotationTool, OrthoView, Vector3 } from "oxalis/constants";
 import type { OxalisState, BorderOpenStatus, Theme } from "oxalis/store";
 import { StartAIJobModalState } from "oxalis/view/action-bar/starting_job_modals";
 
@@ -25,6 +25,8 @@ type HideMeasurementTooltipAction = ReturnType<typeof hideMeasurementTooltipActi
 type SetLastMeasuredPositionAction = ReturnType<typeof setLastMeasuredPositionAction>;
 type SetIsMeasuringAction = ReturnType<typeof setIsMeasuringAction>;
 type SetNavbarHeightAction = ReturnType<typeof setNavbarHeightAction>;
+type ShowContextMenuAction = ReturnType<typeof showContextMenuAction>;
+type HideContextMenuAction = ReturnType<typeof hideContextMenuAction>;
 
 type SetRenderAnimationModalVisibilityAction = ReturnType<
   typeof setRenderAnimationModalVisibilityAction
@@ -54,7 +56,9 @@ export type UiAction =
   | HideMeasurementTooltipAction
   | SetLastMeasuredPositionAction
   | SetIsMeasuringAction
-  | SetNavbarHeightAction;
+  | SetNavbarHeightAction
+  | ShowContextMenuAction
+  | HideContextMenuAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -177,4 +181,32 @@ export const setNavbarHeightAction = (navbarHeight: number) =>
   ({
     type: "SET_NAVBAR_HEIGHT",
     navbarHeight,
+  }) as const;
+
+export const showContextMenuAction = (
+  xPos: number,
+  yPos: number,
+  nodeId: number | null | undefined,
+  boundingBoxId: number | null | undefined,
+  globalPosition: Vector3 | null | undefined,
+  viewport: OrthoView,
+  meshId?: number | null | undefined,
+  meshIntersectionPosition?: Vector3 | null | undefined,
+  unmappedSegmentId?: number | null,
+) =>
+  ({
+    type: "SHOW_CONTEXT_MENU",
+    contextMenuPosition: [xPos, yPos],
+    clickedNodeId: nodeId,
+    clickedBoundingBoxId: boundingBoxId,
+    contextMenuGlobalPosition: globalPosition,
+    contextMenuViewport: viewport,
+    contextMenuMeshId: meshId,
+    contextMenuMeshIntersectionPosition: meshIntersectionPosition,
+    contextUnmappedSegmentId: unmappedSegmentId,
+  }) as const;
+
+export const hideContextMenuAction = () =>
+  ({
+    type: "HIDE_CONTEXT_MENU",
   }) as const;

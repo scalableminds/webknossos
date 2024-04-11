@@ -1,7 +1,7 @@
 import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps, Modal } from "antd";
-import { connect, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import React, { createContext, MouseEvent, useContext, useEffect, useState } from "react";
 import type {
   APIConnectomeFile,
@@ -125,13 +125,14 @@ import {
   ensureLayerMappingsAreLoadedAction,
   ensureSegmentIndexIsLoadedAction,
 } from "oxalis/model/actions/dataset_actions";
+import { hideContextMenuAction } from "oxalis/model/actions/ui_actions";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
 
 // The newest eslint version thinks the props listed below aren't used.
 type OwnProps = {
-  contextMenuPosition: [number, number] | null | undefined;
+  contextMenuPosition: Readonly<[number, number]> | null | undefined;
   maybeClickedNodeId: number | null | undefined;
   maybeClickedMeshId: number | null | undefined;
   maybeMeshIntersectionPosition: Vector3 | null | undefined;
@@ -1114,7 +1115,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
 }
 
 export function GenericContextMenuContainer(props: {
-  contextMenuPosition: [number, number] | null | undefined;
+  contextMenuPosition: Readonly<[number, number]> | null | undefined;
   hideContextMenu: () => void;
   children: React.ReactElement;
   positionAbsolute?: boolean;
@@ -1186,7 +1187,52 @@ export function GenericContextMenuContainer(props: {
   );
 }
 
-function ContextMenuContainer(props: Props) {
+const hideContextMenu = () => Store.dispatch(hideContextMenuAction());
+function WkContextMenu() {
+  const props = useSelector((state: OxalisState) => {
+    const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+    const mappingInfo = getMappingInfo(
+      state.temporaryConfiguration.activeMappingByLayer,
+      visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+    );
+    const someTracing = maybeGetSomeTracing(state.tracing);
+    const { contextInfo } = state.uiInformation;
+    return {
+      skeletonTracing: state.tracing.skeleton,
+      volumeTracing: getActiveSegmentationTracing(state),
+      datasetScale: state.dataset.dataSource.scale,
+      activeTool: state.uiInformation.activeTool,
+      dataset: state.dataset,
+      allowUpdate: state.tracing.restrictions.allowUpdate,
+      visibleSegmentationLayer,
+      currentMeshFile:
+        visibleSegmentationLayer != null
+          ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+          : null,
+      currentConnectomeFile:
+        visibleSegmentationLayer != null
+          ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
+              .currentConnectomeFile
+          : null,
+      useLegacyBindings: state.userConfiguration.useLegacyBindings,
+      userBoundingBoxes: someTracing != null ? someTracing.userBoundingBoxes : [],
+      segments:
+        visibleSegmentationLayer != null
+          ? getSegmentsForLayer(state, visibleSegmentationLayer.name)
+          : null,
+      mappingInfo,
+      maybeClickedNodeId: contextInfo.clickedNodeId,
+      clickedBoundingBoxId: contextInfo.clickedBoundingBoxId,
+      globalPosition: contextInfo.contextMenuGlobalPosition,
+      additionalCoordinates: state.flycam.additionalCoordinates || undefined,
+      contextMenuPosition: contextInfo.contextMenuPosition,
+      maybeViewport: contextInfo.contextMenuViewport,
+      maybeClickedMeshId: contextInfo.contextMenuMeshId,
+      maybeMeshIntersectionPosition: contextInfo.contextMenuMeshIntersectionPosition,
+      hideContextMenu,
+    };
+  });
+
   return (
     <GenericContextMenuContainer {...props}>
       <ContextMenuInner {...props} />
@@ -1603,39 +1649,4 @@ const Actions = {
   },
 };
 
-function mapStateToProps(state: OxalisState): StateProps {
-  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-  const mappingInfo = getMappingInfo(
-    state.temporaryConfiguration.activeMappingByLayer,
-    visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
-  );
-  const someTracing = maybeGetSomeTracing(state.tracing);
-  return {
-    skeletonTracing: state.tracing.skeleton,
-    volumeTracing: getActiveSegmentationTracing(state),
-    datasetScale: state.dataset.dataSource.scale,
-    activeTool: state.uiInformation.activeTool,
-    dataset: state.dataset,
-    allowUpdate: state.tracing.restrictions.allowUpdate,
-    visibleSegmentationLayer,
-    currentMeshFile:
-      visibleSegmentationLayer != null
-        ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
-        : null,
-    currentConnectomeFile:
-      visibleSegmentationLayer != null
-        ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
-            .currentConnectomeFile
-        : null,
-    useLegacyBindings: state.userConfiguration.useLegacyBindings,
-    userBoundingBoxes: someTracing != null ? someTracing.userBoundingBoxes : [],
-    segments:
-      visibleSegmentationLayer != null
-        ? getSegmentsForLayer(state, visibleSegmentationLayer.name)
-        : null,
-    mappingInfo,
-  };
-}
-
-const connector = connect(mapStateToProps);
-export default connector(ContextMenuContainer);
+export default WkContextMenu;

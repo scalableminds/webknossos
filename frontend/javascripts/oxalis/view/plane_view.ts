@@ -176,6 +176,7 @@ class PlaneView {
       // });
       // @ts-ignore
       oldRaycasterHit.material.emissive.setHex("#FF00FF");
+      // @ts-ignore
       oldRaycasterHit.material.color.setHex(oldRaycasterHit.material.savedHex);
       oldRaycasterHit = null;
     }
@@ -189,8 +190,11 @@ class PlaneView {
       //   // @ts-ignore
       //   meshPart.material.emissive.setHSL(...hoveredColor);
       // });
+      // @ts-ignore
       hitObject.material.emissive.setHSL(...hoveredColor);
+      // @ts-ignore
       hitObject.material.savedHex = hitObject.material.color.getHex();
+      // @ts-ignore
       hitObject.material.color.setHSL(...hoveredColor);
       // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", hitObject.parent.segmentId));

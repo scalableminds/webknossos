@@ -51,12 +51,7 @@ import {
   LineMeasurementTool,
   AreaMeasurementTool,
 } from "oxalis/controller/combinations/tool_controls";
-import type {
-  ShowContextMenuFunction,
-  OrthoView,
-  OrthoViewMap,
-  AnnotationTool,
-} from "oxalis/constants";
+import type { OrthoView, OrthoViewMap, AnnotationTool } from "oxalis/constants";
 import { OrthoViewValuesWithoutTDView, OrthoViews, AnnotationToolEnum } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/model/accessors/view_mode_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -90,10 +85,6 @@ function ensureNonConflictingHandlers(
   }
 }
 
-type OwnProps = {
-  showContextMenuAt: ShowContextMenuFunction;
-};
-
 const cycleTools = () => {
   Store.dispatch(cycleToolAction());
 };
@@ -110,7 +101,7 @@ type StateProps = {
   tracing: Tracing;
   activeTool: AnnotationTool;
 };
-type Props = StateProps & OwnProps;
+type Props = StateProps;
 
 class SkeletonKeybindings {
   static getKeyboardControls() {
@@ -304,37 +295,14 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   getPlaneMouseControls(planeId: OrthoView): MouseBindingMap {
-    const moveControls = MoveTool.getMouseControls(
-      planeId,
-      this.planeView,
-      this.props.showContextMenuAt,
-    );
-    const skeletonControls = SkeletonTool.getMouseControls(
-      this.planeView,
-      this.props.showContextMenuAt,
-    );
-    const drawControls = DrawTool.getPlaneMouseControls(
-      planeId,
-      this.planeView,
-      this.props.showContextMenuAt,
-    );
-    const eraseControls = EraseTool.getPlaneMouseControls(
-      planeId,
-      this.planeView,
-      this.props.showContextMenuAt,
-    );
+    const moveControls = MoveTool.getMouseControls(planeId, this.planeView);
+    const skeletonControls = SkeletonTool.getMouseControls(this.planeView);
+    const drawControls = DrawTool.getPlaneMouseControls(planeId, this.planeView);
+    const eraseControls = EraseTool.getPlaneMouseControls(planeId, this.planeView);
     const fillCellControls = FillCellTool.getPlaneMouseControls(planeId);
     const pickCellControls = PickCellTool.getPlaneMouseControls(planeId);
-    const boundingBoxControls = BoundingBoxTool.getPlaneMouseControls(
-      planeId,
-      this.planeView,
-      this.props.showContextMenuAt,
-    );
-    const quickSelectControls = QuickSelectTool.getPlaneMouseControls(
-      planeId,
-      this.planeView,
-      this.props.showContextMenuAt,
-    );
+    const boundingBoxControls = BoundingBoxTool.getPlaneMouseControls(planeId, this.planeView);
+    const quickSelectControls = QuickSelectTool.getPlaneMouseControls(planeId, this.planeView);
     const proofreadControls = ProofreadTool.getPlaneMouseControls(planeId, this.planeView);
     const lineMeasurementControls = LineMeasurementTool.getPlaneMouseControls();
     const areaMeasurementControls = AreaMeasurementTool.getPlaneMouseControls();
@@ -695,7 +663,6 @@ class PlaneController extends React.PureComponent<Props> {
         cameras={this.planeView.getCameras()}
         tracing={this.props.tracing}
         planeView={this.planeView}
-        showContextMenuAt={this.props.showContextMenuAt}
       />
     );
   }

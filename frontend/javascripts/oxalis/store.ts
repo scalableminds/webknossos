@@ -535,6 +535,16 @@ type UiInformation = {
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
   readonly navbarHeight: number;
+  readonly contextInfo: {
+    readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
+    readonly clickedNodeId: number | null | undefined;
+    readonly contextMenuMeshId: number | null | undefined;
+    readonly contextMenuMeshIntersectionPosition: Vector3 | null | undefined;
+    readonly clickedBoundingBoxId: number | null | undefined;
+    readonly contextMenuGlobalPosition: Vector3 | null | undefined;
+    readonly contextMenuViewport: OrthoView | null | undefined;
+    readonly contextUnmappedSegmentId?: number | null;
+  };
 };
 type BaseMeshInformation = {
   readonly segmentId: number;

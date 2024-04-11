@@ -1,12 +1,5 @@
 import * as THREE from "three";
-import type {
-  OrthoView,
-  OrthoViewMap,
-  Point2,
-  Vector3,
-  ShowContextMenuFunction,
-  Viewport,
-} from "oxalis/constants";
+import type { OrthoView, OrthoViewMap, Point2, Vector3, Viewport } from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import _ from "lodash";
@@ -53,6 +46,7 @@ import Dimensions from "oxalis/model/dimensions";
 import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
 import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import ArbitraryView from "oxalis/view/arbitrary_view";
+import { showContextMenuAction } from "oxalis/model/actions/ui_actions";
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,
@@ -137,7 +131,6 @@ export function handleOpenContextMenu(
   plane: OrthoView,
   isTouch: boolean,
   event: MouseEvent,
-  showNodeContextMenuAt: ShowContextMenuFunction,
   meshId?: number | null | undefined,
   meshIntersectionPosition?: Vector3 | null | undefined,
 ) {
@@ -150,15 +143,26 @@ export function handleOpenContextMenu(
   const globalPosition = calculateMaybeGlobalPos(state, position);
   const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, plane);
   const clickedBoundingBoxId = hoveredEdgesInfo != null ? hoveredEdgesInfo[0].boxId : null;
-  showNodeContextMenuAt(
-    event.pageX,
-    event.pageY,
-    nodeId,
-    clickedBoundingBoxId,
-    globalPosition,
-    activeViewport,
-    meshId,
-    meshIntersectionPosition,
+
+  // On Windows the right click to open the context menu is also triggered for the overlay
+  // of the context menu. This causes the context menu to instantly close after opening.
+  // Therefore delay the state update to delay that the context menu is rendered.
+  // Thus the context overlay does not get the right click as an event and therefore does not close.
+  setTimeout(
+    () =>
+      Store.dispatch(
+        showContextMenuAction(
+          event.pageX,
+          event.pageY,
+          nodeId,
+          clickedBoundingBoxId,
+          globalPosition,
+          activeViewport,
+          meshId,
+          meshIntersectionPosition,
+        ),
+      ),
+    0,
   );
 }
 export function moveNode(

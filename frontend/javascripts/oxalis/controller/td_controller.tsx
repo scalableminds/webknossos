@@ -9,7 +9,6 @@ import {
   OrthoViews,
   OrthoViewMap,
   Point2,
-  ShowContextMenuFunction,
   Vector3,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
@@ -67,14 +66,14 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
       activeTool === AnnotationToolEnum.PROOFREAD
         ? ProofreadTool.onLeftClick(planeView, pos, plane, event, isTouch)
         : SkeletonTool.onLeftClick(
-          planeView,
-          pos,
-          event.shiftKey,
-          event.altKey,
-          event.ctrlKey || event.metaKey,
-          OrthoViews.TDView,
-          isTouch,
-        ),
+            planeView,
+            pos,
+            event.shiftKey,
+            event.altKey,
+            event.ctrlKey || event.metaKey,
+            OrthoViews.TDView,
+            isTouch,
+          ),
   };
 }
 
@@ -83,7 +82,6 @@ type OwnProps = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   planeView?: PlaneView;
   tracing?: Tracing;
-  showContextMenuAt?: ShowContextMenuFunction;
 };
 type StateProps = {
   flycam: Flycam;
@@ -248,13 +246,16 @@ class TDController extends React.PureComponent<Props> {
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        if (this.props.planeView == null || this.props.showContextMenuAt == null) return;
+        if (this.props.planeView == null) return;
         const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
         // @ts-expect-error ts-migrate(2339) FIXME: Object is possibly 'null'.
         const meshId = intersection ? intersection.object.parent?.segmentId : null;
         // todop: also extract unmappedSegmentId
         if (intersection) {
-          console.log("intersection.object.unmappedSegmentId", intersection.object.unmappedSegmentId);
+          console.log(
+            "intersection.object.unmappedSegmentId",
+            intersection.object.unmappedSegmentId,
+          );
         }
 
         const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;
@@ -264,7 +265,6 @@ class TDController extends React.PureComponent<Props> {
           plane,
           isTouch,
           event,
-          this.props.showContextMenuAt,
           meshId,
           meshClickedPosition,
         );

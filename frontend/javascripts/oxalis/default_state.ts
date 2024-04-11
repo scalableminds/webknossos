@@ -251,6 +251,16 @@ const defaultState: OxalisState = {
       isMeasuring: false,
     },
     navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT,
+    contextInfo: {
+      contextMenuPosition: null,
+      clickedNodeId: null,
+      contextMenuMeshId: null,
+      contextMenuMeshIntersectionPosition: null,
+      clickedBoundingBoxId: null,
+      contextMenuGlobalPosition: null,
+      contextMenuViewport: null,
+      contextUnmappedSegmentId: null,
+    },
   },
   localSegmentationData: {},
 };

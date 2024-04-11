@@ -4,7 +4,12 @@ import { Vector3, Vector4 } from "oxalis/constants";
 import { APIDatasetId } from "types/api_flow_types";
 import { doWithToken } from "./token";
 
-export type MeshChunk = { position: Vector3; byteOffset: number; byteSize: number, unmappedSegmentId: number };
+export type MeshChunk = {
+  position: Vector3;
+  byteOffset: number;
+  byteSize: number;
+  unmappedSegmentId: number;
+};
 
 type MeshLodInfo = {
   scale: number;

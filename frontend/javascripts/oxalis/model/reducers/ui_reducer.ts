@@ -154,6 +154,32 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SHOW_CONTEXT_MENU": {
+      return updateKey2(state, "uiInformation", "contextInfo", {
+        contextMenuPosition: action.contextMenuPosition,
+        clickedNodeId: action.clickedNodeId,
+        clickedBoundingBoxId: action.clickedBoundingBoxId,
+        contextMenuGlobalPosition: action.contextMenuGlobalPosition,
+        contextMenuViewport: action.contextMenuViewport,
+        contextMenuMeshId: action.contextMenuMeshId,
+        contextMenuMeshIntersectionPosition: action.contextMenuMeshIntersectionPosition,
+        contextUnmappedSegmentId: action.contextUnmappedSegmentId,
+      });
+    }
+
+    case "HIDE_CONTEXT_MENU": {
+      return updateKey2(state, "uiInformation", "contextInfo", {
+        contextMenuPosition: null,
+        clickedNodeId: null,
+        clickedBoundingBoxId: null,
+        contextMenuGlobalPosition: null,
+        contextMenuViewport: null,
+        contextMenuMeshId: null,
+        contextMenuMeshIntersectionPosition: null,
+        contextUnmappedSegmentId: null,
+      });
+    }
+
     default:
       return state;
   }

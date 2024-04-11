@@ -1966,14 +1966,14 @@ export async function getTimeTrackingForUserSummedPerAnnotation(
 
 export async function getTimeTrackingForUserSpans(
   userId: string,
-  startDate: dayjs.Dayjs,
-  endDate: dayjs.Dayjs,
+  startDate: number,
+  endDate: number,
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
   projectIds?: string[] | null,
 ): Promise<Array<APITimeTrackingSpan>> {
   const params = new URLSearchParams({
-    start: startDate.valueOf().toString(),
-    end: endDate.valueOf().toString(),
+    start: startDate.toString(),
+    end: endDate.toString(),
   });
   if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0)

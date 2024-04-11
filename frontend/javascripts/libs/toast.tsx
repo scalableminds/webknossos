@@ -116,8 +116,8 @@ const Toast = {
     // Make sure that toasts don't just disappear while the user has WK in a background tab (e.g. while uploading large dataset).
     // Most browsers pause requestAnimationFrame() if the current tab is not active, but Firefox does not seem to do that.
     if (!sticky && key != null) {
-      await animationFrame(); // ensure tab is active
       const splitTimeout = timeout / 2;
+      await animationFrame(); // ensure tab is active
       await sleep(splitTimeout);
       await animationFrame();
       // If the user has switched the tab, show the toast again so that the user doesn't just see the toast dissapear.

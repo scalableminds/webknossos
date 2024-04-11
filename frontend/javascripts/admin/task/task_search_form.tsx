@@ -1,6 +1,5 @@
 import { Form, Row, Dropdown, Col, Button, Input, Select } from "antd";
 import { DownloadOutlined, DownOutlined, RetweetOutlined } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import React, { useEffect, useState } from "react";
 import _ from "lodash";

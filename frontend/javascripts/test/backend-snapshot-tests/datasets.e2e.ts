@@ -26,7 +26,6 @@ test.serial("getDatasets", async (t) => {
   let retry = 0;
 
   while (JSON.stringify(datasets).indexOf("Not imported yet") === -1 && retry < 10) {
-    // eslint-disable-next-line no-await-in-loop
     datasets = await api.getDatasets();
     retry++;
   }

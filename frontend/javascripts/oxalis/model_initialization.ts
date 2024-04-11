@@ -760,7 +760,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
         // Ensure mesh files are loaded, so that the given mesh file name can be activated.
         // Doing this in a loop is fine, since it can only happen once (maximum) and there
         // are not many other iterations (== layers) which are blocked by this.
-        // eslint-disable-next-line no-await-in-loop
+
         await dispatchMaybeFetchMeshFilesAsync(Store.dispatch, segmentationLayer, dataset, false);
         Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, currentMeshFileName));
       }

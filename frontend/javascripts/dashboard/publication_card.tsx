@@ -1,6 +1,5 @@
 import { Card, Button, Tooltip } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import React, { useState } from "react";
 import classNames from "classnames";

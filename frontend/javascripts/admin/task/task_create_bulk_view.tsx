@@ -235,7 +235,7 @@ function TaskCreateBulkView() {
 
       for (let i = 0; i < tasks.length; i += NUM_TASKS_PER_BATCH) {
         const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
-        // eslint-disable-next-line no-await-in-loop
+
         const response = await createTasks(subArray);
         taskResponses = taskResponses.concat(response.tasks);
         warnings = warnings.concat(response.warnings);

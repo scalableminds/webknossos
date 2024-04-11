@@ -118,7 +118,6 @@ test.serial(
     RequestMock.sendJSONReceiveArraybufferWithHeaders
       .onFirstCall()
       .returns(
-        // eslint-disable-next-line prefer-promise-reject-errors
         Promise.reject({
           status: 403,
         }),

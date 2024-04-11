@@ -45,11 +45,7 @@ function SkeletonQuickSelectModal({ skeletonSAMProgressPercentage }: Props) {
         prediction is completed. <br /> <br />
         After the quick selection is complete, you have the option to make corrections for each
         slice. To quickly navigate between the nodes and correct the corresponding annotations, use
-        the key combinations <Text code>ctrl + ./,</Text>. When you have completed your corrections,
-        you can perform a volume interpolation to label the slices between the quick selections. To
-        do this, use the button at the bottom of the sticky toast in the top right corner. The toast
-        is displayed as soon as the quick selection has been completed. To ignore the interpolation,
-        simply close the toast.
+        the key combinations <Text code>ctrl + ./,</Text>.
         <Progress
           percent={skeletonSAMProgressPercentage}
           format={(percent?: number) => `${Math.round(percent || 0)}%`}

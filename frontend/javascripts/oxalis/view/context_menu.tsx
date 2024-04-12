@@ -364,46 +364,109 @@ function getMaybeMinCutItem(
 
 function getMeshItems(
   volumeTracing: VolumeTracing | null | undefined,
-  maybeClickedMeshId: number | null | undefined,
-  maybeMeshIntersectionPosition: Vector3 | null | undefined,
+  clickedMeshId: number | null | undefined,
+  meshIntersectionPosition: Vector3 | null | undefined,
   maybeUnmappedSegmentId: number | null | undefined,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
   datasetScale: Vector3,
 ): MenuItemType[] {
   if (
-    maybeClickedMeshId == null ||
-    maybeMeshIntersectionPosition == null ||
-    visibleSegmentationLayer == null
+    clickedMeshId == null ||
+    meshIntersectionPosition == null ||
+    visibleSegmentationLayer == null ||
+    volumeTracing == null
   ) {
     return [];
   }
+  const state = Store.getState();
+  const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+  const activeCellId = getActiveCellId(volumeTracing);
+
+  const maybeProofreadingItems: MenuItemType[] = isProofreadingActive
+    ? [
+        {
+          key: "merge-agglomerate-skeleton",
+          disabled: !isProofreadingActive || clickedMeshId === activeCellId,
+          onClick: () => {
+            console.log(
+              `todop: merge ${clickedMeshId} or ${maybeUnmappedSegmentId} with ${activeCellId} or ${volumeTracing.activeUnmappedSegmentId}`,
+            );
+            // return Store.dispatch(proofreadMerge(globalPosition));
+          },
+          label: (
+            <Tooltip
+              title={
+                isProofreadingActive
+                  ? undefined
+                  : "Cannot merge because the proofreading tool is not active."
+              }
+            >
+              <span>Merge with active segment</span>
+            </Tooltip>
+          ),
+        },
+        {
+          key: "min-cut-agglomerate-at-position",
+          disabled:
+            !isProofreadingActive ||
+            clickedMeshId !== activeCellId ||
+            maybeUnmappedSegmentId == null ||
+            volumeTracing.activeUnmappedSegmentId == null,
+          onClick: () => {
+            console.log(
+              `todop: cut ${maybeUnmappedSegmentId} from ${volumeTracing.activeUnmappedSegmentId}`,
+            );
+            // return Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition));
+          },
+          label: (
+            <Tooltip
+              title={
+                isProofreadingActive
+                  ? undefined
+                  : "Cannot split because the proofreading tool is not active."
+              }
+            >
+              <span>Split from active segment</span>
+            </Tooltip>
+          ),
+        },
+        {
+          key: "split-from-all-neighbors",
+          disabled: maybeUnmappedSegmentId == null,
+          onClick: () => {
+            console.log(`todop: cut ${maybeUnmappedSegmentId} from all neighbors`);
+            // Store.dispatch(cutAgglomerateFromNeighborsAction(clickedNode.untransformedPosition));
+          },
+          label: "Split from all neighboring segments",
+        },
+      ]
+    : [];
 
   return [
     {
       key: "activate-segment",
       onClick: () =>
         Store.dispatch(
-          setActiveCellAction(maybeClickedMeshId, undefined, undefined, maybeUnmappedSegmentId),
+          setActiveCellAction(clickedMeshId, undefined, undefined, maybeUnmappedSegmentId),
         ),
-      // disabled: volumeTracing != null && maybeClickedMeshId === getActiveCellId(volumeTracing),
-      label: `Activate Segment (${maybeUnmappedSegmentId} -> ${maybeClickedMeshId})`,
+      // disabled: volumeTracing != null && clickedMeshId === getActiveCellId(volumeTracing),
+      label: `Activate Segment (${maybeUnmappedSegmentId} -> ${clickedMeshId})`,
     },
     {
       key: "hide-mesh",
-      onClick: () =>
-        Actions.hideMesh(Store.dispatch, visibleSegmentationLayer.name, maybeClickedMeshId),
+      onClick: () => Actions.hideMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),
       label: "Hide Mesh",
     },
     {
       key: "reload-mesh",
       onClick: () =>
-        Actions.refreshMesh(Store.dispatch, visibleSegmentationLayer.name, maybeClickedMeshId),
+        Actions.refreshMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),
       label: "Reload Mesh",
     },
     {
       key: "jump-to-mesh",
       onClick: () => {
-        const unscaledPosition = V3.divide3(maybeMeshIntersectionPosition, datasetScale);
+        const unscaledPosition = V3.divide3(meshIntersectionPosition, datasetScale);
         Actions.setPosition(Store.dispatch, unscaledPosition);
       },
       label: "Jump to Position",
@@ -411,9 +474,10 @@ function getMeshItems(
     {
       key: "remove-mesh",
       onClick: () =>
-        Actions.removeMesh(Store.dispatch, visibleSegmentationLayer.name, maybeClickedMeshId),
+        Actions.removeMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),
       label: "Remove Mesh",
     },
+    ...maybeProofreadingItems,
   ];
 }
 
@@ -957,7 +1021,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                     title={
                       isProofreadingActive
                         ? undefined
-                        : "Cannot merge because the proofreading tool is not active."
+                        : "Cannot split because the proofreading tool is not active."
                     }
                   >
                     <span>

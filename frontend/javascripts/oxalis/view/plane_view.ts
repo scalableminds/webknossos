@@ -51,7 +51,7 @@ function updateMeshAppearance(mesh: THREE.Object3D) {
       mesh.material.savedHex = mesh.material.color.getHex();
     }
     // @ts-ignore
-    mesh.material.color.setHSL(...(mesh.isActiveUnmappedSegment ? ACTIVATED_COLOR : HOVERED_COLOR));
+    mesh.material.color.setHSL(...(mesh.isHovered ? HOVERED_COLOR : ACTIVATED_COLOR));
   } else {
     // @ts-ignore
     mesh.material.emissive.setHex("#FF00FF");

@@ -248,13 +248,14 @@ class TDController extends React.PureComponent<Props> {
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (this.props.planeView == null) return;
         const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
-        // @ts-expect-error ts-migrate(2339) FIXME: Object is possibly 'null'.
-        const meshId: number | null = intersection ? intersection.object.parent?.segmentId : null;
-        const unmappedSegmentId: number | null = intersection?.object.unmappedSegmentId;
-        // todop: also extract unmappedSegmentId
-        if (intersection) {
-          console.log("unmappedSegmentId", unmappedSegmentId);
-        }
+        const meshId: number | null = intersection
+          ? _.get(intersection.object.parent, "segmentId", null)
+          : null;
+        const unmappedSegmentId: number | null = _.get(
+          intersection?.object,
+          "unmappedSegmentId",
+          null,
+        );
 
         const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;
         handleOpenContextMenu(

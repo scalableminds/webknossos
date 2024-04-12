@@ -16,6 +16,7 @@ import VisibilityAwareRaycaster, {
   type RaycastIntersection,
 } from "libs/visibility_aware_raycaster";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 
 const createDirLight = (
   position: Vector3,
@@ -35,6 +36,31 @@ const createDirLight = (
 const raycaster = new VisibilityAwareRaycaster();
 let oldRaycasterHit: THREE.Object3D | null = null;
 const MESH_HOVER_THROTTLING_DELAY = 150;
+
+const ACTIVATED_COLOR = [0.7, 0.5, 0.1];
+const HOVERED_COLOR = [0.65, 0.5, 0.1];
+
+function updateMeshAppearance(mesh: THREE.Object3D) {
+  // @ts-ignore
+  if (mesh.isHovered || mesh.isActiveUnmappedSegment) {
+    // @ts-ignore
+    mesh.material.emissive.setHSL(...HOVERED_COLOR);
+    // @ts-ignore
+    if (mesh.material.savedHex == null) {
+      // @ts-ignore
+      mesh.material.savedHex = mesh.material.color.getHex();
+    }
+    // @ts-ignore
+    mesh.material.color.setHSL(...(mesh.isActiveUnmappedSegment ? ACTIVATED_COLOR : HOVERED_COLOR));
+  } else {
+    // @ts-ignore
+    mesh.material.emissive.setHex("#FF00FF");
+    // @ts-ignore
+    mesh.material.color.setHex(mesh.material.savedHex);
+    // @ts-ignore
+    mesh.material.savedHex = null;
+  }
+}
 
 class PlaneView {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
@@ -174,10 +200,13 @@ class PlaneView {
       //   // @ts-ignore
       //   meshPart.material.emissive.setHex("#FF00FF");
       // });
-      // @ts-ignore
-      oldRaycasterHit.material.emissive.setHex("#FF00FF");
-      // @ts-ignore
-      oldRaycasterHit.material.color.setHex(oldRaycasterHit.material.savedHex);
+      oldRaycasterHit.isHovered = false;
+      updateMeshAppearance(oldRaycasterHit);
+
+      // // @ts-ignore
+      // oldRaycasterHit.material.emissive.setHex("#FF00FF");
+      // // @ts-ignore
+      // oldRaycasterHit.material.color.setHex(oldRaycasterHit.material.savedHex);
       oldRaycasterHit = null;
     }
 
@@ -185,17 +214,18 @@ class PlaneView {
 
     // Highlight new hit
     if (hitObject?.parent != null) {
-      const hoveredColor = [0.7, 0.5, 0.1];
       // hitObject.parent.children.forEach((meshPart) => {
       //   // @ts-ignore
-      //   meshPart.material.emissive.setHSL(...hoveredColor);
+      //   meshPart.material.emissive.setHSL(...HOVERED_COLOR);
       // });
-      // @ts-ignore
-      hitObject.material.emissive.setHSL(...hoveredColor);
-      // @ts-ignore
-      hitObject.material.savedHex = hitObject.material.color.getHex();
-      // @ts-ignore
-      hitObject.material.color.setHSL(...hoveredColor);
+      hitObject.isHovered = true;
+      updateMeshAppearance(hitObject);
+      // // @ts-ignore
+      // hitObject.material.emissive.setHSL(...HOVERED_COLOR);
+      // // @ts-ignore
+      // hitObject.material.savedHex = hitObject.material.color.getHex();
+      // // @ts-ignore
+      // hitObject.material.color.setHSL(...HOVERED_COLOR);
       // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", hitObject.parent.segmentId));
       return intersections[0];
@@ -265,6 +295,38 @@ class PlaneView {
         true,
       ),
     );
+    this.unsubscribeFunctions.push(
+      listenToStoreProperty(
+        (storeState) => {
+          const segmentationTracing = getActiveSegmentationTracing(storeState);
+          if (segmentationTracing == null) {
+            return null;
+          }
+          return segmentationTracing.activeUnmappedSegmentId;
+        },
+        (activeUnmappedSegmentId) => this.highlightUnmappedSegmentId(activeUnmappedSegmentId),
+        true,
+      ),
+    );
+  }
+  highlightUnmappedSegmentId(activeUnmappedSegmentId: number | null | undefined): void {
+    const SceneController = getSceneController();
+    const { meshesLODRootGroup } = SceneController.segmentMeshController;
+    if (activeUnmappedSegmentId) {
+      meshesLODRootGroup.traverse((obj) => {
+        // @ts-ignore
+        if (obj.unmappedSegmentId === activeUnmappedSegmentId) {
+          // @ts-ignore
+          obj.isActiveUnmappedSegment = true;
+          updateMeshAppearance(obj);
+          // @ts-ignore
+        } else if (obj.isActiveUnmappedSegment) {
+          // @ts-ignore
+          obj.isActiveUnmappedSegment = false;
+          updateMeshAppearance(obj);
+        }
+      });
+    }
   }
 
   getCameraForPlane(plane: Viewport) {

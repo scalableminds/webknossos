@@ -769,6 +769,10 @@ function* loadPrecomputedMeshForSegmentId(
     Toast.error("Could not load mesh, since the requested mesh file was not found.");
     return;
   }
+  if (id === 0) {
+    Toast.error("Could not load mesh, since the clicked segment ID is 0.");
+    return;
+  }
 
   let availableChunksMap: ChunksMap = {};
   let scale: Vector3 | null = null;

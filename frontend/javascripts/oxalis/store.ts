@@ -245,6 +245,7 @@ export type VolumeTracing = TracingBase & {
   readonly segmentGroups: Array<SegmentGroup>;
   readonly largestSegmentId: number | null;
   readonly activeCellId: number;
+  readonly activeUnmappedSegmentId?: number | null; // not persisted
   // lastLabelActions[0] is the most recent one
   readonly lastLabelActions: Array<LabelAction>;
   readonly contourTracingMode: ContourMode;

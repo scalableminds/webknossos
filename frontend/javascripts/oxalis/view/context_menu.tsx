@@ -135,6 +135,7 @@ type OwnProps = {
   contextMenuPosition: Readonly<[number, number]> | null | undefined;
   maybeClickedNodeId: number | null | undefined;
   maybeClickedMeshId: number | null | undefined;
+  maybeUnmappedSegmentId: number | null | undefined;
   maybeMeshIntersectionPosition: Vector3 | null | undefined;
   clickedBoundingBoxId: number | null | undefined;
   globalPosition: Vector3 | null | undefined;
@@ -365,6 +366,7 @@ function getMeshItems(
   volumeTracing: VolumeTracing | null | undefined,
   maybeClickedMeshId: number | null | undefined,
   maybeMeshIntersectionPosition: Vector3 | null | undefined,
+  maybeUnmappedSegmentId: number | null | undefined,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
   datasetScale: Vector3,
 ): MenuItemType[] {
@@ -379,9 +381,12 @@ function getMeshItems(
   return [
     {
       key: "activate-segment",
-      onClick: () => Store.dispatch(setActiveCellAction(maybeClickedMeshId, undefined, undefined)),
-      disabled: volumeTracing != null && maybeClickedMeshId === getActiveCellId(volumeTracing),
-      label: `Activate Segment (${maybeClickedMeshId})`,
+      onClick: () =>
+        Store.dispatch(
+          setActiveCellAction(maybeClickedMeshId, undefined, undefined, maybeUnmappedSegmentId),
+        ),
+      // disabled: volumeTracing != null && maybeClickedMeshId === getActiveCellId(volumeTracing),
+      label: `Activate Segment (${maybeUnmappedSegmentId} -> ${maybeClickedMeshId})`,
     },
     {
       key: "hide-mesh",
@@ -417,6 +422,7 @@ function getNodeContextMenuOptions({
   clickedNodeId,
   maybeClickedMeshId,
   maybeMeshIntersectionPosition,
+  maybeUnmappedSegmentId,
   visibleSegmentationLayer,
   datasetScale,
   useLegacyBindings,
@@ -461,6 +467,7 @@ function getNodeContextMenuOptions({
     volumeTracing,
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
+    maybeUnmappedSegmentId,
     visibleSegmentationLayer,
     datasetScale,
   );
@@ -772,6 +779,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     additionalCoordinates,
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
+    maybeUnmappedSegmentId,
     viewport,
     visibleSegmentationLayer,
     segmentIdAtPosition,
@@ -1088,6 +1096,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     volumeTracing,
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
+    maybeUnmappedSegmentId,
     visibleSegmentationLayer,
     datasetScale,
   );
@@ -1229,6 +1238,7 @@ function WkContextMenu() {
       maybeViewport: contextInfo.viewport,
       maybeClickedMeshId: contextInfo.meshId,
       maybeMeshIntersectionPosition: contextInfo.meshIntersectionPosition,
+      maybeUnmappedSegmentId: contextInfo.unmappedSegmentId,
       hideContextMenu,
     };
   });

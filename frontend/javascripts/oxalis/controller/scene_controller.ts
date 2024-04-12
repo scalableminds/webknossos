@@ -75,7 +75,6 @@ class SceneController {
   rootGroup!: THREE.Object3D;
   // Group for all meshes including a light.
   meshesRootGroup!: THREE.Object3D;
-  stlMeshes: Record<string, THREE.Mesh> = {};
   segmentMeshController: SegmentMeshController;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
@@ -193,22 +192,6 @@ class SceneController {
 
     // @ts-ignore
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
-  }
-
-  removeSTL(id: string): void {
-    this.meshesRootGroup.remove(this.stlMeshes[id]);
-  }
-
-  setMeshVisibility(id: string, visibility: boolean): void {
-    this.stlMeshes[id].visible = visibility;
-  }
-
-  updateMeshPostion(id: string, position: Vector3): void {
-    const [x, y, z] = position;
-    const mesh = this.stlMeshes[id];
-    mesh.position.x = x;
-    mesh.position.y = y;
-    mesh.position.z = z;
   }
 
   createMeshes(): void {

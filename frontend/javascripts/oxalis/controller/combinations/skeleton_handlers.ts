@@ -133,6 +133,7 @@ export function handleOpenContextMenu(
   event: MouseEvent,
   meshId?: number | null | undefined,
   meshIntersectionPosition?: Vector3 | null | undefined,
+  unmappedSegmentId?: number | null | undefined,
 ) {
   const { activeViewport } = Store.getState().viewModeData.plane;
 
@@ -160,6 +161,7 @@ export function handleOpenContextMenu(
           activeViewport,
           meshId,
           meshIntersectionPosition,
+          unmappedSegmentId,
         ),
       ),
     0,

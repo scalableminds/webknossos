@@ -20,7 +20,7 @@ export type MeshSceneNode = THREE.Mesh<
   isActiveUnmappedSegment?: boolean;
   isHovered?: boolean;
 };
-type SceneGroupForMeshes = THREE.Group & { segmentId: number; children: MeshSceneNode[] };
+export type SceneGroupForMeshes = THREE.Group & { segmentId: number; children: MeshSceneNode[] };
 export type BufferGeometryWithInfo = THREE.BufferGeometry & { unmappedSegmentId: number };
 
 type GroupForLOD = THREE.Group & {

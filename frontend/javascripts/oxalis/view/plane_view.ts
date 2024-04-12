@@ -17,7 +17,7 @@ import VisibilityAwareRaycaster, {
 } from "libs/visibility_aware_raycaster";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { MeshSceneNode } from "oxalis/controller/segment_mesh_controller";
+import { MeshSceneNode, SceneGroupForMeshes } from "oxalis/controller/segment_mesh_controller";
 
 const createDirLight = (
   position: Vector3,
@@ -197,10 +197,6 @@ class PlaneView {
 
     // Undo highlighting of old hit
     if (oldRaycasterHit?.parent != null) {
-      // oldRaycasterHit.parent.children.forEach((meshPart) => {
-      //   // @ts-ignore
-      //   meshPart.material.emissive.setHex("#FF00FF");
-      // });
       oldRaycasterHit.isHovered = false;
       updateMeshAppearance(oldRaycasterHit);
 
@@ -211,20 +207,15 @@ class PlaneView {
 
     // Highlight new hit
     if (hitObject?.parent != null) {
-      // hitObject.parent.children.forEach((meshPart) => {
-      //   // @ts-ignore
-      //   meshPart.material.emissive.setHSL(...HOVERED_COLOR);
-      // });
       hitObject.isHovered = true;
       updateMeshAppearance(hitObject);
-      // // @ts-ignore
-      // hitObject.material.emissive.setHSL(...HOVERED_COLOR);
-      // // @ts-ignore
-      // hitObject.material.savedHex = hitObject.material.color.getHex();
-      // // @ts-ignore
-      // hitObject.material.color.setHSL(...HOVERED_COLOR);
-      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", hitObject.parent.segmentId));
+
+      Store.dispatch(
+        updateTemporarySettingAction(
+          "hoveredSegmentId",
+          (hitObject.parent as SceneGroupForMeshes).segmentId,
+        ),
+      );
       return intersections[0];
     } else {
       Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));

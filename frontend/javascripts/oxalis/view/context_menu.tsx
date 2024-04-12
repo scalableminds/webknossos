@@ -874,6 +874,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       Toast.info("No segment found at the clicked position");
       return;
     }
+    const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
 
     Store.dispatch(
       loadPrecomputedMeshAction(
@@ -881,6 +882,8 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         globalPosition,
         additionalCoordinates,
         currentMeshFile.meshFileName,
+        undefined,
+        !isProofreadingActive,
       ),
     );
   };

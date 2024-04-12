@@ -129,6 +129,8 @@ function* loadCoarseMesh(
         position,
         additionalCoordinates,
         currentMeshFile.meshFileName,
+        undefined,
+        false,
       ),
     );
   } else {

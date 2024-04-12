@@ -587,6 +587,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
         meshInfo.seedAdditionalCoordinates,
         meshInfo.meshFileName,
         layerName,
+        meshInfo.areChunksMerged,
       ),
     );
   } else {
@@ -710,7 +711,14 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 }
 
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
-  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName } = action;
+  const {
+    segmentId,
+    seedPosition,
+    seedAdditionalCoordinates,
+    meshFileName,
+    layerName,
+    mergeChunks,
+  } = action;
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -729,6 +737,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       seedAdditionalCoordinates,
       meshFileName,
       layer,
+      mergeChunks,
     ),
     cancel: take(
       (otherAction: Action) =>
@@ -747,10 +756,18 @@ function* loadPrecomputedMeshForSegmentId(
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
+  mergeChunks: boolean,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   yield* put(
-    addPrecomputedMeshAction(layerName, id, seedPosition, seedAdditionalCoordinates, meshFileName),
+    addPrecomputedMeshAction(
+      layerName,
+      id,
+      seedPosition,
+      seedAdditionalCoordinates,
+      meshFileName,
+      mergeChunks,
+    ),
   );
   yield* put(startedLoadingMeshAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
@@ -785,6 +802,7 @@ function* loadPrecomputedMeshForSegmentId(
       dataset,
       segmentationLayer,
       meshFile,
+      mergeChunks,
     );
     availableChunksMap = chunkDescriptors.availableChunksMap;
     scale = chunkDescriptors.scale;
@@ -808,6 +826,7 @@ function* loadPrecomputedMeshForSegmentId(
     loadingOrder,
     scale,
     additionalCoordinates,
+    mergeChunks,
   );
 
   try {
@@ -825,6 +844,7 @@ function* _getChunkLoadingDescriptors(
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,
   meshFile: APIMeshFile,
+  mergeChunks: boolean,
 ) {
   const availableChunksMap: ChunksMap = {};
   let scale: Vector3 | null = null;
@@ -916,6 +936,7 @@ function _getLoadChunksTasks(
   loadingOrder: number[],
   scale: Vector3 | null,
   additionalCoordinates: AdditionalCoordinate[] | null,
+  mergeChunks: boolean,
 ) {
   const { segmentMeshController } = getSceneController();
   const { meshFileName } = meshFile;
@@ -969,7 +990,7 @@ function _getLoadChunksTasks(
                   // All chunks in chunksForPosition have the same position
                   const position = chunksForPosition[0].position;
 
-                  const bufferGeometries = [];
+                  let bufferGeometries = [];
                   for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
                     const chunk = chunksForPosition[chunkIdx];
                     try {
@@ -983,11 +1004,14 @@ function _getLoadChunksTasks(
                       errorsWithDetails.push({ error, chunk });
                     }
                   }
+                  if (mergeChunks) {
+                    const geometry = mergeBufferGeometries(bufferGeometries, true);
 
-                  // const geometry = mergeBufferGeometries(bufferGeometries, true);
+                    // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
+                    if (geometry == null) continue;
 
-                  // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
-                  // if (geometry == null) continue;
+                    bufferGeometries = [geometry as BufferGeometryWithInfo];
+                  }
 
                   // Compute vertex normals to achieve smooth shading
                   bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
@@ -1197,7 +1221,7 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
 
   while (true) {
     const action = (yield* take(["SET_ADDITIONAL_COORDINATES"]) as any) as FlycamAction;
-    //satisfy TS
+    // Satisfy TS
     if (action.type !== "SET_ADDITIONAL_COORDINATES") {
       throw new Error("Unexpected action type");
     }

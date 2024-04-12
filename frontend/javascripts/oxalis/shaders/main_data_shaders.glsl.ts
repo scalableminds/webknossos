@@ -6,7 +6,7 @@ import {
   convertCellIdToRGB,
   getBrushOverlay,
   getCrossHairOverlay,
-  getSegmentationId,
+  getSegmentId,
 } from "./segmentation.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import {
@@ -167,7 +167,7 @@ ${compileShader(
   getBlendLayersCover,
   hasSegmentation ? convertCellIdToRGB : null,
   hasSegmentation ? getBrushOverlay : null,
-  hasSegmentation ? getSegmentationId : null,
+  hasSegmentation ? getSegmentId : null,
   hasSegmentation ? getCrossHairOverlay : null,
   almostEq,
 )}
@@ -194,7 +194,7 @@ void main() {
     float <%= segmentationName%>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
 
     if (<%= segmentationName%>_effective_alpha > 0.) {
-      vec4[2] segmentationId = getSegmentationId_<%= segmentationName%>(worldCoordUVW);
+      vec4[2] segmentationId = getSegmentId_<%= segmentationName%>(worldCoordUVW);
       <%= segmentationName%>_id_low = segmentationId[1];
       <%= segmentationName%>_id_high = segmentationId[0];
     }
@@ -352,7 +352,7 @@ ${compileShader(
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
   getMaybeFilteredColorOrFallback,
-  hasSegmentation ? getSegmentationId : null,
+  hasSegmentation ? getSegmentId : null,
   getResolution,
   almostEq,
 )}

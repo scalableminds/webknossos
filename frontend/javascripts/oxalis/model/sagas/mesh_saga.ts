@@ -1201,7 +1201,7 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
     if (action.type !== "SET_ADDITIONAL_COORDINATES") {
       throw new Error("Unexpected action type");
     }
-    const meshRecords = segmentMeshController.meshesGroupsPerSegmentationId;
+    const meshRecords = segmentMeshController.meshesGroupsPerSegmentId;
 
     if (action.values == null || action.values.length === 0) break;
     const newAdditionalCoordKey = getAdditionalCoordinatesAsString(action.values);

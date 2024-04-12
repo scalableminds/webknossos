@@ -265,12 +265,12 @@ export const getCrossHairOverlay: ShaderModule = {
   `,
 };
 
-export const getSegmentationId: ShaderModule = {
+export const getSegmentId: ShaderModule = {
   requirements: [binarySearchIndex, getRgbaAtIndex],
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    vec4[2] getSegmentationId_<%= segmentationName %>(vec3 worldPositionUVW) {
+    vec4[2] getSegmentId_<%= segmentationName %>(vec3 worldPositionUVW) {
       vec4[2] volume_color;
       vec3 transformedCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
       if (isOutsideOfBoundingBox(transformedCoordUVW)) {

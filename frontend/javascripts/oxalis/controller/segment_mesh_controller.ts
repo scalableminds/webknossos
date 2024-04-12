@@ -24,13 +24,13 @@ type SceneGroupForMeshes = THREE.Group & { segmentId: number };
 export type BufferGeometryWithInfo = THREE.BufferGeometry & { unmappedSegmentId: number };
 
 export default class SegmentMeshController {
-  // meshesLODRootGroup holds lights and one group per segmentation id.
+  // meshesLODRootGroup holds lights and one group per segment id.
   // Each group can hold multiple meshes.
   meshesLODRootGroup: CustomLOD;
 
-  // meshesGroupsPerSegmentationId holds a record for every additionalCoordinatesString, then
+  // meshesGroupsPerSegmentId holds a record for every additionalCoordinatesString, then
   // (nested) for each layerName, and then at the lowest level a group for each segment ID.
-  meshesGroupsPerSegmentationId: Record<
+  meshesGroupsPerSegmentId: Record<
     string,
     Record<string, Record<number, Record<number, THREE.Group>>>
   > = {};
@@ -53,7 +53,7 @@ export default class SegmentMeshController {
 
   addMeshFromVertices(
     vertices: Float32Array,
-    segmentationId: number,
+    segmentId: number,
     layerName: string,
     additionalCoordinates?: AdditionalCoordinate[] | undefined | null,
   ): void {
@@ -66,7 +66,7 @@ export default class SegmentMeshController {
 
     this.addMeshFromGeometry(
       bufferGeometry,
-      segmentationId,
+      segmentId,
       null,
       null,
       NO_LOD_MESH_INDEX,
@@ -111,7 +111,7 @@ export default class SegmentMeshController {
 
   addMeshFromGeometries(
     geometries: BufferGeometryWithInfo[],
-    segmentationId: number, // todop: rename to segmentId?
+    segmentId: number, // todop: rename to segmentId?
     offset: Vector3 | null = null,
     scale: Vector3 | null = null,
     lod: number,
@@ -119,16 +119,15 @@ export default class SegmentMeshController {
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   ): void {
     const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
-    const keys = [additionalCoordinatesString, layerName, segmentationId, lod];
+    const keys = [additionalCoordinatesString, layerName, segmentId, lod];
     const isNewlyAddedMesh =
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString]?.[layerName]?.[
-        segmentationId
-      ]?.[lod] == null;
-    const targetGroup = _.get(this.meshesGroupsPerSegmentationId, keys, new THREE.Group());
+      this.meshesGroupsPerSegmentId[additionalCoordinatesString]?.[layerName]?.[segmentId]?.[lod] ==
+      null;
+    const targetGroup = _.get(this.meshesGroupsPerSegmentId, keys, new THREE.Group());
     _.set(
-      this.meshesGroupsPerSegmentationId,
+      this.meshesGroupsPerSegmentId,
       keys,
-      _.get(this.meshesGroupsPerSegmentationId, keys, targetGroup),
+      _.get(this.meshesGroupsPerSegmentId, keys, targetGroup),
     );
     if (isNewlyAddedMesh) {
       if (lod === NO_LOD_MESH_INDEX) {
@@ -136,13 +135,13 @@ export default class SegmentMeshController {
       } else {
         this.meshesLODRootGroup.addLODMesh(targetGroup, lod);
       }
-      targetGroup.segmentId = segmentationId;
+      targetGroup.segmentId = segmentId;
       if (scale != null) {
         targetGroup.scale.copy(new THREE.Vector3(...scale));
       }
     }
     const meshes = geometries.map((geometry) => {
-      const mesh = this.constructMesh(segmentationId, layerName, geometry);
+      const mesh = this.constructMesh(segmentId, layerName, geometry);
       if ("unmappedSegmentId" in geometry) {
         mesh.unmappedSegmentId = geometry.unmappedSegmentId as number | null;
       }
@@ -157,13 +156,13 @@ export default class SegmentMeshController {
     for (const mesh of meshes) {
       group.add(mesh);
     }
-    group.segmentId = segmentationId;
-    this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentationId, lod, group);
+    group.segmentId = segmentId;
+    this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentId, lod, group);
   }
 
   addMeshFromGeometry(
     geometry: THREE.BufferGeometry,
-    segmentationId: number,
+    segmentId: number,
     offset: Vector3 | null = null,
     scale: Vector3 | null = null,
     lod: number,
@@ -171,16 +170,15 @@ export default class SegmentMeshController {
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   ): void {
     const additionalCoordinatesString = getAdditionalCoordinatesAsString(additionalCoordinates);
-    const keys = [additionalCoordinatesString, layerName, segmentationId, lod];
+    const keys = [additionalCoordinatesString, layerName, segmentId, lod];
     const isNewlyAddedMesh =
-      this.meshesGroupsPerSegmentationId[additionalCoordinatesString]?.[layerName]?.[
-        segmentationId
-      ]?.[lod] == null;
-    const targetGroup = _.get(this.meshesGroupsPerSegmentationId, keys, new THREE.Group());
+      this.meshesGroupsPerSegmentId[additionalCoordinatesString]?.[layerName]?.[segmentId]?.[lod] ==
+      null;
+    const targetGroup = _.get(this.meshesGroupsPerSegmentId, keys, new THREE.Group());
     _.set(
-      this.meshesGroupsPerSegmentationId,
+      this.meshesGroupsPerSegmentId,
       keys,
-      _.get(this.meshesGroupsPerSegmentationId, keys, targetGroup),
+      _.get(this.meshesGroupsPerSegmentId, keys, targetGroup),
     );
     if (isNewlyAddedMesh) {
       if (lod === NO_LOD_MESH_INDEX) {
@@ -188,24 +186,24 @@ export default class SegmentMeshController {
       } else {
         this.meshesLODRootGroup.addLODMesh(targetGroup, lod);
       }
-      targetGroup.segmentId = segmentationId;
+      targetGroup.segmentId = segmentId;
       if (scale != null) {
         targetGroup.scale.copy(new THREE.Vector3(...scale));
       }
     }
-    const mesh = this.constructMesh(segmentationId, layerName, geometry);
+    const mesh = this.constructMesh(segmentId, layerName, geometry);
     if (offset) {
       mesh.translateX(offset[0]);
       mesh.translateY(offset[1]);
       mesh.translateZ(offset[2]);
     }
-    this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentationId, lod, mesh);
+    this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentId, lod, mesh);
   }
 
-  removeMeshById(segmentationId: number, layerName: string): void {
+  removeMeshById(segmentId: number, layerName: string): void {
     const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-    const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentationId);
+    const meshGroups = this.getMeshGroups(additionalCoordKey, layerName, segmentId);
     if (meshGroups == null) {
       return;
     }
@@ -217,7 +215,7 @@ export default class SegmentMeshController {
         this.meshesLODRootGroup.removeNoLODSupportedMesh(meshGroup);
       }
     });
-    this.removeMeshFromMeshGroups(additionalCoordKey, layerName, segmentationId);
+    this.removeMeshFromMeshGroups(additionalCoordKey, layerName, segmentId);
   }
 
   getMeshGeometryInBestLOD(
@@ -247,7 +245,7 @@ export default class SegmentMeshController {
   setMeshColor(id: number, layerName: string): void {
     const color = this.getColorObjectForSegment(id, layerName);
     //  if in nd-dataset, set the color for all additional coordinates
-    for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentationId)) {
+    for (const recordsOfLayers of Object.values(this.meshesGroupsPerSegmentId)) {
       const meshDataForOneSegment = recordsOfLayers[layerName][id];
       if (meshDataForOneSegment != null) {
         for (const meshGroup of Object.values(meshDataForOneSegment)) {
@@ -299,42 +297,36 @@ export default class SegmentMeshController {
   getMeshGroupsByLOD(
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
     layerName: string,
-    segmentationId: number,
+    segmentId: number,
     lod: number,
   ): THREE.Group | null {
     const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-    const keys = [additionalCoordKey, layerName, segmentationId, lod];
-    return _.get(this.meshesGroupsPerSegmentationId, keys, null);
+    const keys = [additionalCoordKey, layerName, segmentId, lod];
+    return _.get(this.meshesGroupsPerSegmentId, keys, null);
   }
 
   getMeshGroups(
     additionalCoordKey: string,
     layerName: string,
-    segmentationId: number,
+    segmentId: number,
   ): Record<number, THREE.Group> | null {
-    const keys = [additionalCoordKey, layerName, segmentationId];
-    return _.get(this.meshesGroupsPerSegmentationId, keys, null);
+    const keys = [additionalCoordKey, layerName, segmentId];
+    return _.get(this.meshesGroupsPerSegmentId, keys, null);
   }
 
   addMeshToMeshGroups(
     additionalCoordKey: string,
     layerName: string,
-    segmentationId: number,
+    segmentId: number,
     lod: number,
     mesh:
       | THREE.Mesh<THREE.BufferGeometry, THREE.MeshLambertMaterial | THREE.MeshLambertMaterial[]>
       | THREE.Group,
   ) {
-    this.meshesGroupsPerSegmentationId[additionalCoordKey][layerName][segmentationId][lod].add(
-      mesh,
-    );
+    this.meshesGroupsPerSegmentId[additionalCoordKey][layerName][segmentId][lod].add(mesh);
   }
 
-  removeMeshFromMeshGroups(
-    additionalCoordinateKey: string,
-    layerName: string,
-    segmentationId: number,
-  ) {
-    delete this.meshesGroupsPerSegmentationId[additionalCoordinateKey][layerName][segmentationId];
+  removeMeshFromMeshGroups(additionalCoordinateKey: string, layerName: string, segmentId: number) {
+    delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId];
   }
 }

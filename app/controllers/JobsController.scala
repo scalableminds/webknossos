@@ -124,8 +124,7 @@ class JobsController @Inject()(
             "organization_name" -> organizationName,
             "organization_display_name" -> organization.displayName,
             "dataset_name" -> datasetName,
-            "scale" -> scale,
-            "webknossos_token" -> RpcTokenHolder.webknossosToken
+            "scale" -> scale
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)
@@ -205,8 +204,7 @@ class JobsController @Inject()(
             "organization_name" -> organizationName,
             "dataset_name" -> datasetName,
             "layer_name" -> layerName,
-            "new_dataset_name" -> newDatasetName,
-            "webknossos_token" -> RpcTokenHolder.webknossosToken,
+            "new_dataset_name" -> newDatasetName
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNucleiInferral"
           js <- jobService.publicWrites(job)
@@ -241,7 +239,6 @@ class JobsController @Inject()(
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "output_segmentation_layer_name" -> outputSegmentationLayerName,
-            "webknossos_token" -> RpcTokenHolder.webknossosToken,
             "bbox" -> bbox,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNeuronInferral"
@@ -267,8 +264,6 @@ class JobsController @Inject()(
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)
-          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
-            request.identity.loginInfo)
           command = JobCommand.export_tiff
           exportFileName = if (asOmeTiff)
             s"${formatDateForFilename(new Date())}__${datasetName}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.ome.tif"
@@ -281,7 +276,6 @@ class JobsController @Inject()(
             "export_file_name" -> exportFileName,
             "layer_name" -> layerName,
             "mag" -> mag,
-            "user_auth_token" -> userAuthToken.id,
             "annotation_layer_name" -> annotationLayerName,
             "annotation_id" -> annotationId
           )
@@ -311,8 +305,6 @@ class JobsController @Inject()(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
           _ <- datasetService.assertValidLayerNameLax(fallbackLayerName)
-          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
-            request.identity.loginInfo)
           command = JobCommand.materialize_volume_annotation
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
@@ -320,8 +312,6 @@ class JobsController @Inject()(
             "organization_name" -> organizationName,
             "dataset_name" -> datasetName,
             "fallback_layer_name" -> fallbackLayerName,
-            "webknossos_token" -> RpcTokenHolder.webknossosToken,
-            "user_auth_token" -> userAuthToken.id,
             "annotation_id" -> annotationId,
             "output_segmentation_layer_name" -> outputSegmentationLayerName,
             "annotation_type" -> annotationType,
@@ -366,8 +356,6 @@ class JobsController @Inject()(
                                                                                        organizationName)
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
-          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
-            request.identity.loginInfo)
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
@@ -386,7 +374,6 @@ class JobsController @Inject()(
             "organization_name" -> organizationName,
             "dataset_name" -> datasetName,
             "export_file_name" -> exportFileName,
-            "user_auth_token" -> userAuthToken.id,
             "layer_name" -> animationJobOptions.layerName,
             "bounding_box" -> animationJobOptions.boundingBox.toLiteral,
             "include_watermark" -> animationJobOptions.includeWatermark,

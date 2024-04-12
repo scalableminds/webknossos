@@ -748,8 +748,16 @@ function* loadPrecomputedMeshForSegmentId(
   segmentationLayer: APISegmentationLayer,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
+  const mappingName = yield* call(getMappingName, segmentationLayer);
   yield* put(
-    addPrecomputedMeshAction(layerName, id, seedPosition, seedAdditionalCoordinates, meshFileName),
+    addPrecomputedMeshAction(
+      layerName,
+      id,
+      seedPosition,
+      seedAdditionalCoordinates,
+      meshFileName,
+      mappingName,
+    ),
   );
   yield* put(startedLoadingMeshAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
@@ -815,6 +823,18 @@ function* loadPrecomputedMeshForSegmentId(
   yield* put(finishedLoadingMeshAction(layerName, id));
 }
 
+function* getMappingName(segmentationLayer: APISegmentationLayer) {
+  const meshExtraInfo = yield* call(getMeshExtraInfo, segmentationLayer.name, null);
+  const editableMapping = yield* select((state) =>
+    getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
+  );
+
+  // meshExtraInfo.mappingName contains the currently active mapping
+  // (can be the id of an editable mapping). However, we always need to
+  // use the mapping name of the on-disk mapping.
+  return editableMapping != null ? editableMapping.baseMappingName : meshExtraInfo.mappingName;
+}
+
 function* _getChunkLoadingDescriptors(
   id: number,
   dataset: APIDataset,
@@ -832,7 +852,6 @@ function* _getChunkLoadingDescriptors(
   });
   const version = meshFile.formatVersion;
   const { meshFileName } = meshFile;
-  const meshExtraInfo = yield* call(getMeshExtraInfo, segmentationLayer.name, null);
 
   const editableMapping = yield* select((state) =>
     getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
@@ -840,11 +859,7 @@ function* _getChunkLoadingDescriptors(
   const tracing = yield* select((state) =>
     getTracingForSegmentationLayer(state, segmentationLayer),
   );
-  const mappingName =
-    // meshExtraInfo.mappingName contains the currently active mapping
-    // (can be the id of an editable mapping). However, we always need to
-    // use the mapping name of the on-disk mapping.
-    editableMapping != null ? editableMapping.baseMappingName : meshExtraInfo.mappingName;
+  const mappingName = yield* call(getMappingName, segmentationLayer);
 
   if (version < 3) {
     console.warn(

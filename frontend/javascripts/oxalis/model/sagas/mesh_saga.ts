@@ -82,6 +82,7 @@ import { type AdditionalCoordinate } from "types/api_flow_types";
 import Zip from "libs/zipjs_wrapper";
 import { FlycamAction } from "../actions/flycam_actions";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
+import { BufferGeometryWithInfo } from "oxalis/controller/segment_mesh_controller";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -972,7 +973,10 @@ function _getLoadChunksTasks(
                   for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
                     const chunk = chunksForPosition[chunkIdx];
                     try {
-                      const bufferGeometry = yield* call(loader.decodeDracoFileAsync, chunk.data);
+                      const bufferGeometry = (yield* call(
+                        loader.decodeDracoFileAsync,
+                        chunk.data,
+                      )) as BufferGeometryWithInfo;
                       bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
                       bufferGeometries.push(bufferGeometry);
                     } catch (error) {

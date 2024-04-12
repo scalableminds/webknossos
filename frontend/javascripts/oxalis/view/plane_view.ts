@@ -17,6 +17,7 @@ import VisibilityAwareRaycaster, {
 } from "libs/visibility_aware_raycaster";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { MeshSceneNode } from "oxalis/controller/segment_mesh_controller";
 
 const createDirLight = (
   position: Vector3,
@@ -34,31 +35,30 @@ const createDirLight = (
 };
 
 const raycaster = new VisibilityAwareRaycaster();
-let oldRaycasterHit: THREE.Object3D | null = null;
+let oldRaycasterHit: MeshSceneNode | null = null;
 const MESH_HOVER_THROTTLING_DELAY = 150;
 
-const ACTIVATED_COLOR = [0.7, 0.5, 0.1];
-const HOVERED_COLOR = [0.65, 0.5, 0.1];
+const ACTIVATED_COLOR = [0.7, 0.5, 0.1] as const;
+const HOVERED_COLOR = [0.65, 0.5, 0.1] as const;
 
-function updateMeshAppearance(mesh: THREE.Object3D) {
-  // @ts-ignore
+function updateMeshAppearance(_mesh: THREE.Object3D) {
+  const mesh = _mesh as MeshSceneNode;
   if (mesh.isHovered || mesh.isActiveUnmappedSegment) {
-    // @ts-ignore
     mesh.material.emissive.setHSL(...HOVERED_COLOR);
-    // @ts-ignore
+
     if (mesh.material.savedHex == null) {
-      // @ts-ignore
       mesh.material.savedHex = mesh.material.color.getHex();
     }
-    // @ts-ignore
-    mesh.material.color.setHSL(...(mesh.isHovered ? HOVERED_COLOR : ACTIVATED_COLOR));
+    const newColor: readonly [number, number, number] = mesh.isHovered
+      ? HOVERED_COLOR
+      : ACTIVATED_COLOR;
+    mesh.material.color.setHSL(...newColor);
   } else {
-    // @ts-ignore
     mesh.material.emissive.setHex("#FF00FF");
-    // @ts-ignore
-    mesh.material.color.setHex(mesh.material.savedHex);
-    // @ts-ignore
-    mesh.material.savedHex = null;
+    if (mesh.material.savedHex != null) {
+      mesh.material.color.setHex(mesh.material.savedHex);
+    }
+    mesh.material.savedHex = undefined;
   }
 }
 
@@ -186,7 +186,7 @@ class PlaneView {
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
     const intersections = raycaster.intersectObjects(intersectableObjects, true);
-    const hitObject = intersections.length > 0 ? intersections[0].object : null;
+    const hitObject = intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
 
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
@@ -203,10 +203,6 @@ class PlaneView {
       oldRaycasterHit.isHovered = false;
       updateMeshAppearance(oldRaycasterHit);
 
-      // // @ts-ignore
-      // oldRaycasterHit.material.emissive.setHex("#FF00FF");
-      // // @ts-ignore
-      // oldRaycasterHit.material.color.setHex(oldRaycasterHit.material.savedHex);
       oldRaycasterHit = null;
     }
 
@@ -313,15 +309,13 @@ class PlaneView {
     const SceneController = getSceneController();
     const { meshesLODRootGroup } = SceneController.segmentMeshController;
     if (activeUnmappedSegmentId) {
-      meshesLODRootGroup.traverse((obj) => {
-        // @ts-ignore
+      meshesLODRootGroup.traverse((_obj) => {
+        // The cast is save because MeshSceneNode adds only optional properties
+        const obj = _obj as MeshSceneNode;
         if (obj.unmappedSegmentId === activeUnmappedSegmentId) {
-          // @ts-ignore
           obj.isActiveUnmappedSegment = true;
           updateMeshAppearance(obj);
-          // @ts-ignore
         } else if (obj.isActiveUnmappedSegment) {
-          // @ts-ignore
           obj.isActiveUnmappedSegment = false;
           updateMeshAppearance(obj);
         }

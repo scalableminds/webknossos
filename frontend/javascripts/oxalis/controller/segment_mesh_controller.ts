@@ -12,6 +12,17 @@ import Store from "oxalis/store";
 import { AdditionalCoordinate } from "types/api_flow_types";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 
+export type MeshSceneNode = THREE.Mesh<
+  THREE.BufferGeometry,
+  THREE.MeshLambertMaterial & { savedHex?: number }
+> & {
+  unmappedSegmentId?: number | null;
+  isActiveUnmappedSegment?: boolean;
+  isHovered?: boolean;
+};
+type SceneGroupForMeshes = THREE.Group & { segmentId: number };
+export type BufferGeometryWithInfo = THREE.BufferGeometry & { unmappedSegmentId: number };
+
 export default class SegmentMeshController {
   // meshesLODRootGroup holds lights and one group per segmentation id.
   // Each group can hold multiple meshes.
@@ -64,7 +75,11 @@ export default class SegmentMeshController {
     );
   }
 
-  constructMesh(segmentId: number, layerName: string, geometry: THREE.BufferGeometry) {
+  constructMesh(
+    segmentId: number,
+    layerName: string,
+    geometry: THREE.BufferGeometry,
+  ): MeshSceneNode {
     const color = this.getColorObjectForSegment(segmentId, layerName);
     const meshMaterial = new THREE.MeshLambertMaterial({
       color,
@@ -86,10 +101,8 @@ export default class SegmentMeshController {
         },
         500,
       )
-      .onUpdate(function onUpdate() {
-        // @ts-expect-error ts-migrate(2683) FIXME: 'this' implicitly has type 'any' because it does n... Remove this comment to see the full error message
+      .onUpdate(function onUpdate(this: { opacity: number }) {
         meshMaterial.opacity = this.opacity;
-
         app.vent.emit("rerender");
       })
       .start();
@@ -97,7 +110,7 @@ export default class SegmentMeshController {
   }
 
   addMeshFromGeometries(
-    geometries: THREE.BufferGeometry[],
+    geometries: BufferGeometryWithInfo[],
     segmentationId: number, // todop: rename to segmentId?
     offset: Vector3 | null = null,
     scale: Vector3 | null = null,
@@ -130,7 +143,9 @@ export default class SegmentMeshController {
     }
     const meshes = geometries.map((geometry) => {
       const mesh = this.constructMesh(segmentationId, layerName, geometry);
-      mesh.unmappedSegmentId = geometry.unmappedSegmentId;
+      if ("unmappedSegmentId" in geometry) {
+        mesh.unmappedSegmentId = geometry.unmappedSegmentId as number | null;
+      }
       if (offset) {
         mesh.translateX(offset[0]);
         mesh.translateY(offset[1]);
@@ -138,7 +153,7 @@ export default class SegmentMeshController {
       }
       return mesh;
     });
-    const group = new THREE.Group();
+    const group = new THREE.Group() as SceneGroupForMeshes;
     for (const mesh of meshes) {
       group.add(mesh);
     }

@@ -1,3 +1,4 @@
+import _ from "lodash";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as THREE from "three";
@@ -97,14 +98,10 @@ function maybeGetActiveNodeFromProps(props: Props) {
 }
 
 class TDController extends React.PureComponent<Props> {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'controls' has no initializer and is not ... Remove this comment to see the full error message
-  controls: typeof TrackballControls;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'mouseController' has no initializer and ... Remove this comment to see the full error message
-  mouseController: InputMouse;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'oldNmPos' has no initializer and is not ... Remove this comment to see the full error message
-  oldNmPos: Vector3;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'isStarted' has no initializer and is not... Remove this comment to see the full error message
-  isStarted: boolean;
+  controls!: typeof TrackballControls;
+  mouseController!: InputMouse;
+  oldNmPos!: Vector3;
+  isStarted: boolean = false;
 
   componentDidMount() {
     const { dataset, flycam } = Store.getState();
@@ -316,7 +313,6 @@ class TDController extends React.PureComponent<Props> {
     }
 
     const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Point2 | null | undefined' is no... Remove this comment to see the full error message
     Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
   }
 

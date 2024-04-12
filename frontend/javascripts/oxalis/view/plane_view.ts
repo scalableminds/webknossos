@@ -54,6 +54,7 @@ function updateMeshAppearance(_mesh: THREE.Object3D) {
       : ACTIVATED_COLOR;
     mesh.material.color.setHSL(...newColor);
   } else {
+    // @ts-ignore
     mesh.material.emissive.setHex("#FF00FF");
     if (mesh.material.savedHex != null) {
       mesh.material.color.setHex(mesh.material.savedHex);

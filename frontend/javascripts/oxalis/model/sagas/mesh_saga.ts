@@ -802,7 +802,6 @@ function* loadPrecomputedMeshForSegmentId(
       dataset,
       segmentationLayer,
       meshFile,
-      mergeChunks,
     );
     availableChunksMap = chunkDescriptors.availableChunksMap;
     scale = chunkDescriptors.scale;
@@ -844,7 +843,6 @@ function* _getChunkLoadingDescriptors(
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,
   meshFile: APIMeshFile,
-  mergeChunks: boolean,
 ) {
   const availableChunksMap: ChunksMap = {};
   let scale: Vector3 | null = null;
@@ -1068,7 +1066,7 @@ function _getLoadChunksTasks(
                     context: segmentMeshController,
                     fn: segmentMeshController.addMeshFromGeometry,
                   },
-                  geometry,
+                  geometry as BufferGeometryWithInfo,
                   id,
                   null,
                   null,

@@ -1,4 +1,3 @@
-import * as THREE from "three";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Point2, Rect, Viewport } from "oxalis/constants";

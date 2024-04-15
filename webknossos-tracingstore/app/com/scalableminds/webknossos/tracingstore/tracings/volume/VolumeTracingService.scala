@@ -922,9 +922,10 @@ class VolumeTracingService @Inject()(
   def checkIfSegmentIndexMayBeAdded(tracingId: String, tracing: VolumeTracing, userToken: Option[String])(
       implicit ec: ExecutionContext): Fox[Boolean] =
     for {
-      fallbackLayer <- remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+      fallbackLayerOpt <- Fox.runIf(tracing.fallbackLayer.isDefined)(
+        remoteFallbackLayerFromVolumeTracing(tracing, tracingId))
       canHaveSegmentIndex <- VolumeSegmentIndexService.canHaveSegmentIndex(remoteDatastoreClient,
-                                                                           Some(fallbackLayer),
+                                                                           fallbackLayerOpt,
                                                                            userToken)
       alreadyHasSegmentIndex = tracing.hasSegmentIndex.getOrElse(false)
     } yield canHaveSegmentIndex && !alreadyHasSegmentIndex

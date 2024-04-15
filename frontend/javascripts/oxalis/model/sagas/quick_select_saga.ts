@@ -56,7 +56,6 @@ export default function* listenToQuickSelect(): Saga<void> {
       } catch (ex) {
         Toast.error((ex as Error).toString());
         ErrorHandling.notify(ex as Error);
-        console.error(ex);
       } finally {
         yield* put(setBusyBlockingInfoAction(false));
         action.quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);

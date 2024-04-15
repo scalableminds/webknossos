@@ -376,6 +376,47 @@ export function* performVolumeInterpolation(
       firstSlice = lastSlice;
     }
   }
+  // separate canvases with span element for better readability.
+  const span = document.createElement("span");
+  span.innerHTML = `Interpolation between slices ${relevantBoxMag1.min[thirdDim]} ${relevantBoxMag1.max[thirdDim]}`;
+  document.body.appendChild(span);
+  // TODO: Render slice as image to a new canvas debug whether the interpolation input is correct.
+  const canvasFirstSlice = document.createElement("canvas");
+  let ctx = canvasFirstSlice.getContext("2d");
+  if (ctx) {
+    const imageData = ctx.createImageData(size[0], size[1]);
+    const data = imageData.data;
+    for (let i = 0; i < size[0]; i++) {
+      for (let j = 0; j < size[1]; j++) {
+        const idx = i + j * size[0];
+        data[4 * idx] = firstSlice.get(i, j) * 255;
+        data[4 * idx + 1] = firstSlice.get(i, j) * 255;
+        data[4 * idx + 2] = firstSlice.get(i, j) * 255;
+        data[4 * idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+    document.body.appendChild(canvasFirstSlice);
+  }
+  const canvasSecondSlice = document.createElement("canvas");
+  ctx = canvasSecondSlice.getContext("2d");
+  if (ctx) {
+    const imageData = ctx.createImageData(size[0], size[1]);
+    const data = imageData.data;
+    for (let i = 0; i < size[0]; i++) {
+      for (let j = 0; j < size[1]; j++) {
+        const idx = i + j * size[0];
+        data[4 * idx] = lastSlice.get(i, j) * 255;
+        data[4 * idx + 1] = lastSlice.get(i, j) * 255;
+        data[4 * idx + 2] = lastSlice.get(i, j) * 255;
+        data[4 * idx + 3] = 255;
+      }
+    }
+    ctx.putImageData(imageData, 0, 0);
+    document.body.appendChild(canvasSecondSlice);
+  }
+  // add <br/> as a spacer
+  document.body.appendChild(document.createElement("br"));
 
   if (!isNonZero(firstSlice) || !isNonZero(lastSlice)) {
     Toast.warning(

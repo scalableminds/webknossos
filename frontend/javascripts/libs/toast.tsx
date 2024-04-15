@@ -30,14 +30,20 @@ function ToastFunctionalComponentWrapper(props: {
 }) {
   const [toastAPI, contextHolder] = notification.useNotification();
   useEffectOnlyOnce(() =>
-    Toast.message(props.type, props.message(toastAPI), props.config, toastAPI, props.details),
+    Toast._messageInternal(
+      props.type,
+      props.message(toastAPI),
+      props.config,
+      toastAPI,
+      props.details,
+    ),
   );
   // Return empty renderable component for "renderIndependently"
   return <>{contextHolder}</>;
 }
 
 const Toast = {
-  messages(messages: Message[], renderOutsideOfComponentHiearchy: boolean = false): void {
+  messages(messages: Message[]): void {
     const errorChainObject = messages.find((msg) => typeof msg.chain !== "undefined");
     const errorChainString: string | null | undefined = errorChainObject?.chain;
     messages.forEach((singleMessage) => {
@@ -52,7 +58,6 @@ const Toast = {
             sticky: true,
             key: singleMessage.key,
           },
-          renderOutsideOfComponentHiearchy,
           errorChainString,
         );
       }
@@ -95,11 +100,11 @@ const Toast = {
     );
   },
 
-  message(
+  _messageInternal(
     type: ToastStyle,
     rawMessage: string | React.ReactNode,
     config: ToastConfig,
-    notificationAPI?: NotificationAPI | null,
+    notificationAPI: NotificationAPI,
     details?: string,
   ): void {
     const message = this.buildContentWithDetails(rawMessage, details);
@@ -133,67 +138,37 @@ const Toast = {
     }
     if (notificationAPI) {
       notificationAPI[type](toastConfig);
-    } else {
-      notification[type](toastConfig);
     }
   },
 
-  info(
-    message: React.ReactNode,
-    config: ToastConfig = {},
-    renderOutsideOfComponentHiearchy: boolean = false,
-    details?: string | undefined,
-  ): void {
-    if (renderOutsideOfComponentHiearchy) {
-      this.showOutsideComponentContext("info", message, config, details);
-    } else {
-      this.message("info", message, config, null, details);
-    }
+  info(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {
+    this.message("info", message, config, details);
   },
 
-  warning(
-    message: React.ReactNode,
-    config: ToastConfig = {},
-    renderOutsideOfComponentHiearchy: boolean = false,
-    details?: string | undefined,
-  ): void {
-    if (renderOutsideOfComponentHiearchy) {
-      this.showOutsideComponentContext("warning", message, config, details);
-    } else {
-      this.message("warning", message, config, null, details);
-    }
+  warning(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {
+    this.message("warning", message, config, details);
   },
 
   success(
     message: React.ReactNode = "Success :-)",
     config: ToastConfig = {},
-    renderOutsideOfComponentHiearchy: boolean = false,
     details?: string | undefined,
   ): void {
-    if (renderOutsideOfComponentHiearchy) {
-      this.showOutsideComponentContext("success", message, config, details);
-    } else {
-      this.message("success", message, config, null, details);
-    }
+    this.message("success", message, config, details);
   },
 
   error(
     message: React.ReactNode = "Error :-/",
     config: ToastConfig = {},
-    renderOutsideOfComponentHiearchy: boolean = false,
     details?: string | undefined,
   ): void {
-    if (renderOutsideOfComponentHiearchy) {
-      this.showOutsideComponentContext("error", message, config, details);
-    } else {
-      this.message("error", message, config, null, details);
-    }
+    this.message("error", message, config, details);
   },
 
   close(key: string) {
     notification.destroy(key);
   },
-  showOutsideComponentContext(
+  message(
     type: ToastStyle,
     message: ToastMessageCallback | React.ReactNode = "Success :-)",
     config: ToastConfig = {},

@@ -558,7 +558,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerSettings: DatasetLayerConfiguration,
     hasLessThanTwoColorLayers: boolean = true,
   ) => {
-    const { tracing, dataset } = this.props;
+    const { tracing, dataset, isAdminOrDatasetManager } = this.props;
     const { intensityRange } = layerSettings;
     const layer = getLayerByName(dataset, layerName);
     const isSegmentation = layer.category === "segmentation";
@@ -611,7 +611,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       readableName,
     );
     const possibleItems: MenuProps["items"] = [
-      isVolumeTracing && !isDisabled && maybeFallbackLayer != null
+      isVolumeTracing && !isDisabled && maybeFallbackLayer != null && isAdminOrDatasetManager
         ? {
             label: this.getMergeWithFallbackLayerButton(layer),
             key: "mergeWithFallbackLayerButton",

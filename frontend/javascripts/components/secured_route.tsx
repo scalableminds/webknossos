@@ -6,14 +6,17 @@ import {
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
-import { APIOrganization } from "types/api_flow_types";
+import { APIOrganization, APIUser } from "types/api_flow_types";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import type { ComponentType } from "react";
+import { isUserAdminOrTeamManager } from "libs/utils";
 import type { RouteComponentProps } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
+import { PageNotAvailableToNormalUser } from "./permission_enforcer";
 
 type StateProps = {
   activeOrganization: APIOrganization | null;
+  activeUser: APIUser | null | undefined;
 };
 export type SecuredRouteProps = RouteComponentProps &
   StateProps & {
@@ -22,6 +25,7 @@ export type SecuredRouteProps = RouteComponentProps &
     render?: (arg0: RouteComponentProps) => React.ReactNode;
     isAuthenticated: boolean;
     requiredPricingPlan?: PricingPlanEnum;
+    requiresAdminOrTeamManagerRole?: boolean;
     serverAuthenticationCallback?: (...args: Array<any>) => any;
     exact?: boolean;
   };
@@ -62,6 +66,8 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
     const isCompletelyAuthenticated = serverAuthenticationCallback
       ? isAuthenticated || this.state.isAdditionallyAuthenticated
       : isAuthenticated;
+    const isAdminOrTeamManager =
+      this.props.activeUser && isUserAdminOrTeamManager(this.props.activeUser);
     return (
       <Route
         {...rest}
@@ -83,6 +89,9 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
               />
             );
           }
+          if (this.props.requiresAdminOrTeamManagerRole && !isAdminOrTeamManager) {
+            return <PageNotAvailableToNormalUser />;
+          }
 
           if (Component != null) {
             return <Component />;
@@ -98,6 +107,7 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
 }
 const mapStateToProps = (state: OxalisState): StateProps => ({
   activeOrganization: state.activeOrganization,
+  activeUser: state.activeUser,
 });
 
 const connector = connect(mapStateToProps);

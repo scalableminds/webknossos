@@ -2473,8 +2473,8 @@ export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   segmentsInfo: {
-    segmentPosition1: Vector3;
-    segmentPosition2: Vector3;
+    segmentId1: number;
+    segmentId2: number;
     mag: Vector3;
     agglomerateId: number;
     editableMappingId: string;
@@ -2499,7 +2499,7 @@ export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
   segmentInfo: {
-    segmentPosition: Vector3;
+    segmentId: number;
     mag: Vector3;
     agglomerateId: number;
     editableMappingId: string;

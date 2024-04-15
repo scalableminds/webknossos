@@ -334,8 +334,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       mergeAgglomerate(
         sourceAgglomerateId,
         targetAgglomerateId,
-        sourceNodePosition,
-        targetNodePosition,
+        sourceInfo.unmappedId,
+        targetInfo.unmappedId,
         agglomerateFileMag,
       ),
     );
@@ -347,8 +347,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     items.push(
       splitAgglomerate(
         sourceAgglomerateId,
-        sourceNodePosition,
-        targetNodePosition,
+        sourceInfo.unmappedId,
+        targetInfo.unmappedId,
         agglomerateFileMag,
       ),
     );
@@ -357,8 +357,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       performMinCut,
       sourceAgglomerateId,
       targetAgglomerateId,
-      sourceNodePosition,
-      targetNodePosition,
+      sourceInfo.unmappedId,
+      targetInfo.unmappedId,
       agglomerateFileMag,
       editableMappingId,
       volumeTracingId,
@@ -419,8 +419,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
 function* performMinCut(
   sourceAgglomerateId: number,
   targetAgglomerateId: number,
-  sourcePosition: Vector3,
-  targetPosition: Vector3,
+  sourceSegmentId: number,
+  targetSegmentId: number,
   agglomerateFileMag: Vector3,
   editableMappingId: string,
   volumeTracingId: string,
@@ -436,8 +436,8 @@ function* performMinCut(
 
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   const segmentsInfo = {
-    segmentPosition1: sourcePosition,
-    segmentPosition2: targetPosition,
+    segmentId1: sourceSegmentId,
+    segmentId2: targetSegmentId,
     mag: agglomerateFileMag,
     agglomerateId: sourceAgglomerateId,
     editableMappingId,
@@ -468,7 +468,7 @@ function* performMinCut(
     }
 
     items.push(
-      splitAgglomerate(sourceAgglomerateId, edge.position1, edge.position2, agglomerateFileMag),
+      splitAgglomerate(sourceAgglomerateId, edge.segmentId1, edge.segmentId2, agglomerateFileMag),
     );
   }
 
@@ -477,6 +477,7 @@ function* performMinCut(
 
 function* performCutFromNeighbors(
   agglomerateId: number,
+  segmentId: number,
   segmentPosition: Vector3,
   agglomerateFileMag: Vector3,
   editableMappingId: string,
@@ -488,7 +489,7 @@ function* performCutFromNeighbors(
 > {
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   const segmentsInfo = {
-    segmentPosition,
+    segmentId,
     mag: agglomerateFileMag,
     agglomerateId,
     editableMappingId,
@@ -523,7 +524,9 @@ function* performCutFromNeighbors(
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId, Date.now(), "PROOFREADING"));
     }
 
-    items.push(splitAgglomerate(agglomerateId, edge.position1, edge.position2, agglomerateFileMag));
+    items.push(
+      splitAgglomerate(agglomerateId, edge.segmentId1, edge.segmentId2, agglomerateFileMag),
+    );
   }
 
   return { didCancel: false, neighborInfo };
@@ -594,8 +597,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       mergeAgglomerate(
         sourceAgglomerateId,
         targetAgglomerateId,
-        sourcePosition,
-        targetPosition,
+        sourceInfo.unmappedId,
+        targetInfo.unmappedId,
         agglomerateFileMag,
       ),
     );
@@ -610,8 +613,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       performMinCut,
       sourceAgglomerateId,
       targetAgglomerateId,
-      sourcePosition,
-      targetPosition,
+      sourceInfo.unmappedId,
+      targetInfo.unmappedId,
       agglomerateFileMag,
       volumeTracing.mappingName,
       volumeTracingId,
@@ -684,6 +687,7 @@ function* handleProofreadCutNeighbors(action: Action) {
     return;
   }
   const targetAgglomerateId = idInfos[0].agglomerateId;
+  const targetSegmentId = idInfos[0].unmappedId;
 
   const editableMappingId = volumeTracing.mappingName;
 
@@ -695,6 +699,7 @@ function* handleProofreadCutNeighbors(action: Action) {
   const { didCancel, neighborInfo } = yield* call(
     performCutFromNeighbors,
     targetAgglomerateId,
+    targetSegmentId,
     targetPosition,
     agglomerateFileMag,
     editableMappingId,

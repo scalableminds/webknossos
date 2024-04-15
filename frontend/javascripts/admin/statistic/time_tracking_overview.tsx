@@ -98,7 +98,7 @@ function TimeTrackingOverview() {
           row.taskId,
           row.projectName,
           row.taskTypeId,
-          row.taskTypeSummary
+          row.taskTypeSummary,
         ]);
       })
       .join("\n"); // rows starting on new lines

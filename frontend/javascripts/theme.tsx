@@ -60,7 +60,10 @@ export function getAntdTheme(userTheme: Theme) {
   return { algorithm, token: globalDesignToken, components };
 }
 
-export default function GlobalThemeProvider({ children }: { children?: React.ReactNode }) {
+export default function GlobalThemeProvider({
+  children,
+  isMainProvider = true,
+}: { children?: React.ReactNode; isMainProvider?: boolean }) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const userTheme = getThemeFromUser(activeUser);
   const antdTheme = getAntdTheme(userTheme);
@@ -82,7 +85,7 @@ export default function GlobalThemeProvider({ children }: { children?: React.Rea
           className={isDarkMode ? "dark-theme" : undefined}
           style={{
             background: "var(--ant-color-bg-base)",
-            height: "calc(100vh - var(--navbar-height))",
+            height: isMainProvider ? "calc(100vh - var(--navbar-height))" : "auto",
           }}
         >
           {children}

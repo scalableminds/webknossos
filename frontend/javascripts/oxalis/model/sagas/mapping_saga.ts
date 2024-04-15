@@ -220,6 +220,7 @@ function* handleSetMapping(
       [Toast, Toast.error],
       "The requested mapping could not be loaded.",
       { sticky: true },
+      false,
       `${exception}`,
     );
     console.error(exception);

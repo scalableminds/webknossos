@@ -84,7 +84,7 @@ parseDependencyTree("frontend/javascripts/main.tsx", {
       `Too many cyclic dependencies (${
         cyclicDependencies.length - knownCycleStrings.length
       } more than previously). Please run "yarn find-cyclic-dependencies" and remove the dependencies you find. The following ones seem to be new (might be too many because known cycles might have changed their structure):\n\n${newCycles
-        .map((cycle) => cycle.join(" ", " "))
+        .map((cycle) => cycle.join(" -> "))
         .join("\n")}\n`,
     );
   } else if (cyclicDependencies.length < knownCycleStrings.length) {

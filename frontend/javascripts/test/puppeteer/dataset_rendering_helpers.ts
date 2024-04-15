@@ -336,7 +336,6 @@ export async function withRetry(
 ) {
   retryCount = 3;
   for (let i = 0; i < retryCount; i++) {
-    // eslint-disable-next-line no-await-in-loop
     const condition = await testFn();
 
     if (condition || i === retryCount - 1) {

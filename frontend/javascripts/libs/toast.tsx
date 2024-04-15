@@ -25,7 +25,7 @@ type ToastMessageCallback = (api: NotificationAPI) => React.ReactNode;
 
 function ToastFunctionalComponentWrapper(props: {
   type: ToastStyle;
-  message: (api: NotificationAPI) => React.ReactNode;
+  message: ToastMessageCallback;
   config: ToastConfig;
   details: string | undefined;
 }) {

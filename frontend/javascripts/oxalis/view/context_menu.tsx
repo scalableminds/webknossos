@@ -386,12 +386,16 @@ function getMeshItems(
     ? [
         {
           key: "merge-agglomerate-skeleton",
-          disabled: !isProofreadingActive || clickedMeshId === activeCellId,
+          disabled:
+            !isProofreadingActive ||
+            clickedMeshId === activeCellId ||
+            maybeUnmappedSegmentId == null,
           onClick: () => {
-            console.log(
-              `todop: merge ${clickedMeshId} or ${maybeUnmappedSegmentId} with ${activeCellId} or ${volumeTracing.activeUnmappedSegmentId}`,
-            );
-            // return Store.dispatch(proofreadMerge(globalPosition));
+            if (maybeUnmappedSegmentId == null) {
+              // Should not happen due to the disabled property.
+              return;
+            }
+            return Store.dispatch(proofreadMerge(null, maybeUnmappedSegmentId, clickedMeshId));
           },
           label: (
             <Tooltip
@@ -413,10 +417,13 @@ function getMeshItems(
             maybeUnmappedSegmentId == null ||
             volumeTracing.activeUnmappedSegmentId == null,
           onClick: () => {
-            console.log(
-              `todop: cut ${maybeUnmappedSegmentId} from ${volumeTracing.activeUnmappedSegmentId}`,
+            if (maybeUnmappedSegmentId == null) {
+              // Should not happen due to the disabled property.
+              return;
+            }
+            Store.dispatch(
+              minCutAgglomerateWithPositionAction(null, maybeUnmappedSegmentId, clickedMeshId),
             );
-            // return Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition));
           },
           label: (
             <Tooltip
@@ -434,8 +441,13 @@ function getMeshItems(
           key: "split-from-all-neighbors",
           disabled: maybeUnmappedSegmentId == null,
           onClick: () => {
-            console.log(`todop: cut ${maybeUnmappedSegmentId} from all neighbors`);
-            // Store.dispatch(cutAgglomerateFromNeighborsAction(clickedNode.untransformedPosition));
+            if (maybeUnmappedSegmentId == null) {
+              // Should not happen due to the disabled property.
+              return;
+            }
+            Store.dispatch(
+              cutAgglomerateFromNeighborsAction(null, null, maybeUnmappedSegmentId, clickedMeshId),
+            );
           },
           label: "Split from all neighboring segments",
         },

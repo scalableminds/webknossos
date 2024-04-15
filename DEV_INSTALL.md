@@ -86,7 +86,7 @@ sudo apt install -y nodejs git postgresql postgresql-client unzip zip yarn redis
 
  # Install sdkman, java, scala and sbt
 curl -s "https://get.sdkman.io" | bash
-source "/root/.sdkman/bin/sdkman-init.sh"
+source "$HOME/.sdkman/bin/sdkman-init.sh"
 sdk install scala 2.13.12
 sdk install sbt
 sdk install java 21.0.2-tem

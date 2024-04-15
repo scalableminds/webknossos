@@ -454,6 +454,14 @@ export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
   };
 }
 
+export function transformToCSVRow(dataRow: any[]) {
+  return dataRow
+    .map(String) // convert every value to String
+    .map((v) => v.replaceAll('"', '""')) // escape double quotes
+    .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
+    .join(","); // comma-separated
+}
+
 export function isUserTeamManager(user: APIUser): boolean {
   return _.findIndex(user.teams, (team) => team.isTeamManager) >= 0;
 }

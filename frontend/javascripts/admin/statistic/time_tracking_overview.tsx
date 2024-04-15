@@ -9,7 +9,7 @@ import { formatMilliseconds } from "libs/format_utils";
 import ProjectAndAnnotationTypeDropdown, {
   AnnotationTypeFilterEnum,
 } from "./project_and_annotation_type_dropdown";
-import { isUserAdminOrTeamManager } from "libs/utils";
+import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
 import messages from "messages";
 import Toast from "libs/toast";
 import { useSelector } from "react-redux";
@@ -25,16 +25,8 @@ const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER_PER_USER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
 const TIMETRACKING_CSV_HEADER_SPANS = [
-  "userId,email,datasetOrga,datasetName,annotation,startTime,durationInSeconds",
+  "userId,email,datasetOrga,datasetName,annotation,startTime,durationInSeconds,taskId,projectName,taskTypeId,taskTypeSummary",
 ];
-
-const transformToCSVRow = (dataRow: any[]) => {
-  return dataRow
-    .map(String) // convert every value to String
-    .map((v) => v.replaceAll('"', '""')) // escape double quotes
-    .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
-    .join(","); // comma-separated
-};
 
 function TimeTrackingOverview() {
   const currentTime = dayjs();
@@ -103,6 +95,10 @@ function TimeTrackingOverview() {
           row.annotationId,
           dayjs(row.timeSpanCreated),
           Math.ceil(row.timeSpanTimeMillis / 1000),
+          row.taskId,
+          row.projectName,
+          row.taskTypeId,
+          row.taskTypeSummary
         ]);
       })
       .join("\n"); // rows starting on new lines
@@ -127,7 +123,7 @@ function TimeTrackingOverview() {
           Math.round(row.timeMillis / 1000),
         ]);
       })
-      .join("\n"); // rows starting on new lines
+      .join("\n");
     const csv = [TIMETRACKING_CSV_HEADER_PER_USER, timeEntriesAsString].join("\n");
     const filename = "timetracking-export.csv";
     const blob = new Blob([csv], {

@@ -104,7 +104,7 @@ trait VolumeTracingDownsampling
                              dataLayer)
         requiredMag
       }
-      fallbackLayer <- tracingService.getFallbackLayer(tracingId)
+      fallbackLayer <- tracingService.getFallbackLayer(oldTracingId) // remote wk does not know the new id yet
       tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                         volumeSegmentIndexClient,

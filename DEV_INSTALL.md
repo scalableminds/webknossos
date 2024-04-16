@@ -76,13 +76,18 @@ Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 env
 
 ```bash
 sudo apt install -y curl ca-certificates wget
-# Adding repositories for nodejs, sbt and yarn
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+
+# Install nvm, node 18
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+nvm use 18
+
+# Adding repositories for yarn
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 sudo apt update
-sudo apt install -y nodejs git postgresql postgresql-client unzip zip yarn redis-server build-essential libblosc1 libbrotli1 libdraco-dev
+sudo apt install -y git postgresql postgresql-client unzip zip yarn redis-server build-essential libblosc1 libbrotli1 libdraco-dev
 
  # Install sdkman, java, scala and sbt
 curl -s "https://get.sdkman.io" | bash
@@ -123,7 +128,7 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 ### node.js & yarn
 
 * Install node from [http://nodejs.org/download/](http://nodejs.org/download/)
-* node version **16+ is required**
+* node version **16 to 18 is required**
 * Install yarn package manager: `npm install -g yarn`
 
 ## Run locally

@@ -428,7 +428,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
-                requiresAdminOrTeamManagerRole
+                requiresAdminOrManagerRole
                 render={() => <DatasetAddView />}
               />
               <SecuredRouteWithErrorBoundary

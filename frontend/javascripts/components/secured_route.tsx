@@ -9,7 +9,7 @@ import {
 import { APIOrganization, APIUser } from "types/api_flow_types";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import type { ComponentType } from "react";
-import { isUserAdminOrTeamManager } from "libs/utils";
+import { isUserAdminOrManager } from "libs/utils";
 import type { RouteComponentProps } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
 import { PageNotAvailableToNormalUser } from "./permission_enforcer";
@@ -25,7 +25,7 @@ export type SecuredRouteProps = RouteComponentProps &
     render?: (arg0: RouteComponentProps) => React.ReactNode;
     isAuthenticated: boolean;
     requiredPricingPlan?: PricingPlanEnum;
-    requiresAdminOrTeamManagerRole?: boolean;
+    requiresAdminOrManagerRole?: boolean;
     serverAuthenticationCallback?: (...args: Array<any>) => any;
     exact?: boolean;
   };
@@ -66,8 +66,7 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
     const isCompletelyAuthenticated = serverAuthenticationCallback
       ? isAuthenticated || this.state.isAdditionallyAuthenticated
       : isAuthenticated;
-    const isAdminOrTeamManager =
-      this.props.activeUser && isUserAdminOrTeamManager(this.props.activeUser);
+    const isAdminOrManager = this.props.activeUser && isUserAdminOrManager(this.props.activeUser);
     return (
       <Route
         {...rest}
@@ -89,7 +88,7 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
               />
             );
           }
-          if (this.props.requiresAdminOrTeamManagerRole && !isAdminOrTeamManager) {
+          if (this.props.requiresAdminOrManagerRole && !isAdminOrManager) {
             return <PageNotAvailableToNormalUser />;
           }
 

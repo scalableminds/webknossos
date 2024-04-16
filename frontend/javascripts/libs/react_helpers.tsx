@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useSelector, useStore } from "react-redux";
 import type { OxalisState } from "oxalis/store";
 import { ArbitraryFunction } from "types/globals";
-import { isUserAdminOrTeamManager } from "libs/utils";
+import { isUserAdminOrManager } from "libs/utils";
 
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/
 export function useInterval(
@@ -89,9 +89,9 @@ export function makeComponentLazy<T extends { isOpen: boolean }>(
   };
 }
 
-export function useIsActiveUserAdminOrTeamManager() {
+export function useIsActiveUserAdminOrManager() {
   const user = useSelector((state: OxalisState) => state.activeUser);
-  return user != null && isUserAdminOrTeamManager(user);
+  return user != null && isUserAdminOrManager(user);
 }
 
 export default {};

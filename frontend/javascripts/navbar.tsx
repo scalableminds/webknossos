@@ -308,7 +308,7 @@ function getTimeTrackingMenu(collapse: boolean): MenuItemType {
 
     label: (
       <Link
-        to="/reports/timetracking"
+        to="/timetracking"
         style={{
           fontWeight: 400,
         }}

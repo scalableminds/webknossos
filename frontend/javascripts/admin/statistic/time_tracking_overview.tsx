@@ -33,10 +33,6 @@ function TimeTrackingOverview() {
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
   const [isFetching, setIsFetching] = useState(false);
-  const mayUserAccessView = useSelector((state: OxalisState) => {
-    const activeUser = state.activeUser;
-    return activeUser != null && isUserAdminOrTeamManager(activeUser);
-  });
   const allTeams = useFetch(
     async () => {
       setIsFetching(true);
@@ -146,7 +142,7 @@ function TimeTrackingOverview() {
     );
   };
 
-  return mayUserAccessView ? (
+  return (
     <Card
       title={"Annotation Time per User"}
       style={{
@@ -283,8 +279,6 @@ function TimeTrackingOverview() {
         Export to CSV
       </Button>
     </Card>
-  ) : (
-    <>Sorry, you are not allowed to see this view.</>
   );
 }
 

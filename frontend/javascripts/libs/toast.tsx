@@ -194,15 +194,12 @@ const Toast = {
       const deferredDestroy = () => setTimeout(destroy, 0);
       const userOnClose = config.onClose;
       // Making sure onClose destroys the ToastFunctionalComponentWrapper instance.
-      config.onClose =
-        userOnClose != null
-          ? () => {
-              userOnClose();
-              deferredDestroy();
-            }
-          : () => {
-              deferredDestroy();
-            };
+      config.onClose = () => {
+        if (userOnClose != null) {
+          userOnClose();
+        }
+        deferredDestroy();
+      };
       const maybeWrappedMessage = (
         typeof message === "function" ? message : () => message
       ) as ToastMessageCallback;

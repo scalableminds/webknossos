@@ -49,29 +49,12 @@ const KNOWN_CYCLES = [
     "frontend/javascripts/oxalis/geometries/materials/plane_material_factory.ts",
     "frontend/javascripts/oxalis/shaders/main_data_shaders.glsl.ts",
   ],
-  [
-    "frontend/javascripts/libs/toast.tsx",
-    "frontend/javascripts/libs/render_independently.tsx",
-    "frontend/javascripts/oxalis/throttled_store.ts",
-    "frontend/javascripts/oxalis/store.ts",
-    "frontend/javascripts/oxalis/model/reducers/annotation_reducer.ts",
-    "frontend/javascripts/oxalis/model/accessors/view_mode_accessor.ts",
-    "frontend/javascripts/oxalis/model/accessors/flycam_accessor.ts",
-    "frontend/javascripts/oxalis/model/accessors/dataset_accessor.ts",
-    "frontend/javascripts/libs/error_handling.ts",
-  ],
-  [
-    "frontend/javascripts/libs/toast.tsx",
-    "frontend/javascripts/libs/render_independently.tsx",
-    "frontend/javascripts/oxalis/throttled_store.ts",
-    "frontend/javascripts/oxalis/store.ts",
-    "frontend/javascripts/oxalis/model/reducers/skeletontracing_reducer.ts",
-  ],
 ];
 parseDependencyTree("frontend/javascripts/main.tsx", {
   /* options, see below */
   extensions: [".ts", ".tsx"],
   transform: true,
+  skipDynamicImports: true,
 }).then((tree) => {
   const cyclicDependencies = parseCircular(tree);
 

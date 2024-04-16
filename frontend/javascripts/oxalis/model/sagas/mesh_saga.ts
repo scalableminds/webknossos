@@ -587,7 +587,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
         meshInfo.seedAdditionalCoordinates,
         meshInfo.meshFileName,
         layerName,
-        meshInfo.areChunksMerged,
+        action.mergeChunks ?? meshInfo.areChunksMerged,
       ),
     );
   } else {

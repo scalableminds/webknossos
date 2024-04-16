@@ -400,12 +400,14 @@ function getMeshItems(
           label: (
             <Tooltip
               title={
-                isProofreadingActive
-                  ? undefined
-                  : "Cannot merge because the proofreading tool is not active."
+                !isProofreadingActive
+                  ? "Cannot merge because the proofreading tool is not active."
+                  : maybeUnmappedSegmentId == null
+                    ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
+                    : null
               }
             >
-              <span>Merge with active segment</span>
+              Merge with active segment
             </Tooltip>
           ),
         },
@@ -428,12 +430,14 @@ function getMeshItems(
           label: (
             <Tooltip
               title={
-                isProofreadingActive
-                  ? undefined
-                  : "Cannot split because the proofreading tool is not active."
+                !isProofreadingActive
+                  ? "Cannot split because the proofreading tool is not active."
+                  : maybeUnmappedSegmentId == null
+                    ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
+                    : null
               }
             >
-              <span>Split from active segment</span>
+              Split from active segment
             </Tooltip>
           ),
         },
@@ -449,11 +453,27 @@ function getMeshItems(
               cutAgglomerateFromNeighborsAction(null, null, maybeUnmappedSegmentId, clickedMeshId),
             );
           },
-          label: "Split from all neighboring segments",
+          label: (
+            <Tooltip
+              title={
+                !isProofreadingActive
+                  ? "Cannot split because the proofreading tool is not active."
+                  : maybeUnmappedSegmentId == null
+                    ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
+                    : null
+              }
+            >
+              Split from all neighboring segments
+            </Tooltip>
+          ),
         },
       ]
     : [];
 
+  const segmentLabel =
+    maybeUnmappedSegmentId != null
+      ? `${maybeUnmappedSegmentId} -> ${clickedMeshId}`
+      : clickedMeshId;
   return [
     {
       key: "activate-segment",
@@ -462,7 +482,7 @@ function getMeshItems(
           setActiveCellAction(clickedMeshId, undefined, undefined, maybeUnmappedSegmentId),
         ),
       // disabled: volumeTracing != null && clickedMeshId === getActiveCellId(volumeTracing),
-      label: `Activate Segment (${maybeUnmappedSegmentId} -> ${clickedMeshId})`,
+      label: `Activate Segment (${segmentLabel})`,
     },
     {
       key: "hide-mesh",
@@ -472,7 +492,12 @@ function getMeshItems(
     {
       key: "reload-mesh",
       onClick: () =>
-        Actions.refreshMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),
+        Actions.refreshMesh(
+          Store.dispatch,
+          visibleSegmentationLayer.name,
+          clickedMeshId,
+          !isProofreadingActive,
+        ),
       label: "Reload Mesh",
     },
     {
@@ -1736,8 +1761,13 @@ const Actions = {
   setPosition(dispatch: Dispatch<any>, position: Vector3) {
     dispatch(setPositionAction(position));
   },
-  refreshMesh(dispatch: Dispatch<any>, layerName: string, segmentId: number) {
-    dispatch(refreshMeshAction(layerName, segmentId));
+  refreshMesh(
+    dispatch: Dispatch<any>,
+    layerName: string,
+    segmentId: number,
+    mergeChunks?: boolean | undefined,
+  ) {
+    dispatch(refreshMeshAction(layerName, segmentId, mergeChunks));
   },
 };
 

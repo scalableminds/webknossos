@@ -238,11 +238,16 @@ export const refreshMeshesAction = () =>
     type: "REFRESH_MESHES",
   }) as const;
 
-export const refreshMeshAction = (layerName: string, segmentId: number) =>
+export const refreshMeshAction = (
+  layerName: string,
+  segmentId: number,
+  mergeChunks?: boolean | undefined, // If specified, this overwrites the merge-behavior of the existing mesh.
+) =>
   ({
     type: "REFRESH_MESH",
     layerName,
     segmentId,
+    mergeChunks,
   }) as const;
 
 export const startedLoadingMeshAction = (layerName: string, segmentId: number) =>

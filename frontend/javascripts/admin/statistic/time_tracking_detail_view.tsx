@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import { Col, Divider, Row } from "antd";
 import { formatMilliseconds } from "libs/format_utils";
 import _ from "lodash";
-import { APITimeTrackingPerAnnotation } from "types/api_flow_types"; // TODO adjust type based on request
+import { APITimeTrackingPerAnnotation } from "types/api_flow_types";
 import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import { aggregateStatsForAllLayers } from "oxalis/model/accessors/annotation_accessor";
 
@@ -32,6 +32,7 @@ const renderRow = (
   let annotationRows: Array<JSX.Element> = [];
   for (const [project, loggedTimes] of Object.entries(groupedByProject)) {
     if (project === "null") {
+      // explorative annotations
       const tableRows = loggedTimes.map((timeEntry) => (
         <Row>
           <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>
@@ -48,6 +49,7 @@ const renderRow = (
       ));
       annotationRows = annotationRows.concat(tableRows);
     } else {
+      // tasks
       taskRows.push(
         <Row style={{ fontWeight: "bold", margin: 20 }}>
           <Col>{project}</Col>

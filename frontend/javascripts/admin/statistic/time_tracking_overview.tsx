@@ -9,7 +9,7 @@ import { formatMilliseconds } from "libs/format_utils";
 import ProjectAndAnnotationTypeDropdown, {
   AnnotationTypeFilterEnum,
 } from "./project_and_annotation_type_dropdown";
-import { transformToCSVRow } from "libs/utils";
+import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
 import messages from "messages";
 import Toast from "libs/toast";
 import dayjs, { Dayjs } from "antd/node_modules/dayjs";
@@ -18,6 +18,8 @@ import LinkButton from "components/link_button";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import * as Utils from "libs/utils";
 import { APITimeTrackingPerUser } from "types/api_flow_types";
+import { useSelector } from "react-redux";
+import { OxalisState } from "oxalis/store";
 const { Column } = Table;
 const { RangePicker } = DatePicker;
 
@@ -31,6 +33,10 @@ function TimeTrackingOverview() {
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
   const [isFetching, setIsFetching] = useState(false);
+  const isCurrentUserAdminOrManager = useSelector((state: OxalisState) => {
+    const activeUser = state.activeUser;
+    return activeUser != null && isUserAdminOrTeamManager(activeUser);
+  });
   const allTeams = useFetch(
     async () => {
       setIsFetching(true);
@@ -160,6 +166,7 @@ function TimeTrackingOverview() {
         mode="multiple"
         placeholder="Filter teams"
         defaultValue={[]}
+        disabled={!isCurrentUserAdminOrManager}
         style={{ width: 200, ...filterStyle }}
         options={allTeams.map((team) => {
           return {

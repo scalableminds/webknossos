@@ -111,7 +111,7 @@ function TimeTrackingOverview() {
   };
 
   const exportToCSV = () => {
-    if (filteredTimeEntries == null || filteredTimeEntries.length === 0) {
+    if (filteredTimeEntries?.length === null) {
       return;
     }
     const timeEntriesAsString = filteredTimeEntries

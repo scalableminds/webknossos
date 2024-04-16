@@ -52,6 +52,7 @@ GET           /datasets/:organizationName/:datasetName/layers/:dataLayerName/agg
 GET           /datasets/:organizationName/:datasetName/layers/:dataLayerName/agglomerates/:mappingName/agglomerateGraph/:agglomerateId        @com.scalableminds.webknossos.datastore.controllers.DataSourceController.agglomerateGraph(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, mappingName: String, agglomerateId: Long)
 GET           /datasets/:organizationName/:datasetName/layers/:dataLayerName/agglomerates/:mappingName/largestAgglomerateId                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.largestAgglomerateId(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, mappingName: String)
 POST          /datasets/:organizationName/:datasetName/layers/:dataLayerName/agglomerates/:mappingName/agglomeratesForSegments                @com.scalableminds.webknossos.datastore.controllers.DataSourceController.agglomerateIdsForSegmentIds(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, mappingName: String)
+GET           /datasets/:organizationName/:datasetName/layers/:dataLayerName/agglomerates/:mappingName/positionForSegment                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.positionForSegment(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, mappingName: String, segmentId: Long)
 
 
 # Mesh files

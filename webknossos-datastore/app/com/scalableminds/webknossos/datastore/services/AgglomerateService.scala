@@ -1,7 +1,9 @@
 package com.scalableminds.webknossos.datastore.services
 
 import ch.systemsx.cisd.hdf5._
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
@@ -267,6 +269,14 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       agglomerateIds
     }
 
+  }
+
+  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] = tryo {
+    val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
+    val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+    val agglomerateId = reader.uint64().readArrayBlockWithOffset("/segment_to_agglomerate", 1, segmentId)
+    // TODO binary search for segment in agglomerate_to_segments, use that index for agglomerate_to_positions
+    Vec3Int(0, 0, 0)
   }
 
   def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[AgglomerateGraph] =

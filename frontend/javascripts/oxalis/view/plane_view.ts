@@ -44,7 +44,7 @@ const HOVERED_COLOR = [0.65, 0.5, 0.1] as const;
 function updateMeshAppearance(
   _mesh: THREE.Object3D,
   isHovered: boolean | undefined,
-  isActiveUnmappedSegment: boolean | undefined,
+  isActiveUnmappedSegment?: boolean | undefined,
 ) {
   const mesh = _mesh as MeshSceneNode;
   let wasChanged = false;

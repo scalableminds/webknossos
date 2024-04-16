@@ -9,11 +9,9 @@ import { formatMilliseconds } from "libs/format_utils";
 import ProjectAndAnnotationTypeDropdown, {
   AnnotationTypeFilterEnum,
 } from "./project_and_annotation_type_dropdown";
-import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
+import { transformToCSVRow } from "libs/utils";
 import messages from "messages";
 import Toast from "libs/toast";
-import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
 import dayjs, { Dayjs } from "antd/node_modules/dayjs";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
 import LinkButton from "components/link_button";

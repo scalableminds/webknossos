@@ -502,12 +502,28 @@ function* performCutFromNeighbors(
     segmentsInfo,
   );
 
-  const edgesToRemove = neighborInfo.neighbors.map((neighbor) => ({
-    position1: neighbor.position,
-    position2: segmentPosition,
-    segmentId1: neighbor.segmentId,
-    segmentId2: agglomerateId,
-  }));
+  const edgesToRemove: Array<
+    | {
+        position1: Vector3;
+        position2: Vector3;
+        segmentId1: number;
+        segmentId2: number;
+      }
+    | {
+        position1: Vector3;
+        position2: null;
+        segmentId1: number;
+        segmentId2: number;
+      }
+  > = neighborInfo.neighbors.map(
+    (neighbor) =>
+      ({
+        position1: neighbor.position,
+        position2: segmentPosition,
+        segmentId1: neighbor.segmentId,
+        segmentId2: agglomerateId,
+      }) as const,
+  );
 
   if (edgesToRemove.length === 0) {
     Toast.info("No neighbors found.");
@@ -516,15 +532,14 @@ function* performCutFromNeighbors(
 
   for (const edge of edgesToRemove) {
     if (sourceTree) {
-      const { position2 } = edge;
-      if (position2 == null) {
+      if (edge.position2 == null) {
         Toast.warning("Could not perform cut from neighbors. See console for more details.");
         console.warn(
           "segmentPosition is not available even though a tree was passed to performCutFromNeighbors.",
         );
         return { didCancel: true };
       }
-      const result = getDeleteEdgeActionForEdgePositions(sourceTree, { ...edge, position2 });
+      const result = getDeleteEdgeActionForEdgePositions(sourceTree, edge);
       if (result == null) {
         return { didCancel: true };
       }

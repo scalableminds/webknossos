@@ -247,14 +247,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     meshFileName: string,
   ) {
     dispatch(
-      loadPrecomputedMeshAction(
-        segmentId,
-        seedPosition,
-        seedAdditionalCoordinates,
-        meshFileName,
-        undefined,
-        true,
-      ),
+      loadPrecomputedMeshAction(segmentId, seedPosition, seedAdditionalCoordinates, meshFileName),
     );
   },
 

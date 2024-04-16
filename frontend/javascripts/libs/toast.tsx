@@ -1,8 +1,6 @@
 import { notification, Collapse } from "antd";
 import { CloseCircleOutlined } from "@ant-design/icons";
-import React from "react";
-import { useEffectOnlyOnce } from "./react_hooks";
-import renderIndependently from "./render_independently";
+import React, { useEffect } from "react";
 import { animationFrame, sleep } from "./utils";
 
 export type ToastStyle = "info" | "warning" | "success" | "error";
@@ -21,29 +19,30 @@ export type ToastConfig = {
 };
 
 export type NotificationAPI = ReturnType<typeof notification.useNotification>[0];
-type ToastMessageCallback = (api: NotificationAPI) => React.ReactNode;
 
-function ToastFunctionalComponentWrapper(props: {
-  type: ToastStyle;
-  message: ToastMessageCallback;
-  config: ToastConfig;
-  details: string | undefined;
-}) {
+export function ToastContextMountRoot() {
   const [toastAPI, contextHolder] = notification.useNotification();
-  useEffectOnlyOnce(() => {
-    Toast._messageInternal(
-      props.type,
-      props.message(toastAPI),
-      props.config,
-      toastAPI,
-      props.details,
-    );
-  });
-  // Return empty renderable component for "renderIndependently"
+  useEffect(() => {
+    Toast.notificationAPI = toastAPI;
+  }, [toastAPI]);
   return <>{contextHolder}</>;
 }
 
+type ToastParams = {
+  type: ToastStyle;
+  message: React.ReactNode;
+  config: ToastConfig;
+  details?: string;
+};
+
 const Toast = {
+  // The notificationAPI is designed to be a lazy singleton spawned by the first toast call.
+  // Once the notificationAPI is fully initialized, it is stored in this.notificationAPI.
+  // undefined means that the notificationAPI is not yet initialized.
+  // null means that the notificationAPI is still being initialized.
+  notificationAPI: undefined as NotificationAPI | undefined | null,
+  pendingToasts: [] as ToastParams[],
+  pendingTimeouts: {} as Record<string, Promise<void>>,
   messages(messages: Message[]): void {
     const errorChainObject = messages.find((msg) => typeof msg.chain !== "undefined");
     const errorChainString: string | null | undefined = errorChainObject?.chain;
@@ -101,13 +100,15 @@ const Toast = {
     );
   },
 
-  async _messageInternal(
+  _messageInternal(
     type: ToastStyle,
     rawMessage: string | React.ReactNode,
     config: ToastConfig,
-    notificationAPI: NotificationAPI,
     details?: string,
-  ): Promise<void> {
+  ) {
+    if (!this.notificationAPI) {
+      return;
+    }
     const message = this.buildContentWithDetails(rawMessage, details);
     const timeout = config.timeout != null ? config.timeout : 6000;
     const key = config.key || (typeof message === "string" ? message : undefined);
@@ -121,10 +122,12 @@ const Toast = {
       toastMessage = message;
     }
 
+    const timeOutInSeconds = timeout / 1000;
+    const useManualTimeout = !sticky && key != null;
     let toastConfig = {
       icon: undefined,
       key,
-      duration: 0,
+      duration: useManualTimeout || sticky ? 0 : timeOutInSeconds,
       message: toastMessage,
       style: {},
       className: "",
@@ -137,18 +140,22 @@ const Toast = {
       });
     }
 
-    notificationAPI[type](toastConfig);
+    this.notificationAPI[type](toastConfig);
 
     // Make sure that toasts don't just disappear while the user has WK in a background tab (e.g. while uploading large dataset).
     // Most browsers pause requestAnimationFrame() if the current tab is not active, but Firefox does not seem to do that.
-    if (!sticky && key != null) {
-      const splitTimeout = timeout / 2;
-      await animationFrame(); // ensure tab is active
-      await sleep(splitTimeout);
-      await animationFrame();
-      // If the user has switched the tab, show the toast again so that the user doesn't just see the toast dissapear.
-      await sleep(splitTimeout);
-      this.close(key);
+    if (useManualTimeout && this.pendingTimeouts[key] == null) {
+      const timeoutToastManually = async () => {
+        const splitTimeout = timeout / 2;
+        await animationFrame(); // ensure tab is active
+        await sleep(splitTimeout);
+        await animationFrame();
+        // If the user has switched the tab, show the toast again so that the user doesn't just see the toast dissapear.
+        await sleep(splitTimeout);
+        this.close(key);
+        delete this.pendingTimeouts[key];
+      };
+      this.pendingTimeouts[key] = timeoutToastManually();
     }
   },
 
@@ -179,39 +186,29 @@ const Toast = {
   },
 
   close(key: string) {
-    notification.destroy(key);
+    if (this.notificationAPI) {
+      this.notificationAPI.destroy(key);
+    }
   },
   message(
     type: ToastStyle,
-    message: ToastMessageCallback | React.ReactNode = "Success :-)",
+    message: React.ReactNode = "Success :-)",
     config: ToastConfig = {},
     details?: string | undefined,
   ) {
-    renderIndependently((destroy) => {
-      // Deferring the destroy of the ToastFunctionalComponentWrapper to give the Notification API time to call the toast's destroy when e.g. a timeout occurs.
-      // Else the Notification API would call the destroy after the ToastFunctionalComponentWrapper has been unmounted, which would lead to an error in the
-      // console as the Toast is already destroyed because its parent (ToastFunctionalComponentWrapper) is already destroyed.
-      const deferredDestroy = () => setTimeout(destroy, 0);
-      const userOnClose = config.onClose;
-      // Making sure onClose destroys the ToastFunctionalComponentWrapper instance.
-      config.onClose = () => {
-        if (userOnClose != null) {
-          userOnClose();
-        }
-        deferredDestroy();
-      };
-      const maybeWrappedMessage = (
-        typeof message === "function" ? message : () => message
-      ) as ToastMessageCallback;
-      return (
-        <ToastFunctionalComponentWrapper
-          message={maybeWrappedMessage}
-          config={config}
-          details={details}
-          type={type}
-        />
-      );
+    if (this.notificationAPI == null) {
+      // If the notificationAPI is still being initialized, queue the toast.
+      this.pendingToasts.push({ type, message, config, details });
+      return;
+    }
+    // First, show any pending toasts.
+    this.pendingToasts.forEach((toast) => {
+      this._messageInternal(toast.type, toast.message, toast.config, toast.details);
     });
+    this.pendingToasts = [];
+
+    // If the notificationAPI is already initialized, use it.
+    this._messageInternal(type, message, config, details);
   },
 };
 export default Toast;

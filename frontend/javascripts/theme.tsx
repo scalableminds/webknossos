@@ -5,6 +5,7 @@ import { APIUser } from "types/api_flow_types";
 import window from "libs/window";
 import type { OxalisState, Theme } from "oxalis/store";
 import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
+import { ToastContextMountRoot } from "libs/toast";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue
@@ -88,6 +89,7 @@ export default function GlobalThemeProvider({
             height: isMainProvider ? "calc(100vh - var(--navbar-height))" : "auto",
           }}
         >
+          {isMainProvider && <ToastContextMountRoot />}
           {children}
         </div>
       </App>

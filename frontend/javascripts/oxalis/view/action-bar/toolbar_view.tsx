@@ -466,10 +466,9 @@ function AdditionalSkeletonModesButtons() {
           alt="Merger Mode"
         />
       </ButtonComponent>
-      {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && (
+      {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && isUserAdminOrTeamManager && (
         <ButtonComponent
           style={NARROW_BUTTON_STYLE}
-          disabled={!isUserAdminOrTeamManager}
           onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
           title="Materialize this merger mode annotation into a new dataset."
         >

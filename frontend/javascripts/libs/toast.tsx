@@ -36,12 +36,14 @@ type ToastParams = {
 };
 
 const Toast = {
-  // The notificationAPI is designed to be a lazy singleton spawned by the first toast call.
+  // The notificationAPI is designed to be a singleton spawned by the ToastContextMountRoot
+  // mounted in the GlobalThemeProvider.
   // Once the notificationAPI is fully initialized, it is stored in this.notificationAPI.
   // undefined means that the notificationAPI is not yet initialized.
-  // null means that the notificationAPI is still being initialized.
-  notificationAPI: undefined as NotificationAPI | undefined | null,
+  notificationAPI: undefined as NotificationAPI | undefined,
+  // Stores the pending toast messages before the notificationAPI is initialized.
   pendingToasts: [] as ToastParams[],
+  // Stores the pending manual timeouts for toasts to avoid multiple timeouts for the same toast.
   pendingTimeouts: {} as Record<string, Promise<void>>,
   messages(messages: Message[]): void {
     const errorChainObject = messages.find((msg) => typeof msg.chain !== "undefined");

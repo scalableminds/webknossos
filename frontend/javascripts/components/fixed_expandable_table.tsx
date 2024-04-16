@@ -30,7 +30,7 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
 
   componentDidUpdate(prevProps: Readonly<Props<any>>): void {
     if (prevProps.dataSource !== this.props.dataSource) {
-      this.setState({ expandedRows: [] })
+      this.setState({ expandedRows: [] });
     }
   }
 

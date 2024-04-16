@@ -143,6 +143,23 @@ class EditableMappingService @Inject()(
     } yield (newId, newEditableMappingInfo)
   }
 
+  def agglomerateIdForSegmentId(editableMappingId: String,
+                                segmentId: Long,
+                                remoteFallbackLayer: RemoteFallbackLayer,
+                                userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] = {
+    val chunkId = segmentId / defaultSegmentToAgglomerateChunkSize
+    for {
+      (info, version) <- getInfoAndActualVersion(editableMappingId, None, remoteFallbackLayer, userToken)
+      chunk <- getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId, version).map(_.toMap)
+      agglomerateId <- chunk.get(segmentId) match {
+        case Some(agglomerateId) => Fox.successful(agglomerateId)
+        case None =>
+          getBaseSegmentToAgglomerate(info.baseMappingName, Set(segmentId), remoteFallbackLayer, userToken)
+            .flatMap(baseSegmentToAgglomerate => baseSegmentToAgglomerate.get(segmentId))
+      }
+    } yield agglomerateId
+  }
+
   def duplicate(editableMappingIdOpt: Option[String],
                 version: Option[Long],
                 remoteFallbackLayerBox: Box[RemoteFallbackLayer],

@@ -381,6 +381,7 @@ function getMeshItems(
   const state = Store.getState();
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
   const activeCellId = getActiveCellId(volumeTracing);
+  const { activeUnmappedSegmentId } = volumeTracing;
 
   const maybeProofreadingItems: MenuItemType[] = isProofreadingActive
     ? [
@@ -417,7 +418,7 @@ function getMeshItems(
             !isProofreadingActive ||
             clickedMeshId !== activeCellId ||
             maybeUnmappedSegmentId == null ||
-            volumeTracing.activeUnmappedSegmentId == null,
+            activeUnmappedSegmentId == null,
           onClick: () => {
             if (maybeUnmappedSegmentId == null) {
               // Should not happen due to the disabled property.
@@ -470,20 +471,31 @@ function getMeshItems(
       ]
     : [];
 
-  const segmentLabel =
+  const segmentIdLabel =
     maybeUnmappedSegmentId != null
       ? `${maybeUnmappedSegmentId} -> ${clickedMeshId}`
       : clickedMeshId;
+  const segmentOrSuperVoxel = maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
+  const isAlreadySelected =
+    activeUnmappedSegmentId === maybeUnmappedSegmentId && activeCellId === clickedMeshId;
   return [
-    {
-      key: "activate-segment",
-      onClick: () =>
-        Store.dispatch(
-          setActiveCellAction(clickedMeshId, undefined, undefined, maybeUnmappedSegmentId),
-        ),
-      // disabled: volumeTracing != null && clickedMeshId === getActiveCellId(volumeTracing),
-      label: `Activate Segment (${segmentLabel})`,
-    },
+    activeUnmappedSegmentId != null && isAlreadySelected
+      ? {
+          // If a supervoxel is selected (and thus highlighted), allow to select it.
+          key: "deactivate-segment",
+          onClick: () =>
+            Store.dispatch(setActiveCellAction(clickedMeshId, undefined, undefined, undefined)),
+          label: `Deselect ${segmentOrSuperVoxel} (${segmentIdLabel})`,
+        }
+      : {
+          key: "activate-segment",
+          onClick: () =>
+            Store.dispatch(
+              setActiveCellAction(clickedMeshId, undefined, undefined, maybeUnmappedSegmentId),
+            ),
+          disabled: isAlreadySelected,
+          label: `Activate ${segmentOrSuperVoxel} (${segmentIdLabel})`,
+        },
     {
       key: "hide-mesh",
       onClick: () => Actions.hideMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),

@@ -148,6 +148,7 @@ type DatasetSettingsProps = {
   controlMode: ControlMode;
   isArbitraryMode: boolean;
   isAdminOrDatasetManager: boolean;
+  isAdminOrManager: boolean;
   isSuperUser: boolean;
 };
 
@@ -558,7 +559,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerSettings: DatasetLayerConfiguration,
     hasLessThanTwoColorLayers: boolean = true,
   ) => {
-    const { tracing, dataset, isAdminOrDatasetManager } = this.props;
+    const { tracing, dataset, isAdminOrManager } = this.props;
     const { intensityRange } = layerSettings;
     const layer = getLayerByName(dataset, layerName);
     const isSegmentation = layer.category === "segmentation";
@@ -611,7 +612,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       readableName,
     );
     const possibleItems: MenuProps["items"] = [
-      isVolumeTracing && !isDisabled && maybeFallbackLayer != null && isAdminOrDatasetManager
+      isVolumeTracing && !isDisabled && maybeFallbackLayer != null && isAdminOrManager
         ? {
             label: this.getMergeWithFallbackLayerButton(layer),
             key: "mergeWithFallbackLayerButton",
@@ -1502,6 +1503,7 @@ const mapStateToProps = (state: OxalisState) => ({
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
   isAdminOrDatasetManager:
     state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
+  isAdminOrManager: state.activeUser != null ? Utils.isUserAdminOrManager(state.activeUser) : false,
   isSuperUser: state.activeUser?.isSuperUser || false,
 });
 

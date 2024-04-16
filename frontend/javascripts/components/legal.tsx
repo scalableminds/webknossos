@@ -1,5 +1,4 @@
 import { Row, Col, Card } from "antd";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import React from "react";
 import type { APIOrganization } from "types/api_flow_types";

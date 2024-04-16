@@ -239,7 +239,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           }
         }
 
-        // eslint-disable-next-line no-useless-return, consistent-return
         return;
       };
 

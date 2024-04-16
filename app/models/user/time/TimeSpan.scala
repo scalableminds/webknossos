@@ -16,7 +16,7 @@ import scala.concurrent.duration.FiniteDuration
 case class TimeSpan(
     _id: ObjectId,
     _user: ObjectId,
-    _annotation: Option[ObjectId],
+    _annotation: Option[ObjectId], // Optional for compatibility with legacy data. All new timespans have an annotation.
     time: Long,
     lastUpdate: Instant,
     numberOfUpdates: Long = 0,
@@ -38,8 +38,8 @@ object TimeSpan {
   def groupByDay(timeSpan: TimeSpan): Day =
     Day(timeSpan.created.dayOfMonth, timeSpan.created.monthOfYear, timeSpan.created.year)
 
-  def fromInstant(timestamp: Instant, _user: ObjectId, _annotation: Option[ObjectId]): TimeSpan =
-    TimeSpan(ObjectId.generate, _user, _annotation, time = 0L, lastUpdate = timestamp, created = timestamp)
+  def fromInstant(timestamp: Instant, userId: ObjectId, annotationId: ObjectId): TimeSpan =
+    TimeSpan(ObjectId.generate, userId, Some(annotationId), time = 0L, lastUpdate = timestamp, created = timestamp)
 
 }
 

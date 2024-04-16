@@ -288,7 +288,6 @@ export default function TaskListView({
   }
 
   const miniSearch = useMemo(() => {
-    // eslint-disable-next-line @typescript-eslint/no-shadow
     const miniSearch: MiniSearch<VoxelyticsTaskConfig> = new MiniSearch({
       fields: ["taskName", "task", "config.name"],
       idField: "taskName",

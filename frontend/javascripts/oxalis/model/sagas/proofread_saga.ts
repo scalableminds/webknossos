@@ -826,10 +826,10 @@ function* getAgglomerateInfos(
 }> | null> {
   const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
   if (idInfos.find((idInfo) => idInfo.agglomerateId === 0 || idInfo.unmappedId === 0) != null) {
-    console.warn("At least one id was zero:", idInfos);
     Toast.warning(
       "One of the selected segments has the id 0 which is the background. Cannot merge/split.",
     );
+    console.warn("At least one id was zero:", idInfos);
     return null;
   }
   return idInfos;

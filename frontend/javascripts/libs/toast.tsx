@@ -188,8 +188,9 @@ const Toast = {
     details?: string | undefined,
   ) {
     renderIndependently((destroy) => {
-      // Deferring destroy to give the Notification API a chance to close the toast via timeout
-      // before unmounting the parent component created with renderIndependently.
+      // Deferring the destroy of the ToastFunctionalComponentWrapper to give the Notification API time to call the toast's destroy when e.g. a timeout occurs.
+      // Else the Notification API would call the destroy after the ToastFunctionalComponentWrapper has been unmounted, which would lead to an error in the
+      // console as the Toast is already destroyed because its parent (ToastFunctionalComponentWrapper) is already destroyed.
       const deferredDestroy = () => setTimeout(destroy, 0);
       const userOnClose = config.onClose;
       // Making sure onClose destroys the ToastFunctionalComponentWrapper instance.

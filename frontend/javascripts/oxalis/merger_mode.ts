@@ -345,7 +345,6 @@ function changeOpacity(mergerModeState: MergerModeState) {
 }
 
 async function mergeSegmentsOfAlreadyExistingTrees(
-  // eslint-disable-next-line @typescript-eslint/default-param-last
   index = 0,
   mergerModeState: MergerModeState,
   onProgressUpdate: (arg0: number) => void,
@@ -409,7 +408,7 @@ async function mergeSegmentsOfAlreadyExistingTrees(
     const nodesMappedPromises = nodes
       .slice(cur, cur + BATCH_SIZE)
       .map((node) => setSegmentationOfNode(node));
-    // eslint-disable-next-line no-await-in-loop
+
     await Promise.all(nodesMappedPromises);
   }
 

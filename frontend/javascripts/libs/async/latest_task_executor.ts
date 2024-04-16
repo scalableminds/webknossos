@@ -40,7 +40,7 @@ export default class LatestTaskExecutor<T> {
       }
 
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Promise<unknown>' is not assigna... Remove this comment to see the full error message
-      // eslint-disable-next-line no-promise-executor-return
+
       return resolve(deferred.promise());
     });
   }

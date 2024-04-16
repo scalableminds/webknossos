@@ -785,8 +785,8 @@ function* loadPrecomputedMeshForSegmentId(
     scale = chunkDescriptors.scale;
     loadingOrder = chunkDescriptors.loadingOrder;
   } catch (exception) {
-    console.warn("Mesh chunk couldn't be loaded due to", exception);
     Toast.warning(messages["tracing.mesh_listing_failed"]);
+    console.warn("Mesh chunk couldn't be loaded due to", exception);
     yield* put(finishedLoadingMeshAction(layerName, id));
     yield* put(removeMeshAction(layerName, id));
     return;
@@ -808,8 +808,8 @@ function* loadPrecomputedMeshForSegmentId(
   try {
     yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
   } catch (exception) {
-    console.error(exception);
     Toast.warning(`Some mesh chunks could not be loaded for segment ${id}.`);
+    console.error(exception);
   }
 
   yield* put(finishedLoadingMeshAction(layerName, id));
@@ -1092,8 +1092,8 @@ function* downloadMeshCellById(cellName: string, segmentId: number, layerName: s
     yield* call(saveAs, blob, `${cellName}-${segmentId}.stl`);
   } catch (exception) {
     ErrorHandling.notify(exception as Error);
-    console.error(exception);
     Toast.error("Could not export to STL. See console for details");
+    console.error(exception);
   }
 }
 
@@ -1126,8 +1126,8 @@ function* downloadMeshCellsAsZIP(
     yield* call(saveAs, result as Blob, "mesh-export.zip");
   } catch (exception) {
     ErrorHandling.notify(exception as Error);
-    console.error(exception);
     Toast.error("Could not export meshes as STL files. See console for details");
+    console.error(exception);
   }
 }
 

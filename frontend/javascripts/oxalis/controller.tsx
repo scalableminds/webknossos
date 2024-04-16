@@ -160,7 +160,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         }
       }
 
-      // eslint-disable-next-line no-useless-return, consistent-return
       return;
     };
 
@@ -193,13 +192,12 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       const content = await fetchGistContent(script.gist, script.name);
 
       try {
-        // eslint-disable-next-line no-eval
         eval(content);
       } catch (error) {
-        console.error(error);
         Toast.error(
           `Error executing the task script "${script.name}". See console for more information.`,
         );
+        console.error(error);
       }
     }
   }

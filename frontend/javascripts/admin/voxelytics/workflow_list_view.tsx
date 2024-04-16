@@ -50,8 +50,8 @@ export default function WorkflowListView() {
       const _workflows = (await getVoxelyticsWorkflows()).map(parseWorkflowInfo);
       setWorkflows(_workflows);
     } catch (err) {
-      console.error(err);
       Toast.error("Could not load workflow list.");
+      console.error(err);
     } finally {
       setIsLoading(false);
     }

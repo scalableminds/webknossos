@@ -25,6 +25,8 @@ import {
   OrthoView,
   AnnotationToolEnum,
   VolumeTools,
+  AltOrOptionKey,
+  CtrlOrCmdKey,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
@@ -468,12 +470,12 @@ function getNodeContextMenuOptions({
             disabled: areInSameTree,
             onClick: () =>
               activeNodeId != null
-                ? Store.dispatch(mergeTreesAction(clickedNodeId, activeNodeId))
+                ? Store.dispatch(mergeTreesAction(activeNodeId, clickedNodeId))
                 : null,
             label: (
               <>
                 Create Edge & Merge with this Tree{" "}
-                {useLegacyBindings ? shortcutBuilder(["Shift", "Alt", "leftMouse"]) : null}
+                {useLegacyBindings ? shortcutBuilder(["Shift", AltOrOptionKey, "leftMouse"]) : null}
               </>
             ),
           },
@@ -524,7 +526,7 @@ function getNodeContextMenuOptions({
             label: (
               <>
                 Delete Edge to this Node{" "}
-                {useLegacyBindings ? shortcutBuilder(["Shift", "Ctrl", "leftMouse"]) : null}
+                {useLegacyBindings ? shortcutBuilder(["Shift", CtrlOrCmdKey, "leftMouse"]) : null}
               </>
             ),
           },
@@ -904,7 +906,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                   {!isAgglomerateMappingEnabled.value ? (
                     <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
                   ) : null}{" "}
-                  {shortcutBuilder(["SHIFT", "middleMouse"])}
+                  {shortcutBuilder(["Shift", "middleMouse"])}
                 </span>
               </Tooltip>
             ),
@@ -922,7 +924,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                         : "Cannot merge because the proofreading tool is not active."
                     }
                   >
-                    <span>Merge with active segment {shortcutBuilder(["SHIFT", "leftMouse"])}</span>
+                    <span>Merge with active segment {shortcutBuilder(["Shift", "leftMouse"])}</span>
                   </Tooltip>
                 ),
               }
@@ -940,7 +942,9 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                         : "Cannot merge because the proofreading tool is not active."
                     }
                   >
-                    <span>Split from active segment {shortcutBuilder(["CTRL", "leftMouse"])}</span>
+                    <span>
+                      Split from active segment {shortcutBuilder([CtrlOrCmdKey, "leftMouse"])}
+                    </span>
                   </Tooltip>
                 ),
               }
@@ -1249,7 +1253,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
       const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
       const layersFinestResolution = magInfo.getFinestResolution();
-      const dataSetScale = dataset.dataSource.scale;
+      const datasetScale = dataset.dataSource.scale;
 
       try {
         const [segmentSize] = await getSegmentVolumes(
@@ -1272,7 +1276,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
         );
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-        const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
+        const volumeInNm3 = voxelToNm3(datasetScale, layersFinestResolution, segmentSize);
         return [
           formatNumberToVolume(volumeInNm3),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,

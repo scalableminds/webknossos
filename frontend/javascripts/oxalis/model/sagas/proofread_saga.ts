@@ -12,6 +12,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   initializeEditableMappingAction,
+  removeSegmentAction,
   setMappingIsEditableAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { ProofreadAtPositionAction } from "oxalis/model/actions/proofread_actions";
@@ -238,6 +239,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // Actually, action is MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
   // but the takeEveryUnlessBusy wrapper does not understand this.
   // Handles split, merge and min-cut actions on agglomerates.
+  // Note that the skeletontracing reducer already mutated the skeletons according to the
+  // received action.
   if (
     action.type !== "MERGE_TREES" &&
     action.type !== "DELETE_EDGE" &&
@@ -394,12 +397,16 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     ),
   );
   if (sourceTree !== targetTree) {
+    // A split happened, because the new trees are not identical.
     yield* put(
       setTreeNameAction(
         getTreeNameForAgglomerateSkeleton(newTargetAgglomerateId, volumeTracing.mappingName),
         targetTree.treeId,
       ),
     );
+  } else {
+    // A merge happened. Remove the segment that doesn't exist anymore.
+    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
   }
 
   const pack = (agglomerateId: number, newAgglomerateId: number, nodePosition: Vector3) => ({
@@ -633,6 +640,11 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     bucket.containsValue(targetAgglomerateId),
   );
 
+  if (action.type === "PROOFREAD_MERGE") {
+    // Remove the segment that doesn't exist anymore.
+    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
+  }
+
   const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
     call(getDataValue, sourcePosition),
     call(getDataValue, targetPosition),
@@ -814,10 +826,10 @@ function* getAgglomerateInfos(
 }> | null> {
   const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
   if (idInfos.find((idInfo) => idInfo.agglomerateId === 0 || idInfo.unmappedId === 0) != null) {
-    console.warn("At least one id was zero:", idInfos);
     Toast.warning(
       "One of the selected segments has the id 0 which is the background. Cannot merge/split.",
     );
+    console.warn("At least one id was zero:", idInfos);
     return null;
   }
   return idInfos;

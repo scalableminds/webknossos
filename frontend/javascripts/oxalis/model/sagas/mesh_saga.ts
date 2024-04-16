@@ -22,7 +22,7 @@ import {
 } from "oxalis/model/actions/segmentation_actions";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
-import { MappingStatusEnum } from "oxalis/constants";
+import { AnnotationToolEnum, MappingStatusEnum } from "oxalis/constants";
 import {
   UpdateMeshVisibilityAction,
   RemoveMeshAction,
@@ -579,6 +579,9 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
   }
 
   if (meshInfo.isPrecomputed) {
+    const isProofreadingActive = yield* select(
+      (state) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
+    );
     yield* put(removeMeshAction(layerName, meshInfo.segmentId));
     yield* put(
       loadPrecomputedMeshAction(
@@ -587,7 +590,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
         meshInfo.seedAdditionalCoordinates,
         meshInfo.meshFileName,
         layerName,
-        action.mergeChunks ?? meshInfo.areChunksMerged,
+        !isProofreadingActive,
       ),
     );
   } else {

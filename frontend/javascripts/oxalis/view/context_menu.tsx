@@ -492,12 +492,7 @@ function getMeshItems(
     {
       key: "reload-mesh",
       onClick: () =>
-        Actions.refreshMesh(
-          Store.dispatch,
-          visibleSegmentationLayer.name,
-          clickedMeshId,
-          !isProofreadingActive,
-        ),
+        Actions.refreshMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),
       label: "Reload Mesh",
     },
     {
@@ -1761,13 +1756,8 @@ const Actions = {
   setPosition(dispatch: Dispatch<any>, position: Vector3) {
     dispatch(setPositionAction(position));
   },
-  refreshMesh(
-    dispatch: Dispatch<any>,
-    layerName: string,
-    segmentId: number,
-    mergeChunks?: boolean | undefined,
-  ) {
-    dispatch(refreshMeshAction(layerName, segmentId, mergeChunks));
+  refreshMesh(dispatch: Dispatch<any>, layerName: string, segmentId: number) {
+    dispatch(refreshMeshAction(layerName, segmentId));
   },
 };
 

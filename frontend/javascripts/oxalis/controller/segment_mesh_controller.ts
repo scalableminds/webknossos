@@ -119,7 +119,11 @@ export default class SegmentMeshController {
         app.vent.emit("rerender");
       })
       .start();
-    return mesh;
+
+    // parent is still null at this moment, but when the mesh is
+    // added to the group later, parent will be set. We'll ignore
+    // this detail for now via the casting.
+    return mesh as MeshSceneNode;
   }
 
   addMeshFromGeometries(

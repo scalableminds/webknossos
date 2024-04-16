@@ -274,7 +274,11 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] = tryo {
     val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
     val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    val agglomerateId = reader.uint64().readArrayBlockWithOffset("/segment_to_agglomerate", 1, segmentId)
+    val agglomerateIdArr: Array[Long] =
+      reader.uint64().readArrayBlockWithOffset("/segment_to_agglomerate", 1, segmentId)
+    val agglomerateId = agglomerateIdArr(0)
+    val segmentsRange: Array[Long] =
+      reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
     // TODO binary search for segment in agglomerate_to_segments, use that index for agglomerate_to_positions
     Vec3Int(0, 0, 0)
   }

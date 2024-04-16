@@ -43,6 +43,12 @@ const HOVERED_COLOR = [0.65, 0.5, 0.1] as const;
 
 function updateMeshAppearance(_mesh: THREE.Object3D) {
   const mesh = _mesh as MeshSceneNode;
+  const targetOpacity = mesh.isHovered ? 0.8 : 1.0;
+  mesh.parent.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.material.opacity = targetOpacity;
+    }
+  });
   if (mesh.isHovered || mesh.isActiveUnmappedSegment) {
     mesh.material.emissive.setHSL(...HOVERED_COLOR);
 
@@ -53,6 +59,7 @@ function updateMeshAppearance(_mesh: THREE.Object3D) {
       ? HOVERED_COLOR
       : ACTIVATED_COLOR;
     mesh.material.color.setHSL(...newColor);
+    mesh.material.opacity = 1.0;
   } else {
     // @ts-ignore
     mesh.material.emissive.setHex("#FF00FF");

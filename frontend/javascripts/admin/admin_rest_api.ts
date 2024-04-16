@@ -1884,6 +1884,23 @@ export function getEditableMappingInfo(
   );
 }
 
+export function getAgglomerateIdForSegmentId(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentId: number,
+): Promise<number> {
+  return doWithToken(async (token) => {
+    const urlParams = new URLSearchParams({
+      token,
+      segmentId: `${segmentId}`,
+    });
+    const { agglomerateId } = await Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateIdForSegmentId?${urlParams.toString()}`,
+    );
+    return agglomerateId;
+  });
+}
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,

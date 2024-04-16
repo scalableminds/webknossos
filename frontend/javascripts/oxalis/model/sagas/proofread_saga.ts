@@ -37,6 +37,7 @@ import {
   getActiveSegmentationTracingLayer,
   getActiveSegmentationTracing,
   getSegmentsForLayer,
+  getMeshInfoForSegment,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerByName,
@@ -57,7 +58,7 @@ import {
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import { V3 } from "libs/mjs";
-import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
+import { refreshMeshAction, removeMeshAction } from "oxalis/model/actions/annotation_actions";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { Tree, VolumeTracing } from "oxalis/store";
 import _ from "lodash";
@@ -117,6 +118,22 @@ function* loadCoarseMesh(
   const currentMeshFile = yield* select(
     (state) => state.localSegmentationData[layerName].currentMeshFile,
   );
+
+  const meshInfo = yield* select((state) =>
+    getMeshInfoForSegment(state, additionalCoordinates || null, layerName, segmentId),
+  );
+
+  if (meshInfo != null) {
+    if (meshInfo.isPrecomputed && meshInfo.areChunksMerged) {
+      console.log(
+        `Reloading mesh for segment ${segmentId} because its chunks should not be merged for proofreading.`,
+      );
+      yield* put(refreshMeshAction(layerName, segmentId));
+    } else {
+      console.log(`Don't load mesh for segment ${segmentId} because it already exists.`);
+    }
+    return;
+  }
 
   if (
     currentMeshFile != null &&

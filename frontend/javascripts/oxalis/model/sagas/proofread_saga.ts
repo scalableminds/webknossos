@@ -592,7 +592,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   if (!preparation) {
     return;
   }
-  const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
+  const { agglomerateFileMag, volumeTracing } = preparation;
   const { tracingId: volumeTracingId, activeCellId, activeUnmappedSegmentId } = volumeTracing;
   if (activeCellId === 0) return;
 

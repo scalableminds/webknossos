@@ -563,7 +563,7 @@ function getNodeContextMenuOptions({
             disabled: areInSameTree,
             onClick: () =>
               activeNodeId != null
-                ? Store.dispatch(mergeTreesAction(clickedNodeId, activeNodeId))
+                ? Store.dispatch(mergeTreesAction(activeNodeId, clickedNodeId))
                 : null,
             label: (
               <>
@@ -1402,7 +1402,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
       const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
       const layersFinestResolution = magInfo.getFinestResolution();
-      const dataSetScale = dataset.dataSource.scale;
+      const datasetScale = dataset.dataSource.scale;
 
       try {
         const [segmentSize] = await getSegmentVolumes(
@@ -1425,7 +1425,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
         );
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-        const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
+        const volumeInNm3 = voxelToNm3(datasetScale, layersFinestResolution, segmentSize);
         return [
           formatNumberToVolume(volumeInNm3),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,

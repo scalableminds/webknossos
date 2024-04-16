@@ -342,7 +342,6 @@ export class OxalisModel {
         Store.dispatch(saveNowAction());
       }
 
-      // eslint-disable-next-line no-await-in-loop
       await Utils.sleep(500);
     }
   };

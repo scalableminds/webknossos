@@ -1,6 +1,5 @@
 import { Input, InputProps, Tooltip } from "antd";
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import * as React from "react";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";

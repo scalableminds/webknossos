@@ -939,29 +939,30 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           const isProofreadingActive =
             state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
           const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
-          const trees = getTreesWithType(skeletonTracing, treeType);
-          return mergeTrees(trees, sourceNodeId, targetNodeId)
-            .map(([trees, newActiveTreeId, newActiveNodeId]) =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    trees: {
-                      $set: trees,
-                    },
-                    activeNodeId: {
-                      $set: newActiveNodeId,
-                    },
-                    activeTreeId: {
-                      $set: newActiveTreeId,
-                    },
-                    activeGroupId: {
-                      $set: null,
-                    },
-                  },
+          const oldTrees = getTreesWithType(skeletonTracing, treeType);
+          const mergeResult = mergeTrees(oldTrees, sourceNodeId, targetNodeId);
+          if (mergeResult == null) {
+            return state;
+          }
+          const [trees, newActiveTreeId, newActiveNodeId] = mergeResult;
+          return update(state, {
+            tracing: {
+              skeleton: {
+                trees: {
+                  $set: trees,
                 },
-              }),
-            )
-            .getOrElse(state);
+                activeNodeId: {
+                  $set: newActiveNodeId,
+                },
+                activeTreeId: {
+                  $set: newActiveTreeId,
+                },
+                activeGroupId: {
+                  $set: null,
+                },
+              },
+            },
+          });
         }
 
         case "SET_TREE_NAME": {

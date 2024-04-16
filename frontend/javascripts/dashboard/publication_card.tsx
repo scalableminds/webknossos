@@ -1,6 +1,5 @@
 import { Card, Button, Tooltip } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import React, { useState } from "react";
 import classNames from "classnames";
@@ -196,7 +195,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
           }) as PublicationItem,
       ),
   ];
-  sortedItems.sort(compareBy([] as Array<PublicationItem>, (item) => item.dataset.sortingKey));
+  sortedItems.sort(compareBy<PublicationItem>((item) => item.dataset.sortingKey));
   const [activeItem, setActiveItem] = useState<PublicationItem | null>(sortedItems[0]);
 
   return (

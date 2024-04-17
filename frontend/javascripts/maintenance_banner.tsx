@@ -204,13 +204,12 @@ export function UpgradeVersionBanner() {
   return shouldBannerBeShown ? (
     <Alert
       message={
-        <Space>
-          You are using an old version of WEBKNOSSOS. Switch to <b>webknossos.org</b> for automatic
-          updates and exclusive features!
-          <Button
-            style={{ background: "var(--ant-button-default-hover-bg)" }}
-            href="https://webknossos.org/self-hosted-upgrade"
-          >
+        <Space size="middle">
+          <Space size="small">
+            You are using an old version of WEBKNOSSOS. Switch to <b>webknossos.org</b> for
+            automatic updates and exclusive features!
+          </Space>
+          <Button className="upgrade-banner" href="https://webknossos.org/self-hosted-upgrade">
             {" "}
             Learn more{" "}
           </Button>

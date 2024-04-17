@@ -314,6 +314,7 @@ const Constants = {
   VIEWPORT_WIDTH,
   DEFAULT_NAVBAR_HEIGHT: 48,
   MAINTENANCE_BANNER_HEIGHT: 38,
+  UPGRADE_BANNER_HEIGHT: 50,
   // For reference, the area of a large brush size (let's say, 300px) corresponds to
   // pi * 300 ^ 2 == 282690.
   // We multiply this with 5, since the labeling is not done

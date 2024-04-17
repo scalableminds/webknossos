@@ -3,7 +3,7 @@ import {
   listCurrentAndUpcomingMaintenances,
   updateNovelUserExperienceInfos,
 } from "admin/admin_rest_api";
-import { Alert } from "antd";
+import { Alert, Button, Space } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { useFetch, useInterval } from "libs/react_helpers";
@@ -149,40 +149,82 @@ export function MaintenanceBanner() {
 }
 
 export function UpgradeVersionBanner() {
-  //require('dayjs/locale/es');
-  const customParseFormat = require('dayjs/plugin/customParseFormat')
-  dayjs.extend(customParseFormat)
+  const UPGRADE_BANNER_STYLE: React.CSSProperties = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    height: constants.UPGRADE_BANNER_HEIGHT,
+    textAlign: "center",
+    backgroundColor: "var(--ant-color-primary)",
+    color: "var(--ant-color-text-primary)",
+    fontWeight: 600,
+    fontSize: "medium",
+  };
+  const customParseFormat = require("dayjs/plugin/customParseFormat");
+  dayjs.extend(customParseFormat);
   const currentDate = dayjs();
 
-  const isVersionOutdated = useFetch(async () => {
-    const buildInfo = await getBuildInfo();
-    const commitDateWithoutWeekday = buildInfo.webknossos.commitDate.replace(/(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/, "");
-    console.log(commitDateWithoutWeekday)
-    const lastCommitDate = dayjs(commitDateWithoutWeekday, "MMM DD HH:mm:ss YYYY ZZ"); // todo two digit dates? test more once time tracking is merged
-    console.log(lastCommitDate)
-    const needsUpdate = currentDate.diff(lastCommitDate, 'month') >= 6;
-    console.log(needsUpdate);
-    return needsUpdate;
-  }, false, [])
+  const isVersionOutdated = useFetch(
+    async () => {
+      const buildInfo = await getBuildInfo();
+      const commitDateWithoutWeekday = buildInfo.webknossos.commitDate.replace(
+        /(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/,
+        "",
+      );
+      console.log(commitDateWithoutWeekday);
+      const lastCommitDate = dayjs(commitDateWithoutWeekday, "MMM DD HH:mm:ss YYYY ZZ"); // todo two digit dates? test more once time tracking is merged
+      console.log(lastCommitDate);
+      const needsUpdate = currentDate.diff(lastCommitDate, "month") >= 6;
+      console.log(needsUpdate);
+      return needsUpdate;
+    },
+    false,
+    [],
+  );
 
-  const shouldBannerBeShown = () => {
+  const getShouldBannerBeShown = () => {
+    if (!isVersionOutdated) return true; // TODO
     const lastTimeBannerWasClickedAway = localStorage.getItem(UPGRADE_BANNER_LOCAL_STORAGE_KEY);
-    if (lastTimeBannerWasClickedAway != null) {
-      const parsedDate = dayjs(lastTimeBannerWasClickedAway);
-      lastTimeBannerWasClickedAway.diff(currentDate, "days"))
-    }
-  }
+    console.log(lastTimeBannerWasClickedAway);
+    if (lastTimeBannerWasClickedAway == null) return true;
+    const parsedDate = dayjs(lastTimeBannerWasClickedAway);
+    return parsedDate.diff(currentDate, "days") >= 3;
+  };
 
-  return (
+  const shouldBannerBeShown = getShouldBannerBeShown();
+
+  useEffect(() => {
+    if (shouldBannerBeShown) {
+      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.UPGRADE_BANNER_HEIGHT);
+    } else {
+      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
+    }
+  }, [shouldBannerBeShown]);
+
+  return shouldBannerBeShown ? (
     <Alert
       message={
-        <>
-          Update me!
-        </>
+        <Space>
+          You are using an old version of WEBKNOSSOS. Switch to <b>webknossos.org</b> for automatic
+          updates and exclusive features!
+          <Button
+            style={{ background: "var(--ant-button-default-hover-bg)" }}
+            href="https://webknossos.org/self-hosted-upgrade"
+          >
+            {" "}
+            Learn more{" "}
+          </Button>
+        </Space>
       }
-      type="warning"
       banner
-      style={BANNER_STYLE}
+      style={UPGRADE_BANNER_STYLE}
+      closable
+      onClose={() => {
+        localStorage.setItem(UPGRADE_BANNER_LOCAL_STORAGE_KEY, dayjs().toISOString());
+        setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
+      }}
+      type="info"
+      showIcon={false}
     />
-  );
+  ) : null;
 }

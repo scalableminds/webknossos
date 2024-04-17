@@ -1,10 +1,12 @@
 import {
+  getBuildInfo,
   listCurrentAndUpcomingMaintenances,
   updateNovelUserExperienceInfos,
 } from "admin/admin_rest_api";
 import { Alert } from "antd";
 import FormattedDate from "components/formatted_date";
-import { useInterval } from "libs/react_helpers";
+import dayjs from "dayjs";
+import { useFetch, useInterval } from "libs/react_helpers";
 import _ from "lodash";
 import constants from "oxalis/constants";
 import { setNavbarHeightAction } from "oxalis/model/actions/ui_actions";
@@ -17,6 +19,7 @@ import { MaintenanceInfo } from "types/api_flow_types";
 
 const INITIAL_DELAY = 5000;
 const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000; // 1min
+const UPGRADE_BANNER_LOCAL_STORAGE_KEY = "upgradeBannerWasClickedAway";
 
 const BANNER_STYLE: React.CSSProperties = {
   position: "absolute",
@@ -143,4 +146,43 @@ export function MaintenanceBanner() {
   }
 
   return null;
+}
+
+export function UpgradeVersionBanner() {
+  //require('dayjs/locale/es');
+  const customParseFormat = require('dayjs/plugin/customParseFormat')
+  dayjs.extend(customParseFormat)
+  const currentDate = dayjs();
+
+  const isVersionOutdated = useFetch(async () => {
+    const buildInfo = await getBuildInfo();
+    const commitDateWithoutWeekday = buildInfo.webknossos.commitDate.replace(/(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/, "");
+    console.log(commitDateWithoutWeekday)
+    const lastCommitDate = dayjs(commitDateWithoutWeekday, "MMM DD HH:mm:ss YYYY ZZ"); // todo two digit dates? test more once time tracking is merged
+    console.log(lastCommitDate)
+    const needsUpdate = currentDate.diff(lastCommitDate, 'month') >= 6;
+    console.log(needsUpdate);
+    return needsUpdate;
+  }, false, [])
+
+  const shouldBannerBeShown = () => {
+    const lastTimeBannerWasClickedAway = localStorage.getItem(UPGRADE_BANNER_LOCAL_STORAGE_KEY);
+    if (lastTimeBannerWasClickedAway != null) {
+      const parsedDate = dayjs(lastTimeBannerWasClickedAway);
+      lastTimeBannerWasClickedAway.diff(currentDate, "days"))
+    }
+  }
+
+  return (
+    <Alert
+      message={
+        <>
+          Update me!
+        </>
+      }
+      type="warning"
+      banner
+      style={BANNER_STYLE}
+    />
+  );
 }

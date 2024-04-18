@@ -1,5 +1,4 @@
 import { Alert, Modal, Button, Row, Col, Input } from "antd";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import * as React from "react";
 

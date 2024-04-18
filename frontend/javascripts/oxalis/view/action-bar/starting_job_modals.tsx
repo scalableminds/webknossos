@@ -303,11 +303,9 @@ function BoundingBoxSelectionFormItem({
                   mag1,
                 );
                 if (isExportable) return Promise.resolve();
-                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${
-                  features().exportTiffMaxVolumeMVx
-                } Megavoxels. Additionally, no bounding box edge should be longer than ${
-                  features().exportTiffMaxEdgeLengthVx
-                }vx.`;
+                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${features().exportTiffMaxVolumeMVx
+                  } Megavoxels. Additionally, no bounding box edge should be longer than ${features().exportTiffMaxEdgeLengthVx
+                  }vx.`;
               }
               // In case no bounding box was selected, the rejectionReason will be "", because the previous rule already checks that.
               return Promise.reject(rejectionReason);
@@ -460,6 +458,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
             <Radio.Button
               className="aIJobSelection"
               checked={aIJobModalState === "mitochondria_inferral"}
+              disabled={!Store.getState().activeUser?.isSuperUser}
               onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
             >
               <Card bordered={false}>
@@ -569,9 +568,8 @@ function StartJobForm(props: StartJobFormProps) {
     initialLayerName = fixedSelectedLayer.name;
     initialOutputSegmentationLayerName = getReadableNameOfVolumeLayer(fixedSelectedLayer, tracing);
   }
-  initialOutputSegmentationLayerName = `${
-    initialOutputSegmentationLayerName || "segmentation"
-  }_corrected`;
+  initialOutputSegmentationLayerName = `${initialOutputSegmentationLayerName || "segmentation"
+    }_corrected`;
   const hasOutputSegmentationLayer =
     jobTypeWithConfigurableOutputSegmentationLayerName.indexOf(jobName) > -1;
   const notAllowedOutputLayerNames = allLayers

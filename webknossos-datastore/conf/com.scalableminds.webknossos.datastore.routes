@@ -54,7 +54,6 @@ GET           /datasets/:organizationName/:datasetName/layers/:dataLayerName/agg
 POST          /datasets/:organizationName/:datasetName/layers/:dataLayerName/agglomerates/:mappingName/agglomeratesForSegments                @com.scalableminds.webknossos.datastore.controllers.DataSourceController.agglomerateIdsForSegmentIds(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, mappingName: String)
 GET           /datasets/:organizationName/:datasetName/layers/:dataLayerName/agglomerates/:mappingName/positionForSegment                     @com.scalableminds.webknossos.datastore.controllers.DataSourceController.positionForSegment(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, mappingName: String, segmentId: Long)
 
-
 # Mesh files
 GET           /datasets/:organizationName/:datasetName/layers/:dataLayerName/meshes                                                           @com.scalableminds.webknossos.datastore.controllers.DSMeshController.listMeshFiles(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String)
 POST          /datasets/:organizationName/:datasetName/layers/:dataLayerName/meshes/chunks                                                    @com.scalableminds.webknossos.datastore.controllers.DSMeshController.listMeshChunksForSegmentV0(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String)

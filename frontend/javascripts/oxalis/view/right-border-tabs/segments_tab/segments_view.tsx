@@ -247,14 +247,7 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
     meshFileName: string,
   ) {
     dispatch(
-      loadPrecomputedMeshAction(
-        segmentId,
-        seedPosition,
-        seedAdditionalCoordinates,
-        meshFileName,
-        undefined,
-        true,
-      ),
+      loadPrecomputedMeshAction(segmentId, seedPosition, seedAdditionalCoordinates, meshFileName),
     );
   },
 
@@ -421,6 +414,7 @@ class SegmentsView extends React.Component<Props, State> {
     );
 
     if (
+      this.props.dataset.dataStore.jobsEnabled &&
       this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
         APIJobType.COMPUTE_MESH_FILE,
       )

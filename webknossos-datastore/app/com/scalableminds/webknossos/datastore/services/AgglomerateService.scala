@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.services
 import ch.systemsx.cisd.hdf5._
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}

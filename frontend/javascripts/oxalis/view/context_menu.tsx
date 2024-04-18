@@ -381,6 +381,7 @@ function getMeshItems(
   const state = Store.getState();
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
   const activeCellId = getActiveCellId(volumeTracing);
+  const { activeUnmappedSegmentId } = volumeTracing;
 
   const maybeProofreadingItems: MenuItemType[] = isProofreadingActive
     ? [
@@ -400,12 +401,14 @@ function getMeshItems(
           label: (
             <Tooltip
               title={
-                isProofreadingActive
-                  ? undefined
-                  : "Cannot merge because the proofreading tool is not active."
+                !isProofreadingActive
+                  ? "Cannot merge because the proofreading tool is not active."
+                  : maybeUnmappedSegmentId == null
+                    ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
+                    : null
               }
             >
-              <span>Merge with active segment</span>
+              Merge with active segment
             </Tooltip>
           ),
         },
@@ -415,7 +418,7 @@ function getMeshItems(
             !isProofreadingActive ||
             clickedMeshId !== activeCellId ||
             maybeUnmappedSegmentId == null ||
-            volumeTracing.activeUnmappedSegmentId == null,
+            activeUnmappedSegmentId == null,
           onClick: () => {
             if (maybeUnmappedSegmentId == null) {
               // Should not happen due to the disabled property.
@@ -428,12 +431,14 @@ function getMeshItems(
           label: (
             <Tooltip
               title={
-                isProofreadingActive
-                  ? undefined
-                  : "Cannot split because the proofreading tool is not active."
+                !isProofreadingActive
+                  ? "Cannot split because the proofreading tool is not active."
+                  : maybeUnmappedSegmentId == null
+                    ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
+                    : null
               }
             >
-              <span>Split from active segment</span>
+              Split from active segment
             </Tooltip>
           ),
         },
@@ -449,21 +454,48 @@ function getMeshItems(
               cutAgglomerateFromNeighborsAction(null, null, maybeUnmappedSegmentId, clickedMeshId),
             );
           },
-          label: "Split from all neighboring segments",
+          label: (
+            <Tooltip
+              title={
+                !isProofreadingActive
+                  ? "Cannot split because the proofreading tool is not active."
+                  : maybeUnmappedSegmentId == null
+                    ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
+                    : null
+              }
+            >
+              Split from all neighboring segments
+            </Tooltip>
+          ),
         },
       ]
     : [];
 
+  const segmentIdLabel =
+    maybeUnmappedSegmentId != null
+      ? `${maybeUnmappedSegmentId} -> ${clickedMeshId}`
+      : clickedMeshId;
+  const segmentOrSuperVoxel = maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
+  const isAlreadySelected =
+    activeUnmappedSegmentId === maybeUnmappedSegmentId && activeCellId === clickedMeshId;
   return [
-    {
-      key: "activate-segment",
-      onClick: () =>
-        Store.dispatch(
-          setActiveCellAction(clickedMeshId, undefined, undefined, maybeUnmappedSegmentId),
-        ),
-      // disabled: volumeTracing != null && clickedMeshId === getActiveCellId(volumeTracing),
-      label: `Activate Segment (${maybeUnmappedSegmentId} -> ${clickedMeshId})`,
-    },
+    activeUnmappedSegmentId != null && isAlreadySelected
+      ? {
+          // If a supervoxel is selected (and thus highlighted), allow to select it.
+          key: "deactivate-segment",
+          onClick: () =>
+            Store.dispatch(setActiveCellAction(clickedMeshId, undefined, undefined, undefined)),
+          label: `Deselect ${segmentOrSuperVoxel} (${segmentIdLabel})`,
+        }
+      : {
+          key: "activate-segment",
+          onClick: () =>
+            Store.dispatch(
+              setActiveCellAction(clickedMeshId, undefined, undefined, maybeUnmappedSegmentId),
+            ),
+          disabled: isAlreadySelected,
+          label: `Activate ${segmentOrSuperVoxel} (${segmentIdLabel})`,
+        },
     {
       key: "hide-mesh",
       onClick: () => Actions.hideMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),

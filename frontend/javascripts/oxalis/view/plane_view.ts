@@ -41,8 +41,36 @@ const MESH_HOVER_THROTTLING_DELAY = 150;
 const ACTIVATED_COLOR = [0.7, 0.5, 0.1] as const;
 const HOVERED_COLOR = [0.65, 0.5, 0.1] as const;
 
-function updateMeshAppearance(_mesh: THREE.Object3D) {
+function updateMeshAppearance(
+  _mesh: THREE.Object3D,
+  isHovered: boolean | undefined,
+  isActiveUnmappedSegment?: boolean | undefined,
+) {
   const mesh = _mesh as MeshSceneNode;
+  let wasChanged = false;
+  if (isHovered != null) {
+    if (!!mesh.isHovered !== isHovered) {
+      mesh.isHovered = isHovered;
+      wasChanged = true;
+    }
+  }
+  if (isActiveUnmappedSegment != null) {
+    if (!!mesh.isActiveUnmappedSegment !== isActiveUnmappedSegment) {
+      mesh.isActiveUnmappedSegment = isActiveUnmappedSegment;
+      wasChanged = true;
+    }
+  }
+  if (!wasChanged) {
+    // Nothing to do
+    return;
+  }
+
+  const targetOpacity = mesh.isHovered ? 0.8 : 1.0;
+  mesh.parent.traverse((child) => {
+    if (child instanceof THREE.Mesh) {
+      child.material.opacity = targetOpacity;
+    }
+  });
   if (mesh.isHovered || mesh.isActiveUnmappedSegment) {
     mesh.material.emissive.setHSL(...HOVERED_COLOR);
 
@@ -53,6 +81,7 @@ function updateMeshAppearance(_mesh: THREE.Object3D) {
       ? HOVERED_COLOR
       : ACTIVATED_COLOR;
     mesh.material.color.setHSL(...newColor);
+    mesh.material.opacity = 1.0;
   } else {
     // @ts-ignore
     mesh.material.emissive.setHex("#FF00FF");
@@ -197,8 +226,7 @@ class PlaneView {
 
     // Undo highlighting of old hit
     if (oldRaycasterHit?.parent != null) {
-      oldRaycasterHit.isHovered = false;
-      updateMeshAppearance(oldRaycasterHit);
+      updateMeshAppearance(oldRaycasterHit, false);
 
       oldRaycasterHit = null;
     }
@@ -207,8 +235,7 @@ class PlaneView {
 
     // Highlight new hit
     if (hitObject?.parent != null) {
-      hitObject.isHovered = true;
-      updateMeshAppearance(hitObject);
+      updateMeshAppearance(hitObject, true);
 
       Store.dispatch(
         updateTemporarySettingAction(
@@ -300,19 +327,15 @@ class PlaneView {
   highlightUnmappedSegmentId(activeUnmappedSegmentId: number | null | undefined): void {
     const SceneController = getSceneController();
     const { meshesLODRootGroup } = SceneController.segmentMeshController;
-    if (activeUnmappedSegmentId) {
-      meshesLODRootGroup.traverse((_obj) => {
-        // The cast is save because MeshSceneNode adds only optional properties
-        const obj = _obj as MeshSceneNode;
-        if (obj.unmappedSegmentId === activeUnmappedSegmentId) {
-          obj.isActiveUnmappedSegment = true;
-          updateMeshAppearance(obj);
-        } else if (obj.isActiveUnmappedSegment) {
-          obj.isActiveUnmappedSegment = false;
-          updateMeshAppearance(obj);
-        }
-      });
-    }
+    meshesLODRootGroup.traverse((_obj) => {
+      // The cast is save because MeshSceneNode adds only optional properties
+      const obj = _obj as MeshSceneNode;
+      if (activeUnmappedSegmentId != null && obj.unmappedSegmentId === activeUnmappedSegmentId) {
+        updateMeshAppearance(obj, undefined, true);
+      } else if (obj.isActiveUnmappedSegment) {
+        updateMeshAppearance(obj, undefined, false);
+      }
+    });
   }
 
   getCameraForPlane(plane: Viewport) {

@@ -93,6 +93,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform bool isMouseInActiveViewport;
   uniform bool showBrush;
   uniform bool isProofreading;
+  uniform bool isUnmappedSegmentHighlighted;
   uniform float segmentationPatternOpacity;
 
   uniform bool isMappingEnabled;

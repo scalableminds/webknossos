@@ -19,6 +19,7 @@ export type MeshSceneNode = THREE.Mesh<
   unmappedSegmentId?: number | null;
   isActiveUnmappedSegment?: boolean;
   isHovered?: boolean;
+  parent: SceneGroupForMeshes;
 };
 export type SceneGroupForMeshes = THREE.Group & { segmentId: number; children: MeshSceneNode[] };
 export type BufferGeometryWithInfo = THREE.BufferGeometry & { unmappedSegmentId: number };
@@ -118,7 +119,11 @@ export default class SegmentMeshController {
         app.vent.emit("rerender");
       })
       .start();
-    return mesh;
+
+    // mesh.parent is still null at this moment, but when the mesh is
+    // added to the group later, parent will be set. We'll ignore
+    // this detail for now via the casting.
+    return mesh as MeshSceneNode;
   }
 
   addMeshFromGeometries(

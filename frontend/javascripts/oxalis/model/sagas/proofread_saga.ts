@@ -37,6 +37,7 @@ import {
   getActiveSegmentationTracingLayer,
   getActiveSegmentationTracing,
   getSegmentsForLayer,
+  getMeshInfoForSegment,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerByName,
@@ -45,6 +46,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   NeighborInfo,
+  getAgglomerateIdForSegmentId,
   getEdgesForAgglomerateMinCut,
   getNeighborsForAgglomerateNode,
   makeMappingEditable,
@@ -56,7 +58,7 @@ import {
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import { V3 } from "libs/mjs";
-import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
+import { refreshMeshAction, removeMeshAction } from "oxalis/model/actions/annotation_actions";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { Tree, VolumeTracing } from "oxalis/store";
 import _ from "lodash";
@@ -116,6 +118,22 @@ function* loadCoarseMesh(
   const currentMeshFile = yield* select(
     (state) => state.localSegmentationData[layerName].currentMeshFile,
   );
+
+  const meshInfo = yield* select((state) =>
+    getMeshInfoForSegment(state, additionalCoordinates || null, layerName, segmentId),
+  );
+
+  if (meshInfo != null) {
+    if (meshInfo.isPrecomputed && meshInfo.areChunksMerged) {
+      console.log(
+        `Reloading mesh for segment ${segmentId} because its chunks should not be merged for proofreading.`,
+      );
+      yield* put(refreshMeshAction(layerName, segmentId));
+    } else {
+      console.log(`Don't load mesh for segment ${segmentId} because it already exists.`);
+    }
+    return;
+  }
 
   if (
     currentMeshFile != null &&
@@ -528,7 +546,7 @@ function* performCutFromNeighbors(
         position1: neighbor.position,
         position2: segmentPosition,
         segmentId1: neighbor.segmentId,
-        segmentId2: agglomerateId,
+        segmentId2: segmentId,
       }) as const,
   );
 
@@ -591,7 +609,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   if (!preparation) {
     return;
   }
-  const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
+  const { agglomerateFileMag, volumeTracing } = preparation;
   const { tracingId: volumeTracingId, activeCellId, activeUnmappedSegmentId } = volumeTracing;
   if (activeCellId === 0) return;
 
@@ -602,7 +620,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   const sourcePosition = V3.floor(sourcePositionMaybe);
 
-  let targetPosition;
+  let targetPosition: Vector3 | undefined;
   let idInfos;
   if (action.position) {
     targetPosition = V3.floor(action.position);
@@ -626,9 +644,16 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       });
       return;
     }
+    const targetSegment = segments.getNullable(action.agglomerateId);
+    if (targetSegment?.somePosition == null) {
+      Toast.warning("Some required information is missing for this operation.");
+      console.log(`No position is known for agglomerate ${action.agglomerateId}`);
+      return;
+    }
+    targetPosition = targetSegment.somePosition;
     idInfos = [
-      { agglomerateId: action.agglomerateId, unmappedId: action.segmentId },
       { agglomerateId: activeCellId, unmappedId: activeUnmappedSegmentId },
+      { agglomerateId: action.agglomerateId, unmappedId: action.segmentId },
     ];
   }
 
@@ -698,25 +723,38 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     // Remove the segment that doesn't exist anymore.
     yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
   }
-  // todop: reactivate
-  // const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
-  //   call(getDataValue, sourcePosition),
-  //   call(getDataValue, targetPosition),
-  // ]);
 
-  // /* Reload meshes */
-  // yield* spawn(refreshAffectedMeshes, volumeTracingId, [
-  //   {
-  //     agglomerateId: sourceAgglomerateId,
-  //     newAgglomerateId: newSourceAgglomerateId,
-  //     nodePosition: sourcePosition,
-  //   },
-  //   {
-  //     agglomerateId: targetAgglomerateId,
-  //     newAgglomerateId: newTargetAgglomerateId,
-  //     nodePosition: targetPosition,
-  //   },
-  // ]);
+  /* Reload meshes */
+  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  const newSourceAgglomerateId = yield* call(
+    getAgglomerateIdForSegmentId,
+    tracingStoreUrl,
+    volumeTracing.tracingId,
+    sourceInfo.unmappedId,
+  );
+  const newTargetAgglomerateId = yield* call(
+    getAgglomerateIdForSegmentId,
+    tracingStoreUrl,
+    volumeTracing.tracingId,
+    targetInfo.unmappedId,
+  );
+  // todop: these positions are equal but should not be?
+  console.log("refresh with:");
+  console.log("sourcePosition", sourcePosition);
+  console.log("targetPosition", targetPosition);
+
+  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
+    {
+      agglomerateId: sourceAgglomerateId,
+      newAgglomerateId: newSourceAgglomerateId,
+      nodePosition: sourcePosition,
+    },
+    {
+      agglomerateId: targetAgglomerateId,
+      newAgglomerateId: newTargetAgglomerateId,
+      nodePosition: targetPosition,
+    },
+  ]);
 }
 
 function* handleProofreadCutNeighbors(action: Action) {
@@ -791,25 +829,29 @@ function* handleProofreadCutNeighbors(action: Action) {
     bucket.containsValue(targetAgglomerateId),
   );
 
-  // todop
-  // const [newTargetAgglomerateId, ...newNeighborAgglomerateIds] = yield* all([
-  //   call(getDataValue, targetPosition),
-  //   ...neighborInfo.neighbors.map((neighbor) => call(getDataValue, neighbor.position)),
-  // ]);
+  if (targetPosition == null) {
+    // todop: this should be removed again
+    return;
+  }
 
-  // /* Reload meshes */
-  // yield* spawn(refreshAffectedMeshes, volumeTracingId, [
-  //   {
-  //     agglomerateId: targetAgglomerateId,
-  //     newAgglomerateId: newTargetAgglomerateId,
-  //     nodePosition: targetPosition,
-  //   },
-  //   ...neighborInfo.neighbors.map((neighbor, idx) => ({
-  //     agglomerateId: targetAgglomerateId,
-  //     newAgglomerateId: newNeighborAgglomerateIds[idx],
-  //     nodePosition: neighbor.position,
-  //   })),
-  // ]);
+  const [newTargetAgglomerateId, ...newNeighborAgglomerateIds] = yield* all([
+    call(getDataValue, targetPosition),
+    ...neighborInfo.neighbors.map((neighbor) => call(getDataValue, neighbor.position)),
+  ]);
+
+  /* Reload meshes */
+  yield* spawn(refreshAffectedMeshes, volumeTracingId, [
+    {
+      agglomerateId: targetAgglomerateId,
+      newAgglomerateId: newTargetAgglomerateId,
+      nodePosition: targetPosition,
+    },
+    ...neighborInfo.neighbors.map((neighbor, idx) => ({
+      agglomerateId: targetAgglomerateId,
+      newAgglomerateId: newNeighborAgglomerateIds[idx],
+      nodePosition: neighbor.position,
+    })),
+  ]);
 }
 
 // Helper functions

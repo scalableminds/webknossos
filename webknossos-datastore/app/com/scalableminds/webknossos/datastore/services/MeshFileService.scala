@@ -251,28 +251,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       cachedMeshFile.reader.int64().getAttr("/", "artifact_schema_version")
     }.toOption.getOrElse(0)
 
-  def listMeshChunksForSegmentV0(organizationName: String,
-                                 datasetName: String,
-                                 dataLayerName: String,
-                                 listMeshChunksRequest: ListMeshChunksRequest): Fox[List[Vec3Int]] = {
-    val meshFilePath =
-      dataBaseDir
-        .resolve(organizationName)
-        .resolve(datasetName)
-        .resolve(dataLayerName)
-        .resolve(meshesDir)
-        .resolve(s"${listMeshChunksRequest.meshFile}.$hdf5FileExtension")
-
-    executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
-      val chunkPositionLiterals = cachedMeshFile.reader
-        .`object`()
-        .getAllGroupMembers(s"/${listMeshChunksRequest.segmentId}/$defaultLevelOfDetail")
-        .asScala
-        .toList
-      Fox.serialCombined(chunkPositionLiterals)(parsePositionLiteral)
-    }.toFox.flatten ?~> "mesh.file.open.failed"
-  }
-
   def listMeshChunksForSegmentsV3(organizationName: String,
                                   datasetName: String,
                                   dataLayerName: String,
@@ -383,26 +361,6 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     val neuroglancerEnd = buckets(bucketLocalOffset)(2)
 
     (neuroglancerStart, neuroglancerEnd)
-  }
-
-  def readMeshChunkV0(organizationName: String,
-                      datasetName: String,
-                      dataLayerName: String,
-                      meshChunkDataRequest: MeshChunkDataRequestV0): Fox[(Array[Byte], String)] = {
-    val meshFilePath = dataBaseDir
-      .resolve(organizationName)
-      .resolve(datasetName)
-      .resolve(dataLayerName)
-      .resolve(meshesDir)
-      .resolve(s"${meshChunkDataRequest.meshFile}.$hdf5FileExtension")
-
-    executeWithCachedHdf5(meshFilePath, meshFileCache) { cachedMeshFile =>
-      val encoding = cachedMeshFile.reader.string().getAttr("/", "metadata/encoding")
-      val key =
-        s"/${meshChunkDataRequest.segmentId}/$defaultLevelOfDetail/${positionLiteral(meshChunkDataRequest.position)}"
-      val data = cachedMeshFile.reader.readAsByteArray(key)
-      (data, encoding)
-    } ?~> "mesh.file.readData.failed"
   }
 
   def readMeshChunkV3(organizationName: String,

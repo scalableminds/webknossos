@@ -1901,6 +1901,27 @@ export function getAgglomerateIdForSegmentId(
   });
 }
 
+export function getPositionForSegmentInAgglomerate(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingName: string,
+  segmentId: number,
+): Promise<Vector3> {
+  return doWithToken(async (token) => {
+    const urlParams = new URLSearchParams({
+      token,
+      segmentId: `${segmentId}`,
+    });
+    const position = await Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${urlParams.toString()}`,
+    );
+    return position;
+  });
+}
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,

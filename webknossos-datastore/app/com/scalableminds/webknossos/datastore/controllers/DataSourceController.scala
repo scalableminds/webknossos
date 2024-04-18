@@ -292,7 +292,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def agglomeratePositionForSegment(
+  def positionForSegmentViaAgglomerateFile(
       token: Option[String],
       organizationName: String,
       datasetName: String,
@@ -306,7 +306,7 @@ class DataSourceController @Inject()(
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
         position <- agglomerateService.positionForSegmentId(
           AgglomerateFileKey(organizationName, datasetName, dataLayerName, mappingName),
-          segmentId) ?~> "getSegmentIdFromAgglomerateFile.failed"
+          segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
       } yield Ok(Json.toJson(position))
     }
   }

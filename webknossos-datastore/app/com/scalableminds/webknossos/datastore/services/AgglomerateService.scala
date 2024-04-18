@@ -19,6 +19,7 @@ import org.apache.commons.io.FilenameUtils
 import java.nio._
 import java.nio.file.{Files, Paths}
 import javax.inject.Inject
+import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
 
 class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
@@ -270,17 +271,33 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
   }
 
-  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] = tryo {
+  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] = {
     val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
-    val reader = HDF5FactoryProvider.get.openForReading(hdfFile)
-    val agglomerateIdArr: Array[Long] =
-      reader.uint64().readArrayBlockWithOffset("/segment_to_agglomerate", 1, segmentId)
-    val agglomerateId = agglomerateIdArr(0)
-    val segmentsRange: Array[Long] =
-      reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId)
-    // TODO binary search for segment in agglomerate_to_segments, use that index for agglomerate_to_positions
-    Vec3Int(0, 0, 0)
+    val reader: IHDF5Reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+    for {
+      agglomerateIdArr: Array[Long] <- tryo(
+        reader.uint64().readArrayBlockWithOffset("/segment_to_agglomerate", 1, segmentId))
+      agglomerateId = agglomerateIdArr(0)
+      segmentsRange: Array[Long] <- tryo(
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId))
+      segmentIndex <- binarySearchForSegment(segmentsRange(0), segmentsRange(1), segmentId, reader)
+      position <- tryo(reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", 1, 3, segmentIndex, 0)(0))
+    } yield Vec3Int(position(0).toInt, position(1).toInt, position(2).toInt)
   }
+
+  @tailrec
+  private def binarySearchForSegment(rangeStart: Long,
+                                     rangeEnd: Long,
+                                     segmentId: Long,
+                                     reader: IHDF5Reader): Box[Long] =
+    if (rangeStart > rangeEnd) Failure("Could not find segmentId in agglomerate file")
+    else {
+      val middle = rangeStart + (rangeEnd - rangeStart) / 2
+      val segmentIdAtMiddle: Long = reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments", 1, middle)(0)
+      if (segmentIdAtMiddle == segmentId) Full(middle)
+      else if (segmentIdAtMiddle < segmentId) binarySearchForSegment(middle + 1L, rangeEnd, segmentId, reader)
+      else binarySearchForSegment(rangeStart, middle - 1L, segmentId, reader)
+    }
 
   def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[AgglomerateGraph] =
     tryo {

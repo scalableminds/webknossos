@@ -66,7 +66,10 @@ jobs:
             docker-compose run compile tools/postgres/dbtool.js check-evolutions-schema
       - run:
           name: Build frontend documentation
-          command: docker-compose run base yarn run docs
+          command: |
+            WK_VERSION=${CIRCLE_TAG:-${CIRCLE_BUILD_NUM:-dev}}
+            cat package.json | jq --arg version $WK_VERSION '. + {version: $version}' > package.json.new && mv package.json.new package.json
+            docker-compose run base yarn run docs
       - run:
           name: Build webknossos (webpack)
           command: |

@@ -472,12 +472,15 @@ function getMeshItems(
     : [];
 
   const segmentIdLabel =
-    maybeUnmappedSegmentId != null ? `${maybeUnmappedSegmentId} → ${clickedMeshId}` : clickedMeshId;
-  const segmentOrSuperVoxel = maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
+    isProofreadingActive && maybeUnmappedSegmentId != null
+      ? `${maybeUnmappedSegmentId} → ${clickedMeshId}`
+      : clickedMeshId;
+  const segmentOrSuperVoxel =
+    isProofreadingActive && maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
   const isAlreadySelected =
     activeUnmappedSegmentId === maybeUnmappedSegmentId && activeCellId === clickedMeshId;
   return [
-    activeUnmappedSegmentId != null && isAlreadySelected
+    isProofreadingActive && activeUnmappedSegmentId != null && isAlreadySelected
       ? {
           // If a supervoxel is selected (and thus highlighted), allow to select it.
           key: "deactivate-segment",
@@ -492,7 +495,7 @@ function getMeshItems(
               setActiveCellAction(clickedMeshId, undefined, undefined, maybeUnmappedSegmentId),
             ),
           disabled: isAlreadySelected,
-          label: `Activate ${segmentOrSuperVoxel} (${segmentIdLabel})`,
+          label: `Select ${segmentOrSuperVoxel} (${segmentIdLabel})`,
         },
     {
       key: "hide-mesh",

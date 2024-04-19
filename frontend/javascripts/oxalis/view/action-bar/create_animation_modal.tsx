@@ -77,14 +77,18 @@ function selectMagForTextureCreation(
   return [bestMag, bestDifference];
 }
 
-export function CreateAnimationModalWrapper(props: Props) {
+export default function CreateAnimationModalWrapper(props: Props) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
 
   // early stop if no color layer exists
   const colorLayers = getColorLayers(dataset);
   if (colorLayers.length === 0) {
-    Toast.warning("WK can not create animations for datasets without color layers.");
-    return null;
+    const { isOpen, onClose } = props;
+    return (
+      <Modal open={isOpen} onOk={onClose} onCancel={onClose} title="Create Animation">
+        WEBKNOSSOS cannot create animations for datasets without color layers.
+      </Modal>
+    );
   }
 
   return <CreateAnimationModal {...props} />;
@@ -405,5 +409,3 @@ function CreateAnimationModal(props: Props) {
     </Modal>
   );
 }
-
-export default CreateAnimationModal;

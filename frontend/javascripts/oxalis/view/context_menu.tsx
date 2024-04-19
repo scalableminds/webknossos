@@ -472,9 +472,7 @@ function getMeshItems(
     : [];
 
   const segmentIdLabel =
-    maybeUnmappedSegmentId != null
-      ? `${maybeUnmappedSegmentId} -> ${clickedMeshId}`
-      : clickedMeshId;
+    maybeUnmappedSegmentId != null ? `${maybeUnmappedSegmentId} → ${clickedMeshId}` : clickedMeshId;
   const segmentOrSuperVoxel = maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
   const isAlreadySelected =
     activeUnmappedSegmentId === maybeUnmappedSegmentId && activeCellId === clickedMeshId;

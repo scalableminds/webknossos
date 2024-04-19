@@ -60,7 +60,11 @@ import {
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import { V3 } from "libs/mjs";
-import { refreshMeshAction, removeMeshAction } from "oxalis/model/actions/annotation_actions";
+import {
+  dispatchMaybeFetchMeshFilesAsync,
+  refreshMeshAction,
+  removeMeshAction,
+} from "oxalis/model/actions/annotation_actions";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { Tree, VolumeTracing } from "oxalis/store";
 import _ from "lodash";
@@ -115,8 +119,16 @@ function* loadCoarseMesh(
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
-  if ((yield* select((state) => state.userConfiguration.autoRenderMeshInProofreading)) === false)
+  if ((yield* select((state) => state.userConfiguration.autoRenderMeshInProofreading)) === false) {
     return;
+  }
+  const dataset = yield* select((state) => state.dataset);
+  const layer = yield* select((state) => getLayerByName(state.dataset, layerName));
+
+  // Ensure that potential mesh files are already available. Otherwise, the following
+  // code would default to ad-hoc meshing.
+  yield* call(dispatchMaybeFetchMeshFilesAsync, Store.dispatch, layer, dataset, false);
+
   const currentMeshFile = yield* select(
     (state) => state.localSegmentationData[layerName].currentMeshFile,
   );

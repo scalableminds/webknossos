@@ -194,10 +194,10 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       try {
         eval(content);
       } catch (error) {
-        console.error(error);
         Toast.error(
           `Error executing the task script "${script.name}". See console for more information.`,
         );
+        console.error(error);
       }
     }
   }

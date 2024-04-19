@@ -156,7 +156,7 @@ class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionC
   def findAllVolumeLayers: Fox[List[AnnotationLayer]] =
     for {
       rows <- run(
-        q"select _annotation, tracingId, typ, name from webknossos.annotation_layers where typ = 'Volume'"
+        q"select _annotation, tracingId, typ, name, statistics from webknossos.annotation_layers where typ = 'Volume'"
           .as[AnnotationLayersRow])
       parsed <- Fox.serialCombined(rows.toList)(parse)
     } yield parsed

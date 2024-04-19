@@ -700,11 +700,11 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       // The name of the layer could have changed if a volume tracing was created from a viewed annotation
       effectiveLayerName = getLayerByName(dataset, layerName, true).name;
     } catch (e) {
-      console.error(e);
       Toast.error(
         // @ts-ignore
         `URL configuration values for the layer "${layerName}" are ignored, because: ${e.message}`,
       );
+      console.error(e);
       // @ts-ignore
       ErrorHandling.notify(e, {
         urlLayerState: stateByLayer,

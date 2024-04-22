@@ -473,7 +473,7 @@ function getMeshItems(
 
   const segmentIdLabel =
     isProofreadingActive && maybeUnmappedSegmentId != null
-      ? `${maybeUnmappedSegmentId} → ${clickedMeshId}`
+      ? `within Segment ${clickedMeshId}`
       : clickedMeshId;
   const segmentOrSuperVoxel =
     isProofreadingActive && maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";

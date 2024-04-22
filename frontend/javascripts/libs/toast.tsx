@@ -1,6 +1,7 @@
 import { notification, Collapse } from "antd";
 import { CloseCircleOutlined } from "@ant-design/icons";
 import React from "react";
+import { animationFrame, sleep } from "./utils";
 
 export type ToastStyle = "info" | "warning" | "success" | "error";
 export type Message = {
@@ -75,12 +76,12 @@ const Toast = {
     );
   },
 
-  message(
+  async message(
     type: ToastStyle,
     rawMessage: string | React.ReactNode,
     config: ToastConfig,
     details?: string,
-  ): void {
+  ): Promise<void> {
     const message = this.buildContentWithDetails(rawMessage, details);
     const timeout = config.timeout != null ? config.timeout : 6000;
     const key = config.key || (typeof message === "string" ? message : undefined);
@@ -94,11 +95,10 @@ const Toast = {
       toastMessage = message;
     }
 
-    const timeOutInSeconds = timeout / 1000;
     let toastConfig = {
       icon: undefined,
       key,
-      duration: sticky ? 0 : timeOutInSeconds,
+      duration: 0,
       message: toastMessage,
       style: {},
       className: "",
@@ -112,6 +112,18 @@ const Toast = {
     }
 
     notification[type](toastConfig);
+
+    // Make sure that toasts don't just disappear while the user has WK in a background tab (e.g. while uploading large dataset).
+    // Most browsers pause requestAnimationFrame() if the current tab is not active, but Firefox does not seem to do that.
+    if (!sticky && key != null) {
+      const splitTimeout = timeout / 2;
+      await animationFrame(); // ensure tab is active
+      await sleep(splitTimeout);
+      await animationFrame();
+      // If the user has switched the tab, show the toast again so that the user doesn't just see the toast dissapear.
+      await sleep(splitTimeout);
+      this.close(key);
+    }
   },
 
   info(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {
@@ -119,6 +131,7 @@ const Toast = {
   },
 
   warning(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {
+    if (typeof message === "string") console.warn(message);
     this.message("warning", message, config, details);
   },
 
@@ -135,6 +148,7 @@ const Toast = {
     config: ToastConfig = {},
     details?: string | undefined,
   ): void {
+    if (typeof message === "string") console.error(message);
     this.message("error", message, config, details);
   },
 

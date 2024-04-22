@@ -83,7 +83,6 @@ export function* pushAnnotationUpdateAsync(action: Action) {
     // we will only notify the user if the name, visibility or description could not be changed.
     // Otherwise, we won't notify the user and won't let the sagas crash as the actual skeleton/volume
     // tracings are handled separately.
-    console.error(error);
     ErrorHandling.notify(error as Error);
     if (
       ["SET_ANNOTATION_NAME", "SET_ANNOTATION_VISIBILITY", "SET_ANNOTATION_DESCRIPTION"].includes(
@@ -92,6 +91,7 @@ export function* pushAnnotationUpdateAsync(action: Action) {
     ) {
       Toast.error("Could not update annotation property. Please try again.");
     }
+    console.error(error);
   }
 }
 

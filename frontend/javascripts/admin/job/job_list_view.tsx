@@ -1,5 +1,4 @@
 import _ from "lodash";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { Link } from "react-router-dom";
@@ -9,7 +8,7 @@ import {
   ClockCircleTwoTone,
   CloseCircleTwoTone,
   CloseCircleOutlined,
-  DownOutlined,
+  DownloadOutlined,
   EyeOutlined,
   LoadingOutlined,
   QuestionCircleTwoTone,
@@ -22,42 +21,43 @@ import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import FormattedDate from "components/formatted_date";
 import { AsyncLink } from "components/async_clickables";
-import { EmptyObject } from "types/globals";
+import { useEffect, useState } from "react";
+import { useInterval } from "libs/react_helpers";
+
 // Unfortunately, the twoToneColor (nor the style) prop don't support
 // CSS variables.
 export const TOOLTIP_MESSAGES_AND_ICONS = {
   UNKNOWN: {
     tooltip:
       "The status information for this job could not be retreived. Please try again in a few minutes, or contact us if you need assistance.",
-    icon: <QuestionCircleTwoTone twoToneColor="#a3a3a3" />,
+    icon: <QuestionCircleTwoTone twoToneColor="#a3a3a3" className="icon-margin-right" />,
   },
   SUCCESS: {
     tooltip: "This job has successfully been executed.",
-    icon: <CheckCircleTwoTone twoToneColor="#49b21b" />,
+    icon: <CheckCircleTwoTone twoToneColor="#49b21b" className="icon-margin-right" />,
   },
   PENDING: {
     tooltip: "This job will run as soon as a worker becomes available.",
-    icon: <ClockCircleTwoTone twoToneColor="#d89614" />,
+    icon: <ClockCircleTwoTone twoToneColor="#d89614" className="icon-margin-right" />,
   },
   STARTED: {
     tooltip: "This job is currently running.",
-    icon: <LoadingOutlined />,
+    icon: <LoadingOutlined className="icon-margin-right" />,
   },
   FAILURE: {
     tooltip:
       "Something went wrong when executing this job. Feel free to contact us if you need assistance.",
-    icon: <CloseCircleTwoTone twoToneColor="#a61d24" />,
+    icon: <CloseCircleTwoTone twoToneColor="#a61d24" className="icon-margin-right" />,
   },
   CANCELLED: {
     tooltip: "This job was cancelled.",
-    icon: <CloseCircleTwoTone twoToneColor="#aaaaaa" />,
+    icon: <CloseCircleTwoTone twoToneColor="#aaaaaa" className="icon-margin-right" />,
   },
 };
 const refreshInterval = 5000;
 const { Column } = Table;
 const { Search } = Input;
-const typeHint: APIJob[] = [];
-type Props = EmptyObject;
+
 type State = {
   isLoading: boolean;
   jobs: Array<APIJob>;
@@ -70,6 +70,7 @@ const persistence = new Persistence<Pick<State, "searchQuery">>(
   "jobList",
 );
 
+<<<<<<< HEAD
 export function JobState({ job }: { job: APIJob }) {
   const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
 
@@ -90,47 +91,45 @@ class JobListView extends React.PureComponent<Props, State> {
     jobs: [],
     searchQuery: "",
   };
-
-  componentDidMount() {
-    // @ts-ignore
-    this.setState(persistence.load());
-    this.fetchData();
-  }
-
-  componentDidUpdate() {
-    persistence.persist(this.state);
-  }
-
-  componentWillUnmount() {
-    if (this.intervalID != null) {
-      clearTimeout(this.intervalID);
-    }
-  }
-
-  async fetchData(): Promise<void> {
-    const jobs = await getJobs();
-    this.setState(
-      {
-        isLoading: false,
-        jobs,
-      }, // refresh jobs according to the refresh interval
-      () => {
-        if (this.intervalID != null) {
-          clearTimeout(this.intervalID);
-        }
-
-        this.intervalID = setTimeout(this.fetchData.bind(this), refreshInterval);
-      },
-    );
-  }
-
-  handleSearch = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    this.setState({
-      searchQuery: event.target.value,
-    });
+||||||| 9a86c297b
+class JobListView extends React.PureComponent<Props, State> {
+  intervalID: ReturnType<typeof setTimeout> | null | undefined;
+  state: State = {
+    isLoading: true,
+    jobs: [],
+    searchQuery: "",
   };
+=======
+function JobListView() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [jobs, setJobs] = useState<APIJob[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+>>>>>>> master
 
-  renderDescription = (__: any, job: APIJob) => {
+  useEffect(() => {
+    fetchData();
+    const { searchQuery } = persistence.load();
+    setSearchQuery(searchQuery || "");
+    setIsLoading(false);
+  }, []);
+
+  async function fetchData() {
+    setJobs(await getJobs());
+  }
+
+  useInterval(async () => {
+    setJobs(await getJobs());
+  }, refreshInterval);
+
+  useEffect(() => {
+    persistence.persist({ searchQuery });
+  }, [searchQuery]);
+
+  function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
+    setSearchQuery(event.target.value);
+  }
+
+  function renderDescription(__: any, job: APIJob) {
     if (job.type === APIJobType.CONVERT_TO_WKW && job.datasetName) {
       return <span>{`Conversion to WKW of ${job.datasetName}`}</span>;
     } else if (job.type === APIJobType.EXPORT_TIFF && job.organizationName && job.datasetName) {
@@ -251,9 +250,9 @@ class JobListView extends React.PureComponent<Props, State> {
     } else {
       return <span>{job.type}</span>;
     }
-  };
+  }
 
-  renderActions = (__: any, job: APIJob) => {
+  function renderActions(__: any, job: APIJob) {
     if (job.state === "PENDING" || job.state === "STARTED") {
       return (
         <AsyncLink
@@ -266,7 +265,7 @@ class JobListView extends React.PureComponent<Props, State> {
             });
 
             if (isDeleteConfirmed) {
-              cancelJob(job.id).then(() => this.fetchData());
+              cancelJob(job.id).then(() => fetchData());
             }
           }}
           icon={<CloseCircleOutlined key="cancel" className="icon-margin-right" />}
@@ -293,7 +292,7 @@ class JobListView extends React.PureComponent<Props, State> {
         <span>
           {job.resultLink && (
             <a href={job.resultLink} title="Download">
-              <DownOutlined className="icon-margin-right" />
+              <DownloadOutlined className="icon-margin-right" />
               Download
             </a>
           )}
@@ -304,7 +303,7 @@ class JobListView extends React.PureComponent<Props, State> {
         <span>
           {job.resultLink && (
             <a href={job.resultLink} title="Download">
-              <DownOutlined className="icon-margin-right" />
+              <DownloadOutlined className="icon-margin-right" />
               Download
             </a>
           )}
@@ -329,8 +328,9 @@ class JobListView extends React.PureComponent<Props, State> {
         </span>
       );
     } else return null;
-  };
+  }
 
+<<<<<<< HEAD
   renderState = (__: any, job: APIJob) => {
     return <JobState job={job} />;
   };
@@ -417,7 +417,188 @@ class JobListView extends React.PureComponent<Props, State> {
         </Spin>
       </div>
     );
+||||||| 9a86c297b
+  renderState = (__: any, job: APIJob) => {
+    const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
+
+    const jobStateNormalized = _.capitalize(job.state.toLowerCase());
+
+    return (
+      <Tooltip title={tooltip}>
+        {icon}
+        {jobStateNormalized}
+      </Tooltip>
+    );
+  };
+
+  render() {
+    return (
+      <div className="container">
+        <div className="pull-right">
+          <Search
+            style={{
+              width: 200,
+            }}
+            onChange={this.handleSearch}
+            value={this.state.searchQuery}
+          />
+        </div>
+        <h3>Jobs</h3>
+        <Typography.Paragraph type="secondary">
+          Some actions such as dataset conversions or export as Tiff files require some time for
+          processing in the background.
+          <a
+            href="https://docs.webknossos.org/webknossos/jobs.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Tooltip title="Read more in the documentation">
+              <InfoCircleOutlined style={{ marginLeft: 10 }} />
+            </Tooltip>
+          </a>
+          <br />
+          WEBKNOSSOS will notfiy you via email when a job has finished or reload this page to track
+          progress.
+        </Typography.Paragraph>
+        <div
+          className="clearfix"
+          style={{
+            margin: "20px 0px",
+          }}
+        />
+        <Spin spinning={this.state.isLoading} size="large">
+          <Table
+            dataSource={Utils.filterWithSearchQueryAND(
+              this.state.jobs,
+              ["datasetName"],
+              this.state.searchQuery,
+            )}
+            rowKey="id"
+            pagination={{
+              defaultPageSize: 50,
+            }}
+            style={{
+              marginTop: 30,
+              marginBottom: 30,
+            }}
+          >
+            <Column
+              title="Job Id"
+              dataIndex="id"
+              key="id"
+              sorter={Utils.localeCompareBy(typeHint, (job) => job.id)}
+            />
+            <Column title="Description" key="datasetName" render={this.renderDescription} />
+            <Column
+              title="Created at"
+              key="createdAt"
+              render={(job) => <FormattedDate timestamp={job.createdAt} />}
+              sorter={Utils.compareBy(typeHint, (job) => job.createdAt)}
+              defaultSortOrder="descend"
+            />
+            <Column
+              title="State"
+              key="state"
+              render={this.renderState}
+              sorter={Utils.localeCompareBy(typeHint, (job) => job.state)}
+            />
+            <Column
+              title="Action"
+              key="actions"
+              fixed="right"
+              width={150}
+              render={this.renderActions}
+            />
+          </Table>
+        </Spin>
+      </div>
+    );
+=======
+  function renderState(__: any, job: APIJob) {
+    const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
+
+    const jobStateNormalized = _.capitalize(job.state.toLowerCase());
+
+    return (
+      <Tooltip title={tooltip}>
+        {icon}
+        {jobStateNormalized}
+      </Tooltip>
+    );
+>>>>>>> master
   }
+
+  return (
+    <div className="container">
+      <div className="pull-right">
+        <Search
+          style={{
+            width: 200,
+          }}
+          onChange={handleSearch}
+          value={searchQuery}
+        />
+      </div>
+      <h3>Jobs</h3>
+      <Typography.Paragraph type="secondary">
+        Some actions such as dataset conversions or export as Tiff files require some time for
+        processing in the background.
+        <a
+          href="https://docs.webknossos.org/webknossos/jobs.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Tooltip title="Read more in the documentation">
+            <InfoCircleOutlined style={{ marginLeft: 10 }} />
+          </Tooltip>
+        </a>
+        <br />
+        WEBKNOSSOS will notfiy you via email when a job has finished or reload this page to track
+        progress.
+      </Typography.Paragraph>
+      <div
+        className="clearfix"
+        style={{
+          margin: "20px 0px",
+        }}
+      />
+      <Spin spinning={isLoading} size="large">
+        <Table
+          dataSource={Utils.filterWithSearchQueryAND(jobs, ["datasetName"], searchQuery)}
+          rowKey="id"
+          pagination={{
+            defaultPageSize: 50,
+          }}
+          style={{
+            marginTop: 30,
+            marginBottom: 30,
+          }}
+        >
+          <Column
+            title="Job Id"
+            dataIndex="id"
+            key="id"
+            sorter={Utils.localeCompareBy<APIJob>((job) => job.id)}
+          />
+          <Column title="Description" key="datasetName" render={renderDescription} />
+          <Column
+            title="Created at"
+            key="createdAt"
+            render={(job) => <FormattedDate timestamp={job.createdAt} />}
+            sorter={Utils.compareBy<APIJob>((job) => job.createdAt)}
+            defaultSortOrder="descend"
+          />
+          <Column
+            title="State"
+            key="state"
+            render={renderState}
+            sorter={Utils.localeCompareBy<APIJob>((job) => job.state)}
+          />
+          <Column title="Action" key="actions" fixed="right" width={150} render={renderActions} />
+        </Table>
+      </Spin>
+    </div>
+  );
 }
 
 export default JobListView;

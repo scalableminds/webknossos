@@ -25,6 +25,8 @@ import {
   OrthoView,
   AnnotationToolEnum,
   VolumeTools,
+  AltOrOptionKey,
+  CtrlOrCmdKey,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
@@ -62,6 +64,8 @@ import {
 import {
   getNodeAndTree,
   getNodeAndTreeOrNull,
+  getNodePosition,
+  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getSegmentIdForPosition,
@@ -466,12 +470,12 @@ function getNodeContextMenuOptions({
             disabled: areInSameTree,
             onClick: () =>
               activeNodeId != null
-                ? Store.dispatch(mergeTreesAction(clickedNodeId, activeNodeId))
+                ? Store.dispatch(mergeTreesAction(activeNodeId, clickedNodeId))
                 : null,
             label: (
               <>
                 Create Edge & Merge with this Tree{" "}
-                {useLegacyBindings ? shortcutBuilder(["Shift", "Alt", "leftMouse"]) : null}
+                {useLegacyBindings ? shortcutBuilder(["Shift", AltOrOptionKey, "leftMouse"]) : null}
               </>
             ),
           },
@@ -493,7 +497,10 @@ function getNodeContextMenuOptions({
                 disabled: !isProofreadingActive,
                 onClick: () =>
                   Store.dispatch(
-                    cutAgglomerateFromNeighborsAction(clickedNode.position, clickedTree),
+                    cutAgglomerateFromNeighborsAction(
+                      clickedNode.untransformedPosition,
+                      clickedTree,
+                    ),
                   ),
                 label: (
                   <Tooltip
@@ -519,7 +526,7 @@ function getNodeContextMenuOptions({
             label: (
               <>
                 Delete Edge to this Node{" "}
-                {useLegacyBindings ? shortcutBuilder(["Shift", "Ctrl", "leftMouse"]) : null}
+                {useLegacyBindings ? shortcutBuilder(["Shift", CtrlOrCmdKey, "leftMouse"]) : null}
               </>
             ),
           },
@@ -856,6 +863,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             key: "create-node",
             onClick: () => setWaypoint(globalPosition, viewport, false),
             label: "Create Node here",
+            disabled: isSkeletonLayerTransformed(state),
           },
           {
             key: "create-node-with-tree",
@@ -898,7 +906,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                   {!isAgglomerateMappingEnabled.value ? (
                     <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
                   ) : null}{" "}
-                  {shortcutBuilder(["SHIFT", "middleMouse"])}
+                  {shortcutBuilder(["Shift", "middleMouse"])}
                 </span>
               </Tooltip>
             ),
@@ -916,7 +924,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                         : "Cannot merge because the proofreading tool is not active."
                     }
                   >
-                    <span>Merge with active segment {shortcutBuilder(["SHIFT", "leftMouse"])}</span>
+                    <span>Merge with active segment {shortcutBuilder(["Shift", "leftMouse"])}</span>
                   </Tooltip>
                 ),
               }
@@ -934,7 +942,9 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                         : "Cannot merge because the proofreading tool is not active."
                     }
                   >
-                    <span>Split from active segment {shortcutBuilder(["CTRL", "leftMouse"])}</span>
+                    <span>
+                      Split from active segment {shortcutBuilder([CtrlOrCmdKey, "leftMouse"])}
+                    </span>
                   </Tooltip>
                 ),
               }
@@ -1243,7 +1253,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
       const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
       const layersFinestResolution = magInfo.getFinestResolution();
-      const dataSetScale = dataset.dataSource.scale;
+      const datasetScale = dataset.dataSource.scale;
 
       try {
         const [segmentSize] = await getSegmentVolumes(
@@ -1266,7 +1276,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
         );
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-        const volumeInNm3 = voxelToNm3(dataSetScale, layersFinestResolution, segmentSize);
+        const volumeInNm3 = voxelToNm3(datasetScale, layersFinestResolution, segmentSize);
         return [
           formatNumberToVolume(volumeInNm3),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
@@ -1303,24 +1313,34 @@ function ContextMenuInner(propsWithInputRef: Props) {
   nodeContextMenuTree = nodeContextMenuTree as Tree | null;
   nodeContextMenuNode = nodeContextMenuNode as MutableNode | null;
 
+  const clickedNodesPosition =
+    nodeContextMenuNode != null ? getNodePosition(nodeContextMenuNode, Store.getState()) : null;
+
   const positionToMeasureDistanceTo =
-    nodeContextMenuNode != null ? nodeContextMenuNode.position : globalPosition;
+    nodeContextMenuNode != null ? clickedNodesPosition : globalPosition;
   const activeNode =
     activeNodeId != null && skeletonTracing != null
       ? getNodeAndTree(skeletonTracing, activeNodeId, activeTreeId).get()[1]
       : null;
+
+  const getActiveNodePosition = () => {
+    if (activeNode == null) {
+      throw new Error("getActiveNodePosition was called even though activeNode is null.");
+    }
+    return getNodePosition(activeNode, Store.getState());
+  };
   const distanceToSelection =
     activeNode != null && positionToMeasureDistanceTo != null
       ? [
           formatNumberToLength(
-            V3.scaledDist(activeNode.position, positionToMeasureDistanceTo, datasetScale),
+            V3.scaledDist(getActiveNodePosition(), positionToMeasureDistanceTo, datasetScale),
           ),
-          formatLengthAsVx(V3.length(V3.sub(activeNode.position, positionToMeasureDistanceTo))),
+          formatLengthAsVx(V3.length(V3.sub(getActiveNodePosition(), positionToMeasureDistanceTo))),
         ]
       : null;
   const nodePositionAsString =
-    nodeContextMenuNode != null
-      ? positionToString(nodeContextMenuNode.position, nodeContextMenuNode.additionalCoordinates)
+    nodeContextMenuNode != null && clickedNodesPosition != null
+      ? positionToString(clickedNodesPosition, nodeContextMenuNode.additionalCoordinates)
       : "";
   const infoRows = [];
 

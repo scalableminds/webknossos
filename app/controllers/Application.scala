@@ -30,6 +30,7 @@ class Application @Inject()(actorSystem: ActorSystem,
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
+  // Note: This route is used by external applications, keep stable
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async {
     for {
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox

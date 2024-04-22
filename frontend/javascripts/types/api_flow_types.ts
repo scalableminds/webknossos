@@ -91,6 +91,10 @@ export type APISegmentationLayer = APIDataLayerBase & {
 };
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
 
+// Only used in rare cases to generalize over actual data layers and
+// a skeleton layer.
+export type APISkeletonLayer = { category: "skeleton" };
+
 export type LayerLink = {
   datasetId: APIDatasetId;
   sourceName: string;
@@ -538,10 +542,10 @@ export type APITimeTracking = {
   timestamp: number;
   annotation: string;
   _id: string;
-  task_id: string;
-  project_name: string;
-  tasktype_id: string;
-  tasktype_summary: string;
+  task_id: string | undefined;
+  project_name: string | undefined;
+  tasktype_id: string | undefined;
+  tasktype_summary: string | undefined;
 };
 export type APIProjectProgressReport = {
   readonly projectName: string;
@@ -560,11 +564,13 @@ export type APIAvailableTasksReport = {
   readonly totalAvailableTasks: number;
   readonly availableTasksByProjects: Record<string, number>;
 };
-export type APIOrganization = {
+export type APIOrganizationCompact = {
   readonly id: string;
   readonly name: string;
-  readonly additionalInformation: string;
   readonly displayName: string;
+};
+export type APIOrganization = APIOrganizationCompact & {
+  readonly additionalInformation: string;
   readonly pricingPlan: PricingPlanEnum;
   readonly enableAutoVerify: boolean;
   readonly newUserMailingList: string;

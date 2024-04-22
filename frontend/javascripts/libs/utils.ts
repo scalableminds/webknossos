@@ -14,10 +14,7 @@ import type {
   TypedArray,
 } from "oxalis/constants";
 import window, { document, location } from "libs/window";
-import { ArbitraryObject } from "types/globals";
-
-export type Comparator<T> = (arg0: T, arg1: T) => -1 | 0 | 1;
-export type ArrayElement<A> = A extends readonly (infer T)[] ? T : never;
+import { ArbitraryObject, Comparator } from "types/globals";
 
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
@@ -161,7 +158,6 @@ export function asAbortable<T>(
   signal: AbortSignal,
   abortError: Error,
 ): Promise<T> {
-  // eslint-disable-next-line no-async-promise-executor
   return new Promise(async (resolve, reject) => {
     const abort = () => reject(abortError);
 
@@ -240,7 +236,6 @@ export function hslaToRgba(hsla: Vector4): Vector4 {
   let b: number;
 
   if (s === 0) {
-    // eslint-disable-next-line no-multi-assign
     r = g = b = l; // achromatic
   } else {
     const hue2rgb = function hue2rgb(p: number, q: number, t: number) {
@@ -353,7 +348,6 @@ export function areBoundingBoxesOverlappingOrTouching(
 }
 
 export function compareBy<T>(
-  _collectionForTypeInference: Array<T>, // this parameter is only used let TS infer the used type
   selector: (arg0: T) => number,
   isSortedAscending: boolean = true,
 ): Comparator<T> {
@@ -378,7 +372,6 @@ export function compareBy<T>(
 }
 
 export function localeCompareBy<T>(
-  _collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
   selector: (arg0: T) => string,
   isSortedAscending: boolean = true,
   sortNatural: boolean = true,
@@ -530,7 +523,7 @@ export function hasUrlParam(paramName: string): boolean {
 export function __range__(left: number, right: number, inclusive: boolean): Array<number> {
   const range = [];
   const ascending = left < right;
-  // eslint-disable-next-line no-nested-ternary
+
   const end = !inclusive ? right : ascending ? right + 1 : right - 1;
 
   for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
@@ -569,7 +562,6 @@ export function busyWaitDevHelper(time: number) {
   const start = new Date();
   let now: Date;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     now = new Date();
 
@@ -884,13 +876,13 @@ export function convertDecToBase256(num: number): Vector4 {
   let tmp = num;
 
   let r: number, g: number, b: number, a: number;
-  [tmp, r] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, r] = divMod(tmp);
 
-  [tmp, g] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, g] = divMod(tmp);
 
-  [tmp, b] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, b] = divMod(tmp);
 
-  [tmp, a] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, a] = divMod(tmp);
 
   // Little endian
   return [r, g, b, a];

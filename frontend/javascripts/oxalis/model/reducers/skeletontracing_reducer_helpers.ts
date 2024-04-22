@@ -139,7 +139,7 @@ export function createNode(
   const position = V3.trunc(positionFloat);
   // Create the new node
   const node: Node = {
-    position,
+    untransformedPosition: position,
     additionalCoordinates,
     radius,
     rotation,
@@ -651,12 +651,13 @@ export function mergeTrees(
   trees: TreeMap,
   sourceNodeId: number,
   targetNodeId: number,
-): Maybe<[TreeMap, number, number]> {
-  const sourceTree = findTreeByNodeId(trees, sourceNodeId);
-  const targetTree = findTreeByNodeId(trees, targetNodeId); // should be activeTree
+): [TreeMap, number, number] | null {
+  // targetTree will be removed (the content will be merged into sourceTree).
+  const sourceTree = findTreeByNodeId(trees, sourceNodeId); // should be activeTree, so that the active tree "survives"
+  const targetTree = findTreeByNodeId(trees, targetNodeId);
 
-  if (sourceTree == null || targetTree == null || sourceTree === targetTree) {
-    return Maybe.Nothing();
+  if (targetTree == null || sourceTree == null || targetTree === sourceTree) {
+    return null;
   }
 
   const newEdge: Edge = {
@@ -664,31 +665,31 @@ export function mergeTrees(
     target: targetNodeId,
   };
 
-  let newTrees = _.omit(trees, sourceTree.treeId);
+  let newTrees = _.omit(trees, targetTree.treeId);
 
-  const newNodes = targetTree.nodes.clone();
+  const newNodes = sourceTree.nodes.clone();
 
-  for (const [id, node] of sourceTree.nodes.entries()) {
+  for (const [id, node] of targetTree.nodes.entries()) {
     newNodes.mutableSet(id, node);
   }
 
   newTrees = update(newTrees, {
-    [targetTree.treeId]: {
+    [sourceTree.treeId]: {
       nodes: {
         $set: newNodes,
       },
       edges: {
-        $set: targetTree.edges.addEdges(sourceTree.edges.asArray().concat(newEdge)),
+        $set: sourceTree.edges.addEdges(targetTree.edges.asArray().concat(newEdge)),
       },
       comments: {
-        $set: targetTree.comments.concat(sourceTree.comments),
+        $set: sourceTree.comments.concat(targetTree.comments),
       },
       branchPoints: {
-        $set: targetTree.branchPoints.concat(sourceTree.branchPoints),
+        $set: sourceTree.branchPoints.concat(targetTree.branchPoints),
       },
     },
   });
-  return Maybe.Just([newTrees, targetTree.treeId, targetNodeId]);
+  return [newTrees, sourceTree.treeId, sourceNodeId];
 }
 export function shuffleTreeColor(
   skeletonTracing: SkeletonTracing,
@@ -807,7 +808,7 @@ export function toggleTreeGroupReducer(
 function serverNodeToMutableNode(n: ServerNode): MutableNode {
   return {
     id: n.id,
-    position: Utils.point3ToVector3(n.position),
+    untransformedPosition: Utils.point3ToVector3(n.position),
     additionalCoordinates: n.additionalCoordinates,
     rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,

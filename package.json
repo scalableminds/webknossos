@@ -1,6 +1,5 @@
 {
   "name": "webknossos",
-  "version": "0.17.146",
   "license": "AGPL-3.0",
   "engines": {
     "node": ">=16"
@@ -29,7 +28,6 @@
     "@types/react-virtualized": "^9.21.21",
     "@types/sinon": "^10.0.11",
     "@types/url-join": "^4.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.17.0",
     "abort-controller": "^3.0.0",
     "ava": "^3.13.0",
     "browserslist-to-esbuild": "^1.2.0",
@@ -39,6 +37,7 @@
     "css-loader": "^6.5.1",
     "documentation": "^14.0.2",
     "domexception": "^2.0.1",
+    "dpdm": "^3.14.0",
     "enzyme": "^3.7.0",
     "enzyme-adapter-react-16": "^1.9.1",
     "espree": "^3.5.4",
@@ -49,7 +48,6 @@
     "less": "^4.0.0",
     "less-loader": "^10.2.0",
     "lz4-wasm-nodejs": "^0.9.2",
-    "madge": "^5.0.1",
     "merge-img": "^2.1.2",
     "mock-require": "^1.2.1",
     "node-fetch": "^2.6.7",
@@ -96,7 +94,9 @@
     "test-help": "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
     "remove-e2e-snapshots": "rm -rf frontend/javascripts/test/snapshots/public-test/test-bundle/test/backend-snapshot-tests/ && rm -rf frontend/javascripts/test/snapshots/public-test/test-bundle/test/enzyme/",
     "remove-all-snapshots": "rm -rf frontend/javascripts/test/snapshots/",
-    "refresh-e2e-snapshots": "yarn remove-e2e-snapshots && mkdir -p frontend/javascripts/test/snapshots/type-check && docker compose down && docker compose up e2e-tests",
+    "stash-cmake-cache": "[ -f webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt ] && mv webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt.bak || true",
+    "stash-pop-cmake-cache": "[ -f webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt.bak ] && mv webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt.bak webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt || true",
+    "refresh-e2e-snapshots": "yarn remove-e2e-snapshots && mkdir -p frontend/javascripts/test/snapshots/type-check && yarn stash-cmake-cache && docker compose down && docker compose up e2e-tests && yarn stash-pop-cmake-cache",
     "refresh-all-snapshots": "yarn remove-all-snapshots && yarn test && yarn refresh-e2e-snapshots",
     "check-frontend": "yarn run biome check frontend --organize-imports-enabled=false && tools/assert-no-test-only.sh",
     "fix-frontend": "yarn run biome check frontend --apply --organize-imports-enabled=false && echo Please proofread the applied suggestions, as they may not be safe.",
@@ -105,8 +105,8 @@
     "licenses-backend": "sbt dumpLicenseReport",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/oxalis/api/api_loader.ts frontend/javascripts/oxalis/api/api_latest.ts --github --project-name \"WEBKNOSSOS Frontend API\" --format html --output public/docs/frontend-api",
     "refresh-schema": "./tools/postgres/dbtool.js refresh-schema && rm -f target/scala-2.13/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
-    "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; ./tools/postgres/dbtool.js enable-jobs",
-    "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; ./tools/postgres/dbtool.js disable-jobs",
+    "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = false/voxelyticsEnabled = true/g' ./conf/application.conf; ./tools/postgres/dbtool.js enable-jobs",
+    "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = true/voxelyticsEnabled = false/g' ./conf/application.conf; ./tools/postgres/dbtool.js disable-jobs",
     "coverage-local": "c8 report --reporter=html && echo Success! Open coverage/index.html",
     "coverage": "c8 report --reporter=text-lcov | coveralls",
     "postcheckout": "echo 'Deleting auto-generated typescript files...' && rm -f frontend/javascripts/test/snapshots/type-check/*.ts",
@@ -116,7 +116,7 @@
     "ts": "yarn tsc",
     "ts-watch": "yarn tsc --watch",
     "ts-coverage": "typescript-coverage-report",
-    "find-cyclic-dependencies": "madge --circular --extensions ts,tsx frontend/javascripts/main.tsx",
+    "find-cyclic-dependencies": "yarn run dpdm -T --tree false --warning false --extensions .ts,.tsx frontend/javascripts/main.tsx",
     "check-cyclic-dependencies": "node ./tools/check-cyclic-dependencies.js",
     "startf": "yarn rm-fossil-lock; yarn kill-listeners; yarn start"
   },
@@ -238,15 +238,5 @@
       "frontend/javascripts/test/**/*.*"
     ],
     "reporter": "lcov"
-  },
-  "madge": {
-    "detectiveOptions": {
-      "ts": {
-        "skipTypeImports": true
-      },
-      "tsx": {
-        "skipTypeImports": true
-      }
-    }
   }
 }

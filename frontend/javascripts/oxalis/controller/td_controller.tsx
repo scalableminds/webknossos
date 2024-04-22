@@ -26,7 +26,7 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorWithoutTimeTrackingAction,
 } from "oxalis/model/actions/view_mode_actions";
-import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletontracing_accessor";
 import { voxelToNm } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import PlaneView from "oxalis/view/plane_view";
@@ -68,12 +68,12 @@ function getTDViewMouseControlsSkeleton(planeView: PlaneView): Record<string, an
     ) =>
       activeTool === AnnotationToolEnum.PROOFREAD
         ? ProofreadTool.onLeftClick(planeView, pos, plane, event, isTouch)
-        : SkeletonTool.onLegacyLeftClick(
+        : SkeletonTool.onLeftClick(
             planeView,
             pos,
             event.shiftKey,
             event.altKey,
-            event.ctrlKey,
+            event.ctrlKey || event.metaKey,
             OrthoViews.TDView,
             isTouch,
           ),
@@ -128,7 +128,7 @@ class TDController extends React.PureComponent<Props> {
       // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
       // Thus we do it manually whenever the active node changes.
       getActiveNode(this.props.tracing.skeleton).map((activeNode) =>
-        this.setTargetAndFixPosition(activeNode.position),
+        this.setTargetAndFixPosition(getNodePosition(activeNode, Store.getState())),
       );
     }
   }
@@ -220,7 +220,8 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        if (!event.shiftKey && !event.ctrlKey) {
+        const ctrlOrMetaPressed = event.ctrlKey || event.metaKey;
+        if (!event.shiftKey && !ctrlOrMetaPressed) {
           // No modifiers were pressed. No mesh related action is necessary.
           return;
         }
@@ -236,7 +237,7 @@ class TDController extends React.PureComponent<Props> {
 
         if (event.shiftKey) {
           Store.dispatch(setPositionAction(unscaledPosition));
-        } else if (event.ctrlKey) {
+        } else if (ctrlOrMetaPressed) {
           const storeState = Store.getState();
           const { hoveredSegmentId } = storeState.temporaryConfiguration;
           const segmentationLayer = getVisibleSegmentationLayer(storeState);

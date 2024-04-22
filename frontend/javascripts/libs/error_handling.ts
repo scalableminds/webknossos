@@ -174,7 +174,6 @@ class ErrorHandling {
         error = new Error(message);
       }
 
-      console.error(error);
       this.notify(error);
 
       if (error.toString() === "Error: Script error.") {

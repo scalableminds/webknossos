@@ -288,6 +288,27 @@ export function startMaterializingVolumeAnnotationJob(
   );
 }
 
+export function startMitochondriaInferralJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+  bbox: Vector6,
+  outputSegmentationLayerName: string,
+  newDatasetName: string,
+): Promise<APIJob> {
+  const urlParams = new URLSearchParams({
+    layerName,
+    bbox: bbox.join(","),
+    outputSegmentationLayerName,
+    newDatasetName,
+  });
+  return Request.receiveJSON(
+    `/api/jobs/run/inferMitochondria/${organizationName}/${datasetName}?${urlParams.toString()}`,
+    {
+      method: "POST",
+    },
+  );
+}
 type AiModelCategory = "em_neurons" | "em_nuclei";
 
 type AiModelTrainingAnnotationSpecification = {

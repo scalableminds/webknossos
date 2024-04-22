@@ -12,6 +12,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   initializeEditableMappingAction,
+  removeSegmentAction,
   setMappingIsEditableAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { ProofreadAtPositionAction } from "oxalis/model/actions/proofread_actions";
@@ -20,6 +21,7 @@ import {
   findTreeByNodeId,
   getNodeAndTree,
   getTreeNameForAgglomerateSkeleton,
+  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   pushSaveQueueTransaction,
@@ -237,6 +239,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // Actually, action is MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
   // but the takeEveryUnlessBusy wrapper does not understand this.
   // Handles split, merge and min-cut actions on agglomerates.
+  // Note that the skeletontracing reducer already mutated the skeletons according to the
+  // received action.
   if (
     action.type !== "MERGE_TREES" &&
     action.type !== "DELETE_EDGE" &&
@@ -296,8 +300,14 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
 
-  const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).position;
-  const targetNodePosition = targetTree.nodes.get(targetNodeId).position;
+  // Use untransformedPosition because agglomerate trees should not have
+  // any transforms, anyway.
+  if (yield* select((state) => isSkeletonLayerTransformed(state))) {
+    Toast.error("Proofreading is currently not supported when the skeleton layer is transformed.");
+    return;
+  }
+  const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).untransformedPosition;
+  const targetNodePosition = targetTree.nodes.get(targetNodeId).untransformedPosition;
 
   const idInfos = yield* call(getAgglomerateInfos, preparation.getMappedAndUnmapped, [
     sourceNodePosition,
@@ -387,12 +397,16 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     ),
   );
   if (sourceTree !== targetTree) {
+    // A split happened, because the new trees are not identical.
     yield* put(
       setTreeNameAction(
         getTreeNameForAgglomerateSkeleton(newTargetAgglomerateId, volumeTracing.mappingName),
         targetTree.treeId,
       ),
     );
+  } else {
+    // A merge happened. Remove the segment that doesn't exist anymore.
+    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
   }
 
   const pack = (agglomerateId: number, newAgglomerateId: number, nodePosition: Vector3) => ({
@@ -440,6 +454,13 @@ function* performMinCut(
     volumeTracingId,
     segmentsInfo,
   );
+
+  // Use untransformedPosition below because agglomerate trees should not have
+  // any transforms, anyway.
+  if (yield* select((state) => isSkeletonLayerTransformed(state))) {
+    Toast.error("Proofreading is currently not supported when the skeleton layer is transformed.");
+    return true;
+  }
 
   for (const edge of edgesToRemove) {
     if (sourceTree) {
@@ -618,6 +639,11 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   yield* call([api.data, api.data.reloadBuckets], volumeTracingId, (bucket) =>
     bucket.containsValue(targetAgglomerateId),
   );
+
+  if (action.type === "PROOFREAD_MERGE") {
+    // Remove the segment that doesn't exist anymore.
+    yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
+  }
 
   const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
     call(getDataValue, sourcePosition),
@@ -800,10 +826,10 @@ function* getAgglomerateInfos(
 }> | null> {
   const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
   if (idInfos.find((idInfo) => idInfo.agglomerateId === 0 || idInfo.unmappedId === 0) != null) {
-    console.warn("At least one id was zero:", idInfos);
     Toast.warning(
       "One of the selected segments has the id 0 which is the background. Cannot merge/split.",
     );
+    console.warn("At least one id was zero:", idInfos);
     return null;
   }
   return idInfos;
@@ -888,9 +914,9 @@ function getDeleteEdgeActionForEdgePositions(
   let firstNodeId;
   let secondNodeId;
   for (const node of sourceTree.nodes.values()) {
-    if (_.isEqual(node.position, edge.position1)) {
+    if (_.isEqual(node.untransformedPosition, edge.position1)) {
       firstNodeId = node.id;
-    } else if (_.isEqual(node.position, edge.position2)) {
+    } else if (_.isEqual(node.untransformedPosition, edge.position2)) {
       secondNodeId = node.id;
     }
     if (firstNodeId && secondNodeId) {

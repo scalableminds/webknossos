@@ -276,7 +276,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               ARRAY_REMOVE(ARRAY_AGG(utr.isteammanager :: TEXT), null) AS team_managers
             FROM webknossos.users AS u
             LEFT JOIN webknossos.user_team_roles utr on utr._user = u._id
-            INNER JOIN webknossos.teams t on t._id = utr._team
+            LEFT JOIN webknossos.teams t on t._id = utr._team -- should not cause fanout since there is only one team per team_role
             GROUP BY u._id
           )
           SELECT
@@ -321,6 +321,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       compactInfos = r.toList
     } yield (users, compactInfos)
 
+  // NOTE: This will not return admins. They have “access to all teams”. Consider fetching those too when you use this
   def findAllByTeams(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =
     if (teamIds.isEmpty) Fox.successful(List())
     else
@@ -344,12 +345,25 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"""select $columns
-                   from $existingCollectionName
-                   where $accessQuery
-                   and (isDatasetManager or isAdmin)
-                   and not isDeactivated
-                   and _organization = $organizationId
-                   order by _id""".as[UsersRow])
+                     from $existingCollectionName
+                     where $accessQuery
+                     and (isDatasetManager or isAdmin)
+                     and not isDeactivated
+                     and _organization = $organizationId
+                     order by _id""".as[UsersRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  def findAdminsByOrg(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[User]] =
+    for {
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      r <- run(q"""SELECT $columns
+                         FROM $existingCollectionName
+                         where $accessQuery
+                         AND isAdmin
+                         AND NOT isDeactivated
+                         AND _organization = $organizationId
+                         ORDER BY _id""".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -392,7 +406,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       result <- run(q"""SELECT $columns
                         FROM $existingCollectionName
-                        WHERE _id in
+                        WHERE _id IN
                           (SELECT _user FROM webknossos.annotation_contributors WHERE _annotation = $annotationId)
                         AND NOT isUnlisted
                         AND $accessQuery""".as[UsersRow])

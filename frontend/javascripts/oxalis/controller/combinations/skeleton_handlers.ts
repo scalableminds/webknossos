@@ -5,6 +5,7 @@ import type {
   Point2,
   Vector3,
   ShowContextMenuFunction,
+  Viewport,
 } from "oxalis/constants";
 import { OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
@@ -16,6 +17,8 @@ import {
   getActiveNode,
   getNodeAndTree,
   getNodeAndTreeOrNull,
+  getNodePosition,
+  untransformNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   getInputCatcherRect,
@@ -49,6 +52,7 @@ import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
 import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
+import ArbitraryView from "oxalis/view/arbitrary_view";
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,
@@ -56,12 +60,12 @@ const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.TDView]: 3,
 };
 export function handleMergeTrees(
-  planeView: PlaneView,
+  view: PlaneView | ArbitraryView,
   position: Point2,
-  plane: OrthoView,
+  plane: Viewport,
   isTouch: boolean,
 ) {
-  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
+  const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
 
   // otherwise we have hit the background and do nothing
@@ -72,12 +76,12 @@ export function handleMergeTrees(
   }
 }
 export function handleDeleteEdge(
-  planeView: PlaneView,
+  view: PlaneView | ArbitraryView,
   position: Point2,
-  plane: OrthoView,
+  plane: Viewport,
   isTouch: boolean,
 ) {
-  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
+  const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
 
   // otherwise we have hit the background and do nothing
@@ -88,12 +92,12 @@ export function handleDeleteEdge(
   }
 }
 export function handleSelectNode(
-  planeView: PlaneView,
+  view: PlaneView | ArbitraryView,
   position: Point2,
-  plane: OrthoView,
+  plane: Viewport,
   isTouch: boolean,
 ): boolean {
-  const nodeId = maybeGetNodeIdFromPosition(planeView, position, plane, isTouch);
+  const nodeId = maybeGetNodeIdFromPosition(view, position, plane, isTouch);
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
@@ -103,7 +107,7 @@ export function handleSelectNode(
 
   return false;
 }
-export function handleCreateNode(_planeView: PlaneView, position: Point2, ctrlPressed: boolean) {
+export function handleCreateNode(position: Point2, ctrlPressed: boolean) {
   const state = Store.getState();
 
   if (isMagRestrictionViolated(state)) {
@@ -197,10 +201,10 @@ export function moveNode(
         op(vector[1] * zoomFactor * scaleFactor[1]),
         op(vector[2] * zoomFactor * scaleFactor[2]),
       ];
-      const [x, y, z] = activeNode.position;
+      const [x, y, z] = getNodePosition(activeNode, state);
       Store.dispatch(
         setNodePositionAction(
-          [x + delta[0], y + delta[1], z + delta[2]],
+          untransformNodePosition([x + delta[0], y + delta[1], z + delta[2]], state),
           activeNode.id,
           activeTree.treeId,
         ),
@@ -213,7 +217,11 @@ export function finishNodeMovement(nodeId: number) {
   getSkeletonTracing(Store.getState().tracing).map((skeletonTracing) =>
     getNodeAndTree(skeletonTracing, nodeId).map(([activeTree, node]) => {
       Store.dispatch(
-        setNodePositionAction(V3.round(node.position, [0, 0, 0]), node.id, activeTree.treeId),
+        setNodePositionAction(
+          V3.round(node.untransformedPosition, [0, 0, 0]),
+          node.id,
+          activeTree.treeId,
+        ),
       );
     }),
   );
@@ -228,15 +236,16 @@ export function setWaypoint(
   const activeNodeMaybe = getActiveNode(skeletonTracing);
   const rotation = getRotationOrtho(activeViewport);
   // set the new trace direction
-  activeNodeMaybe.map((activeNode) =>
-    Store.dispatch(
+  activeNodeMaybe.map((activeNode) => {
+    const activeNodePosition = getNodePosition(activeNode, Store.getState());
+    return Store.dispatch(
       setDirectionAction([
-        position[0] - activeNode.position[0],
-        position[1] - activeNode.position[1],
-        position[2] - activeNode.position[2],
+        position[0] - activeNodePosition[0],
+        position[1] - activeNodePosition[1],
+        position[2] - activeNodePosition[2],
       ]),
-    ),
-  );
+    );
+  });
   const state = Store.getState();
   // Create a new tree automatically if the corresponding setting is true and allowed
   const createNewTree =
@@ -276,7 +285,7 @@ function addNode(
 
   Store.dispatch(
     createNodeAction(
-      position,
+      untransformNodePosition(position, state),
       state.flycam.additionalCoordinates,
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
@@ -293,12 +302,10 @@ function addNode(
   if (center) {
     // we created a new node, so get a new reference from the current store state
     const newState = Store.getState();
-    enforce(getActiveNode)(newState.tracing.skeleton).map(
-      (
-        newActiveNode, // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
-      ) =>
-        // This is important because otherwise the user cannot continue to trace until the animation is over
-        api.tracing.centerPositionAnimated(newActiveNode.position, true),
+    enforce(getActiveNode)(newState.tracing.skeleton).map((newActiveNode) =>
+      // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
+      // This is important because otherwise the user cannot continue to trace until the animation is over
+      api.tracing.centerPositionAnimated(getNodePosition(newActiveNode, state), true),
     );
   }
 
@@ -314,9 +321,9 @@ export function moveAlongDirection(reverse: boolean = false): void {
   api.tracing.centerPositionAnimated(newPosition, false);
 }
 export function maybeGetNodeIdFromPosition(
-  planeView: PlaneView,
+  planeView: PlaneView | ArbitraryView,
   position: Point2,
-  plane: OrthoView,
+  plane: Viewport,
   isTouch: boolean,
 ): number | null | undefined {
   const SceneController = getSceneController();
@@ -339,7 +346,8 @@ export function maybeGetNodeIdFromPosition(
   const pickingNode = skeleton.startPicking(isTouch);
   const pickingScene = new THREE.Scene();
   pickingScene.add(pickingNode);
-  const camera = planeView.getCameras()[plane];
+  const camera = planeView.getCameraForPlane(plane);
+
   let { width, height } = getInputCatcherRect(Store.getState(), plane);
   width = Math.round(width);
   height = Math.round(height);

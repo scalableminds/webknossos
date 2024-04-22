@@ -22,7 +22,6 @@ import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
 import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
-import StatisticView from "admin/statistic/statistic_view";
 import TaskCreateFormView from "admin/task/task_create_form_view";
 import TaskCreateView from "admin/task/task_create_view";
 import TaskListView from "admin/task/task_list_view";
@@ -67,6 +66,7 @@ import {
 import ErrorBoundary from "components/error_boundary";
 import { Store } from "oxalis/singletons";
 import VerifyEmailView from "admin/auth/verify_email_view";
+import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
 import { EmptyObject } from "types/globals";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
 
@@ -313,8 +313,8 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/statistics"
-                component={StatisticView}
+                path="/timetracking"
+                component={TimeTrackingOverview}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -543,7 +543,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/reports/timetracking"
                 requiredPricingPlan={PricingPlanEnum.Power}
-                render={() => <TimeLineView />}
+                component={TimeLineView}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -628,14 +628,14 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationName/:dataSetName/createExplorative/:type"
+                path="/datasets/:organizationName/:datasetName/createExplorative/:type"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
                     pushToHistory={false}
                     redirectTo={async () => {
                       if (
                         !match.params.organizationName ||
-                        !match.params.dataSetName ||
+                        !match.params.datasetName ||
                         !match.params.type
                       ) {
                         // Typehint for TS
@@ -644,7 +644,7 @@ class ReactRouter extends React.Component<Props> {
 
                       const dataset = {
                         owningOrganization: match.params.organizationName,
-                        name: match.params.dataSetName,
+                        name: match.params.datasetName,
                       };
                       const type =
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;

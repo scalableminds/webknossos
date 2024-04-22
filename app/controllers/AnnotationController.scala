@@ -106,7 +106,7 @@ class AnnotationController @Inject()(
         _ <- Fox.runOptional(request.identity) { user =>
           if (typedTyp == AnnotationType.Task || typedTyp == AnnotationType.Explorational) {
             timeSpanService
-              .logUserInteraction(Instant(timestamp), user, annotation) // log time when a user starts working
+              .logUserInteractionIfTheyArePotentialContributor(Instant(timestamp), user, annotation) // log time when a user starts working
           } else Fox.successful(())
         }
         _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
@@ -149,24 +149,6 @@ class AnnotationController @Inject()(
         result <- merge(annotation.typ.toString, id, mergedTyp, mergedId)(request)
       } yield result
     }
-
-  def loggedTime(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
-      restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
-      _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-      loggedTimeAsMap <- timeSpanService
-        .loggedTimeOfAnnotation(annotation._id, TimeSpan.groupByMonth) ?~> "annotation.timelogging.read.failed"
-    } yield {
-      Ok(
-        Json.arr(
-          loggedTimeAsMap.map {
-            case (month, duration) =>
-              Json.obj("interval" -> month, "durationInSeconds" -> duration.toSeconds)
-          }
-        ))
-    }
-  }
 
   def reset(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
@@ -421,7 +403,7 @@ class AnnotationController @Inject()(
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
       message <- annotationService.finish(annotation, issuingUser, restrictions) ?~> "annotation.finish.failed"
       updated <- provider.provideAnnotation(typ, id, issuingUser)
-      _ <- timeSpanService.logUserInteraction(timestamp, issuingUser, annotation) // log time on tracing end
+      _ <- timeSpanService.logUserInteractionIfTheyArePotentialContributor(timestamp, issuingUser, annotation) // log time on tracing end
     } yield (updated, message)
 
   def finish(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {

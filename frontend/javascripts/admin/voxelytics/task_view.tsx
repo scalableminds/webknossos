@@ -1,7 +1,6 @@
 import React from "react";
 import { JSONTree } from "react-json-tree";
 import { Progress, Tabs, TabsProps, Tooltip } from "antd";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import {
   VoxelyticsArtifactConfig,

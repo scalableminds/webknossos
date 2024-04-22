@@ -126,8 +126,7 @@ class JobsController @Inject()(
             "organization_name" -> organizationName,
             "organization_display_name" -> organization.displayName,
             "dataset_name" -> datasetName,
-            "scale" -> scale,
-            "webknossos_token" -> RpcTokenHolder.webknossosToken
+            "scale" -> scale
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)
@@ -149,7 +148,7 @@ class JobsController @Inject()(
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
           "dataset.notFound",
           datasetName) ~> NOT_FOUND
-        _ <- datasetService.assertValidLayerName(layerName)
+        _ <- datasetService.assertValidLayerNameLax(layerName)
         command = JobCommand.compute_mesh_file
         commandArgs = Json.obj(
           "organization_name" -> organizationName,
@@ -174,7 +173,7 @@ class JobsController @Inject()(
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
           "dataset.notFound",
           datasetName) ~> NOT_FOUND
-        _ <- datasetService.assertValidLayerName(layerName)
+        _ <- datasetService.assertValidLayerNameLax(layerName)
         command = JobCommand.compute_segment_index_file
         commandArgs = Json.obj(
           "organization_name" -> organizationName,
@@ -201,14 +200,13 @@ class JobsController @Inject()(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
           _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerName(layerName)
+          _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.infer_nuclei
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> datasetName,
             "layer_name" -> layerName,
-            "new_dataset_name" -> newDatasetName,
-            "webknossos_token" -> RpcTokenHolder.webknossosToken,
+            "new_dataset_name" -> newDatasetName
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNucleiInferral"
           js <- jobService.publicWrites(job)
@@ -232,8 +230,8 @@ class JobsController @Inject()(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
           _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerName(outputSegmentationLayerName)
-          _ <- datasetService.assertValidLayerName(layerName)
+          _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
+          _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
           command = JobCommand.infer_neurons
@@ -243,10 +241,45 @@ class JobsController @Inject()(
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
             "output_segmentation_layer_name" -> outputSegmentationLayerName,
-            "webknossos_token" -> RpcTokenHolder.webknossosToken,
             "bbox" -> bbox,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNeuronInferral"
+          js <- jobService.publicWrites(job)
+        } yield Ok(js)
+      }
+    }
+
+  def runInferMitochondriaJob(organizationName: String,
+                              datasetName: String,
+                              layerName: String,
+                              bbox: String,
+                              outputSegmentationLayerName: String,
+                              newDatasetName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                       organizationName)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferMitochondria.notAllowed.organization" ~> FORBIDDEN
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
+            "dataset.notFound",
+            datasetName) ~> NOT_FOUND
+          _ <- datasetService.assertValidDatasetName(newDatasetName)
+          _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
+          _ <- datasetService.assertValidLayerNameLax(layerName)
+          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
+          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
+          command = JobCommand.infer_mitochondria
+          commandArgs = Json.obj(
+            "organization_name" -> organizationName,
+            "dataset_name" -> datasetName,
+            "new_dataset_name" -> newDatasetName,
+            "layer_name" -> layerName,
+            "output_segmentation_layer_name" -> outputSegmentationLayerName,
+            "bbox" -> bbox,
+          )
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunInferMitochondria"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -266,11 +299,9 @@ class JobsController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
-          _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerName)
-          _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerName)
+          _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
+          _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)
-          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
-            request.identity.loginInfo)
           command = JobCommand.export_tiff
           exportFileName = if (asOmeTiff)
             s"${formatDateForFilename(new Date())}__${datasetName}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.ome.tif"
@@ -283,7 +314,6 @@ class JobsController @Inject()(
             "export_file_name" -> exportFileName,
             "layer_name" -> layerName,
             "mag" -> mag,
-            "user_auth_token" -> userAuthToken.id,
             "annotation_layer_name" -> annotationLayerName,
             "annotation_id" -> annotationId
           )
@@ -312,18 +342,14 @@ class JobsController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
-          _ <- datasetService.assertValidLayerName(fallbackLayerName)
-          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
-            request.identity.loginInfo)
+          _ <- datasetService.assertValidLayerNameLax(fallbackLayerName)
           command = JobCommand.materialize_volume_annotation
           _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerName(outputSegmentationLayerName)
+          _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> datasetName,
             "fallback_layer_name" -> fallbackLayerName,
-            "webknossos_token" -> RpcTokenHolder.webknossosToken,
-            "user_auth_token" -> userAuthToken.id,
             "annotation_id" -> annotationId,
             "output_segmentation_layer_name" -> outputSegmentationLayerName,
             "annotation_type" -> annotationType,
@@ -347,7 +373,7 @@ class JobsController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
-          _ <- datasetService.assertValidLayerName(layerName)
+          _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.find_largest_segment_id
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
@@ -368,8 +394,6 @@ class JobsController @Inject()(
                                                                                        organizationName)
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.renderAnimation.notAllowed.organization" ~> FORBIDDEN
-          userAuthToken <- wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(
-            request.identity.loginInfo)
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
@@ -381,15 +405,14 @@ class JobsController @Inject()(
             bool2Fox(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
           layerName = animationJobOptions.layerName
-          _ <- datasetService.assertValidLayerName(layerName)
-          _ <- Fox.runOptional(animationJobOptions.segmentationLayerName)(datasetService.assertValidLayerName)
+          _ <- datasetService.assertValidLayerNameLax(layerName)
+          _ <- Fox.runOptional(animationJobOptions.segmentationLayerName)(datasetService.assertValidLayerNameLax)
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${datasetName}__$layerName.mp4"
           command = JobCommand.render_animation
           commandArgs = Json.obj(
             "organization_name" -> organizationName,
             "dataset_name" -> datasetName,
             "export_file_name" -> exportFileName,
-            "user_auth_token" -> userAuthToken.id,
             "layer_name" -> animationJobOptions.layerName,
             "segmentation_layer_name" -> animationJobOptions.segmentationLayerName,
             "bounding_box" -> animationJobOptions.boundingBox.toLiteral,

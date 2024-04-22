@@ -288,22 +288,20 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     const k1 = 0xcc9e2d51;
     const k2 = 0x1b873593;
 
-    // eslint-disable-next-line no-param-reassign
     value >>>= 0;
-    // eslint-disable-next-line no-param-reassign
+
     state >>>= 0;
 
-    // eslint-disable-next-line no-param-reassign
     value = Math.imul(value, k1) >>> 0;
-    // eslint-disable-next-line no-param-reassign
+
     value = ((value << 15) | (value >>> 17)) >>> 0;
-    // eslint-disable-next-line no-param-reassign
+
     value = Math.imul(value, k2) >>> 0;
-    // eslint-disable-next-line no-param-reassign
+
     state = (state ^ value) >>> 0;
-    // eslint-disable-next-line no-param-reassign
+
     state = ((state << 13) | (state >>> 19)) >>> 0;
-    // eslint-disable-next-line no-param-reassign
+
     state = (state * 5 + 0xe6546b64) >>> 0;
     return state;
   }

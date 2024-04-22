@@ -19,6 +19,7 @@ import {
   startNucleiInferralJob,
   startMaterializingVolumeAnnotationJob,
   startNeuronInferralJob,
+  startMitochondriaInferralJob,
 } from "admin/admin_rest_api";
 import { useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
@@ -73,6 +74,7 @@ const jobNameToImagePath: Record<
 const jobTypeWithConfigurableOutputSegmentationLayerName = [
   "materialize_volume_annotation",
   "neuron_inferral",
+  "mitochondria_inferral",
 ];
 type Props = {
   handleClose: () => void;
@@ -475,6 +477,7 @@ function RunModelTab({ aIJobModalState }: { aIJobModalState: string }) {
               </Space>
             </Card>
           </Radio.Button>
+<<<<<<< HEAD
         </Tooltip>
         <Tooltip title="Coming soon">
           <Radio.Button
@@ -497,6 +500,100 @@ function RunModelTab({ aIJobModalState }: { aIJobModalState: string }) {
             </Card>
           </Radio.Button>
         </Tooltip>
+||||||| 9a86c297b
+          <Tooltip title="Coming soon">
+            <Radio.Button
+              className="aIJobSelection"
+              disabled
+              checked={aIJobModalState === "nuclei_inferral"}
+              onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
+            >
+              <Card bordered={false}>
+                <Space direction="vertical" size="small">
+                  <Row className="ai-job-title">Nuclei detection</Row>
+                  <Row>
+                    <img
+                      src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
+                      alt={"Nuclei detection example"}
+                      style={centerImageStyle}
+                    />
+                  </Row>
+                </Space>
+              </Card>
+            </Radio.Button>
+          </Tooltip>
+          <Tooltip title="Coming soon">
+            <Radio.Button
+              className="aIJobSelection"
+              disabled
+              checked={aIJobModalState === "mitochondria_inferral"}
+              onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
+            >
+              <Card bordered={false}>
+                <Space direction="vertical" size="small">
+                  <Row className="ai-job-title">Mitochondria detection</Row>
+                  <Row>
+                    <img
+                      src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
+                      alt={"Mitochondria detection example"}
+                      style={centerImageStyle}
+                    />
+                  </Row>
+                </Space>
+              </Card>
+            </Radio.Button>
+          </Tooltip>
+        </Space>
+        {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
+        {aIJobModalState === "nuclei_inferral" ? <NucleiDetectionForm /> : null}
+=======
+          <Tooltip title="Coming soon">
+            <Radio.Button
+              className="aIJobSelection"
+              disabled
+              checked={aIJobModalState === "nuclei_inferral"}
+              onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
+            >
+              <Card bordered={false}>
+                <Space direction="vertical" size="small">
+                  <Row className="ai-job-title">Nuclei detection</Row>
+                  <Row>
+                    <img
+                      src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
+                      alt={"Nuclei detection example"}
+                      style={centerImageStyle}
+                    />
+                  </Row>
+                </Space>
+              </Card>
+            </Radio.Button>
+          </Tooltip>
+          <Tooltip title="Coming soon">
+            <Radio.Button
+              className="aIJobSelection"
+              checked={aIJobModalState === "mitochondria_inferral"}
+              disabled={!Store.getState().activeUser?.isSuperUser}
+              onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
+            >
+              <Card bordered={false}>
+                <Space direction="vertical" size="small">
+                  <Row className="ai-job-title">Mitochondria detection</Row>
+                  <Row>
+                    <img
+                      src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
+                      alt={"Mitochondria detection example"}
+                      style={centerImageStyle}
+                    />
+                  </Row>
+                </Space>
+              </Card>
+            </Radio.Button>
+          </Tooltip>
+        </Space>
+        {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
+        {aIJobModalState === "nuclei_inferral" ? <NucleiDetectionForm /> : null}
+        {aIJobModalState === "mitochondria_inferral" ? <MitochondriaSegmentationForm /> : null}
+>>>>>>> master
       </Space>
       {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
       {aIJobModalState === "nuclei_inferral" ? <NucleiDetectionForm /> : null}
@@ -574,10 +671,10 @@ function StartJobForm(props: StartJobFormProps) {
       );
       handleClose();
     } catch (error) {
-      console.error(error);
       Toast.error(
         `The ${jobName} job could not be started. Please contact an administrator or look in the console for more details.`,
       );
+      console.error(error);
       handleClose();
     }
   };
@@ -724,6 +821,58 @@ export function NeuronSegmentationForm() {
             <Row>
               This job will automatically detect and segment all neurons in this dataset. The AI
               will create a copy of this dataset containing the new neuron segmentation.
+            </Row>
+            <Row style={{ display: "grid", marginBottom: 16 }}>
+              <Alert
+                message="Please note that this feature is experimental and currently only works with electron
+                microscopy data."
+                type="warning"
+                showIcon
+              />
+            </Row>
+          </Space>
+        </>
+      }
+    />
+  );
+}
+
+export function MitochondriaSegmentationForm() {
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  return (
+    <StartJobForm
+      handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
+      jobName={"mitochondria_inferral"}
+      buttonLabel="Start AI mitochondria segmentation"
+      title="AI Mitochondria Segmentation"
+      suggestedDatasetSuffix="with_mitochondria_detected"
+      isBoundingBoxConfigurable
+      jobApiCall={async ({
+        newDatasetName,
+        selectedLayer: colorLayer,
+        selectedBoundingBox,
+        outputSegmentationLayerName,
+      }) => {
+        if (!selectedBoundingBox || !outputSegmentationLayerName) {
+          return;
+        }
+
+        const bbox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+        return startMitochondriaInferralJob(
+          dataset.owningOrganization,
+          dataset.name,
+          colorLayer.name,
+          bbox,
+          outputSegmentationLayerName,
+          newDatasetName,
+        );
+      }}
+      description={
+        <>
+          <Space direction="vertical" size="middle">
+            <Row>
+              This job will automatically detect and segment all mitochondria in this dataset. The
+              AI will create a copy of this dataset containing the new mitochondria segmentation.
             </Row>
             <Row style={{ display: "grid", marginBottom: 16 }}>
               <Alert

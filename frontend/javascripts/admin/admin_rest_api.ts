@@ -95,6 +95,7 @@ import { doWithToken } from "./api/token";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { ArbitraryObject } from "types/globals";
 import { assertResponseLimit } from "./api/api_utils";
+import { AnnotationTypeFilterEnum } from "admin/statistic/project_and_annotation_type_dropdown";
 
 export * from "./api/token";
 export * from "./api/jobs";

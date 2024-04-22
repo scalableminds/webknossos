@@ -1,6 +1,6 @@
 package controllers
 
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel, AiModelDAO, AiModelService}
 import models.annotation.AnnotationDAO
@@ -38,9 +38,11 @@ object RunTrainingParameters {
   implicit val jsonFormat: OFormat[RunTrainingParameters] = Json.format[RunTrainingParameters]
 }
 
-case class RunInferenceParameters(annotationId: ObjectId,
+case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   aiModelId: ObjectId,
+                                  datasetName: String,
                                   coloLayerName: String,
+                                  bounding_box: String,
                                   newSegmentationLayerName: String,
                                   newDatasetName: String,
                                   maskAnnotationLayerName: Option[String])
@@ -156,20 +158,19 @@ class AiModelController @Inject()(
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
-        annotation <- annotationDAO.findOne(request.body.annotationId)
-        dataset <- datasetDAO.findOne(annotation._dataset)
         organization <- organizationDAO.findOne(request.identity._organization)
-        _ <- bool2Fox(dataset._organization == request.identity._organization) ?~> "job.inferWithModel.onlyDatasetsOfYourOrga"
+        dataset <- datasetDAO.findOneByNameAndOrganization(request.body.datasetName, organization._id)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         // _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         _ <- datasetService.assertNewDatasetName(request.body.newDatasetName, organization._id)
         jobCommand = JobCommand.infer_with_model
+        boundingBox <- BoundingBox.fromLiteral(request.body.bounding_box).toFox
         commandArgs = Json.obj(
           "organization_name" -> organization.name,
           "dataset_name" -> dataset.name,
           "color_layer_name" -> request.body.coloLayerName,
-          "bounding_box" -> "10,10,10,100,100,100",
+          "bounding_box" -> boundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
           "new_segmentation_layer_name" -> request.body.newSegmentationLayerName,
           "new_dataset_name" -> request.body.newDatasetName
@@ -181,8 +182,9 @@ class AiModelController @Inject()(
           _id = ObjectId.generate,
           _organization = request.identity._organization,
           _aiModel = request.body.aiModelId,
-          _dataset = None,
-          _annotation = annotation._id,
+          _newDataset = None,
+          _annotation = request.body.annotationId,
+          boundingBox = boundingBox,
           _inferenceJob = newInferenceJob._id,
           newSegmentationLayerName = request.body.newSegmentationLayerName,
           maskAnnotationLayerName = request.body.maskAnnotationLayerName

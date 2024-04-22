@@ -16,11 +16,16 @@ import TimeTrackingChart from "./time_line_chart_view";
 
 import type { APIUser, APITimeTracking } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import type { DateRange, ColumnDefinition, RowContent } from "./time_line_chart_view";
+import type { DateRange } from "./time_line_chart_view";
 import * as Utils from "libs/utils";
 import ProjectAndAnnotationTypeDropdown, {
   AnnotationTypeFilterEnum,
 } from "admin/statistic/project_and_annotation_type_dropdown";
+import {
+  GoogleDataTableColumn,
+  GoogleDataTableColumnRoleType,
+  GoogleDataTableRow,
+} from "react-google-charts";
 
 const FormItem = Form.Item;
 const { RangePicker } = DatePicker;
@@ -307,7 +312,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
   };
 
   render() {
-    const columns: Array<ColumnDefinition> = [
+    const columns: GoogleDataTableColumn[] = [
       {
         id: "AnnotationId",
         type: "string",
@@ -319,7 +324,7 @@ class TimeLineView extends React.PureComponent<Props, State> {
       },
       {
         type: "string",
-        role: "tooltip",
+        role: GoogleDataTableColumnRoleType.tooltip,
         p: {
           html: true,
         },
@@ -334,9 +339,9 @@ class TimeLineView extends React.PureComponent<Props, State> {
       },
     ];
     const { dateRange, isLoading, timeTrackingData } = this.state;
-    const timeTrackingRowGrouped: Array<RowContent> = []; // shows each time span grouped by annotation id
+    const timeTrackingRowGrouped: GoogleDataTableRow[] = []; // shows each time span grouped by annotation id
 
-    const timeTrackingRowTotal: Array<RowContent> = []; // show all times spans in a single row
+    const timeTrackingRowTotal: GoogleDataTableRow[] = []; // show all times spans in a single row
 
     const totalSumColumnLabel = "Sum Tracking Time";
     for (const datum of this.state.timeTrackingData) {

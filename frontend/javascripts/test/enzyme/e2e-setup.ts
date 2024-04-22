@@ -139,7 +139,7 @@ const a: ${fullTypeAnnotation} = ${JSON.stringify(object)}`,
 }
 
 // The adapter tries to access document when importing it, so we need to import it down here
-const Adapter = require("enzyme-adapter-react-16");
+const Adapter = require("@wojtekmaj/enzyme-adapter-react-17");
 
 configure({
   adapter: new Adapter(),

@@ -1,20 +1,20 @@
-import { Chart } from "react-google-charts";
+import { Chart, type GoogleDataTableColumn, type GoogleDataTableRow } from "react-google-charts";
 import * as React from "react";
 import { getWindowBounds } from "libs/utils";
 import dayjs from "dayjs";
 
-export type ColumnDefinition = {
-  id?: string;
-  type: string;
-  role?: string;
-  p?: Record<string, any>;
-};
-export type RowContent = [string, string, string, Date, Date];
+// export type ColumnDefinition = {
+//   id?: string;
+//   type: string;
+//   role?: string;
+//   p?: Record<string, any>;
+// };
+// export type RowContent = [string, string, string, Date, Date];
 
 export type DateRange = [dayjs.Dayjs, dayjs.Dayjs];
 type Props = {
-  columns: Array<ColumnDefinition>;
-  rows: Array<RowContent>;
+  columns: Array<GoogleDataTableColumn>;
+  rows: Array<GoogleDataTableRow>;
   timeAxisFormat: string;
   dateRange: DateRange;
 };
@@ -105,7 +105,6 @@ export default class TimeTrackingChart extends React.PureComponent<Props> {
     const { columns, rows, timeAxisFormat, dateRange } = this.props;
     const { applyTooltipPositioningFix } = this;
     return (
-      // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
       <Chart
         chartType="Timeline"
         columns={columns}

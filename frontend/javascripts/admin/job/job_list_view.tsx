@@ -70,7 +70,6 @@ const persistence = new Persistence<Pick<State, "searchQuery">>(
   "jobList",
 );
 
-<<<<<<< HEAD
 export function JobState({ job }: { job: APIJob }) {
   const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
 
@@ -84,27 +83,10 @@ export function JobState({ job }: { job: APIJob }) {
   );
 }
 
-class JobListView extends React.PureComponent<Props, State> {
-  intervalID: ReturnType<typeof setTimeout> | null | undefined;
-  state: State = {
-    isLoading: true,
-    jobs: [],
-    searchQuery: "",
-  };
-||||||| 9a86c297b
-class JobListView extends React.PureComponent<Props, State> {
-  intervalID: ReturnType<typeof setTimeout> | null | undefined;
-  state: State = {
-    isLoading: true,
-    jobs: [],
-    searchQuery: "",
-  };
-=======
 function JobListView() {
   const [isLoading, setIsLoading] = useState(true);
   const [jobs, setJobs] = useState<APIJob[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
->>>>>>> master
 
   useEffect(() => {
     fetchData();
@@ -330,202 +312,8 @@ function JobListView() {
     } else return null;
   }
 
-<<<<<<< HEAD
-  renderState = (__: any, job: APIJob) => {
-    return <JobState job={job} />;
-  };
-
-  render() {
-    return (
-      <div className="container">
-        <div className="pull-right">
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={this.handleSearch}
-            value={this.state.searchQuery}
-          />
-        </div>
-        <h3>Jobs</h3>
-        <Typography.Paragraph type="secondary">
-          Some actions such as dataset conversions or export as Tiff files require some time for
-          processing in the background.
-          <a
-            href="https://docs.webknossos.org/webknossos/jobs.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Tooltip title="Read more in the documentation">
-              <InfoCircleOutlined style={{ marginLeft: 10 }} />
-            </Tooltip>
-          </a>
-          <br />
-          WEBKNOSSOS will notfiy you via email when a job has finished or reload this page to track
-          progress.
-        </Typography.Paragraph>
-        <div
-          className="clearfix"
-          style={{
-            margin: "20px 0px",
-          }}
-        />
-        <Spin spinning={this.state.isLoading} size="large">
-          <Table
-            dataSource={Utils.filterWithSearchQueryAND(
-              this.state.jobs,
-              ["datasetName"],
-              this.state.searchQuery,
-            )}
-            rowKey="id"
-            pagination={{
-              defaultPageSize: 50,
-            }}
-            style={{
-              marginTop: 30,
-              marginBottom: 30,
-            }}
-          >
-            <Column
-              title="Job Id"
-              dataIndex="id"
-              key="id"
-              sorter={Utils.localeCompareBy(typeHint, (job) => job.id)}
-            />
-            <Column title="Description" key="datasetName" render={this.renderDescription} />
-            <Column
-              title="Created at"
-              key="createdAt"
-              render={(job) => <FormattedDate timestamp={job.createdAt} />}
-              sorter={Utils.compareBy(typeHint, (job) => job.createdAt)}
-              defaultSortOrder="descend"
-            />
-            <Column
-              title="State"
-              key="state"
-              render={this.renderState}
-              sorter={Utils.localeCompareBy(typeHint, (job) => job.state)}
-            />
-            <Column
-              title="Action"
-              key="actions"
-              fixed="right"
-              width={150}
-              render={this.renderActions}
-            />
-          </Table>
-        </Spin>
-      </div>
-    );
-||||||| 9a86c297b
-  renderState = (__: any, job: APIJob) => {
-    const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
-
-    const jobStateNormalized = _.capitalize(job.state.toLowerCase());
-
-    return (
-      <Tooltip title={tooltip}>
-        {icon}
-        {jobStateNormalized}
-      </Tooltip>
-    );
-  };
-
-  render() {
-    return (
-      <div className="container">
-        <div className="pull-right">
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={this.handleSearch}
-            value={this.state.searchQuery}
-          />
-        </div>
-        <h3>Jobs</h3>
-        <Typography.Paragraph type="secondary">
-          Some actions such as dataset conversions or export as Tiff files require some time for
-          processing in the background.
-          <a
-            href="https://docs.webknossos.org/webknossos/jobs.html"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Tooltip title="Read more in the documentation">
-              <InfoCircleOutlined style={{ marginLeft: 10 }} />
-            </Tooltip>
-          </a>
-          <br />
-          WEBKNOSSOS will notfiy you via email when a job has finished or reload this page to track
-          progress.
-        </Typography.Paragraph>
-        <div
-          className="clearfix"
-          style={{
-            margin: "20px 0px",
-          }}
-        />
-        <Spin spinning={this.state.isLoading} size="large">
-          <Table
-            dataSource={Utils.filterWithSearchQueryAND(
-              this.state.jobs,
-              ["datasetName"],
-              this.state.searchQuery,
-            )}
-            rowKey="id"
-            pagination={{
-              defaultPageSize: 50,
-            }}
-            style={{
-              marginTop: 30,
-              marginBottom: 30,
-            }}
-          >
-            <Column
-              title="Job Id"
-              dataIndex="id"
-              key="id"
-              sorter={Utils.localeCompareBy(typeHint, (job) => job.id)}
-            />
-            <Column title="Description" key="datasetName" render={this.renderDescription} />
-            <Column
-              title="Created at"
-              key="createdAt"
-              render={(job) => <FormattedDate timestamp={job.createdAt} />}
-              sorter={Utils.compareBy(typeHint, (job) => job.createdAt)}
-              defaultSortOrder="descend"
-            />
-            <Column
-              title="State"
-              key="state"
-              render={this.renderState}
-              sorter={Utils.localeCompareBy(typeHint, (job) => job.state)}
-            />
-            <Column
-              title="Action"
-              key="actions"
-              fixed="right"
-              width={150}
-              render={this.renderActions}
-            />
-          </Table>
-        </Spin>
-      </div>
-    );
-=======
   function renderState(__: any, job: APIJob) {
-    const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
-
-    const jobStateNormalized = _.capitalize(job.state.toLowerCase());
-
-    return (
-      <Tooltip title={tooltip}>
-        {icon}
-        {jobStateNormalized}
-      </Tooltip>
-    );
->>>>>>> master
+    return <JobState job={job} />;
   }
 
   return (

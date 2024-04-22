@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow}
+import models.aimodels.AiModelCategory.AiModelCategory
 import models.dataset.{DataStoreDAO, DataStoreService}
 import models.job.{JobDAO, JobService}
 import models.user.{UserDAO, UserService}
@@ -26,6 +27,7 @@ case class AiModel(_id: ObjectId,
                    _trainingAnnotations: List[ObjectId],
                    name: String,
                    comment: Option[String],
+                   category: Option[AiModelCategory],
                    created: Instant = Instant.now,
                    modified: Instant = Instant.now,
                    isDeleted: Boolean = false)
@@ -78,6 +80,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         trainingAnnotationIds,
         r.name,
         r.comment,
+        r.category.flatMap(AiModelCategory.fromString),
         Instant.fromSql(r.created),
         Instant.fromSql(r.modified),
         r.isdeleted
@@ -105,10 +108,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertModelQuery =
       q"""INSERT INTO webknossos.aiModels(
                       _id, _organization, _dataStore, _user, _trainingJob, name,
-                       comment, created, modified, isDeleted
+                       comment, category, created, modified, isDeleted
                     ) VALUES(
                       ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.name},
-                      ${a.comment}, ${a.created}, ${a.modified}, ${a.isDeleted}
+                      ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}
                     )
            """.asUpdate
     val insertTrainingAnnotationQueries = insertTrainingAnnotationIdQueries(a._id, a._trainingAnnotations)

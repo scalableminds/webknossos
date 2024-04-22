@@ -120,8 +120,7 @@ class AiModelController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         trainingAnnotations = request.body.trainingAnnotations
-        // TODO if full yaml is supplied, relax this check
-        _ <- bool2Fox(trainingAnnotations.nonEmpty) ?~> "aiModel.training.zeroAnnotations"
+        _ <- bool2Fox(trainingAnnotations.nonEmpty || request.body.workflowYaml.isDefined) ?~> "aiModel.training.zeroAnnotations"
         firstAnnotationId <- trainingAnnotations.headOption.map(_.annotationId).toFox
         annotation <- annotationDAO.findOne(firstAnnotationId)
         dataset <- datasetDAO.findOne(annotation._dataset)
@@ -131,9 +130,12 @@ class AiModelController @Inject()(
         modelId = ObjectId.generate
         organization <- organizationDAO.findOne(request.identity._organization)
         jobCommand = JobCommand.train_model
-        commandArgs = Json.obj("training_annotations" -> Json.toJson(trainingAnnotations),
-                               "organization_name" -> organization.name,
-                               "model_id" -> modelId)
+        commandArgs = Json.obj(
+          "training_annotations" -> Json.toJson(trainingAnnotations),
+          "organization_name" -> organization.name,
+          "model_id" -> modelId,
+          "workflowYaml" -> request.body.workflowYaml
+        )
         newTrainingJob <- jobService
           .submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunTrainModel"
         existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
@@ -147,7 +149,8 @@ class AiModelController @Inject()(
           _trainingJob = Some(newTrainingJob._id),
           _trainingAnnotations = trainingAnnotations.map(_.annotationId),
           name = request.body.name,
-          comment = request.body.comment
+          comment = request.body.comment,
+          category = request.body.aiModelCategory
         )
         _ <- aiModelDAO.insertOne(newAiModel)
         newAiModelJs <- aiModelService.publicWrites(newAiModel)
@@ -175,8 +178,6 @@ class AiModelController @Inject()(
           "new_segmentation_layer_name" -> request.body.newSegmentationLayerName,
           "new_dataset_name" -> request.body.newDatasetName
         )
-        // TODO pass annotation to job? mask?
-        // TODO insert new layer into existing dataset? or link new one?
         newInferenceJob <- jobService.submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunInferWithModel"
         newAiInference = AiInference(
           _id = ObjectId.generate,

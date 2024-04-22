@@ -540,6 +540,8 @@ CREATE TABLE webknossos.emailVerificationKeys(
   isUsed BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei');
+
 CREATE TABLE webknossos.aiModels(
    -- todo foreign keys
   _id CHAR(24) PRIMARY KEY,
@@ -549,6 +551,7 @@ CREATE TABLE webknossos.aiModels(
   _trainingJob CHAR(24),
   name VARCHAR(1024) NOT NULL,
   comment VARCHAR(1024),
+  category webknossos.AI_MODEL_CATEGORY,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,

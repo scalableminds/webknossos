@@ -1015,29 +1015,6 @@ function _getLoadChunksTasks(
                     additionalCoordinates,
                   );
                 }
-
-                const geometry = mergeBufferGeometries(bufferGeometries);
-
-                // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
-                if (geometry == null) continue;
-
-                // Compute vertex normals to achieve smooth shading
-                geometry.computeVertexNormals();
-
-                yield* call(
-                  {
-                    context: segmentMeshController,
-                    fn: segmentMeshController.addMeshFromGeometry,
-                  },
-                  geometry as BufferGeometryWithInfo,
-                  id,
-                  position,
-                  // Apply the scale from the segment info, which includes dataset scale and mag
-                  scale,
-                  lod,
-                  layerName,
-                  additionalCoordinates,
-                );
               }
 
               if (errorsWithDetails.length > 0) {

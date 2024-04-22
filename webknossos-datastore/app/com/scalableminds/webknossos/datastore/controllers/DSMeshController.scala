@@ -66,11 +66,11 @@ class DSMeshController @Inject()(
             mappingNameForMeshFile,
             urlOrHeaderToken(token, request)
           )
-          chunkInfos <- meshFileService.listMeshChunksForSegmentsV3(organizationName,
-                                                                    datasetName,
-                                                                    dataLayerName,
-                                                                    request.body.meshFile,
-                                                                    segmentIds)
+          chunkInfos <- meshFileService.listMeshChunksForSegments(organizationName,
+                                                                  datasetName,
+                                                                  dataLayerName,
+                                                                  request.body.meshFile,
+                                                                  segmentIds)
         } yield Ok(Json.toJson(chunkInfos))
       }
     }
@@ -78,15 +78,12 @@ class DSMeshController @Inject()(
   def readMeshChunk(token: Option[String],
                     organizationName: String,
                     datasetName: String,
-                    dataLayerName: String): Action[MeshChunkDataRequestV3List] =
-    Action.async(validateJson[MeshChunkDataRequestV3List]) { implicit request =>
+                    dataLayerName: String): Action[MeshChunkDataRequestList] =
+    Action.async(validateJson[MeshChunkDataRequestList]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          (data, encoding) <- meshFileService.readMeshChunkV3(organizationName,
-                                                              datasetName,
-                                                              dataLayerName,
-                                                              request.body) ?~> "mesh.file.loadChunk.failed"
+          (data, encoding) <- meshFileService.readMeshChunk(organizationName, datasetName, dataLayerName, request.body) ?~> "mesh.file.loadChunk.failed"
         } yield {
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")

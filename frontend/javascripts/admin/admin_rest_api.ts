@@ -104,8 +104,7 @@ import { AnnotationTypeFilterEnum } from "./statistic/project_and_annotation_typ
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
 export * from "./api/token";
-export * as meshV3 from "./api/mesh_v3";
-export * as meshV0 from "./api/mesh_v0";
+export * as meshApi from "./api/mesh";
 
 type NewTeam = {
   readonly name: string;

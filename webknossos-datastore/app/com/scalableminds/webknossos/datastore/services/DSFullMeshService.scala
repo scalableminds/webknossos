@@ -136,7 +136,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         mappingNameForMeshFile,
         token
       )
-      chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsV3(organizationName,
+      chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegments(organizationName,
                                                                                        datasetName,
                                                                                        layerName,
                                                                                        meshFileName,
@@ -156,11 +156,11 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                  chunkInfo: MeshChunk,
                                  transform: Array[Array[Double]])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunkV3(
+      (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunk(
         organizationName,
         datasetName,
         layerName,
-        MeshChunkDataRequestV3List(meshfileName, List(MeshChunkDataRequestV3(chunkInfo.byteOffset, chunkInfo.byteSize)))
+        MeshChunkDataRequestList(meshfileName, List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize)))
       )
       _ <- bool2Fox(encoding == "draco") ?~> s"meshfile encoding is $encoding, only draco is supported"
       scale <- tryo(Vec3Double(transform(0)(0), transform(1)(1), transform(2)(2))) ?~> "could not extract scale from meshfile transform attribute"

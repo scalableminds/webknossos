@@ -757,7 +757,7 @@ export function MitochondriaSegmentationForm() {
           <Space direction="vertical" size="middle">
             <Row>
               This job will automatically detect and segment all mitochondria in this dataset. The AI
-              will create a copy of this dataset containing the new neuron segmentation.
+              will create a copy of this dataset containing the new mitochondria segmentation.
             </Row>
             <Row style={{ display: "grid", marginBottom: 16 }}>
               <Alert

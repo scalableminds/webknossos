@@ -42,7 +42,7 @@ case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   aiModelId: ObjectId,
                                   datasetName: String,
                                   coloLayerName: String,
-                                  bounding_box: String,
+                                  boundingBox: String,
                                   newSegmentationLayerName: String,
                                   newDatasetName: String,
                                   maskAnnotationLayerName: Option[String])
@@ -165,7 +165,7 @@ class AiModelController @Inject()(
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         _ <- datasetService.assertNewDatasetName(request.body.newDatasetName, organization._id)
         jobCommand = JobCommand.infer_with_model
-        boundingBox <- BoundingBox.fromLiteral(request.body.bounding_box).toFox
+        boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
           "organization_name" -> organization.name,
           "dataset_name" -> dataset.name,

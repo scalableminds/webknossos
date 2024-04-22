@@ -37,7 +37,7 @@ def main():
     seen = []
 
     for orga_dir in [
-        item for item in binary_data_dir.iterdir() if item.exists() and item.is_dir()
+        item for item in binary_data_dir.iterdir() if item.exists() and item.is_dir() and not item.name.startswith(".")
     ]:
         for dataset_dir in orga_dir.iterdir():
             try:

@@ -6,11 +6,17 @@ import { mergeVertices } from "libs/BufferGeometryUtils";
 import _ from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import CustomLOD from "oxalis/controller/custom_lod";
-import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveSegmentationTracing,
+  getSegmentColorAsHSLA,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { NO_LOD_MESH_INDEX } from "oxalis/model/sagas/mesh_saga";
 import Store from "oxalis/store";
 import { AdditionalCoordinate } from "types/api_flow_types";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+
+const ACTIVATED_COLOR = [0.7, 0.5, 0.1] as const;
+const HOVERED_COLOR = [0.65, 0.5, 0.1] as const;
 
 export type MeshSceneNode = THREE.Mesh<
   THREE.BufferGeometry,
@@ -175,6 +181,11 @@ export default class SegmentMeshController {
     }
     group.segmentId = segmentId;
     this.addMeshToMeshGroups(additionalCoordinatesString, layerName, segmentId, lod, group);
+
+    const segmentationTracing = getActiveSegmentationTracing(Store.getState());
+    if (segmentationTracing != null) {
+      this.highlightUnmappedSegmentId(segmentationTracing.activeUnmappedSegmentId);
+    }
   }
 
   addMeshFromGeometry(
@@ -325,5 +336,69 @@ export default class SegmentMeshController {
 
   removeMeshFromMeshGroups(additionalCoordinateKey: string, layerName: string, segmentId: number) {
     delete this.meshesGroupsPerSegmentId[additionalCoordinateKey][layerName][segmentId];
+  }
+
+  updateMeshAppearance(
+    _mesh: THREE.Object3D,
+    isHovered: boolean | undefined,
+    isActiveUnmappedSegment?: boolean | undefined,
+  ) {
+    const mesh = _mesh as MeshSceneNode;
+    let wasChanged = false;
+    if (isHovered != null) {
+      if (!!mesh.isHovered !== isHovered) {
+        mesh.isHovered = isHovered;
+        wasChanged = true;
+      }
+    }
+    if (isActiveUnmappedSegment != null) {
+      if (!!mesh.isActiveUnmappedSegment !== isActiveUnmappedSegment) {
+        mesh.isActiveUnmappedSegment = isActiveUnmappedSegment;
+        wasChanged = true;
+      }
+    }
+    if (!wasChanged) {
+      // Nothing to do
+      return;
+    }
+
+    const targetOpacity = mesh.isHovered ? 0.8 : 1.0;
+    mesh.parent.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.material.opacity = targetOpacity;
+      }
+    });
+    if (mesh.isHovered || mesh.isActiveUnmappedSegment) {
+      mesh.material.emissive.setHSL(...HOVERED_COLOR);
+
+      if (mesh.material.savedHex == null) {
+        mesh.material.savedHex = mesh.material.color.getHex();
+      }
+      const newColor: readonly [number, number, number] = mesh.isHovered
+        ? HOVERED_COLOR
+        : ACTIVATED_COLOR;
+      mesh.material.color.setHSL(...newColor);
+      mesh.material.opacity = 1.0;
+    } else {
+      // @ts-ignore
+      mesh.material.emissive.setHex("#FF00FF");
+      if (mesh.material.savedHex != null) {
+        mesh.material.color.setHex(mesh.material.savedHex);
+      }
+      mesh.material.savedHex = undefined;
+    }
+  }
+
+  highlightUnmappedSegmentId(activeUnmappedSegmentId: number | null | undefined): void {
+    const { meshesLODRootGroup } = this;
+    meshesLODRootGroup.traverse((_obj) => {
+      // The cast is save because MeshSceneNode adds only optional properties
+      const obj = _obj as MeshSceneNode;
+      if (activeUnmappedSegmentId != null && obj.unmappedSegmentId === activeUnmappedSegmentId) {
+        this.updateMeshAppearance(obj, undefined, true);
+      } else if (obj.isActiveUnmappedSegment) {
+        this.updateMeshAppearance(obj, undefined, false);
+      }
+    });
   }
 }

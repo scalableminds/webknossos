@@ -987,34 +987,34 @@ function _getLoadChunksTasks(
                   } catch (error) {
                     errorsWithDetails.push({ error, chunk });
                   }
-
-                  if (mergeChunks) {
-                    const geometry = mergeBufferGeometries(bufferGeometries, true);
-
-                    // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
-                    if (geometry == null) continue;
-
-                    bufferGeometries = [geometry as BufferGeometryWithInfo];
-                  }
-
-                  // Compute vertex normals to achieve smooth shading
-                  bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
-
-                  yield* call(
-                    {
-                      context: segmentMeshController,
-                      fn: segmentMeshController.addMeshFromGeometries,
-                    },
-                    bufferGeometries,
-                    id,
-                    position,
-                    // Apply the scale from the segment info, which includes dataset scale and mag
-                    scale,
-                    lod,
-                    layerName,
-                    additionalCoordinates,
-                  );
                 }
+
+                if (mergeChunks) {
+                  const geometry = mergeBufferGeometries(bufferGeometries, true);
+
+                  // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
+                  if (geometry == null) continue;
+
+                  bufferGeometries = [geometry as BufferGeometryWithInfo];
+                }
+
+                // Compute vertex normals to achieve smooth shading
+                bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
+
+                yield* call(
+                  {
+                    context: segmentMeshController,
+                    fn: segmentMeshController.addMeshFromGeometries,
+                  },
+                  bufferGeometries,
+                  id,
+                  position,
+                  // Apply the scale from the segment info, which includes dataset scale and mag
+                  scale,
+                  lod,
+                  layerName,
+                  additionalCoordinates,
+                );
               }
 
               if (errorsWithDetails.length > 0) {

@@ -321,6 +321,14 @@ img.keyboard-mouse-icon:first-child {
   color: rgba(255, 255, 255, 0.67);
   z-index: 1000;
 
+  .upgrade-banner{
+    .ant-alert-close-icon {
+      .anticon, .anticon-close {
+        color: var(--ant-color-primary-bg)
+      }
+    }
+  }
+
   &.statusbar-footer {
     left: 0px;
     bottom: 0px;
@@ -357,10 +365,20 @@ img.keyboard-mouse-icon:first-child {
   .ant-input,
   .ant-input-number,
   .ant-radio-button-wrapper,
-  .ant-select > .ant-select-selector {
+  .ant-select > .ant-select-selector{
     background-color: @dark-bg !important;
     color: @dark-fg !important;
     border-color: @dark-border;
+
+    &.upgrade-banner-button{
+        background-color: var(--ant-button-primary-color) !important;
+        color: var(--ant-color-primary) !important;
+        border-color: var(--ant-button-primary-color);
+        height: 30px;
+        display: flex;
+        align-items: center;
+
+      }
 
     &:hover {
       border-color: var(--color-blue-zircon) !important;
@@ -383,15 +401,7 @@ img.keyboard-mouse-icon:first-child {
         background-color: @dark-border !important;
       }
     }
-
-    &.upgrade-banner {
-      color: var(--ant-color-primary) !important;
-      background: var(--ant-color-bg-container) !important;
-      font-weight: 700;
-      height: 30px;
-      display: flex;
-      align-items: center;
-    }
+    
   }
 
   .ant-btn[disabled],

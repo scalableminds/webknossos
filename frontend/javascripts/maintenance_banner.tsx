@@ -149,15 +149,17 @@ export function MaintenanceBanner() {
 }
 
 export function UpgradeVersionBanner() {
+  const white = "var(--ant-color-text-primary)";
+  const blue = "var(--ant-color-primary)";
   const UPGRADE_BANNER_STYLE: React.CSSProperties = {
     position: "absolute",
     top: 0,
     left: 0,
     height: constants.UPGRADE_BANNER_HEIGHT,
     textAlign: "center",
-    backgroundColor: "var(--ant-color-primary)",
-    color: "var(--ant-color-text-primary)",
-    fontWeight: 600,
+    backgroundColor: blue,
+    color: white,
+    //fontWeight: 600,
     fontSize: "medium",
   };
   const customParseFormat = require("dayjs/plugin/customParseFormat");
@@ -203,13 +205,17 @@ export function UpgradeVersionBanner() {
 
   return shouldBannerBeShown ? (
     <Alert
+      className="upgrade-banner"
       message={
         <Space size="middle">
           <Space size="small">
             You are using an old version of WEBKNOSSOS. Switch to <b>webknossos.org</b> for
             automatic updates and exclusive features!
           </Space>
-          <Button className="upgrade-banner" href="https://webknossos.org/self-hosted-upgrade">
+          <Button
+            className="upgrade-banner-button"
+            href="https://webknossos.org/self-hosted-upgrade"
+          >
             {" "}
             Learn more{" "}
           </Button>

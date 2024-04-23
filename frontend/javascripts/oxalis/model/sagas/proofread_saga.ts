@@ -605,6 +605,9 @@ function* clearProofreadingByproducts() {
   coarselyLoadedSegmentIds = [];
 }
 
+const MISSING_INFORMATION_WARNING =
+  "Please use either the data viewports OR the 3D viewport (but not both) for selecting the partners of a proofreading operation.";
+
 function* handleProofreadMergeOrMinCut(action: Action) {
   // Actually, action is ProofreadMergeAction | MinCutAgglomerateWithPositionAction
   // but the takeEveryUnlessBusy wrapper does not understand this.
@@ -653,7 +656,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       activeUnmappedSegmentId == null ||
       action.segmentId == null
     ) {
-      Toast.warning("Some required information is missing for this operation.");
+      Toast.warning(MISSING_INFORMATION_WARNING);
       console.log("Some fields were null:", {
         agglomerateId: action.agglomerateId,
         activeCellId,
@@ -664,7 +667,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     }
     const targetSegmentId = action.segmentId;
     if (targetSegmentId == null) {
-      Toast.warning("Some required information is missing for this operation.");
+      Toast.warning(MISSING_INFORMATION_WARNING);
       console.log(`No position is known for agglomerate ${action.agglomerateId}`);
       return;
     }
@@ -820,7 +823,7 @@ function* handleProofreadCutNeighbors(action: Action) {
     idInfos = yield* call(getAgglomerateInfos, preparation.getMappedAndUnmapped, [targetPosition]);
   } else {
     if (action.agglomerateId == null || action.segmentId == null) {
-      Toast.warning("Some required information is missing for this operation.");
+      Toast.warning(MISSING_INFORMATION_WARNING);
       return;
     }
     idInfos = [{ agglomerateId: action.agglomerateId, unmappedId: action.segmentId }];

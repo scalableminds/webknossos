@@ -383,7 +383,7 @@ function getMeshItems(
   const activeCellId = getActiveCellId(volumeTracing);
   const { activeUnmappedSegmentId } = volumeTracing;
   const segments = getSegmentsForLayer(state, volumeTracing.tracingId);
-  // Cut and merge depend on the active segment. The volume tracing *always* has an activeCellId.
+  // The cut and merge operations depend on the active segment. The volume tracing *always* has an activeCellId.
   // However, the ID be 0 or it could be an unused ID (this is the default when creating a new
   // volume tracing). Therefore, merging/splitting with that ID won't work. We can avoid this
   // by looking the segment id up the segments list and checking against null.

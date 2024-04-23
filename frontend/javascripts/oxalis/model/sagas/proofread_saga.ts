@@ -123,7 +123,7 @@ function* loadCoarseMesh(
     return;
   }
   const dataset = yield* select((state) => state.dataset);
-  const layer = yield* select((state) => getLayerByName(state.dataset, layerName));
+  const layer = getLayerByName(dataset, layerName);
 
   // Ensure that potential mesh files are already available. Otherwise, the following
   // code would default to ad-hoc meshing.
@@ -777,10 +777,6 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     volumeTracing.tracingId,
     targetInfo.unmappedId,
   );
-  // todop: these positions are equal but should not be?
-  console.log("refresh with:");
-  console.log("sourcePosition", sourcePosition);
-  console.log("targetPosition", targetPosition);
 
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {

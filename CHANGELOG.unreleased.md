@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added Typescript defintions for @scalableminds/prop-types package. [#7744](https://github.com/scalableminds/webknossos/pull/7744)
 - Time Tracking now also works when editing other users’ shared annotations, and when editing proofreading annotations (a.k.a. editable mappings). [#7749](https://github.com/scalableminds/webknossos/pull/7749)
 - Added Typescript definitions for react-remarkable package. [#7748](https://github.com/scalableminds/webknossos/pull/7748)
+- Within the proofreading tool, the user can now interact with the super voxels of a mesh in the 3D viewport. For example, this allows to merge or cut super voxels from another. As before, the proofreading tool requires an agglomerate file. [#7742](https://github.com/scalableminds/webknossos/pull/7742)
 
 ### Changed
 - Improved task list to sort tasks by project date, add option to expand all tasks at once and improve styling. [#7709](https://github.com/scalableminds/webknossos/pull/7709)

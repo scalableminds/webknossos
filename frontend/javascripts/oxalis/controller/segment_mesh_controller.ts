@@ -339,11 +339,10 @@ export default class SegmentMeshController {
   }
 
   updateMeshAppearance(
-    _mesh: THREE.Object3D,
+    mesh: MeshSceneNode,
     isHovered: boolean | undefined,
     isActiveUnmappedSegment?: boolean | undefined,
   ) {
-    const mesh = _mesh as MeshSceneNode;
     let wasChanged = false;
     if (isHovered != null) {
       if (!!mesh.isHovered !== isHovered) {
@@ -392,7 +391,7 @@ export default class SegmentMeshController {
   highlightUnmappedSegmentId(activeUnmappedSegmentId: number | null | undefined): void {
     const { meshesLODRootGroup } = this;
     meshesLODRootGroup.traverse((_obj) => {
-      // The cast is save because MeshSceneNode adds only optional properties
+      // The cast is safe because MeshSceneNode adds only optional properties
       const obj = _obj as MeshSceneNode;
       if (activeUnmappedSegmentId != null && obj.unmappedSegmentId === activeUnmappedSegmentId) {
         this.updateMeshAppearance(obj, undefined, true);

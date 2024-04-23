@@ -57,6 +57,7 @@ const renderRow = (
       );
       const tableRows = loggedTimes.map((timeEntry) => (
         <Row style={{ lineHeight: 3.3 }}>
+          {/* Adjust row height because there are fewer annotation stats for tasks that make the row highers */}
           <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>
             <a href={`annotations/${timeEntry.annotation}`}>Task: {timeEntry.task}</a>
           </Col>

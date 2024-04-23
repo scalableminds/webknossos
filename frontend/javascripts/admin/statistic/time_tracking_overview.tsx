@@ -25,7 +25,7 @@ const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER_PER_USER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
 const TIMETRACKING_CSV_HEADER_SPANS = [
-  "userId,email,datasetOrga,datasetName,annotation,startTime,durationInSeconds,taskId,projectName,taskTypeId,taskTypeSummary",
+  "userId,email,datasetOrga,datasetName,annotation,startTimeUnixTimestamp,durationInSeconds,taskId,projectName,taskTypeId,taskTypeSummary",
 ];
 
 function TimeTrackingOverview() {
@@ -93,7 +93,7 @@ function TimeTrackingOverview() {
           row.datasetOrganization,
           row.datasetName,
           row.annotationId,
-          dayjs(row.timeSpanCreated),
+          row.timeSpanCreated,
           Math.ceil(row.timeSpanTimeMillis / 1000),
           row.taskId,
           row.projectName,

@@ -109,14 +109,14 @@ export function aggregateStatsForAllLayers(
   const aggregatedStats: TracingStatsHelper = {};
 
   for (const annotationLayerStats of stats) {
-    if (Object.keys(annotationLayerStats).includes("treeCount")) {
+    if ("treeCount" in annotationLayerStats) {
       const { treeCount, nodeCount, edgeCount, branchPointCount } =
         annotationLayerStats as SkeletonTracingStats;
       aggregatedStats.treeCount = treeCount;
       aggregatedStats.nodeCount = nodeCount;
       aggregatedStats.edgeCount = edgeCount;
       aggregatedStats.branchPointCount = branchPointCount;
-    } else if (Object.keys(annotationLayerStats).includes("segmentCount")) {
+    } else if ("segmentCount" in annotationLayerStats) {
       if (aggregatedStats.segmentCount == null) {
         aggregatedStats.segmentCount = 0;
       }

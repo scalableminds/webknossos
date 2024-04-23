@@ -278,10 +278,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     this.props.setAnnotationName(newName);
   };
 
-  setAnnotationDescription = (evt: ChangeEvent<HTMLTextAreaElement>) => {
-    this.props.setAnnotationDescription(evt.target.value);
-  };
-
   componentDidMount(): void {
     this.fetchData();
   }
@@ -500,7 +496,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             source={this.props.annotation.description}
             isOpen={this.state.isMarkdownModalOpen}
             onOk={() => this.setState({ isMarkdownModalOpen: false })}
-            onChange={this.setAnnotationDescription}
+            onChange={this.props.setAnnotationDescription}
           />
         </div>
       );

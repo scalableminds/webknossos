@@ -134,7 +134,7 @@ class AiModelController @Inject()(
           "training_annotations" -> Json.toJson(trainingAnnotations),
           "organization_name" -> organization.name,
           "model_id" -> modelId,
-          "workflowYaml" -> request.body.workflowYaml
+          "workflow_yaml" -> request.body.workflowYaml
         )
         newTrainingJob <- jobService
           .submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunTrainModel"

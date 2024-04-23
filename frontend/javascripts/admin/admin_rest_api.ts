@@ -99,8 +99,7 @@ import { AnnotationTypeFilterEnum } from "admin/statistic/project_and_annotation
 
 export * from "./api/token";
 export * from "./api/jobs";
-export * as meshV3 from "./api/mesh_v3";
-export * as meshV0 from "./api/mesh_v0";
+export * as meshApi from "./api/mesh";
 
 type NewTeam = {
   readonly name: string;

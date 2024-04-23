@@ -382,6 +382,12 @@ function getMeshItems(
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
   const activeCellId = getActiveCellId(volumeTracing);
   const { activeUnmappedSegmentId } = volumeTracing;
+  const segments = getSegmentsForLayer(state, volumeTracing.tracingId);
+  // Cut and merge depend on the active segment. The volume tracing *always* has an activeCellId.
+  // However, the ID be 0 or it could be an unused ID (this is the default when creating a new
+  // volume tracing). Therefore, merging/splitting with that ID won't work. We can avoid this
+  // by looking the segment id up the segments list and checking against null.
+  const activeSegmentMissing = segments.getNullable(activeCellId) == null;
 
   const maybeProofreadingItems: MenuItemType[] = isProofreadingActive
     ? [
@@ -389,6 +395,7 @@ function getMeshItems(
           key: "merge-agglomerate-skeleton",
           disabled:
             !isProofreadingActive ||
+            activeSegmentMissing ||
             clickedMeshId === activeCellId ||
             maybeUnmappedSegmentId == null,
           onClick: () => {
@@ -405,7 +412,9 @@ function getMeshItems(
                   ? "Cannot merge because the proofreading tool is not active."
                   : maybeUnmappedSegmentId == null
                     ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
-                    : null
+                    : activeSegmentMissing
+                      ? "Select a segment first."
+                      : null
               }
             >
               Merge with active segment
@@ -416,6 +425,7 @@ function getMeshItems(
           key: "min-cut-agglomerate-at-position",
           disabled:
             !isProofreadingActive ||
+            activeSegmentMissing ||
             clickedMeshId !== activeCellId ||
             maybeUnmappedSegmentId == null ||
             activeUnmappedSegmentId == null,
@@ -435,7 +445,9 @@ function getMeshItems(
                   ? "Cannot split because the proofreading tool is not active."
                   : maybeUnmappedSegmentId == null
                     ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
-                    : null
+                    : activeSegmentMissing
+                      ? "Select a segment first."
+                      : null
               }
             >
               Split from active segment

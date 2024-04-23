@@ -3,7 +3,7 @@ import { Tooltip, Typography, Tag } from "antd";
 import { SettingOutlined, InfoCircleOutlined, EditOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
-import React, { CSSProperties, ChangeEvent } from "react";
+import React, { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";

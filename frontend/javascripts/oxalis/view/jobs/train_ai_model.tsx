@@ -19,7 +19,8 @@ export function TrainAiModelTab() {
         {
           annotationId: tracing.annotationId,
           colorLayerName: values.imageDataLayer,
-          segmentationLayerName: "Volume",
+          // todop
+          segmentationLayerName: "segmentation",
           mag: [1, 1, 1],
         },
       ],

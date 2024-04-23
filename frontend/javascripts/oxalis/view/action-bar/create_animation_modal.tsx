@@ -34,7 +34,8 @@ import {
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { Model } from "oxalis/singletons";
-import { BoundingBoxSelection, LayerSelection } from "./starting_job_modals";
+import { BoundingBoxSelection } from "./starting_job_modals";
+import { LayerSelection } from "components/layer_selection";
 
 type Props = {
   isOpen: boolean;

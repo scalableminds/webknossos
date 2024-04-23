@@ -3,9 +3,9 @@ import { Form, Row, Col, Input, Button, Select } from "antd";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
-import { LayerSelection } from "../action-bar/starting_job_modals";
 import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import { runTraining } from "admin/admin_rest_api";
+import { LayerSelection } from "components/layer_selection";
 
 const FormItem = Form.Item;
 

@@ -29,12 +29,12 @@ import {
   getDataLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getReadableNameByVolumeTracingId,
   getActiveSegmentationTracingLayer,
+  getReadableNameOfVolumeLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
-import type { OxalisState, UserBoundingBox, HybridTracing } from "oxalis/store";
+import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
 import { Model, Store } from "oxalis/singletons";
 import {
@@ -51,6 +51,7 @@ import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { TrainAiModelTab } from "../jobs/train_ai_model";
+import { LayerSelectionFormItem } from "components/layer_selection";
 
 const { ThinSpace } = Unicode;
 
@@ -101,99 +102,6 @@ type StartJobFormProps = Props & {
   title: string;
   buttonLabel?: string | null;
 };
-
-type LayerSelectionProps = {
-  chooseSegmentationLayer: boolean;
-  layers: APIDataLayer[];
-  tracing: HybridTracing;
-  fixedLayerName?: string;
-};
-
-export function getReadableNameOfVolumeLayer(
-  layer: APIDataLayer,
-  tracing: HybridTracing,
-): string | null {
-  return "tracingId" in layer && layer.tracingId != null
-    ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
-    : null;
-}
-
-export function LayerSelection({
-  layers,
-  tracing,
-  fixedLayerName,
-  layerType,
-  onChange,
-  style,
-  value,
-}: {
-  layers: APIDataLayer[];
-  tracing: HybridTracing;
-  fixedLayerName?: string;
-  layerType?: string;
-  style?: React.CSSProperties;
-  // onChange and value should not be renamed, because these are the
-  // default property names for controlled antd FormItems.
-  onChange?: (a: string) => void;
-  value?: string | null;
-}): JSX.Element {
-  const onSelect = onChange ? (layerName: string) => onChange(layerName) : undefined;
-  const maybeLayerType = layerType || "";
-  const maybeSpace = layerType != null ? " " : "";
-  return (
-    <Select
-      showSearch
-      placeholder={`Select a ${maybeLayerType}${maybeSpace}layer`}
-      optionFilterProp="children"
-      filterOption={(input, option) =>
-        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-      }
-      disabled={fixedLayerName != null}
-      onSelect={onSelect}
-      style={style}
-      value={value}
-    >
-      {layers.map((layer) => {
-        const readableName = getReadableNameOfVolumeLayer(layer, tracing) || layer.name;
-        return (
-          <Select.Option key={layer.name} value={layer.name}>
-            {readableName}
-          </Select.Option>
-        );
-      })}
-    </Select>
-  );
-}
-
-function LayerSelectionFormItem({
-  chooseSegmentationLayer,
-  layers,
-  tracing,
-  fixedLayerName,
-}: LayerSelectionProps): JSX.Element {
-  const layerType = chooseSegmentationLayer ? "segmentation" : "color";
-  return (
-    <Form.Item
-      label="Layer"
-      name="layerName"
-      rules={[
-        {
-          required: true,
-          message: `Please select the ${layerType} layer that should be used for this job.`,
-        },
-      ]}
-      hidden={layers.length === 1 && fixedLayerName == null}
-    >
-      <LayerSelection
-        layers={layers}
-        fixedLayerName={fixedLayerName}
-        layerType={layerType}
-        tracing={tracing}
-      />
-    </Form.Item>
-  );
-}
 
 type BoundingBoxSelectionProps = {
   isBoundingBoxConfigurable?: boolean;

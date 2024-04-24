@@ -10,6 +10,7 @@ import {
   Tag,
   Input,
   InputRef,
+  ConfigProvider,
 } from "antd";
 import _ from "lodash";
 import {
@@ -62,7 +63,7 @@ import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItem
 import { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
 import { MaintenanceBanner, UpgradeVersionBanner } from "maintenance_banner";
-import { getSystemColorTheme } from "theme";
+import { getAntdTheme, getSystemColorTheme } from "theme";
 
 const { Header } = Layout;
 
@@ -200,34 +201,34 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
 
   const adminstrationSubMenuItems = isAdminOrTeamManager
     ? [
-        { key: "/users", label: <Link to="/users">Users</Link> },
-        { key: "/teams", label: <Link to="/teams">Teams</Link> },
-        {
-          key: "/projects",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/projects">Projects</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "/tasks",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/tasks">Tasks</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "/taskTypes",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/taskTypes">Task Types</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
-      ]
+      { key: "/users", label: <Link to="/users">Users</Link> },
+      { key: "/teams", label: <Link to="/teams">Teams</Link> },
+      {
+        key: "/projects",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/projects">Projects</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "/tasks",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/tasks">Tasks</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "/taskTypes",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/taskTypes">Task Types</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
+    ]
     : [];
 
   if (features().jobsEnabled)
@@ -342,15 +343,15 @@ function getHelpSubMenu(
       ),
     },
     (!features().discussionBoardRequiresAdmin || isAdminOrManager) &&
-    features().discussionBoard !== false
+      features().discussionBoard !== false
       ? {
-          key: "discussion-board",
-          label: (
-            <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
-              Community Support
-            </a>
-          ),
-        }
+        key: "discussion-board",
+        label: (
+          <a href={features().discussionBoard} target="_blank" rel="noreferrer noopener">
+            Community Support
+          </a>
+        ),
+      }
       : null,
     {
       key: "frontend-api",
@@ -590,17 +591,17 @@ function LoggedInAvatar({
   const maybeOrganizationFilterInput =
     switchableOrganizations.length > ORGANIZATION_COUNT_THRESHOLD_FOR_SEARCH_INPUT
       ? [
-          {
-            key: "input",
-            label: (
-              <OrganizationFilterInput
-                onChange={onChangeOrganizationFilter}
-                isVisible={openKeys.includes("switch-organization")}
-                onPressEnter={onEnterOrganization}
-              />
-            ),
-          },
-        ]
+        {
+          key: "input",
+          label: (
+            <OrganizationFilterInput
+              onChange={onChangeOrganizationFilter}
+              isVisible={openKeys.includes("switch-organization")}
+              onPressEnter={onEnterOrganization}
+            />
+          ),
+        },
+      ]
       : [];
 
   const isMultiMember = switchableOrganizations.length > 0;
@@ -636,28 +637,28 @@ function LoggedInAvatar({
             },
             activeOrganization && Utils.isUserAdmin(activeUser)
               ? {
-                  key: "manage-organization",
-                  label: (
-                    <Link to={`/organizations/${activeOrganization.name}`}>
-                      Manage Organization
-                    </Link>
-                  ),
-                }
+                key: "manage-organization",
+                label: (
+                  <Link to={`/organizations/${activeOrganization.name}`}>
+                    Manage Organization
+                  </Link>
+                ),
+              }
               : null,
             isMultiMember
               ? {
-                  key: "switch-organization",
-                  label: "Switch Organization",
-                  popupClassName: "organization-switch-menu",
-                  children: [
-                    ...maybeOrganizationFilterInput,
-                    ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
-                      key: org.name,
-                      onClick: () => switchTo(org),
-                      label: org.displayName || org.name,
-                    })),
-                  ],
-                }
+                key: "switch-organization",
+                label: "Switch Organization",
+                popupClassName: "organization-switch-menu",
+                children: [
+                  ...maybeOrganizationFilterInput,
+                  ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
+                    key: org.name,
+                    onClick: () => switchTo(org),
+                    label: org.displayName || org.name,
+                  })),
+                ],
+              }
               : null,
             {
               key: "resetpassword",
@@ -897,7 +898,8 @@ function Navbar({
       })}
     >
       <MaintenanceBanner />
-      <UpgradeVersionBanner />
+      <ConfigProvider theme={{ ...getAntdTheme("light") }}>
+        <UpgradeVersionBanner /></ConfigProvider>
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}

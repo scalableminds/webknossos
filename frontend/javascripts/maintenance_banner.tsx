@@ -208,7 +208,7 @@ export function UpgradeVersionBanner() {
       message={
         <Space size="middle">
           <Space size="small">
-            You are using an old version of WEBKNOSSOS. Switch to{" "}
+            You are using an old version of WEBKNOSSOS. Switch to
             <b style={{ marginInline: -2 }}>webknossos.org</b> for automatic updates and exclusive
             features!
           </Space>

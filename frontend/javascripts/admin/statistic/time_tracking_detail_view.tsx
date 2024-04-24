@@ -42,6 +42,7 @@ const renderRow = (
             <AnnotationStats
               stats={aggregateStatsForAllLayers(timeEntry.annotationLayerStats)}
               asInfoBlock={false}
+              withMargin={false}
             />
           </Col>
           <Col span={TIMESPAN_SPAN}>{formatMilliseconds(timeEntry.timeMillis)}</Col>
@@ -51,13 +52,12 @@ const renderRow = (
     } else {
       // tasks
       taskRows.push(
-        <Row style={{ fontWeight: "bold", margin: 20 }}>
+        <Row style={{ fontWeight: "bold", margin: "5px 20px" }}>
           <Col>{project}</Col>
         </Row>,
       );
       const tableRows = loggedTimes.map((timeEntry) => (
-        <Row style={{ lineHeight: 3.3 }}>
-          {/* Adjust row height because there are fewer annotation stats for tasks that make the row highers */}
+        <Row>
           <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>
             <a href={`annotations/${timeEntry.annotation}`}>Task: {timeEntry.task}</a>
           </Col>
@@ -65,6 +65,7 @@ const renderRow = (
             <AnnotationStats
               stats={aggregateStatsForAllLayers(timeEntry.annotationLayerStats)}
               asInfoBlock={false}
+              withMargin={false}
             />
           </Col>
           <Col span={TIMESPAN_SPAN}>{formatMilliseconds(timeEntry.timeMillis)}</Col>

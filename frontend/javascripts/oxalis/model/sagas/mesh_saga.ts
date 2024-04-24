@@ -4,7 +4,7 @@ import { V3 } from "libs/mjs";
 import { chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
-import { mergeBufferGeometries, mergeVertices } from "libs/BufferGeometryUtils";
+import { mergeBufferGeometries } from "libs/BufferGeometryUtils";
 import Deferred from "libs/async/deferred";
 
 import Store from "oxalis/store";
@@ -47,8 +47,7 @@ import { stlMeshConstants } from "oxalis/view/right-border-tabs/segments_tab/seg
 import {
   computeAdHocMesh,
   sendAnalyticsEvent,
-  meshV0,
-  meshV3,
+  meshApi,
   getMeshfilesForDatasetLayer,
   getBucketPositionsForAdHocMesh,
 } from "admin/admin_rest_api";
@@ -58,7 +57,6 @@ import { Model } from "oxalis/singletons";
 import ThreeDMap from "libs/ThreeDMap";
 import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
 import {
   getActiveSegmentationTracing,
@@ -738,7 +736,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   });
 }
 
-type ChunksMap = Record<number, Vector3[] | meshV3.MeshChunk[] | null | undefined>;
+type ChunksMap = Record<number, Vector3[] | meshApi.MeshChunk[] | null | undefined>;
 
 function* loadPrecomputedMeshForSegmentId(
   id: number,
@@ -826,10 +824,6 @@ function* _getChunkLoadingDescriptors(
   let loadingOrder: number[] = [];
 
   const { segmentMeshController } = getSceneController();
-  const currentLODIndex = yield* call({
-    context: segmentMeshController.meshesLODRootGroup,
-    fn: segmentMeshController.meshesLODRootGroup.getCurrentLOD,
-  });
   const version = meshFile.formatVersion;
   const { meshFileName } = meshFile;
   const meshExtraInfo = yield* call(getMeshExtraInfo, segmentationLayer.name, null);
@@ -847,9 +841,7 @@ function* _getChunkLoadingDescriptors(
     editableMapping != null ? editableMapping.baseMappingName : meshExtraInfo.mappingName;
 
   if (version < 3) {
-    console.warn(
-      "The active mesh file uses a version lower than 3. webKnossos cannot check whether the mesh file was computed with the correct target mapping. Meshing requests will fail if the mesh file does not match the active mapping.",
-    );
+    console.warn("The active mesh file uses a version lower than 3, which is not supported");
   }
 
   // mappingName only exists for versions >= 3
@@ -859,39 +851,34 @@ function* _getChunkLoadingDescriptors(
     );
   }
 
-  if (version >= 3) {
-    const segmentInfo = yield* call(
-      meshV3.getMeshfileChunksForSegment,
-      dataset.dataStore.url,
-      dataset,
-      getBaseSegmentationName(segmentationLayer),
-      meshFileName,
-      id,
-      // The back-end should only receive a non-null mapping name,
-      // if it should perform extra (reverse) look ups to compute a mesh
-      // with a specific mapping from a mesh file that was computed
-      // without a mapping.
-      meshFile.mappingName == null ? mappingName : null,
-      editableMapping != null && tracing ? tracing.tracingId : null,
-    );
-    scale = [segmentInfo.transform[0][0], segmentInfo.transform[1][1], segmentInfo.transform[2][2]];
-    segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
-      availableChunksMap[lodIndex] = chunks?.chunks;
-      loadingOrder.push(lodIndex);
-    });
-    // Load the chunks closest to the current LOD first.
-    loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
-  } else {
-    availableChunksMap[NO_LOD_MESH_INDEX] = yield* call(
-      meshV0.getMeshfileChunksForSegment,
-      dataset.dataStore.url,
-      dataset,
-      getBaseSegmentationName(segmentationLayer),
-      meshFileName,
-      id,
-    );
-    loadingOrder = [NO_LOD_MESH_INDEX];
-  }
+  const segmentInfo = yield* call(
+    meshApi.getMeshfileChunksForSegment,
+    dataset.dataStore.url,
+    dataset,
+    getBaseSegmentationName(segmentationLayer),
+    meshFileName,
+    id,
+    // The back-end should only receive a non-null mapping name,
+    // if it should perform extra (reverse) look ups to compute a mesh
+    // with a specific mapping from a mesh file that was computed
+    // without a mapping.
+    meshFile.mappingName == null ? mappingName : null,
+    editableMapping != null && tracing ? tracing.tracingId : null,
+  );
+  scale = [segmentInfo.transform[0][0], segmentInfo.transform[1][1], segmentInfo.transform[2][2]];
+  segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
+    availableChunksMap[lodIndex] = chunks?.chunks;
+    loadingOrder.push(lodIndex);
+  });
+  const currentLODIndex = yield* call(
+    {
+      context: segmentMeshController.meshesLODRootGroup,
+      fn: segmentMeshController.meshesLODRootGroup.getCurrentLOD,
+    },
+    Math.max(...loadingOrder),
+  );
+  // Load the chunks closest to the current LOD first.
+  loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
 
   return {
     availableChunksMap,
@@ -924,110 +911,59 @@ function _getLoadChunksTasks(
         // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
         const sortedAvailableChunks = sortByDistanceTo(availableChunks, seedPosition);
 
-        let tasks;
-        if (sortedAvailableChunks.length > 0 && "position" in sortedAvailableChunks[0]) {
-          // V3
-          const batches = chunkDynamically(
-            sortedAvailableChunks as meshV3.MeshChunk[],
-            MIN_BATCH_SIZE_IN_BYTES,
-            (chunk) => chunk.byteSize,
-          );
+        const batches = chunkDynamically(
+          sortedAvailableChunks as meshApi.MeshChunk[],
+          MIN_BATCH_SIZE_IN_BYTES,
+          (chunk) => chunk.byteSize,
+        );
 
-          tasks = batches.map(
-            (chunks) =>
-              function* loadChunks(): Saga<void> {
-                // V3
-                const dataForChunks = yield* call(
-                  meshV3.getMeshfileChunkData,
-                  dataset.dataStore.url,
-                  dataset,
-                  getBaseSegmentationName(segmentationLayer),
-                  {
-                    meshFile: meshFileName,
-                    // Only extract the relevant properties
-                    requests: chunks.map(({ byteOffset, byteSize }) => ({ byteOffset, byteSize })),
-                  },
-                );
-                const loader = getDracoLoader();
+        const tasks = batches.map(
+          (chunks) =>
+            function* loadChunks(): Saga<void> {
+              const dataForChunks = yield* call(
+                meshApi.getMeshfileChunkData,
+                dataset.dataStore.url,
+                dataset,
+                getBaseSegmentationName(segmentationLayer),
+                {
+                  meshFile: meshFileName,
+                  // Only extract the relevant properties
+                  requests: chunks.map(({ byteOffset, byteSize }) => ({ byteOffset, byteSize })),
+                },
+              );
+              const loader = getDracoLoader();
 
-                const errorsWithDetails = [];
+              const errorsWithDetails = [];
 
-                const chunksWithData = chunks.map((chunk, idx) => ({
-                  ...chunk,
-                  data: dataForChunks[idx],
-                }));
-                // Group chunks by position and merge meshes in the same chunk to keep the number
-                // of objects in the scene low for better performance. Ideally, more mesh geometries
-                // would be merged, but the meshes in different chunks need to be translated differently.
-                const chunksGroupedByPosition = _.groupBy(chunksWithData, "position");
-                for (const chunksForPosition of Object.values(chunksGroupedByPosition)) {
-                  // All chunks in chunksForPosition have the same position
-                  const position = chunksForPosition[0].position;
+              const chunksWithData = chunks.map((chunk, idx) => ({
+                ...chunk,
+                data: dataForChunks[idx],
+              }));
+              // Group chunks by position and merge meshes in the same chunk to keep the number
+              // of objects in the scene low for better performance. Ideally, more mesh geometries
+              // would be merged, but the meshes in different chunks need to be translated differently.
+              const chunksGroupedByPosition = _.groupBy(chunksWithData, "position");
+              for (const chunksForPosition of Object.values(chunksGroupedByPosition)) {
+                // All chunks in chunksForPosition have the same position
+                const position = chunksForPosition[0].position;
 
-                  const bufferGeometries = [];
-                  for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
-                    const chunk = chunksForPosition[chunkIdx];
-                    try {
-                      const bufferGeometry = yield* call(loader.decodeDracoFileAsync, chunk.data);
-                      bufferGeometries.push(bufferGeometry);
-                    } catch (error) {
-                      errorsWithDetails.push({ error, chunk });
-                    }
+                const bufferGeometries = [];
+                for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
+                  const chunk = chunksForPosition[chunkIdx];
+                  try {
+                    const bufferGeometry = yield* call(loader.decodeDracoFileAsync, chunk.data);
+                    bufferGeometries.push(bufferGeometry);
+                  } catch (error) {
+                    errorsWithDetails.push({ error, chunk });
                   }
-
-                  const geometry = mergeBufferGeometries(bufferGeometries);
-
-                  // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
-                  if (geometry == null) continue;
-
-                  // Compute vertex normals to achieve smooth shading
-                  geometry.computeVertexNormals();
-
-                  yield* call(
-                    {
-                      context: segmentMeshController,
-                      fn: segmentMeshController.addMeshFromGeometry,
-                    },
-                    geometry,
-                    id,
-                    position,
-                    // Apply the scale from the segment info, which includes dataset scale and mag
-                    scale,
-                    lod,
-                    layerName,
-                    additionalCoordinates,
-                  );
                 }
 
-                if (errorsWithDetails.length > 0) {
-                  console.warn("Errors occurred while decoding mesh chunks:", errorsWithDetails);
-                  // Use first error as representative
-                  throw errorsWithDetails[0].error;
-                }
-              },
-          );
-        } else {
-          tasks = (sortedAvailableChunks as Vector3[]).map(
-            (chunk) =>
-              function* loadChunk(): Saga<void> {
-                // V0
-                const stlData = yield* call(
-                  meshV0.getMeshfileChunkData,
-                  dataset.dataStore.url,
-                  dataset,
-                  getBaseSegmentationName(segmentationLayer),
-                  meshFileName,
-                  id,
-                  chunk,
-                );
-                let geometry = yield* call(parseStlBuffer, stlData);
+                const geometry = mergeBufferGeometries(bufferGeometries);
 
-                // Delete existing vertex normals (since these are not interpolated
-                // across faces).
-                geometry.deleteAttribute("normal");
-                // Ensure that vertices of adjacent faces are shared.
-                geometry = mergeVertices(geometry);
-                // Recompute normals to achieve smooth shading
+                // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
+                if (geometry == null) continue;
+
+                // Compute vertex normals to achieve smooth shading
                 geometry.computeVertexNormals();
 
                 yield* call(
@@ -1037,15 +973,22 @@ function _getLoadChunksTasks(
                   },
                   geometry,
                   id,
-                  null,
-                  null,
+                  position,
+                  // Apply the scale from the segment info, which includes dataset scale and mag
+                  scale,
                   lod,
                   layerName,
                   additionalCoordinates,
                 );
-              },
-          );
-        }
+              }
+
+              if (errorsWithDetails.length > 0) {
+                console.warn("Errors occurred while decoding mesh chunks:", errorsWithDetails);
+                // Use first error as representative
+                throw errorsWithDetails[0].error;
+              }
+            },
+        );
 
         return tasks;
       }),
@@ -1054,12 +997,12 @@ function _getLoadChunksTasks(
 }
 
 function sortByDistanceTo(
-  availableChunks: Vector3[] | meshV3.MeshChunk[] | null | undefined,
+  availableChunks: Vector3[] | meshApi.MeshChunk[] | null | undefined,
   seedPosition: Vector3,
 ) {
-  return _.sortBy(availableChunks, (chunk: Vector3 | meshV3.MeshChunk) =>
+  return _.sortBy(availableChunks, (chunk: Vector3 | meshApi.MeshChunk) =>
     V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
-  ) as Array<Vector3> | Array<meshV3.MeshChunk>;
+  ) as Array<Vector3> | Array<meshApi.MeshChunk>;
 }
 
 /*

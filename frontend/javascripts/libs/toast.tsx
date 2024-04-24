@@ -44,7 +44,7 @@ const Toast = {
   // Stores the pending toast messages before the notificationAPI is initialized.
   pendingToasts: [] as ToastParams[],
   // Stores the pending manual timeouts for toasts to avoid multiple timeouts for the same toast.
-  pendingTimeouts: {} as Record<string, Promise<void>>,
+  closePendingToastsEarlyMap: {} as Record<string, () => void>,
   messages(messages: Message[]): void {
     const errorChainObject = messages.find((msg) => typeof msg.chain !== "undefined");
     const errorChainString: string | null | undefined = errorChainObject?.chain;
@@ -142,23 +142,37 @@ const Toast = {
       });
     }
 
-    this.notificationAPI[type](toastConfig);
-
     // Make sure that toasts don't just disappear while the user has WK in a background tab (e.g. while uploading large dataset).
     // Most browsers pause requestAnimationFrame() if the current tab is not active, but Firefox does not seem to do that.
-    if (useManualTimeout && this.pendingTimeouts[key] == null) {
+    if (useManualTimeout) {
+      // In case a toast with the same key is already open, close it first.
+      this.closePendingToastsEarlyMap[key]?.();
+      let cancelledTimeout = false;
       const timeoutToastManually = async () => {
         const splitTimeout = timeout / 2;
         await animationFrame(); // ensure tab is active
         await sleep(splitTimeout);
         await animationFrame();
+        if (cancelledTimeout) {
+          // If the toast has been closed early, don't close it again.
+          return;
+        }
         // If the user has switched the tab, show the toast again so that the user doesn't just see the toast dissapear.
         await sleep(splitTimeout);
         this.close(key);
-        delete this.pendingTimeouts[key];
+        delete this.closePendingToastsEarlyMap[key];
       };
-      this.pendingTimeouts[key] = timeoutToastManually();
+      // Start the toast timeout and store the cancel function.
+      timeoutToastManually();
+      const closeToastEarly = () => {
+        this.close(key);
+        cancelledTimeout = true;
+        delete this.closePendingToastsEarlyMap[key];
+      };
+      this.closePendingToastsEarlyMap[key] = closeToastEarly;
     }
+    // Show the toast.
+    this.notificationAPI[type](toastConfig);
   },
 
   info(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {

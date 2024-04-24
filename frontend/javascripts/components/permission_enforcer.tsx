@@ -7,14 +7,15 @@ export function PageNotAvailableToNormalUser() {
     <Row justify="center" align="middle" className="full-viewport-height">
       <Col>
         <Result
-          status="403"
-          title="403"
+          status="error"
+          title="Forbidden"
+          icon={<i className="drawing drawing-forbidden-view" />}
           subTitle={
             <>
               Apologies, but you don't have permission to view this page.
               <br />
-              Please reach out to a team manager or administrator to assist you with the actions
-              you'd like to take.
+              Please reach out to a team manager, dataset manager or administrator to assist you
+              with the actions you'd like to take.
             </>
           }
           extra={

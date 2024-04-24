@@ -1,26 +1,33 @@
-import React, { useState } from "react";
+import React from "react";
 import { Form, Row, Col, Input, Button, Select } from "antd";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
-import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
+import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import { runTraining } from "admin/admin_rest_api";
-import { LayerSelection } from "components/layer_selection";
+import { LayerSelection, LayerSelectionFormItem } from "components/layer_selection";
+import Toast from "libs/toast";
+import { Model } from "oxalis/singletons";
+import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 
 const FormItem = Form.Item;
 
-export function TrainAiModelTab() {
+export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
   const [form] = Form.useForm();
 
   const tracing = useSelector((state: OxalisState) => state.tracing);
+  const dataset = useSelector((state: OxalisState) => state.dataset);
   const onFinish = async (values: any) => {
+    form.validateFields();
+    await Model.ensureSavedState();
+    const readableVolumeName = getReadableNameForLayerName(dataset, tracing, values.layerName);
+
     await runTraining({
       trainingAnnotations: [
         {
           annotationId: tracing.annotationId,
           colorLayerName: values.imageDataLayer,
-          // todop
-          segmentationLayerName: "segmentation",
+          segmentationLayerName: readableVolumeName,
           mag: [1, 1, 1],
         },
       ],
@@ -29,16 +36,20 @@ export function TrainAiModelTab() {
       // optional comment,
       // optional workflowYaml
     });
+    Toast.success("The training has successfully started.");
+    onClose();
   };
 
-  const dataset = useSelector((state: OxalisState) => state.dataset);
   const colorLayers = getColorLayers(dataset);
   const colorLayer = colorLayers[0];
-  const [selectedColorLayerName, setSelectedColorLayerName] = useState<string>(colorLayer.name);
+
   const defaultValues = {
     modelCategory: "em_neurons",
-    imageDataLayer: colorLayer,
+    imageDataLayer: colorLayer.name,
   };
+
+  const segmentationLayers = getSegmentationLayers(dataset);
+  const fixedSelectedLayer = segmentationLayers.length === 1 ? segmentationLayers[0] : null;
 
   const userBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
@@ -83,6 +94,7 @@ export function TrainAiModelTab() {
         hasFeedback
         name="imageDataLayer"
         label="Image Data Layer"
+        hidden={colorLayers.length === 1}
         rules={[
           {
             required: true,
@@ -90,14 +102,16 @@ export function TrainAiModelTab() {
           },
         ]}
       >
-        <LayerSelection
-          layers={colorLayers}
-          value={selectedColorLayerName}
-          onChange={setSelectedColorLayerName}
-          tracing={tracing}
-          style={{ width: "100%" }}
-        />
+        <LayerSelection layers={colorLayers} tracing={tracing} style={{ width: "100%" }} />
       </FormItem>
+
+      <LayerSelectionFormItem
+        chooseSegmentationLayer
+        layers={segmentationLayers}
+        fixedLayerName={fixedSelectedLayer?.name}
+        tracing={tracing}
+        label="Groundtruth Layer"
+      />
 
       <FormItem hasFeedback name="dummy" label="Training Data">
         <div>{userBoundingBoxes.length} bounding boxes</div>
@@ -111,6 +125,7 @@ export function TrainAiModelTab() {
           style={{
             width: "100%",
           }}
+          disabled={userBoundingBoxes.length === 0}
         >
           Start Training
         </Button>

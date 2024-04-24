@@ -307,12 +307,13 @@ export function OutputSegmentationLayerNameFormItem({
 }
 
 export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
+  const onClose = () => Store.dispatch(setAIJobModalStateAction("invisible"));
   const tabs = [
     // todop: reorder so that train model tab is the second one
     {
       label: "Train a model",
       key: "trainModel",
-      children: <TrainAiModelTab />,
+      children: <TrainAiModelTab onClose={onClose} />,
     },
     {
       label: "Run a model",
@@ -330,7 +331,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
           AI Analysis
         </>
       }
-      onCancel={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
+      onCancel={onClose}
       footer={null}
     >
       <Tabs items={tabs} />
@@ -386,7 +387,7 @@ function RunModelTab({ aIJobModalState }: { aIJobModalState: string }) {
             </Card>
           </Radio.Button>
         </Tooltip>
-        <Tooltip title="Coming soon">
+        <Tooltip title={!Store.getState().activeUser?.isSuperUser ? "Coming soon" : null}>
           <Radio.Button
             className="aIJobSelection"
             disabled={!Store.getState().activeUser?.isSuperUser}

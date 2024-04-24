@@ -9,6 +9,7 @@ type LayerSelectionProps = {
   layers: APIDataLayer[];
   tracing: HybridTracing;
   fixedLayerName?: string;
+  label?: string;
 };
 
 export function LayerSelection({
@@ -64,11 +65,12 @@ export function LayerSelectionFormItem({
   layers,
   tracing,
   fixedLayerName,
+  label,
 }: LayerSelectionProps): JSX.Element {
   const layerType = chooseSegmentationLayer ? "segmentation" : "color";
   return (
     <Form.Item
-      label="Layer"
+      label={label || "Layer"}
       name="layerName"
       rules={[
         {
@@ -77,6 +79,7 @@ export function LayerSelectionFormItem({
         },
       ]}
       hidden={layers.length === 1 && fixedLayerName == null}
+      initialValue={fixedLayerName}
     >
       <LayerSelection
         layers={layers}

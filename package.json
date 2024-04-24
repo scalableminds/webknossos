@@ -1,6 +1,5 @@
 {
   "name": "webknossos",
-  "version": "0.17.146",
   "license": "AGPL-3.0",
   "engines": {
     "node": ">=16"

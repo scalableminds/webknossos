@@ -482,8 +482,7 @@ function NotificationIcon({
         position: "relative",
         display: "flex",
         marginRight: 12,
-        paddingTop:
-          navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT : 0,
+        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
       }}
     >
       <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
@@ -610,8 +609,7 @@ function LoggedInAvatar({
       selectedKeys={["prevent highlighting of this menu"]}
       mode="horizontal"
       style={{
-        paddingTop:
-          navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT : 0,
+        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
       }}
       theme="dark"
@@ -905,10 +903,7 @@ function Navbar({
         selectedKeys={selectedKeys}
         onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
-          paddingTop:
-            navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT
-              ? constants.MAINTENANCE_BANNER_HEIGHT
-              : 0,
+          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
           lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         }}
         theme="dark"
@@ -931,10 +926,7 @@ function Navbar({
         style={{
           flex: 1,
           display: "flex",
-          paddingTop:
-            navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT
-              ? constants.MAINTENANCE_BANNER_HEIGHT
-              : 0,
+          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         }}
       />
 

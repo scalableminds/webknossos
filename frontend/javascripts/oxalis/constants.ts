@@ -313,8 +313,7 @@ const Constants = {
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
   DEFAULT_NAVBAR_HEIGHT: 48,
-  MAINTENANCE_BANNER_HEIGHT: 38,
-  UPGRADE_BANNER_HEIGHT: 38,
+  BANNER_HEIGHT: 38,
   // For reference, the area of a large brush size (let's say, 300px) corresponds to
   // pi * 300 ^ 2 == 282690.
   // We multiply this with 5, since the labeling is not done

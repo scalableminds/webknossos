@@ -25,7 +25,7 @@ const BANNER_STYLE: React.CSSProperties = {
   position: "absolute",
   top: 0,
   left: 0,
-  height: constants.MAINTENANCE_BANNER_HEIGHT,
+  height: constants.BANNER_HEIGHT,
 };
 
 function setNavbarHeight(newNavbarHeight: number) {
@@ -119,7 +119,7 @@ export function MaintenanceBanner() {
 
   useEffect(() => {
     if (currentMaintenance || closestUpcomingMaintenance) {
-      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.MAINTENANCE_BANNER_HEIGHT);
+      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.BANNER_HEIGHT);
     }
 
     if (currentMaintenance == null && closestUpcomingMaintenance == null) {
@@ -155,11 +155,10 @@ export function UpgradeVersionBanner() {
     position: "absolute",
     top: 0,
     left: 0,
-    height: constants.UPGRADE_BANNER_HEIGHT,
+    height: constants.BANNER_HEIGHT,
     textAlign: "center",
     backgroundColor: blue,
     color: white,
-    //fontWeight: 600,
     fontSize: "medium",
   };
   const customParseFormat = require("dayjs/plugin/customParseFormat");
@@ -197,7 +196,7 @@ export function UpgradeVersionBanner() {
 
   useEffect(() => {
     if (shouldBannerBeShown) {
-      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.UPGRADE_BANNER_HEIGHT);
+      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.BANNER_HEIGHT);
     } else {
       setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
     }
@@ -209,12 +208,14 @@ export function UpgradeVersionBanner() {
       message={
         <Space size="middle">
           <Space size="small">
-            You are using an old version of WEBKNOSSOS. Switch to <b>webknossos.org</b> for
-            automatic updates and exclusive features!
+            You are using an old version of WEBKNOSSOS. Switch to{" "}
+            <b style={{ marginInline: -2 }}>webknossos.org</b> for automatic updates and exclusive
+            features!
           </Space>
           <Button
             className="upgrade-banner-button"
             href="https://webknossos.org/self-hosted-upgrade"
+            size="small"
           >
             {" "}
             Learn more{" "}

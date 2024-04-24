@@ -240,13 +240,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     this.nextComment(false);
   };
 
-  handleChangeInput = (
-    evt: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    insertLineBreaks: boolean = false,
-  ) => {
-    // @ts-ignore
-    const commentText = evt.target.value;
-
+  handleChangeInput = (commentText: string, insertLineBreaks: boolean = false) => {
     if (commentText) {
       this.props.createComment(insertLineBreaks ? commentText.replace(/\\n/g, "\n") : commentText);
     } else {
@@ -466,7 +460,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                         : messages["tracing.read_only_mode_notification"]
                     }
                     onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
-                      this.handleChangeInput(evt, true)
+                      this.handleChangeInput(evt.target.value, true)
                     }
                     onPressEnter={(evt: React.KeyboardEvent<HTMLInputElement>) =>
                       (evt.target as HTMLElement).blur()

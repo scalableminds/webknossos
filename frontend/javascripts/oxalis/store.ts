@@ -544,10 +544,10 @@ type BaseMeshInformation = {
   readonly seedAdditionalCoordinates?: AdditionalCoordinate[] | null;
   readonly isLoading: boolean;
   readonly isVisible: boolean;
+  readonly mappingName: string | null | undefined;
 };
 export type AdHocMeshInformation = BaseMeshInformation & {
   readonly isPrecomputed: false;
-  readonly mappingName: string | null | undefined;
   readonly mappingType: MappingType | null | undefined;
 };
 export type PrecomputedMeshInformation = BaseMeshInformation & {

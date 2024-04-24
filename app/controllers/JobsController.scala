@@ -34,9 +34,7 @@ case class AnimationJobOptions(
     layerName: String,
     boundingBox: BoundingBox,
     includeWatermark: Boolean,
-    segmentationLayerName: Option[String],
-    meshFileName: Option[String],
-    meshSegmentIds: Array[Int],
+    meshes: JsValue,
     movieResolution: MovieResolutionSetting.Value,
     cameraPosition: CameraPositionSetting.Value,
     intensityMin: Double,
@@ -249,6 +247,42 @@ class JobsController @Inject()(
       }
     }
 
+  def runInferMitochondriaJob(organizationName: String,
+                              datasetName: String,
+                              layerName: String,
+                              bbox: String,
+                              outputSegmentationLayerName: String,
+                              newDatasetName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                       organizationName)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.inferMitochondria.notAllowed.organization" ~> FORBIDDEN
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
+            "dataset.notFound",
+            datasetName) ~> NOT_FOUND
+          _ <- datasetService.assertValidDatasetName(newDatasetName)
+          _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
+          _ <- datasetService.assertValidLayerNameLax(layerName)
+          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
+          _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
+          command = JobCommand.infer_mitochondria
+          commandArgs = Json.obj(
+            "organization_name" -> organizationName,
+            "dataset_name" -> datasetName,
+            "new_dataset_name" -> newDatasetName,
+            "layer_name" -> layerName,
+            "output_segmentation_layer_name" -> outputSegmentationLayerName,
+            "bbox" -> bbox,
+          )
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunInferMitochondria"
+          js <- jobService.publicWrites(job)
+        } yield Ok(js)
+      }
+    }
+
   def runExportTiffJob(organizationName: String,
                        datasetName: String,
                        bbox: String,
@@ -370,7 +404,6 @@ class JobsController @Inject()(
           }
           layerName = animationJobOptions.layerName
           _ <- datasetService.assertValidLayerNameLax(layerName)
-          _ <- Fox.runOptional(animationJobOptions.segmentationLayerName)(datasetService.assertValidLayerNameLax)
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${datasetName}__$layerName.mp4"
           command = JobCommand.render_animation
           commandArgs = Json.obj(
@@ -378,11 +411,9 @@ class JobsController @Inject()(
             "dataset_name" -> datasetName,
             "export_file_name" -> exportFileName,
             "layer_name" -> animationJobOptions.layerName,
-            "segmentation_layer_name" -> animationJobOptions.segmentationLayerName,
             "bounding_box" -> animationJobOptions.boundingBox.toLiteral,
             "include_watermark" -> animationJobOptions.includeWatermark,
-            "mesh_segment_ids" -> animationJobOptions.meshSegmentIds,
-            "meshfile_name" -> animationJobOptions.meshFileName,
+            "meshes" -> animationJobOptions.meshes,
             "movie_resolution" -> animationJobOptions.movieResolution,
             "camera_position" -> animationJobOptions.cameraPosition,
             "intensity_min" -> animationJobOptions.intensityMin,

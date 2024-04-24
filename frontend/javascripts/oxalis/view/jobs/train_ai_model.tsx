@@ -3,12 +3,19 @@ import { Form, Row, Col, Input, Button, Select } from "antd";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
-import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getColorLayers,
+  getResolutionInfo,
+  getSegmentationLayerByName,
+  getSegmentationLayers,
+} from "oxalis/model/accessors/dataset_accessor";
 import { runTraining } from "admin/admin_rest_api";
 import { LayerSelection, LayerSelectionFormItem } from "components/layer_selection";
 import Toast from "libs/toast";
 import { Model } from "oxalis/singletons";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
+import _ from "lodash";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
 const FormItem = Form.Item;
 
@@ -21,6 +28,7 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
     form.validateFields();
     await Model.ensureSavedState();
     const readableVolumeName = getReadableNameForLayerName(dataset, tracing, values.layerName);
+    const segmentationLayer = getSegmentationLayerByName(dataset, values.layerName);
 
     await runTraining({
       trainingAnnotations: [
@@ -28,7 +36,7 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
           annotationId: tracing.annotationId,
           colorLayerName: values.imageDataLayer,
           segmentationLayerName: readableVolumeName,
-          mag: [1, 1, 1],
+          mag: getResolutionInfo(segmentationLayer.resolutions).getFinestResolution(),
         },
       ],
       name: values.modelName,
@@ -53,6 +61,9 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
 
   const userBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
+  );
+  const bboxesVoxelCount = _.sum(
+    userBoundingBoxes.map((bbox) => new BoundingBox(bbox.boundingBox).getVolume()),
   );
   return (
     <Form onFinish={onFinish} form={form} initialValues={defaultValues} layout="vertical">
@@ -114,7 +125,9 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
       />
 
       <FormItem hasFeedback name="dummy" label="Training Data">
-        <div>{userBoundingBoxes.length} bounding boxes</div>
+        <div>
+          {userBoundingBoxes.length} bounding boxes ({bboxesVoxelCount / 1000000} MVx)
+        </div>
       </FormItem>
 
       <FormItem>

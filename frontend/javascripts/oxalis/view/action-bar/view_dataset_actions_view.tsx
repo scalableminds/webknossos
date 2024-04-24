@@ -19,7 +19,7 @@ import {
 import Store, { OxalisState } from "oxalis/store";
 import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import DownloadModalView from "./download_modal_view";
-import { CreateAnimationModalWrapper as CreateAnimationModal } from "./create_animation_modal";
+import CreateAnimationModal from "./create_animation_modal";
 
 type Props = {
   layoutMenu: SubMenuType;

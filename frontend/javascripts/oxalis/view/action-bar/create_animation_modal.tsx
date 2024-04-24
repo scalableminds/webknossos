@@ -45,7 +45,7 @@ type Props = {
 
 // When creating the texture for the dataset animation, we aim for for texture with the largest side of roughly this size
 const TARGET_TEXTURE_SIZE = 2000; // in pixels
-const MAX_MESHES_PER_ANIMATION = 30; // arbitrary limit to not overload the server when rendering many large STL files
+const MAX_MESHES_PER_ANIMATION = 40; // arbitrary limit to not overload the server when rendering many large STL files
 
 function selectMagForTextureCreation(
   colorLayer: APIDataLayer,
@@ -147,18 +147,18 @@ function CreateAnimationModal(props: Props) {
     const [_, estimatedTextureSize] = selectMagForTextureCreation(colorLayer, selectedBoundingBox);
 
     const hasEnoughMags = estimatedTextureSize < 1.5 * TARGET_TEXTURE_SIZE;
-    if (hasEnoughMags)
+    if (!hasEnoughMags)
       errorMessages.push(
         "The selected bounding box is too large to create an animation. Either shrink the bounding box or consider downsampling the dataset to coarser magnifications.",
       );
 
     const isDtypeSupported = colorLayer.elementClass !== "uint24";
-    if (isDtypeSupported)
+    if (!isDtypeSupported)
       errorMessages.push("Sorry, animations are not supported for uInt24 datasets.");
 
     const isDataset3D =
       !is2dDataset(state.dataset) && (colorLayer.additionalAxes?.length || 0) === 0;
-    if (isDataset3D) errorMessages.push("Sorry, animations are only supported for 3D datasets.");
+    if (!isDataset3D) errorMessages.push("Sorry, animations are only supported for 3D datasets.");
 
     const isTooManyMeshes = meshes.length > MAX_MESHES_PER_ANIMATION;
     if (isTooManyMeshes)

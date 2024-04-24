@@ -172,11 +172,8 @@ export function UpgradeVersionBanner() {
         /(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/,
         "",
       );
-      console.log(commitDateWithoutWeekday);
       const lastCommitDate = dayjs(commitDateWithoutWeekday, "MMM DD HH:mm:ss YYYY ZZ"); // todo two digit dates? test more once time tracking is merged
-      console.log(lastCommitDate);
       const needsUpdate = currentDate.diff(lastCommitDate, "month") >= 6;
-      console.log(needsUpdate);
       return needsUpdate;
     },
     false,
@@ -184,9 +181,8 @@ export function UpgradeVersionBanner() {
   );
 
   const getShouldBannerBeShown = () => {
-    if (!isVersionOutdated) return true; // TODO
+    if (!isVersionOutdated) return false;
     const lastTimeBannerWasClickedAway = localStorage.getItem(UPGRADE_BANNER_LOCAL_STORAGE_KEY);
-    console.log(lastTimeBannerWasClickedAway);
     if (lastTimeBannerWasClickedAway == null) return true;
     const parsedDate = dayjs(lastTimeBannerWasClickedAway);
     return parsedDate.diff(currentDate, "days") >= 3;
@@ -217,8 +213,7 @@ export function UpgradeVersionBanner() {
             href="https://webknossos.org/self-hosted-upgrade"
             size="small"
           >
-            {" "}
-            Learn more{" "}
+            Learn more
           </Button>
         </Space>
       }

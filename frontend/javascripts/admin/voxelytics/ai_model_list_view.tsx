@@ -23,7 +23,7 @@ export default function AiModelListView() {
       setAiModels(_aiModels);
     } catch (err) {
       console.error(err);
-      Toast.error("Could not load workflow list.");
+      Toast.error("Could not load model list.");
     } finally {
       setIsLoading(false);
     }

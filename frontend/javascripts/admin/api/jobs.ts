@@ -333,6 +333,24 @@ export function runTraining(params: RunTrainingParameters) {
   });
 }
 
+type RunInferenceParameters = {
+  annotationId: string;
+  aiModelId: string;
+  datasetName: string;
+  coloLayerName: string;
+  boundingBox: Vector6;
+  newSegmentationLayerName: string;
+  newDatasetName: string;
+  // maskAnnotationLayerName?: string | null
+};
+
+export function runInferenceJob(params: RunInferenceParameters) {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runInference", {
+    method: "POST",
+    data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
+  });
+}
+
 export function getAiModels(): Promise<AiModel[]> {
   return Request.receiveJSON("/api/aiModels");
 }

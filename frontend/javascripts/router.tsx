@@ -705,7 +705,7 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/models"
+                path="/aiModels"
                 component={AiModelListView}
                 exact
               />

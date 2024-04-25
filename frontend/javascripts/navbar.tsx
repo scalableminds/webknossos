@@ -242,8 +242,8 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
     adminstrationSubMenuItems.push({
-      key: "/models",
-      label: <Link to={"/models"}>Models</Link>,
+      key: "/aiModels",
+      label: <Link to={"/aiModels"}>AI Models</Link>,
     });
   }
 

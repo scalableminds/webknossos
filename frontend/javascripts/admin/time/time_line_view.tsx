@@ -3,8 +3,7 @@ import * as React from "react";
 import ReactDOMServer from "react-dom/server";
 import { connect } from "react-redux";
 import _ from "lodash";
-import dayjs from "dayjs";
-import antddayjs from "antd/node_modules/dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import FormattedDate from "components/formatted_date";
 import { formatMilliseconds, formatDurationToMinutesAndSeconds } from "libs/format_utils";
 import { isUserAdminOrTeamManager } from "libs/utils";
@@ -238,16 +237,16 @@ class TimeLineView extends React.PureComponent<Props, State> {
       user: prevState.users.find((u) => u.id === userId),
     }));
   };
-
-  handleDateChange = async (antdDates: [antddayjs.Dayjs | null, antddayjs.Dayjs | null]) => {
-    if (antdDates[0] == null || antdDates[1] == null) return;
+  // import type NoUndefinedRangeValueType from "antd/locale"
+  handleDateChange = async (antdDates: [Dayjs | null, Dayjs | null] | null) => {
+    if (antdDates == null || antdDates[0] == null || antdDates[1] == null) return;
     // to ease the load on the server restrict date range selection to three month
     if (Math.abs(antdDates[0].diff(antdDates[1], "days")) > 3 * 31) {
       Toast.error(messages["timetracking.date_range_too_long"]);
       return;
     }
 
-    const dates: DateRange = [this.getDayJsObject(antdDates[0]), this.getDayJsObject(antdDates[1])];
+    const dates: DateRange = [antdDates[0], antdDates[1]];
     // Force an interval of at least one minute.
     const dateRange: DateRange = dates[0].isSame(dates[1], "minute")
       ? [dates[0].startOf("day"), dates[0].add(1, "minute")]
@@ -301,10 +300,6 @@ class TimeLineView extends React.PureComponent<Props, State> {
     );
     return ReactDOMServer.renderToStaticMarkup(tooltip);
   }
-
-  getDayJsObject = (antdDate: antddayjs.Dayjs) => {
-    return dayjs(antdDate.valueOf());
-  };
 
   render() {
     const columns: Array<ColumnDefinition> = [

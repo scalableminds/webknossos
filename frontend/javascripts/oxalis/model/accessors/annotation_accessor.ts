@@ -110,8 +110,7 @@ export function aggregateStatsForAllLayers(
 
   for (const annotationLayerStats of stats) {
     if ("treeCount" in annotationLayerStats) {
-      const { treeCount, nodeCount, edgeCount, branchPointCount } =
-        annotationLayerStats as SkeletonTracingStats;
+      const { treeCount, nodeCount, edgeCount, branchPointCount } = annotationLayerStats;
       aggregatedStats.treeCount = treeCount;
       aggregatedStats.nodeCount = nodeCount;
       aggregatedStats.edgeCount = edgeCount;
@@ -121,7 +120,7 @@ export function aggregateStatsForAllLayers(
         aggregatedStats.segmentCount = 0;
       }
 
-      aggregatedStats.segmentCount += (annotationLayerStats as VolumeTracingStats).segmentCount;
+      aggregatedStats.segmentCount += annotationLayerStats.segmentCount;
     }
   }
 

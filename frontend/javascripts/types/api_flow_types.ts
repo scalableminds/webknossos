@@ -6,6 +6,7 @@ import type {
   TreeGroup,
   RecommendedConfiguration,
   SegmentGroup,
+  MeshInformation,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type {
@@ -1092,9 +1093,11 @@ export enum MOVIE_RESOLUTIONS {
 
 export type RenderAnimationOptions = {
   layerName: string;
-  segmentationLayerName?: string;
-  meshFileName?: string;
-  meshSegmentIds: number[];
+  meshes: ({
+    layerName: string;
+    tracingId: string | null;
+    adhocMag: Vector3;
+  } & MeshInformation)[];
   boundingBox: BoundingBoxObject;
   includeWatermark: boolean;
   intensityMin: number;

@@ -59,9 +59,17 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     }
   }
 
-  handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+  handleInputChangeFromEvent = (
+    event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>,
+  ) => {
     this.setState({
       value: event.target.value,
+    });
+  };
+
+  handleInputChange = (newValue: string) => {
+    this.setState({
+      value: newValue,
     });
   };
 
@@ -120,7 +128,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     const margin = this.props.margin != null ? this.props.margin : "0 10px";
     const inputComponentProps: InputProps = {
       value: this.state.value,
-      onChange: this.handleInputChange,
+      onChange: this.handleInputChangeFromEvent,
       onPressEnter: this.handleOnChange,
       style: {
         width: this.props.width != null ? this.props.width : "60%",

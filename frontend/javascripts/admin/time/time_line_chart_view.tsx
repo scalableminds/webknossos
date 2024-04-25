@@ -1,7 +1,7 @@
 import { Chart, type GoogleDataTableColumn, type GoogleDataTableRow } from "react-google-charts";
 import * as React from "react";
 import { getWindowBounds } from "libs/utils";
-import dayjs from "dayjs";
+import type { Dayjs } from "dayjs";
 
 // export type ColumnDefinition = {
 //   id?: string;
@@ -11,7 +11,7 @@ import dayjs from "dayjs";
 // };
 // export type RowContent = [string, string, string, Date, Date];
 
-export type DateRange = [dayjs.Dayjs, dayjs.Dayjs];
+export type DateRange = [Dayjs, Dayjs];
 type Props = {
   columns: Array<GoogleDataTableColumn>;
   rows: Array<GoogleDataTableRow>;

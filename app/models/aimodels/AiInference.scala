@@ -102,7 +102,7 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def insertOne(a: AiInference): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.aiInferences(
-                    _id, _organization, _aiModel, _dataset, _annotation, _inferenceJob, boundingBox,
+                    _id, _organization, _aiModel, _newDataset, _annotation, _inferenceJob, boundingBox,
                      newSegmentationLayerName, maskAnnotationLayerName, created, modified, isDeleted)
                  VALUES(${a._id}, ${a._organization}, ${a._aiModel}, ${a._newDataset}, ${a._annotation}, ${a._inferenceJob}, ${a.boundingBox},
                         ${a.newSegmentationLayerName}, ${a.maskAnnotationLayerName}, ${a.created}, ${a.modified}, ${a.isDeleted})""".asUpdate)

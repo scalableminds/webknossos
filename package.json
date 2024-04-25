@@ -138,7 +138,7 @@
     "@tanstack/react-query-persist-client": "^4.14.1",
     "@zip.js/zip.js": "^2.7.32",
     "ansi-to-react": "^6.1.6",
-    "antd": "^5.14.0",
+    "antd": "^5.16.0",
     "ball-morphology": "^0.1.0",
     "base64-js": "^1.2.1",
     "beautiful-react-hooks": "^3.11.1",
@@ -150,7 +150,7 @@
     "cwise": "^1.0.10",
     "dagre": "^0.8.5",
     "data.maybe": "^1.2.2",
-    "dayjs": "^1.11.7",
+    "dayjs": "^1.11.10",
     "deep-for-each": "^2.0.3",
     "deep-freeze": "0.0.1",
     "dice-coefficient": "^2.1.0",
@@ -183,12 +183,11 @@
     "pretty-bytes": "^5.1.0",
     "process": "^0.11.10",
     "protobufjs": "^6.10.3",
-    "rc-util": "^5.24.4",
     "react": "^17.0.2",
     "react-colorful": "^5.6.1",
     "react-debounce-render": "^8.0.1",
-    "react-dnd": "^14.0.4",
-    "react-dnd-html5-backend": "^14.1.0",
+    "react-dnd": "^16.0.0",
+    "react-dnd-html5-backend": "^16.0.0",
     "react-dom": "^17.0.2",
     "react-dropzone": "^11.3.1",
     "react-flow-renderer": "^10.3.16",
@@ -215,7 +214,8 @@
   "resolutions": {
     "**/mini-store": "^1.1.0",
     "**/redux": "3.7.2",
-    "**/rc-tree": "^5.7.12"
+    "**/rc-resize-observer": "^1.4.0",
+    "**/rc-util": "^5.39.1"
   },
   "ava": {
     "files": [

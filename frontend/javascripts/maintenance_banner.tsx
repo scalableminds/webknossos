@@ -160,6 +160,7 @@ export function UpgradeVersionBanner() {
     backgroundColor: blue,
     color: white,
     fontSize: "medium",
+    minWidth: "fit-content",
   };
   const customParseFormat = require("dayjs/plugin/customParseFormat");
   dayjs.extend(customParseFormat);
@@ -167,7 +168,8 @@ export function UpgradeVersionBanner() {
 
   const isVersionOutdated = useFetch(
     async () => {
-      const buildInfo = await getBuildInfo();
+      let buildInfo = await getBuildInfo();
+      buildInfo.webknossos.commitDate = "Wed Apr 24 22:40:38 2023 +0200"; // one year back for testing purposes, TODO remove
       const commitDateWithoutWeekday = buildInfo.webknossos.commitDate.replace(
         /(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/,
         "",
@@ -185,7 +187,7 @@ export function UpgradeVersionBanner() {
     const lastTimeBannerWasClickedAway = localStorage.getItem(UPGRADE_BANNER_LOCAL_STORAGE_KEY);
     if (lastTimeBannerWasClickedAway == null) return true;
     const parsedDate = dayjs(lastTimeBannerWasClickedAway);
-    return parsedDate.diff(currentDate, "days") >= 3;
+    return currentDate.diff(parsedDate, "day") >= 3;
   };
 
   const shouldBannerBeShown = getShouldBannerBeShown();

@@ -102,10 +102,16 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def insertOne(a: AiInference): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.aiInferences(
-                    _id, _organization, _aiModel, _dataset, _annotation, _inferenceJob, boundingBox,
+                    _id, _organization, _aiModel, _newDataset, _annotation, _inferenceJob, boundingBox,
                      newSegmentationLayerName, maskAnnotationLayerName, created, modified, isDeleted)
                  VALUES(${a._id}, ${a._organization}, ${a._aiModel}, ${a._newDataset}, ${a._annotation}, ${a._inferenceJob}, ${a.boundingBox},
                         ${a.newSegmentationLayerName}, ${a.maskAnnotationLayerName}, ${a.created}, ${a.modified}, ${a.isDeleted})""".asUpdate)
     } yield ()
+
+  def countForModel(aiModelId: ObjectId): Fox[Long] =
+    for {
+      countRows <- run(q"SELECT COUNT(*) FROM webknossos.aiInferences_ WHERE _aiModel = $aiModelId".as[Long])
+      count <- countRows.headOption
+    } yield count
 
 }

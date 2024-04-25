@@ -352,3 +352,5 @@ segmentAnything.getData.failed=Failed to get image data to send to SAM server.
 segmentAnything.getEmbedding.failed=Failed to get image embedding from SAM server.
 
 shortLink.notFound=No shortlink with this key could be found
+
+aiModels.delete.referencedByInferences=Cannot delete AI models that are referenced by existing inferences.

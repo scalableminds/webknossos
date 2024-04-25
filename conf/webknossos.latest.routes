@@ -276,6 +276,7 @@ GET           /jobs/:id/export                                                  
 # AI Models
 GET           /aiModels/:id                                                                     controllers.AiModelController.readAiModelInfo(id: String)
 PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: String)
+DELETE        /aiModels/:id                                                                     controllers.AiModelController.deleteAiModel(id: String)
 POST          /aiModels/runTraining                                                             controllers.AiModelController.runTraining
 POST          /aiModels/inferences/runInference                                                 controllers.AiModelController.runInference
 GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: String)

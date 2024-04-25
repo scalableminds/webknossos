@@ -197,17 +197,27 @@ class AiModelController @Inject()(
 
   def updateAiModelInfo(aiModelId: String): Action[UpdateAiModelParameters] =
     sil.SecuredAction.async(validateJson[UpdateAiModelParameters]) { implicit request =>
-      {
-        for {
-          _ <- userService.assertIsSuperUser(request.identity)
-          aiModelIdValidated <- ObjectId.fromString(aiModelId)
-          aiModel <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
-          _ <- aiModelDAO.updateOne(
-            aiModel.copy(name = request.body.name, comment = request.body.comment, modified = Instant.now))
-          updatedAiModel <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
-          jsResult <- aiModelService.publicWrites(updatedAiModel)
-        } yield Ok(jsResult)
-      }
+      for {
+        _ <- userService.assertIsSuperUser(request.identity)
+        aiModelIdValidated <- ObjectId.fromString(aiModelId)
+        aiModel <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
+        _ <- aiModelDAO.updateOne(
+          aiModel.copy(name = request.body.name, comment = request.body.comment, modified = Instant.now))
+        updatedAiModel <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
+        jsResult <- aiModelService.publicWrites(updatedAiModel)
+      } yield Ok(jsResult)
+    }
+
+  def deleteAiModel(aiModelId: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity)
+        aiModelIdValidated <- ObjectId.fromString(aiModelId)
+        referencesCount <- aiInferenceDAO.countForModel(aiModelIdValidated)
+        _ <- bool2Fox(referencesCount == 0) ?~> "aiModel.delete.referencedByInferences"
+        _ <- aiModelDAO.findOne(aiModelIdValidated) ?~> "aiModel.notFound" ~> NOT_FOUND
+        _ <- aiModelDAO.deleteOne(aiModelIdValidated)
+      } yield Ok
     }
 
 }

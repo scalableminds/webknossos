@@ -108,4 +108,10 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
                         ${a.newSegmentationLayerName}, ${a.maskAnnotationLayerName}, ${a.created}, ${a.modified}, ${a.isDeleted})""".asUpdate)
     } yield ()
 
+  def countForModel(aiModelId: ObjectId): Fox[Long] =
+    for {
+      countRows <- run(q"SELECT COUNT(*) FROM webknossos.aiInferences_ WHERE _aiModel = $aiModelId".as[Long])
+      count <- countRows.headOption
+    } yield count
+
 }

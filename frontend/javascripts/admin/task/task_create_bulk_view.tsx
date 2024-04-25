@@ -269,7 +269,7 @@ function TaskCreateBulkView() {
             depth, <a href="/projects">project</a>, <a href="/scripts">scriptId</a> (optional),
             baseAnnotationId (optional)
             <br />
-            If you want to define some, (but not all) of the optional values, please list all
+            If you want to define some (but not all) of the optional values, please list all
             optional values and use an empty value for the ones you do not want to set (e.g.,
             someValue,,someOtherValue if you want to omit the second value). If you do not want to
             define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding values.

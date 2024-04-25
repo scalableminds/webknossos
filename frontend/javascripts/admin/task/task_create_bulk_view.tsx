@@ -264,12 +264,12 @@ function TaskCreateBulkView() {
             Specify each new task on a separate line as comma seperated values (CSV) in the
             following format:
             <br />
-            <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
+            <a href="/dashboard">dataset</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
             minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height,
-            depth, <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>,
-            baseAnnotationId]
+            depth, <a href="/projects">project</a>, <a href="/scripts">scriptId</a> (optional),
+            baseAnnotationId (optional)
             <br />
-            If you want to define some (but not all) of the optional values, please list all
+            If you want to define some, (but not all) of the optional values, please list all
             optional values and use an empty value for the ones you do not want to set (e.g.,
             someValue,,someOtherValue if you want to omit the second value). If you do not want to
             define a bounding box, you may use 0, 0, 0, 0, 0, 0 for the corresponding values.

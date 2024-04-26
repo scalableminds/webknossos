@@ -15,7 +15,7 @@ import messages from "messages";
 import Toast from "libs/toast";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
-import dayjs, { type Dayjs } from "dayjs";
+import dayjs, { Dayjs } from "antd/node_modules/dayjs";
 const { Column } = Table;
 const { RangePicker } = DatePicker;
 

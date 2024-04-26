@@ -85,7 +85,6 @@ import {
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type {
   ActiveMappingInfo,
-  Flycam,
   MeshInformation,
   OxalisState,
   Segment,
@@ -140,7 +139,7 @@ type StateProps = {
   dataset: APIDataset;
   isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
-  flycam: Flycam;
+  centeredSegmentId: number;
   hasVolumeTracing: boolean | undefined;
   isSegmentIndexAvailable: boolean | undefined;
   segments: SegmentMap | null | undefined;
@@ -190,7 +189,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     isJSONMappingEnabled:
       mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
     mappingInfo,
-    flycam: state.flycam,
+    centeredSegmentId: getSegmentIdForPosition(getPosition(state.flycam)),
     hasVolumeTracing: state.tracing.volumes.length > 0,
     isSegmentIndexAvailable,
     segments,
@@ -1353,13 +1352,11 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   handleLoadMeshesAdHoc = (groupId: number | null) => {
+    const { flycam } = Store.getState();
+
     this.handlePerSegment(groupId, (segment) => {
       if (segment.somePosition == null) return;
-      this.props.loadAdHocMesh(
-        segment.id,
-        segment.somePosition,
-        this.props.flycam.additionalCoordinates,
-      );
+      this.props.loadAdHocMesh(segment.id, segment.somePosition, flycam.additionalCoordinates);
     });
   };
 
@@ -1570,7 +1567,7 @@ class SegmentsView extends React.Component<Props, State> {
         <DomVisibilityObserver targetId={segmentsTabId}>
           {(isVisibleInDom) => {
             if (!isVisibleInDom) return null;
-            const centeredSegmentId = getSegmentIdForPosition(getPosition(this.props.flycam));
+            const { centeredSegmentId } = this.props;
             const allSegments = this.props.segments;
             const isSegmentHierarchyEmpty = !(
               allSegments?.size() || this.props.segmentGroups.length

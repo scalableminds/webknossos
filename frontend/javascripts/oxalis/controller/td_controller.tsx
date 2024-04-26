@@ -16,7 +16,6 @@ import { V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import {
   setViewportAction,
   setTDCameraAction,
@@ -34,9 +33,9 @@ import type { CameraData, OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
-import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
 import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, left, right, top, bottom } = camera;
@@ -220,55 +219,65 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
+        // const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
+        const intersection = this.getMeshIntersection(pos);
+        if (intersection == null) {
+          return;
+        }
 
         if (!intersection) {
           return;
         }
-        const { point: hitPosition } = intersection;
+        const { hitPosition } = intersection;
 
         const unscaledPosition = V3.divide3(hitPosition.toArray() as Vector3, this.props.scale);
 
         if (event.shiftKey) {
           Store.dispatch(setPositionAction(unscaledPosition));
-        } else if (ctrlOrMetaPressed) {
-          const storeState = Store.getState();
-          const { hoveredSegmentId } = storeState.temporaryConfiguration;
-          const segmentationLayer = getVisibleSegmentationLayer(storeState);
-
-          if (!segmentationLayer || hoveredSegmentId == null) {
-            return;
-          }
-
-          Store.dispatch(removeMeshAction(segmentationLayer.name, hoveredSegmentId));
+        } else if (ctrlOrMetaPressed && intersection.meshId != null) {
+          Store.dispatch(
+            setActiveCellAction(
+              intersection.meshId,
+              undefined,
+              undefined,
+              intersection.unmappedSegmentId,
+            ),
+          );
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        if (this.props.planeView == null) return;
-        const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
-        const meshId: number | null = intersection
-          ? _.get(intersection.object.parent, "segmentId", null)
-          : null;
-        const unmappedSegmentId: number | null = _.get(
-          intersection?.object,
-          "unmappedSegmentId",
-          null,
-        );
-
-        const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;
+        if (this.props.planeView == null) return null;
+        const intersection = this.getMeshIntersection(pos);
+        if (intersection == null) {
+          return;
+        }
         handleOpenContextMenu(
           this.props.planeView,
           pos,
           plane,
           isTouch,
           event,
-          meshId,
-          meshClickedPosition,
-          unmappedSegmentId,
+          intersection.meshId,
+          intersection.meshClickedPosition,
+          intersection.unmappedSegmentId,
         );
       },
     };
     return controls;
+  }
+
+  getMeshIntersection(pos: Point2) {
+    if (this.props.planeView == null) return null;
+    const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
+    if (intersection == null) {
+      return null;
+    }
+    const meshId: number | null = intersection
+      ? _.get(intersection.object.parent, "segmentId", null)
+      : null;
+    const unmappedSegmentId: number | null = _.get(intersection?.object, "unmappedSegmentId", null);
+    const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;
+    return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: intersection.point };
   }
 
   setTargetAndFixPosition = (position?: Vector3): void => {

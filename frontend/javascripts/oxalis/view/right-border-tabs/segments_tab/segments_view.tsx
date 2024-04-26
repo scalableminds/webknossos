@@ -1340,7 +1340,8 @@ class SegmentsView extends React.Component<Props, State> {
     groupId: number | null,
     isVisible: boolean,
   ) => {
-    const { flycam, meshes } = this.props;
+    const { flycam } = Store.getState();
+    const { meshes } = this.props;
     const additionalCoordinates = flycam.additionalCoordinates;
     this.handlePerSegment(groupId, (segment) => {
       if (meshes[segment.id] != null) {

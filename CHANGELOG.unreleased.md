@@ -26,6 +26,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Toasts are shown until WEBKNOSSOS is running in the active browser tab again. Also, the content of most toasts that show errors or warnings is printed to the browser's console. [#7741](https://github.com/scalableminds/webknossos/pull/7741)
 - Improved UI speed when editing the description of an annotation. [#7769](https://github.com/scalableminds/webknossos/pull/7769)
 - Updated dataset animations to use the new meshing API. Animitation now support ad-hoc meshes and mappings. [#7692](https://github.com/scalableminds/webknossos/pull/7692) 
+- Slightly refactored the `<FixExpandleTable/>`component to use columns as props. [#7772](https://github.com/scalableminds/webknossos/pull/7772)
 
 
 ### Fixed

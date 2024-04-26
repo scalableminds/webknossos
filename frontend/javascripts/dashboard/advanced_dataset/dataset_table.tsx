@@ -1,6 +1,6 @@
 import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { Dropdown, MenuProps, Table, TableProps, Tag, Tooltip } from "antd";
+import { Dropdown, MenuProps, TableProps, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
 import * as React from "react";
 import _ from "lodash";
@@ -41,7 +41,6 @@ type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
 
 const { ThinSpace } = Unicode;
-const { Column } = Table;
 const useLruRank = true;
 
 const THUMBNAIL_SIZE = 100;

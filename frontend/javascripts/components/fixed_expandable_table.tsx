@@ -49,11 +49,12 @@ export default class FixedExpandableTable extends React.PureComponent<TableProps
     // Don't use React.Children.map here, since this adds .$ prefixes
     // to the keys. However, the keys are needed when managing the sorters
     // of the table.
-    const columnsWithAdjustedFixedProp: TableProps["columns"] = (this.props.columns || [])
-      .map((column) => {
+    const columnsWithAdjustedFixedProp: TableProps["columns"] = (this.props.columns || []).map(
+      (column) => {
         const columnFixed = expandedRows.length > 0 ? false : column.fixed;
         return { ...column, fixed: columnFixed };
-      });
+      },
+    );
     const expandableProp = {
       ...expandable,
       expandedRowKeys: expandedRows,

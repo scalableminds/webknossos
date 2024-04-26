@@ -308,6 +308,7 @@ export const addPrecomputedMeshAction = (
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   areChunksMerged: boolean,
+  mappingName: string | null | undefined,
 ) =>
   ({
     type: "ADD_PRECOMPUTED_MESH",
@@ -317,6 +318,7 @@ export const addPrecomputedMeshAction = (
     seedAdditionalCoordinates,
     meshFileName,
     areChunksMerged,
+    mappingName,
   }) as const;
 
 export const setOthersMayEditForAnnotationAction = (othersMayEdit: boolean) =>

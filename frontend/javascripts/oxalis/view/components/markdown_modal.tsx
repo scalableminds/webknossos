@@ -34,19 +34,32 @@ export function MarkdownModal({
   isOpen?: boolean;
   placeholder?: string;
   onOk: () => void;
-  onChange: React.ChangeEventHandler<HTMLTextAreaElement>;
+  onChange: (newValue: string) => void;
 }) {
   const placeholderText = placeholder ? placeholder : `Add ${label}`;
+  const [currentValue, setCurrentValue] = React.useState(source);
+
+  const onConfirm = () => {
+    onChange(currentValue);
+    onOk();
+  };
+
+  const setCurrentValueFromEvent = (
+    event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>,
+  ) => {
+    setCurrentValue(event.target.value);
+  };
+
   return (
     <Modal
       key="comment-markdown-modal"
       title={<span>{`Edit ${label}`}</span>}
       open={isOpen}
       onCancel={onOk}
-      closable={false}
+      closable={true}
       width={700}
       footer={[
-        <Button key="back" onClick={onOk}>
+        <Button key="back" onClick={onConfirm}>
           Ok
         </Button>,
       ]}
@@ -71,9 +84,9 @@ export function MarkdownModal({
       <Row gutter={16}>
         <Col span={12}>
           <Input.TextArea
-            defaultValue={source}
+            defaultValue={currentValue}
             placeholder={placeholderText}
-            onChange={onChange}
+            onChange={setCurrentValueFromEvent}
             rows={5}
             autoSize={{
               minRows: 5,
@@ -88,7 +101,7 @@ export function MarkdownModal({
             overflowY: "auto",
           }}
         >
-          <MarkdownWrapper source={source} />
+          <MarkdownWrapper source={currentValue} />
         </Col>
       </Row>
     </Modal>

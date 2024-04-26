@@ -572,6 +572,8 @@ function* performCutFromNeighbors(
   for (const edge of edgesToRemove) {
     if (sourceTree) {
       if (edge.position2 == null) {
+        // Satisfy TypeScript. Should not happen because segmentPosition should not be null
+        // when a sourceTree was passed.
         Toast.warning("Could not perform cut from neighbors. See console for more details.");
         console.warn(
           "segmentPosition is not available even though a tree was passed to performCutFromNeighbors.",
@@ -820,6 +822,10 @@ function* handleProofreadCutNeighbors(action: Action) {
   } else {
     if (action.agglomerateId == null || action.segmentId == null) {
       Toast.warning(MISSING_INFORMATION_WARNING);
+      console.log("Some fields were null:", {
+        agglomerateId: action.agglomerateId,
+        segmentId: action.segmentId,
+      });
       return;
     }
     idInfos = [{ agglomerateId: action.agglomerateId, unmappedId: action.segmentId }];

@@ -30,7 +30,7 @@ import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletont
 import { voxelToNm } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import PlaneView from "oxalis/view/plane_view";
-import type { CameraData, Flycam, OxalisState, Tracing } from "oxalis/store";
+import type { CameraData, OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
@@ -85,7 +85,6 @@ type OwnProps = {
   tracing?: Tracing;
 };
 type StateProps = {
-  flycam: Flycam;
   scale: Vector3;
   activeTool: AnnotationTool;
 };
@@ -152,7 +151,9 @@ class TDController extends React.PureComponent<Props> {
   }
 
   initTrackballControls(view: HTMLElement): void {
-    const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
+    const { flycam } = Store.getState();
+
+    const pos = voxelToNm(this.props.scale, getPosition(flycam));
     const tdCamera = this.props.cameras[OrthoViews.TDView];
     this.controls = new TrackballControls(
       tdCamera,
@@ -271,8 +272,10 @@ class TDController extends React.PureComponent<Props> {
   }
 
   setTargetAndFixPosition = (position?: Vector3): void => {
+    const { flycam } = Store.getState();
     const { controls } = this;
-    position = position || getPosition(this.props.flycam);
+
+    position = position || getPosition(flycam);
     const nmPosition = voxelToNm(this.props.scale, position);
 
     if (controls != null) {
@@ -345,7 +348,6 @@ class TDController extends React.PureComponent<Props> {
 
 export function mapStateToProps(state: OxalisState): StateProps {
   return {
-    flycam: state.flycam,
     scale: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,
   };

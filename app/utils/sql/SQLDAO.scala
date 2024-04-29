@@ -72,7 +72,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
       collectionToken = SqlToken.raw(collectionName)
       nameColumnToken = SqlToken.raw(nameColumn)
       _ <- run(
-        q"UPDATE $collectionToken SET isDeleted = TRUE, $nameColumnToken = CONCAT($nameColumnToken, $deletedSuffix) WHERE _id = $id".asUpdate)
+        q"UPDATE $collectionToken SET isDeleted = ${true}, $nameColumnToken = CONCAT($nameColumnToken, $deletedSuffix) WHERE _id = $id".asUpdate)
     } yield ()
 
   protected def updateStringCol(id: ObjectId, column: X => Rep[String], newValue: String)(

@@ -165,7 +165,7 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   def deleteOneByName(name: String): Fox[Unit] =
     for {
-      _ <- run(q"UPDATE webknossos.dataStores SET isDeleted = TRUE WHERE name = $name".asUpdate)
+      _ <- run(q"UPDATE webknossos.dataStores SET isDeleted = ${true} WHERE name = $name".asUpdate)
     } yield ()
 
   def updateOne(d: DataStore): Fox[Unit] =

@@ -902,7 +902,7 @@ class DatasetLayerAdditionalAxesDAO @Inject()(sqlClient: SqlClient)(implicit ec:
 
   def findAllForDatasetAndDataLayerName(datasetId: ObjectId, dataLayerName: String): Fox[Seq[AdditionalAxis]] =
     for {
-      rows <- run(q"""SELECT *
+      rows <- run(q"""SELECT _dataset, layerName, name, lowerBound, upperBound, index
                       FROM webknossos.dataset_layer_additionalAxes
                       WHERE _dataset = $datasetId AND layerName = $dataLayerName""".as[DatasetLayerAdditionalaxesRow])
       additionalAxes = rows.map(parseRow)

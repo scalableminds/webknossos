@@ -124,7 +124,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   }
 
   private def projectIdsFilterQuery(projectIds: List[ObjectId]): SqlToken =
-    if (projectIds.isEmpty) q"TRUE" // Query did not filter by project, include all
+    if (projectIds.isEmpty) q"${true}" // Query did not filter by project, include all
     else q"p._id IN ${SqlToken.tupleFromList(projectIds)}"
 
   def timeSummedSearch(start: Instant,

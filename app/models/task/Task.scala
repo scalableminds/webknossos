@@ -333,8 +333,8 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def removeOneAndItsAnnotations(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val queries = List(
-      q"UPDATE webknossos.tasks SET isDeleted = TRUE WHERE _id = $id".asUpdate,
-      q"UPDATE webknossos.annotations SET isDeleted = TRUE WHERE _task = $id".asUpdate
+      q"UPDATE webknossos.tasks SET isDeleted = ${true} WHERE _id = $id".asUpdate,
+      q"UPDATE webknossos.annotations SET isDeleted = ${true} WHERE _task = $id".asUpdate
     )
     for {
       _ <- assertUpdateAccess(id)
@@ -344,9 +344,9 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def removeAllWithTaskTypeAndItsAnnotations(taskTypeId: ObjectId): Fox[Unit] = {
     val queries = List(
-      q"UPDATE webknossos.tasks SET isDeleted = TRUE WHERE _taskType = $taskTypeId".asUpdate,
+      q"UPDATE webknossos.tasks SET isDeleted = ${true} WHERE _taskType = $taskTypeId".asUpdate,
       q"""UPDATE webknossos.annotations
-          SET isDeleted = TRUE
+          SET isDeleted = ${true}
           WHERE _task IN (
             SELECT _id FROM webknossos.tasks WHERE _taskType = $taskTypeId
           )""".asUpdate
@@ -358,7 +358,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def removeAllWithProjectAndItsAnnotations(projectId: ObjectId): Fox[Unit] = {
     val queries = List(
-      q"UPDATE webknossos.tasks SET isDeleted = TRUE WHERE _project = $projectId".asUpdate,
+      q"UPDATE webknossos.tasks SET isDeleted = ${true} WHERE _project = $projectId".asUpdate,
       q"""UPDATE webknossos.annotations
           SET isDeleted = true
           WHERE _task in (

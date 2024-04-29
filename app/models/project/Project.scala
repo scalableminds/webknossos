@@ -77,7 +77,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       ))
 
   override protected def readAccessQ(requestingUserId: ObjectId) =
-    q"""(_team INT (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId))
+    q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId))
         OR _owner = $requestingUserId
         OR _organization = (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)"""
   override protected def deleteAccessQ(requestingUserId: ObjectId) = q"_owner = $requestingUserId"

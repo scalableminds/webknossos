@@ -114,4 +114,15 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       count <- countRows.headOption
     } yield count
 
+  def findOneByJobId(jobId: ObjectId): Fox[AiInference] =
+    for {
+      r <- run(q"SELECT $columns from $existingCollectionName WHERE _inferenceJob = $jobId".as[AiinferencesRow])
+      parsed <- parseFirst(r, "find AiInference by job id")
+    } yield parsed
+
+  def updateDataset(id: ObjectId, datasetId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE $collectionName SET _newDataset = $datasetId WHERE _id = $id".asUpdate)
+    } yield ()
+
 }

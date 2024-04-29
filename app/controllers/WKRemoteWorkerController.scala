@@ -1,7 +1,9 @@
 package controllers
 
-import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
+import models.aimodels.AiInferenceDAO
+import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
 
 import javax.inject.Inject
@@ -18,6 +20,8 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
                                          jobService: JobService,
                                          workerDAO: WorkerDAO,
                                          voxelyticsDAO: VoxelyticsDAO,
+                                         aiInferenceDAO: AiInferenceDAO,
+                                         datasetDAO: DatasetDAO,
                                          wkConf: WkConf)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
@@ -97,5 +101,18 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
         _ <- jobDAO.updateVoxelyticsWorkflow(jobIdParsed, request.body)
       } yield Ok
   }
+
+  def attachDatasetToInference(key: String, id: String, datasetName: String): Action[String] =
+    Action.async(validateJson[String]) { implicit request =>
+      implicit val ctx: DBAccessContext = GlobalAccessContext
+      for {
+        _ <- workerDAO.findOneByKey(key) ?~> "jobs.worker.notFound"
+        jobIdParsed <- ObjectId.fromString(id)
+        organizationId <- jobDAO.organizationIdForJobId(jobIdParsed) ?~> "job.notFound"
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
+        aiInference <- aiInferenceDAO.findOneByJobId(jobIdParsed) ?~> "aiInference.notFound"
+        _ <- aiInferenceDAO.updateDataset(aiInference._id, dataset._id)
+      } yield Ok
+    }
 
 }

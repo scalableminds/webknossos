@@ -114,17 +114,17 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       ))
 
   override protected def readAccessQ(requestingUserId: ObjectId) =
-    q"""(_id in (select _team from webknossos.user_team_roles where _user = $requestingUserId)
-       or _organization in (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin))"""
+    q"""_id IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId)
+        OR _organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)"""
 
   override protected def deleteAccessQ(requestingUserId: ObjectId) =
-    q"""(not isorganizationteam
-          and _organization in (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin))"""
+    q"""NOT isOrganizationTeam
+        AND _organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Team] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where _id = $id and $accessQuery".as[TeamsRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[TeamsRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
@@ -138,7 +138,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where $accessQuery".as[TeamsRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[TeamsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -146,10 +146,22 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       requestingUserId <- userIdFromCtx
       accessQuery <- readAccessQuery
-      r <- run(q"""select $columns from $existingCollectionName
-                   where (_id in (select _team from webknossos.user_team_roles where _user = $requestingUserId and isTeamManager)
-                           or _organization in (select _organization from webknossos.users_ where _id = $requestingUserId and isAdmin))
-                   and $accessQuery""".as[TeamsRow])
+      r <- run(q"""SELECT $columns FROM $existingCollectionName
+                   WHERE (
+                     _id in (
+                       SELECT _team
+                       FROM webknossos.user_team_roles
+                       WHERE _user = $requestingUserId
+                       AND isTeamManager
+                     )
+                     OR _organization in (
+                       SELECT _organization
+                       FROM webknossos.users_
+                       WHERE _id = $requestingUserId
+                       AND isAdmin
+                     )
+                   )
+                   AND $accessQuery""".as[TeamsRow])
       parsed <- parseAll(r)
     } yield parsed
 
@@ -157,7 +169,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        q"select _id from $existingCollectionName where _organization = $organizationId and $accessQuery".as[String])
+        q"SELECT _id FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery".as[String])
       parsed <- Fox.serialCombined(r.toList)(col => ObjectId.fromString(col))
     } yield parsed
 
@@ -174,15 +186,17 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns from $existingCollectionName
-              WHERE _id IN (SELECT _team FROM webknossos.annotation_sharedTeams WHERE _annotation = $annotationId)
-              AND $accessQuery""".as[TeamsRow])
+                   WHERE _id IN (
+                     SELECT _team FROM webknossos.annotation_sharedTeams WHERE _annotation = $annotationId
+                   )
+                   AND $accessQuery""".as[TeamsRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def insertOne(t: Team): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted)
-                  VALUES(${t._id}, ${t._organization}, ${t.name}, ${t.created}, ${t.isOrganizationTeam}, ${t.isDeleted})
+                   VALUES(${t._id}, ${t._organization}, ${t.name}, ${t.created}, ${t.isOrganizationTeam}, ${t.isDeleted})
             """.asUpdate)
     } yield ()
 

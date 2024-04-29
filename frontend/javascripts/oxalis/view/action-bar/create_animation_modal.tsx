@@ -11,6 +11,7 @@ import {
   getColorLayers,
   getEffectiveIntensityRange,
   getLayerByName,
+  getResolutionInfo,
   is2dDataset,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -24,6 +25,7 @@ import {
   MOVIE_RESOLUTIONS,
   APIDataLayer,
   APIJobType,
+  APISegmentationLayer,
 } from "types/api_flow_types";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
@@ -33,9 +35,9 @@ import {
 } from "admin/organization/pricing_plan_utils";
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import { Model } from "oxalis/singletons";
 import { BoundingBoxSelection } from "./starting_job_modals";
 import { LayerSelection } from "components/layer_selection";
+import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 
 type Props = {
   isOpen: boolean;
@@ -44,7 +46,7 @@ type Props = {
 
 // When creating the texture for the dataset animation, we aim for for texture with the largest side of roughly this size
 const TARGET_TEXTURE_SIZE = 2000; // in pixels
-const MAX_MESHES_PER_ANIMATION = 30; // arbitrary limit to not overload the server when rendering many large STL files
+const MAX_MESHES_PER_ANIMATION = 40; // arbitrary limit to not overload the server when rendering many large STL files
 
 function selectMagForTextureCreation(
   colorLayer: APIDataLayer,
@@ -76,12 +78,19 @@ function selectMagForTextureCreation(
   return [bestMag, bestDifference];
 }
 
-export function CreateAnimationModalWrapper(props: Props) {
+export default function CreateAnimationModalWrapper(props: Props) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
 
   // early stop if no color layer exists
   const colorLayers = getColorLayers(dataset);
-  if (colorLayers.length === 0) return null;
+  if (colorLayers.length === 0) {
+    const { isOpen, onClose } = props;
+    return (
+      <Modal open={isOpen} onOk={onClose} onCancel={onClose} title="Create Animation">
+        WEBKNOSSOS cannot create animations for datasets without color layers.
+      </Modal>
+    );
+  }
 
   return <CreateAnimationModal {...props} />;
 }
@@ -129,7 +138,7 @@ function CreateAnimationModal(props: Props) {
   const validateAnimationOptions = (
     colorLayer: APIDataLayer,
     selectedBoundingBox: BoundingBoxType,
-    meshSegmentIds: number[],
+    meshes: Partial<MeshInformation>[],
   ) => {
     //  Validate the select parameters and dataset to make sure it actually works and does not overload the server
 
@@ -139,20 +148,20 @@ function CreateAnimationModal(props: Props) {
     const [_, estimatedTextureSize] = selectMagForTextureCreation(colorLayer, selectedBoundingBox);
 
     const hasEnoughMags = estimatedTextureSize < 1.5 * TARGET_TEXTURE_SIZE;
-    if (hasEnoughMags)
+    if (!hasEnoughMags)
       errorMessages.push(
         "The selected bounding box is too large to create an animation. Either shrink the bounding box or consider downsampling the dataset to coarser magnifications.",
       );
 
     const isDtypeSupported = colorLayer.elementClass !== "uint24";
-    if (isDtypeSupported)
+    if (!isDtypeSupported)
       errorMessages.push("Sorry, animations are not supported for uInt24 datasets.");
 
     const isDataset3D =
       !is2dDataset(state.dataset) && (colorLayer.additionalAxes?.length || 0) === 0;
-    if (isDataset3D) errorMessages.push("Sorry, animations are only supported for 3D datasets.");
+    if (!isDataset3D) errorMessages.push("Sorry, animations are only supported for 3D datasets.");
 
-    const isTooManyMeshes = meshSegmentIds.length > MAX_MESHES_PER_ANIMATION;
+    const isTooManyMeshes = meshes.length > MAX_MESHES_PER_ANIMATION;
     if (isTooManyMeshes)
       errorMessages.push(
         `You selected too many meshes for the animation. Please keep the number of meshes below ${MAX_MESHES_PER_ANIMATION} to create an animation.`,
@@ -172,32 +181,33 @@ function CreateAnimationModal(props: Props) {
       (bb) => bb.id === selectedBoundingBoxId,
     )!.boundingBox;
 
-    // Submit currently visible pre-computed meshes
-    let meshSegmentIds: number[] = [];
-    let meshFileName: string | undefined;
-    let segmentationLayerName: string | undefined;
+    // Submit currently visible pre-computed & ad-hoc meshes
+    const axis = getAdditionalCoordinatesAsString([]);
+    const layerNames = Object.keys(state.localSegmentationData);
+    const { preferredQualityForMeshAdHocComputation } = state.temporaryConfiguration;
 
-    const visibleSegmentationLayer = Model.getVisibleSegmentationLayer();
+    const meshes: RenderAnimationOptions["meshes"] = layerNames.flatMap((layerName) => {
+      const meshInfos = state.localSegmentationData[layerName]?.meshes?.[axis] || {};
 
-    if (visibleSegmentationLayer) {
-      const availableMeshes = state.localSegmentationData[visibleSegmentationLayer.name].meshes;
-      if (availableMeshes == null) {
-        throw new Error("There is no mesh data in localSegmentationData.");
-      }
-      meshSegmentIds = Object.values(availableMeshes as Record<number, MeshInformation>)
-        .filter((mesh) => mesh.isVisible && mesh.isPrecomputed)
-        .map((mesh) => mesh.segmentId);
+      const layer = getLayerByName(state.dataset, layerName) as APISegmentationLayer;
+      const fullLayerName = layer.fallbackLayerInfo?.name || layerName;
 
-      const currentMeshFile =
-        state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile;
-      meshFileName = currentMeshFile?.meshFileName;
+      const adhocMagIndex = getResolutionInfo(layer.resolutions).getClosestExistingIndex(
+        preferredQualityForMeshAdHocComputation,
+      );
+      const adhocMag = layer.resolutions[adhocMagIndex];
 
-      if (visibleSegmentationLayer.fallbackLayerInfo) {
-        segmentationLayerName = visibleSegmentationLayer.fallbackLayerInfo.name;
-      } else {
-        segmentationLayerName = visibleSegmentationLayer.name;
-      }
-    }
+      return Object.values(meshInfos)
+        .filter((meshInfo: MeshInformation) => meshInfo.isVisible)
+        .flatMap((meshInfo: MeshInformation) => {
+          return {
+            layerName: fullLayerName,
+            tracingId: layer.tracingId || null,
+            adhocMag,
+            ...meshInfo,
+          };
+        });
+    });
 
     // Submit the configured min/max intensity info to support float datasets
     const [intensityMin, intensityMax] = getEffectiveIntensityRange(
@@ -210,9 +220,7 @@ function CreateAnimationModal(props: Props) {
 
     const animationOptions: RenderAnimationOptions = {
       layerName: selectedColorLayerName,
-      segmentationLayerName,
-      meshFileName,
-      meshSegmentIds,
+      meshes,
       intensityMin,
       intensityMax,
       magForTextures,
@@ -222,7 +230,7 @@ function CreateAnimationModal(props: Props) {
       cameraPosition: selectedCameraPosition,
     };
 
-    if (!validateAnimationOptions(colorLayer, boundingBox, meshSegmentIds)) return;
+    if (!validateAnimationOptions(colorLayer, boundingBox, meshes)) return;
 
     startRenderAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);
 
@@ -339,7 +347,7 @@ function CreateAnimationModal(props: Props) {
               >
                 Include the currently selected 3D meshes
                 <Tooltip
-                  title="When enabled, all (pre-computed) meshes currently visible in WEBKNOSSOS will be included in the animation."
+                  title="When enabled, all meshes currently visible in WEBKNOSSOS will be included in the animation."
                   placement="right"
                 >
                   <InfoCircleOutlined style={{ marginLeft: 10 }} />
@@ -402,5 +410,3 @@ function CreateAnimationModal(props: Props) {
     </Modal>
   );
 }
-
-export default CreateAnimationModal;

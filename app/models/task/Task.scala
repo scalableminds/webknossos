@@ -8,7 +8,6 @@ import com.scalableminds.webknossos.schema.Tables._
 
 import javax.inject.Inject
 import models.annotation._
-import models.project.ProjectDAO
 import models.user.Experience
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable

@@ -20,7 +20,7 @@ import { MaintenanceInfo } from "types/api_flow_types";
 
 const INITIAL_DELAY = 5000;
 const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000; // 1min
-const UPGRADE_BANNER_LOCAL_STORAGE_KEY = "upgradeBannerWasClickedAway";
+const UPGRADE_BANNER_LOCAL_STORAGE_KEY = "upgradeBannerWasClickedAwayy";
 
 const BANNER_STYLE: React.CSSProperties = {
   position: "absolute",

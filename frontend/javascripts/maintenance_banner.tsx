@@ -174,7 +174,7 @@ export function UpgradeVersionBanner() {
         /(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/,
         "",
       );
-      const lastCommitDate = dayjs(commitDateWithoutWeekday, "MMM DD HH:mm:ss YYYY ZZ"); // todo two digit dates? test more once time tracking is merged
+      const lastCommitDate = dayjs(commitDateWithoutWeekday, "MMM D HH:mm:ss YYYY ZZ");
       const needsUpdate = currentDate.diff(lastCommitDate, "month") >= 6;
       return needsUpdate;
     },

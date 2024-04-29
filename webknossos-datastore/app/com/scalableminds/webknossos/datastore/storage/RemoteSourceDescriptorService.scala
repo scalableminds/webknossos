@@ -65,7 +65,7 @@ class RemoteSourceDescriptorService @Inject()(dSRemoteWebknossosClient: DSRemote
               uri
             else
               throw new Exception(
-                s"Absolute path $localPath in local file system is not in path whitelist. Consider adding it to datastore.pathWhitelist")
+                s"Absolute path $localPath in local file system is not in path whitelist. Consider adding it to datastore.localFolderWhitelist")
           } else { // relative local path, resolve in dataset dir
             val magPathRelativeToDataset = localDatasetDir.resolve(localPath)
             val magPathRelativeToLayer = localDatasetDir.resolve(layerName).resolve(localPath)

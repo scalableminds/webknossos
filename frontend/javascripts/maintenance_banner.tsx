@@ -7,6 +7,7 @@ import { Alert, Button, Space } from "antd";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { useFetch, useInterval } from "libs/react_helpers";
+import { parseCTimeDefaultDate } from "libs/utils";
 import _ from "lodash";
 import constants from "oxalis/constants";
 import { setNavbarHeightAction } from "oxalis/model/actions/ui_actions";
@@ -170,11 +171,7 @@ export function UpgradeVersionBanner() {
     async () => {
       let buildInfo = await getBuildInfo();
       buildInfo.webknossos.commitDate = "Wed Apr 24 22:40:38 2023 +0200"; // one year back for testing purposes, TODO remove
-      const commitDateWithoutWeekday = buildInfo.webknossos.commitDate.replace(
-        /(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/,
-        "",
-      );
-      const lastCommitDate = dayjs(commitDateWithoutWeekday, "MMM D HH:mm:ss YYYY ZZ");
+      const lastCommitDate = parseCTimeDefaultDate(buildInfo.webknossos.commitDate);
       const needsUpdate = currentDate.diff(lastCommitDate, "month") >= 6;
       return needsUpdate;
     },

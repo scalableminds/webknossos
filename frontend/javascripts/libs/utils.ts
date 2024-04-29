@@ -15,6 +15,7 @@ import type {
 } from "oxalis/constants";
 import window, { document, location } from "libs/window";
 import { ArbitraryObject, Comparator } from "types/globals";
+import dayjs from "dayjs";
 
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
@@ -553,6 +554,15 @@ export function isFileExtensionEqualTo(
   }
 
   return passedExtension === extensionOrExtensions;
+}
+
+// Parses dates in format "Thu Jan 1 00:00:00 1970 +0000".
+export function parseCTimeDefaultDate(dateString: string) {
+  const commitDateWithoutWeekday = dateString.replace(
+    /(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/,
+    "",
+  );
+  return dayjs(commitDateWithoutWeekday, "MMM D HH:mm:ss YYYY ZZ");
 }
 
 // Only use this function if you really need a busy wait (useful

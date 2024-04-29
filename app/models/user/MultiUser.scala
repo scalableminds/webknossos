@@ -106,7 +106,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   def updateLastLoggedInIdentity(multiUserId: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
-      _ <- run(q"""UPDATE webknossos.multiuser
+      _ <- run(q"""UPDATE webknossos.multiusers
                    SET _lastLoggedInIdentity = $userId
                    WHERE _id = $multiUserId""".asUpdate)
     } yield ()

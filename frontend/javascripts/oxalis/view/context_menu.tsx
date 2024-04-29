@@ -428,7 +428,8 @@ function getMeshItems(
             activeSegmentMissing ||
             clickedMeshId !== activeCellId ||
             maybeUnmappedSegmentId == null ||
-            activeUnmappedSegmentId == null,
+            activeUnmappedSegmentId == null ||
+            maybeUnmappedSegmentId === activeUnmappedSegmentId,
           onClick: () => {
             if (maybeUnmappedSegmentId == null) {
               // Should not happen due to the disabled property.

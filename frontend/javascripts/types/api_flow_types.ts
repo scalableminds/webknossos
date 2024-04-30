@@ -24,6 +24,7 @@ import type {
 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { EmptyObject } from "./globals";
+import { ScaleUnit } from "./schemas/datasource.types";
 
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -122,6 +123,7 @@ export type APIUnimportedDatasource = APIDataSourceBase;
 export type MutableAPIDataSource = MutableAPIDataSourceBase & {
   dataLayers: Array<APIDataLayer>;
   scale: Vector3;
+  unit: ScaleUnit;
 };
 export type APIDataSource = Readonly<MutableAPIDataSource>;
 export type APIDataStore = {

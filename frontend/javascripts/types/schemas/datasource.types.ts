@@ -5,6 +5,15 @@
 // Please note that some manual changes to the schema are required.
 type Vector2 = [number, number];
 type Vector3 = [number, number, number];
+export enum ScaleUnit {
+  nm = "nm",
+  µm = "µm",
+  mm = "mm",
+  cm = "cm",
+  dm = "dm",
+  m = "m",
+  km = "km",
+}
 type BoundingBox = {
   topLeft: Vector3;
   width: number;
@@ -86,4 +95,5 @@ export type DatasourceConfiguration = {
   };
   dataLayers: Array<DataLayer>;
   scale: Vector3;
+  unit: ScaleUnit;
 };

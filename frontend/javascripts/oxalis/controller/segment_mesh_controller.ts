@@ -18,17 +18,19 @@ import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_
 const ACTIVATED_COLOR = [0.7, 0.5, 0.1] as const;
 const HOVERED_COLOR = [0.65, 0.5, 0.1] as const;
 
-export type MeshSceneNode = THREE.Mesh<
-  THREE.BufferGeometry,
-  THREE.MeshLambertMaterial & { savedHex?: number }
-> & {
+type MeshMaterial = THREE.MeshLambertMaterial & { savedHex?: number };
+export type MeshSceneNode = THREE.Mesh<THREE.BufferGeometry, MeshMaterial> & {
   unmappedSegmentId?: number | null;
+  isMerged?: boolean;
   isActiveUnmappedSegment?: boolean;
   isHovered?: boolean;
   parent: SceneGroupForMeshes;
 };
 export type SceneGroupForMeshes = THREE.Group & { segmentId: number; children: MeshSceneNode[] };
-export type BufferGeometryWithInfo = THREE.BufferGeometry & { unmappedSegmentId: number };
+export type BufferGeometryWithInfo = THREE.BufferGeometry & {
+  unmappedSegmentId: number;
+  isMerged?: boolean;
+};
 
 type GroupForLOD = THREE.Group & {
   children: SceneGroupForMeshes[];
@@ -97,7 +99,7 @@ export default class SegmentMeshController {
   constructMesh(
     segmentId: number,
     layerName: string,
-    geometry: THREE.BufferGeometry,
+    geometry: BufferGeometryWithInfo,
   ): MeshSceneNode {
     const color = this.getColorObjectForSegment(segmentId, layerName);
     const meshMaterial = new THREE.MeshLambertMaterial({
@@ -106,7 +108,10 @@ export default class SegmentMeshController {
     meshMaterial.side = THREE.FrontSide;
     meshMaterial.transparent = true;
 
-    const mesh = new THREE.Mesh(geometry, meshMaterial);
+    // mesh.parent is still null at this moment, but when the mesh is
+    // added to the group later, parent will be set. We'll ignore
+    // this detail for now via the casting.
+    const mesh = new THREE.Mesh(geometry, meshMaterial) as any as MeshSceneNode;
 
     mesh.castShadow = true;
     mesh.receiveShadow = true;
@@ -126,10 +131,14 @@ export default class SegmentMeshController {
       })
       .start();
 
-    // mesh.parent is still null at this moment, but when the mesh is
-    // added to the group later, parent will be set. We'll ignore
-    // this detail for now via the casting.
-    return mesh as MeshSceneNode;
+    if ("unmappedSegmentId" in geometry) {
+      mesh.unmappedSegmentId = geometry.unmappedSegmentId as number | null;
+    }
+    if ("isMerged" in geometry) {
+      mesh.isMerged = geometry.isMerged;
+    }
+
+    return mesh;
   }
 
   addMeshFromGeometries(
@@ -165,9 +174,6 @@ export default class SegmentMeshController {
     }
     const meshChunks = geometries.map((geometry) => {
       const meshChunk = this.constructMesh(segmentId, layerName, geometry);
-      if ("unmappedSegmentId" in geometry) {
-        meshChunk.unmappedSegmentId = geometry.unmappedSegmentId as number | null;
-      }
       if (offset) {
         meshChunk.translateX(offset[0]);
         meshChunk.translateY(offset[1]);
@@ -362,29 +368,60 @@ export default class SegmentMeshController {
     }
 
     const targetOpacity = mesh.isHovered ? 0.8 : 1.0;
-    mesh.parent.traverse((child) => {
+
+    // mesh.parent contains all geometries that were loaded
+    // for one chunk (if isMerged is true, this is only one geometry).
+    // mesh.parent.parent contains all chunks for the current segment.
+    const parent = mesh.parent.parent;
+    if (parent == null) {
+      // Satisfy TS
+      throw new Error("Unexpected null parent");
+    }
+    // We update the opacity for all meshes that belong to the current
+    // segment ID (in contrast to the color) so that the user can
+    // see which other super voxels belong to the segment id of the
+    // hovered super-voxel.
+    parent.traverse((child) => {
       if (child instanceof THREE.Mesh) {
         child.material.opacity = targetOpacity;
       }
     });
+    const changeMaterial = (fn: (material: MeshMaterial) => void) => {
+      if (mesh.isMerged) {
+        // Update the material for all meshes that belong to the current
+        // segment ID.
+        parent.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            fn(child.material);
+          }
+        });
+      } else {
+        // Only update the given mesh, because we only want to highlight
+        // that super-voxel.
+        fn(mesh.material);
+      }
+    };
     if (mesh.isHovered || mesh.isActiveUnmappedSegment) {
-      mesh.material.emissive.setHSL(...HOVERED_COLOR);
-
-      if (mesh.material.savedHex == null) {
-        mesh.material.savedHex = mesh.material.color.getHex();
-      }
-      const newColor: readonly [number, number, number] = mesh.isHovered
-        ? HOVERED_COLOR
-        : ACTIVATED_COLOR;
-      mesh.material.color.setHSL(...newColor);
-      mesh.material.opacity = 1.0;
+      changeMaterial((material) => {
+        if (material.savedHex == null) {
+          material.savedHex = material.color.getHex();
+        }
+        const newColor: readonly [number, number, number] = mesh.isHovered
+          ? HOVERED_COLOR
+          : ACTIVATED_COLOR;
+        material.color.setHSL(...newColor);
+        material.opacity = 1.0;
+        material.emissive.setHSL(...HOVERED_COLOR);
+      });
     } else {
-      // @ts-ignore
-      mesh.material.emissive.setHex("#FF00FF");
-      if (mesh.material.savedHex != null) {
-        mesh.material.color.setHex(mesh.material.savedHex);
-      }
-      mesh.material.savedHex = undefined;
+      changeMaterial((material) => {
+        // @ts-ignore
+        material.emissive.setHex("#FF00FF");
+        if (material.savedHex != null) {
+          material.color.setHex(material.savedHex);
+        }
+        material.savedHex = undefined;
+      });
     }
   }
 

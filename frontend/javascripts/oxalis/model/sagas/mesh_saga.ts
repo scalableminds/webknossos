@@ -1003,7 +1003,7 @@ function _getLoadChunksTasks(
 
                   // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
                   if (geometry == null) continue;
-
+                  (geometry as BufferGeometryWithInfo).isMerged = true;
                   bufferGeometries = [geometry as BufferGeometryWithInfo];
                 }
 

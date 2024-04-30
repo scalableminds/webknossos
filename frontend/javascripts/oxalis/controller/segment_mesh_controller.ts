@@ -190,7 +190,9 @@ export default class SegmentMeshController {
 
     const segmentationTracing = getActiveSegmentationTracing(Store.getState());
     if (segmentationTracing != null) {
-      this.highlightUnmappedSegmentId(segmentationTracing.activeUnmappedSegmentId);
+      // addMeshFromGeometries is often called multiple times for different sets of geometries.
+      // Therefore, used a throttled varaint of the highlightUnmappedSegmentId method.
+      this.throttledHighlightUnmappedSegmentId(segmentationTracing.activeUnmappedSegmentId);
     }
   }
 
@@ -425,7 +427,8 @@ export default class SegmentMeshController {
     }
   }
 
-  highlightUnmappedSegmentId(activeUnmappedSegmentId: number | null | undefined): void {
+  highlightUnmappedSegmentId = (activeUnmappedSegmentId: number | null | undefined) => {
+    console.log("highlightUnmappedSegmentId");
     const { meshesLODRootGroup } = this;
     meshesLODRootGroup.traverse((_obj) => {
       // The cast is safe because MeshSceneNode adds only optional properties
@@ -436,5 +439,7 @@ export default class SegmentMeshController {
         this.updateMeshAppearance(obj, undefined, false);
       }
     });
-  }
+  };
+
+  throttledHighlightUnmappedSegmentId = _.throttle(this.highlightUnmappedSegmentId, 150);
 }

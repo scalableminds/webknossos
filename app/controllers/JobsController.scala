@@ -34,9 +34,7 @@ case class AnimationJobOptions(
     layerName: String,
     boundingBox: BoundingBox,
     includeWatermark: Boolean,
-    segmentationLayerName: Option[String],
-    meshFileName: Option[String],
-    meshSegmentIds: Array[Int],
+    meshes: JsValue,
     movieResolution: MovieResolutionSetting.Value,
     cameraPosition: CameraPositionSetting.Value,
     intensityMin: Double,
@@ -406,7 +404,6 @@ class JobsController @Inject()(
           }
           layerName = animationJobOptions.layerName
           _ <- datasetService.assertValidLayerNameLax(layerName)
-          _ <- Fox.runOptional(animationJobOptions.segmentationLayerName)(datasetService.assertValidLayerNameLax)
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${datasetName}__$layerName.mp4"
           command = JobCommand.render_animation
           commandArgs = Json.obj(
@@ -414,11 +411,9 @@ class JobsController @Inject()(
             "dataset_name" -> datasetName,
             "export_file_name" -> exportFileName,
             "layer_name" -> animationJobOptions.layerName,
-            "segmentation_layer_name" -> animationJobOptions.segmentationLayerName,
             "bounding_box" -> animationJobOptions.boundingBox.toLiteral,
             "include_watermark" -> animationJobOptions.includeWatermark,
-            "mesh_segment_ids" -> animationJobOptions.meshSegmentIds,
-            "meshfile_name" -> animationJobOptions.meshFileName,
+            "meshes" -> animationJobOptions.meshes,
             "movie_resolution" -> animationJobOptions.movieResolution,
             "camera_position" -> animationJobOptions.cameraPosition,
             "intensity_min" -> animationJobOptions.intensityMin,

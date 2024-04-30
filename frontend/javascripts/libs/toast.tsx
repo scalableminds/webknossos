@@ -153,12 +153,12 @@ const Toast = {
         await animationFrame(); // ensure tab is active
         await sleep(splitTimeout);
         await animationFrame();
+        // If the user has switched the tab, show the toast again so that the user doesn't just see the toast dissapear.
+        await sleep(splitTimeout);
         if (cancelledTimeout) {
           // If the toast has been closed early, don't close it again.
           return;
         }
-        // If the user has switched the tab, show the toast again so that the user doesn't just see the toast dissapear.
-        await sleep(splitTimeout);
         this.close(key);
         delete this.closePendingToastsEarlyMap[key];
       };

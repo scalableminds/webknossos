@@ -937,6 +937,7 @@ function _getLoadChunksTasks(
 ) {
   const { segmentMeshController } = getSceneController();
   const { meshFileName } = meshFile;
+  const loader = getDracoLoader();
   return _.compact(
     _.flatten(
       loadingOrder.map((lod) => {
@@ -967,7 +968,6 @@ function _getLoadChunksTasks(
                   requests: chunks.map(({ byteOffset, byteSize }) => ({ byteOffset, byteSize })),
                 },
               );
-              const loader = getDracoLoader();
 
               const errorsWithDetails = [];
 

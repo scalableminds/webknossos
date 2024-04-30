@@ -219,7 +219,6 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        // const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
         const intersection = this.getMeshIntersection(pos);
         if (intersection == null) {
           return;

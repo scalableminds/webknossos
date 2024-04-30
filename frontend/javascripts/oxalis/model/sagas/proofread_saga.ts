@@ -549,18 +549,18 @@ function* performCutFromNeighbors(
         segmentId2: number;
       }
     | {
-        position1: Vector3;
-        position2: null;
+        position1: null;
+        position2: Vector3;
         segmentId1: number;
         segmentId2: number;
       }
   > = neighborInfo.neighbors.map(
     (neighbor) =>
       ({
-        position1: neighbor.position,
-        position2: segmentPosition,
-        segmentId1: neighbor.segmentId,
-        segmentId2: segmentId,
+        position1: segmentPosition,
+        position2: neighbor.position,
+        segmentId1: segmentId,
+        segmentId2: neighbor.segmentId,
       }) as const,
   );
 
@@ -571,7 +571,7 @@ function* performCutFromNeighbors(
 
   for (const edge of edgesToRemove) {
     if (sourceTree) {
-      if (edge.position2 == null) {
+      if (edge.position1 == null) {
         // Satisfy TypeScript. Should not happen because segmentPosition should not be null
         // when a sourceTree was passed.
         Toast.warning("Could not perform cut from neighbors. See console for more details.");

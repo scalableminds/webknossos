@@ -17,10 +17,11 @@ import { OxalisState } from "oxalis/store";
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { MaintenanceInfo } from "types/api_flow_types";
+import * as Utils from "libs/utils";
 
 const INITIAL_DELAY = 5000;
 const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000; // 1min
-const UPGRADE_BANNER_LOCAL_STORAGE_KEY = "upgradeBannerWasClickedAwayy";
+const UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY = "upgradeBannerWasClickedAwayy";
 
 const BANNER_STYLE: React.CSSProperties = {
   position: "absolute",
@@ -169,6 +170,7 @@ export function UpgradeVersionBanner() {
 
   const isVersionOutdated = useFetch(
     async () => {
+      Utils.sleep(INITIAL_DELAY);
       let buildInfo = await getBuildInfo();
       buildInfo.webknossos.commitDate = "Wed Apr 24 22:40:38 2023 +0200"; // one year back for testing purposes, TODO remove
       const lastCommitDate = parseCTimeDefaultDate(buildInfo.webknossos.commitDate);
@@ -181,7 +183,9 @@ export function UpgradeVersionBanner() {
 
   const getShouldBannerBeShown = () => {
     if (!isVersionOutdated) return false;
-    const lastTimeBannerWasClickedAway = localStorage.getItem(UPGRADE_BANNER_LOCAL_STORAGE_KEY);
+    const lastTimeBannerWasClickedAway = localStorage.getItem(
+      UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY,
+    );
     if (lastTimeBannerWasClickedAway == null) return true;
     const parsedDate = dayjs(lastTimeBannerWasClickedAway);
     return currentDate.diff(parsedDate, "day") >= 3;
@@ -220,7 +224,10 @@ export function UpgradeVersionBanner() {
       style={UPGRADE_BANNER_STYLE}
       closable
       onClose={() => {
-        localStorage.setItem(UPGRADE_BANNER_LOCAL_STORAGE_KEY, dayjs().toISOString());
+        localStorage.setItem(
+          UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY,
+          dayjs().toISOString(),
+        );
         setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
       }}
       type="info"

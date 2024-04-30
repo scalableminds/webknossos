@@ -640,6 +640,13 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   let targetPosition: Vector3 | undefined;
   let idInfos;
   if (action.position) {
+    if (activeUnmappedSegmentId != null) {
+      // The user has selected a super-voxel in the 3D viewport and then clicked
+      // in a data viewport to select the second merge partner. However, this mix
+      // is currently not supported.
+      Toast.warning(MISSING_INFORMATION_WARNING);
+      return;
+    }
     // The action was triggered via a data viewport (not 3D). In this case,
     // the active segment's position can be used as a source.
     sourcePosition = activeSegmentPosition;

@@ -120,7 +120,10 @@ export function MaintenanceBanner() {
   }
 
   useEffect(() => {
-    if (currentMaintenance || closestUpcomingMaintenance) {
+    const shouldShowUpcomingMaintenanceBanner =
+      closestUpcomingMaintenance != null && activeUser != null;
+
+    if (currentMaintenance || shouldShowUpcomingMaintenanceBanner) {
       setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.BANNER_HEIGHT);
     }
 
@@ -128,7 +131,7 @@ export function MaintenanceBanner() {
       // Reset Navbar height if maintenance is over
       setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
     }
-  }, [currentMaintenance, closestUpcomingMaintenance]);
+  }, [currentMaintenance, closestUpcomingMaintenance, activeUser]);
 
   useEffect(() => {
     // Do an initial fetch of the maintenance status so that users are notified
@@ -164,10 +167,9 @@ export function UpgradeVersionBanner() {
     fontSize: "medium",
     minWidth: "fit-content",
   };
-  const customParseFormat = require("dayjs/plugin/customParseFormat");
-  dayjs.extend(customParseFormat);
   const currentDate = dayjs();
 
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isVersionOutdated = useFetch(
     async () => {
       Utils.sleep(INITIAL_DELAY);
@@ -181,17 +183,18 @@ export function UpgradeVersionBanner() {
     [],
   );
 
-  const getShouldBannerBeShown = () => {
-    if (!isVersionOutdated) return false;
+  const [shouldBannerBeShown, setShouldBannerBeShown] = useState(false);
+
+  useEffect(() => {
+    if (!isVersionOutdated || activeUser == null) setShouldBannerBeShown(false);
     const lastTimeBannerWasClickedAway = localStorage.getItem(
       UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY,
     );
-    if (lastTimeBannerWasClickedAway == null) return true;
+    if (lastTimeBannerWasClickedAway == null) setShouldBannerBeShown(true);
+    // todo doesnt work yet, look into custom parse format
     const parsedDate = dayjs(lastTimeBannerWasClickedAway);
-    return currentDate.diff(parsedDate, "day") >= 3;
-  };
-
-  const shouldBannerBeShown = getShouldBannerBeShown();
+    setShouldBannerBeShown(currentDate.diff(parsedDate, "day") >= 3);
+  }, [activeUser, isVersionOutdated]);
 
   useEffect(() => {
     if (shouldBannerBeShown) {

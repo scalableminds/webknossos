@@ -67,7 +67,11 @@ class Mappings {
       mappingSize + MAPPING_TEXTURE_WIDTH - (mappingSize % MAPPING_TEXTURE_WIDTH);
     const keys = new Uint32Array(paddedLength);
     const values = new Uint32Array(paddedLength);
-    const mappingKeys = Array.from(mapping.keys());
+    const mappingKeys: Array<number> | Array<bigint> = Array.from(
+      // TS thinks Iterable<bigint> won't work with Array.from, which is why
+      // we cast to Iterable<number>.
+      mapping.keys() as Iterable<number>,
+    );
     mappingKeys.sort((a, b) => a - b);
     keys.set(mappingKeys);
     // @ts-ignore mappingKeys are guaranteed to exist in mapping as they are mapping.keys()
@@ -82,6 +86,7 @@ class Mappings {
       throw new Error(messages["mapping.too_big"]);
     }
 
+    console.time("MappingActivation");
     this.mappingLookupTexture.update(
       uint8Keys,
       0,

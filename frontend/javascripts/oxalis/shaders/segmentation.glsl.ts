@@ -273,13 +273,13 @@ export const getSegmentId: ShaderModule = {
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    void getSegmentId_<%= segmentationName %>(vec3 worldPositionUVW, out vec4[2] segmentation_id, out vec4[2] mapped_id) {
+    void getSegmentId_<%= segmentationName %>(vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
       vec3 transformedCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
       if (isOutsideOfBoundingBox(transformedCoordUVW)) {
         return;
       }
 
-      segmentation_id =
+      segment_id =
         getSegmentIdOrFallback(
           <%= formatNumberAsGLSLFloat(colorLayerNames.length + layerIndex) %>,
           <%= segmentationName %>_data_texture_width,
@@ -294,13 +294,13 @@ export const getSegmentId: ShaderModule = {
       // a cell id with the hovered cell passed via uniforms, for example).
 
       <% if (textureLayerInfos[segmentationName].packingDegree === 4) { %>
-        segmentation_id[1] = vec4(segmentation_id[1].r, 0.0, 0.0, 0.0);
+        segment_id[1] = vec4(segment_id[1].r, 0.0, 0.0, 0.0);
       <% } else if (textureLayerInfos[segmentationName].packingDegree === 2) { %>
-        segmentation_id[1] = vec4(segmentation_id[1].r, segmentation_id[1].g, 0.0, 0.0);
+        segment_id[1] = vec4(segment_id[1].r, segment_id[1].g, 0.0, 0.0);
       <% } %>
 
-      mapped_id[0] = segmentation_id[0];
-      mapped_id[1] = segmentation_id[1];
+      mapped_id[0] = segment_id[0];
+      mapped_id[1] = segment_id[1];
 
       if (isMappingEnabled) {
         // Note that currently only the lower 32 bits of the segmentation
@@ -309,7 +309,7 @@ export const getSegmentId: ShaderModule = {
         float index = binarySearchIndex(
           segmentation_mapping_lookup_texture,
           mappingSize,
-          segmentation_id[1]
+          segment_id[1]
         );
         if (index != -1.0) {
           mapped_id[1] = getRgbaAtIndex(
@@ -322,8 +322,8 @@ export const getSegmentId: ShaderModule = {
         }
       }
 
-      segmentation_id[0] *= 255.0;
-      segmentation_id[1] *= 255.0;
+      segment_id[0] *= 255.0;
+      segment_id[1] *= 255.0;
       mapped_id[0] *= 255.0;
       mapped_id[1] *= 255.0;
       return;

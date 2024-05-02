@@ -756,8 +756,10 @@ class PlaneMaterialFactory {
       );
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          (storeState) =>
-            Utils.maybe(getActiveCellId)(getActiveSegmentationTracing(storeState)).getOrElse(0),
+          (storeState) => {
+            const activeSegmentationTracing = getActiveSegmentationTracing(storeState);
+            return activeSegmentationTracing ? getActiveCellId(activeSegmentationTracing) : 0;
+          },
           () => this.updateActiveCellId(),
           true,
         ),
@@ -856,12 +858,10 @@ class PlaneMaterialFactory {
   }
 
   updateActiveCellId() {
-    const activeCellId = Utils.maybe(getActiveCellId)(
-      getActiveSegmentationTracing(Store.getState()),
-    ).getOrElse(0);
-    const segmentationLayer = Model.getVisibleSegmentationLayer();
+    const activeSegmentationTracing = getActiveSegmentationTracing(Store.getState());
+    const activeCellId = activeSegmentationTracing ? getActiveCellId(activeSegmentationTracing) : 0;
 
-    if (segmentationLayer == null) {
+    if (activeSegmentationTracing == null) {
       return;
     }
 

@@ -6,6 +6,7 @@ import {
   isSegmentationLayer,
   getByteCountFromLayer,
   getResolutionInfo,
+  getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { parseMaybe } from "libs/utils";
@@ -19,7 +20,7 @@ import type { DataLayerType, VolumeTracing } from "oxalis/store";
 import Store from "oxalis/store";
 import WebworkerPool from "libs/webworker_pool";
 import type { BucketAddress, Vector3 } from "oxalis/constants";
-import constants from "oxalis/constants";
+import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
 import { ResolutionInfo } from "../helpers/resolution_info";
@@ -112,9 +113,18 @@ export async function requestWithFallback(
     "tracingId" in layerInfo && layerInfo.tracingId != null
       ? getVolumeTracingById(state.tracing, layerInfo.tracingId)
       : null;
+  const activeMapping = getMappingInfo(
+    state.temporaryConfiguration.activeMappingByLayer,
+    layerInfo.name,
+  );
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
   // TODO: Change this back once the tracingstore sends the original segment IDs even if an agglomerate mapping is enabled
-  const shouldUseDataStore = true; //maybeVolumeTracing == null;
+  // Only when the mapping is editable, we can do the shortcut via the datastore.
+  const shouldUseDataStore =
+    maybeVolumeTracing == null ||
+    (activeMapping != null &&
+      activeMapping.mappingStatus !== MappingStatusEnum.DISABLED &&
+      activeMapping.mappingType === "HDF5");
   const requestUrl = shouldUseDataStore
     ? getDataStoreUrl(maybeVolumeTracing?.fallbackLayer)
     : getTracingStoreUrl();

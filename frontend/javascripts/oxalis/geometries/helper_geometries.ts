@@ -5,7 +5,8 @@ import app from "app";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import Dimensions from "oxalis/model/dimensions";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { datasetScaleFactorToNm, getBaseVoxelInDatasourceScale } from "oxalis/model/scaleinfo";
+import { DatasetScale } from "types/api_flow_types";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
@@ -111,7 +112,7 @@ export class ContourGeometry {
     this.connectingLine.geometry.computeBoundingSphere();
   }
 
-  getArea(scale: Vector3): number {
+  getArea(datasetScale: DatasetScale): number {
     // This algorithm is based on the Trapezoid formula for calculating the polygon area.
     // Source: https://www.mathopenref.com/coordpolygonarea2.html.
     let accArea = 0;
@@ -119,7 +120,11 @@ export class ContourGeometry {
     const points = this.vertexBuffer.getBuffer();
     let previousPointIndex = pointCount - 1;
     const dimIndices = Dimensions.getIndices(this.viewport);
-    const scaleVector = new THREE.Vector2(scale[dimIndices[0]], scale[dimIndices[1]]);
+    const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
+    const scaleVector = new THREE.Vector2(
+      scaleFactorInNm[dimIndices[0]],
+      scaleFactorInNm[dimIndices[1]],
+    );
     for (let i = 0; i < pointCount; i++) {
       const start = new THREE.Vector2(
         points[previousPointIndex * 3 + dimIndices[0]],
@@ -176,7 +181,9 @@ export class QuickSelectGeometry {
     });
     this.rectangle = new THREE.Mesh(geometry, material);
 
-    const baseWidth = getBaseVoxel(Store.getState().dataset.dataSource.scale);
+    const baseWidth = getBaseVoxelInDatasourceScale(
+      Store.getState().dataset.dataSource.scale.factor,
+    );
     const centerGeometry = new THREE.PlaneGeometry(baseWidth, baseWidth);
     const centerMaterial = new THREE.MeshBasicMaterial({
       color: this.centerMarkerColor,
@@ -219,7 +226,7 @@ export class QuickSelectGeometry {
 
   rotateToViewport() {
     const { activeViewport } = Store.getState().viewModeData.plane;
-    const { scale } = Store.getState().dataset.dataSource;
+    const { factor: scaleFactor } = Store.getState().dataset.dataSource.scale;
     const rotation = rotations[activeViewport];
     if (!rotation) {
       return;
@@ -229,7 +236,7 @@ export class QuickSelectGeometry {
     this.centerMarker.setRotationFromEuler(rotation);
     this.centerMarker.scale.copy(
       new THREE.Vector3(
-        ...Dimensions.transDim(scale.map((el) => 1 / el) as Vector3, activeViewport),
+        ...Dimensions.transDim(scaleFactor.map((el) => 1 / el) as Vector3, activeViewport),
       ),
     );
   }
@@ -410,22 +417,25 @@ export class LineMeasurementGeometry {
     app.vent.emit("rerender");
   }
 
-  getDistance(scale: Vector3): number {
-    const scaleVector = new THREE.Vector3(...scale);
+  getDistance(datasetScale: DatasetScale): number {
+    const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
+    const scaleVectorInNm = new THREE.Vector3(...scaleFactorInNm);
     const points = this.vertexBuffer.getBuffer();
     const pointCount = this.vertexBuffer.getLength();
     if (pointCount < 2) {
       return 0;
     }
-    let accDistance = 0;
+    let accDistanceInNm = 0;
     for (let i = 0; i < pointCount - 1; i++) {
-      const start = new THREE.Vector3(...points.subarray(i * 3, (i + 1) * 3)).multiply(scaleVector);
-      const end = new THREE.Vector3(...points.subarray((i + 1) * 3, (i + 2) * 3)).multiply(
-        scaleVector,
+      const start = new THREE.Vector3(...points.subarray(i * 3, (i + 1) * 3)).multiply(
+        scaleVectorInNm,
       );
-      accDistance += start.distanceTo(end);
+      const end = new THREE.Vector3(...points.subarray((i + 1) * 3, (i + 2) * 3)).multiply(
+        scaleVectorInNm,
+      );
+      accDistanceInNm += start.distanceTo(end);
     }
-    return accDistance;
+    return accDistanceInNm;
   }
 
   updateForCam(orthoView: OrthoView) {

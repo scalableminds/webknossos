@@ -68,6 +68,7 @@ import type {
   AdditionalCoordinate,
   RenderAnimationOptions,
   LayerLink,
+  DatasetScale,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -1546,7 +1547,7 @@ type DatasetCompositionArgs = {
   newDatasetName: string;
   targetFolderId: string;
   organizationName: string;
-  scale: Vector3;
+  scale: DatasetScale;
   layers: LayerLink[];
 };
 

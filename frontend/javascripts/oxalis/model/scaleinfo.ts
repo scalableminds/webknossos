@@ -1,36 +1,65 @@
-import type { Vector3 } from "oxalis/constants";
-export function getBaseVoxel(datasetScale: Vector3): number {
-  // base voxel should be a cube with highest resolution
-  return Math.min(...datasetScale);
+import { LengthUnitsMap } from "libs/format_utils";
+import { map3 } from "libs/utils";
+import { LengthUnit, type Vector3 } from "oxalis/constants";
+import { DatasetScale } from "types/api_flow_types";
+
+export function datasetScaleFactorToNm(datasetScale: DatasetScale): Vector3 {
+  const conversionToNmFactor = LengthUnitsMap[datasetScale.unit] / LengthUnitsMap[LengthUnit.nm];
+  return map3((factor) => factor * conversionToNmFactor, datasetScale.factor);
 }
 
-export function voxelToNm3(datasetScale: Vector3, mag: Vector3, volumeInVx: number): number {
+export function getBaseVoxelInDatasourceScale(datasetScaleFactor: Vector3): number {
+  // base voxel should be a cube with highest resolution
+  return Math.min(...datasetScaleFactor);
+}
+
+export function getBaseVoxelInNm(datasetScale: DatasetScale): number {
+  // base voxel should be a cube with highest resolution
+  const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
+  return getBaseVoxelInDatasourceScale(scaleFactorInNm);
+}
+
+export function voxelToNm3(datasetScale: DatasetScale, mag: Vector3, volumeInVx: number): number {
+  const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
   return (
-    mag[0] * mag[1] * mag[2] * datasetScale[0] * datasetScale[1] * datasetScale[2] * volumeInVx
+    mag[0] *
+    mag[1] *
+    mag[2] *
+    scaleFactorInNm[0] *
+    scaleFactorInNm[1] *
+    scaleFactorInNm[2] *
+    volumeInVx
   );
 }
 
-export function getBaseVoxelFactors(datasetScale: Vector3): Vector3 {
+export function getBaseVoxelFactorInNm(datasetScale: DatasetScale): Vector3 {
   // base voxel should be a cube with highest resolution
-  const baseVoxel = getBaseVoxel(datasetScale);
+  const baseVoxel = getBaseVoxelInDatasourceScale(datasetScale.factor);
+  const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
   // scale factor to calculate the voxels in a certain
   // dimension from baseVoxels
-  return [baseVoxel / datasetScale[0], baseVoxel / datasetScale[1], baseVoxel / datasetScale[2]];
+  return [
+    baseVoxel / scaleFactorInNm[0],
+    baseVoxel / scaleFactorInNm[1],
+    baseVoxel / scaleFactorInNm[2],
+  ];
 }
-export function getVoxelPerNM(datasetScale: Vector3): Vector3 {
+export function getVoxelPerNm(datasetScale: DatasetScale): Vector3 {
   const voxelPerNM = [0, 0, 0] as Vector3;
+  const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
 
   for (let i = 0; i < 3; i++) {
-    voxelPerNM[i] = 1 / datasetScale[i];
+    voxelPerNM[i] = 1 / scaleFactorInNm[i];
   }
 
   return voxelPerNM;
 }
-export function voxelToNm(datasetScale: Vector3, posArray: Vector3): Vector3 {
+export function voxelToNm(datasetScale: DatasetScale, posArray: Vector3): Vector3 {
   const result = [0, 0, 0] as Vector3;
+  const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
 
   for (let i = 0; i < 3; i++) {
-    result[i] = posArray[i] * datasetScale[i];
+    result[i] = posArray[i] * scaleFactorInNm[i];
   }
 
   return result;

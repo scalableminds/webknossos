@@ -27,8 +27,9 @@ import type {
   APIDatasetId,
   APIMessage,
   APIUnimportedDatasource,
+  DatasetScale,
 } from "types/api_flow_types";
-import { Unicode, Vector3 } from "oxalis/constants";
+import { LengthUnit, Unicode } from "oxalis/constants";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
 import LinkButton from "components/link_button";
 import { diffObjects, jsonStringify } from "libs/utils";
@@ -127,7 +128,7 @@ function ensureValidScaleOnInferredDataSource(
   const savedScale =
     "dataLayers" in savedDataSourceOnServer
       ? savedDataSourceOnServer.scale
-      : ([0, 0, 0] as Vector3);
+      : ({ factor: [0, 0, 0], unit: LengthUnit.nm } as DatasetScale);
   if (_.isEqual(inferredDataSource.scale, [0, 0, 0]) && !_.isEqual(savedScale, [0, 0, 0])) {
     inferredDataSourceClone.scale = savedScale;
   }
@@ -148,8 +149,6 @@ function ensureValidScaleOnInferredDataSource(
     if (
       segmentationLayerSettings != null &&
       savedSegmentationLayerSettings != null &&
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'largestSegmentId' does not exist on type... Remove this comment to see the full error message
-      segmentationLayerSettings.largestSegmentId === 0 && // Flow needs this additional check to understand that segmentationLayerSettings is for the segmentation layer.
       savedSegmentationLayerSettings.category === "segmentation" &&
       segmentationLayerSettings.category === "segmentation"
     ) {

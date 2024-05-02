@@ -413,6 +413,9 @@ export default {
           minItems: 3,
           maxItems: 3,
         },
+        unit: {
+          enum: ["nm", "µm", "mm", "cm", "dm", "m", "km"],
+        },
         defaultViewConfiguration: {
           $ref: "#/definitions/types::OptionalDatasetViewConfiguration",
         },

@@ -8,6 +8,7 @@ import type {
   APIDataset,
   APIDataLayer,
   APIMeshFile,
+  DatasetScale,
 } from "types/api_flow_types";
 import type {
   ActiveMappingInfo,
@@ -53,7 +54,11 @@ import {
   deleteBranchpointByIdAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { formatNumberToLength, formatLengthAsVx, formatNumberToVolume } from "libs/format_utils";
+import {
+  formatNumberInNmToLength,
+  formatLengthAsVx,
+  formatNumberToVolume,
+} from "libs/format_utils";
 import {
   getActiveSegmentationTracing,
   getSegmentsForLayer,
@@ -118,7 +123,7 @@ import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import { voxelToNm3 } from "oxalis/model/scaleinfo";
+import { datasetScaleFactorToNm, voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import {
   ensureLayerMappingsAreLoadedAction,
@@ -143,7 +148,7 @@ type OwnProps = {
 
 type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
-  datasetScale: Vector3;
+  datasetScale: DatasetScale;
   visibleSegmentationLayer: APIDataLayer | null | undefined;
   dataset: APIDataset;
   currentMeshFile: APIMeshFile | null | undefined;
@@ -193,7 +198,7 @@ function measureAndShowLengthBetweenNodes(sourceNodeId: number, targetNodeId: nu
     targetNodeId,
   );
   notification.open({
-    message: `The shortest path length between the nodes is ${formatNumberToLength(
+    message: `The shortest path length between the nodes is ${formatNumberInNmToLength(
       lengthNm,
     )} (${formatLengthAsVx(lengthVx)}).`,
     icon: <i className="fas fa-ruler" />,
@@ -218,7 +223,7 @@ function measureAndShowFullTreeLength(treeId: number, treeName: string) {
   notification.open({
     message: messages["tracing.tree_length_notification"](
       treeName,
-      formatNumberToLength(lengthInNm),
+      formatNumberInNmToLength(lengthInNm),
       formatLengthAsVx(lengthInVx),
     ),
     icon: <i className="fas fa-ruler" />,
@@ -363,7 +368,7 @@ function getMeshItems(
   maybeClickedMeshId: number | null | undefined,
   maybeMeshIntersectionPosition: Vector3 | null | undefined,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
-  datasetScale: Vector3,
+  datasetScaleFactor: Vector3,
 ): MenuItemType[] {
   if (
     maybeClickedMeshId == null ||
@@ -389,7 +394,7 @@ function getMeshItems(
     {
       key: "jump-to-mesh",
       onClick: () => {
-        const unscaledPosition = V3.divide3(maybeMeshIntersectionPosition, datasetScale);
+        const unscaledPosition = V3.divide3(maybeMeshIntersectionPosition, datasetScaleFactor);
         Actions.setPosition(Store.dispatch, unscaledPosition);
       },
       label: "Jump to Position",
@@ -452,7 +457,7 @@ function getNodeContextMenuOptions({
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
     visibleSegmentationLayer,
-    datasetScale,
+    datasetScale.factor,
   );
 
   const menuItems: ItemType[] = [
@@ -1077,7 +1082,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
     visibleSegmentationLayer,
-    datasetScale,
+    datasetScale.factor,
   );
 
   if (isSkeletonToolActive) {
@@ -1332,8 +1337,12 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const distanceToSelection =
     activeNode != null && positionToMeasureDistanceTo != null
       ? [
-          formatNumberToLength(
-            V3.scaledDist(getActiveNodePosition(), positionToMeasureDistanceTo, datasetScale),
+          formatNumberInNmToLength(
+            V3.scaledDist(
+              getActiveNodePosition(),
+              positionToMeasureDistanceTo,
+              datasetScaleFactorToNm(datasetScale),
+            ),
           ),
           formatLengthAsVx(V3.length(V3.sub(getActiveNodePosition(), positionToMeasureDistanceTo))),
         ]

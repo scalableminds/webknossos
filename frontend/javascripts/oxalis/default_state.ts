@@ -7,6 +7,7 @@ import Constants, {
   FillModeEnum,
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
+  LengthUnit,
 } from "oxalis/constants";
 import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
 import constants from "oxalis/constants";
@@ -119,7 +120,7 @@ const defaultState: OxalisState = {
     created: 123,
     dataSource: {
       dataLayers: [],
-      scale: [5, 5, 5],
+      scale: { factor: [5, 5, 5], unit: LengthUnit.nm },
       id: {
         name: "Test Dataset",
         team: "",

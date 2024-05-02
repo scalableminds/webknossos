@@ -36,7 +36,7 @@ import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import Dimensions from "oxalis/model/dimensions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { getVoxelPerNM } from "oxalis/model/scaleinfo";
+import { getVoxelPerNm } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
@@ -419,7 +419,7 @@ class SceneController {
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
-    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.dataSource.scale);
+    const voxelPerNMVector = getVoxelPerNm(Store.getState().dataset.dataSource.scale);
     V3.scale(voxelPerNMVector, value, this.planeShift);
     app.vent.emit("rerender");
   }

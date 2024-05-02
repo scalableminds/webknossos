@@ -21,10 +21,10 @@ import type {
   LOG_LEVELS,
   Vector4,
   TreeType,
+  LengthUnit,
 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { EmptyObject } from "./globals";
-import { ScaleUnit } from "./schemas/datasource.types";
 
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -120,10 +120,13 @@ type MutableAPIDataSourceBase = {
 };
 type APIDataSourceBase = Readonly<MutableAPIDataSourceBase>;
 export type APIUnimportedDatasource = APIDataSourceBase;
+export type DatasetScale = {
+  factor: Vector3;
+  unit: LengthUnit;
+};
 export type MutableAPIDataSource = MutableAPIDataSourceBase & {
   dataLayers: Array<APIDataLayer>;
-  scale: Vector3;
-  unit: ScaleUnit;
+  scale: DatasetScale;
 };
 export type APIDataSource = Readonly<MutableAPIDataSource>;
 export type APIDataStore = {

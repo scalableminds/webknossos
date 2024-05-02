@@ -1,5 +1,9 @@
 import test from "ava";
-import { formatNumberToArea, formatNumberToLength, formatNumberToVolume } from "libs/format_utils";
+import {
+  formatNumberToArea,
+  formatNumberInNmToLength,
+  formatNumberToVolume,
+} from "libs/format_utils";
 import _ from "lodash";
 import { Unicode } from "oxalis/constants";
 
@@ -29,7 +33,7 @@ test("Format number to length", (t) => {
       `10${ThinSpace}km`,
       `100${ThinSpace}km`,
     ],
-    simpleLengthsInNm.map((length) => formatNumberToLength(length)),
+    simpleLengthsInNm.map((length) => formatNumberInNmToLength(length)),
   );
 
   const lengthsWithFactorInNm = _.range(-5, 1).map((exp) => 107 * Math.pow(10, exp));
@@ -42,16 +46,16 @@ test("Format number to length", (t) => {
       `10.7${ThinSpace}nm`,
       `0.1${ThinSpace}µm`,
     ],
-    lengthsWithFactorInNm.map((length) => formatNumberToLength(length)),
+    lengthsWithFactorInNm.map((length) => formatNumberInNmToLength(length)),
   );
 
   const advancedLengthsInNm = [1e6, 12, 1e-5, 1234e12];
   t.deepEqual(
     [`1${ThinSpace}mm`, `12${ThinSpace}nm`, `0.0${ThinSpace}pm`, `1234${ThinSpace}km`],
-    advancedLengthsInNm.map((length) => formatNumberToLength(length)),
+    advancedLengthsInNm.map((length) => formatNumberInNmToLength(length)),
   );
 
-  t.deepEqual(`0.01${ThinSpace}pm`, formatNumberToLength(1e-5, 2));
+  t.deepEqual(`0.01${ThinSpace}pm`, formatNumberInNmToLength(1e-5, 2));
 });
 
 test("Format number to area", (t) => {

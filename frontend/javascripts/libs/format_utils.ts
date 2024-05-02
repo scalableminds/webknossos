@@ -1,5 +1,5 @@
 import { presetPalettes } from "@ant-design/colors";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import type { LengthUnit, Vector3, Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -15,6 +15,7 @@ import localeData from "dayjs/plugin/localeData";
 
 import type { BoundingBoxObject } from "oxalis/store";
 import type { Duration } from "dayjs/plugin/duration";
+import { DatasetScale } from "types/api_flow_types";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);
@@ -47,6 +48,36 @@ const COLOR_MAP: Array<string> = [
   "#FF9364",
   "#750790",
 ];
+
+export const LengthUnitsMap: Record<LengthUnit, number> = {
+  ym: 1e-15,
+  zm: 1e-12,
+  am: 1e-9,
+  fm: 1e-6,
+  pm: 1e-3,
+  nm: 1.0,
+  µm: 1e3,
+  mm: 1e6,
+  cm: 1e7,
+  dm: 1e8,
+  m: 1e9,
+  hm: 1e11,
+  km: 1e12,
+  Mm: 1e15,
+  Gm: 1e18,
+  Tm: 1e21,
+  Pm: 1e24,
+  Em: 1e27,
+  Zm: 1e30,
+  Ym: 1e33,
+  Å: 0.1,
+  in: 25400000.0,
+  ft: 304800000.0,
+  yd: 914400000.0,
+  mi: 1609344000000.0,
+  pc: 3.085677581e25,
+};
+
 // Specifying a preset color makes an antd <Tag/> appear more lightweight, see https://ant.design/components/tag/
 const COLOR_MAP_ANTD: Array<string> = Object.keys(presetPalettes);
 export function stringToColor(string: string): string {
@@ -82,27 +113,25 @@ export function formatTuple(tuple: (Array<number> | Vector3 | Vector6) | null | 
     return "";
   }
 }
-export function formatScale(scaleArr: Vector3 | null | undefined, roundTo: number = 2): string {
-  if (scaleArr != null && scaleArr.length > 0) {
-    let unit = "nm³";
-    let scaleArrAdjusted = scaleArr;
+export function formatScale(scale: DatasetScale | null | undefined, roundTo: number = 2): string {
+  // TODO: fix me and try to use findClosestToUnitFactor for less code duplication
+  if (scale != null && scale.factor.length > 0) {
     const smallestValue = Math.min(...scaleArr);
-
-    if (smallestValue > 1000000) {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-      scaleArrAdjusted = scaleArr.map((value) => value / 1000000);
-      unit = "mm³";
-    } else if (smallestValue > 1000) {
-      // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-      scaleArrAdjusted = scaleArr.map((value) => value / 1000);
-      unit = "µm³";
+    const allScaleUnitsInverse = AllScaleUnits.slice().reverse();
+    for (const unit of allScaleUnitsInverse) {
+      const conversionFactor = ScaleUnitToNm[unit] / ScaleUnitToNm[scaleUnit];
+      if (smallestValue > conversionFactor) {
+        const scaleArrRounded = Utils.map3(
+          (value) => Utils.roundTo(value / conversionFactor, roundTo),
+          scaleArr,
+        );
+        return `${scaleArrRounded.join(
+          ThinSpace + MultiplicationSymbol + ThinSpace,
+        )} ${unit}³/voxel`;
+      }
     }
-
-    const scaleArrRounded = scaleArrAdjusted.map((value) => Utils.roundTo(value, roundTo));
-    return `${scaleArrRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${unit}/voxel`;
-  } else {
-    return "";
   }
+  return "";
 }
 
 export function formatNumberToUnit(
@@ -140,7 +169,7 @@ const nmFactorToUnit = new Map([
   [1e9, "m"],
   [1e12, "km"],
 ]);
-export function formatNumberToLength(lengthInNm: number, decimalPrecision: number = 1): string {
+export function formatNumberInNmToLength(lengthInNm: number, decimalPrecision: number = 1): string {
   return formatNumberToUnit(lengthInNm, nmFactorToUnit, true, decimalPrecision);
 }
 
@@ -196,12 +225,12 @@ export function findClosestToUnitFactor(
 ): number {
   const sortedFactors = getSortedFactors(unitMap);
   let closestFactor = sortedFactors[0];
-  const minumumToRoundUpToOne = 0.95;
+  const minimumToRoundUpToOne = 0.95;
 
   for (const factor of sortedFactors) {
     if (
       number >=
-      factor * (preferShorterDecimals ? minumumToRoundUpToOne * 10 ** -decimalPrecision : 1)
+      factor * (preferShorterDecimals ? minimumToRoundUpToOne * 10 ** -decimalPrecision : 1)
     ) {
       closestFactor = factor;
     }

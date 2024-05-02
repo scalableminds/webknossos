@@ -77,7 +77,7 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
+import { getHalfViewportExtentsInNmFromState } from "oxalis/model/sagas/saga_selectors";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -1758,6 +1758,7 @@ class DataApi {
       dimensions.roundCoordinate(getPosition(state.flycam)),
       viewport,
     );
+    // This s
     const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsFromState(
       state,
       viewport,

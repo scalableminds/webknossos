@@ -523,7 +523,7 @@ function getArea(
     zoomStep,
     planeId,
   ).map((el) => el / 2);
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(datasetScale);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactor(datasetScale);
   const uHalf = viewportWidthHalf * baseVoxelFactors[u];
   const vHalf = viewportHeightHalf * baseVoxelFactors[v];
   const isVisible = uHalf > 0 && vHalf > 0;

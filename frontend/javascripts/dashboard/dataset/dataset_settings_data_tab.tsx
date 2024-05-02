@@ -31,7 +31,7 @@ import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
 import { APIDataLayer, APIDataset, APIJobType } from "types/api_flow_types";
 import { useStartAndPollJob } from "admin/job/job_hooks";
-import { Vector3 } from "oxalis/constants";
+import { AllLengthUnits, LengthUnitLongNames, Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 
 const FormItem = Form.Item;
@@ -232,6 +232,30 @@ function SimpleDatasetForm({
                       width: 400,
                     }}
                     allowDecimals
+                  />
+                </FormItemWithInfo>
+                <Space size="large" />
+                <FormItemWithInfo
+                  name={["dataSource", "unit"]}
+                  label="Unit"
+                  info="The unit in which the voxel size is defined."
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please provide a unit for the voxel scale of the dataset.",
+                    },
+                  ]}
+                >
+                  <Select
+                    style={{ width: 120 }}
+                    options={AllLengthUnits.map((unit) => ({
+                      value: unit,
+                      label: (
+                        <span>
+                          <Tooltip title={LengthUnitLongNames[unit]}>{unit}</Tooltip>
+                        </span>
+                      ),
+                    }))}
                   />
                 </FormItemWithInfo>
               </Col>

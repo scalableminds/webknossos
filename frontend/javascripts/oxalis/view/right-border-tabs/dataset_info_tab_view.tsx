@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { getBaseVoxelInNm } from "oxalis/model/scaleinfo";
 import {
   getDatasetExtentAsString,
   getResolutionUnion,
@@ -127,7 +127,7 @@ export function convertPixelsToNm(
   zoomValue: number,
   dataset: APIDataset,
 ): number {
-  return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
+  return lengthInPixel * zoomValue * getBaseVoxelInNm(dataset.dataSource.scale);
 }
 
 export function convertNmToPixels(
@@ -135,7 +135,7 @@ export function convertNmToPixels(
   zoomValue: number,
   dataset: APIDataset,
 ): number {
-  return lengthInNm / (zoomValue * getBaseVoxel(dataset.dataSource.scale));
+  return lengthInNm / (zoomValue * getBaseVoxelInNm(dataset.dataSource.scale));
 }
 
 export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {

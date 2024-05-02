@@ -405,3 +405,63 @@ const isMac = (() => {
 
 export const AltOrOptionKey = isMac ? "⌥" : "Alt";
 export const CtrlOrCmdKey = isMac ? "Cmd" : "Ctrl";
+
+export enum LengthUnit {
+  ym = "ym",
+  zm = "zm",
+  am = "am",
+  fm = "fm",
+  pm = "pm",
+  nm = "nm",
+  µm = "µm",
+  mm = "mm",
+  cm = "cm",
+  dm = "dm",
+  m = "m",
+  hm = "hm",
+  km = "km",
+  Mm = "Mm",
+  Gm = "Gm",
+  Tm = "Tm",
+  Pm = "Pm",
+  Em = "Em",
+  Zm = "Zm",
+  Ym = "Ym",
+  Å = "Å",
+  in = "in",
+  ft = "ft",
+  yd = "yd",
+  mi = "mi",
+  pc = "pc",
+}
+
+export const LengthUnitLongNames: Record<LengthUnit, string> = {
+  ym: "yoctometer",
+  zm: "zeptometer",
+  am: "attometer",
+  fm: "femtometer",
+  pm: "picometer",
+  nm: "nanometer",
+  µm: "micrometer",
+  mm: "millimeter",
+  cm: "centimeter",
+  dm: "decimeter",
+  m: "meter",
+  hm: "hectometer",
+  km: "kilometer",
+  Mm: "megameter",
+  Gm: "gigameter",
+  Tm: "terameter",
+  Pm: "petameter",
+  Em: "exameter",
+  Zm: "zettameter",
+  Ym: "yottameter",
+  Å: "ångström",
+  in: "inch",
+  ft: "foot",
+  yd: "yard",
+  mi: "mile",
+  pc: "parsec",
+};
+
+export const AllLengthUnits = Object.values(LengthUnit);

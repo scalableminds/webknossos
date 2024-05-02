@@ -22,7 +22,7 @@ import ErrorHandling from "libs/error_handling";
 import { IdentityTransform, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import { aggregateBoundingBox, maxValue } from "libs/utils";
-import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
+import { formatExtentWithLength, formatNumberInNmToLength } from "libs/format_utils";
 import messages from "messages";
 import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
@@ -325,7 +325,7 @@ export function getDatasetExtentAsString(
   }
 
   const extent = getDatasetExtentInLength(dataset);
-  return formatExtentWithLength(extent, formatNumberToLength);
+  return formatExtentWithLength(extent, formatNumberInNmToLength);
 }
 export function determineAllowedModes(settings?: Settings): {
   preferredMode: APIAllowedMode | null | undefined;

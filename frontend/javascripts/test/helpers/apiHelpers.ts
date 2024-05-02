@@ -223,7 +223,7 @@ export function __setupOxalis(
 
   setSceneController({
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
-    segmentMeshController: { meshesGroupsPerSegmentationId: {} },
+    segmentMeshController: { meshesGroupsPerSegmentId: {} },
   });
 
   return Model.fetch(

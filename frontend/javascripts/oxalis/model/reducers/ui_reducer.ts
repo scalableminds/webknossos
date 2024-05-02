@@ -154,6 +154,32 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SHOW_CONTEXT_MENU": {
+      return updateKey2(state, "uiInformation", "contextInfo", {
+        contextMenuPosition: action.contextMenuPosition,
+        clickedNodeId: action.clickedNodeId,
+        clickedBoundingBoxId: action.clickedBoundingBoxId,
+        globalPosition: action.globalPosition,
+        viewport: action.viewport,
+        meshId: action.meshId,
+        meshIntersectionPosition: action.meshIntersectionPosition,
+        unmappedSegmentId: action.unmappedSegmentId,
+      });
+    }
+
+    case "HIDE_CONTEXT_MENU": {
+      return updateKey2(state, "uiInformation", "contextInfo", {
+        contextMenuPosition: null,
+        clickedNodeId: null,
+        clickedBoundingBoxId: null,
+        globalPosition: null,
+        viewport: null,
+        meshId: null,
+        meshIntersectionPosition: null,
+        unmappedSegmentId: null,
+      });
+    }
+
     default:
       return state;
   }

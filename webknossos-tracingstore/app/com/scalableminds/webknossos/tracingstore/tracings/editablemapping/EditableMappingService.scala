@@ -50,8 +50,8 @@ case class FallbackDataKey(
 )
 
 case class MinCutParameters(
-    segmentPosition1: Vec3Int,
-    segmentPosition2: Vec3Int,
+    segmentId1: Long,
+    segmentId2: Long,
     mag: Vec3Int,
     agglomerateId: Long,
     editableMappingId: String
@@ -61,7 +61,7 @@ object MinCutParameters {
   implicit val jsonFormat: OFormat[MinCutParameters] = Json.format[MinCutParameters]
 }
 
-case class NeighborsParameters(segmentPosition: Vec3Int, mag: Vec3Int, agglomerateId: Long, editableMappingId: String)
+case class NeighborsParameters(segmentId: Long, mag: Vec3Int, agglomerateId: Long, editableMappingId: String)
 
 object NeighborsParameters {
   implicit val jsonFormat: OFormat[NeighborsParameters] = Json.format[NeighborsParameters]
@@ -141,6 +141,23 @@ class EditableMappingService @Inject()(
     for {
       _ <- tracingDataStore.editableMappingsInfo.put(newId, 0L, toProtoBytes(newEditableMappingInfo))
     } yield (newId, newEditableMappingInfo)
+  }
+
+  def agglomerateIdForSegmentId(editableMappingId: String,
+                                segmentId: Long,
+                                remoteFallbackLayer: RemoteFallbackLayer,
+                                userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] = {
+    val chunkId = segmentId / defaultSegmentToAgglomerateChunkSize
+    for {
+      (info, version) <- getInfoAndActualVersion(editableMappingId, None, remoteFallbackLayer, userToken)
+      chunk <- getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId, version).map(_.toMap)
+      agglomerateId <- chunk.get(segmentId) match {
+        case Some(agglomerateId) => Fox.successful(agglomerateId)
+        case None =>
+          getBaseSegmentToAgglomerate(info.baseMappingName, Set(segmentId), remoteFallbackLayer, userToken)
+            .flatMap(baseSegmentToAgglomerate => baseSegmentToAgglomerate.get(segmentId))
+      }
+    } yield agglomerateId
   }
 
   def duplicate(editableMappingIdOpt: Option[String],
@@ -326,11 +343,22 @@ class EditableMappingService @Inject()(
     } yield flat
   }
 
-  def findSegmentIdAtPosition(remoteFallbackLayer: RemoteFallbackLayer,
-                              pos: Vec3Int,
-                              mag: Vec3Int,
-                              userToken: Option[String]): Fox[Long] =
+  def findSegmentIdAtPositionIfNeeded(remoteFallbackLayer: RemoteFallbackLayer,
+                                      positionOpt: Option[Vec3Int],
+                                      segmentIdOpt: Option[Long],
+                                      mag: Vec3Int,
+                                      userToken: Option[String]): Fox[Long] =
+    segmentIdOpt match {
+      case Some(segmentId) => Fox.successful(segmentId)
+      case None            => findSegmentIdAtPosition(remoteFallbackLayer, positionOpt, mag, userToken)
+    }
+
+  private def findSegmentIdAtPosition(remoteFallbackLayer: RemoteFallbackLayer,
+                                      positionOpt: Option[Vec3Int],
+                                      mag: Vec3Int,
+                                      userToken: Option[String]): Fox[Long] =
     for {
+      pos <- positionOpt.toFox ?~> "segment id or position is required in editable mapping action"
       voxelAsBytes: Array[Byte] <- remoteDatastoreClient.getVoxelAtPosition(userToken, remoteFallbackLayer, pos, mag)
       voxelAsLongArray: Array[Long] <- bytesToLongs(voxelAsBytes, remoteFallbackLayer.elementClass)
       _ <- Fox.bool2Fox(voxelAsLongArray.length == 1) ?~> s"Expected one, got ${voxelAsLongArray.length} segment id values for voxel."
@@ -606,8 +634,6 @@ class EditableMappingService @Inject()(
                              remoteFallbackLayer: RemoteFallbackLayer,
                              userToken: Option[String]): Fox[List[EdgeWithPositions]] =
     for {
-      segmentId1 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition1, parameters.mag, userToken)
-      segmentId2 <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition2, parameters.mag, userToken)
       // called here to ensure updates are applied
       mapping <- getInfo(parameters.editableMappingId, version = None, remoteFallbackLayer, userToken)
       agglomerateGraph <- getAgglomerateGraphForIdWithFallback(mapping,
@@ -616,7 +642,7 @@ class EditableMappingService @Inject()(
                                                                parameters.agglomerateId,
                                                                remoteFallbackLayer,
                                                                userToken)
-      edgesToCut <- minCut(agglomerateGraph, segmentId1, segmentId2) ?~> "Could not calculate min-cut on agglomerate graph."
+      edgesToCut <- minCut(agglomerateGraph, parameters.segmentId1, parameters.segmentId2) ?~> "Could not calculate min-cut on agglomerate graph."
       edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
     } yield edgesWithPositions
 
@@ -676,7 +702,6 @@ class EditableMappingService @Inject()(
                                 remoteFallbackLayer: RemoteFallbackLayer,
                                 userToken: Option[String]): Fox[(Long, Seq[NodeWithPosition])] =
     for {
-      segmentId <- findSegmentIdAtPosition(remoteFallbackLayer, parameters.segmentPosition, parameters.mag, userToken)
       // called here to ensure updates are applied
       mapping <- getInfo(parameters.editableMappingId, version = None, remoteFallbackLayer, userToken)
       agglomerateGraph <- getAgglomerateGraphForIdWithFallback(mapping,
@@ -685,9 +710,9 @@ class EditableMappingService @Inject()(
                                                                parameters.agglomerateId,
                                                                remoteFallbackLayer,
                                                                userToken)
-      neighborNodes = neighbors(agglomerateGraph, segmentId)
+      neighborNodes = neighbors(agglomerateGraph, parameters.segmentId)
       nodesWithPositions = annotateNodesWithPositions(neighborNodes, agglomerateGraph)
-    } yield (segmentId, nodesWithPositions)
+    } yield (parameters.segmentId, nodesWithPositions)
 
   private def neighbors(agglomerateGraph: AgglomerateGraph, segmentId: Long): Seq[Long] = {
     val relevantEdges = agglomerateGraph.edges.filter { edge =>

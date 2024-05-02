@@ -6,7 +6,7 @@ import {
   convertCellIdToRGB,
   getBrushOverlay,
   getCrossHairOverlay,
-  getSegmentationId,
+  getSegmentId,
 } from "./segmentation.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 import {
@@ -93,6 +93,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform bool isMouseInActiveViewport;
   uniform bool showBrush;
   uniform bool isProofreading;
+  uniform bool isUnmappedSegmentHighlighted;
   uniform float segmentationPatternOpacity;
 
   uniform bool isMappingEnabled;
@@ -169,7 +170,7 @@ ${compileShader(
   getBlendLayersCover,
   hasSegmentation ? convertCellIdToRGB : null,
   hasSegmentation ? getBrushOverlay : null,
-  hasSegmentation ? getSegmentationId : null,
+  hasSegmentation ? getSegmentId : null,
   hasSegmentation ? getCrossHairOverlay : null,
   almostEq,
 )}
@@ -200,7 +201,7 @@ void main() {
     if (<%= segmentationName %>_effective_alpha > 0.) {
       vec4[2] unmapped_segment_id;
       vec4[2] segment_id;
-      getSegmentationId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
+      getSegmentId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
       <%= segmentationName %>_unmapped_id_low = unmapped_segment_id[1];
       <%= segmentationName %>_unmapped_id_high = unmapped_segment_id[0];
       <%= segmentationName %>_id_low = segment_id[1];
@@ -364,7 +365,7 @@ ${compileShader(
   getWorldCoordUVW,
   isOutsideOfBoundingBox,
   getMaybeFilteredColorOrFallback,
-  hasSegmentation ? getSegmentationId : null,
+  hasSegmentation ? getSegmentId : null,
   getResolution,
   almostEq,
 )}

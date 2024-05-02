@@ -810,7 +810,7 @@ function* loadPrecomputedMeshForSegmentId(
     scale = chunkDescriptors.scale;
     loadingOrder = chunkDescriptors.loadingOrder;
   } catch (exception) {
-    Toast.warning(messages["tracing.mesh_listing_failed"]);
+    Toast.warning(messages["tracing.mesh_listing_failed"](id));
     console.warn(
       `Mesh chunks for segment ${id} couldn't be loaded due to`,
       exception,

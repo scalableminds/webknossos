@@ -594,7 +594,7 @@ class DataCube {
       // for the current magnification. This simplifies the algorithm, too, since the floodfill also
       // uses the bucket's data array to mark visited voxels (which would not be possible with
       // LabeledVoxelMaps).
-      // eslint-disable-next-line no-await-in-loop
+
       const bucketData = await currentBucket.getDataForMutation();
       const initialVoxelIndex = this.getVoxelIndexByVoxelOffset(initialXyzVoxelInBucket);
 
@@ -696,7 +696,7 @@ class DataCube {
 
               if (labeledVoxelCount % 1000000 === 0) {
                 console.log(`Labeled ${labeledVoxelCount} Vx. Continuing...`);
-                // eslint-disable-next-line no-await-in-loop
+
                 await progressCallback(
                   false,
                   `Labeled ${labeledVoxelCount / 1000000} MVx. Continuing...`,
@@ -828,7 +828,7 @@ class DataCube {
 
     while (
       position &&
-      usableZoomStep < resolutions.length - 1 && // eslint-disable-next-line no-await-in-loop
+      usableZoomStep < resolutions.length - 1 &&
       !(await this.isZoomStepUltimatelyRenderableForVoxel(
         position,
         additionalCoordinates,

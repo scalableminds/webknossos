@@ -2,9 +2,8 @@ import type { Dispatch } from "redux";
 import { Tooltip, Typography, Tag } from "antd";
 import { SettingOutlined, InfoCircleOutlined, EditOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
-import React, { CSSProperties, ChangeEvent } from "react";
+import React, { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
@@ -279,10 +278,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     this.props.setAnnotationName(newName);
   };
 
-  setAnnotationDescription = (evt: ChangeEvent<HTMLTextAreaElement>) => {
-    this.props.setAnnotationDescription(evt.target.value);
-  };
-
   componentDidMount(): void {
     this.fetchData();
   }
@@ -501,7 +496,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             source={this.props.annotation.description}
             isOpen={this.state.isMarkdownModalOpen}
             onOk={() => this.setState({ isMarkdownModalOpen: false })}
-            onChange={this.setAnnotationDescription}
+            onChange={this.props.setAnnotationDescription}
           />
         </div>
       );

@@ -1,6 +1,6 @@
 import { createStore, applyMiddleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
-import createSagaMiddleware, { Saga } from "redux-saga";
+import createSagaMiddleware, { type Saga } from "redux-saga";
 import type {
   APIAllowedMode,
   APIAnnotationType,
@@ -47,13 +47,13 @@ import type {
   InterpolationMode,
   TreeType,
 } from "oxalis/constants";
-import { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
+import type { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
-import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "oxalis/model/edge_collection";
+import type DiffableMap from "libs/diffable_map";
+import type EdgeCollection from "oxalis/model/edge_collection";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
@@ -69,7 +69,7 @@ import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_mid
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
-import { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
+import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
 export type MutableCommentType = {
   content: string;
@@ -545,10 +545,10 @@ type BaseMeshInformation = {
   readonly seedAdditionalCoordinates?: AdditionalCoordinate[] | null;
   readonly isLoading: boolean;
   readonly isVisible: boolean;
+  readonly mappingName: string | null | undefined;
 };
 export type AdHocMeshInformation = BaseMeshInformation & {
   readonly isPrecomputed: false;
-  readonly mappingName: string | null | undefined;
   readonly mappingType: MappingType | null | undefined;
 };
 export type PrecomputedMeshInformation = BaseMeshInformation & {

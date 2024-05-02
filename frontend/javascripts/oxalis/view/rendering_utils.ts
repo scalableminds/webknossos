@@ -163,7 +163,6 @@ export async function downloadScreenshot() {
           )
         : null;
 
-    // eslint-disable-next-line no-await-in-loop
     const blob = await convertBufferToImage(
       buffer,
       width,

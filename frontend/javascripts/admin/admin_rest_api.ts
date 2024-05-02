@@ -109,8 +109,7 @@ import { AnnotationTypeFilterEnum } from "./statistic/project_and_annotation_typ
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
 export * from "./api/token";
-export * as meshV3 from "./api/mesh_v3";
-export * as meshV0 from "./api/mesh_v0";
+export * as meshApi from "./api/mesh";
 
 type NewTeam = {
   readonly name: string;
@@ -457,7 +456,7 @@ function transformTask(task: APITask): APITask {
   return { ...task, tracingTime, boundingBoxVec6 };
 }
 
-export async function getTasks(queryObject: QueryObject): Promise<Array<APITask>> {
+export async function getTasks(queryObject: QueryObject): Promise<APITask[]> {
   const responses = await Request.sendJSONReceiveJSON("/api/tasks/list", {
     data: queryObject,
   });
@@ -466,7 +465,7 @@ export async function getTasks(queryObject: QueryObject): Promise<Array<APITask>
   return tasks;
 }
 
-export function createTasks(tasks: Array<NewTask>): Promise<TaskCreationResponseContainer> {
+export function createTasks(tasks: NewTask[]): Promise<TaskCreationResponseContainer> {
   return Request.sendJSONReceiveJSON("/api/tasks", {
     data: tasks,
   });
@@ -1319,6 +1318,28 @@ export function startNeuronInferralJob(
   });
   return Request.receiveJSON(
     `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?${urlParams.toString()}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function startMitochondriaInferralJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+  bbox: Vector6,
+  outputSegmentationLayerName: string,
+  newDatasetName: string,
+): Promise<APIJob> {
+  const urlParams = new URLSearchParams({
+    layerName,
+    bbox: bbox.join(","),
+    outputSegmentationLayerName,
+    newDatasetName,
+  });
+  return Request.receiveJSON(
+    `/api/jobs/run/inferMitochondria/${organizationName}/${datasetName}?${urlParams.toString()}`,
     {
       method: "POST",
     },

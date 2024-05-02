@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentStatisticsParameters
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
-import com.scalableminds.webknossos.datastore.models.{WebknossosDataRequest, WebknossosAdHocMeshRequest}
+import com.scalableminds.webknossos.datastore.models.{WebknossosAdHocMeshRequest, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{
   EditableMappingSegmentListResult,
@@ -43,7 +43,8 @@ import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebknossosClient,
   TracingStoreAccessTokenService,
-  TracingStoreConfig
+  TracingStoreConfig,
+  TracingUpdatesReport
 }
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.Messages
@@ -424,6 +425,15 @@ class VolumeTracingController @Inject()(
           _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update request must contain exactly one update group"
           updateGroup <- request.body.headOption.toFox
           _ <- bool2Fox(updateGroup.version == currentVersion + 1) ?~> "version mismatch"
+          report = TracingUpdatesReport(
+            tracingId,
+            timestamps = List(Instant(updateGroup.timestamp)),
+            statistics = None,
+            significantChangesCount = updateGroup.actions.length,
+            viewChangesCount = 0,
+            urlOrHeaderToken(token, request)
+          )
+          _ <- remoteWebknossosClient.reportTracingUpdates(report)
           _ <- editableMappingService.update(mappingName, updateGroup, updateGroup.version)
         } yield Ok
       }

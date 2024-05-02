@@ -1905,6 +1905,44 @@ export function getEditableMappingInfo(
   );
 }
 
+export function getAgglomerateIdForSegmentId(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentId: number,
+): Promise<number> {
+  return doWithToken(async (token) => {
+    const urlParams = new URLSearchParams({
+      token,
+      segmentId: `${segmentId}`,
+    });
+    const { agglomerateId } = await Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateIdForSegmentId?${urlParams.toString()}`,
+    );
+    return agglomerateId;
+  });
+}
+
+export function getPositionForSegmentInAgglomerate(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingName: string,
+  segmentId: number,
+): Promise<Vector3> {
+  return doWithToken(async (token) => {
+    const urlParams = new URLSearchParams({
+      token,
+      segmentId: `${segmentId}`,
+    });
+    const position = await Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${urlParams.toString()}`,
+    );
+    return position;
+  });
+}
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -2479,8 +2517,8 @@ export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   segmentsInfo: {
-    segmentPosition1: Vector3;
-    segmentPosition2: Vector3;
+    segmentId1: number;
+    segmentId2: number;
     mag: Vector3;
     agglomerateId: number;
     editableMappingId: string;
@@ -2505,7 +2543,7 @@ export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
   segmentInfo: {
-    segmentPosition: Vector3;
+    segmentId: number;
     mag: Vector3;
     agglomerateId: number;
     editableMappingId: string;

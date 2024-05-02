@@ -428,7 +428,6 @@ export default class SegmentMeshController {
   }
 
   highlightUnmappedSegmentId = (activeUnmappedSegmentId: number | null | undefined) => {
-    console.log("highlightUnmappedSegmentId");
     const { meshesLODRootGroup } = this;
     meshesLODRootGroup.traverse((_obj) => {
       // The cast is safe because MeshSceneNode adds only optional properties

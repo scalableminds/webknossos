@@ -3,8 +3,9 @@ import { useDispatch, useSelector } from "react-redux";
 import React, { useCallback, useState } from "react";
 import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
-import { AltOrOptionKey, OrthoViews } from "oxalis/constants";
+import { AltOrOptionKey, MappingStatusEnum, OrthoViews } from "oxalis/constants";
 import {
+  getMappingInfoOrNull,
   getVisibleSegmentationLayer,
   hasVisibleUint64Segmentation,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -28,7 +29,6 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { V3 } from "libs/mjs";
-import { Model } from "oxalis/singletons";
 import { OxalisState } from "oxalis/store";
 import {
   getActiveSegmentationTracing,
@@ -352,18 +352,32 @@ function ShortcutsInfo() {
   );
 }
 
-function getCellInfo(globalMousePosition: Vector3 | null | undefined) {
-  const getSegmentIdString = (): string => {
-    const hoveredCellInfo = Model.getHoveredCellId(globalMousePosition);
+function SegmentInfo() {
+  const visibleSegmentationLayer = useSelector((state: OxalisState) =>
+    getVisibleSegmentationLayer(state),
+  );
+  const hasVisibleSegmentation = visibleSegmentationLayer != null;
+  const activeMappingInfo = useSelector((state: OxalisState) =>
+    getMappingInfoOrNull(
+      state.temporaryConfiguration.activeMappingByLayer,
+      visibleSegmentationLayer?.name,
+    ),
+  );
+  const hoveredSegmentId = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId,
+  );
+  if (hasVisibleSegmentation == null) {
+    return null;
+  }
 
-    if (!hoveredCellInfo) {
-      return "-";
-    }
+  const idString =
+    hoveredSegmentId == null
+      ? "-"
+      : activeMappingInfo?.mappingStatus === MappingStatusEnum.ENABLED
+        ? `${hoveredSegmentId} (mapped)`
+        : `${hoveredSegmentId}`;
 
-    return hoveredCellInfo.isMapped ? `${hoveredCellInfo.id} (mapped)` : `${hoveredCellInfo.id}`;
-  };
-
-  return <span className="info-element">Segment {getSegmentIdString()}</span>;
+  return <span className="info-element">Segment {idString}</span>;
 }
 
 function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean, label: string) {
@@ -509,9 +523,6 @@ function Infos() {
 function SegmentAndMousePosition() {
   // This component depends on the mouse position which is a fast-changing property.
   // For the sake of performance, it is isolated as a single component.
-  const hasVisibleSegmentation = useSelector(
-    (state: OxalisState) => getVisibleSegmentationLayer(state) != null,
-  );
   const mousePosition = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.mousePosition,
   );
@@ -532,9 +543,10 @@ function SegmentAndMousePosition() {
 
     return undefined;
   });
+
   return (
     <>
-      {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
+      {isPlaneMode ? <SegmentInfo /> : null}
       {isPlaneMode ? (
         <span className="info-element">
           Pos [

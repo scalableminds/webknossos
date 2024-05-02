@@ -192,7 +192,7 @@ class PlaneView {
       );
       return intersections[0];
     } else {
-      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));
+      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", null));
       return null;
     }
   }

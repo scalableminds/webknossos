@@ -883,11 +883,6 @@ function* handleProofreadCutNeighbors(action: Action) {
     call(getDataValue, targetPosition),
     ...neighborInfo.neighbors.map((neighbor) => call(getDataValue, neighbor.position)),
   ]);
-  console.log("targetPosition", targetPosition, "newTargetAgglomerateId", newTargetAgglomerateId);
-  console.log(
-    "newNeighborAgglomerateIds with position",
-    newNeighborAgglomerateIds.map((el, idx) => [el, neighborInfo.neighbors[idx].position]),
-  );
 
   /* Reload meshes */
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [

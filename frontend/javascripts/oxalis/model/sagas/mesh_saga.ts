@@ -811,7 +811,11 @@ function* loadPrecomputedMeshForSegmentId(
     loadingOrder = chunkDescriptors.loadingOrder;
   } catch (exception) {
     Toast.warning(messages["tracing.mesh_listing_failed"]);
-    console.warn(`Mesh chunks for segment ${id} couldn't be loaded due to`, exception);
+    console.warn(
+      `Mesh chunks for segment ${id} couldn't be loaded due to`,
+      exception,
+      "\nOne possible explanation could be that the segment was not included in the mesh file because it's smaller than the dust threshold that was specified for the mesh computation.",
+    );
     yield* put(finishedLoadingMeshAction(layerName, id));
     yield* put(removeMeshAction(layerName, id));
     return;

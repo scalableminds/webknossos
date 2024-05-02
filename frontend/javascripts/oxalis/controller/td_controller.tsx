@@ -36,6 +36,7 @@ import * as Utils from "libs/utils";
 import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, left, right, top, bottom } = camera;
@@ -234,12 +235,18 @@ class TDController extends React.PureComponent<Props> {
         if (event.shiftKey) {
           Store.dispatch(setPositionAction(unscaledPosition));
         } else if (ctrlOrMetaPressed && intersection.meshId != null) {
+          const state = Store.getState();
+          const volumeTracing = getActiveSegmentationTracing(state);
+          const deselect =
+            volumeTracing?.activeUnmappedSegmentId != null &&
+            volumeTracing?.activeUnmappedSegmentId === intersection.unmappedSegmentId;
+
           Store.dispatch(
             setActiveCellAction(
               intersection.meshId,
               undefined,
               undefined,
-              intersection.unmappedSegmentId,
+              deselect ? null : intersection.unmappedSegmentId,
             ),
           );
         }

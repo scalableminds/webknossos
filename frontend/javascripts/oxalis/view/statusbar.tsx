@@ -162,6 +162,9 @@ function ShortcutsInfo() {
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const isTDViewportActive = useSelector(
+    (state: OxalisState) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
+  );
 
   const moreShortcutsLink = (
     <a
@@ -185,6 +188,7 @@ function ShortcutsInfo() {
         isShiftPressed,
         isControlOrMetaPressed,
         isAltPressed,
+        isTDViewportActive,
       );
     }
 
@@ -324,6 +328,7 @@ function ShortcutsInfo() {
     isShiftPressed,
     isControlOrMetaPressed,
     isAltPressed,
+    isTDViewportActive,
   );
 
   return (

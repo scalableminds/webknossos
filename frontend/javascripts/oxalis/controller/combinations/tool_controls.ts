@@ -167,6 +167,7 @@ export class MoveTool {
     shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     altKey: boolean,
+    _isTDViewportActive: boolean,
   ): ActionDescriptor {
     // In legacy mode, don't display a hint for
     // left click as it would be equal to left drag.
@@ -313,6 +314,7 @@ export class SkeletonTool {
     shiftKey: boolean,
     ctrlOrMetaKey: boolean,
     altKey: boolean,
+    _isTDViewportActive: boolean,
   ): ActionDescriptor {
     // In legacy mode, don't display a hint for
     // left click as it would be equal to left drag
@@ -439,6 +441,7 @@ export class DrawTool {
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
+    _isTDViewportActive: boolean,
   ): ActionDescriptor {
     let rightClick;
 
@@ -483,6 +486,7 @@ export class EraseTool {
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
+    _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
       leftDrag: `Erase (${activeTool === AnnotationToolEnum.ERASE_BRUSH ? "Brush" : "Trace"})`,
@@ -507,6 +511,7 @@ export class PickCellTool {
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
+    _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
       leftClick: "Pick Segment",
@@ -537,6 +542,7 @@ export class FillCellTool {
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
+    _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
       leftClick: "Fill Segment",
@@ -605,6 +611,7 @@ export class BoundingBoxTool {
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
+    _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
       leftDrag: "Create/Resize Bounding Boxes",
@@ -722,6 +729,7 @@ export class QuickSelectTool {
     shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
+    _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
       leftDrag: shiftKey ? "Resize Rectangle symmetrically" : "Draw Rectangle around Segment",
@@ -845,6 +853,7 @@ export class LineMeasurementTool {
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
+    _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
       leftClick: "Left Click to measure distance",
@@ -923,6 +932,7 @@ export class AreaMeasurementTool {
     _shiftKey: boolean,
     _ctrlOrMetaKey: boolean,
     _altKey: boolean,
+    _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
       leftDrag: "Drag to measure area",
@@ -982,9 +992,27 @@ export class ProofreadTool {
     shiftKey: boolean,
     ctrlOrMetaKey: boolean,
     _altKey: boolean,
+    isTDViewportActive: boolean,
   ): ActionDescriptor {
-    let leftClick = "Select Segment to Proofread";
+    if (isTDViewportActive) {
+      let maybeLeftClick = {};
+      if (shiftKey) {
+        maybeLeftClick = {
+          leftClick: "Jump to point",
+        };
+      } else if (ctrlOrMetaKey) {
+        maybeLeftClick = {
+          leftClick: "Activate super-voxel",
+        };
+      }
 
+      return {
+        ...maybeLeftClick,
+        leftDrag: "Move",
+        rightClick: "Context Menu",
+      };
+    }
+    let leftClick = "Select Segment to Proofread";
     if (shiftKey) {
       leftClick = "Merge with active Segment";
     } else if (ctrlOrMetaKey) {

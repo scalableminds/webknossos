@@ -90,7 +90,7 @@ class AiModelController @Inject()(
         _ <- userService.assertIsSuperUser(request.identity)
         aiInferenceIdValidated <- ObjectId.fromString(aiInferenceId)
         aiInference <- aiInferenceDAO.findOne(aiInferenceIdValidated) ?~> "aiInference.notFound" ~> NOT_FOUND
-        jsResult <- aiInferenceService.publicWrites(aiInference)
+        jsResult <- aiInferenceService.publicWrites(aiInference, request.identity)
       } yield Ok(jsResult)
     }
   }
@@ -110,7 +110,8 @@ class AiModelController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity)
         aiInferences <- aiInferenceDAO.findAll
-        jsResults <- Fox.serialCombined(aiInferences)(aiInferenceService.publicWrites)
+        jsResults <- Fox.serialCombined(aiInferences)(inference =>
+          aiInferenceService.publicWrites(inference, request.identity))
       } yield Ok(Json.toJson(jsResults))
     }
   }
@@ -191,7 +192,7 @@ class AiModelController @Inject()(
           maskAnnotationLayerName = request.body.maskAnnotationLayerName
         )
         _ <- aiInferenceDAO.insertOne(newAiInference)
-        newAiModelJs <- aiInferenceService.publicWrites(newAiInference)
+        newAiModelJs <- aiInferenceService.publicWrites(newAiInference, request.identity)
       } yield Ok(newAiModelJs)
     }
 

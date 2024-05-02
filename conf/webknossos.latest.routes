@@ -271,18 +271,18 @@ GET           /jobs/:id                                                         
 PATCH         /jobs/:id/cancel                                                                  controllers.JobController.cancel(id: String)
 POST          /jobs/:id/status                                                                  controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)
 POST          /jobs/:id/attachVoxelyticsWorkflow                                                controllers.WKRemoteWorkerController.attachVoxelyticsWorkflow(key: String, id: String)
-POST          /jobs/:id/attachDatasetToInference                                                controllers.WKRemoteWorkerController.attachDatasetToInference(key: String, id: String, datasetName: String)
+POST          /jobs/:id/attachDatasetToInference                                                controllers.WKRemoteWorkerController.attachDatasetToInference(key: String, id: String)
 GET           /jobs/:id/export                                                                  controllers.JobController.redirectToExport(id: String)
 
 # AI Models
-GET           /aiModels/:id                                                                     controllers.AiModelController.readAiModelInfo(id: String)
-PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: String)
-DELETE        /aiModels/:id                                                                     controllers.AiModelController.deleteAiModel(id: String)
 POST          /aiModels/runTraining                                                             controllers.AiModelController.runTraining
 POST          /aiModels/inferences/runInference                                                 controllers.AiModelController.runInference
 GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: String)
 GET           /aiModels/inferences                                                              controllers.AiModelController.listAiInferences
 GET           /aiModels                                                                         controllers.AiModelController.listAiModels
+GET           /aiModels/:id                                                                     controllers.AiModelController.readAiModelInfo(id: String)
+PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: String)
+DELETE        /aiModels/:id                                                                     controllers.AiModelController.deleteAiModel(id: String)
 
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()

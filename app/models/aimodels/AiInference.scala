@@ -5,9 +5,9 @@ import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Aiinferences, AiinferencesRow}
-import models.dataset.{DataStoreDAO, DataStoreService}
+import models.dataset.{DataStoreDAO, DataStoreService, DatasetDAO, DatasetService}
 import models.job.{JobDAO, JobService}
-import models.user.{UserDAO, UserService}
+import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
 import utils.ObjectId
@@ -33,19 +33,25 @@ class AiInferenceService @Inject()(dataStoreDAO: DataStoreDAO,
                                    dataStoreService: DataStoreService,
                                    aiModelService: AiModelService,
                                    aiModelDAO: AiModelDAO,
+                                   datasetDAO: DatasetDAO,
                                    userDAO: UserDAO,
                                    userService: UserService,
+                                   datasetService: DatasetService,
                                    jobDAO: JobDAO,
                                    jobService: JobService) {
 
-  def publicWrites(aiInference: AiInference)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def publicWrites(aiInference: AiInference, requestingUser: User)(implicit ctx: DBAccessContext,
+                                                                   ec: ExecutionContext): Fox[JsObject] =
     for {
       inferenceJob <- jobDAO.findOne(aiInference._inferenceJob)
       inferenceJobJs <- jobService.publicWrites(inferenceJob)
       dataStore <- dataStoreDAO.findOneByName(inferenceJob._dataStore)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
-      // aiModel <- aiModelDAO.findOne(aiInference._aiModel)
-      // aiModelJs <- aiModelService.publicWrites(aiModel)
+      aiModel <- aiModelDAO.findOne(aiInference._aiModel)
+      aiModelJs <- aiModelService.publicWrites(aiModel)
+      newDatasetOpt <- Fox.runOptional(aiInference._newDataset)(datasetDAO.findOne)
+      newDatasetJsOpt <- Fox.runOptional(newDatasetOpt)(newDataset =>
+        datasetService.publicWrites(newDataset, Some(requestingUser)))
       user <- userDAO.findOne(inferenceJob._owner)
       userJs <- userService.compactWrites(user)
     } yield
@@ -55,8 +61,9 @@ class AiInferenceService @Inject()(dataStoreDAO: DataStoreDAO,
         "newSegmentationLayerName" -> aiInference.newSegmentationLayerName,
         "maskAnnotationLayerName" -> aiInference.maskAnnotationLayerName,
         "inferenceJob" -> inferenceJobJs,
-        // "aiModel" -> aiModelJs,
+        "aiModel" -> aiModelJs,
         "user" -> userJs,
+        "newDataset" -> newDatasetJsOpt,
         "created" -> aiInference.created
       )
 }
@@ -122,7 +129,7 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   def updateDataset(id: ObjectId, datasetId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(q"UPDATE $collectionName SET _newDataset = $datasetId WHERE _id = $id".asUpdate)
+      _ <- run(q"UPDATE webknossos.aiInferences SET _newDataset = $datasetId WHERE _id = $id".asUpdate)
     } yield ()
 
 }

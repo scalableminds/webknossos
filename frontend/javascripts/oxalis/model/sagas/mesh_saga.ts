@@ -811,7 +811,7 @@ function* loadPrecomputedMeshForSegmentId(
     loadingOrder = chunkDescriptors.loadingOrder;
   } catch (exception) {
     Toast.warning(messages["tracing.mesh_listing_failed"]);
-    console.warn("Mesh chunk couldn't be loaded due to", exception);
+    console.warn(`Mesh chunks for segment ${id} couldn't be loaded due to`, exception);
     yield* put(finishedLoadingMeshAction(layerName, id));
     yield* put(removeMeshAction(layerName, id));
     return;

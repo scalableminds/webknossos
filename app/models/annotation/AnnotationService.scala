@@ -17,6 +17,7 @@ import com.scalableminds.webknossos.datastore.geometry.{
   Vec3IntProto
 }
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
   AnnotationLayerStatistics,
@@ -67,7 +68,7 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               volumeTracingOpt: Option[VolumeTracing],
                               volumeDataOpt: Option[Array[Byte]],
                               name: String,
-                              scaleOpt: Option[Vec3Double],
+                              voxelSizeOpt: Option[VoxelSize],
                               annotation: Annotation,
                               user: User,
                               taskOpt: Option[Task],
@@ -668,7 +669,7 @@ class AnnotationService @Inject()(
                                 volumeTracingOpt,
                                 volumeDataOpt,
                                 name,
-                                scaleOpt,
+                                voxelSizeOpt,
                                 annotation,
                                 user,
                                 taskOpt,
@@ -683,7 +684,7 @@ class AnnotationService @Inject()(
               name,
               fetchedAnnotationLayersForAnnotation,
               Some(annotation),
-              scaleOpt,
+              voxelSizeOpt,
               Some(name + "_data.zip"),
               organizationName,
               conf.Http.uri,
@@ -703,7 +704,7 @@ class AnnotationService @Inject()(
       skipVolumeData: Boolean,
       volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext): Fox[List[List[DownloadAnnotation]]] = {
 
-    def getSingleDownloadAnnotation(annotation: Annotation, scaleOpt: Option[Vec3Double]) =
+    def getSingleDownloadAnnotation(annotation: Annotation, voxelSizeOpt: Option[VoxelSize]) =
       for {
         user <- userService.findOneCached(annotation._user) ?~> "user.notFound"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"
@@ -719,7 +720,7 @@ class AnnotationService @Inject()(
                            None,
                            None,
                            name,
-                           scaleOpt,
+                           voxelSizeOpt,
                            annotation,
                            user,
                            taskOpt,

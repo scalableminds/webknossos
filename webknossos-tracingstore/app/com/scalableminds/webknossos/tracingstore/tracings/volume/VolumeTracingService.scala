@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.datastore.models.{
   BucketPosition,
   UnsignedInteger,
   UnsignedIntegerArray,
+  VoxelSize,
   WebknossosAdHocMeshRequest
 }
 import com.scalableminds.webknossos.datastore.services._
@@ -473,7 +474,7 @@ class VolumeTracingService @Inject()(
   def allDataZip(tracingId: String,
                  tracing: VolumeTracing,
                  volumeDataZipFormat: VolumeDataZipFormat,
-                 voxelSize: Option[Vec3Double])(implicit ec: ExecutionContext): Fox[Files.TemporaryFile] = {
+                 voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[Files.TemporaryFile] = {
     val zipped = temporaryFileCreator.create(tracingId, ".zip")
     val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString)))
     allDataToOutputStream(tracingId, tracing, volumeDataZipFormat, voxelSize, os).map(_ => zipped)
@@ -482,7 +483,7 @@ class VolumeTracingService @Inject()(
   private def allDataToOutputStream(tracingId: String,
                                     tracing: VolumeTracing,
                                     volumeDataZipFormmat: VolumeDataZipFormat,
-                                    voxelSize: Option[Vec3Double],
+                                    voxelSize: Option[VoxelSize],
                                     os: OutputStream)(implicit ec: ExecutionContext): Fox[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] = volumeDataZipFormmat match {

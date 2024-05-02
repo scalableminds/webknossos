@@ -56,7 +56,7 @@ class ZarrStreamingController @Inject()(
                                                                                   datasetName,
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
-        omeNgffHeader = NgffMetadata.fromNameScaleAndMags(dataLayerName, dataSource.scale, dataLayer.resolutions)
+        omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(dataLayerName, dataSource.scale, dataLayer.resolutions)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }
@@ -79,9 +79,9 @@ class ZarrStreamingController @Inject()(
                 annotationSource.organizationName,
                 annotationSource.datasetName,
                 dataLayerName) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
-              dataSourceOmeNgffHeader = NgffMetadata.fromNameScaleAndMags(dataLayerName,
-                                                                          dataSource.scale,
-                                                                          dataLayer.resolutions)
+              dataSourceOmeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(dataLayerName,
+                                                                              dataSource.scale,
+                                                                              dataLayer.resolutions)
             } yield dataSourceOmeNgffHeader
         }
       } yield Ok(Json.toJson(omeNgffHeader))

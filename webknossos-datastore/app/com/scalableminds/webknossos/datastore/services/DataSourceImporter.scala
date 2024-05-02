@@ -4,6 +4,7 @@ import java.nio.file.Path
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
 import net.liftweb.common.Box
 
@@ -44,7 +45,7 @@ trait DataSourceImporter {
       }
       GenericDataSource(id,
                         layers,
-                        previous.map(_.scale).getOrElse(Vec3Double.zeros),
+                        previous.map(_.scale).getOrElse(VoxelSize.fromFactorWithDefaultUnit(Vec3Double.zeros)),
                         previous.flatMap(_.defaultViewConfiguration))
     }
 
@@ -53,7 +54,7 @@ trait DataSourceImporter {
                       report: DataSourceImportReport[Path]): Box[DataSource] = {
     report.warning(_ =>
       "Automatic suggestions for the datasource-properties.json are not available since the dataset is not in WKW format.")
-    previous.orElse(Some(GenericDataSource(id, List.empty, Vec3Double.zeros)))
+    previous.orElse(Some(GenericDataSource(id, List.empty, VoxelSize.fromFactorWithDefaultUnit(Vec3Double.zeros))))
   }
 
   protected def guessLayerCategory(layerName: String, elementClass: ElementClass.Value)(

@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceId,
   GenericDataSource
 }
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, VoxelSize}
 import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -36,7 +36,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   private lazy val rank = layer.additionalAxes.getOrElse(Seq.empty).length + 4
   private lazy val additionalAxesSorted = reorderAdditionalAxes(layer.additionalAxes.getOrElse(Seq.empty))
 
-  def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[Vec3Double])(
+  def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[VoxelSize])(
       implicit ec: ExecutionContext): Iterator[NamedStream] = {
 
     val header = Zarr3ArrayHeader(
@@ -97,7 +97,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
       ))
   }
 
-  private def createVolumeDataSource(voxelSize: Option[Vec3Double]): GenericDataSource[DataLayer] = {
+  private def createVolumeDataSource(voxelSize: Option[VoxelSize]): GenericDataSource[DataLayer] = {
     val magLocators = layer.tracing.resolutions.map { mag =>
       MagLocator(mag = vec3IntToProto(mag),
                  axisOrder = Some(AxisOrder(c = Some(0), x = rank - 3, y = rank - 2, z = Some(rank - 1))))
@@ -114,7 +114,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
             if (additionalAxesSorted.isEmpty) None
             else Some(additionalAxesSorted)
         )),
-      scale = voxelSize.getOrElse(Vec3Double.ones) // Download should still be available if the dataset no longer exists. In that case, the voxel size is unknown
+      scale = voxelSize.getOrElse(VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)) // Download should still be available if the dataset no longer exists. In that case, the voxel size is unknown
     )
   }
 

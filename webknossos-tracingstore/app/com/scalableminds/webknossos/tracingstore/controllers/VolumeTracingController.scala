@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentStatisticsParameters
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
-import com.scalableminds.webknossos.datastore.models.{WebknossosAdHocMeshRequest, WebknossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.{VoxelSize, WebknossosAdHocMeshRequest, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{
   EditableMappingSegmentListResult,
@@ -144,7 +144,8 @@ class VolumeTracingController @Inject()(
                  tracingId: String,
                  volumeDataZipFormat: String,
                  version: Option[Long],
-                 voxelSize: Option[String]): Action[AnyContent] =
+                 voxelSize: Option[String],
+                 voxelSizeUnit: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
@@ -152,7 +153,11 @@ class VolumeTracingController @Inject()(
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
             volumeDataZipFormatParsed <- VolumeDataZipFormat.fromString(volumeDataZipFormat).toFox
             voxelSizeParsed <- Fox.runOptional(voxelSize)(vs => Vec3Double.fromUriLiteral(vs))
-            data <- tracingService.allDataZip(tracingId, tracing, volumeDataZipFormatParsed, voxelSizeParsed)
+            data <- tracingService.allDataZip(
+              tracingId,
+              tracing,
+              volumeDataZipFormatParsed,
+              voxelSizeParsed.map(VoxelSize.fromFactorWithDefaultUnit)) // todo unit of voxel size
           } yield Ok.sendFile(data)
         }
       }

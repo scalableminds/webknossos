@@ -153,9 +153,9 @@ class VolumeTracingZarrStreamingController @Inject()(
 
         existingMags = tracing.resolutions.map(vec3IntFromProto)
         dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
-        omeNgffHeader = NgffMetadata.fromNameScaleAndMags(tracingId,
-                                                          dataSourceScale = dataSource.scale,
-                                                          mags = existingMags.toList)
+        omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(tracingId,
+                                                              dataSourceVoxelSize = dataSource.scale,
+                                                              mags = existingMags.toList)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }

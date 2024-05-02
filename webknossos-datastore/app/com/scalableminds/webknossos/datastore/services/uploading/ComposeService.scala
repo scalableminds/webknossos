@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceRepository}
 import play.api.libs.json.{Json, OFormat}
@@ -138,7 +139,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       dataSource = GenericDataSource(
         DataSourceId(composeRequest.newDatasetName, organizationName),
         layers,
-        composeRequest.scale,
+        VoxelSize.fromFactorWithDefaultUnit(composeRequest.scale),
         None
       )
 

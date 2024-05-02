@@ -6,6 +6,7 @@ import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{
   CoordinateTransformation,
   CoordinateTransformationType,
@@ -17,17 +18,20 @@ import scala.util.Try
 
 class ExploreLayerService extends FoxImplicits {
 
-  def adaptLayersAndVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, Vec3Double)],
-                              preferredVoxelSize: Option[Vec3Double])(
-      implicit ec: ExecutionContext): Fox[(List[DataLayerWithMagLocators], Vec3Double)] =
+  def adaptLayersAndVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, VoxelSize)],
+                              preferredVoxelSize: Option[VoxelSize])(
+      implicit ec: ExecutionContext): Fox[(List[DataLayerWithMagLocators], VoxelSize)] =
     for {
-      rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes, preferredVoxelSize) ?~> "Could not extract common voxel size from layers"
+      rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes,
+                                                                   preferredVoxelSize.map(_.factor) // TODO unit
+      ) ?~> "Could not extract common voxel size from layers"
       rescaledLayers = rescaledLayersAndVoxelSize._1
       voxelSize = rescaledLayersAndVoxelSize._2
       renamedLayers = makeLayerNamesUnique(rescaledLayers)
-      layersWithCoordinateTransformations = addCoordinateTransformationsToLayers(renamedLayers,
-                                                                                 preferredVoxelSize,
-                                                                                 voxelSize)
+      layersWithCoordinateTransformations = addCoordinateTransformationsToLayers(
+        renamedLayers,
+        preferredVoxelSize.map(_.factor), // TODO unit
+        voxelSize.factor) // TODO unit
     } yield (layersWithCoordinateTransformations, voxelSize)
 
   def makeLayerNamesUnique(layers: List[DataLayerWithMagLocators]): List[DataLayerWithMagLocators] = {
@@ -113,13 +117,13 @@ class ExploreLayerService extends FoxImplicits {
         }
     }
 
-  private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, Vec3Double)],
+  private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, VoxelSize)],
                                              preferredVoxelSize: Option[Vec3Double])(
-      implicit ec: ExecutionContext): Fox[(List[DataLayerWithMagLocators], Vec3Double)] = {
+      implicit ec: ExecutionContext): Fox[(List[DataLayerWithMagLocators], VoxelSize)] = {
     val allVoxelSizes = layersWithVoxelSizes
       .flatMap(layerWithVoxelSize => {
         val layer = layerWithVoxelSize._1
-        val voxelSize = layerWithVoxelSize._2
+        val voxelSize = layerWithVoxelSize._2.factor // TODO unit
 
         layer.resolutions.map(resolution => voxelSize * resolution.toVec3Double)
       })
@@ -135,11 +139,11 @@ class ExploreLayerService extends FoxImplicits {
       _ <- Fox.combined(groupedMags.values.map(checkForDuplicateMags).toList)
       rescaledLayers = layersWithVoxelSizes.map(layerWithVoxelSize => {
         val layer = layerWithVoxelSize._1
-        val layerVoxelSize = layerWithVoxelSize._2
+        val layerVoxelSize = layerWithVoxelSize._2.factor // TODO unit
         val magFactors = (layerVoxelSize / baseVoxelSize).toVec3Int
         layer.mapped(boundingBoxMapping = _ * magFactors, magMapping = mag => mag.copy(mag = mag.mag * magFactors))
       })
-    } yield (rescaledLayers, baseVoxelSize)
+    } yield (rescaledLayers, VoxelSize.fromFactorWithDefaultUnit(baseVoxelSize))
   }
 
   def removeHeaderFileNamesFromUriSuffix(uri: String): String =

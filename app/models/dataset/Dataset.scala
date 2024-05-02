@@ -4,6 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
@@ -48,7 +49,7 @@ case class Dataset(_id: ObjectId,
                    isPublic: Boolean,
                    isUsable: Boolean,
                    name: String,
-                   scale: Option[Vec3Double],
+                   scale: Option[VoxelSize],
                    sharingToken: Option[String],
                    status: String,
                    logoUrl: Option[String],
@@ -97,17 +98,17 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   val deletedByUserStatus: String = "Deleted by user."
   private val unreportedStatusList = List(unreportedStatus, deletedByUserStatus)
 
-  private def parseScaleOpt(literalOpt: Option[String]): Fox[Option[Vec3Double]] = literalOpt match {
+  private def parseVoxelSizeOpt(literalOpt: Option[String]): Fox[Option[VoxelSize]] = literalOpt match {
     case Some(literal) =>
       for {
         scale <- Vec3Double.fromList(parseArrayLiteral(literal).map(_.toDouble)) ?~> "could not parse dataset scale"
-      } yield Some(scale)
+      } yield Some(VoxelSize.fromFactorWithDefaultUnit(scale))
     case None => Fox.successful(None)
   }
 
   protected def parse(r: DatasetsRow): Fox[Dataset] =
     for {
-      scale <- parseScaleOpt(r.scale)
+      voxelSize <- parseVoxelSizeOpt(r.scale)
       defaultViewConfigurationOpt <- Fox.runOptional(r.defaultviewconfiguration)(
         JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
@@ -129,7 +130,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         r.ispublic,
         r.isusable,
         r.name,
-        scale,
+        voxelSize,
         r.sharingtoken,
         r.status,
         r.logourl,
@@ -535,10 +536,10 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
            ${d._uploader}, ${d._folder},
            ${d.inboxSourceHash}, $defaultViewConfiguration, $adminViewConfiguration,
            ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
-           ${d.name}, ${d.scale}, ${d.status.take(1024)},
+           ${d.name}, ${d.scale.map(_.factor)}, ${d.status.take(1024)},
            ${d.sharingToken}, ${d.sortingKey}, ${d.details}, ${d.tags},
            ${d.created}, ${d.isDeleted})
-           """.asUpdate)
+           """.asUpdate) // TODO unit of voxel size
     } yield ()
   }
 
@@ -556,7 +557,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                               inboxSourceHash = $inboxSourceHash,
                               defaultViewConfiguration = $defaultViewConfiguration,
                               isUsable = $isUsable,
-                              scale = ${source.scaleOpt},
+                              scale = ${source.scaleOpt.map(_.factor)},
                               status = ${source.statusOpt.getOrElse("").take(1024)}
                          where _id = $id""".asUpdate)
       _ <- datasetLayerDAO.updateLayers(id, source)

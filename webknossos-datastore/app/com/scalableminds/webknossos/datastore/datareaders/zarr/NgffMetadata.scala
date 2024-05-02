@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr;
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
@@ -87,12 +88,16 @@ object NgffMultiscalesItem {
 case class NgffMetadata(multiscales: List[NgffMultiscalesItem], omero: Option[NgffOmeroMetadata])
 
 object NgffMetadata {
-  def fromNameScaleAndMags(dataLayerName: String, dataSourceScale: Vec3Double, mags: List[Vec3Int]): NgffMetadata = {
+  def fromNameVoxelSizeAndMags(dataLayerName: String,
+                               dataSourceVoxelSize: VoxelSize,
+                               mags: List[Vec3Int]): NgffMetadata = {
     val datasets = mags.map(
       mag =>
-        NgffDataset(path = mag.toMagLiteral(allowScalar = true),
-                    List(NgffCoordinateTransformation(
-                      scale = Some(List[Double](1.0) ++ (dataSourceScale * Vec3Double(mag)).toList)))))
+        NgffDataset(
+          path = mag.toMagLiteral(allowScalar = true),
+          List(NgffCoordinateTransformation(
+            scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList)))
+      )) // TODO unit of voxel size
     NgffMetadata(multiscales = List(NgffMultiscalesItem(name = Some(dataLayerName), datasets = datasets)), None)
   }
 

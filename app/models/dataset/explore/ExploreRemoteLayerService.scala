@@ -16,6 +16,7 @@ import com.scalableminds.webknossos.datastore.explore.{
   Zarr3ArrayExplorer,
   ZarrArrayExplorer
 }
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.storage.{DataVaultService, RemoteSourceDescriptor}
@@ -80,7 +81,9 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       layersWithVoxelSizes = exploredLayersNested.flatten
       preferredVoxelSize = parameters.flatMap(_.preferredVoxelSize).headOption
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
-      (layers, voxelSize) <- exploreLayerService.adaptLayersAndVoxelSize(layersWithVoxelSizes, preferredVoxelSize)
+      (layers, voxelSize) <- exploreLayerService.adaptLayersAndVoxelSize(
+        layersWithVoxelSizes,
+        preferredVoxelSize.map(VoxelSize.fromFactorWithDefaultUnit)) // TODO unit
       dataSource = GenericDataSource[DataLayer](
         DataSourceId("", ""), // Frontend will prompt user for a good name
         layers,
@@ -107,7 +110,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       credentialIdentifier: Option[String],
       credentialSecret: Option[String],
       reportMutable: ListBuffer[String],
-      requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
+      requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       uri <- tryo(new URI(exploreLayerService.removeHeaderFileNamesFromUriSuffix(layerUri))) ?~> s"Received invalid URI: $layerUri"
       _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
@@ -146,7 +149,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
                                                credentialId: Option[String],
                                                reportMutable: ListBuffer[String],
                                                explorers: List[RemoteLayerExplorer])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     explorers match {
       case Nil => Fox.empty
       case currentExplorer :: remainingExplorers =>

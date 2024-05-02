@@ -7,6 +7,25 @@ import play.api.libs.json._
 
 import scala.annotation.nowarn
 
+// Defines the real-world size in a spatial unit for a mag1-voxel.
+case class VoxelSize(factor: Vec3Double, unit: String)
+
+object VoxelSize {
+  private val DEFAULT_UNIT: String = "µm" // TODO make enum. // TODO: final default should be nm
+
+  def fromFactorWithDefaultUnit(factor: Vec3Double): VoxelSize = VoxelSize(factor, DEFAULT_UNIT)
+
+  implicit val voxelSizeFormat: Format[VoxelSize] = new Format[VoxelSize] {
+    def reads(json: JsValue): JsResult[VoxelSize] =
+      Vec3Double.Vec3DoubleReads.reads(json).map(VoxelSize.fromFactorWithDefaultUnit).orElse {
+        Json.reads[VoxelSize].reads(json)
+      }
+
+    def writes(voxelSize: VoxelSize): JsValue = Json.writes[VoxelSize].writes(voxelSize)
+  }
+
+}
+
 package object datasource {
 
   // here team is not (yet) renamed to organization to avoid migrating all jsons
@@ -25,13 +44,13 @@ package object datasource {
 
   case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId,
                                                     dataLayers: List[T],
-                                                    scale: Vec3Double,
+                                                    scale: VoxelSize,
                                                     defaultViewConfiguration: Option[DatasetViewConfiguration] = None)
       extends GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)
 
-    val scaleOpt: Option[Vec3Double] = Some(scale)
+    val scaleOpt: Option[VoxelSize] = Some(scale)
 
     val statusOpt: Option[String] = None
 

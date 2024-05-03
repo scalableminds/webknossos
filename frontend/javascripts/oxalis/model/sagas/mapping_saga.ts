@@ -414,7 +414,11 @@ function convertMappingObjectToClasses(existingMapping: Mapping) {
     // @ts-ignore unmapped is guaranteed to exist in existingMapping as it was obtained using existingMapping.keys()
     const mapped: number = existingMapping.get(unmapped);
     classesByRepresentative[mapped] = classesByRepresentative[mapped] || [];
-    classesByRepresentative[mapped].push(unmapped);
+    if (typeof unmapped === "bigint") {
+      // todop
+      console.warn("Casting BigInt to Number for custom colors.");
+    }
+    classesByRepresentative[mapped].push(Number(unmapped));
   }
   const classes = Object.values(classesByRepresentative);
   return classes;
@@ -433,12 +437,18 @@ function* setCustomColors(
     const firstIdEntry = aClass[0];
     if (firstIdEntry == null) continue;
 
-    const representativeId = mappingProperties.mapping.get(firstIdEntry);
+    const representativeId = (mappingProperties.mapping as Map<NumberLike, NumberLike>).get(
+      firstIdEntry,
+    );
     if (representativeId == null) continue;
 
     const hueValue = mappingProperties.mappingColors[classIdx];
     const color = jsHsv2rgb(360 * hueValue, 1, 1);
-    yield* put(updateSegmentAction(representativeId, { color }, layerName));
+    if (typeof representativeId === "bigint") {
+      // todop
+      console.warn("Casting BigInt to Number for custom colors.");
+    }
+    yield* put(updateSegmentAction(Number(representativeId), { color }, layerName));
 
     classIdx++;
   }
@@ -471,7 +481,7 @@ function* fetchMappings(
 }
 
 function buildMappingObject(mappingName: string, fetchedMappings: APIMappings): Mapping {
-  const mappingObject: Mapping = new Map();
+  const mappingObject = new Map<number, number>();
 
   for (const currentMappingName of getMappingChain(mappingName, fetchedMappings)) {
     const mapping = fetchedMappings[currentMappingName];

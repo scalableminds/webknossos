@@ -1021,7 +1021,6 @@ class TracingApi {
    * api.tracing.centerTDView()
    */
   centerTDView = (): void => {
-    debugger;
     Store.dispatch(centerTDViewAction());
   };
 

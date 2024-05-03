@@ -337,7 +337,6 @@ class TDController extends React.PureComponent<Props> {
 
   onTDCameraChanged = (userTriggered: boolean = true) => {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
-    debugger;
     const setCameraAction = userTriggered
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;

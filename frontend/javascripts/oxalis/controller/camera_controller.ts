@@ -8,9 +8,8 @@ import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "oxalis/co
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
-  getDatasetExtentInNm,
-  getDatasetCenter,
   getDatasetExtentInDatasourceUnit,
+  getDatasetCenter,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getInputCatcherAspectRatio,
@@ -73,12 +72,6 @@ class CameraController extends React.PureComponent<Props> {
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
 
   componentDidMount() {
-    const far = 8000000;
-
-    for (const cam of _.values(this.props.cameras)) {
-      cam.near = 0;
-      cam.far = far;
-    }
     // Take the whole diagonal extent of the dataset to get the possible maximum extent of the dataset.
     // This is used as an indication to set the far plane. This needs to be multiplied by 2
     // as the dataset planes in the 3d viewport are offset by the maximum of width, height and extent to ensure the dataset is visible.
@@ -90,8 +83,14 @@ class CameraController extends React.PureComponent<Props> {
     const diagonalDatasetExtent = Math.sqrt(
       datasetExtent.width ** 2 + datasetExtent.height ** 2 + datasetExtent.depth ** 2,
     );
+    const far = Math.max(8000000, diagonalDatasetExtent * 2);
+
+    for (const cam of _.values(this.props.cameras)) {
+      cam.near = 0;
+      cam.far = far;
+    }
     // This value is correct
-    this.props.cameras[OrthoViews.TDView].far = diagonalDatasetExtent * 2;
+    this.props.cameras[OrthoViews.TDView].far = far;
 
     const tdId = `inputcatcher_${OrthoViews.TDView}`;
     this.bindToEvents();
@@ -235,7 +234,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const { dataset } = state;
   const { tdCamera } = state.viewModeData.plane;
   const flycamPos = voxelToDatasourceUnit(dataset.dataSource.scale, getPosition(state.flycam));
-  const datasetExtent = getDatasetExtentInNm(dataset);
+  const datasetExtent = getDatasetExtentInDatasourceUnit(dataset);
   console.log("CameraController", "rotate3DViewTo", "datasetExtent", datasetExtent);
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
   // are in front of it and thus visible.
@@ -333,16 +332,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     const newPosition = V3.toArray(
       V3.sub(currentFlycamPos, V3.scale(tweened.forward, centerDistance)),
     );
-    console.log("Init 3d camera to: ---------------------------", {
-      position: newPosition,
-      up: tweened.up,
-      left,
-      right,
-      top,
-      bottom,
-      lookAt: currentFlycamPos,
-    });
-    debugger;
     Store.dispatch(
       setTDCameraWithoutTimeTrackingAction({
         position: newPosition,

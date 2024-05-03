@@ -66,7 +66,7 @@ import {
   refreshMeshAction,
   removeMeshAction,
 } from "oxalis/model/actions/annotation_actions";
-import { Tree, VolumeTracing } from "oxalis/store";
+import { NumberLike, NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
 import _ from "lodash";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
@@ -366,6 +366,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       return;
     }
     items.push(
+      // todop: how to serialize bigint for server?
       mergeAgglomerate(
         sourceAgglomerateId,
         targetAgglomerateId,
@@ -380,6 +381,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       return;
     }
     items.push(
+      // todop: how to serialize bigint for server?
       splitAgglomerate(
         sourceAgglomerateId,
         sourceInfo.unmappedId,
@@ -456,10 +458,10 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
 }
 
 function* performMinCut(
-  sourceAgglomerateId: number,
-  targetAgglomerateId: number,
-  sourceSegmentId: number,
-  targetSegmentId: number,
+  sourceAgglomerateId: NumberLike,
+  targetAgglomerateId: NumberLike,
+  sourceSegmentId: NumberLike,
+  targetSegmentId: NumberLike,
   agglomerateFileMag: Vector3,
   editableMappingId: string,
   volumeTracingId: string,
@@ -742,7 +744,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     );
 
     const mergedMapping = new Map(
-      Array.from(activeMapping.mapping, ([key, value]) =>
+      Array.from(activeMapping.mapping as Map<number | bigint, number | bigint>, ([key, value]) =>
         value === targetAgglomerateId ? [key, sourceAgglomerateId] : [key, value],
       ),
     ) as typeof activeMapping.mapping;
@@ -954,10 +956,10 @@ function* handleProofreadCutNeighbors(action: Action) {
 
 function* prepareSplitOrMerge(): Saga<{
   agglomerateFileMag: Vector3;
-  getDataValue: (position: Vector3) => Promise<number>;
+  getDataValue: (position: Vector3) => Promise<NumberLike>;
   getMappedAndUnmapped: (
     position: Vector3,
-  ) => Promise<{ agglomerateId: number; unmappedId: number }>;
+  ) => Promise<{ agglomerateId: NumberLike; unmappedId: NumberLike }>;
   volumeTracing: VolumeTracing & { mappingName: string };
 } | null> {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
@@ -1012,12 +1014,21 @@ function* prepareSplitOrMerge(): Saga<{
 
   const getDataValue = async (position: Vector3) => {
     const unmappedId = await getUnmappedDataValue(position);
-    return mapping.get(unmappedId);
+    const mappedId = (mapping as NumberLikeMap).get(unmappedId);
+    if (mappedId == null) {
+      // todop: are we sure that this will not throw unexpectedly?
+      throw new Error(`Could not map id ${unmappedId} at position. Is mapping up to date?`);
+    }
+    return mappedId;
   };
 
   const getMappedAndUnmapped = async (position: Vector3) => {
     const unmappedId = await getUnmappedDataValue(position);
-    const agglomerateId = mapping.get(unmappedId);
+    const agglomerateId = (mapping as NumberLikeMap).get(unmappedId);
+    if (agglomerateId == null) {
+      // todop: are we sure that this will not throw unexpectedly?
+      throw new Error(`Could not map id ${unmappedId} at position. Is mapping up to date?`);
+    }
     return { agglomerateId, unmappedId };
   };
 
@@ -1032,11 +1043,11 @@ function* prepareSplitOrMerge(): Saga<{
 function* getAgglomerateInfos(
   getMappedAndUnmapped: (
     position: Vector3,
-  ) => Promise<{ agglomerateId: number; unmappedId: number }>,
+  ) => Promise<{ agglomerateId: NumberLike; unmappedId: NumberLike }>,
   positions: Vector3[],
 ): Saga<Array<{
-  agglomerateId: number;
-  unmappedId: number;
+  agglomerateId: NumberLike;
+  unmappedId: NumberLike;
 }> | null> {
   const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
   if (idInfos.find((idInfo) => idInfo.agglomerateId === 0 || idInfo.unmappedId === 0) != null) {

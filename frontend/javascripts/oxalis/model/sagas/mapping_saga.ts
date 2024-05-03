@@ -38,7 +38,7 @@ import {
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import type { Mapping, MappingType } from "oxalis/store";
+import type { Mapping, MappingType, NumberLike } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
 import { Model } from "oxalis/singletons";
@@ -56,7 +56,6 @@ import { chainIterators } from "libs/utils";
 
 type APIMappings = Record<string, APIMapping>;
 type PreviousMappingObject = { mapping: Mapping };
-type NumberLike = number | bigint;
 
 const takeLatestMappingChange = (previousMappingObject: PreviousMappingObject) =>
   fork(function* () {

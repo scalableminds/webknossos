@@ -2370,7 +2370,7 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   segmentIds: Array<T>,
 ): Promise<Mapping> {
   const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
-  const listArrayBuffer = await doWithToken((token) =>
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
       `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
       {
@@ -2382,8 +2382,8 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
       },
     ),
   );
-
-  return new Map(_.zip(segmentIds, parseProtoListOfLong<T>(listArrayBuffer)) as Array<[T, T]>);
+  // @ts-ignore
+  return new Map(_.zip(segmentIds, parseProtoListOfLong(listArrayBuffer)));
 }
 
 export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(

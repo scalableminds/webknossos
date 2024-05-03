@@ -31,6 +31,19 @@ export function getTDViewZoom(state: OxalisState) {
   const { factor } = state.dataset.dataSource.scale;
   // We only need to calculate scaleX as scaleY would have the same value.
   const scaleX = viewplaneWidth / (width * factor[0]);
+  console.log(
+    "debug",
+    "getTDViewZoom",
+    "width",
+    width,
+    "viewplaneWidth",
+    viewplaneWidth,
+    "factor",
+    factor,
+    "scaleX",
+    scaleX,
+  );
+  console.log("getTDViewZoom", "scaleX", scaleX);
   return scaleX;
 }
 export function getInputCatcherRect(state: OxalisState, viewport: Viewport): Rect {
@@ -99,6 +112,7 @@ function _calculateMaybeGlobalPos(
   planeId = planeId || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
   const planeRatio = getBaseVoxelFactorsInDatasourceUnit(state.dataset.dataSource.scale);
+  console.log("calculateMaybeGlobalPos", "planeRatio", planeRatio);
   const { width, height } = getInputCatcherRect(state, planeId);
   // Subtract clickPos from only half of the viewport extent as
   // the center of the viewport / the flycam position is used as a reference point.
@@ -153,6 +167,7 @@ function _calculateMaybePlaneScreenPos(
   const navbarHeight = state.uiInformation.navbarHeight;
   const curGlobalPos = getPosition(state.flycam);
   const planeRatio = getBaseVoxelFactorsInDatasourceUnit(state.dataset.dataSource.scale);
+  console.log("calculateMaybePlaneScreenPos", "planeRatio", planeRatio);
   const { width, height, top, left } = getInputCatcherRect(state, planeId);
   const positionDiff = V3.sub(globalPosition, curGlobalPos);
   switch (planeId) {
@@ -208,6 +223,7 @@ function _calculateGlobalPos(
 
 export function getDisplayedDataExtentInPlaneMode(state: OxalisState) {
   const planeRatio = getBaseVoxelFactorsInDatasourceUnit(state.dataset.dataSource.scale);
+  console.log("getDisplayedDataExtentInPlaneMode", "planeRatio", planeRatio);
   const curGlobalCenterPos = getPosition(state.flycam);
   const extents = OrthoViewValuesWithoutTDView.map((orthoView) =>
     getPlaneExtentInVoxelFromStore(state, state.flycam.zoomStep, orthoView),

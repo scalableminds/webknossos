@@ -23,6 +23,7 @@ function ViewModeReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_TD_CAMERA_WITHOUT_TIME_TRACKING":
     case "SET_TD_CAMERA": {
+      debugger;
       return setTDCameraReducer(state, action.cameraData);
     }
 

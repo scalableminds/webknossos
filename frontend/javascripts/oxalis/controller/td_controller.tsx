@@ -27,7 +27,7 @@ import {
   moveTDViewByVectorWithoutTimeTrackingAction,
 } from "oxalis/model/actions/view_mode_actions";
 import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletontracing_accessor";
-import { voxelToNm } from "oxalis/model/scaleinfo";
+import { voxelToDatasourceUnit } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import PlaneView from "oxalis/view/plane_view";
 import type { CameraData, Flycam, OxalisState, Tracing } from "oxalis/store";
@@ -113,7 +113,7 @@ class TDController extends React.PureComponent<Props> {
 
   componentDidMount() {
     const { dataset, flycam } = Store.getState();
-    this.oldNmPos = voxelToNm(dataset.dataSource.scale, getPosition(flycam));
+    this.oldNmPos = voxelToDatasourceUnit(dataset.dataSource.scale, getPosition(flycam));
     this.isStarted = true;
     this.initMouse();
   }
@@ -160,7 +160,7 @@ class TDController extends React.PureComponent<Props> {
   }
 
   initTrackballControls(view: HTMLElement): void {
-    const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
+    const pos = voxelToDatasourceUnit(this.props.scale, getPosition(this.props.flycam));
     const tdCamera = this.props.cameras[OrthoViews.TDView];
     this.controls = new TrackballControls(
       tdCamera,
@@ -238,6 +238,14 @@ class TDController extends React.PureComponent<Props> {
           hitPosition.toArray() as Vector3,
           this.props.scale.factor,
         );
+        console.log(
+          "TDController",
+          "leftclick",
+          "unscaledPosition",
+          unscaledPosition,
+          "scale factor",
+          this.props.scale.factor,
+        );
 
         if (event.shiftKey) {
           Store.dispatch(setPositionAction(unscaledPosition));
@@ -277,7 +285,7 @@ class TDController extends React.PureComponent<Props> {
   setTargetAndFixPosition = (position?: Vector3): void => {
     const { controls } = this;
     position = position || getPosition(this.props.flycam);
-    const nmPosition = voxelToNm(this.props.scale, position);
+    const nmPosition = voxelToDatasourceUnit(this.props.scale, position);
 
     if (controls != null) {
       controls.target.set(...nmPosition);
@@ -329,10 +337,12 @@ class TDController extends React.PureComponent<Props> {
 
   onTDCameraChanged = (userTriggered: boolean = true) => {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
+    debugger;
     const setCameraAction = userTriggered
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;
     // Write threeJS camera into store
+    console.log("TDController", "onTDCameraChanged", "tdCamera", tdCamera);
     Store.dispatch(setCameraAction(threeCameraToCameraData(tdCamera)));
   };
 

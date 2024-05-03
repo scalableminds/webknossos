@@ -1021,6 +1021,7 @@ class TracingApi {
    * api.tracing.centerTDView()
    */
   centerTDView = (): void => {
+    debugger;
     Store.dispatch(centerTDViewAction());
   };
 
@@ -1077,7 +1078,7 @@ class TracingApi {
       lengthNmAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), datasetScaleFactorInNm);
       lengthVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
     }
-
+    console.log("measureTreeLength", lengthNmAcc, lengthVxAcc);
     return [lengthNmAcc, lengthVxAcc];
   }
 
@@ -1764,6 +1765,11 @@ class DataApi {
     // This s
     const [halfViewportExtentU, halfViewportExtentV] =
       getHalfViewportExtentsInDatasourceUnitFromState(state, viewport);
+    console.log(
+      "getHalfViewportExtentsInDatasourceUnitFromState",
+      halfViewportExtentU,
+      halfViewportExtentV,
+    );
     const layer = getLayerByName(state.dataset, layerName);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
     if (maybeResolutionIndex == null) {

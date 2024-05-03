@@ -169,6 +169,11 @@ export function setDirectionReducer(state: OxalisState, direction: Vector3) {
 export function setRotationReducer(state: OxalisState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
+    console.log(
+      "flycam reducer setRotationReducer",
+      "scaleFactor",
+      state.dataset.dataSource.scale.factor,
+    );
     let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale.factor);
     matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
     matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
@@ -188,6 +193,11 @@ export function setRotationReducer(state: OxalisState, rotation: Vector3) {
 function FlycamReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "SET_DATASET": {
+      console.log(
+        "flycam reducer SET_DATASET reducer",
+        "scaleFactor",
+        state.dataset.dataSource.scale.factor,
+      );
       return update(state, {
         flycam: {
           currentMatrix: {
@@ -327,6 +337,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
         const vector = Dimensions.transDim(action.vector, planeId);
         const zoomFactor = increaseSpeedWithZoom ? state.flycam.zoomStep : 1;
         const scaleFactor = getBaseVoxelFactorsInDatasourceUnit(dataset.dataSource.scale);
+        console.log("Fylcam reducer MOVE_PLANE_FLYCAM_ORTHO", "scaleFactor", scaleFactor);
         const delta: Vector3 = [
           vector[0] * zoomFactor * scaleFactor[0],
           vector[1] * zoomFactor * scaleFactor[1],

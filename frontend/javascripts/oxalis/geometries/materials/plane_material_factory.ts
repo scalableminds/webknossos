@@ -1021,6 +1021,17 @@ class PlaneMaterialFactory {
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
+    console.log("getMainFragmentShader params", {
+      globalLayerCount,
+      orderedColorLayerNames,
+      colorLayerNames,
+      segmentationLayerNames,
+      textureLayerInfos,
+      resolutionsCount: this.getTotalResolutionCount(),
+      datasetScale: datasetScaleFactor,
+      isOrthogonal: this.isOrthogonal,
+      tpsTransformPerLayer: this.scaledTpsInvPerLayer,
+    });
     return [
       code,
       { availableLayerIndexToGlobalLayerIndex: { value: availableLayerIndexToGlobalLayerIndex } },
@@ -1044,6 +1055,17 @@ class PlaneMaterialFactory {
     const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();
     const datasetScaleFactor = dataset.dataSource.scale.factor;
+    console.log("getMainVertexShader params", {
+      globalLayerCount,
+      orderedColorLayerNames,
+      colorLayerNames,
+      segmentationLayerNames,
+      textureLayerInfos,
+      resolutionsCount: this.getTotalResolutionCount(),
+      datasetScale: datasetScaleFactor,
+      isOrthogonal: this.isOrthogonal,
+      tpsTransformPerLayer: this.scaledTpsInvPerLayer,
+    });
 
     return getMainVertexShader({
       globalLayerCount,

@@ -45,6 +45,11 @@ class NodeShader {
   setupUniforms(treeColorTexture: THREE.DataTexture): void {
     const state = Store.getState();
     const { additionalCoordinates } = state.flycam;
+    console.log(
+      "NodeShader.setupUniforms",
+      "getBaseVoxelInDatasourceUnit",
+      getBaseVoxelInDatasourceUnit(state.dataset.dataSource.scale.factor),
+    );
     this.uniforms = {
       planeZoomFactor: {
         // The flycam zoom is typically decomposed into an x- and y-factor

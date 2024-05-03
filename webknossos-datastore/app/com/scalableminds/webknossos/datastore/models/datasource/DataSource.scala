@@ -12,6 +12,7 @@ case class VoxelSize(factor: Vec3Double, unit: String)
 
 object VoxelSize {
   private val DEFAULT_UNIT: String = "µm" // TODO make enum. // TODO: final default should be nm
+  //private val DEFAULT_UNIT: String = "nm" // TODO make enum. // TODO: final default should be nm
 
   def fromFactorWithDefaultUnit(factor: Vec3Double): VoxelSize = VoxelSize(factor, DEFAULT_UNIT)
 

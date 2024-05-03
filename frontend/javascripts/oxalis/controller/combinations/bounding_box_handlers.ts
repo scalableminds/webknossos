@@ -168,6 +168,7 @@ export function getClosestHoveredBoundingBox(
   const { userBoundingBoxes } = getSomeTracing(state.tracing);
   const indices = Dimension.getIndices(plane);
   const planeRatio = getBaseVoxelFactorsInDatasourceUnit(state.dataset.dataSource.scale);
+  console.log("getClosestHoveredBoundingBox", "getBaseVoxelFactorsInDatasourceUnit", planeRatio);
   const thirdDim = indices[2];
   const zoomedMaxDistanceToSelection = MAX_DISTANCE_TO_SELECTION * state.flycam.zoomStep;
   let currentNearestDistance = zoomedMaxDistanceToSelection;

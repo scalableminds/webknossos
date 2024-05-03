@@ -53,6 +53,7 @@ class Plane {
     const baseVoxelFactors = getBaseVoxelFactorsInDatasourceUnit(
       Store.getState().dataset.dataSource.scale,
     );
+    console.log("Plane", "constructor", "baseVoxelFactors", baseVoxelFactors);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.baseScaleVector = new THREE.Vector3(...scaleArray);
     this.createMeshes();

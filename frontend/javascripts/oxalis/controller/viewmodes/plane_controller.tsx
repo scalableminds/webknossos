@@ -230,6 +230,7 @@ function createDelayAwareMoveHandler(multiplier: number) {
     const thirdDim = dimensions.thirdDimensionForPlane(activeViewport);
     const voxelPerSecond =
       state.userConfiguration.moveValue / state.dataset.dataSource.scale.factor[thirdDim];
+    console.log("createDelayAwareMoveHandler -> voxelPerSecond", voxelPerSecond);
 
     if (state.userConfiguration.dynamicSpaceDirection) {
       // Change direction of the value connected to space, based on the last direction

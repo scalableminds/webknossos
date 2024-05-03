@@ -179,6 +179,7 @@ export function moveNode(
       const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
       const zoomFactor = state.flycam.zoomStep;
       const scaleFactor = getBaseVoxelFactorsInDatasourceUnit(state.dataset.dataSource.scale);
+      console.log("moveNode", "getBaseVoxelFactorsInDatasourceUnit", scaleFactor);
 
       const op = (val: number) => {
         if (useFloat) {

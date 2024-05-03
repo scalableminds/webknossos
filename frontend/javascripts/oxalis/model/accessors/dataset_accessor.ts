@@ -313,10 +313,14 @@ function getDatasetExtentWithScale(dataset: APIDataset, scale: Vector3): Boundin
 }
 export function getDatasetExtentInNm(dataset: APIDataset): BoundingBoxObject {
   const datasetScaleInNm = datasetScaleFactorToNm(dataset.dataSource.scale);
-  return getDatasetExtentWithScale(dataset, datasetScaleInNm);
+  const res = getDatasetExtentWithScale(dataset, datasetScaleInNm);
+  console.log("getDatasetExtentInNm", "extent", res);
+  return res;
 }
 export function getDatasetExtentInDatasourceUnit(dataset: APIDataset): BoundingBoxObject {
-  return getDatasetExtentWithScale(dataset, dataset.dataSource.scale.factor);
+  const extent = getDatasetExtentWithScale(dataset, dataset.dataSource.scale.factor);
+  console.log("getDatasetExtentInDatasourceUnit", "extent", extent);
+  return extent;
 }
 export function getDatasetExtentAsString(
   dataset: APIMaybeUnimportedDataset,

@@ -132,6 +132,10 @@ export function formatScale(scale: DatasetScale | null | undefined, roundTo: num
       (value) => Utils.roundTo(value / closestFactor, roundTo),
       scaleInNm,
     );
+    const str = `${scaleInNmRounded.join(
+      ThinSpace + MultiplicationSymbol + ThinSpace,
+    )} ${unit}³/voxel`;
+    console.log("formatScale", str);
     return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${unit}³/voxel`;
   }
   return "";
@@ -173,7 +177,9 @@ const nmFactorToUnit = new Map([
   [1e12, "km"],
 ]);
 export function formatNumberInNmToLength(lengthInNm: number, decimalPrecision: number = 1): string {
-  return formatNumberToUnit(lengthInNm, nmFactorToUnit, true, decimalPrecision);
+  const s = formatNumberToUnit(lengthInNm, nmFactorToUnit, true, decimalPrecision);
+  console.log("formatNumberInNmToLength", s);
+  return s;
 }
 
 const nmFactorToUnit2D = new Map([

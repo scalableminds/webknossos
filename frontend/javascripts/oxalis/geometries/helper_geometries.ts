@@ -121,10 +121,12 @@ export class ContourGeometry {
     let previousPointIndex = pointCount - 1;
     const dimIndices = Dimensions.getIndices(this.viewport);
     const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
+    console.log("ContourGeometry.getArea -> scaleFactorInNm", scaleFactorInNm);
     const scaleVector = new THREE.Vector2(
       scaleFactorInNm[dimIndices[0]],
       scaleFactorInNm[dimIndices[1]],
     );
+    console.log("ContourGeometry.getArea -> scaleVector", scaleVector);
     for (let i = 0; i < pointCount; i++) {
       const start = new THREE.Vector2(
         points[previousPointIndex * 3 + dimIndices[0]],
@@ -184,6 +186,7 @@ export class QuickSelectGeometry {
     const baseWidth = getBaseVoxelInDatasourceUnit(
       Store.getState().dataset.dataSource.scale.factor,
     );
+    console.log("QuickSelectGeometry -> baseWidth", baseWidth);
     const centerGeometry = new THREE.PlaneGeometry(baseWidth, baseWidth);
     const centerMaterial = new THREE.MeshBasicMaterial({
       color: this.centerMarkerColor,
@@ -239,6 +242,7 @@ export class QuickSelectGeometry {
         ...Dimensions.transDim(scaleFactor.map((el) => 1 / el) as Vector3, activeViewport),
       ),
     );
+    console.log("QuickSelectGeometry rotateToViewport -> scaleFactor", scaleFactor);
   }
 
   setColor(color: THREE.Color) {
@@ -419,6 +423,7 @@ export class LineMeasurementGeometry {
 
   getDistance(datasetScale: DatasetScale): number {
     const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
+    console.log("LineMeasurementGeometry.getDistance -> scaleFactorInNm", scaleFactorInNm);
     const scaleVectorInNm = new THREE.Vector3(...scaleFactorInNm);
     const points = this.vertexBuffer.getBuffer();
     const pointCount = this.vertexBuffer.getLength();

@@ -17,7 +17,7 @@ import constants, {
   OrthoViewValuesWithoutTDView,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
-import { getBaseVoxelFactor } from "oxalis/model/scaleinfo";
+import { getBaseVoxelFactorsInDatasourceUnit } from "oxalis/model/scaleinfo";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 
@@ -28,9 +28,9 @@ export function getTDViewportSize(state: OxalisState): [number, number] {
 export function getTDViewZoom(state: OxalisState) {
   const { width } = getInputCatcherRect(state, OrthoViews.TDView);
   const [viewplaneWidth] = getTDViewportSize(state);
-  const { scale } = state.dataset.dataSource;
+  const { factor } = state.dataset.dataSource.scale;
   // We only need to calculate scaleX as scaleY would have the same value.
-  const scaleX = viewplaneWidth / (width * scale[0]);
+  const scaleX = viewplaneWidth / (width * factor[0]);
   return scaleX;
 }
 export function getInputCatcherRect(state: OxalisState, viewport: Viewport): Rect {
@@ -98,7 +98,7 @@ function _calculateMaybeGlobalPos(
   let position: Vector3;
   planeId = planeId || state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
-  const planeRatio = getBaseVoxelFactor(state.dataset.dataSource.scale);
+  const planeRatio = getBaseVoxelFactorsInDatasourceUnit(state.dataset.dataSource.scale);
   const { width, height } = getInputCatcherRect(state, planeId);
   // Subtract clickPos from only half of the viewport extent as
   // the center of the viewport / the flycam position is used as a reference point.
@@ -152,7 +152,7 @@ function _calculateMaybePlaneScreenPos(
   planeId = planeId || state.viewModeData.plane.activeViewport;
   const navbarHeight = state.uiInformation.navbarHeight;
   const curGlobalPos = getPosition(state.flycam);
-  const planeRatio = getBaseVoxelFactor(state.dataset.dataSource.scale);
+  const planeRatio = getBaseVoxelFactorsInDatasourceUnit(state.dataset.dataSource.scale);
   const { width, height, top, left } = getInputCatcherRect(state, planeId);
   const positionDiff = V3.sub(globalPosition, curGlobalPos);
   switch (planeId) {
@@ -207,7 +207,7 @@ function _calculateGlobalPos(
 }
 
 export function getDisplayedDataExtentInPlaneMode(state: OxalisState) {
-  const planeRatio = getBaseVoxelFactor(state.dataset.dataSource.scale);
+  const planeRatio = getBaseVoxelFactorsInDatasourceUnit(state.dataset.dataSource.scale);
   const curGlobalCenterPos = getPosition(state.flycam);
   const extents = OrthoViewValuesWithoutTDView.map((orthoView) =>
     getPlaneExtentInVoxelFromStore(state, state.flycam.zoomStep, orthoView),

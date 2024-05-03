@@ -8,8 +8,9 @@ import type { OrthoView, OrthoViewMap, OrthoViewRects, Vector3 } from "oxalis/co
 import { OrthoViewValuesWithoutTDView, OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
-  getDatasetExtentInLength,
+  getDatasetExtentInNm,
   getDatasetCenter,
+  getDatasetExtentInDatasourceUnit,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
   getInputCatcherAspectRatio,
@@ -18,7 +19,7 @@ import {
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setTDCameraWithoutTimeTrackingAction } from "oxalis/model/actions/view_mode_actions";
-import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
+import { getBaseVoxelInDatasourceUnit, voxelToNm } from "oxalis/model/scaleinfo";
 import type { CameraData } from "oxalis/store";
 import Store from "oxalis/store";
 import { api } from "oxalis/singletons";
@@ -81,7 +82,7 @@ class CameraController extends React.PureComponent<Props> {
     // Take the whole diagonal extent of the dataset to get the possible maximum extent of the dataset.
     // This is used as an indication to set the far plane. This needs to be multiplied by 2
     // as the dataset planes in the 3d viewport are offset by the maximum of width, height and extent to ensure the dataset is visible.
-    const datasetExtent = getDatasetExtentInLength(Store.getState().dataset);
+    const datasetExtent = getDatasetExtentInDatasourceUnit(Store.getState().dataset);
     const diagonalDatasetExtent = Math.sqrt(
       datasetExtent.width ** 2 + datasetExtent.height ** 2 + datasetExtent.depth ** 2,
     );
@@ -115,7 +116,7 @@ class CameraController extends React.PureComponent<Props> {
   updateCamViewport(inputCatcherRects?: OrthoViewRects): void {
     const state = Store.getState();
     const { clippingDistance } = state.userConfiguration;
-    const scaleFactor = getBaseVoxel(state.dataset.dataSource.scale);
+    const scaleFactor = getBaseVoxelInDatasourceUnit(state.dataset.dataSource.scale.factor);
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const [width, height] = getPlaneExtentInVoxelFromStore(
@@ -223,7 +224,7 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const { dataset } = state;
   const { tdCamera } = state.viewModeData.plane;
   const flycamPos = voxelToNm(dataset.dataSource.scale, getPosition(state.flycam));
-  const datasetExtent = getDatasetExtentInLength(dataset);
+  const datasetExtent = getDatasetExtentInNm(dataset);
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
   // are in front of it and thus visible.
   const clippingOffsetFactor = Math.max(

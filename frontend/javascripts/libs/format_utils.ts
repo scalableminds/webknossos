@@ -16,6 +16,7 @@ import localeData from "dayjs/plugin/localeData";
 import type { BoundingBoxObject } from "oxalis/store";
 import type { Duration } from "dayjs/plugin/duration";
 import { DatasetScale } from "types/api_flow_types";
+import { datasetScaleFactorToNm } from "oxalis/model/scaleinfo";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);
@@ -114,22 +115,24 @@ export function formatTuple(tuple: (Array<number> | Vector3 | Vector6) | null | 
   }
 }
 export function formatScale(scale: DatasetScale | null | undefined, roundTo: number = 2): string {
-  // TODO: fix me and try to use findClosestToUnitFactor for less code duplication
   if (scale != null && scale.factor.length > 0) {
-    const smallestValue = Math.min(...scaleArr);
-    const allScaleUnitsInverse = AllScaleUnits.slice().reverse();
-    for (const unit of allScaleUnitsInverse) {
-      const conversionFactor = ScaleUnitToNm[unit] / ScaleUnitToNm[scaleUnit];
-      if (smallestValue > conversionFactor) {
-        const scaleArrRounded = Utils.map3(
-          (value) => Utils.roundTo(value / conversionFactor, roundTo),
-          scaleArr,
-        );
-        return `${scaleArrRounded.join(
-          ThinSpace + MultiplicationSymbol + ThinSpace,
-        )} ${unit}³/voxel`;
-      }
+    const scaleInNm = datasetScaleFactorToNm(scale);
+    const smallestValueInNm = Math.min(...scaleInNm);
+    const closestFactor = findClosestToUnitFactor(
+      smallestValueInNm,
+      nmFactorToUnit,
+      false,
+      roundTo,
+    );
+    const unit = nmFactorToUnit.get(closestFactor);
+    if (unit == null) {
+      throw new Error("Couldn't look up appropriate unit.");
     }
+    const scaleInNmRounded = Utils.map3(
+      (value) => Utils.roundTo(value / closestFactor, roundTo),
+      scaleInNm,
+    );
+    return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${unit}³/voxel`;
   }
   return "";
 }

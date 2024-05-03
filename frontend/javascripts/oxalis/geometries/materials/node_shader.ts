@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { getBaseVoxelInDatasourceUnit } from "oxalis/model/scaleinfo";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { Store } from "oxalis/singletons";
@@ -57,7 +57,7 @@ class NodeShader {
         value: state.dataset.dataSource.scale,
       },
       datasetScaleMin: {
-        value: getBaseVoxel(state.dataset.dataSource.scale),
+        value: getBaseVoxelInDatasourceUnit(state.dataset.dataSource.scale.factor),
       },
       overrideParticleSize: {
         value: state.userConfiguration.particleSize,

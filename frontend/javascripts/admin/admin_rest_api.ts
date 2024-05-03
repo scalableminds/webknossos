@@ -2224,7 +2224,7 @@ type MeshRequest = {
   segmentId: number; // Segment to build mesh for
   // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
-  scale: Vector3;
+  scaleFactor: Vector3;
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   findNeighbors: boolean;
@@ -2237,14 +2237,8 @@ export function computeAdHocMesh(
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
-  const {
-    position,
-    additionalCoordinates,
-    cubeSize,
-    mappingName,
-
-    ...rest
-  } = meshRequest;
+  const { position, additionalCoordinates, cubeSize, mappingName, scaleFactor, ...rest } =
+    meshRequest;
 
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
@@ -2262,6 +2256,7 @@ export function computeAdHocMesh(
           cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])),
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
+          scale: scaleFactor,
           ...rest,
         },
       },

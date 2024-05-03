@@ -5,7 +5,7 @@ import app from "app";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import Dimensions from "oxalis/model/dimensions";
-import { datasetScaleFactorToNm, getBaseVoxelInDatasourceScale } from "oxalis/model/scaleinfo";
+import { datasetScaleFactorToNm, getBaseVoxelInDatasourceUnit } from "oxalis/model/scaleinfo";
 import { DatasetScale } from "types/api_flow_types";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
@@ -181,7 +181,7 @@ export class QuickSelectGeometry {
     });
     this.rectangle = new THREE.Mesh(geometry, material);
 
-    const baseWidth = getBaseVoxelInDatasourceScale(
+    const baseWidth = getBaseVoxelInDatasourceUnit(
       Store.getState().dataset.dataSource.scale.factor,
     );
     const centerGeometry = new THREE.PlaneGeometry(baseWidth, baseWidth);

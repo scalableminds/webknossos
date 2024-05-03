@@ -449,7 +449,7 @@ function* maybeLoadMeshChunk(
 
   batchCounterPerSegment[segmentId]++;
   threeDMap.set(clippedPosition, true);
-  const scale = yield* select((state) => state.dataset.dataSource.scale);
+  const scaleFactor = yield* select((state) => state.dataset.dataSource.scale.factor);
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
   const datasetName = yield* select((state) => state.dataset.name);
@@ -487,7 +487,7 @@ function* maybeLoadMeshChunk(
           mag,
           segmentId,
           cubeSize,
-          scale,
+          scaleFactor,
           findNeighbors,
           ...meshExtraInfo,
         },

@@ -114,7 +114,9 @@ class SceneController {
     this.meshesRootGroup = new THREE.Group();
     this.highlightedBBoxId = null;
     // The dimension(s) with the highest resolution will not be distorted
-    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
+    this.rootGroup.scale.copy(
+      new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
+    );
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
     this.scene.add(this.segmentMeshController.meshesLODRootGroup);

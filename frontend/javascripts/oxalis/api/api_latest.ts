@@ -77,7 +77,7 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getHalfViewportExtentsInNmFromState } from "oxalis/model/sagas/saga_selectors";
+import { getHalfViewportExtentsInDatasourceUnitFromState } from "oxalis/model/sagas/saga_selectors";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -177,6 +177,7 @@ import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import { datasetScaleFactorToNm } from "oxalis/model/scaleinfo";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -1068,11 +1069,12 @@ class TracingApi {
     let lengthVxAcc = 0;
 
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
+    const datasetScaleFactorInNm = datasetScaleFactorToNm(datasetScale);
 
     for (const edge of tree.edges.all()) {
       const sourceNode = tree.nodes.get(edge.source);
       const targetNode = tree.nodes.get(edge.target);
-      lengthNmAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), datasetScale);
+      lengthNmAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), datasetScaleFactorInNm);
       lengthVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
     }
 
@@ -1152,6 +1154,7 @@ class TracingApi {
 
     const state = Store.getState();
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
+    const datasetScaleFactorInNm = datasetScaleFactorToNm(datasetScale);
 
     while (priorityQueue.length > 0) {
       const [nextNodeId, distance] = priorityQueue.dequeue();
@@ -1162,7 +1165,7 @@ class TracingApi {
         const neighbourNodeId = source === nextNodeId ? target : source;
         const neighbourPosition = getPos(sourceTree.nodes.get(neighbourNodeId));
         const neighbourDistance =
-          distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScale);
+          distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScaleFactorInNm);
 
         if (neighbourDistance < getDistance(neighbourNodeId)) {
           distanceMap[neighbourNodeId] = neighbourDistance;
@@ -1759,10 +1762,8 @@ class DataApi {
       viewport,
     );
     // This s
-    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsFromState(
-      state,
-      viewport,
-    );
+    const [halfViewportExtentU, halfViewportExtentV] =
+      getHalfViewportExtentsInDatasourceUnitFromState(state, viewport);
     const layer = getLayerByName(state.dataset, layerName);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
     if (maybeResolutionIndex == null) {

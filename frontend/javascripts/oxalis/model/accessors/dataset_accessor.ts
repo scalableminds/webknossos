@@ -37,6 +37,7 @@ import {
   Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
+import { datasetScaleFactorToNm } from "../scaleinfo";
 
 function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
   return new ResolutionInfo(resolutions);
@@ -299,9 +300,8 @@ export function getDatasetExtentInVoxel(dataset: APIDataset) {
   };
   return extent;
 }
-export function getDatasetExtentInLength(dataset: APIDataset): BoundingBoxObject {
+function getDatasetExtentWithScale(dataset: APIDataset, scale: Vector3): BoundingBoxObject {
   const extentInVoxel = getDatasetExtentInVoxel(dataset);
-  const { scale } = dataset.dataSource;
   const topLeft = extentInVoxel.topLeft.map((val, index) => val * scale[index]) as any as Vector3;
   const extent = {
     topLeft,
@@ -310,6 +310,13 @@ export function getDatasetExtentInLength(dataset: APIDataset): BoundingBoxObject
     depth: extentInVoxel.depth * scale[2],
   };
   return extent;
+}
+export function getDatasetExtentInNm(dataset: APIDataset): BoundingBoxObject {
+  const datasetScaleInNm = datasetScaleFactorToNm(dataset.dataSource.scale);
+  return getDatasetExtentWithScale(dataset, datasetScaleInNm);
+}
+export function getDatasetExtentInDatasourceUnit(dataset: APIDataset): BoundingBoxObject {
+  return getDatasetExtentWithScale(dataset, dataset.dataSource.scale.factor);
 }
 export function getDatasetExtentAsString(
   dataset: APIMaybeUnimportedDataset,
@@ -324,7 +331,7 @@ export function getDatasetExtentAsString(
     return `${formatExtentWithLength(extentInVoxel, (x) => `${x}`)} voxel`;
   }
 
-  const extent = getDatasetExtentInLength(dataset);
+  const extent = getDatasetExtentInNm(dataset);
   return formatExtentWithLength(extent, formatNumberInNmToLength);
 }
 export function determineAllowedModes(settings?: Settings): {
@@ -707,7 +714,7 @@ function _getOriginalTransformsForLayerOrNull(
   } else if (type === "thin_plate_spline") {
     const { source, target } = transformation.correspondences;
 
-    return createThinPlateSplineTransform(target, source, dataset.dataSource.scale);
+    return createThinPlateSplineTransform(target, source, dataset.dataSource.scale.factor);
   }
 
   console.error(

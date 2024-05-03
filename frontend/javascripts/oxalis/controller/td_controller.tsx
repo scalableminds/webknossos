@@ -37,6 +37,7 @@ import * as Utils from "libs/utils";
 import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
 import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
+import { DatasetScale } from "types/api_flow_types";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
@@ -89,7 +90,7 @@ type OwnProps = {
 };
 type StateProps = {
   flycam: Flycam;
-  scale: Vector3;
+  scale: DatasetScale;
   activeTool: AnnotationTool;
 };
 type Props = OwnProps & StateProps;
@@ -233,7 +234,10 @@ class TDController extends React.PureComponent<Props> {
         }
         const { point: hitPosition } = intersection;
 
-        const unscaledPosition = V3.divide3(hitPosition.toArray() as Vector3, this.props.scale);
+        const unscaledPosition = V3.divide3(
+          hitPosition.toArray() as Vector3,
+          this.props.scale.factor,
+        );
 
         if (event.shiftKey) {
           Store.dispatch(setPositionAction(unscaledPosition));

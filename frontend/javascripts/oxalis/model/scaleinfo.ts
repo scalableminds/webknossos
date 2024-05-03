@@ -8,7 +8,7 @@ export function datasetScaleFactorToNm(datasetScale: DatasetScale): Vector3 {
   return map3((factor) => factor * conversionToNmFactor, datasetScale.factor);
 }
 
-export function getBaseVoxelInDatasourceScale(datasetScaleFactor: Vector3): number {
+export function getBaseVoxelInDatasourceUnit(datasetScaleFactor: Vector3): number {
   // base voxel should be a cube with highest resolution
   return Math.min(...datasetScaleFactor);
 }
@@ -16,7 +16,7 @@ export function getBaseVoxelInDatasourceScale(datasetScaleFactor: Vector3): numb
 export function getBaseVoxelInNm(datasetScale: DatasetScale): number {
   // base voxel should be a cube with highest resolution
   const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
-  return getBaseVoxelInDatasourceScale(scaleFactorInNm);
+  return getBaseVoxelInDatasourceUnit(scaleFactorInNm);
 }
 
 export function voxelToNm3(datasetScale: DatasetScale, mag: Vector3, volumeInVx: number): number {
@@ -32,9 +32,10 @@ export function voxelToNm3(datasetScale: DatasetScale, mag: Vector3, volumeInVx:
   );
 }
 
-export function getBaseVoxelFactorInNm(datasetScale: DatasetScale): Vector3 {
+// TODO: check whether this function semantically makes sense or whether only getBaseVoxelFactorsInDatasetResolution is needed / makes sense.
+export function getBaseVoxelFactorsInNm(datasetScale: DatasetScale): Vector3 {
   // base voxel should be a cube with highest resolution
-  const baseVoxel = getBaseVoxelInDatasourceScale(datasetScale.factor);
+  const baseVoxel = getBaseVoxelInDatasourceUnit(datasetScale.factor);
   const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
   // scale factor to calculate the voxels in a certain
   // dimension from baseVoxels
@@ -44,6 +45,15 @@ export function getBaseVoxelFactorInNm(datasetScale: DatasetScale): Vector3 {
     baseVoxel / scaleFactorInNm[2],
   ];
 }
+export function getBaseVoxelFactorsInDatasourceUnit(datasetScale: DatasetScale): Vector3 {
+  const scaleFactor = datasetScale.factor;
+  // base voxel should be a cube with highest resolution
+  const baseVoxel = getBaseVoxelInDatasourceUnit(scaleFactor);
+  // scale factor to calculate the voxels in a certain
+  // dimension from baseVoxels
+  return [baseVoxel / scaleFactor[0], baseVoxel / scaleFactor[1], baseVoxel / scaleFactor[2]];
+}
+
 export function getVoxelPerNm(datasetScale: DatasetScale): Vector3 {
   const voxelPerNM = [0, 0, 0] as Vector3;
   const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
@@ -54,13 +64,22 @@ export function getVoxelPerNm(datasetScale: DatasetScale): Vector3 {
 
   return voxelPerNM;
 }
-export function voxelToNm(datasetScale: DatasetScale, posArray: Vector3): Vector3 {
+
+function voxelScaledToUnit(scale: Vector3, posArray: Vector3): Vector3 {
   const result = [0, 0, 0] as Vector3;
-  const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
 
   for (let i = 0; i < 3; i++) {
-    result[i] = posArray[i] * scaleFactorInNm[i];
+    result[i] = posArray[i] * scale[i];
   }
 
   return result;
+}
+
+export function voxelToNm(datasetScale: DatasetScale, posArray: Vector3): Vector3 {
+  const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
+  return voxelScaledToUnit(scaleFactorInNm, posArray);
+}
+
+export function voxelToDatasourceUnit(datasetScale: DatasetScale, posArray: Vector3): Vector3 {
+  return voxelScaledToUnit(datasetScale.factor, posArray);
 }

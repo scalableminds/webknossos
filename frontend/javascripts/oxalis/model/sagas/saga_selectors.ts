@@ -3,14 +3,18 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V2 } from "libs/mjs";
 import type { Vector2, OrthoView } from "oxalis/constants";
-import { getBaseVoxelFactor } from "oxalis/model/scaleinfo";
+import { getBaseVoxelFactorsInDatasourceUnit } from "oxalis/model/scaleinfo";
 import { getPlaneExtentInVoxelFromStore } from "oxalis/model/accessors/view_mode_accessor";
 import Dimensions from "oxalis/model/dimensions";
 
+// TODO: Check whether this function usage is correct.
 export function* getHalfViewportExtentsInVx(activeViewport: OrthoView): Saga<Vector2> {
   const zoom = yield* select((state) => state.flycam.zoomStep);
   const baseVoxelFactors = yield* select((state) =>
-    Dimensions.transDim(getBaseVoxelFactor(state.dataset.dataSource.scale), activeViewport),
+    Dimensions.transDim(
+      getBaseVoxelFactorsInDatasourceUnit(state.dataset.dataSource.scale),
+      activeViewport,
+    ),
   );
   const viewportExtents = yield* select((state) =>
     getPlaneExtentInVoxelFromStore(state, zoom, activeViewport),
@@ -22,13 +26,14 @@ export function* getHalfViewportExtentsInVx(activeViewport: OrthoView): Saga<Vec
   ) as Vector2;
   return halfViewportExtents;
 }
-export function getHalfViewportExtentsInNmFromState(
+// TODO: Check whether this function usage is correct.
+export function getHalfViewportExtentsInDatasourceUnitFromState(
   state: OxalisState,
   activeViewport: OrthoView,
 ): Vector2 {
   const zoom = state.flycam.zoomStep;
   const baseVoxelFactors = Dimensions.transDim(
-    getBaseVoxelFactor(state.dataset.dataSource.scale),
+    getBaseVoxelFactorsInDatasourceUnit(state.dataset.dataSource.scale),
     activeViewport,
   );
   const viewportExtents = getPlaneExtentInVoxelFromStore(state, zoom, activeViewport);

@@ -52,8 +52,11 @@ import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 import DataCube from "../bucket_data_handling/data_cube";
+import { chainIterators } from "libs/utils";
+
 type APIMappings = Record<string, APIMapping>;
 type PreviousMappingObject = { mapping: Mapping };
+type NumberLike = number | bigint;
 
 const takeLatestMappingChange = (previousMappingObject: PreviousMappingObject) =>
   fork(function* () {
@@ -309,13 +312,15 @@ function* updateHdf5Mapping(
   const valueSet = cube.getValueSetForAllBuckets();
 
   const { mapping: previousMapping } = previousMappingObject;
-  const newValues = new Set([...valueSet].filter((i) => !previousMapping.has(i))) as
-    | Set<number>
-    | Set<bigint>;
+  const newValues = new Set(
+    [...valueSet].filter((i) => !(previousMapping as Map<NumberLike, NumberLike>).has(i)),
+  ) as Set<number> | Set<bigint>;
 
   if (newValues.size === 0) return;
 
-  const remainingValues = new Set([...previousMapping.keys()].filter((i) => valueSet.has(i)));
+  const remainingValues = new Set(
+    [...previousMapping.keys()].filter((i) => (valueSet as Set<NumberLike>).has(i)),
+  );
   const newUniqueSegmentIds = [...newValues].sort(<T extends number | bigint>(a: T, b: T) => a - b);
   console.log(
     "New values",
@@ -343,17 +348,13 @@ function* updateHdf5Mapping(
           newUniqueSegmentIds,
         );
 
-  const chainIterators = <T extends number | bigint>(a: Iterable<T>, b: Iterable<T>): Iterable<T> =>
-    (function* () {
-      yield* a;
-      yield* b;
-    })();
+  const a = [...previousMapping.entries()] as Array<[NumberLike, NumberLike]>;
 
-  const a = [...previousMapping.entries()] as Array<[number, number]> | Array<[bigint, bigint]>;
-  const remainingMapping = new Map(a.filter(([key, _]) => remainingValues.has(key)));
-  const mapping = new Map(chainIterators(remainingMapping.entries(), newMapping.entries())) as
-    | Map<number, number>
-    | Map<bigint, bigint>;
+  const filtered = a.filter(([key, _]) => remainingValues.has(key));
+  const remainingMapping = new Map<NumberLike, NumberLike>(filtered) as Mapping;
+  const remainingEntries = remainingMapping.entries();
+  const chainedIterator = chainIterators<NumberLike>(remainingEntries, newMapping.entries());
+  const mapping = new Map(chainedIterator) as Mapping;
 
   previousMappingObject.mapping = mapping;
 

@@ -1193,3 +1193,13 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
   // Source https://github.com/microsoft/TypeScript/issues/45097#issuecomment-882526325
   return value !== null && value !== undefined;
 }
+
+export function chainIterators<T extends number | bigint>(
+  a: Iterable<[T, T]>,
+  b: Iterable<[T, T]>,
+): Iterable<[T, T]> {
+  return (function* () {
+    yield* a;
+    yield* b;
+  })();
+}

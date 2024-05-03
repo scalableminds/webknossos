@@ -245,6 +245,7 @@ export type VolumeTracing = TracingBase & {
   readonly segmentGroups: Array<SegmentGroup>;
   readonly largestSegmentId: number | null;
   readonly activeCellId: number;
+  readonly activeUnmappedSegmentId?: number | null; // not persisted
   // lastLabelActions[0] is the most recent one
   readonly lastLabelActions: Array<LabelAction>;
   readonly contourTracingMode: ContourMode;
@@ -473,7 +474,6 @@ export type CameraData = {
   readonly top: number;
   readonly bottom: number;
   readonly up: Vector3;
-  readonly lookAt: Vector3;
   readonly position: Vector3;
 };
 export type PartialCameraData = {
@@ -484,7 +484,6 @@ export type PartialCameraData = {
   readonly top?: number;
   readonly bottom?: number;
   readonly up?: Vector3;
-  readonly lookAt?: Vector3;
   readonly position?: Vector3;
 };
 export type PlaneRects = {
@@ -537,6 +536,16 @@ type UiInformation = {
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
   readonly navbarHeight: number;
+  readonly contextInfo: {
+    readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
+    readonly clickedNodeId: number | null | undefined;
+    readonly meshId: number | null | undefined;
+    readonly meshIntersectionPosition: Vector3 | null | undefined;
+    readonly clickedBoundingBoxId: number | null | undefined;
+    readonly globalPosition: Vector3 | null | undefined;
+    readonly viewport: OrthoView | null | undefined;
+    readonly unmappedSegmentId?: number | null;
+  };
 };
 type BaseMeshInformation = {
   readonly segmentId: number;
@@ -553,6 +562,7 @@ export type AdHocMeshInformation = BaseMeshInformation & {
 export type PrecomputedMeshInformation = BaseMeshInformation & {
   readonly isPrecomputed: true;
   readonly meshFileName: string;
+  readonly areChunksMerged: boolean;
 };
 export type MeshInformation = AdHocMeshInformation | PrecomputedMeshInformation;
 export type ConnectomeData = {

@@ -434,16 +434,29 @@ export function updateMappingName(
 }
 export function splitAgglomerate(
   agglomerateId: number,
-  segmentPosition1: Vector3,
-  segmentPosition2: Vector3,
+  segmentId1: number,
+  segmentId2: number,
   mag: Vector3,
-) {
+): {
+  name: "splitAgglomerate";
+  value: {
+    agglomerateId: number;
+    mag: Vector3;
+    // For backwards compatibility reasons,
+    // older segments are defined using their positions
+    // instead of their unmapped ids.
+    segmentId1: number | undefined;
+    segmentId2: number | undefined;
+    segmentPosition1?: Vector3 | undefined;
+    segmentPosition2?: Vector3 | undefined;
+  };
+} {
   return {
     name: "splitAgglomerate",
     value: {
       agglomerateId,
-      segmentPosition1,
-      segmentPosition2,
+      segmentId1,
+      segmentId2,
       mag,
     },
   } as const;
@@ -451,17 +464,31 @@ export function splitAgglomerate(
 export function mergeAgglomerate(
   agglomerateId1: number,
   agglomerateId2: number,
-  segmentPosition1: Vector3,
-  segmentPosition2: Vector3,
+  segmentId1: number,
+  segmentId2: number,
   mag: Vector3,
-) {
+): {
+  name: "mergeAgglomerate";
+  value: {
+    agglomerateId1: number;
+    agglomerateId2: number;
+    mag: Vector3;
+    // For backwards compatibility reasons,
+    // older segments are defined using their positions
+    // instead of their unmapped ids.
+    segmentId1: number | undefined;
+    segmentId2: number | undefined;
+    segmentPosition1?: Vector3 | undefined;
+    segmentPosition2?: Vector3 | undefined;
+  };
+} {
   return {
     name: "mergeAgglomerate",
     value: {
       agglomerateId1,
       agglomerateId2,
-      segmentPosition1,
-      segmentPosition2,
+      segmentId1,
+      segmentId2,
       mag,
     },
   } as const;

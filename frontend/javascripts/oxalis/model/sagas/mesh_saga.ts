@@ -22,7 +22,7 @@ import {
 } from "oxalis/model/actions/segmentation_actions";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
-import { MappingStatusEnum } from "oxalis/constants";
+import { AnnotationToolEnum, MappingStatusEnum } from "oxalis/constants";
 import {
   UpdateMeshVisibilityAction,
   RemoveMeshAction,
@@ -80,6 +80,7 @@ import { type AdditionalCoordinate } from "types/api_flow_types";
 import Zip from "libs/zipjs_wrapper";
 import { FlycamAction } from "../actions/flycam_actions";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
+import { BufferGeometryWithInfo } from "oxalis/controller/segment_mesh_controller";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -576,6 +577,9 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
   }
 
   if (meshInfo.isPrecomputed) {
+    const isProofreadingActive = yield* select(
+      (state) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
+    );
     yield* put(removeMeshAction(layerName, meshInfo.segmentId));
     yield* put(
       loadPrecomputedMeshAction(
@@ -584,6 +588,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
         meshInfo.seedAdditionalCoordinates,
         meshInfo.meshFileName,
         layerName,
+        !isProofreadingActive,
       ),
     );
   } else {
@@ -707,7 +712,14 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 }
 
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
-  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName } = action;
+  const {
+    segmentId,
+    seedPosition,
+    seedAdditionalCoordinates,
+    meshFileName,
+    layerName,
+    mergeChunks,
+  } = action;
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -726,6 +738,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       seedAdditionalCoordinates,
       meshFileName,
       layer,
+      mergeChunks,
     ),
     cancel: take(
       (otherAction: Action) =>
@@ -744,6 +757,7 @@ function* loadPrecomputedMeshForSegmentId(
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
+  mergeChunks: boolean,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
   const mappingName = yield* call(getMappingName, segmentationLayer);
@@ -754,6 +768,7 @@ function* loadPrecomputedMeshForSegmentId(
       seedPosition,
       seedAdditionalCoordinates,
       meshFileName,
+      mergeChunks,
       mappingName,
     ),
   );
@@ -775,6 +790,10 @@ function* loadPrecomputedMeshForSegmentId(
     Toast.error("Could not load mesh, since the requested mesh file was not found.");
     return;
   }
+  if (id === 0) {
+    Toast.error("Could not load mesh, since the clicked segment ID is 0.");
+    return;
+  }
 
   let availableChunksMap: ChunksMap = {};
   let scale: Vector3 | null = null;
@@ -791,8 +810,12 @@ function* loadPrecomputedMeshForSegmentId(
     scale = chunkDescriptors.scale;
     loadingOrder = chunkDescriptors.loadingOrder;
   } catch (exception) {
-    Toast.warning(messages["tracing.mesh_listing_failed"]);
-    console.warn("Mesh chunk couldn't be loaded due to", exception);
+    Toast.warning(messages["tracing.mesh_listing_failed"](id));
+    console.warn(
+      `Mesh chunks for segment ${id} couldn't be loaded due to`,
+      exception,
+      "\nOne possible explanation could be that the segment was not included in the mesh file because it's smaller than the dust threshold that was specified for the mesh computation.",
+    );
     yield* put(finishedLoadingMeshAction(layerName, id));
     yield* put(removeMeshAction(layerName, id));
     return;
@@ -809,6 +832,7 @@ function* loadPrecomputedMeshForSegmentId(
     loadingOrder,
     scale,
     additionalCoordinates,
+    mergeChunks,
   );
 
   try {
@@ -913,9 +937,11 @@ function _getLoadChunksTasks(
   loadingOrder: number[],
   scale: Vector3 | null,
   additionalCoordinates: AdditionalCoordinate[] | null,
+  mergeChunks: boolean,
 ) {
   const { segmentMeshController } = getSceneController();
   const { meshFileName } = meshFile;
+  const loader = getDracoLoader();
   return _.compact(
     _.flatten(
       loadingOrder.map((lod) => {
@@ -946,7 +972,6 @@ function _getLoadChunksTasks(
                   requests: chunks.map(({ byteOffset, byteSize }) => ({ byteOffset, byteSize })),
                 },
               );
-              const loader = getDracoLoader();
 
               const errorsWithDetails = [];
 
@@ -962,31 +987,39 @@ function _getLoadChunksTasks(
                 // All chunks in chunksForPosition have the same position
                 const position = chunksForPosition[0].position;
 
-                const bufferGeometries = [];
+                let bufferGeometries: BufferGeometryWithInfo[] = [];
                 for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
                   const chunk = chunksForPosition[chunkIdx];
                   try {
-                    const bufferGeometry = yield* call(loader.decodeDracoFileAsync, chunk.data);
+                    const bufferGeometry = (yield* call(
+                      loader.decodeDracoFileAsync,
+                      chunk.data,
+                    )) as BufferGeometryWithInfo;
+                    bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
                     bufferGeometries.push(bufferGeometry);
                   } catch (error) {
                     errorsWithDetails.push({ error, chunk });
                   }
                 }
 
-                const geometry = mergeBufferGeometries(bufferGeometries);
+                if (mergeChunks) {
+                  const geometry = mergeBufferGeometries(bufferGeometries, true);
 
-                // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
-                if (geometry == null) continue;
+                  // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
+                  if (geometry == null) continue;
+                  (geometry as BufferGeometryWithInfo).isMerged = true;
+                  bufferGeometries = [geometry as BufferGeometryWithInfo];
+                }
 
                 // Compute vertex normals to achieve smooth shading
-                geometry.computeVertexNormals();
+                bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
 
                 yield* call(
                   {
                     context: segmentMeshController,
-                    fn: segmentMeshController.addMeshFromGeometry,
+                    fn: segmentMeshController.addMeshFromGeometries,
                   },
-                  geometry,
+                  bufferGeometries,
                   id,
                   position,
                   // Apply the scale from the segment info, which includes dataset scale and mag
@@ -1146,11 +1179,11 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
 
   while (true) {
     const action = (yield* take(["SET_ADDITIONAL_COORDINATES"]) as any) as FlycamAction;
-    //satisfy TS
+    // Satisfy TS
     if (action.type !== "SET_ADDITIONAL_COORDINATES") {
       throw new Error("Unexpected action type");
     }
-    const meshRecords = segmentMeshController.meshesGroupsPerSegmentationId;
+    const meshRecords = segmentMeshController.meshesGroupsPerSegmentId;
 
     if (action.values == null || action.values.length === 0) break;
     const newAdditionalCoordKey = getAdditionalCoordinatesAsString(action.values);

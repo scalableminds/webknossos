@@ -220,6 +220,9 @@ class PlaneMaterialFactory {
       activeCellIdLow: {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
+      isUnmappedSegmentHighlighted: {
+        value: false,
+      },
       blendMode: { value: 1.0 },
     };
 
@@ -739,6 +742,14 @@ class PlaneMaterialFactory {
           (storeState) =>
             Utils.maybe(getActiveCellId)(getActiveSegmentationTracing(storeState)).getOrElse(0),
           () => this.updateActiveCellId(),
+          true,
+        ),
+      );
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          (storeState) => getActiveSegmentationTracing(storeState)?.activeUnmappedSegmentId,
+          (activeUnmappedSegmentId) =>
+            (this.uniforms.isUnmappedSegmentHighlighted.value = activeUnmappedSegmentId != null),
           true,
         ),
       );

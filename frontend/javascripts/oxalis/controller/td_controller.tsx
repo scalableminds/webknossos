@@ -1,3 +1,4 @@
+import _ from "lodash";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as THREE from "three";
@@ -9,14 +10,12 @@ import {
   OrthoViews,
   OrthoViewMap,
   Point2,
-  ShowContextMenuFunction,
   Vector3,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import {
   setViewportAction,
   setTDCameraAction,
@@ -30,17 +29,18 @@ import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletont
 import { voxelToDatasourceUnit } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import PlaneView from "oxalis/view/plane_view";
-import type { CameraData, Flycam, OxalisState, Tracing } from "oxalis/store";
+import type { CameraData, OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
-import { removeMeshAction } from "oxalis/model/actions/annotation_actions";
 import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
 import { DatasetScale } from "types/api_flow_types";
+import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 
 export function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
-  const { position, up, near, far, lookAt, left, right, top, bottom } = camera;
+  const { position, up, near, far, left, right, top, bottom } = camera;
 
   const objToArr = ({ x, y, z }: { x: number; y: number; z: number }): Vector3 => [x, y, z];
 
@@ -53,8 +53,6 @@ export function threeCameraToCameraData(camera: THREE.OrthographicCamera): Camer
     far,
     position: objToArr(position),
     up: objToArr(up),
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type '(vector: number | Vector3, y?: n... Remove this comment to see the full error message
-    lookAt: objToArr(lookAt),
   };
 }
 
@@ -86,10 +84,8 @@ type OwnProps = {
   cameras: OrthoViewMap<THREE.OrthographicCamera>;
   planeView?: PlaneView;
   tracing?: Tracing;
-  showContextMenuAt?: ShowContextMenuFunction;
 };
 type StateProps = {
-  flycam: Flycam;
   scale: DatasetScale;
   activeTool: AnnotationTool;
 };
@@ -102,14 +98,10 @@ function maybeGetActiveNodeFromProps(props: Props) {
 }
 
 class TDController extends React.PureComponent<Props> {
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'controls' has no initializer and is not ... Remove this comment to see the full error message
-  controls: typeof TrackballControls;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'mouseController' has no initializer and ... Remove this comment to see the full error message
-  mouseController: InputMouse;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'oldNmPos' has no initializer and is not ... Remove this comment to see the full error message
-  oldNmPos: Vector3;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'isStarted' has no initializer and is not... Remove this comment to see the full error message
-  isStarted: boolean;
+  controls!: typeof TrackballControls;
+  mouseController!: InputMouse;
+  oldNmPos!: Vector3;
+  isStarted: boolean = false;
 
   componentDidMount() {
     const { dataset, flycam } = Store.getState();
@@ -160,7 +152,9 @@ class TDController extends React.PureComponent<Props> {
   }
 
   initTrackballControls(view: HTMLElement): void {
-    const pos = voxelToDatasourceUnit(this.props.scale, getPosition(this.props.flycam));
+    const { flycam } = Store.getState();
+
+    const pos = voxelToDatasourceUnit(this.props.scale, getPosition(flycam));
     const tdCamera = this.props.cameras[OrthoViews.TDView];
     this.controls = new TrackballControls(
       tdCamera,
@@ -227,12 +221,15 @@ class TDController extends React.PureComponent<Props> {
           return;
         }
 
-        const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
+        const intersection = this.getMeshIntersection(pos);
+        if (intersection == null) {
+          return;
+        }
 
         if (!intersection) {
           return;
         }
-        const { point: hitPosition } = intersection;
+        const { hitPosition } = intersection;
 
         const unscaledPosition = V3.divide3(
           hitPosition.toArray() as Vector3,
@@ -249,42 +246,62 @@ class TDController extends React.PureComponent<Props> {
 
         if (event.shiftKey) {
           Store.dispatch(setPositionAction(unscaledPosition));
-        } else if (ctrlOrMetaPressed) {
-          const storeState = Store.getState();
-          const { hoveredSegmentId } = storeState.temporaryConfiguration;
-          const segmentationLayer = getVisibleSegmentationLayer(storeState);
+        } else if (ctrlOrMetaPressed && intersection.meshId != null) {
+          const state = Store.getState();
+          const volumeTracing = getActiveSegmentationTracing(state);
+          const deselect =
+            volumeTracing?.activeUnmappedSegmentId != null &&
+            volumeTracing?.activeUnmappedSegmentId === intersection.unmappedSegmentId;
 
-          if (!segmentationLayer || hoveredSegmentId == null) {
-            return;
-          }
-
-          Store.dispatch(removeMeshAction(segmentationLayer.name, hoveredSegmentId));
+          Store.dispatch(
+            setActiveCellAction(
+              intersection.meshId,
+              undefined,
+              undefined,
+              deselect ? null : intersection.unmappedSegmentId,
+            ),
+          );
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        if (this.props.planeView == null || this.props.showContextMenuAt == null) return;
-        const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
-        // @ts-expect-error ts-migrate(2339) FIXME: Object is possibly 'null'.
-        const meshId = intersection ? intersection.object.parent?.cellId : null;
-        const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;
+        if (this.props.planeView == null) return null;
+        const intersection = this.getMeshIntersection(pos);
+        if (intersection == null) {
+          return;
+        }
         handleOpenContextMenu(
           this.props.planeView,
           pos,
           plane,
           isTouch,
           event,
-          this.props.showContextMenuAt,
-          meshId,
-          meshClickedPosition,
+          intersection.meshId,
+          intersection.meshClickedPosition,
+          intersection.unmappedSegmentId,
         );
       },
     };
     return controls;
   }
 
+  getMeshIntersection(pos: Point2) {
+    if (this.props.planeView == null) return null;
+    const intersection = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
+    if (intersection == null) {
+      return null;
+    }
+    const meshId: number | null = intersection
+      ? _.get(intersection.object.parent, "segmentId", null)
+      : null;
+    const unmappedSegmentId: number | null = _.get(intersection?.object, "unmappedSegmentId", null);
+    const meshClickedPosition = intersection ? (intersection.point.toArray() as Vector3) : null;
+    return { meshId, unmappedSegmentId, meshClickedPosition, hitPosition: intersection.point };
+  }
+
   setTargetAndFixPosition = (position?: Vector3): void => {
+    const { flycam } = Store.getState();
     const { controls } = this;
-    position = position || getPosition(this.props.flycam);
+    position = position || getPosition(flycam);
     const nmPosition = voxelToDatasourceUnit(this.props.scale, position);
 
     if (controls != null) {
@@ -325,7 +342,6 @@ class TDController extends React.PureComponent<Props> {
     }
 
     const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Point2 | null | undefined' is no... Remove this comment to see the full error message
     Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
   }
 
@@ -359,7 +375,6 @@ class TDController extends React.PureComponent<Props> {
 
 export function mapStateToProps(state: OxalisState): StateProps {
   return {
-    flycam: state.flycam,
     scale: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,
   };

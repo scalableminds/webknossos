@@ -479,6 +479,25 @@ class VolumeTracingController @Inject()(
       }
     }
 
+  def editableMappingAgglomerateIdForSegmentId(token: Option[String],
+                                               tracingId: String,
+                                               segmentId: Long): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            tracing <- tracingService.find(tracingId)
+            mappingName <- tracing.mappingName.toFox
+            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+            agglomerateId <- editableMappingService.agglomerateIdForSegmentId(mappingName,
+                                                                              segmentId,
+                                                                              remoteFallbackLayer,
+                                                                              urlOrHeaderToken(token, request))
+          } yield Ok(Json.obj("agglomerateId" -> agglomerateId))
+        }
+      }
+    }
+
   def editableMappingSegmentIdsForAgglomerate(token: Option[String],
                                               tracingId: String,
                                               agglomerateId: Long): Action[AnyContent] = Action.async {

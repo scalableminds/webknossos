@@ -209,7 +209,6 @@ const defaultState: OxalisState = {
         top: 0,
         bottom: 0,
         up: [0, 0, 0],
-        lookAt: [0, 0, 0],
         position: [0, 0, 0],
       },
       inputCatcherRects: {
@@ -253,6 +252,16 @@ const defaultState: OxalisState = {
       isMeasuring: false,
     },
     navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT,
+    contextInfo: {
+      contextMenuPosition: null,
+      clickedNodeId: null,
+      meshId: null,
+      meshIntersectionPosition: null,
+      clickedBoundingBoxId: null,
+      globalPosition: null,
+      viewport: null,
+      unmappedSegmentId: null,
+    },
   },
   localSegmentationData: {},
 };

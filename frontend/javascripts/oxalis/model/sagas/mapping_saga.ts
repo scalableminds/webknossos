@@ -287,6 +287,13 @@ function* handleSetHdf5Mapping(
   );
 }
 
+function getSetWithoutMapKeys<T>(valueSet: Iterable<T>, map: Map<T, T>): Set<T> {
+  return new Set([...valueSet].filter((i) => !map.has(i)));
+}
+function getSetIntersectedMapKeys<T>(valueSet: Iterable<T>, map: Map<T, T>): Set<T> {
+  return new Set([...valueSet].filter((i) => map.has(i)));
+}
+
 function* updateHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
@@ -311,14 +318,19 @@ function* updateHdf5Mapping(
   const valueSet = cube.getValueSetForAllBuckets();
 
   const { mapping: previousMapping } = previousMappingObject;
-  const newValues = new Set(
-    [...valueSet].filter((i) => !(previousMapping as Map<NumberLike, NumberLike>).has(i)),
-  ) as Set<NumberLike>;
+
+  const newValues = getSetWithoutMapKeys(
+    // @ts-ignore valueSet and previousMapping are expected to have the same value type
+    valueSet,
+    previousMapping,
+  );
 
   if (newValues.size === 0) return;
 
-  const remainingValues = new Set(
-    [...previousMapping.keys()].filter((i) => (valueSet as Set<NumberLike>).has(i)),
+  const remainingValues = getSetIntersectedMapKeys(
+    // @ts-ignore valueSet and previousMapping are expected to have the same value type
+    previousMapping.keys(),
+    valueSet,
   );
   const newUniqueSegmentIds = [...newValues].sort(<T extends NumberLike>(a: T, b: T) => a - b);
   console.log(
@@ -352,7 +364,11 @@ function* updateHdf5Mapping(
   const filtered = a.filter(([key, _]) => remainingValues.has(key));
   const remainingMapping = new Map<NumberLike, NumberLike>(filtered) as Mapping;
   const remainingEntries = remainingMapping.entries();
-  const chainedIterator = chainIterators<NumberLike>(remainingEntries, newMapping.entries());
+  const chainedIterator = chainIterators<NumberLike>(
+    // @ts-ignore remainingEntries and newMapping are expected to have the same value type
+    remainingEntries,
+    newMapping.entries(),
+  );
   const mapping = new Map(chainedIterator) as Mapping;
 
   previousMappingObject.mapping = mapping;

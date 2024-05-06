@@ -566,7 +566,7 @@ class DataApi {
     const mappingProperties = {
       mapping:
         mapping instanceof Map
-          ? new Map(mapping)
+          ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
           : new Map(Object.entries(mapping).map(([key, value]) => [parseInt(key, 10), value])),
     };
     Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));

@@ -40,6 +40,14 @@ const warnAboutTooManyAllocations = _.once(() => {
   });
 });
 
+// function isNumberTupleArray(x: any[]): x is Array<[number, number]> {
+//     return x.length > 0 && typeof x[0] === "number";
+// }
+function isNumberMap(x: Map<any, any>): x is Map<number, number> {
+  const { value } = x.entries().next();
+  return value && typeof value[0] === "number";
+}
+
 class CubeEntry {
   data: Map<number, Bucket>;
   boundary: Vector3;
@@ -178,7 +186,10 @@ class DataCube {
     const mapping = this.getMapping();
 
     if (mapping != null && this.isMappingEnabled()) {
-      mappedId = mapping.get(idToMap);
+      mappedId = isNumberMap(mapping)
+        ? mapping.get(Number(idToMap))
+        : // TODO #6581: Uint64 Support
+          Number(mapping.get(BigInt(idToMap)));
     }
 
     if (this.shouldHideUnmappedIds() && mappedId == null) {
@@ -858,17 +869,21 @@ class DataCube {
 
     if (bucket.hasData()) {
       const data = bucket.getData();
-      const dataValue = Number(data[voxelIndex]);
+      const dataValue = data[voxelIndex];
 
       if (mapping) {
-        const mappedValue = mapping.get(dataValue);
+        const mappedValue = isNumberMap(mapping)
+          ? mapping.get(Number(dataValue))
+          : mapping.get(BigInt(dataValue));
 
         if (mappedValue != null) {
-          return mappedValue;
+          // TODO #6581: Uint64 Support
+          return Number(mappedValue);
         }
       }
 
-      return dataValue;
+      // TODO #6581: Uint64 Support
+      return Number(dataValue);
     }
 
     return 0;

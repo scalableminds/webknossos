@@ -38,7 +38,7 @@ import {
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import type { Mapping, MappingType, NumberLike } from "oxalis/store";
+import type { Mapping, MappingType, NumberLike, NumberLikeMap } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
 import { Model } from "oxalis/singletons";
@@ -319,7 +319,7 @@ function* updateHdf5Mapping(
 
   const { mapping: previousMapping } = previousMappingObject;
 
-  const newValues = getSetWithoutMapKeys(
+  const newValues: Set<NumberLike> = getSetWithoutMapKeys(
     // @ts-ignore valueSet and previousMapping are expected to have the same value type
     valueSet,
     previousMapping,
@@ -327,7 +327,7 @@ function* updateHdf5Mapping(
 
   if (newValues.size === 0) return;
 
-  const remainingValues = getSetIntersectedMapKeys(
+  const remainingValues: Set<NumberLike> = getSetIntersectedMapKeys(
     // @ts-ignore valueSet and previousMapping are expected to have the same value type
     previousMapping.keys(),
     valueSet,
@@ -452,9 +452,7 @@ function* setCustomColors(
     const firstIdEntry = aClass[0];
     if (firstIdEntry == null) continue;
 
-    const representativeId = (mappingProperties.mapping as Map<NumberLike, NumberLike>).get(
-      firstIdEntry,
-    );
+    const representativeId = (mappingProperties.mapping as NumberLikeMap).get(firstIdEntry);
     if (representativeId == null) continue;
 
     const hueValue = mappingProperties.mappingColors[classIdx];

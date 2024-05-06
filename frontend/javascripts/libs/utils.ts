@@ -1203,3 +1203,11 @@ export function chainIterators<T extends number | bigint>(
     yield* b;
   })();
 }
+
+// function isNumberTupleArray(x: any[]): x is Array<[number, number]> {
+//     return x.length > 0 && typeof x[0] === "number";
+// }
+export function isNumberMap(x: Map<any, any>): x is Map<number, number> {
+  const { value } = x.entries().next();
+  return value && typeof value[0] === "number";
+}

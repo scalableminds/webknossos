@@ -391,7 +391,7 @@ export type RecommendedConfiguration = Partial<
 // whereas a value of null indicates that the histogram couldn't be fetched
 export type HistogramDataForAllLayers = Record<string, APIHistogramData | null>;
 export type Mapping = Map<number, number> | Map<bigint, bigint>;
-export type NumberLike = number; // | bigint; todop
+export type NumberLike = number | bigint;
 export type NumberLikeMap = Map<NumberLike, NumberLike>;
 
 export type MappingType = "JSON" | "HDF5";

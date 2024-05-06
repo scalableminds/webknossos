@@ -243,7 +243,7 @@ export const updateSegmentAction = (
   }) as const;
 
 export const removeSegmentAction = (
-  segmentId: NumberLike,
+  segmentId: number,
   layerName: string,
   timestamp: number = Date.now(),
 ) =>

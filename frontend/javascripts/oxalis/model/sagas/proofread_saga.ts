@@ -71,6 +71,7 @@ import _ from "lodash";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
 import { Action } from "../actions/actions";
+import { isNumberMap } from "libs/utils";
 
 export default function* proofreadRootSaga(): Saga<void> {
   yield* take("INITIALIZE_SKELETONTRACING");
@@ -458,10 +459,10 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
 }
 
 function* performMinCut(
-  sourceAgglomerateId: NumberLike,
-  targetAgglomerateId: NumberLike,
-  sourceSegmentId: NumberLike,
-  targetSegmentId: NumberLike,
+  sourceAgglomerateId: number,
+  targetAgglomerateId: number,
+  sourceSegmentId: number,
+  targetSegmentId: number,
   agglomerateFileMag: Vector3,
   editableMappingId: string,
   volumeTracingId: string,
@@ -744,7 +745,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     );
 
     const mergedMapping = new Map(
-      Array.from(activeMapping.mapping as Map<NumberLike, NumberLike>, ([key, value]) =>
+      Array.from(activeMapping.mapping as NumberLikeMap, ([key, value]) =>
         value === targetAgglomerateId ? [key, sourceAgglomerateId] : [key, value],
       ),
     ) as typeof activeMapping.mapping;
@@ -792,7 +793,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       return;
     }
 
-    const splitSegmentIds = Array.from(activeMapping.mapping as Map<NumberLike, NumberLike>)
+    const splitSegmentIds = Array.from(activeMapping.mapping as NumberLikeMap)
       .filter(([_segmentId, agglomerateId]) => agglomerateId === sourceAgglomerateId)
       .map(([segmentId, _agglomerateId]) => segmentId);
 
@@ -805,24 +806,21 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     );
 
     const splitMapping = new Map(
-      Array.from(
-        activeMapping.mapping as Map<NumberLike, NumberLike>,
-        ([segmentId, agglomerateId]) => {
-          if (
-            mappingAfterSplit.has(
-              // @ts-ignore has() is expected to accept the type that segmentId has
-              segmentId,
-            )
-          ) {
-            return [
-              segmentId,
-              // @ts-ignore get() is expected to accept the type that segmentId has
-              mappingAfterSplit.get(segmentId),
-            ];
-          }
-          return [segmentId, agglomerateId];
-        },
-      ),
+      Array.from(activeMapping.mapping as NumberLikeMap, ([segmentId, agglomerateId]) => {
+        if (
+          mappingAfterSplit.has(
+            // @ts-ignore has() is expected to accept the type that segmentId has
+            segmentId,
+          )
+        ) {
+          return [
+            segmentId,
+            // @ts-ignore get() is expected to accept the type that segmentId has
+            mappingAfterSplit.get(segmentId),
+          ];
+        }
+        return [segmentId, agglomerateId];
+      }),
     ) as typeof activeMapping.mapping;
 
     yield* put(
@@ -968,10 +966,10 @@ function* handleProofreadCutNeighbors(action: Action) {
 
 function* prepareSplitOrMerge(): Saga<{
   agglomerateFileMag: Vector3;
-  getDataValue: (position: Vector3) => Promise<NumberLike>;
+  getDataValue: (position: Vector3) => Promise<number>;
   getMappedAndUnmapped: (
     position: Vector3,
-  ) => Promise<{ agglomerateId: NumberLike; unmappedId: NumberLike }>;
+  ) => Promise<{ agglomerateId: number; unmappedId: number }>;
   volumeTracing: VolumeTracing & { mappingName: string };
 } | null> {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
@@ -1003,7 +1001,7 @@ function* prepareSplitOrMerge(): Saga<{
   const agglomerateFileMag = resolutionInfo.getFinestResolution();
   const agglomerateFileZoomstep = resolutionInfo.getFinestResolutionIndex();
 
-  const getUnmappedDataValue = (position: Vector3) => {
+  const getUnmappedDataValue = (position: Vector3): Promise<number> => {
     const { additionalCoordinates } = Store.getState().flycam;
     return api.data.getDataValue(
       volumeTracing.tracingId,
@@ -1024,9 +1022,11 @@ function* prepareSplitOrMerge(): Saga<{
     return null;
   }
 
-  const getDataValue = async (position: Vector3) => {
+  const getDataValue = async (position: Vector3): Promise<number> => {
     const unmappedId = await getUnmappedDataValue(position);
-    const mappedId = (mapping as NumberLikeMap).get(unmappedId);
+    const mappedId = isNumberMap(mapping)
+      ? mapping.get(unmappedId)
+      : Number(mapping.get(BigInt(unmappedId)));
     if (mappedId == null) {
       // todop: are we sure that this will not throw unexpectedly?
       throw new Error(`Could not map id ${unmappedId} at position. Is mapping up to date?`);
@@ -1036,7 +1036,10 @@ function* prepareSplitOrMerge(): Saga<{
 
   const getMappedAndUnmapped = async (position: Vector3) => {
     const unmappedId = await getUnmappedDataValue(position);
-    const agglomerateId = (mapping as NumberLikeMap).get(unmappedId);
+    const agglomerateId = isNumberMap(mapping)
+      ? mapping.get(unmappedId)
+      : Number(mapping.get(BigInt(unmappedId)));
+
     if (agglomerateId == null) {
       // todop: are we sure that this will not throw unexpectedly?
       throw new Error(`Could not map id ${unmappedId} at position. Is mapping up to date?`);
@@ -1055,11 +1058,11 @@ function* prepareSplitOrMerge(): Saga<{
 function* getAgglomerateInfos(
   getMappedAndUnmapped: (
     position: Vector3,
-  ) => Promise<{ agglomerateId: NumberLike; unmappedId: NumberLike }>,
+  ) => Promise<{ agglomerateId: number; unmappedId: number }>,
   positions: Vector3[],
 ): Saga<Array<{
-  agglomerateId: NumberLike;
-  unmappedId: NumberLike;
+  agglomerateId: number;
+  unmappedId: number;
 }> | null> {
   const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
   if (idInfos.find((idInfo) => idInfo.agglomerateId === 0 || idInfo.unmappedId === 0) != null) {

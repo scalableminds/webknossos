@@ -6,7 +6,12 @@ import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
-import { areBoundingBoxesOverlappingOrTouching, castForArrayType, union } from "libs/utils";
+import {
+  areBoundingBoxesOverlappingOrTouching,
+  castForArrayType,
+  isNumberMap,
+  union,
+} from "libs/utils";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
@@ -39,14 +44,6 @@ const warnAboutTooManyAllocations = _.once(() => {
     sticky: true,
   });
 });
-
-// function isNumberTupleArray(x: any[]): x is Array<[number, number]> {
-//     return x.length > 0 && typeof x[0] === "number";
-// }
-function isNumberMap(x: Map<any, any>): x is Map<number, number> {
-  const { value } = x.entries().next();
-  return value && typeof value[0] === "number";
-}
 
 class CubeEntry {
   data: Map<number, Bucket>;

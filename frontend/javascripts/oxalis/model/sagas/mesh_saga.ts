@@ -6,6 +6,7 @@ import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeBufferGeometries } from "libs/BufferGeometryUtils";
 import Deferred from "libs/async/deferred";
+import { ActionPattern } from "redux-saga/effects";
 
 import Store from "oxalis/store";
 import {
@@ -282,10 +283,10 @@ function* loadAdHocMesh(
       removeExistingMesh,
     ),
     cancel: take(
-      (action: Action) =>
+      ((action: Action) =>
         action.type === "REMOVE_MESH" &&
         action.segmentId === segmentId &&
-        action.layerName === layer.name,
+        action.layerName === layer.name) as ActionPattern,
     ),
   });
   removeMeshWithoutVoxels(segmentId, layer.name, seedAdditionalCoordinates);
@@ -741,10 +742,10 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       mergeChunks,
     ),
     cancel: take(
-      (otherAction: Action) =>
+      ((otherAction: Action) =>
         otherAction.type === "REMOVE_MESH" &&
         otherAction.segmentId === segmentId &&
-        otherAction.layerName === layer.name,
+        otherAction.layerName === layer.name) as ActionPattern,
     ),
   });
 }

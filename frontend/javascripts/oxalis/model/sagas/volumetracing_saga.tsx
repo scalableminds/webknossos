@@ -113,6 +113,7 @@ import {
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 import messages from "messages";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
+import { ActionPattern } from "redux-saga/effects";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
@@ -924,7 +925,7 @@ function* ensureValidBrushSize(): Saga<void> {
       "WK_READY",
       (action: Action) =>
         action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
-    ],
+    ] as ActionPattern<Action>,
     maybeClampBrushSize,
   );
 }

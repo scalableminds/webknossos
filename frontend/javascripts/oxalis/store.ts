@@ -1,4 +1,4 @@
-import { createStore, applyMiddleware } from "redux";
+import { createStore, applyMiddleware, Middleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
 import type {
@@ -391,7 +391,7 @@ export type RecommendedConfiguration = Partial<
 // whereas a value of null indicates that the histogram couldn't be fetched
 export type HistogramDataForAllLayers = Record<string, APIHistogramData | null>;
 export type Mapping = Map<number, number> | Map<bigint, bigint>;
-export type NumberLike = number | bigint;
+export type NumberLike = number; // | bigint; todop
 export type NumberLikeMap = Map<NumberLike, NumberLike>;
 
 export type MappingType = "JSON" | "HDF5";
@@ -631,7 +631,7 @@ const combinedReducers = reduceReducers(
 const store = createStore<OxalisState>(
   enableBatching(combinedReducers),
   defaultState,
-  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware),
+  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),
 );
 
 export function startSagas(rootSaga: Saga<any[]>) {

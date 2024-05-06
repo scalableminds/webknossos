@@ -8,6 +8,7 @@ import {
   type SetOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { EditableAnnotation } from "admin/admin_rest_api";
+import { ActionPattern } from "redux-saga/effects";
 import {
   editAnnotation,
   updateAnnotationLayer,
@@ -183,7 +184,7 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
         action.type === "UPDATE_LAYER_SETTING" &&
         action.layerName === segmentationLayerName &&
         action.propertyName === "alpha",
-    ]);
+    ] as ActionPattern);
     yield* warnMaybe();
   }
 }
@@ -197,8 +198,9 @@ export function* watchAnnotationAsync(): Saga<void> {
   yield* takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
   yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
   yield* takeLatest(
-    (action: Action) =>
-      action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
+    ((action: Action) =>
+      action.type === "UPDATE_LAYER_SETTING" &&
+      action.propertyName === "isDisabled") as ActionPattern,
     pushAnnotationUpdateAsync,
   );
   yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);

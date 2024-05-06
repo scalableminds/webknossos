@@ -3,6 +3,7 @@ import Request from "libs/request";
 import * as RestAPI from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
+import { APIDataStore, APITracingStore } from "types/api_flow_types";
 
 // Create a throttled function which depends on its arguments.
 // That way, each datastore is checked for health in a throttled and isolated manner
@@ -34,9 +35,9 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
     return;
   }
 
-  // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
   const stores = datastores
     .map((datastore) => ({ ...datastore, path: "data" }))
+    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
     .concat({ ...tracingstore, path: "tracings" });
 
   if (isInMaintenance) {

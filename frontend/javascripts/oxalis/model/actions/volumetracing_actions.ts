@@ -1,7 +1,7 @@
 import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, OrthoView, ContourMode, BucketAddress } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "oxalis/store";
+import type { Segment, SegmentGroup, SegmentMap } from "oxalis/store";
 import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";

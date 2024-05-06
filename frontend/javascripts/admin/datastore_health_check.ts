@@ -3,7 +3,6 @@ import Request from "libs/request";
 import * as RestAPI from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
-import { APIDataStore, APITracingStore } from "types/api_flow_types";
 
 // Create a throttled function which depends on its arguments.
 // That way, each datastore is checked for health in a throttled and isolated manner

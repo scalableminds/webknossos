@@ -199,7 +199,7 @@ export function UpgradeVersionBanner() {
     }
 
     const parsedDate = dayjs(lastTimeBannerWasClickedAway);
-    setShouldBannerBeShown(currentDate.diff(parsedDate, "minutes") >= 3);
+    setShouldBannerBeShown(currentDate.diff(parsedDate, "day") >= 3);
   }, [activeUser, isVersionOutdated, currentDate]);
 
   useEffect(() => {

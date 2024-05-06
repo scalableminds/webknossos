@@ -28,7 +28,6 @@ import TaskListView from "admin/task/task_list_view";
 import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import TaskTypeListView from "admin/tasktype/task_type_list_view";
 import TeamListView from "admin/team/team_list_view";
-import TimeLineView from "admin/time/time_line_view";
 import UserListView from "admin/user/user_list_view";
 import { Button, Col, Layout, Result, Row } from "antd";
 import DisableGenericDnd from "components/disable_generic_dnd";
@@ -562,12 +561,6 @@ class ReactRouter extends React.Component<Props> {
                 render={() => (
                   <Redirect to="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html" />
                 )}
-              />
-              <SecuredRouteWithErrorBoundary
-                isAuthenticated={isAuthenticated}
-                path="/reports/timetracking"
-                requiredPricingPlan={PricingPlanEnum.Power}
-                component={TimeLineView}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}

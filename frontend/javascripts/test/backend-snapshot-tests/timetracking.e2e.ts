@@ -5,6 +5,7 @@ import {
   setCurrToken,
   resetDatabase,
   writeTypeCheckingFile,
+  replaceVolatileValues,
 } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
@@ -25,29 +26,29 @@ test.before("Reset database and initialize values", async () => {
 
 // Note: /api/users/:userId/loggedTime is tested in users.e2e.ts
 
-test("getTimeTrackingForUser", async (t) => {
-  const timeTrackingForUser = await api.getTimeTrackingForUser(
+test("getTimeTrackingForUserSpans", async (t) => {
+  const timeTrackingForUser = await api.getTimeTrackingForUserSpans(
     activeUser.id,
-    dayjs("20180101", "YYYYMMDD"),
-    dayjs("20181001", "YYYYMMDD"),
+    dayjs("20180101", "YYYYMMDD").valueOf(),
+    dayjs("20181001", "YYYYMMDD").valueOf(),
     "Task",
   );
   t.true(timeTrackingForUser.length > 0);
-  t.snapshot(timeTrackingForUser, {
+  t.snapshot(replaceVolatileValues(timeTrackingForUser), {
     id: "timetracking-timeTrackingForUser",
   });
 });
 
 test("getTimeTrackingForUser for a user other than the active user", async (t) => {
   const idUserC = "770b9f4d2a7c0e4d008da6ef";
-  const timeTrackingForUser = await api.getTimeTrackingForUser(
+  const timeTrackingForUser = await api.getTimeTrackingForUserSpans(
     idUserC,
-    dayjs("20160401", "YYYYMMDD"),
-    dayjs("20160420", "YYYYMMDD"),
+    dayjs("20160401", "YYYYMMDD").valueOf(),
+    dayjs("20160420", "YYYYMMDD").valueOf(),
     "Task",
   );
   t.true(timeTrackingForUser.length > 0);
-  t.snapshot(timeTrackingForUser, {
+  t.snapshot(replaceVolatileValues(timeTrackingForUser), {
     id: "timetracking-timeTrackingForUser-C",
   });
 });

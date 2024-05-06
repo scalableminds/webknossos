@@ -345,7 +345,7 @@ export const getColorForCoords: ShaderModule = {
 
       if (packingDegree == 2.0) {
         // It's essentially irrelevant what we return as the 3rd and 4th value here as we only have 2 byte of information.
-        // The caller needs to unpack this vec4 according to the packingDegree, see getSegmentationId for an example.
+        // The caller needs to unpack this vec4 according to the packingDegree, see getSegmentId for an example.
         // The same goes for the following code where the packingDegree is 4 and we only have 1 byte of information.
         if (rgbaIndex == 0.0) {
           returnValue[1] = vec4(

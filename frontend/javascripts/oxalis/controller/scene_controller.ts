@@ -5,7 +5,13 @@ import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import _ from "lodash";
-import type { BoundingBoxType, OrthoView, OrthoViewMap, Vector3 } from "oxalis/constants";
+import type {
+  BoundingBoxType,
+  OrthoView,
+  OrthoViewMap,
+  OrthoViewWithoutTDMap,
+  Vector3,
+} from "oxalis/constants";
 import constants, {
   OrthoViews,
   OrthoViewValuesWithoutTDView,
@@ -50,38 +56,25 @@ class SceneController {
   current: number;
   isPlaneVisible: OrthoViewMap<boolean>;
   planeShift: Vector3;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'datasetBoundingBox' has no initializer a... Remove this comment to see the full error message
-  datasetBoundingBox: Cube;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'userBoundingBoxGroup' has no initializer... Remove this comment to see the full error message
-  userBoundingBoxGroup: THREE.Group;
+  datasetBoundingBox!: Cube;
+  userBoundingBoxGroup!: THREE.Group;
   layerBoundingBoxGroup!: THREE.Group;
   userBoundingBoxes!: Array<Cube>;
   layerBoundingBoxes!: { [layerName: string]: Cube };
   annotationToolsGeometryGroup!: THREE.Group;
   highlightedBBoxId: number | null | undefined;
   taskBoundingBox: Cube | null | undefined;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'contour' has no initializer and is not d... Remove this comment to see the full error message
-  contour: ContourGeometry;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'quickSelectGeometry' has no initializer and is not d... Remove this comment to see the full error message
-  quickSelectGeometry: QuickSelectGeometry;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'lineMeasurementGeometry' has no initializer and is not d... Remove this comment to see the full error message
-  lineMeasurementGeometry: LineMeasurementGeometry;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'areaMeasurementGeometry' has no initializer and is not d... Remove this comment to see the full error message
-  areaMeasurementGeometry: ContourGeometry;
-  // @ts-expect-error ts-migrate(2304) FIXME: Cannot find name 'OrthoViewWithoutTDMap'.
-  planes: OrthoViewWithoutTDMap<Plane>;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootNode' has no initializer and is not ... Remove this comment to see the full error message
-  rootNode: THREE.Object3D;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'renderer' has no initializer and is not ... Remove this comment to see the full error message
-  renderer: THREE.WebGLRenderer;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'scene' has no initializer and is not def... Remove this comment to see the full error message
-  scene: THREE.Scene;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'rootGroup' has no initializer and is not... Remove this comment to see the full error message
-  rootGroup: THREE.Object3D;
+  contour!: ContourGeometry;
+  quickSelectGeometry!: QuickSelectGeometry;
+  lineMeasurementGeometry!: LineMeasurementGeometry;
+  areaMeasurementGeometry!: ContourGeometry;
+  planes!: OrthoViewWithoutTDMap<Plane>;
+  rootNode!: THREE.Object3D;
+  renderer!: THREE.WebGLRenderer;
+  scene!: THREE.Scene;
+  rootGroup!: THREE.Object3D;
   // Group for all meshes including a light.
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'meshesRootGroup' has no initializer and ... Remove this comment to see the full error message
-  meshesRootGroup: THREE.Object3D;
-  stlMeshes: Record<string, THREE.Mesh> = {};
+  meshesRootGroup!: THREE.Object3D;
   segmentMeshController: SegmentMeshController;
 
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
@@ -199,22 +192,6 @@ class SceneController {
 
     // @ts-ignore
     window.removeBucketMesh = (mesh: THREE.LineSegments) => this.rootNode.remove(mesh);
-  }
-
-  removeSTL(id: string): void {
-    this.meshesRootGroup.remove(this.stlMeshes[id]);
-  }
-
-  setMeshVisibility(id: string, visibility: boolean): void {
-    this.stlMeshes[id].visible = visibility;
-  }
-
-  updateMeshPostion(id: string, position: Vector3): void {
-    const [x, y, z] = position;
-    const mesh = this.stlMeshes[id];
-    mesh.position.x = x;
-    mesh.position.y = y;
-    mesh.position.z = z;
   }
 
   createMeshes(): void {

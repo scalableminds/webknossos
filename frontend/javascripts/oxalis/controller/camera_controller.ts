@@ -202,7 +202,6 @@ class CameraController extends React.PureComponent<Props> {
     tdCamera.top = cameraData.top;
     tdCamera.bottom = cameraData.bottom;
     tdCamera.up = new THREE.Vector3(...cameraData.up);
-    tdCamera.lookAt(new THREE.Vector3(...cameraData.lookAt));
     tdCamera.updateProjectionMatrix();
     this.props.onCameraPositionChanged();
   }
@@ -324,7 +323,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
         right,
         top,
         bottom,
-        lookAt: currentFlycamPos,
       }),
     );
   };

@@ -321,8 +321,15 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "ADD_PRECOMPUTED_MESH": {
-      const { layerName, segmentId, seedPosition, seedAdditionalCoordinates, meshFileName } =
-        action;
+      const {
+        layerName,
+        segmentId,
+        seedPosition,
+        seedAdditionalCoordinates,
+        meshFileName,
+        areChunksMerged,
+        mappingName,
+      } = action;
       const meshInfo: MeshInformation = {
         segmentId: segmentId,
         seedPosition,
@@ -331,6 +338,8 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
         isVisible: true,
         isPrecomputed: true,
         meshFileName,
+        areChunksMerged,
+        mappingName,
       };
       const additionalCoordinates = state.flycam.additionalCoordinates;
       const additionalCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);

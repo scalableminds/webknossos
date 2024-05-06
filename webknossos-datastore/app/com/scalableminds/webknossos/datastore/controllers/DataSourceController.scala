@@ -316,6 +316,25 @@ class DataSourceController @Inject()(
     }
   }
 
+  def positionForSegmentViaAgglomerateFile(
+      token: Option[String],
+      organizationName: String,
+      datasetName: String,
+      dataLayerName: String,
+      mappingName: String,
+      segmentId: Long
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
+                                      urlOrHeaderToken(token, request)) {
+      for {
+        agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+        position <- agglomerateService.positionForSegmentId(
+          AgglomerateFileKey(organizationName, datasetName, dataLayerName, mappingName),
+          segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
+      } yield Ok(Json.toJson(position))
+    }
+  }
+
   def largestAgglomerateId(
       token: Option[String],
       organizationName: String,

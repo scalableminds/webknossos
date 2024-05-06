@@ -3,7 +3,7 @@ import { Tooltip, Typography, Tag } from "antd";
 import { SettingOutlined, InfoCircleOutlined, EditOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import Markdown from "react-remarkable";
-import React, { CSSProperties, ChangeEvent } from "react";
+import React, { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
@@ -203,14 +203,22 @@ export function OwningOrganizationRow({ organizationName }: { organizationName: 
 export function AnnotationStats({
   stats,
   asInfoBlock,
+  withMargin,
 }: {
   stats: CombinedTracingStats;
   asInfoBlock: boolean;
+  withMargin?: boolean | null | undefined;
 }) {
   const formatLabel = (str: string) => (asInfoBlock ? str : "");
+  const useStyleWithMargin = withMargin != null ? withMargin : true;
+  const styleWithLargeMarginBottom = { marginBottom: 14 };
+  const styleWithSmallMargin = { margin: "2px auto" };
 
   return (
-    <div className="info-tab-block">
+    <div
+      className="info-tab-block"
+      style={useStyleWithMargin ? styleWithLargeMarginBottom : styleWithSmallMargin}
+    >
       {asInfoBlock && <p className="sidebar-label">Statistics</p>}
       <table className={asInfoBlock ? "annotation-stats-table" : "annotation-stats-table-slim"}>
         <tbody>
@@ -276,10 +284,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
   setAnnotationName = (newName: string) => {
     this.props.setAnnotationName(newName);
-  };
-
-  setAnnotationDescription = (evt: ChangeEvent<HTMLTextAreaElement>) => {
-    this.props.setAnnotationDescription(evt.target.value);
   };
 
   componentDidMount(): void {
@@ -500,7 +504,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             source={this.props.annotation.description}
             isOpen={this.state.isMarkdownModalOpen}
             onOk={() => this.setState({ isMarkdownModalOpen: false })}
-            onChange={this.setAnnotationDescription}
+            onChange={this.props.setAnnotationDescription}
           />
         </div>
       );

@@ -192,7 +192,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       val projectQuery = projectIdsFilterQuery(projectIds)
       val query =
         q"""
-          SELECT u._id, u.firstName, u.lastName, mu.email, SUM(ts.time), COUNT(a._id)
+          SELECT u._id, u.firstName, u.lastName, mu.email, SUM(ts.time), COUNT(DISTINCT a._id)
           FROM webknossos.timespans_ ts
           JOIN webknossos.annotations_ a ON ts._annotation = a._id
           JOIN webknossos.users_ u ON ts._user = u._id

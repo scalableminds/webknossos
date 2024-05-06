@@ -316,7 +316,6 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/timetracking"
                 component={TimeTrackingOverview}
-                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}

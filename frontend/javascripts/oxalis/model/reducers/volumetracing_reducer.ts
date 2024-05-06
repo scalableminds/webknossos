@@ -263,7 +263,12 @@ function VolumeTracingReducer(
         const newSegmentId = volumeTracing.largestSegmentId + 1;
         if (newSegmentId > getMaximumSegmentIdForLayer(newState.dataset, segmentationLayer.name)) {
           // If the new segment ID would overflow the maximum segment ID, simply set the active cell to largestSegmentId.
-          return setActiveCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId);
+          return setActiveCellReducer(
+            newState,
+            volumeTracing,
+            volumeTracing.largestSegmentId,
+            null,
+          );
         } else {
           return createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId + 1);
         }
@@ -326,7 +331,12 @@ function VolumeTracingReducer(
 
   switch (action.type) {
     case "SET_ACTIVE_CELL": {
-      return setActiveCellReducer(state, volumeTracing, action.segmentId);
+      return setActiveCellReducer(
+        state,
+        volumeTracing,
+        action.segmentId,
+        action.activeUnmappedSegmentId,
+      );
     }
 
     case "CREATE_CELL": {

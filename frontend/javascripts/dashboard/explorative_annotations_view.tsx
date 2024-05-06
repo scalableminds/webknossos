@@ -689,6 +689,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <AnnotationStats
               stats={getCombinedStatsFromServerAnnotation(annotation)}
               asInfoBlock={false}
+              withMargin={false}
             />
           )}
         />

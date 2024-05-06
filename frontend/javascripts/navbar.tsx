@@ -278,7 +278,7 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
         key: "/timetracking",
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <Link to="/timetracking">Time Tracking Overview</Link>
+            <Link to="/timetracking">Time Tracking</Link>
           </PricingEnforcedSpan>
         ),
       },
@@ -308,7 +308,7 @@ function getTimeTrackingMenu(collapse: boolean): MenuItemType {
 
     label: (
       <Link
-        to="/reports/timetracking"
+        to="/timetracking"
         style={{
           fontWeight: 400,
         }}

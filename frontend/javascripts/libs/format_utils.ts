@@ -1,5 +1,5 @@
 import { presetPalettes } from "@ant-design/colors";
-import type { LengthUnit, Vector3, Vector6 } from "oxalis/constants";
+import { LengthUnit, type Vector3, type Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -16,7 +16,6 @@ import localeData from "dayjs/plugin/localeData";
 import type { BoundingBoxObject } from "oxalis/store";
 import type { Duration } from "dayjs/plugin/duration";
 import { DatasetScale } from "types/api_flow_types";
-import { datasetScaleFactorToNm } from "oxalis/model/scaleinfo";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);
@@ -79,6 +78,24 @@ export const LengthUnitsMap: Record<LengthUnit, number> = {
   pc: 3.085677581e25,
 };
 
+const uncommonLengthUnitsToCommon: Map<LengthUnit, LengthUnit> = new Map([
+  [LengthUnit.Å, LengthUnit.pm],
+  [LengthUnit.in, LengthUnit.cm],
+  [LengthUnit.ft, LengthUnit.dm],
+  [LengthUnit.yd, LengthUnit.dm],
+  [LengthUnit.mi, LengthUnit.km],
+  [LengthUnit.pc, LengthUnit.Pm],
+]);
+
+function convertLengthUnitToCommonUnit(length: number, unit: LengthUnit): [number, LengthUnit] {
+  const commonUnit = uncommonLengthUnitsToCommon.get(unit);
+  if (commonUnit == null) {
+    return [length, unit];
+  }
+  const commonLength = (length * LengthUnitsMap[unit]) / LengthUnitsMap[commonUnit];
+  return [commonLength, commonUnit];
+}
+
 // Specifying a preset color makes an antd <Tag/> appear more lightweight, see https://ant.design/components/tag/
 const COLOR_MAP_ANTD: Array<string> = Object.keys(presetPalettes);
 export function stringToColor(string: string): string {
@@ -116,95 +133,126 @@ export function formatTuple(tuple: (Array<number> | Vector3 | Vector6) | null | 
 }
 export function formatScale(scale: DatasetScale | null | undefined, roundTo: number = 2): string {
   if (scale != null && scale.factor.length > 0) {
-    const scaleInNm = datasetScaleFactorToNm(scale);
-    const smallestValueInNm = Math.min(...scaleInNm);
-    const closestFactor = findClosestToUnitFactor(
-      smallestValueInNm,
+    const scaleFactor = scale.factor;
+    const smallestScaleFactor = Math.min(...scaleFactor);
+    const [conversionFactor, newUnit] = findClosestToUnitFactorAndUnit(
+      smallestScaleFactor,
+      scale.unit,
       nmFactorToUnit,
       false,
       roundTo,
     );
-    const unit = nmFactorToUnit.get(closestFactor);
-    if (unit == null) {
-      throw new Error("Couldn't look up appropriate unit.");
-    }
     const scaleInNmRounded = Utils.map3(
-      (value) => Utils.roundTo(value / closestFactor, roundTo),
-      scaleInNm,
+      (value) => Utils.roundTo(value / conversionFactor, roundTo),
+      scaleFactor,
     );
-    const str = `${scaleInNmRounded.join(
+    return `${scaleInNmRounded.join(
       ThinSpace + MultiplicationSymbol + ThinSpace,
-    )} ${unit}³/voxel`;
-    console.log("formatScale", str);
-    return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${unit}³/voxel`;
+    )} ${newUnit}³/voxel`;
   }
   return "";
 }
 
 export function formatNumberToUnit(
   number: number,
+  unit: string,
   unitMap: Map<number, string>,
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
 ): string {
-  const closestFactor = findClosestToUnitFactor(
+  const [conversionFactor, newUnit] = findClosestToUnitFactorAndUnit(
     number,
+    unit,
     unitMap,
     preferShorterDecimals,
     decimalPrecision,
   );
-  const unit = unitMap.get(closestFactor);
 
-  if (unit == null) {
-    throw new Error("Couldn't look up appropriate unit.");
-  }
-
-  const valueInUnit = number / closestFactor;
+  const valueInUnit = number / conversionFactor;
 
   if (valueInUnit !== Math.floor(valueInUnit)) {
-    return `${valueInUnit.toFixed(decimalPrecision)}${ThinSpace}${unit}`;
+    return `${valueInUnit.toFixed(decimalPrecision)}${ThinSpace}${newUnit}`;
   }
 
-  return `${valueInUnit}${ThinSpace}${unit}`;
+  return `${valueInUnit}${ThinSpace}${newUnit}`;
 }
 
 const nmFactorToUnit = new Map([
+  [1e-15, "ym"],
+  [1e-12, "zm"],
+  [1e-9, "am"],
+  [1e-6, "fm"],
   [1e-3, "pm"],
   [1, "nm"],
   [1e3, "µm"],
   [1e6, "mm"],
   [1e9, "m"],
   [1e12, "km"],
+  [1e15, "Mm"],
+  [1e18, "Gm"],
+  [1e21, "Tm"],
+  [1e24, "Pm"],
+  [1e27, "Em"],
+  [1e30, "Zm"],
+  [1e33, "Ym"],
+  [3.085677581e25, "pc"],
 ]);
+// TODO: Do not expect to get nm to preserve potential precision
 export function formatNumberInNmToLength(lengthInNm: number, decimalPrecision: number = 1): string {
-  const s = formatNumberToUnit(lengthInNm, nmFactorToUnit, true, decimalPrecision);
+  const s = formatNumberToUnit(lengthInNm, LengthUnit.nm, nmFactorToUnit, true, decimalPrecision);
   console.log("formatNumberInNmToLength", s);
   return s;
 }
 
 const nmFactorToUnit2D = new Map([
+  [1e-30, "ym²"],
+  [1e-24, "zm²"],
+  [1e-18, "am²"],
+  [1e-12, "fm²"],
   [1e-6, "pm²"],
   [1, "nm²"],
   [1e6, "µm²"],
   [1e12, "mm²"],
   [1e18, "m²"],
   [1e24, "km²"],
+  [1e30, "Mm²"],
+  [1e36, "Gm²"],
+  [1e42, "Tm²"],
+  [1e48, "Pm²"],
+  [1e54, "Em²"],
+  [1e60, "Zm²"],
+  [1e66, "Ym²"],
+  [9.521422549e50, "pc²"],
 ]);
 
+// TODO: Do not expect to get nm to preserve potential precision
 export function formatNumberToArea(lengthInNm2: number, decimalPrecision: number = 1): string {
-  return formatNumberToUnit(lengthInNm2, nmFactorToUnit2D, true, decimalPrecision);
+  return formatNumberToUnit(lengthInNm2, "nm²", nmFactorToUnit2D, true, decimalPrecision);
 }
 
 const nmFactorToUnit3D = new Map([
+  [1e-45, "ym³"],
+  [1e-36, "zm³"],
+  [1e-27, "am³"],
+  [1e-18, "fm³"],
   [1e-9, "pm³"],
   [1, "nm³"],
   [1e9, "µm³"],
   [1e18, "mm³"],
   [1e27, "m³"],
   [1e36, "km³"],
+  [1e45, "Mm³"],
+  [1e54, "Gm³"],
+  [1e63, "Tm³"],
+  [1e72, "Pm³"],
+  [1e81, "Em³"],
+  [1e90, "Zm³"],
+  [1e99, "Ym³"],
+  [2.938006565e76, "pc³"],
 ]);
+// TODO: Do not expect to get nm to preserve potential precision
 export function formatNumberToVolume(lengthInNm3: number, decimalPrecision: number = 1): string {
-  return formatNumberToUnit(lengthInNm3, nmFactorToUnit3D, true, decimalPrecision);
+  return formatNumberToUnit(lengthInNm3, "nm³", nmFactorToUnit3D, true, decimalPrecision);
 }
 
 const byteFactorToUnit = new Map([
@@ -219,32 +267,51 @@ export function formatCountToDataAmountUnit(
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
 ): string {
-  return formatNumberToUnit(count, byteFactorToUnit, preferShorterDecimals, decimalPrecision);
+  return formatNumberToUnit(count, "B", byteFactorToUnit, preferShorterDecimals, decimalPrecision);
 }
 
-const getSortedFactors = _.memoize((unitMap: Map<number, string>) =>
-  Array.from(unitMap.keys()).sort((a, b) => a - b),
+const getSortedFactorsAndUnits = _.memoize((unitMap: Map<number, string>) =>
+  Array.from(unitMap.entries()).sort((a, b) => a[0] - b[0]),
 );
 
-export function findClosestToUnitFactor(
+// TODO: This needs to potentially be adjusted to handle multidimensional units as the ensurance of uncommon length units only supports 1D units.
+export function findClosestToUnitFactorAndUnit(
   number: number,
+  unit: string,
   unitMap: Map<number, string>,
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
-): number {
-  const sortedFactors = getSortedFactors(unitMap);
-  let closestFactor = sortedFactors[0];
+): [number, string] {
+  const isLengthUnit = unit in LengthUnitsMap;
+  if (isLengthUnit) {
+    // In case of an length unit, ensure it is among the common length units that we support conversion for.
+    [number, unit] = convertLengthUnitToCommonUnit(number, unit as LengthUnit);
+  }
+  const sortedFactorsAndUnits = getSortedFactorsAndUnits(unitMap);
+  const [currentFactor, currentUnit] = sortedFactorsAndUnits.find((entry) => entry[1] === unit) || [
+    undefined,
+    undefined,
+  ];
+  if (currentFactor == null || currentUnit == null) {
+    throw new Error(`Couldn't look up appropriate unit for ${unit}.`);
+  }
+  let closestConversionFactor = currentFactor;
+  let closestUnit = currentUnit;
+
   const minimumToRoundUpToOne = 0.95;
 
-  for (const factor of sortedFactors) {
+  for (const [factor, unit] of sortedFactorsAndUnits) {
+    const currentConversionFactor = factor / currentFactor;
     if (
       number >=
-      factor * (preferShorterDecimals ? minimumToRoundUpToOne * 10 ** -decimalPrecision : 1)
+      currentConversionFactor *
+        (preferShorterDecimals ? minimumToRoundUpToOne * 10 ** -decimalPrecision : 1)
     ) {
-      closestFactor = factor;
+      closestConversionFactor = currentConversionFactor;
+      closestUnit = unit;
     }
   }
-  return closestFactor;
+  return [closestConversionFactor, closestUnit];
 }
 export function formatLengthAsVx(lengthInVx: number, roundTo: number = 2): string {
   const roundedLength = Utils.roundTo(lengthInVx, roundTo);

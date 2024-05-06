@@ -744,7 +744,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     );
 
     const mergedMapping = new Map(
-      Array.from(activeMapping.mapping as Map<number | bigint, number | bigint>, ([key, value]) =>
+      Array.from(activeMapping.mapping as Map<NumberLike, NumberLike>, ([key, value]) =>
         value === targetAgglomerateId ? [key, sourceAgglomerateId] : [key, value],
       ),
     ) as typeof activeMapping.mapping;

@@ -313,14 +313,14 @@ function* updateHdf5Mapping(
   const { mapping: previousMapping } = previousMappingObject;
   const newValues = new Set(
     [...valueSet].filter((i) => !(previousMapping as Map<NumberLike, NumberLike>).has(i)),
-  ) as Set<number> | Set<bigint>;
+  ) as Set<NumberLike>;
 
   if (newValues.size === 0) return;
 
   const remainingValues = new Set(
     [...previousMapping.keys()].filter((i) => (valueSet as Set<NumberLike>).has(i)),
   );
-  const newUniqueSegmentIds = [...newValues].sort(<T extends number | bigint>(a: T, b: T) => a - b);
+  const newUniqueSegmentIds = [...newValues].sort(<T extends NumberLike>(a: T, b: T) => a - b);
   console.log(
     "New values",
     newValues.size,

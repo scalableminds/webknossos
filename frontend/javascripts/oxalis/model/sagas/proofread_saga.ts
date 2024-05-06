@@ -792,7 +792,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       return;
     }
 
-    const splitSegmentIds: number[] = Array.from(activeMapping.mapping)
+    const splitSegmentIds = Array.from(activeMapping.mapping as Map<NumberLike, NumberLike>)
       .filter(([_segmentId, agglomerateId]) => agglomerateId === sourceAgglomerateId)
       .map(([segmentId, _agglomerateId]) => segmentId);
 
@@ -805,12 +805,24 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     );
 
     const splitMapping = new Map(
-      Array.from(activeMapping.mapping, ([segmentId, agglomerateId]) => {
-        if (mappingAfterSplit.has(segmentId)) {
-          return [segmentId, mappingAfterSplit.get(segmentId)];
-        }
-        return [segmentId, agglomerateId];
-      }),
+      Array.from(
+        activeMapping.mapping as Map<NumberLike, NumberLike>,
+        ([segmentId, agglomerateId]) => {
+          if (
+            mappingAfterSplit.has(
+              // @ts-ignore has() is expected to accept the type that segmentId has
+              segmentId,
+            )
+          ) {
+            return [
+              segmentId,
+              // @ts-ignore get() is expected to accept the type that segmentId has
+              mappingAfterSplit.get(segmentId),
+            ];
+          }
+          return [segmentId, agglomerateId];
+        },
+      ),
     ) as typeof activeMapping.mapping;
 
     yield* put(

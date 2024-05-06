@@ -149,6 +149,7 @@ function ensureValidScaleOnInferredDataSource(
     if (
       segmentationLayerSettings != null &&
       savedSegmentationLayerSettings != null &&
+      segmentationLayerSettings.largestSegmentId === 0 &&
       savedSegmentationLayerSettings.category === "segmentation" &&
       segmentationLayerSettings.category === "segmentation"
     ) {

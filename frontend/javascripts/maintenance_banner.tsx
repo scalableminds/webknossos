@@ -186,15 +186,21 @@ export function UpgradeVersionBanner() {
   const [shouldBannerBeShown, setShouldBannerBeShown] = useState(false);
 
   useEffect(() => {
-    if (!isVersionOutdated || activeUser == null) setShouldBannerBeShown(false);
+    if (!isVersionOutdated || activeUser == null) {
+      setShouldBannerBeShown(false);
+      return;
+    }
     const lastTimeBannerWasClickedAway = localStorage.getItem(
       UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY,
     );
-    if (lastTimeBannerWasClickedAway == null) setShouldBannerBeShown(true);
-    // todo doesnt work yet, look into custom parse format
+    if (lastTimeBannerWasClickedAway == null) {
+      setShouldBannerBeShown(true);
+      return;
+    }
+
     const parsedDate = dayjs(lastTimeBannerWasClickedAway);
-    setShouldBannerBeShown(currentDate.diff(parsedDate, "day") >= 3);
-  }, [activeUser, isVersionOutdated]);
+    setShouldBannerBeShown(currentDate.diff(parsedDate, "minutes") >= 3);
+  }, [activeUser, isVersionOutdated, currentDate]);
 
   useEffect(() => {
     if (shouldBannerBeShown) {
@@ -211,8 +217,15 @@ export function UpgradeVersionBanner() {
         <Space size="middle">
           <Space size="small">
             You are using an old version of WEBKNOSSOS. Switch to
-            <b style={{ marginInline: -2 }}>webknossos.org</b> for automatic updates and exclusive
-            features!
+            <a
+              className="upgrade-banner-wk-link"
+              target="_blank"
+              href="https://webknossos.org"
+              rel="noreferrer noopener"
+            >
+              webknossos.org
+            </a>
+            for automatic updates and exclusive features!
           </Space>
           <Button
             className="upgrade-banner-button"

@@ -474,10 +474,20 @@ img.keyboard-mouse-icon:first-child {
     right: 8px;
   }
 
-  .upgrade-banner{
+  .upgrade-banner {
+    .upgrade-banner-wk-link {
+      margin-inline: -2; 
+      color: var(--ant-color-text-primary); 
+      font-weight: bold;
+
+      &:hover{
+        color: var(--color-blue-zircon);
+      }
+    }
+    
     .ant-alert-close-icon {
       .anticon, .anticon-close {
-        color: var(--ant-color-primary-bg)
+        color: var(--ant-color-text-primary);
       }
     }
   }

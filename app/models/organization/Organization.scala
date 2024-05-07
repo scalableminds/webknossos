@@ -70,11 +70,11 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser = (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId)))
-      OR 'true' in (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId))"""
+      OR TRUE in (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId))"""
 
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = sharingToken match {
-    case Some(_) => q"${true}"
-    case _       => q"${false}"
+    case Some(_) => q"TRUE"
+    case _       => q"FALSE"
   }
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =

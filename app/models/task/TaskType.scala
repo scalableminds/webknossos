@@ -183,7 +183,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {
-      countList <- run(q"SELECT COUNT(_id) FROM $existingCollectionName WHERE _team = $teamId".as[Int])
+      countList <- run(q"SELECT COUNT(*) FROM $existingCollectionName WHERE _team = $teamId".as[Int])
       count <- countList.headOption
     } yield count
 

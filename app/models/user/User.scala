@@ -201,7 +201,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           } else {
             q"(${userPrefix}_id NOT IN $usersInTeamsManagedByRequestingUser AND (NOT (${requestingUser.isAdmin} AND ${userPrefix}_organization = ${requestingUser._organization}))"
           }
-        case None => q"${true}"
+        case None => q"TRUE"
       }
       isTeamManagerOrAdminPredicate = isTeamManagerOrAdminOpt match {
         case Some(isTeamManagerOrAdmin) =>
@@ -211,9 +211,9 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           } else {
             q"${userPrefix}_id NOT IN $teamManagers AND NOT ${userPrefix}isAdmin"
           }
-        case None => q"${true}"
+        case None => q"TRUE"
       }
-      adminPredicate = isAdminOpt.map(isAdmin => q"${userPrefix}isAdmin = $isAdmin").getOrElse(q"${true}")
+      adminPredicate = isAdminOpt.map(isAdmin => q"${userPrefix}isAdmin = $isAdmin").getOrElse(q"TRUE")
     } yield q"""
         ($editablePredicate) AND
         ($isTeamManagerOrAdminPredicate) AND
@@ -250,7 +250,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           (SELECT _id AS editableUsers FROM webknossos.users WHERE _organization IN
               (SELECT _organization FROM webknossos.users WHERE _id = ${requestingUser._id} AND isAdmin)
             UNION
-          SELECT _user AS editableUsers FROM webknossos.user_team_roles WHERE _team in
+          SELECT _user AS editableUsers FROM webknossos.user_team_roles WHERE _team IN
               (SELECT _team FROM webknossos.user_team_roles WHERE _user = ${requestingUser._id} AND isTeamManager)
           )
         )
@@ -266,7 +266,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               ARRAY_REMOVE(ARRAY_AGG(ux.domain), null) AS experience_domains,
               ARRAY_REMOVE(ARRAY_AGG(ux.value), null) AS experience_values
             FROM webknossos.users AS u
-            LEFT JOIN webknossos.user_experiences ux on ux._user = u._id
+            LEFT JOIN webknossos.user_experiences ux ON ux._user = u._id
             GROUP BY u._id
           ),
           agg_user_team_roles AS (
@@ -274,10 +274,10 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               u._id AS _user,
               ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
               ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
-              ARRAY_REMOVE(ARRAY_AGG(utr.isteammanager :: TEXT), null) AS team_managers
+              ARRAY_REMOVE(ARRAY_AGG(utr.isTeamManager :: TEXT), null) AS team_managers
             FROM webknossos.users AS u
-            LEFT JOIN webknossos.user_team_roles utr on utr._user = u._id
-            LEFT JOIN webknossos.teams t on t._id = utr._team -- should not cause fanout since there is only one team per team_role
+            LEFT JOIN webknossos.user_team_roles utr ON utr._user = u._id
+            LEFT JOIN webknossos.teams t ON t._id = utr._team -- should not cause fanout since there is only one team per team_role
             GROUP BY u._id
           )
           SELECT
@@ -307,10 +307,10 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             m.isEmailVerified,
             $isEditableAttribute
         FROM webknossos.users AS u
-        INNER JOIN webknossos.organizations o on o._id = u._organization
-        INNER JOIN webknossos.multiusers m on u._multiuser = m._id
-        INNER JOIN agg_user_team_roles autr on autr._user = u._id
-        INNER JOIN agg_experiences aux on aux._user = u._id
+        INNER JOIN webknossos.organizations o ON o._id = u._organization
+        INNER JOIN webknossos.multiusers m ON u._multiuser = m._id
+        INNER JOIN agg_user_team_roles autr ON autr._user = u._id
+        INNER JOIN agg_experiences aux ON aux._user = u._id
         WHERE $selectionPredicates
         GROUP BY
           u._id, u.firstname, u.lastname, u.userConfiguration, u.isAdmin, u.isOrganizationOwner, u.isDatasetManager,
@@ -332,7 +332,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                      FROM
                      (SELECT $columns FROM $existingCollectionName WHERE $accessQuery) u
                      JOIN webknossos.user_team_roles ON u._id = webknossos.user_team_roles._user
-                     WHERE webknossos.user_team_roles._team in ${SqlToken.tupleFromList(teamIds)}
+                     WHERE webknossos.user_team_roles._team IN ${SqlToken.tupleFromList(teamIds)}
                      AND NOT u.isDeactivated
                      ORDER BY _id""".as[UsersRow])
         parsed <- parseAll(r)
@@ -362,7 +362,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"""SELECT $columns
                    FROM $existingCollectionName
-                   where $accessQuery
+                   WHERE $accessQuery
                    AND isAdmin
                    AND NOT isDeactivated
                    AND _organization = $organizationId

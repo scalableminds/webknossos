@@ -112,7 +112,7 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def deleteOneByName(name: String): Fox[Unit] =
     for {
-      _ <- run(q"UPDATE webknossos.tracingStores SET isDeleted = ${true} WHERE name = $name".asUpdate)
+      _ <- run(q"UPDATE webknossos.tracingStores SET isDeleted = TRUE WHERE name = $name".asUpdate)
     } yield ()
 
   def updateOne(t: TracingStore): Fox[Unit] =

@@ -115,7 +115,7 @@ class SqlInterpolationTestSuite extends PlaySpec with SqlTypeImplicits {
       assert(sql == SqlToken("SELECT * FROM test "))
     }
     "construct an SQLToken with nested SQL" in {
-      val accessQ = q"""isAdmin = ${true}"""
+      val accessQ = q"""isAdmin = TRUE"""
       val sql = q"""SELECT * FROM test WHERE $accessQ"""
       assert(sql == SqlToken("SELECT * FROM test WHERE isAdmin = ?", List(BooleanValue(true))))
     }

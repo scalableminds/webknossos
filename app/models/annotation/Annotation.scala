@@ -273,7 +273,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
           OR ${prefix}_user = $requestingUserId
           OR (
             (SELECT _organization FROM webknossos.teams WHERE webknossos.teams._id = ${prefix}_team)
-            IN (SELECT _organization FROM webknossos.users_ where _id = $requestingUserId and isAdmin)
+            IN (SELECT _organization FROM webknossos.users_ where _id = $requestingUserId AND isAdmin)
           )
         )"""
 
@@ -334,7 +334,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       accessQuery <- if (isForOwnDashboard) accessQueryFromAccessQWithPrefix(listAccessQ, q"a.")
       else accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, q"a.")
       stateQuery = getStateQuery(isFinished)
-      userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"${true}")
+      userQuery = forUser.map(u => q"a._user = $u").getOrElse(q"TRUE")
       typQuery = q"a.typ = $typ"
 
       query = q"""WITH
@@ -342,7 +342,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                     -- Note that only one of the joins in it has 1:n, so they can happen together
                   teams_agg AS (
                     SELECT
-                    a._id as _annotation,
+                    a._id AS _annotation,
                     ARRAY_REMOVE(ARRAY_AGG(t._id), null) AS team_ids,
                     ARRAY_REMOVE(ARRAY_AGG(t.name), null) AS team_names,
                     ARRAY_REMOVE(ARRAY_AGG(o._id), null) AS team_organization_ids
@@ -375,12 +375,12 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                     ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
                     ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
                     ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
-                  FROM webknossos.annotations_ as a
+                  FROM webknossos.annotations_ AS a
                   JOIN webknossos.users_ u ON u._id = a._user
                   JOIN teams_agg ON teams_agg._annotation = a._id
                   JOIN webknossos.datasets_ d ON d._id = a._dataset
-                  JOIN webknossos.organizations_ as o ON o._id = d._organization
-                  JOIN webknossos.annotation_layers as al ON al._annotation = a._id
+                  JOIN webknossos.organizations_ AS o ON o._id = d._organization
+                  JOIN webknossos.annotation_layers AS al ON al._annotation = a._id
                   WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
                   GROUP BY
                     a._id, a.name, a.description, a._user, a.othersmayedit, a.modified,
@@ -552,7 +552,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       implicit ctx: DBAccessContext): Fox[Int] =
     for {
       accessQuery <- readAccessQuery
-      excludeTeamsQ = if (excludedTeamIds.isEmpty) q"${true}"
+      excludeTeamsQ = if (excludedTeamIds.isEmpty) q"TRUE"
       else q"(NOT t._id IN ${SqlToken.tupleFromList(excludedTeamIds)})"
       countList <- run(q"""SELECT COUNT(*)
                            FROM (

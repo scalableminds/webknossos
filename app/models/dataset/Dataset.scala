@@ -143,12 +143,12 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   override def anonymousReadAccessQ(token: Option[String]): SqlToken = {
     val tokenAccess = token.map(t => q"""sharingToken = $t
-          OR _id in (
+          OR _id IN (
             SELECT a._dataset
             FROM webknossos.annotation_privateLinks_ apl
             JOIN webknossos.annotations_ a ON apl._annotation = a._id
             WHERE apl.accessToken = $t
-          )""").getOrElse(q"${false}")
+          )""").getOrElse(q"FALSE")
     // token can either be a dataset sharingToken or a matching annotation’s private link token
     q"isPublic OR ($tokenAccess)"
   }
@@ -260,7 +260,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                       WHERE utr._user = u._id
                     )
                   )
-                ), ${false}
+                ), FALSE
               ) AS isEditable,
               COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}),
               d.status,
@@ -328,13 +328,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         case Some(folderId) if includeSubfolders =>
           q"_folder IN (SELECT _descendant FROM webknossos.folder_paths fp WHERE fp._ancestor = $folderId)"
         case Some(folderId) => q"_folder = $folderId"
-        case None           => q"${true}"
+        case None           => q"TRUE"
       }
-      uploaderPredicate = uploaderIdOpt.map(uploaderId => q"_uploader = $uploaderId").getOrElse(q"${true}")
-      isActivePredicate = isActiveOpt.map(isActive => q"isUsable = $isActive").getOrElse(q"${true}")
+      uploaderPredicate = uploaderIdOpt.map(uploaderId => q"_uploader = $uploaderId").getOrElse(q"TRUE")
+      isActivePredicate = isActiveOpt.map(isActive => q"isUsable = $isActive").getOrElse(q"TRUE")
       organizationPredicate = organizationIdOpt
         .map(organizationId => q"_organization = $organizationId")
-        .getOrElse(q"${true}")
+        .getOrElse(q"TRUE")
       searchPredicate = buildSearchPredicate(searchQuery)
       isUnreportedPredicate = buildIsUnreportedPredicate(isUnreported)
     } yield q"""
@@ -349,7 +349,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   private def buildSearchPredicate(searchQueryOpt: Option[String]): SqlToken =
     searchQueryOpt match {
-      case None => q"${true}"
+      case None => q"TRUE"
       case Some(searchQuery) =>
         val queryTokens = searchQuery.toLowerCase.trim.split(" +")
         SqlToken.joinBySeparator(queryTokens.map(queryToken => q"POSITION($queryToken IN LOWER(name)) > 0"), " AND ")
@@ -359,7 +359,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     isUnreportedOpt match {
       case Some(true)  => q"status = $unreportedStatus OR status = $deletedByUserStatus"
       case Some(false) => q"status != $unreportedStatus AND status != $deletedByUserStatus"
-      case None        => q"${true}"
+      case None        => q"TRUE"
     }
 
   def countByFolder(folderId: ObjectId): Fox[Int] =
@@ -585,7 +585,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                            unreportedStatus: String,
                            inactiveStatusList: List[String]): Fox[Unit] = {
     val inclusionPredicate =
-      if (existingDatasetIds.isEmpty) q"${true}"
+      if (existingDatasetIds.isEmpty) q"TRUE"
       else q"_id NOT IN ${SqlToken.tupleFromList(existingDatasetIds)}"
     val statusNotAlreadyInactive = q"status NOT IN ${SqlToken.tupleFromList(inactiveStatusList)}"
     val deleteResolutionsQuery =

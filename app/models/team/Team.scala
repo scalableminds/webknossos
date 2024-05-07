@@ -148,13 +148,13 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns FROM $existingCollectionName
                    WHERE (
-                     _id in (
+                     _id IN (
                        SELECT _team
                        FROM webknossos.user_team_roles
                        WHERE _user = $requestingUserId
                        AND isTeamManager
                      )
-                     OR _organization in (
+                     OR _organization IN (
                        SELECT _organization
                        FROM webknossos.users_
                        WHERE _id = $requestingUserId
@@ -176,7 +176,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllByIds(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
-      idPredicate = if (teamIds.isEmpty) q"${false}" else q"_id IN ${SqlToken.tupleFromList(teamIds)}"
+      idPredicate = if (teamIds.isEmpty) q"FALSE" else q"_id IN ${SqlToken.tupleFromList(teamIds)}"
       r <- run(q"""SELECT $columns FROM $existingCollectionName
                    WHERE $idPredicate AND $accessQuery""".as[TeamsRow])
       parsed <- parseAll(r)
@@ -185,7 +185,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findSharedTeamsForAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"""SELECT $columns from $existingCollectionName
+      r <- run(q"""SELECT $columns FROM $existingCollectionName
                    WHERE _id IN (
                      SELECT _team FROM webknossos.annotation_sharedTeams WHERE _annotation = $annotationId
                    )

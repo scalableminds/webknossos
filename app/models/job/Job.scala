@@ -153,7 +153,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     if (jobCommands.isEmpty) Fox.successful(0)
     else {
       for {
-        r <- run(q"""SELECT COUNT(_id) from $existingCollectionName
+        r <- run(q"""SELECT COUNT(*) from $existingCollectionName
                    WHERE state = ${JobState.PENDING}
                    AND command IN ${SqlToken.tupleFromList(jobCommands)}
                    AND manualState IS NULL
@@ -167,12 +167,12 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     if (jobCommands.isEmpty) Fox.successful(0)
     else {
       for {
-        r <- run(q"""SELECT COUNT(_id)
-                   FROM $existingCollectionName
-                   WHERE _worker = $workerId
-                   AND state IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
-                   AND command IN ${SqlToken.tupleFromList(jobCommands)}
-                   AND manualState IS NULL""".as[Int])
+        r <- run(q"""SELECT COUNT(*)
+                     FROM $existingCollectionName
+                     WHERE _worker = $workerId
+                     AND state IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                     AND command IN ${SqlToken.tupleFromList(jobCommands)}
+                     AND manualState IS NULL""".as[Int])
         head <- r.headOption
       } yield head
     }
@@ -180,7 +180,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
       r <- run(q"""SELECT $columns from $existingCollectionName
-                   WHERE _worker = $workerId and state in ${SqlToken
+                   WHERE _worker = $workerId AND state IN ${SqlToken
         .tupleFromValues(JobState.PENDING, JobState.STARTED)}
                    AND manualState IS NULL
                    ORDER BY created""".as[JobsRow])

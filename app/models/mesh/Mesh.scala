@@ -84,7 +84,7 @@ class MeshDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[MeshInfo] =
     for {
       accessQuery <- readAccessQuery
-      rows <- run(q"SELECT $infoColumns FROM $existingCollectionName WHERE _id = $id and $accessQuery".as[InfoTuple])
+      rows <- run(q"SELECT $infoColumns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[InfoTuple])
       r <- rows.headOption.toFox
       parsed <- parseInfo(r)
     } yield parsed

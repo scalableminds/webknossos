@@ -136,14 +136,14 @@ class ReportDAO @Inject()(sqlClient: SqlClient, annotationDAO: AnnotationDAO)(im
           SELECT domain, value
           FROM webknossos.user_experiences
           WHERE _user = $userId
-        ) AS ue ON t.neededExperience_domain = ue.domain and t.neededExperience_value <= ue.value
+        ) AS ue ON t.neededExperience_domain = ue.domain AND t.neededExperience_value <= ue.value
         JOIN webknossos.projects_ p ON t._project = p._id
         LEFT JOIN (
           SELECT _task
           FROM webknossos.annotations_
           WHERE _user = $userId
           AND typ = ${AnnotationType.Task}
-        ) as userAnnotations ON t._id = userAnnotations._task
+        ) AS userAnnotations ON t._id = userAnnotations._task
         WHERE t.pendingInstances > 0
         AND userAnnotations._task IS NULL
         AND NOT p.paused

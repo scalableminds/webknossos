@@ -79,27 +79,26 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       val projectQuery = projectIdsFilterQuery(projectIds)
       for {
         tuples <- run(
-          q"""
-          WITH annotationLayerStatistics AS (
-            SELECT an._id AS _annotation, JSON_AGG(al.statistics) AS layerStatistics
-            FROM webknossos.annotation_layers al
-            JOIN webknossos.annotations an ON al._annotation = an._id
-            GROUP BY an._id
-          )
-          SELECT a._id, t._id, p.name, SUM(ts.time), JSON_AGG(als.layerStatistics)->0 AS annotationLayerStatistics
-          FROM webknossos.timespans_ ts
-          JOIN webknossos.annotations_ a ON ts._annotation = a._id
-          JOIN annotationLayerStatistics AS als ON als._annotation = a._id
-          LEFT JOIN webknossos.tasks_ t ON a._task = t._id
-          LEFT JOIN webknossos.projects_ p ON t._project = p._id
-          WHERE ts._user = $userId
-          AND ts.time > 0
-          AND ts.created >= $start
-          AND ts.created < $end
-          AND $projectQuery
-          AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
-          GROUP BY a._id, t._id, p.name
-          ORDER BY a._id
+          q"""WITH annotationLayerStatistics AS (
+                SELECT an._id AS _annotation, JSON_AGG(al.statistics) AS layerStatistics
+                FROM webknossos.annotation_layers al
+                JOIN webknossos.annotations an ON al._annotation = an._id
+                GROUP BY an._id
+              )
+              SELECT a._id, t._id, p.name, SUM(ts.time), JSON_AGG(als.layerStatistics)->0 AS annotationLayerStatistics
+              FROM webknossos.timespans_ ts
+              JOIN webknossos.annotations_ a ON ts._annotation = a._id
+              JOIN annotationLayerStatistics AS als ON als._annotation = a._id
+              LEFT JOIN webknossos.tasks_ t ON a._task = t._id
+              LEFT JOIN webknossos.projects_ p ON t._project = p._id
+              WHERE ts._user = $userId
+              AND ts.time > 0
+              AND ts.created >= $start
+              AND ts.created < $end
+              AND $projectQuery
+              AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
+              GROUP BY a._id, t._id, p.name
+              ORDER BY a._id
          """.as[(String, Option[String], Option[String], Long, String)]
         )
         parsed = tuples.map { t =>
@@ -126,21 +125,21 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       for {
         tuples <- run(
           q"""SELECT ts._user, mu.email, o.name, d.name, a._id, t._id, p.name, tt._id, tt.summary, ts._id, ts.created, ts.time
-                        FROM webknossos.timespans_ ts
-                        JOIN webknossos.annotations_ a on ts._annotation = a._id
-                        JOIN webknossos.users_ u on ts._user = u._id
-                        JOIN webknossos.multiUsers_ mu on u._multiUser = mu._id
-                        JOIN webknossos.datasets_ d on a._dataset = d._id
-                        JOIN webknossos.organizations_ o on d._organization = o._id
-                        LEFT JOIN webknossos.tasks_ t on a._task = t._id
-                        LEFT JOIN webknossos.projects_ p on t._project = p._id
-                        LEFT JOIN webknossos.taskTypes_ tt on t._taskType = tt._id
-                        WHERE ts._user = $userId
-                        AND ts.time > 0
-                        AND ts.created >= $start
-                        AND ts.created < $end
-                        AND $projectQuery
-                        AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
+              FROM webknossos.timespans_ ts
+              JOIN webknossos.annotations_ a ON ts._annotation = a._id
+              JOIN webknossos.users_ u ON ts._user = u._id
+              JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
+              JOIN webknossos.datasets_ d ON a._dataset = d._id
+              JOIN webknossos.organizations_ o ON d._organization = o._id
+              LEFT JOIN webknossos.tasks_ t ON a._task = t._id
+              LEFT JOIN webknossos.projects_ p ON t._project = p._id
+              LEFT JOIN webknossos.taskTypes_ tt ON t._taskType = tt._id
+              WHERE ts._user = $userId
+              AND ts.time > 0
+              AND ts.created >= $start
+              AND ts.created < $end
+              AND $projectQuery
+              AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
             """.as[(String,
                     String,
                     String,
@@ -185,7 +184,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     )
 
   private def projectIdsFilterQuery(projectIds: List[ObjectId]): SqlToken =
-    if (projectIds.isEmpty) q"${true}" // Query did not filter by project, include all
+    if (projectIds.isEmpty) q"TRUE" // Query did not filter by project, include all
     else q"p._id IN ${SqlToken.tupleFromList(projectIds)}"
 
   def timeOverview(start: Instant,

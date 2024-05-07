@@ -185,7 +185,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val now = Instant.now
 
     val insertAnnotationQ = q"""
-      WITH TASK as (${findNextTaskByIdQ(taskId)})
+      WITH task AS (${findNextTaskByIdQ(taskId)})
       ,dataset AS (SELECT _id FROM webknossos.datasets_ LIMIT 1)
       INSERT INTO webknossos.annotations(_id, _dataset, _task, _team, _user, description, visibility, name, state, tags, tracingTime, typ, created, modified, isDeleted)
       SELECT $annotationId, dataset._id, task._id, ${teamIds.headOption}, $userId, '',
@@ -222,17 +222,17 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       case Some(true) => q"ORDER BY RANDOM()"
       case _          => q""
     }
-    val projectFilter = projectIdOpt.map(pId => q"(t._project = $pId)").getOrElse(q"${true}")
-    val taskTypeFilter = taskTypeIdOpt.map(ttId => q"(t._taskType = $ttId)").getOrElse(q"${true}")
+    val projectFilter = projectIdOpt.map(pId => q"(t._project = $pId)").getOrElse(q"TRUE")
+    val taskTypeFilter = taskTypeIdOpt.map(ttId => q"(t._taskType = $ttId)").getOrElse(q"TRUE")
     val taskIdsFilter = taskIdsOpt
-      .map(tIds => if (tIds.isEmpty) q"${false}" else q"(t._id IN ${SqlToken.tupleFromList(tIds)})")
-      .getOrElse(q"${true}")
+      .map(tIds => if (tIds.isEmpty) q"FALSE" else q"(t._id IN ${SqlToken.tupleFromList(tIds)})")
+      .getOrElse(q"TRUE")
     val userJoin = userIdOpt
       .map(_ => q"JOIN webknossos.annotations_ a ON a._task = t._id JOIN webknossos.users_ u ON a._user = u._id")
       .getOrElse(q"")
     val userFilter = userIdOpt
       .map(uId => q"(u._id = $uId AND a.typ = ${AnnotationType.Task} AND a.state != ${AnnotationState.Cancelled})")
-      .getOrElse(q"${true}")
+      .getOrElse(q"TRUE")
 
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
@@ -332,8 +332,8 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def removeOneAndItsAnnotations(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val queries = List(
-      q"UPDATE webknossos.tasks SET isDeleted = ${true} WHERE _id = $id".asUpdate,
-      q"UPDATE webknossos.annotations SET isDeleted = ${true} WHERE _task = $id".asUpdate
+      q"UPDATE webknossos.tasks SET isDeleted = TRUE WHERE _id = $id".asUpdate,
+      q"UPDATE webknossos.annotations SET isDeleted = TRUE WHERE _task = $id".asUpdate
     )
     for {
       _ <- assertUpdateAccess(id)
@@ -343,9 +343,9 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def removeAllWithTaskTypeAndItsAnnotations(taskTypeId: ObjectId): Fox[Unit] = {
     val queries = List(
-      q"UPDATE webknossos.tasks SET isDeleted = ${true} WHERE _taskType = $taskTypeId".asUpdate,
+      q"UPDATE webknossos.tasks SET isDeleted = TRUE WHERE _taskType = $taskTypeId".asUpdate,
       q"""UPDATE webknossos.annotations
-          SET isDeleted = ${true}
+          SET isDeleted = TRUE
           WHERE _task IN (
             SELECT _id FROM webknossos.tasks WHERE _taskType = $taskTypeId
           )""".asUpdate
@@ -357,7 +357,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def removeAllWithProjectAndItsAnnotations(projectId: ObjectId): Fox[Unit] = {
     val queries = List(
-      q"UPDATE webknossos.tasks SET isDeleted = ${true} WHERE _project = $projectId".asUpdate,
+      q"UPDATE webknossos.tasks SET isDeleted = TRUE WHERE _project = $projectId".asUpdate,
       q"""UPDATE webknossos.annotations
           SET isDeleted = true
           WHERE _task in (

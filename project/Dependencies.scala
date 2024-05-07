@@ -9,9 +9,9 @@ object Dependencies {
 
   val utilDependencies: Seq[ModuleID] = Seq(
     // Play Web Framework. import play
-    "org.playframework" %% "play" % "3.0.2",
+    "org.playframework" %% "play" % "3.0.3",
     // Play’s JSON serialization. import play.api.libs.json
-    "com.typesafe.play" %% "play-json" % "2.10.1",
+    "com.typesafe.play" %% "play-json" % "2.10.5",
     // Sending emails. import org.apache.commons.mail
     "org.apache.commons" % "commons-email" % "1.5",
     // File utils. import org.apache.commons.io

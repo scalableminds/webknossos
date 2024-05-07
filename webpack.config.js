@@ -199,7 +199,7 @@ module.exports = function (env = {}) {
       liveReload: false,
       client: {
         overlay: false,
-        logging: "error",
+        logging: "none",
       },
     },
     cache: {

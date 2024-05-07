@@ -50,7 +50,12 @@ export function updateEditableMapping(
     mappings: newMappings,
   });
 }
-export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
+export function setActiveCellReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracing,
+  id: number,
+  activeUnmappedSegmentId: number | null | undefined,
+) {
   const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
   if (id > getMaximumSegmentIdForLayer(state.dataset, segmentationLayer.name)) {
     // Ignore the action if the segment id is larger than the maximum segment id for the layer.
@@ -58,6 +63,7 @@ export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTr
   }
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     activeCellId: id,
+    activeUnmappedSegmentId,
   });
 }
 export function createCellReducer(
@@ -65,7 +71,7 @@ export function createCellReducer(
   volumeTracing: VolumeTracing,
   newSegmentId: number,
 ) {
-  return setActiveCellReducer(state, volumeTracing, newSegmentId);
+  return setActiveCellReducer(state, volumeTracing, newSegmentId, null);
 }
 
 const MAXIMUM_LABEL_ACTIONS_COUNT = 50;

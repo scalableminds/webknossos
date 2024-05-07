@@ -1,8 +1,7 @@
-import * as THREE from "three";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
 import type { PartialCameraData } from "oxalis/store";
 import Store from "oxalis/store";
-import type { OrthoView, Rect, Viewport, ViewportRects } from "oxalis/constants";
+import type { OrthoView, Point2, Rect, Viewport, ViewportRects } from "oxalis/constants";
 import constants from "oxalis/constants";
 type SetViewportAction = ReturnType<typeof setViewportAction>;
 type SetTDCameraAction = ReturnType<typeof setTDCameraAction>;
@@ -48,7 +47,7 @@ export const centerTDViewAction = () =>
 
 export const zoomTDViewAction = (
   value: number,
-  targetPosition: THREE.Vector3,
+  targetPosition: Point2 | null | undefined,
   curWidth: number,
   curHeight: number,
 ) =>

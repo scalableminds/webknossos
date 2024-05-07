@@ -1,6 +1,6 @@
 import { createStore, applyMiddleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
-import createSagaMiddleware, { Saga } from "redux-saga";
+import createSagaMiddleware, { type Saga } from "redux-saga";
 import type {
   APIAllowedMode,
   APIAnnotationType,
@@ -47,13 +47,13 @@ import type {
   InterpolationMode,
   TreeType,
 } from "oxalis/constants";
-import { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
+import type { BLEND_MODES, ControlModeEnum } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import DatasetReducer from "oxalis/model/reducers/dataset_reducer";
-import DiffableMap from "libs/diffable_map";
-import EdgeCollection from "oxalis/model/edge_collection";
+import type DiffableMap from "libs/diffable_map";
+import type EdgeCollection from "oxalis/model/edge_collection";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SettingsReducer from "oxalis/model/reducers/settings_reducer";
@@ -69,7 +69,7 @@ import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_mid
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
 import ConnectomeReducer from "oxalis/model/reducers/connectome_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
-import { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
+import type { StartAIJobModalState } from "./view/action-bar/starting_job_modals";
 
 export type MutableCommentType = {
   content: string;
@@ -245,6 +245,7 @@ export type VolumeTracing = TracingBase & {
   readonly segmentGroups: Array<SegmentGroup>;
   readonly largestSegmentId: number | null;
   readonly activeCellId: number;
+  readonly activeUnmappedSegmentId?: number | null; // not persisted
   // lastLabelActions[0] is the most recent one
   readonly lastLabelActions: Array<LabelAction>;
   readonly contourTracingMode: ContourMode;
@@ -473,7 +474,6 @@ export type CameraData = {
   readonly top: number;
   readonly bottom: number;
   readonly up: Vector3;
-  readonly lookAt: Vector3;
   readonly position: Vector3;
 };
 export type PartialCameraData = {
@@ -484,7 +484,6 @@ export type PartialCameraData = {
   readonly top?: number;
   readonly bottom?: number;
   readonly up?: Vector3;
-  readonly lookAt?: Vector3;
   readonly position?: Vector3;
 };
 export type PlaneRects = {
@@ -537,6 +536,16 @@ type UiInformation = {
   readonly areQuickSelectSettingsOpen: boolean;
   readonly measurementToolInfo: { lastMeasuredPosition: Vector3 | null; isMeasuring: boolean };
   readonly navbarHeight: number;
+  readonly contextInfo: {
+    readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
+    readonly clickedNodeId: number | null | undefined;
+    readonly meshId: number | null | undefined;
+    readonly meshIntersectionPosition: Vector3 | null | undefined;
+    readonly clickedBoundingBoxId: number | null | undefined;
+    readonly globalPosition: Vector3 | null | undefined;
+    readonly viewport: OrthoView | null | undefined;
+    readonly unmappedSegmentId?: number | null;
+  };
 };
 type BaseMeshInformation = {
   readonly segmentId: number;
@@ -553,6 +562,7 @@ export type AdHocMeshInformation = BaseMeshInformation & {
 export type PrecomputedMeshInformation = BaseMeshInformation & {
   readonly isPrecomputed: true;
   readonly meshFileName: string;
+  readonly areChunksMerged: boolean;
 };
 export type MeshInformation = AdHocMeshInformation | PrecomputedMeshInformation;
 export type ConnectomeData = {

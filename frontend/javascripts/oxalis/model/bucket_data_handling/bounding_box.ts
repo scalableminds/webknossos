@@ -81,6 +81,15 @@ class BoundingBox {
     });
   }
 
+  extend(other: BoundingBox): BoundingBox {
+    const newMin = V3.min(this.min, other.min);
+    const newMax = V3.max(this.max, other.max);
+    return new BoundingBox({
+      min: newMin,
+      max: newMax,
+    });
+  }
+
   getCenter(): Vector3 {
     return V3.floor(V3.add(this.min, V3.scale(this.getSize(), 0.5)));
   }

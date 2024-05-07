@@ -66,6 +66,12 @@ class DataVaultTestSuite extends PlaySpec {
           }
         }
         "returns failure" when {
+          "requesting invalid range" in {
+            val result = (vaultPath / dataKey)
+              .readBytes(Some(Range.Long(-5, -10, 1)))(globalExecutionContext)
+              .await(handleFoxJustification)
+            assertBoxFailure(result)
+          }
           "using invalid credentials" in {
             val vaultPath =
               new VaultPath(uri,

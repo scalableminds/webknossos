@@ -197,7 +197,7 @@ const nmFactorToUnit = new Map([
   [1e33, "Ym"],
   [3.085677581e25, "pc"],
 ]);
-// TODO: Do not expect to get nm to preserve potential precision
+
 export function formatNumberInUnitToLength(
   lengthInNm: number,
   unit: string,
@@ -229,9 +229,19 @@ const nmFactorToUnit2D = new Map([
   [9.521422549e50, "pc²"],
 ]);
 
-// TODO: Do not expect to get nm to preserve potential precision
-export function formatNumberToArea(lengthInNm2: number, decimalPrecision: number = 1): string {
-  return formatNumberToUnit(lengthInNm2, "nm²", nmFactorToUnit2D, true, decimalPrecision);
+// TODO: Support conversion from uncommon units in 2d
+export function formatNumberInDatasourceUnitToArea(
+  lengthInDatasourceUnit2: number,
+  unit: string,
+  decimalPrecision: number = 1,
+): string {
+  return formatNumberToUnit(
+    lengthInDatasourceUnit2,
+    unit,
+    nmFactorToUnit2D,
+    true,
+    decimalPrecision,
+  );
 }
 
 const nmFactorToUnit3D = new Map([
@@ -254,9 +264,19 @@ const nmFactorToUnit3D = new Map([
   [1e99, "Ym³"],
   [2.938006565e76, "pc³"],
 ]);
-// TODO: Do not expect to get nm to preserve potential precision
-export function formatNumberToVolume(lengthInNm3: number, decimalPrecision: number = 1): string {
-  return formatNumberToUnit(lengthInNm3, "nm³", nmFactorToUnit3D, true, decimalPrecision);
+// TODO: Support conversion from uncommon units in 3d
+export function formatNumberInDatasourceUnitToVolume(
+  lengthInDatasourceUnit3: number,
+  unit: string,
+  decimalPrecision: number = 1,
+): string {
+  return formatNumberToUnit(
+    lengthInDatasourceUnit3,
+    unit,
+    nmFactorToUnit3D,
+    true,
+    decimalPrecision,
+  );
 }
 
 const byteFactorToUnit = new Map([

@@ -1,6 +1,6 @@
 import test from "ava";
 import {
-  formatNumberToArea,
+  formatNumberInDatasourceUnitToArea,
   formatNumberInUnitToLength,
   formatNumberToVolume,
 } from "libs/format_utils";
@@ -80,9 +80,9 @@ test("Format number to area", (t) => {
       `107.0${ThinSpace}km²`,
       `1070${ThinSpace}km²`,
     ],
-    areasInNm2.map((area) => formatNumberToArea(area)),
+    areasInNm2.map((area) => formatNumberInDatasourceUnitToArea(area, "nm")),
   );
-  t.deepEqual(`0.10${ThinSpace}pm²`, formatNumberToArea(1e-7, 2));
+  t.deepEqual(`0.10${ThinSpace}pm²`, formatNumberInDatasourceUnitToArea(1e-7, "nm", 2));
 });
 
 test("Format number to volume", (t) => {

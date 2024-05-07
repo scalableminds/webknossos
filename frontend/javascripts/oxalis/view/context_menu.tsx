@@ -57,7 +57,7 @@ import {
 import {
   formatNumberInUnitToLength,
   formatLengthAsVx,
-  formatNumberToVolume,
+  formatNumberInDatasourceUnitToVolume,
 } from "libs/format_utils";
 import {
   getActiveCellId,
@@ -124,7 +124,7 @@ import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import { voxelToNm3 } from "oxalis/model/scaleinfo";
+import { voxelToVolumeInDatasetUnit } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import {
   ensureLayerMappingsAreLoadedAction,
@@ -1482,9 +1482,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
         );
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-        const volumeInNm3 = voxelToNm3(datasetScale, layersFinestResolution, segmentSize);
+        const volumeInDatasourceUnit3 = voxelToVolumeInDatasetUnit(
+          datasetScale,
+          layersFinestResolution,
+          segmentSize,
+        );
         return [
-          formatNumberToVolume(volumeInNm3),
+          formatNumberInDatasourceUnitToVolume(volumeInDatasourceUnit3, datasetScale.unit),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
         ];
       } catch (_error) {

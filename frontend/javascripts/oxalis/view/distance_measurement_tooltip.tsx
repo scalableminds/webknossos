@@ -12,7 +12,7 @@ import {
   formatNumberInUnitToLength,
   formatLengthAsVx,
   formatAreaAsVx,
-  formatNumberToArea,
+  formatNumberInDatasourceUnitToArea,
 } from "libs/format_utils";
 import { Tooltip } from "antd";
 import {
@@ -91,7 +91,11 @@ export default function DistanceMeasurementTooltip() {
   } else if (activeTool === AnnotationToolEnum.AREA_MEASUREMENT) {
     const { areaMeasurementGeometry } = getSceneController();
     valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea(in3DSpaceScale), 1);
-    valueInMetricUnit = formatNumberToArea(areaMeasurementGeometry.getArea(datasetScale), 1);
+    valueInMetricUnit = formatNumberInDatasourceUnitToArea(
+      areaMeasurementGeometry.getArea(datasetScale),
+      datasetScale.unit,
+      1,
+    );
   }
   const {
     left: viewportLeft,

@@ -15,26 +15,18 @@ export function getBaseVoxelInDatasourceUnit(datasetScaleFactor: Vector3): numbe
 }
 
 // TODO: Check where this is used and whether it is necessary / correct there.
-export function voxelToNm3(datasetScale: DatasetScale, mag: Vector3, volumeInVx: number): number {
-  const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
-  console.log(
-    "voxelToNm3",
-    "result",
-    mag[0] *
-      mag[1] *
-      mag[2] *
-      scaleFactorInNm[0] *
-      scaleFactorInNm[1] *
-      scaleFactorInNm[2] *
-      volumeInVx,
-  );
+export function voxelToVolumeInDatasetUnit(
+  datasetScale: DatasetScale,
+  mag: Vector3,
+  volumeInVx: number,
+): number {
   return (
     mag[0] *
     mag[1] *
     mag[2] *
-    scaleFactorInNm[0] *
-    scaleFactorInNm[1] *
-    scaleFactorInNm[2] *
+    datasetScale.factor[0] *
+    datasetScale.factor[1] *
+    datasetScale.factor[2] *
     volumeInVx
   );
 }

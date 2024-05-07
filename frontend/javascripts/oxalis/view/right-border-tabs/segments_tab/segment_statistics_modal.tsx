@@ -1,7 +1,7 @@
 import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
 import { Alert, Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
-import { formatNumberToVolume } from "libs/format_utils";
+import { voxelToVolumeInDatasetUnit } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { Vector3 } from "oxalis/constants";
 import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -14,7 +14,7 @@ import {
 } from "./segments_view_helper";
 import { api } from "oxalis/singletons";
 import { APISegmentationLayer } from "types/api_flow_types";
-import { voxelToNm3 } from "oxalis/model/scaleinfo";
+import { voxelToVolumeInDatasetUnit } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { useSelector } from "react-redux";
 import {
@@ -169,7 +169,8 @@ export function SegmentStatisticsModal({
               layersFinestResolution,
             );
             const currentSegmentSizeInVx = segmentSizes[i];
-            const volumeInNm3 = voxelToNm3(
+            // TODO: This might need to be changed to the actual dataset unit and thus the SegmentInfo type.
+            const volumeInNm3 = voxelToVolumeInDatasetUnit(
               datasetScale,
               layersFinestResolution,
               currentSegmentSizeInVx,

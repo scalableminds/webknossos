@@ -1,13 +1,14 @@
 import test from "ava";
 import {
   formatNumberToArea,
-  formatNumberInNmToLength,
+  formatNumberInUnitToLength,
   formatNumberToVolume,
 } from "libs/format_utils";
 import _ from "lodash";
-import { Unicode } from "oxalis/constants";
+import { LengthUnit, Unicode } from "oxalis/constants";
 
 const { ThinSpace } = Unicode;
+// TODO: Improve tests to check different base units and not just nm.
 test("Format number to length", (t) => {
   const simpleLengthsInNm = _.range(-5, 15).map((exp) => Math.pow(10, exp));
   t.deepEqual(
@@ -33,7 +34,7 @@ test("Format number to length", (t) => {
       `10${ThinSpace}km`,
       `100${ThinSpace}km`,
     ],
-    simpleLengthsInNm.map((length) => formatNumberInNmToLength(length)),
+    simpleLengthsInNm.map((length) => formatNumberInUnitToLength(length, LengthUnit.nm)),
   );
 
   const lengthsWithFactorInNm = _.range(-5, 1).map((exp) => 107 * Math.pow(10, exp));
@@ -46,16 +47,16 @@ test("Format number to length", (t) => {
       `10.7${ThinSpace}nm`,
       `0.1${ThinSpace}µm`,
     ],
-    lengthsWithFactorInNm.map((length) => formatNumberInNmToLength(length)),
+    lengthsWithFactorInNm.map((length) => formatNumberInUnitToLength(length, LengthUnit.nm)),
   );
 
   const advancedLengthsInNm = [1e6, 12, 1e-5, 1234e12];
   t.deepEqual(
     [`1${ThinSpace}mm`, `12${ThinSpace}nm`, `0.0${ThinSpace}pm`, `1234${ThinSpace}km`],
-    advancedLengthsInNm.map((length) => formatNumberInNmToLength(length)),
+    advancedLengthsInNm.map((length) => formatNumberInUnitToLength(length, LengthUnit.nm)),
   );
 
-  t.deepEqual(`0.01${ThinSpace}pm`, formatNumberInNmToLength(1e-5, 2));
+  t.deepEqual(`0.01${ThinSpace}pm`, formatNumberInUnitToLength(1e-5, LengthUnit.nm, 2));
 });
 
 test("Format number to area", (t) => {

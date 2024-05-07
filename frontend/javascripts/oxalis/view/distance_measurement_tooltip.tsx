@@ -9,7 +9,7 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CopyOutlined } from "@ant-design/icons";
 import { copyToClipboad } from "admin/voxelytics/utils";
 import {
-  formatNumberInNmToLength,
+  formatNumberInUnitToLength,
   formatLengthAsVx,
   formatAreaAsVx,
   formatNumberToArea,
@@ -83,8 +83,9 @@ export default function DistanceMeasurementTooltip() {
   if (activeTool === AnnotationToolEnum.LINE_MEASUREMENT) {
     const { lineMeasurementGeometry } = getSceneController();
     valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(in3DSpaceScale), 1);
-    valueInMetricUnit = formatNumberInNmToLength(
+    valueInMetricUnit = formatNumberInUnitToLength(
       lineMeasurementGeometry.getDistance(datasetScale),
+      datasetScale.unit,
       1,
     );
   } else if (activeTool === AnnotationToolEnum.AREA_MEASUREMENT) {

@@ -34,7 +34,7 @@ import {
   MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { formatNumberInNmToLength, formatLengthAsVx } from "libs/format_utils";
+import { formatNumberInUnitToLength, formatLengthAsVx } from "libs/format_utils";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getActiveTree,
@@ -787,10 +787,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     ) : null;
 
   handleMeasureAllSkeletonsLength = () => {
+    const { unit } = Store.getState().dataset.dataSource.scale;
     const [totalLengthNm, totalLengthVx] = api.tracing.measureAllTrees();
     notification.open({
-      message: `The total length of all skeletons is ${formatNumberInNmToLength(
+      message: `The total length of all skeletons is ${formatNumberInUnitToLength(
         totalLengthNm,
+        unit,
       )} (${formatLengthAsVx(totalLengthVx)}).`,
       icon: <i className="fas fa-ruler" />,
     });

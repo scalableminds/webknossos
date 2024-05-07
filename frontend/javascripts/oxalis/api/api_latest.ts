@@ -177,7 +177,6 @@ import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { datasetScaleFactorToNm } from "oxalis/model/scaleinfo";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -1063,22 +1062,25 @@ class TracingApi {
       throw new Error(`Tree with id ${treeId} not found.`);
     }
 
-    const datasetScale = state.dataset.dataSource.scale;
+    const datasetScaleFactor = state.dataset.dataSource.scale.factor;
     // Pre-allocate vectors
-    let lengthNmAcc = 0;
-    let lengthVxAcc = 0;
+    let lengthInDatasourceUnitAcc = 0;
+    let lengthInVxAcc = 0;
 
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
-    const datasetScaleFactorInNm = datasetScaleFactorToNm(datasetScale);
 
     for (const edge of tree.edges.all()) {
       const sourceNode = tree.nodes.get(edge.source);
       const targetNode = tree.nodes.get(edge.target);
-      lengthNmAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), datasetScaleFactorInNm);
-      lengthVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
+      lengthInDatasourceUnitAcc += V3.scaledDist(
+        getPos(sourceNode),
+        getPos(targetNode),
+        datasetScaleFactor,
+      );
+      lengthInVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
     }
-    console.log("measureTreeLength", lengthNmAcc, lengthVxAcc);
-    return [lengthNmAcc, lengthVxAcc];
+    console.log("measureTreeLength", lengthInDatasourceUnitAcc, lengthInVxAcc);
+    return [lengthInDatasourceUnitAcc, lengthInVxAcc];
   }
 
   /**
@@ -1086,16 +1088,16 @@ class TracingApi {
    */
   measureAllTrees(): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    let totalLengthNm = 0;
-    let totalLengthVx = 0;
+    let totalLengthInDatasourceUnit = 0;
+    let totalLengthInVx = 0;
 
     _.values(skeletonTracing.trees).forEach((currentTree) => {
-      const [lengthNm, lengthVx] = this.measureTreeLength(currentTree.treeId);
-      totalLengthNm += lengthNm;
-      totalLengthVx += lengthVx;
+      const [lengthInDatasourceUnit, lengthInVx] = this.measureTreeLength(currentTree.treeId);
+      totalLengthInDatasourceUnit += lengthInDatasourceUnit;
+      totalLengthInVx += lengthInVx;
     });
 
-    return [totalLengthNm, totalLengthVx];
+    return [totalLengthInDatasourceUnit, totalLengthInVx];
   }
 
   /**
@@ -1106,8 +1108,8 @@ class TracingApi {
     sourceNodeId: number,
     targetNodeId: number,
   ): {
-    lengthNm: number;
-    lengthVx: number;
+    lengthInDatasourceUnit: number;
+    lengthInVx: number;
     shortestPath: number[];
   } {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
@@ -1128,7 +1130,7 @@ class TracingApi {
       throw new Error("The nodes are not within the same tree.");
     }
 
-    const datasetScale = Store.getState().dataset.dataSource.scale;
+    const datasetScaleFactor = Store.getState().dataset.dataSource.scale.factor;
     // We use the Dijkstra algorithm to get the shortest path between the nodes.
     const distanceMap: Record<number, number> = {};
     // The distance map is also maintained in voxel space. This information is only
@@ -1154,7 +1156,6 @@ class TracingApi {
 
     const state = Store.getState();
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
-    const datasetScaleFactorInNm = datasetScaleFactorToNm(datasetScale);
 
     while (priorityQueue.length > 0) {
       const [nextNodeId, distance] = priorityQueue.dequeue();
@@ -1165,7 +1166,7 @@ class TracingApi {
         const neighbourNodeId = source === nextNodeId ? target : source;
         const neighbourPosition = getPos(sourceTree.nodes.get(neighbourNodeId));
         const neighbourDistance =
-          distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScaleFactorInNm);
+          distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScaleFactor);
 
         if (neighbourDistance < getDistance(neighbourNodeId)) {
           distanceMap[neighbourNodeId] = neighbourDistance;
@@ -1186,8 +1187,8 @@ class TracingApi {
     }
 
     return {
-      lengthNm: distanceMap[targetNodeId],
-      lengthVx: distanceMapVx[targetNodeId],
+      lengthInDatasourceUnit: distanceMap[targetNodeId],
+      lengthInVx: distanceMapVx[targetNodeId],
       shortestPath,
     };
   }
@@ -1196,8 +1197,11 @@ class TracingApi {
    * Returns the length of the shortest path between two nodes in nanometer and in voxels.
    */
   measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): [number, number] {
-    const { lengthNm, lengthVx } = this.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
-    return [lengthNm, lengthVx];
+    const { lengthInDatasourceUnit, lengthInVx } = this.findShortestPathBetweenNodes(
+      sourceNodeId,
+      targetNodeId,
+    );
+    return [lengthInDatasourceUnit, lengthInVx];
   }
 
   /**

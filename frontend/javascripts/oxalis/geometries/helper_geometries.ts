@@ -5,7 +5,7 @@ import app from "app";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import Dimensions from "oxalis/model/dimensions";
-import { datasetScaleFactorToNm, getBaseVoxelInDatasourceUnit } from "oxalis/model/scaleinfo";
+import { getBaseVoxelInDatasourceUnit } from "oxalis/model/scaleinfo";
 import { DatasetScale } from "types/api_flow_types";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
@@ -115,18 +115,15 @@ export class ContourGeometry {
   getArea(datasetScale: DatasetScale): number {
     // This algorithm is based on the Trapezoid formula for calculating the polygon area.
     // Source: https://www.mathopenref.com/coordpolygonarea2.html.
-    let accArea = 0;
+    let accAreaInDatasourceUnit = 0;
     const pointCount = this.vertexBuffer.getLength();
     const points = this.vertexBuffer.getBuffer();
     let previousPointIndex = pointCount - 1;
     const dimIndices = Dimensions.getIndices(this.viewport);
-    const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
-    console.log("ContourGeometry.getArea -> scaleFactorInNm", scaleFactorInNm);
     const scaleVector = new THREE.Vector2(
-      scaleFactorInNm[dimIndices[0]],
-      scaleFactorInNm[dimIndices[1]],
+      datasetScale.factor[dimIndices[0]],
+      datasetScale.factor[dimIndices[1]],
     );
-    console.log("ContourGeometry.getArea -> scaleVector", scaleVector);
     for (let i = 0; i < pointCount; i++) {
       const start = new THREE.Vector2(
         points[previousPointIndex * 3 + dimIndices[0]],
@@ -136,10 +133,10 @@ export class ContourGeometry {
         points[i * 3 + dimIndices[0]],
         points[i * 3 + dimIndices[1]],
       ).multiply(scaleVector);
-      accArea += (start.x + end.x) * (start.y - end.y);
+      accAreaInDatasourceUnit += (start.x + end.x) * (start.y - end.y);
       previousPointIndex = i;
     }
-    return Math.abs(accArea / 2);
+    return Math.abs(accAreaInDatasourceUnit / 2);
   }
   hide() {
     this.line.visible = false;
@@ -422,25 +419,21 @@ export class LineMeasurementGeometry {
   }
 
   getDistance(datasetScale: DatasetScale): number {
-    const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
-    console.log("LineMeasurementGeometry.getDistance -> scaleFactorInNm", scaleFactorInNm);
-    const scaleVectorInNm = new THREE.Vector3(...scaleFactorInNm);
+    const scaleVector = new THREE.Vector3(...datasetScale.factor);
     const points = this.vertexBuffer.getBuffer();
     const pointCount = this.vertexBuffer.getLength();
     if (pointCount < 2) {
       return 0;
     }
-    let accDistanceInNm = 0;
+    let accDistanceInDatasourceUnit = 0;
     for (let i = 0; i < pointCount - 1; i++) {
-      const start = new THREE.Vector3(...points.subarray(i * 3, (i + 1) * 3)).multiply(
-        scaleVectorInNm,
-      );
+      const start = new THREE.Vector3(...points.subarray(i * 3, (i + 1) * 3)).multiply(scaleVector);
       const end = new THREE.Vector3(...points.subarray((i + 1) * 3, (i + 2) * 3)).multiply(
-        scaleVectorInNm,
+        scaleVector,
       );
-      accDistanceInNm += start.distanceTo(end);
+      accDistanceInDatasourceUnit += start.distanceTo(end);
     }
-    return accDistanceInNm;
+    return accDistanceInDatasourceUnit;
   }
 
   updateForCam(orthoView: OrthoView) {

@@ -15,13 +15,6 @@ export function getBaseVoxelInDatasourceUnit(datasetScaleFactor: Vector3): numbe
 }
 
 // TODO: Check where this is used and whether it is necessary / correct there.
-export function getBaseVoxelInNm(datasetScale: DatasetScale): number {
-  // base voxel should be a cube with highest resolution
-  const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
-  return getBaseVoxelInDatasourceUnit(scaleFactorInNm);
-}
-
-// TODO: Check where this is used and whether it is necessary / correct there.
 export function voxelToNm3(datasetScale: DatasetScale, mag: Vector3, volumeInVx: number): number {
   const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
   console.log(

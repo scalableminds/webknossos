@@ -3,12 +3,12 @@ import * as React from "react";
 import { Tooltip } from "antd";
 import type { APIDataset } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { convertPixelsToNm } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import { formatNumberInNmToLength } from "libs/format_utils";
+import { formatNumberInUnitToLength } from "libs/format_utils";
 import { getViewportExtents, getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import type { OrthoView } from "oxalis/constants";
 import constants, { Unicode, OrthoViews } from "oxalis/constants";
+import { getBaseVoxelInDatasourceUnit } from "oxalis/model/scaleinfo";
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 type OwnProps = {
   viewportID: OrthoView;
@@ -20,6 +20,14 @@ type StateProps = {
   viewportHeightInPixels: number;
 };
 type Props = OwnProps & StateProps;
+
+function convertPixelsToDatasourceUnit(
+  lengthInPixel: number,
+  zoomValue: number,
+  dataset: APIDataset,
+): number {
+  return lengthInPixel * zoomValue * getBaseVoxelInDatasourceUnit(dataset.dataSource.scale.factor);
+}
 
 const getBestScalebarAnchorInNm = (lengthInNm: number): number => {
   const closestExponent = Math.floor(Math.log10(lengthInNm));
@@ -44,20 +52,29 @@ const maxScaleBarWidthFactor = 0.45;
 const minWidthToFillScalebar = 130;
 
 function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInPixels }: Props) {
-  const viewportWidthInNm = convertPixelsToNm(viewportWidthInPixels, zoomValue, dataset);
-  const viewportHeightInNm = convertPixelsToNm(viewportHeightInPixels, zoomValue, dataset);
-  const idealWidthInNm = viewportWidthInNm * idealScalebarWidthFactor;
-  const scalebarWidthInNm = getBestScalebarAnchorInNm(idealWidthInNm);
+  const datasetScaleUnit = dataset.dataSource.scale.unit;
+  const viewportWidthInDSUnit = convertPixelsToDatasourceUnit(
+    viewportWidthInPixels,
+    zoomValue,
+    dataset,
+  );
+  const viewportHeightInDSUnit = convertPixelsToDatasourceUnit(
+    viewportHeightInPixels,
+    zoomValue,
+    dataset,
+  );
+  const idealWidthInDSUnit = viewportWidthInDSUnit * idealScalebarWidthFactor;
+  const scalebarWidthInDSUnit = getBestScalebarAnchorInNm(idealWidthInDSUnit);
   const scaleBarWidthFactor = Math.min(
-    scalebarWidthInNm / viewportWidthInNm,
+    scalebarWidthInDSUnit / viewportWidthInDSUnit,
     maxScaleBarWidthFactor,
   );
   const tooltip = [
-    formatNumberInNmToLength(viewportWidthInNm),
+    formatNumberInUnitToLength(viewportWidthInDSUnit, datasetScaleUnit),
     ThinSpace,
     MultiplicationSymbol,
     ThinSpace,
-    formatNumberInNmToLength(viewportHeightInNm),
+    formatNumberInUnitToLength(viewportHeightInDSUnit, datasetScaleUnit),
   ].join("");
   const collapseScalebar = viewportWidthInPixels < minWidthToFillScalebar;
   const limitScalebar = scaleBarWidthFactor === maxScaleBarWidthFactor;
@@ -95,7 +112,9 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
             borderRight: "1px solid",
           }}
         >
-          {collapseScalebar ? "i" : formatNumberInNmToLength(scalebarWidthInNm)}
+          {collapseScalebar
+            ? "i"
+            : formatNumberInUnitToLength(scalebarWidthInDSUnit, datasetScaleUnit)}
         </div>
       </div>
     </Tooltip>

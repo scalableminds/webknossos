@@ -55,7 +55,7 @@ import {
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
-  formatNumberInNmToLength,
+  formatNumberInUnitToLength,
   formatLengthAsVx,
   formatNumberToVolume,
 } from "libs/format_utils";
@@ -124,7 +124,7 @@ import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import { datasetScaleFactorToNm, voxelToNm3 } from "oxalis/model/scaleinfo";
+import { voxelToNm3 } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import {
   ensureLayerMappingsAreLoadedAction,
@@ -195,15 +195,20 @@ function copyIconWithTooltip(value: string | number, title: string) {
   );
 }
 
-function measureAndShowLengthBetweenNodes(sourceNodeId: number, targetNodeId: number) {
-  const [lengthNm, lengthVx] = api.tracing.measurePathLengthBetweenNodes(
+function measureAndShowLengthBetweenNodes(
+  sourceNodeId: number,
+  targetNodeId: number,
+  datasetScaleUnit: string,
+) {
+  const [lengthInDatasourceUnit, lengthInVx] = api.tracing.measurePathLengthBetweenNodes(
     sourceNodeId,
     targetNodeId,
   );
   notification.open({
-    message: `The shortest path length between the nodes is ${formatNumberInNmToLength(
-      lengthNm,
-    )} (${formatLengthAsVx(lengthVx)}).`,
+    message: `The shortest path length between the nodes is ${formatNumberInUnitToLength(
+      lengthInDatasourceUnit,
+      datasetScaleUnit,
+    )} (${formatLengthAsVx(lengthInVx)}).`,
     icon: <i className="fas fa-ruler" />,
   });
 }
@@ -221,12 +226,12 @@ function extractShortestPathAsNewTree(
   }
 }
 
-function measureAndShowFullTreeLength(treeId: number, treeName: string) {
-  const [lengthInNm, lengthInVx] = api.tracing.measureTreeLength(treeId);
+function measureAndShowFullTreeLength(treeId: number, treeName: string, datasetScaleUnit: string) {
+  const [lengthInDatasourceUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
   notification.open({
     message: messages["tracing.tree_length_notification"](
       treeName,
-      formatNumberInNmToLength(lengthInNm),
+      formatNumberInUnitToLength(lengthInDatasourceUnit, datasetScaleUnit),
       formatLengthAsVx(lengthInVx),
     ),
     icon: <i className="fas fa-ruler" />,
@@ -728,13 +733,14 @@ function getNodeContextMenuOptions({
           disabled: activeNodeId == null || !areInSameTree || isTheSameNode,
           onClick: () =>
             activeNodeId != null
-              ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
+              ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId, datasetScale.unit)
               : null,
           label: "Path Length to this Node",
         },
     {
       key: "measure-whole-tree-length",
-      onClick: () => measureAndShowFullTreeLength(clickedTree.treeId, clickedTree.name),
+      onClick: () =>
+        measureAndShowFullTreeLength(clickedTree.treeId, clickedTree.name, datasetScale.unit),
       label: "Path Length of this Tree",
     },
     allowUpdate
@@ -1532,12 +1538,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const distanceToSelection =
     activeNode != null && positionToMeasureDistanceTo != null
       ? [
-          formatNumberInNmToLength(
+          formatNumberInUnitToLength(
             V3.scaledDist(
               getActiveNodePosition(),
               positionToMeasureDistanceTo,
-              datasetScaleFactorToNm(datasetScale),
+              datasetScale.factor,
             ),
+            datasetScale.unit,
           ),
           formatLengthAsVx(V3.length(V3.sub(getActiveNodePosition(), positionToMeasureDistanceTo))),
         ]

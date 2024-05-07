@@ -8,7 +8,6 @@ import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
-import { getBaseVoxelInNm } from "oxalis/model/scaleinfo";
 import {
   getDatasetExtentAsString,
   getResolutionUnion,
@@ -121,22 +120,6 @@ const shortcuts = [
     action: "Rotate 3D View",
   },
 ];
-
-export function convertPixelsToNm(
-  lengthInPixel: number,
-  zoomValue: number,
-  dataset: APIDataset,
-): number {
-  return lengthInPixel * zoomValue * getBaseVoxelInNm(dataset.dataSource.scale);
-}
-
-export function convertNmToPixels(
-  lengthInNm: number,
-  zoomValue: number,
-  dataset: APIDataset,
-): number {
-  return lengthInNm / (zoomValue * getBaseVoxelInNm(dataset.dataSource.scale));
-}
 
 export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   const extentInVoxel = getDatasetExtentAsString(dataset, true);

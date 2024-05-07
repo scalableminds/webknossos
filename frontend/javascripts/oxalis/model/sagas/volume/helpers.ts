@@ -42,6 +42,7 @@ export function* getBoundingBoxForViewport(
   position: Vector3,
   currentViewport: OrthoView,
 ): Saga<BoundingBox> {
+  // TODO: Investigate: This should likely be in datasource unit scale and not in nm.
   const [halfViewportExtentX, halfViewportExtentY] = yield* call(
     getHalfViewportExtentsInVx,
     currentViewport,

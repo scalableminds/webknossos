@@ -198,9 +198,13 @@ const nmFactorToUnit = new Map([
   [3.085677581e25, "pc"],
 ]);
 // TODO: Do not expect to get nm to preserve potential precision
-export function formatNumberInNmToLength(lengthInNm: number, decimalPrecision: number = 1): string {
-  const s = formatNumberToUnit(lengthInNm, LengthUnit.nm, nmFactorToUnit, true, decimalPrecision);
-  console.log("formatNumberInNmToLength", s);
+export function formatNumberInUnitToLength(
+  lengthInNm: number,
+  unit: string,
+  decimalPrecision: number = 1,
+): string {
+  const s = formatNumberToUnit(lengthInNm, unit, nmFactorToUnit, true, decimalPrecision);
+  console.log("formatNumberInUnitToLength", s);
   return s;
 }
 
@@ -320,13 +324,15 @@ export function formatLengthAsVx(lengthInVx: number, roundTo: number = 2): strin
 export function formatAreaAsVx(areaInVx: number, roundTo: number = 2): string {
   return `${formatLengthAsVx(areaInVx, roundTo)}²`;
 }
-export function formatExtentWithLength(
+export function formatExtentInUnitWithLength(
   extent: BoundingBoxObject,
-  formattingFunction: (arg0: number) => string,
+  unit: string,
+  formattingFunction: (length: number, unit: string) => string,
 ): string {
-  return `${formattingFunction(extent.width)}${ThinSpace}×${ThinSpace}${formattingFunction(
+  return `${formattingFunction(extent.width, unit)}${ThinSpace}×${ThinSpace}${formattingFunction(
     extent.height,
-  )}${ThinSpace}×${ThinSpace}${formattingFunction(extent.depth)}`;
+    unit,
+  )}${ThinSpace}×${ThinSpace}${formattingFunction(extent.depth, unit)}`;
 }
 export function formatMilliseconds(durationMilliSeconds: number): string {
   return formatSeconds(durationMilliSeconds / 1000);

@@ -1487,10 +1487,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
     [contextMenuPosition, clickedSegmentOrMeshId, lastTimeSegmentInfoShouldBeFetched],
   );
 
-  if (contextMenuPosition == null || maybeViewport == null) {
-    return <></>;
-  }
-
   const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
   const activeNodeId = skeletonTracing?.activeNodeId;
 

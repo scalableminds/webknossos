@@ -1,6 +1,6 @@
-import React, { useMemo, useRef, useState } from "react";
-import { SearchOutlined, SyncOutlined } from "@ant-design/icons";
-import { Table, Progress, Tooltip, Button, TableColumnType, Input, Space, InputRef } from "antd";
+import React, { useEffect, useMemo, useState } from "react";
+import { SyncOutlined } from "@ant-design/icons";
+import { Table, Progress, Tooltip, Button } from "antd";
 import { Link } from "react-router-dom";
 import { getVoxelyticsWorkflows } from "admin/admin_rest_api";
 import {
@@ -12,7 +12,17 @@ import { usePolling } from "libs/react_hooks";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Toast from "libs/toast";
 import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
-import { FilterDropdownProps } from "antd/lib/table/interface";
+import Search from "antd/lib/input/Search";
+import Persistence from "libs/persistence";
+import * as Utils from "libs/utils";
+import { PropTypes } from "@scalableminds/prop-types";
+
+const persistence = new Persistence<Pick<{ searchQuery: string }, "searchQuery">>(
+  {
+    searchQuery: PropTypes.string,
+  },
+  "workflowList",
+);
 
 function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun): VoxelyticsWorkflowListingRun {
   return {
@@ -44,6 +54,21 @@ type RenderRunInfo = VoxelyticsWorkflowListingRun & {
 export default function WorkflowListView() {
   const [isLoading, setIsLoading] = useState(false);
   const [workflows, setWorkflows] = useState<Array<VoxelyticsWorkflowListing>>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
+    setSearchQuery(event.target.value);
+  }
+
+  useEffect(() => {
+    const { searchQuery } = persistence.load();
+    setSearchQuery(searchQuery || "");
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    persistence.persist({ searchQuery });
+  }, [searchQuery]);
 
   async function loadData() {
     setIsLoading(true);
@@ -125,77 +150,16 @@ export default function WorkflowListView() {
     );
   }
 
-  const [searchText, setSearchText] = useState('');
-  const [searchedColumn, setSearchedColumn] = useState('');
-  const searchInput = useRef<InputRef>(null);
-
-  const handleSearch = (
-    selectedKeys: string[],
-    confirm: FilterDropdownProps['confirm'],
-    dataIndex: "workflow",
-  ) => {
-    confirm();
-    setSearchText(selectedKeys[0]);
-    setSearchedColumn(dataIndex);
-  };
-
-  const handleReset = (clearFilters: () => void) => {
-    clearFilters();
-    setSearchText('');
-  };
-
-  const getColumnSearchProps = (dataIndex) => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters, close }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          ref={searchInput}
-          placeholder={`Search ${dataIndex}`}
-          value={selectedKeys[0]}
-          onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-          onPressEnter={() => handleSearch(selectedKeys as string[], confirm, dataIndex)}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => handleSearch(selectedKeys as string[], confirm, dataIndex)}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Search
-          </Button>
-
-          <Button
-            size="small"
-            onClick={() => {
-              close();
-            }}
-          >
-            close
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) =>
-      record[dataIndex]
-        .toString()
-        .toLowerCase()
-        .includes((value as string).toLowerCase()),
-    onFilterDropdownOpenChange: (visible) => {
-      if (visible) {
-        setTimeout(() => searchInput.current?.select(), 100);
-      }
-    },
-  });
-
-
   return (
     <div className="container voxelytics-view">
       <div className="pull-right">
+        <Search
+          style={{
+            width: 200,
+          }}
+          onChange={handleSearch}
+          value={searchQuery}
+        />
         <Button onClick={() => loadData()}>
           <SyncOutlined spin={isLoading} /> Refresh
         </Button>
@@ -219,7 +183,6 @@ export default function WorkflowListView() {
                   {run.name}
                 </Link>
               ),
-            ...getColumnSearchProps("workflow")
           },
           {
             title: "User",
@@ -288,7 +251,7 @@ export default function WorkflowListView() {
             render: (run: RenderRunInfo) => run.endTime && formatDateMedium(run.endTime),
           },
         ]}
-        dataSource={renderRuns}
+        dataSource={Utils.filterWithSearchQueryAND(renderRuns, ["workflowName"], searchQuery)}
       />
     </div>
   );

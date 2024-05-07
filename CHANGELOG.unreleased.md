@@ -15,9 +15,11 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Updated several backend dependencies for optimized stability and performance. [#7782](https://github.com/scalableminds/webknossos/pull/7782)
 
 ### Changed
-- Non admin or manager user can no longer start long running jobs creating datasets. This includes annotation materialization and AI inferrals. [#7753](https://github.com/scalableminds/webknossos/pull/7753)
+- Non-admin or -manager users can no longer start long-running jobs that create datasets. This includes annotation materialization and AI inferrals. [#7753](https://github.com/scalableminds/webknossos/pull/7753)
+- In the time tracking view, all annotations and tasks can be shown for each user by expanding the table. The individual time spans spent with a task or annotating an explorative annotation can be accessed via CSV export. The detail view including a chart for the individual spans has been removed. [#7733](https://github.com/scalableminds/webknossos/pull/7733)
 
 ### Fixed
+- Fixed a bug where some annotation times would be shown double. [#7787](https://github.com/scalableminds/webknossos/pull/7787)
 
 ### Removed
 

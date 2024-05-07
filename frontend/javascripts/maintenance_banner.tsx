@@ -174,7 +174,6 @@ export function UpgradeVersionBanner() {
     async () => {
       Utils.sleep(INITIAL_DELAY);
       let buildInfo = await getBuildInfo();
-      buildInfo.webknossos.commitDate = "Wed Apr 24 22:40:38 2023 +0200"; // one year back for testing purposes, TODO remove
       const lastCommitDate = parseCTimeDefaultDate(buildInfo.webknossos.commitDate);
       const needsUpdate = currentDate.diff(lastCommitDate, "month") >= 6;
       return needsUpdate;

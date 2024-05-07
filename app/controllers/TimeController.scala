@@ -3,7 +3,7 @@ package controllers
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationType
+import models.annotation.{AnnotationState, AnnotationType}
 
 import scala.collection.immutable.ListMap
 import javax.inject.Inject
@@ -51,12 +51,14 @@ class TimeController @Inject()(userService: UserService,
                                     start: Long,
                                     end: Long,
                                     annotationTypes: String,
-                                    projectIds: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
+                                    projectIds: Option[String],
+                                    annotationStates: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         userIdValidated <- ObjectId.fromString(userId)
         projectIdsValidated <- ObjectId.fromCommaSeparated(projectIds)
         annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> "invalidAnnotationType"
+        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
@@ -64,6 +66,7 @@ class TimeController @Inject()(userService: UserService,
                                                                    Instant(start),
                                                                    Instant(end),
                                                                    annotationTypesValidated,
+                                                                   annotationStatesValidated,
                                                                    projectIdsValidated)
       } yield Ok(timesByAnnotation)
   }
@@ -72,12 +75,14 @@ class TimeController @Inject()(userService: UserService,
                       start: Long,
                       end: Long,
                       annotationTypes: String,
-                      projectIds: Option[String]): Action[AnyContent] =
+                      projectIds: Option[String],
+                      annotationStates: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.fromString(userId)
         projectIdsValidated <- ObjectId.fromCommaSeparated(projectIds)
         annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> "invalidAnnotationType"
+        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
@@ -85,6 +90,7 @@ class TimeController @Inject()(userService: UserService,
                                                          Instant(start),
                                                          Instant(end),
                                                          annotationTypesValidated,
+                                                         annotationStatesValidated,
                                                          projectIdsValidated)
       } yield Ok(timeSpansJs)
     }
@@ -93,11 +99,13 @@ class TimeController @Inject()(userService: UserService,
                    end: Long,
                    annotationTypes: String,
                    teamIds: Option[String],
-                   projectIds: Option[String]): Action[AnyContent] =
+                   projectIds: Option[String],
+                   annotationStates: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         teamIdsValidated <- ObjectId.fromCommaSeparated(teamIds) ?~> "invalidTeamId"
         annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> "invalidAnnotationType"
+        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
         _ <- bool2Fox(annotationTypesValidated.nonEmpty) ?~> "annotationTypesEmpty"
         _ <- bool2Fox(annotationTypesValidated.forall(typ =>
           typ == AnnotationType.Explorational || typ == AnnotationType.Task)) ?~> "unsupportedAnnotationType"
@@ -109,6 +117,7 @@ class TimeController @Inject()(userService: UserService,
                                                      Instant(end),
                                                      usersFiltered.map(_._id),
                                                      annotationTypesValidated,
+                                                     annotationStatesValidated,
                                                      projectIdsValidated)
       } yield Ok(Json.toJson(usersWithTimesJs))
     }

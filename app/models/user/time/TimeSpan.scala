@@ -3,6 +3,7 @@ package models.user.time
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import models.annotation.AnnotationState.AnnotationState
 import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 import slick.lifted.Rep
@@ -73,6 +74,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                                 start: Instant,
                                 end: Instant,
                                 annotationTypes: List[AnnotationType],
+                                annotationStates: List[AnnotationState],
                                 projectIds: List[ObjectId]): Fox[JsValue] =
     if (annotationTypes.isEmpty) Fox.successful(Json.arr())
     else {
@@ -98,6 +100,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           AND ts.created < $end
           AND $projectQuery
           AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
+          AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
           GROUP BY a._id, t._id, p.name
           ORDER BY a._id
          """.as[(String, Option[String], Option[String], Long, String)]
@@ -119,6 +122,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                             start: Instant,
                             end: Instant,
                             annotationTypes: List[AnnotationType],
+                            annotationStates: List[AnnotationState],
                             projectIds: List[ObjectId]): Fox[JsValue] =
     if (annotationTypes.isEmpty) Fox.successful(Json.arr())
     else {
@@ -141,6 +145,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                         AND ts.created < $end
                         AND $projectQuery
                         AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
+                        AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
             """.as[(String,
                     String,
                     String,
@@ -192,6 +197,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    end: Instant,
                    users: List[ObjectId],
                    annotationTypes: List[AnnotationType],
+                   annotationStates: List[AnnotationState],
                    projectIds: List[ObjectId]): Fox[List[JsObject]] =
     if (users.isEmpty || annotationTypes.isEmpty) Fox.successful(List.empty)
     else {
@@ -208,6 +214,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           WHERE $projectQuery
           AND u._id IN ${SqlToken.tupleFromList(users)}
           AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
+          AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
           AND ts.time > 0
           AND ts.created >= $start
           AND ts.created < $end

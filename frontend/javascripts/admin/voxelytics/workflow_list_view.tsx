@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
-import { SyncOutlined } from "@ant-design/icons";
-import { Table, Progress, Tooltip, Button } from "antd";
+import React, { useMemo, useRef, useState } from "react";
+import { SearchOutlined, SyncOutlined } from "@ant-design/icons";
+import { Table, Progress, Tooltip, Button, TableColumnType, Input, Space, InputRef } from "antd";
 import { Link } from "react-router-dom";
 import { getVoxelyticsWorkflows } from "admin/admin_rest_api";
 import {
@@ -12,6 +12,7 @@ import { usePolling } from "libs/react_hooks";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Toast from "libs/toast";
 import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
+import { FilterDropdownProps } from "antd/lib/table/interface";
 
 function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun): VoxelyticsWorkflowListingRun {
   return {
@@ -114,7 +115,7 @@ export default function WorkflowListView() {
           percent={Math.round(
             ((run.taskCounts.complete + run.taskCounts.cancelled + run.taskCounts.failed) /
               run.taskCounts.total) *
-              100,
+            100,
           )}
           status={runStateToStatus(run.state)}
           success={{ percent: Math.round((run.taskCounts.complete / run.taskCounts.total) * 100) }}
@@ -123,6 +124,74 @@ export default function WorkflowListView() {
       </Tooltip>
     );
   }
+
+  const [searchText, setSearchText] = useState('');
+  const [searchedColumn, setSearchedColumn] = useState('');
+  const searchInput = useRef<InputRef>(null);
+
+  const handleSearch = (
+    selectedKeys: string[],
+    confirm: FilterDropdownProps['confirm'],
+    dataIndex: "workflow",
+  ) => {
+    confirm();
+    setSearchText(selectedKeys[0]);
+    setSearchedColumn(dataIndex);
+  };
+
+  const handleReset = (clearFilters: () => void) => {
+    clearFilters();
+    setSearchText('');
+  };
+
+  const getColumnSearchProps = (dataIndex) => ({
+    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters, close }) => (
+      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
+        <Input
+          ref={searchInput}
+          placeholder={`Search ${dataIndex}`}
+          value={selectedKeys[0]}
+          onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+          onPressEnter={() => handleSearch(selectedKeys as string[], confirm, dataIndex)}
+          style={{ marginBottom: 8, display: 'block' }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => handleSearch(selectedKeys as string[], confirm, dataIndex)}
+            icon={<SearchOutlined />}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Search
+          </Button>
+
+          <Button
+            size="small"
+            onClick={() => {
+              close();
+            }}
+          >
+            close
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered: boolean) => (
+      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
+    ),
+    onFilter: (value, record) =>
+      record[dataIndex]
+        .toString()
+        .toLowerCase()
+        .includes((value as string).toLowerCase()),
+    onFilterDropdownOpenChange: (visible) => {
+      if (visible) {
+        setTimeout(() => searchInput.current?.select(), 100);
+      }
+    },
+  });
+
 
   return (
     <div className="container voxelytics-view">
@@ -135,7 +204,7 @@ export default function WorkflowListView() {
       <Table
         bordered
         rowKey={(run: RenderRunInfo) => `${run.id}-${run.workflowHash}`}
-        pagination={{ pageSize: 100 }}
+        pagination={{ pageSize: 1 }}
         columns={[
           {
             title: "Workflow",
@@ -150,6 +219,7 @@ export default function WorkflowListView() {
                   {run.name}
                 </Link>
               ),
+            ...getColumnSearchProps("workflow")
           },
           {
             title: "User",

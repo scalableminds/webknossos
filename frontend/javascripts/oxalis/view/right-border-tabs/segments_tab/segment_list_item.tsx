@@ -186,7 +186,7 @@ type Props = {
   mapId: (arg0: number) => number;
   isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
-  centeredSegmentId: number | null | undefined;
+  isCentered: boolean;
   selectedSegmentIds: number[] | null | undefined;
   activeCellId: number | null | undefined;
   setHoveredSegmentId: (arg0: number | null | undefined) => void;
@@ -382,7 +382,7 @@ function _SegmentListItem({
   mapId,
   isJSONMappingEnabled,
   mappingInfo,
-  centeredSegmentId,
+  isCentered,
   selectedSegmentIds,
   activeCellId,
   setHoveredSegmentId,
@@ -643,7 +643,7 @@ function _SegmentListItem({
             </Tooltip>
             {/* Show Default Segment Name if another one is already defined*/}
             {getSegmentIdDetails()}
-            {segment.id === centeredSegmentId ? (
+            {isCentered ? (
               <Tooltip title="This segment is currently centered in the data viewports.">
                 <i
                   className="fas fa-crosshairs deemphasized"

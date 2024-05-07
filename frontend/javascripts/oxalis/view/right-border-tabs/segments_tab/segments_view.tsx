@@ -1609,7 +1609,7 @@ class SegmentsView extends React.Component<Props, State> {
                     key={segment.id}
                     mapId={mapId}
                     segment={segment}
-                    centeredSegmentId={centeredSegmentId}
+                    isCentered={centeredSegmentId === segment.id}
                     selectedSegmentIds={this.props.selectedIds.segments}
                     activeDropdownSegmentId={this.state.activeDropdownSegmentId}
                     onSelectSegment={this.onSelectSegment}
@@ -1632,6 +1632,8 @@ class SegmentsView extends React.Component<Props, State> {
                     currentMeshFile={this.props.currentMeshFile}
                     onRenameStart={this.onRenameStart}
                     onRenameEnd={this.onRenameEnd}
+                    // todop: this causes SegmentItems to always rerender if SegmentsView
+                    // rerenders
                     multiSelectMenu={multiSelectMenu()}
                     activeVolumeTracing={this.props.activeVolumeTracing}
                   />

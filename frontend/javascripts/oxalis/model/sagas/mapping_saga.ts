@@ -12,7 +12,7 @@ import {
   put,
   actionChannel,
 } from "typed-redux-saga";
-import { eventChannel } from "redux-saga";
+import { Channel, eventChannel } from "redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { message } from "antd";
 import type {
@@ -57,13 +57,17 @@ import { chainIterators } from "libs/utils";
 type APIMappings = Record<string, APIMapping>;
 type PreviousMappingObject = { mapping: Mapping };
 
-const takeLatestMappingChange = (previousMappingObject: PreviousMappingObject) =>
+const takeLatestMappingChange = (
+  setMappingEnabledActionChannel: Channel<SetMappingEnabledAction>,
+  previousMappingObject: PreviousMappingObject,
+) =>
   fork(function* () {
     let lastTask;
     let lastLayerName: string | null | undefined;
     let lastMappingEnabled: boolean = false;
     while (true) {
-      const action = (yield* take(["SET_MAPPING_ENABLED"])) as SetMappingEnabledAction;
+      const action = yield* take(setMappingEnabledActionChannel);
+      console.log("RECEIVED SET_MAPPING_ENABLED", action);
 
       // Don't cancel the watcher if the enabled state was not changed
       if (action.layerName === lastLayerName && action.isMappingEnabled === lastMappingEnabled)
@@ -90,6 +94,8 @@ export default function* watchActivatedMappings(): Saga<void> {
   };
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
+  const setMappingEnabledActionChannel =
+    yield* actionChannel<SetMappingEnabledAction>("SET_MAPPING_ENABLED");
   yield* take("WK_READY");
   yield* takeLatest(setMappingActionChannel, handleSetMapping, previousMappingObject);
   yield* takeEvery(
@@ -102,7 +108,7 @@ export default function* watchActivatedMappings(): Saga<void> {
       }
     },
   );
-  yield* takeLatestMappingChange(previousMappingObject);
+  yield* takeLatestMappingChange(setMappingEnabledActionChannel, previousMappingObject);
 }
 
 function createBucketChannel(dataCube: DataCube) {
@@ -179,7 +185,6 @@ function* handleSetMapping(
   previousMappingObject: PreviousMappingObject,
   action: SetMappingAction,
 ): Saga<void> {
-  console.log("MappingActivation", performance.now());
   const {
     layerName,
     mappingName,
@@ -325,8 +330,6 @@ function* updateHdf5Mapping(
     previousMapping,
   );
 
-  if (newValues.size === 0) return;
-
   const remainingValues: Set<NumberLike> = getSetIntersectedMapKeys(
     // @ts-ignore valueSet and previousMapping are expected to have the same value type
     previousMapping.keys(),
@@ -383,6 +386,7 @@ function* handleSetJsonMapping(
   mappingName: string,
   mappingType: MappingType,
 ): Saga<void> {
+  console.time("MappingSaga JSON");
   const fetchedMappings: APIMappings = {};
   try {
     yield* call(fetchMappings, layerName, mappingName, fetchedMappings);
@@ -419,7 +423,7 @@ function* handleSetJsonMapping(
       { sticky: true },
     );
   }
-  console.timeEnd("MappingSaga");
+  console.timeEnd("MappingSaga JSON");
   yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
 }
 

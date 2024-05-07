@@ -66,7 +66,7 @@ import {
   refreshMeshAction,
   removeMeshAction,
 } from "oxalis/model/actions/annotation_actions";
-import { NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
+import { Mapping, NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
 import _ from "lodash";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
@@ -821,7 +821,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
         }
         return [segmentId, agglomerateId];
       }),
-    ) as typeof activeMapping.mapping;
+    ) as Mapping;
 
     yield* put(
       setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {

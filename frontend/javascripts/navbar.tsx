@@ -62,7 +62,7 @@ import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
-import { MaintenanceBanner, UpgradeVersionBanner } from "maintenance_banner";
+import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { getAntdTheme, getSystemColorTheme } from "theme";
 
 const { Header } = Layout;
@@ -700,7 +700,7 @@ function LoggedInAvatar({
 }
 
 function AnonymousAvatar() {
-  const navbarHeight = useSelector(
+  const bannerHeight = useSelector(
     (state: OxalisState) => state.uiInformation.navbarHeight - constants.DEFAULT_NAVBAR_HEIGHT,
   );
   return (
@@ -724,7 +724,7 @@ function AnonymousAvatar() {
         icon={<UserOutlined />}
         style={{
           marginLeft: 8,
-          marginTop: navbarHeight,
+          marginTop: bannerHeight,
         }}
       />
     </Popover>

@@ -81,29 +81,27 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       val projectQuery = projectIdsFilterQuery(projectIds)
       for {
         tuples <- run(
-          q"""
-          WITH annotationLayerStatistics AS (
-            SELECT an._id AS _annotation, JSON_AGG(al.statistics) AS layerStatistics
-            FROM webknossos.annotation_layers al
-            JOIN webknossos.annotations an ON al._annotation = an._id
-            GROUP BY an._id
-          )
-          SELECT a._id, t._id, p.name, SUM(ts.time), JSON_AGG(als.layerStatistics)->0 AS annotationLayerStatistics
-          FROM webknossos.timespans_ ts
-          JOIN webknossos.annotations_ a ON ts._annotation = a._id
-          JOIN annotationLayerStatistics AS als ON als._annotation = a._id
-          LEFT JOIN webknossos.tasks_ t ON a._task = t._id
-          LEFT JOIN webknossos.projects_ p ON t._project = p._id
-          WHERE ts._user = $userId
-          AND ts.time > 0
-          AND ts.created >= $start
-          AND ts.created < $end
-          AND $projectQuery
-          AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
-          AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
-          GROUP BY a._id, t._id, p.name
-          ORDER BY a._id
-         """.as[(String, Option[String], Option[String], Long, String)]
+          q"""WITH timeSummedPerAnnotation AS (
+                SELECT a._id AS _annotation, t._id AS _task, p.name AS projectName, SUM(ts.time) AS timeSummed
+                FROM webknossos.timespans_ ts
+                JOIN webknossos.annotations_ a ON ts._annotation = a._id
+                LEFT JOIN webknossos.tasks_ t ON a._task = t._id
+                LEFT JOIN webknossos.projects_ p ON t._project = p._id
+                WHERE ts._user = $userId
+                AND ts.time > 0
+                AND ts.created >= $start
+                AND ts.created < $end
+                AND $projectQuery
+                AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
+                AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
+                GROUP BY a._id, t._id, p.name
+              )
+              SELECT ti._annotation, ti._task, ti.projectName, ti.timeSummed, JSON_AGG(al.statistics) AS layerStatistics
+              FROM timeSummedPerAnnotation ti
+              JOIN webknossos.annotation_layers al ON al._annotation = ti._annotation
+              GROUP BY ti._annotation, ti._task, ti.projectName, ti.timeSummed
+              ORDER BY ti._annotation
+          """.as[(String, Option[String], Option[String], Long, String)]
         )
         parsed = tuples.map { t =>
           val layerStats: JsArray = Json.parse(t._5).validate[JsArray].getOrElse(Json.arr())

@@ -38,7 +38,7 @@ const renderRow = (
           <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>
             <a href={`annotations/${timeEntry.annotation}`}>Annotation: {timeEntry.annotation} </a>
           </Col>
-          <Col span={STATISTICS_SPAN} style={{ textAlign: "left" }}>
+          <Col span={STATISTICS_SPAN}>
             <AnnotationStats
               stats={aggregateStatsForAllLayers(timeEntry.annotationLayerStats)}
               asInfoBlock={false}

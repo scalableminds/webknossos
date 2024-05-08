@@ -17,8 +17,8 @@ type TimeTrackingDetailViewProps = {
   projectIds: string[];
 };
 
-const ANNOTATION_OR_TASK_NAME_SPAN = 12;
-const STATISTICS_SPAN = 8;
+const ANNOTATION_OR_TASK_NAME_SPAN = 16;
+const STATISTICS_SPAN = 4;
 const TIMESPAN_SPAN = 4;
 
 const STYLING_CLASS_NAME = "time-tracking-details";
@@ -38,7 +38,7 @@ const renderRow = (
           <Col span={ANNOTATION_OR_TASK_NAME_SPAN}>
             <a href={`annotations/${timeEntry.annotation}`}>Annotation: {timeEntry.annotation} </a>
           </Col>
-          <Col span={STATISTICS_SPAN}>
+          <Col span={STATISTICS_SPAN} style={{textAlign: "left"}}>
             <AnnotationStats
               stats={aggregateStatsForAllLayers(timeEntry.annotationLayerStats)}
               asInfoBlock={false}

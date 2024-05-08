@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { SyncOutlined } from "@ant-design/icons";
-import { Table, Progress, Tooltip, Button } from "antd";
+import { Table, Progress, Tooltip, Button, Input } from "antd";
 import { Link } from "react-router-dom";
 import { getVoxelyticsWorkflows } from "admin/admin_rest_api";
 import {
@@ -12,10 +12,11 @@ import { usePolling } from "libs/react_hooks";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Toast from "libs/toast";
 import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
-import Search from "antd/lib/input/Search";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";
 import { PropTypes } from "@scalableminds/prop-types";
+
+const { Search } = Input;
 
 const persistence = new Persistence<Pick<{ searchQuery: string }, "searchQuery">>(
   {
@@ -140,7 +141,7 @@ export default function WorkflowListView() {
           percent={Math.round(
             ((run.taskCounts.complete + run.taskCounts.cancelled + run.taskCounts.failed) /
               run.taskCounts.total) *
-            100,
+              100,
           )}
           status={runStateToStatus(run.state)}
           success={{ percent: Math.round((run.taskCounts.complete / run.taskCounts.total) * 100) }}
@@ -153,6 +154,9 @@ export default function WorkflowListView() {
   return (
     <div className="container voxelytics-view">
       <div className="pull-right">
+        <Button onClick={() => loadData()} style={{ marginRight: 20 }}>
+          <SyncOutlined spin={isLoading} /> Refresh
+        </Button>
         <Search
           style={{
             width: 200,
@@ -160,15 +164,12 @@ export default function WorkflowListView() {
           onChange={handleSearch}
           value={searchQuery}
         />
-        <Button onClick={() => loadData()}>
-          <SyncOutlined spin={isLoading} /> Refresh
-        </Button>
       </div>
       <h3>Voxelytics Workflows</h3>
       <Table
         bordered
         rowKey={(run: RenderRunInfo) => `${run.id}-${run.workflowHash}`}
-        pagination={{ pageSize: 1 }}
+        pagination={{ pageSize: 100 }}
         columns={[
           {
             title: "Workflow",

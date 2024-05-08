@@ -197,7 +197,6 @@ export const nmFactorToUnit = new Map([
   [1e27, "Em"],
   [1e30, "Zm"],
   [1e33, "Ym"],
-  //[3.085677581e25, "pc"],
 ]);
 
 export function formatNumberToLength(
@@ -228,7 +227,6 @@ const nmFactorToUnit2D = new Map([
   [1e54, "Em²"],
   [1e60, "Zm²"],
   [1e66, "Ym²"],
-  //[9.521422549e50, "pc²"],
 ]);
 
 // TODO: Support conversion from uncommon units in 2d
@@ -265,7 +263,6 @@ const nmFactorToUnit3D = new Map([
   [1e81, "Em³"],
   [1e90, "Zm³"],
   [1e99, "Ym³"],
-  //[2.938006565e76, "pc³"],
 ]);
 // TODO: Support conversion from uncommon units in 3d
 export function formatNumberToVolume(
@@ -467,12 +464,3 @@ export function formatBytes(nbytes: number) {
 export function formatNumber(num: number): string {
   return new Intl.NumberFormat("en-US").format(num);
 }
-
-/*(() => {
-  debugger;
-  /*formatNumberToLength(Math.pow(10, -5), LengthUnit.zm);
-  formatNumberToLength(Math.pow(10, -4), LengthUnit.zm);
-  formatNumberToLength(Math.pow(10, -3), LengthUnit.zm);
-  formatNumberToLength(Math.pow(10, -2), LengthUnit.zm);
-  formatNumberToLength(Math.pow(10, -1), LengthUnit.zm);*
-})();*/

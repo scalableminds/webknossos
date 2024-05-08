@@ -371,6 +371,10 @@ function SegmentInfo() {
   const hoveredSegmentId = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId,
   );
+  const hoveredUnmappedSegmentId = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.hoveredUnmappedSegmentId,
+  );
+
   if (hasVisibleSegmentation == null) {
     return null;
   }
@@ -379,7 +383,8 @@ function SegmentInfo() {
     hoveredSegmentId == null
       ? "-"
       : activeMappingInfo?.mappingStatus === MappingStatusEnum.ENABLED
-        ? `${hoveredSegmentId} (mapped)`
+        ? // todop: remove hoveredUnmappedSegmentId again
+          `${hoveredUnmappedSegmentId} -> ${hoveredSegmentId} (mapped)`
         : `${hoveredSegmentId}`;
 
   return <span className="info-element">Segment {idString}</span>;

@@ -840,7 +840,7 @@ function* updateHoveredSegmentId(): Saga<void> {
   if (oldHoveredSegmentId !== id) {
     yield* put(updateTemporarySettingAction("hoveredSegmentId", id));
   }
-  if (oldHoveredUnmappedSegmentId !== id) {
+  if (oldHoveredUnmappedSegmentId !== unmappedId) {
     yield* put(updateTemporarySettingAction("hoveredUnmappedSegmentId", unmappedId));
   }
 }

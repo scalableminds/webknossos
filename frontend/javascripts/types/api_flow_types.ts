@@ -998,6 +998,7 @@ export type VoxelyticsWorkflowListingRun = (
   hostname: string;
   voxelyticsVersion: string;
   taskCounts: TaskCounts;
+  wkUser: string;
 };
 
 export type VoxelyticsWorkflowListing = {
@@ -1008,6 +1009,7 @@ export type VoxelyticsWorkflowListing = {
   state: VoxelyticsRunState;
   taskCounts: TaskCounts;
   runs: Array<VoxelyticsWorkflowListingRun>;
+  wkUser: string;
 };
 
 type Statistics = {

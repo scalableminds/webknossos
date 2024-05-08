@@ -59,18 +59,20 @@ export default function WorkflowListView() {
 
   usePolling(loadData, VX_POLLING_INTERVAL);
 
-  const renderRuns = useMemo(
+  // todo fix state enum typing
+  const renderRuns: Array<RenderRunInfo> = useMemo(
     () =>
       workflows.map((workflow) => ({
         workflowName: workflow.name,
         workflowHash: workflow.hash,
-        state: workflow.state,
+        state: VoxelyticsRunState[workflow.state],
         beginTime: workflow.runs[0].beginTime,
         endTime: workflow.runs[0].endTime,
         name: "",
         id: "", // used to distinguish between workflows and runs when rendering
         username: uniqueify(workflow.runs.map((run) => run.username)).join(", "),
         hostname: uniqueify(workflow.runs.map((run) => run.hostname)).join(", "),
+        wkUserId: uniqueify(workflow.runs.map((run) => run.wkUser)).join(", "),
         voxelyticsVersion: uniqueify(workflow.runs.map((run) => run.voxelyticsVersion)).join(", "),
         taskCounts: workflow.taskCounts,
         children: workflow.runs.map((run) => ({
@@ -80,7 +82,7 @@ export default function WorkflowListView() {
         })),
       })),
     [workflows],
-  ) as any as Array<RenderRunInfo>;
+  );
 
   function renderProgress(run: RenderRunInfo) {
     let label = "";
@@ -152,7 +154,12 @@ export default function WorkflowListView() {
               ),
           },
           {
-            title: "User",
+            title: "Webknossos User",
+            dataIndex: "wkUserId",
+            key: "wkUser",
+          },
+          {
+            title: "Host User",
             dataIndex: "username",
             key: "user",
             filters: uniqueify(renderRuns.map((run) => run.username)).map((username) => ({

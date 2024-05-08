@@ -84,7 +84,8 @@ case class WorkflowListingRunEntry(id: ObjectId,
                                    state: VoxelyticsRunState,
                                    beginTime: Option[Instant],
                                    endTime: Option[Instant],
-                                   taskCounts: TaskCounts)
+                                   taskCounts: TaskCounts,
+                                   wkUser: String)
 
 object WorkflowListingRunEntry {
   implicit val jsonFormat: OFormat[WorkflowListingRunEntry] = Json.format[WorkflowListingRunEntry]

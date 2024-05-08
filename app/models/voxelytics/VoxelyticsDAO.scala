@@ -467,7 +467,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           COALESCE(tasks.complete, 0) AS tasksComplete,
           COALESCE(tasks.cancelled, 0) AS tasksCancelled,
           COALESCE(tasks.fileSize, 0) AS fileSize,
-          COALESCE(tasks.inodeCount, 0) AS inodeCount
+          COALESCE(tasks.inodeCount, 0) AS inodeCount,
+          r._user
         FROM (${visibleRunsQ(currentUser, allowUnlisted = false)}) r
         JOIN (${runsWithStateQ(staleTimeout)}) rs ON rs._id = r._id
         LEFT JOIN (
@@ -506,7 +507,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                 Long,
                 Long,
                 Long,
-                Long)])
+                Long,
+                String)])
       results <- Fox.combined(
         r.toList.map(
           row =>
@@ -531,7 +533,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                   cancelled = row._14,
                   fileSize = row._15,
                   inodeCount = row._16
-                )
+                ),
+                wkUser = row._17
             )))
     } yield results
   }

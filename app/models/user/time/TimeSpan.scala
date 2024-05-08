@@ -4,7 +4,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationType.AnnotationType
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
@@ -80,12 +80,18 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       for {
         tuples <- run(
           q"""
-          SELECT a._id, t._id, p.name, SUM(ts.time), ARRAY_REMOVE(ARRAY_AGG(al.statistics), null) AS annotation_layer_statistics
+          WITH annotationLayerStatistics AS (
+            SELECT an._id AS _annotation, JSON_AGG(al.statistics) AS layerStatistics
+            FROM webknossos.annotation_layers al
+            JOIN webknossos.annotations an ON al._annotation = an._id
+            GROUP BY an._id
+          )
+          SELECT a._id, t._id, p.name, SUM(ts.time), JSON_AGG(als.layerStatistics)->0 AS annotationLayerStatistics
           FROM webknossos.timespans_ ts
-          JOIN webknossos.annotations_ a on ts._annotation = a._id
-          JOIN webknossos.annotation_layers as al ON al._annotation = a._id
-          LEFT JOIN webknossos.tasks_ t on a._task = t._id
-          LEFT JOIN webknossos.projects_ p on t._project = p._id
+          JOIN webknossos.annotations_ a ON ts._annotation = a._id
+          JOIN annotationLayerStatistics AS als ON als._annotation = a._id
+          LEFT JOIN webknossos.tasks_ t ON a._task = t._id
+          LEFT JOIN webknossos.projects_ p ON t._project = p._id
           WHERE ts._user = $userId
           AND ts.time > 0
           AND ts.created >= $start
@@ -97,13 +103,13 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
          """.as[(String, Option[String], Option[String], Long, String)]
         )
         parsed = tuples.map { t =>
+          val layerStats: JsArray = Json.parse(t._5).validate[JsArray].getOrElse(Json.arr())
           Json.obj(
             "annotation" -> t._1,
             "task" -> t._2,
             "projectName" -> t._3,
             "timeMillis" -> t._4,
-            "annotationLayerStats" -> parseArrayLiteral(t._5).map(layerStats =>
-              Json.parse(layerStats).validate[JsObject].getOrElse(Json.obj()))
+            "annotationLayerStats" -> layerStats
           )
         }
       } yield Json.toJson(parsed)

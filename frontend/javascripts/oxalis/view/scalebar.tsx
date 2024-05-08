@@ -3,7 +3,7 @@ import * as React from "react";
 import { Tooltip } from "antd";
 import type { APIDataset } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
-import { formatNumberInUnitToLength } from "libs/format_utils";
+import { formatNumberToLength } from "libs/format_utils";
 import { getViewportExtents, getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import type { OrthoView } from "oxalis/constants";
@@ -70,11 +70,11 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
     maxScaleBarWidthFactor,
   );
   const tooltip = [
-    formatNumberInUnitToLength(viewportWidthInDSUnit, datasetScaleUnit),
+    formatNumberToLength(viewportWidthInDSUnit, datasetScaleUnit),
     ThinSpace,
     MultiplicationSymbol,
     ThinSpace,
-    formatNumberInUnitToLength(viewportHeightInDSUnit, datasetScaleUnit),
+    formatNumberToLength(viewportHeightInDSUnit, datasetScaleUnit),
   ].join("");
   const collapseScalebar = viewportWidthInPixels < minWidthToFillScalebar;
   const limitScalebar = scaleBarWidthFactor === maxScaleBarWidthFactor;
@@ -112,9 +112,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
             borderRight: "1px solid",
           }}
         >
-          {collapseScalebar
-            ? "i"
-            : formatNumberInUnitToLength(scalebarWidthInDSUnit, datasetScaleUnit)}
+          {collapseScalebar ? "i" : formatNumberToLength(scalebarWidthInDSUnit, datasetScaleUnit)}
         </div>
       </div>
     </Tooltip>

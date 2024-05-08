@@ -34,7 +34,7 @@ import {
   MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { formatNumberInUnitToLength, formatLengthAsVx } from "libs/format_utils";
+import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getActiveTree,
@@ -790,7 +790,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     const { unit } = Store.getState().dataset.dataSource.scale;
     const [totalLengthNm, totalLengthVx] = api.tracing.measureAllTrees();
     notification.open({
-      message: `The total length of all skeletons is ${formatNumberInUnitToLength(
+      message: `The total length of all skeletons is ${formatNumberToLength(
         totalLengthNm,
         unit,
       )} (${formatLengthAsVx(totalLengthVx)}).`,

@@ -87,12 +87,17 @@ const uncommonLengthUnitsToCommon: Map<LengthUnit, LengthUnit> = new Map([
   [LengthUnit.pc, LengthUnit.Pm],
 ]);
 
-function convertLengthUnitToCommonUnit(length: number, unit: LengthUnit): [number, LengthUnit] {
+function convertLengthUnitToCommonUnit(
+  length: number,
+  unit: LengthUnit,
+  dimensionsCount: number = 1,
+): [number, LengthUnit] {
   const commonUnit = uncommonLengthUnitsToCommon.get(unit);
   if (commonUnit == null) {
     return [length, unit];
   }
-  const commonLength = (length * LengthUnitsMap[unit]) / LengthUnitsMap[commonUnit];
+  const conversionFactor = (LengthUnitsMap[unit] / LengthUnitsMap[commonUnit]) ** dimensionsCount;
+  const commonLength = length * conversionFactor;
   return [commonLength, commonUnit];
 }
 
@@ -135,9 +140,10 @@ export function formatScale(scale: DatasetScale | null | undefined, roundTo: num
   if (scale != null && scale.factor.length > 0) {
     const scaleFactor = scale.factor;
     const smallestScaleFactor = Math.min(...scaleFactor);
+    const unitDimension = { unit: scale.unit, dimension: 1 };
     const [conversionFactor, newUnit] = findClosestToUnitFactorAndUnit(
       smallestScaleFactor,
-      scale.unit,
+      unitDimension,
       nmFactorToUnit,
       false,
       roundTo,
@@ -153,31 +159,27 @@ export function formatScale(scale: DatasetScale | null | undefined, roundTo: num
   return "";
 }
 
-export function formatNumberToUnit(
+function formatNumberToUnit(
   number: number,
-  unit: string,
+  unitDimension: UnitDimension,
   unitMap: Map<number, string>,
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
 ): string {
+  // TODO: Properly rename formatNumberToUnit and findClosestToUnitFactorAndUnit to better match their purpose.
   const [conversionFactor, newUnit] = findClosestToUnitFactorAndUnit(
     number,
-    unit,
+    unitDimension,
     unitMap,
     preferShorterDecimals,
     decimalPrecision,
   );
 
   const valueInUnit = number / conversionFactor;
-
-  if (valueInUnit !== Math.floor(valueInUnit)) {
-    return `${valueInUnit.toFixed(decimalPrecision)}${ThinSpace}${newUnit}`;
-  }
-
-  return `${valueInUnit}${ThinSpace}${newUnit}`;
+  return `${valueInUnit.toFixed(decimalPrecision)}${ThinSpace}${newUnit}`;
 }
 
-const nmFactorToUnit = new Map([
+export const nmFactorToUnit = new Map([
   [1e-15, "ym"],
   [1e-12, "zm"],
   [1e-9, "am"],
@@ -195,16 +197,16 @@ const nmFactorToUnit = new Map([
   [1e27, "Em"],
   [1e30, "Zm"],
   [1e33, "Ym"],
-  [3.085677581e25, "pc"],
+  //[3.085677581e25, "pc"],
 ]);
 
-export function formatNumberInUnitToLength(
-  lengthInNm: number,
+export function formatNumberToLength(
+  length: number,
   unit: string,
   decimalPrecision: number = 1,
 ): string {
-  const s = formatNumberToUnit(lengthInNm, unit, nmFactorToUnit, true, decimalPrecision);
-  console.log("formatNumberInUnitToLength", s);
+  const unitDimension = { unit, dimension: 1 };
+  const s = formatNumberToUnit(length, unitDimension, nmFactorToUnit, true, decimalPrecision);
   return s;
 }
 
@@ -226,18 +228,19 @@ const nmFactorToUnit2D = new Map([
   [1e54, "Em²"],
   [1e60, "Zm²"],
   [1e66, "Ym²"],
-  [9.521422549e50, "pc²"],
+  //[9.521422549e50, "pc²"],
 ]);
 
 // TODO: Support conversion from uncommon units in 2d
-export function formatNumberInDatasourceUnitToArea(
+export function formatNumberToArea(
   lengthInDatasourceUnit2: number,
   unit: string,
   decimalPrecision: number = 1,
 ): string {
+  const unitDimension = { unit, dimension: 2 };
   return formatNumberToUnit(
     lengthInDatasourceUnit2,
-    unit,
+    unitDimension,
     nmFactorToUnit2D,
     true,
     decimalPrecision,
@@ -262,17 +265,18 @@ const nmFactorToUnit3D = new Map([
   [1e81, "Em³"],
   [1e90, "Zm³"],
   [1e99, "Ym³"],
-  [2.938006565e76, "pc³"],
+  //[2.938006565e76, "pc³"],
 ]);
 // TODO: Support conversion from uncommon units in 3d
-export function formatNumberInDatasourceUnitToVolume(
+export function formatNumberToVolume(
   lengthInDatasourceUnit3: number,
   unit: string,
   decimalPrecision: number = 1,
 ): string {
+  const unitDimension = { unit, dimension: 3 };
   return formatNumberToUnit(
     lengthInDatasourceUnit3,
-    unit,
+    unitDimension,
     nmFactorToUnit3D,
     true,
     decimalPrecision,
@@ -291,17 +295,27 @@ export function formatCountToDataAmountUnit(
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
 ): string {
-  return formatNumberToUnit(count, "B", byteFactorToUnit, preferShorterDecimals, decimalPrecision);
+  const unitDimension = { unit: "B", dimension: 1 };
+  return formatNumberToUnit(
+    count,
+    unitDimension,
+    byteFactorToUnit,
+    preferShorterDecimals,
+    decimalPrecision,
+  );
 }
 
 const getSortedFactorsAndUnits = _.memoize((unitMap: Map<number, string>) =>
   Array.from(unitMap.entries()).sort((a, b) => a[0] - b[0]),
 );
 
+// This tuple represents the unit and the dimension the unit is in.
+type UnitDimension = { unit: string; dimension: number };
+
 // TODO: This needs to potentially be adjusted to handle multidimensional units as the ensurance of uncommon length units only supports 1D units.
 export function findClosestToUnitFactorAndUnit(
   number: number,
-  unit: string,
+  { unit, dimension }: UnitDimension,
   unitMap: Map<number, string>,
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
@@ -309,18 +323,16 @@ export function findClosestToUnitFactorAndUnit(
   const isLengthUnit = unit in LengthUnitsMap;
   if (isLengthUnit) {
     // In case of an length unit, ensure it is among the common length units that we support conversion for.
-    [number, unit] = convertLengthUnitToCommonUnit(number, unit as LengthUnit);
+    [number, unit] = convertLengthUnitToCommonUnit(number, unit as LengthUnit, dimension);
   }
+  unit = dimension === 1 ? unit : dimension === 2 ? `${unit}²` : `${unit}³`;
   const sortedFactorsAndUnits = getSortedFactorsAndUnits(unitMap);
-  const [currentFactor, currentUnit] = sortedFactorsAndUnits.find((entry) => entry[1] === unit) || [
-    undefined,
-    undefined,
-  ];
-  if (currentFactor == null || currentUnit == null) {
+  const currentFactor = sortedFactorsAndUnits.find((entry) => entry[1] === unit)?.[0] || undefined;
+  if (currentFactor == null) {
     throw new Error(`Couldn't look up appropriate unit for ${unit}.`);
   }
-  let closestConversionFactor = currentFactor;
-  let closestUnit = currentUnit;
+  let closestConversionFactor = sortedFactorsAndUnits[0][0] / currentFactor; // The default is 1 as in this case there is no conversion.
+  let closestUnit = sortedFactorsAndUnits[0][1];
 
   const minimumToRoundUpToOne = 0.95;
 
@@ -455,3 +467,12 @@ export function formatBytes(nbytes: number) {
 export function formatNumber(num: number): string {
   return new Intl.NumberFormat("en-US").format(num);
 }
+
+/*(() => {
+  debugger;
+  /*formatNumberToLength(Math.pow(10, -5), LengthUnit.zm);
+  formatNumberToLength(Math.pow(10, -4), LengthUnit.zm);
+  formatNumberToLength(Math.pow(10, -3), LengthUnit.zm);
+  formatNumberToLength(Math.pow(10, -2), LengthUnit.zm);
+  formatNumberToLength(Math.pow(10, -1), LengthUnit.zm);*
+})();*/

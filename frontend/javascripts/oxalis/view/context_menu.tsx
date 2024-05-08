@@ -54,11 +54,7 @@ import {
   deleteBranchpointByIdAction,
   addTreesAndGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import {
-  formatNumberInUnitToLength,
-  formatLengthAsVx,
-  formatNumberInDatasourceUnitToVolume,
-} from "libs/format_utils";
+import { formatNumberToLength, formatLengthAsVx, formatNumberToVolume } from "libs/format_utils";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
@@ -124,7 +120,7 @@ import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import { voxelToVolumeInDatasetUnit } from "oxalis/model/scaleinfo";
+import { voxelToVolumeInDatasourceUnit } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import {
   ensureLayerMappingsAreLoadedAction,
@@ -205,7 +201,7 @@ function measureAndShowLengthBetweenNodes(
     targetNodeId,
   );
   notification.open({
-    message: `The shortest path length between the nodes is ${formatNumberInUnitToLength(
+    message: `The shortest path length between the nodes is ${formatNumberToLength(
       lengthInDatasourceUnit,
       datasetScaleUnit,
     )} (${formatLengthAsVx(lengthInVx)}).`,
@@ -231,7 +227,7 @@ function measureAndShowFullTreeLength(treeId: number, treeName: string, datasetS
   notification.open({
     message: messages["tracing.tree_length_notification"](
       treeName,
-      formatNumberInUnitToLength(lengthInDatasourceUnit, datasetScaleUnit),
+      formatNumberToLength(lengthInDatasourceUnit, datasetScaleUnit),
       formatLengthAsVx(lengthInVx),
     ),
     icon: <i className="fas fa-ruler" />,
@@ -1482,13 +1478,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
         );
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-        const volumeInDatasourceUnit3 = voxelToVolumeInDatasetUnit(
+        const volumeInDatasourceUnit3 = voxelToVolumeInDatasourceUnit(
           datasetScale,
           layersFinestResolution,
           segmentSize,
         );
         return [
-          formatNumberInDatasourceUnitToVolume(volumeInDatasourceUnit3, datasetScale.unit),
+          formatNumberToVolume(volumeInDatasourceUnit3, datasetScale.unit),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
         ];
       } catch (_error) {
@@ -1542,7 +1538,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
   const distanceToSelection =
     activeNode != null && positionToMeasureDistanceTo != null
       ? [
-          formatNumberInUnitToLength(
+          formatNumberToLength(
             V3.scaledDist(
               getActiveNodePosition(),
               positionToMeasureDistanceTo,

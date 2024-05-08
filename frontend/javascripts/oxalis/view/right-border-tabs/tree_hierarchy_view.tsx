@@ -57,7 +57,7 @@ import {
   setTreeTypeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
-import { formatNumberInUnitToLength, formatLengthAsVx } from "libs/format_utils";
+import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { api, Store } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
@@ -401,7 +401,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     notification.open({
       message: messages["tracing.tree_length_notification"](
         treeName,
-        formatNumberInUnitToLength(lengthInDatasourceUnit, datasourceUnit),
+        formatNumberToLength(lengthInDatasourceUnit, datasourceUnit),
         formatLengthAsVx(lengthInVx),
       ),
       icon: <i className="fas fa-ruler" />,

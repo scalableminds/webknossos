@@ -62,15 +62,22 @@ const test: TestInterface<Context> = anyTest as any;
 
 test.beforeEach(async (t) => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
+  console.log("beforeEach");
   Store.dispatch(restartSagaAction());
+  console.log("after restartSagaAction");
   Store.dispatch(discardSaveQueuesAction());
+  console.log("after discardSaveQueuesAction");
   Store.dispatch(setActiveUserAction(dummyUser));
+  console.log("after setActiveUserAction");
   await __setupOxalis(t, "volume");
+  console.log("after __setupOxalis");
   // Ensure the slow compression is disabled by default. Tests may change
   // this individually.
   t.context.setSlowCompression(false);
+  console.log("after setSlowCompression");
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());
+  console.log("after wkReadyAction");
 });
 test.afterEach(async (t) => {
   // Saving after each test and checking that the root saga didn't crash,

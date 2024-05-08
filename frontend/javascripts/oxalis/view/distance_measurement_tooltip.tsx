@@ -9,10 +9,10 @@ import getSceneController from "oxalis/controller/scene_controller_provider";
 import { CopyOutlined } from "@ant-design/icons";
 import { copyToClipboad } from "admin/voxelytics/utils";
 import {
-  formatNumberInUnitToLength,
+  formatNumberToLength,
   formatLengthAsVx,
   formatAreaAsVx,
-  formatNumberInDatasourceUnitToArea,
+  formatNumberToArea,
 } from "libs/format_utils";
 import { Tooltip } from "antd";
 import {
@@ -83,7 +83,7 @@ export default function DistanceMeasurementTooltip() {
   if (activeTool === AnnotationToolEnum.LINE_MEASUREMENT) {
     const { lineMeasurementGeometry } = getSceneController();
     valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(in3DSpaceScale), 1);
-    valueInMetricUnit = formatNumberInUnitToLength(
+    valueInMetricUnit = formatNumberToLength(
       lineMeasurementGeometry.getDistance(datasetScale),
       datasetScale.unit,
       1,
@@ -91,7 +91,7 @@ export default function DistanceMeasurementTooltip() {
   } else if (activeTool === AnnotationToolEnum.AREA_MEASUREMENT) {
     const { areaMeasurementGeometry } = getSceneController();
     valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea(in3DSpaceScale), 1);
-    valueInMetricUnit = formatNumberInDatasourceUnitToArea(
+    valueInMetricUnit = formatNumberToArea(
       areaMeasurementGeometry.getArea(datasetScale),
       datasetScale.unit,
       1,

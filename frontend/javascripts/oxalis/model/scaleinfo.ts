@@ -15,7 +15,7 @@ export function getBaseVoxelInDatasourceUnit(datasetScaleFactor: Vector3): numbe
 }
 
 // TODO: Check where this is used and whether it is necessary / correct there.
-export function voxelToVolumeInDatasetUnit(
+export function voxelToVolumeInDatasourceUnit(
   datasetScale: DatasetScale,
   mag: Vector3,
   volumeInVx: number,

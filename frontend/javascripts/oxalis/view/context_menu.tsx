@@ -1686,19 +1686,21 @@ function ContextMenuInner(propsWithInputRef: Props) {
     },
     mode: "vertical",
     items:
-      maybeClickedNodeId != null
-        ? getNodeContextMenuOptions({
-            clickedNodeId: maybeClickedNodeId,
-            infoRows,
-            viewport: maybeViewport,
-            ...props,
-          })
-        : getNoNodeContextMenuOptions({
-            segmentIdAtPosition,
-            infoRows,
-            viewport: maybeViewport,
-            ...props,
-          }),
+      maybeViewport == null
+        ? []
+        : maybeClickedNodeId != null
+          ? getNodeContextMenuOptions({
+              clickedNodeId: maybeClickedNodeId,
+              infoRows,
+              viewport: maybeViewport,
+              ...props,
+            })
+          : getNoNodeContextMenuOptions({
+              segmentIdAtPosition,
+              infoRows,
+              viewport: maybeViewport,
+              ...props,
+            }),
   };
 
   if (inputRef == null || inputRef.current == null) return null;

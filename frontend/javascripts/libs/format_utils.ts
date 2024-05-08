@@ -79,26 +79,27 @@ export const LengthUnitsMap: Record<LengthUnit, number> = {
 };
 
 const uncommonLengthUnitsToCommon: Map<LengthUnit, LengthUnit> = new Map([
+  [LengthUnit.cm, LengthUnit.mm],
+  [LengthUnit.dm, LengthUnit.mm],
+  [LengthUnit.hm, LengthUnit.m],
   [LengthUnit.Å, LengthUnit.pm],
-  [LengthUnit.in, LengthUnit.cm],
+  [LengthUnit.in, LengthUnit.mm],
   [LengthUnit.ft, LengthUnit.dm],
   [LengthUnit.yd, LengthUnit.dm],
   [LengthUnit.mi, LengthUnit.km],
   [LengthUnit.pc, LengthUnit.Pm],
 ]);
 
-function convertLengthUnitToCommonUnit(
-  length: number,
+function getFactorToNextSmallestCommonUnit(
   unit: LengthUnit,
   dimensionsCount: number = 1,
 ): [number, LengthUnit] {
   const commonUnit = uncommonLengthUnitsToCommon.get(unit);
   if (commonUnit == null) {
-    return [length, unit];
+    return [1, unit];
   }
   const conversionFactor = (LengthUnitsMap[unit] / LengthUnitsMap[commonUnit]) ** dimensionsCount;
-  const commonLength = length * conversionFactor;
-  return [commonLength, commonUnit];
+  return [conversionFactor, commonUnit];
 }
 
 // Specifying a preset color makes an antd <Tag/> appear more lightweight, see https://ant.design/components/tag/
@@ -167,16 +168,23 @@ function formatNumberToUnit(
   decimalPrecision: number = 1,
 ): string {
   // TODO: Properly rename formatNumberToUnit and findClosestToUnitFactorAndUnit to better match their purpose.
-  const [conversionFactor, newUnit] = findClosestToUnitFactorAndUnit(
-    number,
-    unitDimension,
-    unitMap,
-    preferShorterDecimals,
-    decimalPrecision,
-  );
+  let unit = unitDimension.unit;
+  let valueInUnit = number;
+  if (number === 0) {
+    unit = adjustUnitToDimension(unit, unitDimension.dimension);
+  } else {
+    const [conversionFactor, newUnit] = findClosestToUnitFactorAndUnit(
+      number,
+      unitDimension,
+      unitMap,
+      preferShorterDecimals,
+      decimalPrecision,
+    );
 
-  const valueInUnit = number / conversionFactor;
-  return `${valueInUnit.toFixed(decimalPrecision)}${ThinSpace}${newUnit}`;
+    valueInUnit = number / conversionFactor;
+    unit = newUnit;
+  }
+  return `${valueInUnit.toFixed(decimalPrecision)}${ThinSpace}${unit}`;
 }
 
 export const nmFactorToUnit = new Map([
@@ -188,6 +196,7 @@ export const nmFactorToUnit = new Map([
   [1, "nm"],
   [1e3, "µm"],
   [1e6, "mm"],
+  [1e7, "cm"],
   [1e9, "m"],
   [1e12, "km"],
   [1e15, "Mm"],
@@ -209,7 +218,7 @@ export function formatNumberToLength(
   return s;
 }
 
-const nmFactorToUnit2D = new Map([
+export const nmFactorToUnit2D = new Map([
   [1e-30, "ym²"],
   [1e-24, "zm²"],
   [1e-18, "am²"],
@@ -218,6 +227,7 @@ const nmFactorToUnit2D = new Map([
   [1, "nm²"],
   [1e6, "µm²"],
   [1e12, "mm²"],
+  [1e14, "cm²"],
   [1e18, "m²"],
   [1e24, "km²"],
   [1e30, "Mm²"],
@@ -236,6 +246,7 @@ export function formatNumberToArea(
   decimalPrecision: number = 1,
 ): string {
   const unitDimension = { unit, dimension: 2 };
+  console.log(nmFactorToUnit2D);
   return formatNumberToUnit(
     lengthInDatasourceUnit2,
     unitDimension,
@@ -245,7 +256,7 @@ export function formatNumberToArea(
   );
 }
 
-const nmFactorToUnit3D = new Map([
+export const nmFactorToUnit3D = new Map([
   [1e-45, "ym³"],
   [1e-36, "zm³"],
   [1e-27, "am³"],
@@ -254,6 +265,7 @@ const nmFactorToUnit3D = new Map([
   [1, "nm³"],
   [1e9, "µm³"],
   [1e18, "mm³"],
+  [1e21, "cm³"],
   [1e27, "m³"],
   [1e36, "km³"],
   [1e45, "Mm³"],
@@ -309,6 +321,10 @@ const getSortedFactorsAndUnits = _.memoize((unitMap: Map<number, string>) =>
 // This tuple represents the unit and the dimension the unit is in.
 type UnitDimension = { unit: string; dimension: number };
 
+function adjustUnitToDimension(unit: string, dimension: number): string {
+  return (unit = dimension === 1 ? unit : dimension === 2 ? `${unit}²` : `${unit}³`);
+}
+
 // TODO: This needs to potentially be adjusted to handle multidimensional units as the ensurance of uncommon length units only supports 1D units.
 export function findClosestToUnitFactorAndUnit(
   number: number,
@@ -318,23 +334,28 @@ export function findClosestToUnitFactorAndUnit(
   decimalPrecision: number = 1,
 ): [number, string] {
   const isLengthUnit = unit in LengthUnitsMap;
+  let factorToNextSmallestCommonUnit = 1;
   if (isLengthUnit) {
     // In case of an length unit, ensure it is among the common length units that we support conversion for.
-    [number, unit] = convertLengthUnitToCommonUnit(number, unit as LengthUnit, dimension);
+    [factorToNextSmallestCommonUnit, unit] = getFactorToNextSmallestCommonUnit(
+      unit as LengthUnit,
+      dimension,
+    );
   }
-  unit = dimension === 1 ? unit : dimension === 2 ? `${unit}²` : `${unit}³`;
+  unit = adjustUnitToDimension(unit, dimension);
   const sortedFactorsAndUnits = getSortedFactorsAndUnits(unitMap);
   const currentFactor = sortedFactorsAndUnits.find((entry) => entry[1] === unit)?.[0] || undefined;
   if (currentFactor == null) {
     throw new Error(`Couldn't look up appropriate unit for ${unit}.`);
   }
-  let closestConversionFactor = sortedFactorsAndUnits[0][0] / currentFactor; // The default is 1 as in this case there is no conversion.
+  const currentFactorFromSmallestCommonUnit = currentFactor * factorToNextSmallestCommonUnit;
+  let closestConversionFactor = sortedFactorsAndUnits[0][0] / currentFactorFromSmallestCommonUnit; // The default is 1 as in this case there is no conversion.
   let closestUnit = sortedFactorsAndUnits[0][1];
 
   const minimumToRoundUpToOne = 0.95;
 
   for (const [factor, unit] of sortedFactorsAndUnits) {
-    const currentConversionFactor = factor / currentFactor;
+    const currentConversionFactor = factor / currentFactorFromSmallestCommonUnit;
     if (
       number >=
       currentConversionFactor *

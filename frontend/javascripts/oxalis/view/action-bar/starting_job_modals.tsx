@@ -762,7 +762,11 @@ function CustomAiModelInferenceForm() {
     try {
       const _aiModels = await getAiModels();
 
-      setAiModels(_aiModels.filter((aiModel) => aiModel.trainingJob.state === "SUCCESS"));
+      setAiModels(
+        _aiModels.filter(
+          (aiModel) => aiModel.trainingJob == null || aiModel.trainingJob.state === "SUCCESS",
+        ),
+      );
     } catch (err) {
       console.error(err);
       Toast.error("Could not load model list.");

@@ -655,6 +655,7 @@ export enum APIJobType {
   INFER_NUCLEI = "infer_nuclei",
   INFER_NEURONS = "infer_neurons",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
+  INFER_WITH_MODEL = "infer_with_model",
 }
 
 export type APIJob = {
@@ -683,8 +684,8 @@ export type AiModel = {
   dataStore: APIDataStore;
   user: APIUser;
   comment: string;
-  trainingJob: APIJob;
   created: number;
+  trainingJob: APIJob | null;
 };
 
 // Tracing related datatypes

@@ -309,7 +309,17 @@ function JobListView() {
           )}
         </span>
       );
-    } else return null;
+    } else if (job.type === APIJobType.INFER_WITH_MODEL) {
+      return (
+        <span>
+          The model may now be selected from the &quot;AI Analysis&quot; button when viewing a
+          dataset.
+        </span>
+      );
+    } else {
+      // The above if-branches should be exhaustive over all job types
+      Utils.assertNever(job.type);
+    }
   }
 
   function renderState(__: any, job: APIJob) {

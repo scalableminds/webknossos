@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   CancelUploadInformation,
   ComposeRequest,
   ComposeService,
+  ReserveManualUploadInformation,
   ReserveUploadInformation,
   UploadInformation,
   UploadService
@@ -100,6 +101,29 @@ class DataSourceController @Inject()(
             (remoteWebknossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataset.upload.validation.failed")
               .flatMap(_ => uploadService.reserveUpload(request.body))
           } else Fox.successful(())
+        } yield Ok
+      }
+    }
+
+  // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
+  // and it can be put in a webknossos folder where they have access
+  def reserveManualUpload(token: Option[String]): Action[ReserveManualUploadInformation] =
+    Action.async(validateJson[ReserveManualUploadInformation]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organization),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          _ <- remoteWebknossosClient.reserveDataSourceUpload(
+            ReserveUploadInformation(
+              "aManualUpload",
+              request.body.datasetName,
+              request.body.organization,
+              0,
+              None,
+              request.body.initialTeamIds,
+              request.body.folderId
+            ),
+            urlOrHeaderToken(token, request)
+          ) ?~> "dataset.upload.validation.failed"
         } yield Ok
       }
     }

@@ -250,7 +250,8 @@ GET           /termsOfService/acceptanceNeeded                                  
 
 # Time Tracking
 # Note, there is also /users/:id/loggedTime
-GET           /time/user/:userId                                                                controllers.TimeController.timeSpansOfUser(userId: String, startDate: Long, endDate: Long, annotationTypes: String, projectIds: Option[String])
+GET           /time/user/:userId/spans                                                          controllers.TimeController.timeSpansOfUser(userId: String, start: Long, end: Long, annotationTypes: String, projectIds: Option[String])
+GET           /time/user/:userId/summedByAnnotation                                             controllers.TimeController.timeSummedByAnnotationForUser(userId: String, start: Long, end: Long, annotationTypes: String, projectIds: Option[String])
 GET           /time/overview                                                                    controllers.TimeController.timeOverview(start: Long, end: Long, annotationTypes: String, teamIds: Option[String], projectIds: Option[String])
 
 # Long-Running Jobs

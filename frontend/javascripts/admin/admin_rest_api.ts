@@ -41,7 +41,8 @@ import type {
   APITaskType,
   APITeam,
   APITimeInterval,
-  APITimeTracking,
+  APITimeTrackingPerAnnotation,
+  APITimeTrackingSpan,
   APITracingStore,
   APIUpdateActionBatch,
   APIUser,
@@ -68,6 +69,7 @@ import type {
   AdditionalCoordinate,
   RenderAnimationOptions,
   LayerLink,
+  APITimeTrackingPerUser,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -2005,24 +2007,42 @@ export function updateUserConfiguration(
   });
 }
 
-export async function getTimeTrackingForUser(
+export async function getTimeTrackingForUserSummedPerAnnotation(
   userId: string,
   startDate: dayjs.Dayjs,
   endDate: dayjs.Dayjs,
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
   projectIds?: string[] | null,
-): Promise<Array<APITimeTracking>> {
+): Promise<Array<APITimeTrackingPerAnnotation>> {
   const params = new URLSearchParams({
-    startDate: startDate.valueOf().toString(),
-    endDate: endDate.valueOf().toString(),
+    start: startDate.valueOf().toString(),
+    end: endDate.valueOf().toString(),
   });
   if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0)
     params.append("projectIds", projectIds.join(","));
-  const timeTrackingData = await Request.receiveJSON(`/api/time/user/${userId}?${params}`);
-  const { timelogs } = timeTrackingData;
-  assertResponseLimit(timelogs);
-  return timelogs;
+  const timeTrackingData = await Request.receiveJSON(
+    `/api/time/user/${userId}/summedByAnnotation?${params}`,
+  );
+  assertResponseLimit(timeTrackingData);
+  return timeTrackingData;
+}
+
+export async function getTimeTrackingForUserSpans(
+  userId: string,
+  startDate: number,
+  endDate: number,
+  annotationTypes: "Explorational" | "Task" | "Task,Explorational",
+  projectIds?: string[] | null,
+): Promise<Array<APITimeTrackingSpan>> {
+  const params = new URLSearchParams({
+    start: startDate.toString(),
+    end: endDate.toString(),
+  });
+  if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
+  if (projectIds != null && projectIds.length > 0)
+    params.append("projectIds", projectIds.join(","));
+  return await Request.receiveJSON(`/api/time/user/${userId}/spans?${params}`);
 }
 
 export async function getTimeEntries(
@@ -2031,7 +2051,7 @@ export async function getTimeEntries(
   teamIds: string[],
   selectedTypes: AnnotationTypeFilterEnum,
   projectIds: string[],
-) {
+): Promise<Array<APITimeTrackingPerUser>> {
   const params = new URLSearchParams({
     start: startMs.toString(),
     end: endMs.toString(),

@@ -22,7 +22,7 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import { pluralize, transformToCSVRow } from "libs/utils";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
-import { voxelToVolumeInDatasourceUnit } from "oxalis/model/scaleinfo";
+import { voxelToVolumeInUnit } from "oxalis/model/scaleinfo";
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";
@@ -51,7 +51,7 @@ type SegmentInfo = {
   segmentName: string;
   groupId: number | undefined | null;
   groupName: string;
-  volumeInDatasourceUnit3: number;
+  volumeInUnit3: number;
   formattedSize: string;
   volumeInVoxel: number;
   boundingBoxTopLeft: Vector3;
@@ -77,7 +77,7 @@ const exportStatisticsToCSV = (
         row.groupId,
         row.groupName,
         row.volumeInVoxel,
-        row.volumeInDatasourceUnit3,
+        row.volumeInUnit3,
         ...row.boundingBoxTopLeft,
         ...row.boundingBoxPosition,
       ]);
@@ -172,7 +172,7 @@ export function SegmentStatisticsModal({
             );
             const currentSegmentSizeInVx = segmentSizes[i];
             // TODO: This might need to be changed to the actual dataset unit and thus the SegmentInfo type.
-            const volumeInDatasourceUnit3 = voxelToVolumeInDatasourceUnit(
+            const volumeInUnit3 = voxelToVolumeInUnit(
               datasetScale,
               layersFinestResolution,
               currentSegmentSizeInVx,
@@ -187,8 +187,8 @@ export function SegmentStatisticsModal({
               groupId: currentGroupId,
               groupName: getGroupNameForId(currentGroupId),
               volumeInVoxel: currentSegmentSizeInVx,
-              volumeInDatasourceUnit3,
-              formattedSize: formatNumberToVolume(volumeInDatasourceUnit3, datasetScale.unit),
+              volumeInUnit3: volumeInUnit3,
+              formattedSize: formatNumberToVolume(volumeInUnit3, datasetScale.unit),
               boundingBoxTopLeft: boundingBoxInMag1.topLeft,
               boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
               boundingBoxPosition: [

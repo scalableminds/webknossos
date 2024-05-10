@@ -41,7 +41,7 @@ import type { Edge, Tree, Node } from "oxalis/store";
 import { api } from "oxalis/singletons";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { renderToTexture } from "oxalis/view/rendering_utils";
-import { getBaseVoxelFactorsInDatasourceUnit } from "oxalis/model/scaleinfo";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
 import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
@@ -184,8 +184,7 @@ export function moveNode(
       const { activeViewport } = state.viewModeData.plane;
       const vector = Dimensions.transDim([dx, dy, 0], activeViewport);
       const zoomFactor = state.flycam.zoomStep;
-      const scaleFactor = getBaseVoxelFactorsInDatasourceUnit(state.dataset.dataSource.scale);
-      console.log("moveNode", "getBaseVoxelFactorsInDatasourceUnit", scaleFactor);
+      const scaleFactor = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
 
       const op = (val: number) => {
         if (useFloat) {

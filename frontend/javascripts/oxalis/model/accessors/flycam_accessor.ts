@@ -35,7 +35,7 @@ import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configu
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 import { SmallerOrHigherInfo } from "../helpers/resolution_info";
-import { getBaseVoxelInDatasourceUnit } from "oxalis/model/scaleinfo";
+import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 import { AdditionalCoordinate, DatasetScale } from "types/api_flow_types";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
@@ -210,14 +210,14 @@ export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
 export function getMoveOffset(state: OxalisState, timeFactor: number) {
   return (
     (state.userConfiguration.moveValue * timeFactor) /
-    getBaseVoxelInDatasourceUnit(state.dataset.dataSource.scale.factor) /
+    getBaseVoxelInUnit(state.dataset.dataSource.scale.factor) /
     constants.FPS
   );
 }
 
 export function getMoveOffset3d(state: OxalisState, timeFactor: number) {
   const { moveValue3d } = state.userConfiguration;
-  const baseVoxel = getBaseVoxelInDatasourceUnit(state.dataset.dataSource.scale.factor);
+  const baseVoxel = getBaseVoxelInUnit(state.dataset.dataSource.scale.factor);
   return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
 }
 
@@ -531,7 +531,7 @@ function getArea(
     zoomStep,
     planeId,
   ).map((el) => el / 2);
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactorsInDatasourceUnit(datasetScale);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactorsInUnit(datasetScale);
   const uHalf = viewportWidthHalf * baseVoxelFactors[u];
   const vHalf = viewportHeightHalf * baseVoxelFactors[v];
   const isVisible = uHalf > 0 && vHalf > 0;

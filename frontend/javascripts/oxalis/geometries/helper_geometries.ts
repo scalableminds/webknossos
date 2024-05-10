@@ -5,7 +5,7 @@ import app from "app";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import Dimensions from "oxalis/model/dimensions";
-import { getBaseVoxelInDatasourceUnit } from "oxalis/model/scaleinfo";
+import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 import { DatasetScale } from "types/api_flow_types";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
@@ -115,7 +115,7 @@ export class ContourGeometry {
   getArea(datasetScale: DatasetScale): number {
     // This algorithm is based on the Trapezoid formula for calculating the polygon area.
     // Source: https://www.mathopenref.com/coordpolygonarea2.html.
-    let accAreaInDatasourceUnit = 0;
+    let accAreaInUnit = 0;
     const pointCount = this.vertexBuffer.getLength();
     const points = this.vertexBuffer.getBuffer();
     let previousPointIndex = pointCount - 1;
@@ -133,10 +133,10 @@ export class ContourGeometry {
         points[i * 3 + dimIndices[0]],
         points[i * 3 + dimIndices[1]],
       ).multiply(scaleVector);
-      accAreaInDatasourceUnit += (start.x + end.x) * (start.y - end.y);
+      accAreaInUnit += (start.x + end.x) * (start.y - end.y);
       previousPointIndex = i;
     }
-    return Math.abs(accAreaInDatasourceUnit / 2);
+    return Math.abs(accAreaInUnit / 2);
   }
   hide() {
     this.line.visible = false;
@@ -180,9 +180,7 @@ export class QuickSelectGeometry {
     });
     this.rectangle = new THREE.Mesh(geometry, material);
 
-    const baseWidth = getBaseVoxelInDatasourceUnit(
-      Store.getState().dataset.dataSource.scale.factor,
-    );
+    const baseWidth = getBaseVoxelInUnit(Store.getState().dataset.dataSource.scale.factor);
     console.log("QuickSelectGeometry -> baseWidth", baseWidth);
     const centerGeometry = new THREE.PlaneGeometry(baseWidth, baseWidth);
     const centerMaterial = new THREE.MeshBasicMaterial({
@@ -425,15 +423,15 @@ export class LineMeasurementGeometry {
     if (pointCount < 2) {
       return 0;
     }
-    let accDistanceInDatasourceUnit = 0;
+    let accDistanceInUnit = 0;
     for (let i = 0; i < pointCount - 1; i++) {
       const start = new THREE.Vector3(...points.subarray(i * 3, (i + 1) * 3)).multiply(scaleVector);
       const end = new THREE.Vector3(...points.subarray((i + 1) * 3, (i + 2) * 3)).multiply(
         scaleVector,
       );
-      accDistanceInDatasourceUnit += start.distanceTo(end);
+      accDistanceInUnit += start.distanceTo(end);
     }
-    return accDistanceInDatasourceUnit;
+    return accDistanceInUnit;
   }
 
   updateForCam(orthoView: OrthoView) {

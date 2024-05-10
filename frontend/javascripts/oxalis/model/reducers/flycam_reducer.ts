@@ -5,7 +5,7 @@ import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import type { OxalisState } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
-import { getBaseVoxelFactorsInDatasourceUnit } from "oxalis/model/scaleinfo";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import {
   getValidZoomRangeForUser,
   ZOOM_STEP_INTERVAL,
@@ -336,7 +336,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
         const { planeId, increaseSpeedWithZoom } = action;
         const vector = Dimensions.transDim(action.vector, planeId);
         const zoomFactor = increaseSpeedWithZoom ? state.flycam.zoomStep : 1;
-        const scaleFactor = getBaseVoxelFactorsInDatasourceUnit(dataset.dataSource.scale);
+        const scaleFactor = getBaseVoxelFactorsInUnit(dataset.dataSource.scale);
         console.log("Fylcam reducer MOVE_PLANE_FLYCAM_ORTHO", "scaleFactor", scaleFactor);
         const delta: Vector3 = [
           vector[0] * zoomFactor * scaleFactor[0],

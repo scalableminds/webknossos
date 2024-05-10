@@ -8,7 +8,7 @@ import { getViewportExtents, getTDViewZoom } from "oxalis/model/accessors/view_m
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import type { OrthoView } from "oxalis/constants";
 import constants, { Unicode, OrthoViews } from "oxalis/constants";
-import { getBaseVoxelInDatasourceUnit } from "oxalis/model/scaleinfo";
+import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 type OwnProps = {
   viewportID: OrthoView;
@@ -21,12 +21,12 @@ type StateProps = {
 };
 type Props = OwnProps & StateProps;
 
-function convertPixelsToDatasourceUnit(
+function convertPixelsToUnit(
   lengthInPixel: number,
   zoomValue: number,
   dataset: APIDataset,
 ): number {
-  return lengthInPixel * zoomValue * getBaseVoxelInDatasourceUnit(dataset.dataSource.scale.factor);
+  return lengthInPixel * zoomValue * getBaseVoxelInUnit(dataset.dataSource.scale.factor);
 }
 
 const getBestScalebarAnchorInNm = (lengthInNm: number): number => {
@@ -53,16 +53,8 @@ const minWidthToFillScalebar = 130;
 
 function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInPixels }: Props) {
   const datasetScaleUnit = dataset.dataSource.scale.unit;
-  const viewportWidthInDSUnit = convertPixelsToDatasourceUnit(
-    viewportWidthInPixels,
-    zoomValue,
-    dataset,
-  );
-  const viewportHeightInDSUnit = convertPixelsToDatasourceUnit(
-    viewportHeightInPixels,
-    zoomValue,
-    dataset,
-  );
+  const viewportWidthInDSUnit = convertPixelsToUnit(viewportWidthInPixels, zoomValue, dataset);
+  const viewportHeightInDSUnit = convertPixelsToUnit(viewportHeightInPixels, zoomValue, dataset);
   const idealWidthInDSUnit = viewportWidthInDSUnit * idealScalebarWidthFactor;
   const scalebarWidthInDSUnit = getBestScalebarAnchorInNm(idealWidthInDSUnit);
   const scaleBarWidthFactor = Math.min(

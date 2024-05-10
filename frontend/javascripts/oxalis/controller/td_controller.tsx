@@ -26,7 +26,7 @@ import {
   moveTDViewByVectorWithoutTimeTrackingAction,
 } from "oxalis/model/actions/view_mode_actions";
 import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletontracing_accessor";
-import { voxelToDatasourceUnit } from "oxalis/model/scaleinfo";
+import { voxelToUnit } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
 import PlaneView from "oxalis/view/plane_view";
 import type { CameraData, OxalisState, Tracing } from "oxalis/store";
@@ -105,7 +105,7 @@ class TDController extends React.PureComponent<Props> {
 
   componentDidMount() {
     const { dataset, flycam } = Store.getState();
-    this.oldNmPos = voxelToDatasourceUnit(dataset.dataSource.scale, getPosition(flycam));
+    this.oldNmPos = voxelToUnit(dataset.dataSource.scale, getPosition(flycam));
     this.isStarted = true;
     this.initMouse();
   }
@@ -154,7 +154,7 @@ class TDController extends React.PureComponent<Props> {
   initTrackballControls(view: HTMLElement): void {
     const { flycam } = Store.getState();
 
-    const pos = voxelToDatasourceUnit(this.props.scale, getPosition(flycam));
+    const pos = voxelToUnit(this.props.scale, getPosition(flycam));
     const tdCamera = this.props.cameras[OrthoViews.TDView];
     this.controls = new TrackballControls(
       tdCamera,
@@ -302,7 +302,7 @@ class TDController extends React.PureComponent<Props> {
     const { flycam } = Store.getState();
     const { controls } = this;
     position = position || getPosition(flycam);
-    const nmPosition = voxelToDatasourceUnit(this.props.scale, position);
+    const nmPosition = voxelToUnit(this.props.scale, position);
 
     if (controls != null) {
       controls.target.set(...nmPosition);

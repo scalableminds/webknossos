@@ -313,14 +313,10 @@ function getDatasetExtentWithScale(dataset: APIDataset, scale: Vector3): Boundin
 }
 export function getDatasetExtentInNm(dataset: APIDataset): BoundingBoxObject {
   const datasetScaleInNm = datasetScaleFactorToNm(dataset.dataSource.scale);
-  const res = getDatasetExtentWithScale(dataset, datasetScaleInNm);
-  console.log("getDatasetExtentInNm", "extent", res);
-  return res;
+  return getDatasetExtentWithScale(dataset, datasetScaleInNm);
 }
-export function getDatasetExtentInDatasourceUnit(dataset: APIDataset): BoundingBoxObject {
-  const extent = getDatasetExtentWithScale(dataset, dataset.dataSource.scale.factor);
-  console.log("getDatasetExtentInDatasourceUnit", "extent", extent);
-  return extent;
+export function getDatasetExtentInUnit(dataset: APIDataset): BoundingBoxObject {
+  return getDatasetExtentWithScale(dataset, dataset.dataSource.scale.factor);
 }
 export function getDatasetExtentAsString(
   dataset: APIMaybeUnimportedDataset,
@@ -335,7 +331,7 @@ export function getDatasetExtentAsString(
     return `${formatExtentInUnitWithLength(extentInVoxel, "vx", (x, _) => `${x}`)} voxel`;
   }
 
-  const extent = getDatasetExtentInDatasourceUnit(dataset);
+  const extent = getDatasetExtentInUnit(dataset);
   return formatExtentInUnitWithLength(extent, dataset.dataSource.scale.unit, formatNumberToLength);
 }
 export function determineAllowedModes(settings?: Settings): {

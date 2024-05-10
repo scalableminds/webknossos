@@ -120,7 +120,7 @@ import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import { voxelToVolumeInDatasourceUnit } from "oxalis/model/scaleinfo";
+import { voxelToVolumeInUnit } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import {
   ensureLayerMappingsAreLoadedAction,
@@ -196,13 +196,13 @@ function measureAndShowLengthBetweenNodes(
   targetNodeId: number,
   datasetScaleUnit: string,
 ) {
-  const [lengthInDatasourceUnit, lengthInVx] = api.tracing.measurePathLengthBetweenNodes(
+  const [lengthInUnit, lengthInVx] = api.tracing.measurePathLengthBetweenNodes(
     sourceNodeId,
     targetNodeId,
   );
   notification.open({
     message: `The shortest path length between the nodes is ${formatNumberToLength(
-      lengthInDatasourceUnit,
+      lengthInUnit,
       datasetScaleUnit,
     )} (${formatLengthAsVx(lengthInVx)}).`,
     icon: <i className="fas fa-ruler" />,
@@ -223,11 +223,11 @@ function extractShortestPathAsNewTree(
 }
 
 function measureAndShowFullTreeLength(treeId: number, treeName: string, datasetScaleUnit: string) {
-  const [lengthInDatasourceUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
+  const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
   notification.open({
     message: messages["tracing.tree_length_notification"](
       treeName,
-      formatNumberToLength(lengthInDatasourceUnit, datasetScaleUnit),
+      formatNumberToLength(lengthInUnit, datasetScaleUnit),
       formatLengthAsVx(lengthInVx),
     ),
     icon: <i className="fas fa-ruler" />,
@@ -1478,13 +1478,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
         );
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-        const volumeInDatasourceUnit3 = voxelToVolumeInDatasourceUnit(
+        const volumeInUnit3 = voxelToVolumeInUnit(
           datasetScale,
           layersFinestResolution,
           segmentSize,
         );
         return [
-          formatNumberToVolume(volumeInDatasourceUnit3, datasetScale.unit),
+          formatNumberToVolume(volumeInUnit3, datasetScale.unit),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
         ];
       } catch (_error) {

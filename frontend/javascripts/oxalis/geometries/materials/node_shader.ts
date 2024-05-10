@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
-import { getBaseVoxelInDatasourceUnit } from "oxalis/model/scaleinfo";
+import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { Store } from "oxalis/singletons";
@@ -45,11 +45,6 @@ class NodeShader {
   setupUniforms(treeColorTexture: THREE.DataTexture): void {
     const state = Store.getState();
     const { additionalCoordinates } = state.flycam;
-    console.log(
-      "NodeShader.setupUniforms",
-      "getBaseVoxelInDatasourceUnit",
-      getBaseVoxelInDatasourceUnit(state.dataset.dataSource.scale.factor),
-    );
     this.uniforms = {
       planeZoomFactor: {
         // The flycam zoom is typically decomposed into an x- and y-factor
@@ -62,7 +57,7 @@ class NodeShader {
         value: state.dataset.dataSource.scale,
       },
       datasetScaleMin: {
-        value: getBaseVoxelInDatasourceUnit(state.dataset.dataSource.scale.factor),
+        value: getBaseVoxelInUnit(state.dataset.dataSource.scale.factor),
       },
       overrideParticleSize: {
         value: state.userConfiguration.particleSize,

@@ -241,19 +241,13 @@ export const nmFactorToUnit2D = new Map([
 
 // TODO: Support conversion from uncommon units in 2d
 export function formatNumberToArea(
-  lengthInDatasourceUnit2: number,
+  lengthInUnit2: number,
   unit: string,
   decimalPrecision: number = 1,
 ): string {
   const unitDimension = { unit, dimension: 2 };
   console.log(nmFactorToUnit2D);
-  return formatNumberToUnit(
-    lengthInDatasourceUnit2,
-    unitDimension,
-    nmFactorToUnit2D,
-    true,
-    decimalPrecision,
-  );
+  return formatNumberToUnit(lengthInUnit2, unitDimension, nmFactorToUnit2D, true, decimalPrecision);
 }
 
 export const nmFactorToUnit3D = new Map([
@@ -278,18 +272,12 @@ export const nmFactorToUnit3D = new Map([
 ]);
 // TODO: Support conversion from uncommon units in 3d
 export function formatNumberToVolume(
-  lengthInDatasourceUnit3: number,
+  lengthInUnit3: number,
   unit: string,
   decimalPrecision: number = 1,
 ): string {
   const unitDimension = { unit, dimension: 3 };
-  return formatNumberToUnit(
-    lengthInDatasourceUnit3,
-    unitDimension,
-    nmFactorToUnit3D,
-    true,
-    decimalPrecision,
-  );
+  return formatNumberToUnit(lengthInUnit3, unitDimension, nmFactorToUnit3D, true, decimalPrecision);
 }
 
 const byteFactorToUnit = new Map([

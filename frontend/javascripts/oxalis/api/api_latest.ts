@@ -77,7 +77,7 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getHalfViewportExtentsInDatasourceUnitFromState } from "oxalis/model/sagas/saga_selectors";
+import { getHalfViewportExtentsInUnitFromState } from "oxalis/model/sagas/saga_selectors";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -1064,7 +1064,7 @@ class TracingApi {
 
     const datasetScaleFactor = state.dataset.dataSource.scale.factor;
     // Pre-allocate vectors
-    let lengthInDatasourceUnitAcc = 0;
+    let lengthInUnitAcc = 0;
     let lengthInVxAcc = 0;
 
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
@@ -1072,15 +1072,11 @@ class TracingApi {
     for (const edge of tree.edges.all()) {
       const sourceNode = tree.nodes.get(edge.source);
       const targetNode = tree.nodes.get(edge.target);
-      lengthInDatasourceUnitAcc += V3.scaledDist(
-        getPos(sourceNode),
-        getPos(targetNode),
-        datasetScaleFactor,
-      );
+      lengthInUnitAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), datasetScaleFactor);
       lengthInVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
     }
-    console.log("measureTreeLength", lengthInDatasourceUnitAcc, lengthInVxAcc);
-    return [lengthInDatasourceUnitAcc, lengthInVxAcc];
+    console.log("measureTreeLength", lengthInUnitAcc, lengthInVxAcc);
+    return [lengthInUnitAcc, lengthInVxAcc];
   }
 
   /**
@@ -1088,16 +1084,16 @@ class TracingApi {
    */
   measureAllTrees(): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    let totalLengthInDatasourceUnit = 0;
+    let totalLengthInUnit = 0;
     let totalLengthInVx = 0;
 
     _.values(skeletonTracing.trees).forEach((currentTree) => {
-      const [lengthInDatasourceUnit, lengthInVx] = this.measureTreeLength(currentTree.treeId);
-      totalLengthInDatasourceUnit += lengthInDatasourceUnit;
+      const [lengthInUnit, lengthInVx] = this.measureTreeLength(currentTree.treeId);
+      totalLengthInUnit += lengthInUnit;
       totalLengthInVx += lengthInVx;
     });
 
-    return [totalLengthInDatasourceUnit, totalLengthInVx];
+    return [totalLengthInUnit, totalLengthInVx];
   }
 
   /**
@@ -1108,7 +1104,7 @@ class TracingApi {
     sourceNodeId: number,
     targetNodeId: number,
   ): {
-    lengthInDatasourceUnit: number;
+    lengthInUnit: number;
     lengthInVx: number;
     shortestPath: number[];
   } {
@@ -1187,7 +1183,7 @@ class TracingApi {
     }
 
     return {
-      lengthInDatasourceUnit: distanceMap[targetNodeId],
+      lengthInUnit: distanceMap[targetNodeId],
       lengthInVx: distanceMapVx[targetNodeId],
       shortestPath,
     };
@@ -1197,11 +1193,11 @@ class TracingApi {
    * Returns the length of the shortest path between two nodes in nanometer and in voxels.
    */
   measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): [number, number] {
-    const { lengthInDatasourceUnit, lengthInVx } = this.findShortestPathBetweenNodes(
+    const { lengthInUnit: lengthInUnit, lengthInVx } = this.findShortestPathBetweenNodes(
       sourceNodeId,
       targetNodeId,
     );
-    return [lengthInDatasourceUnit, lengthInVx];
+    return [lengthInUnit, lengthInVx];
   }
 
   /**
@@ -1766,12 +1762,9 @@ class DataApi {
       viewport,
     );
     // This s
-    const [halfViewportExtentU, halfViewportExtentV] =
-      getHalfViewportExtentsInDatasourceUnitFromState(state, viewport);
-    console.log(
-      "getHalfViewportExtentsInDatasourceUnitFromState",
-      halfViewportExtentU,
-      halfViewportExtentV,
+    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsInUnitFromState(
+      state,
+      viewport,
     );
     const layer = getLayerByName(state.dataset, layerName);
     const resolutionInfo = getResolutionInfo(layer.resolutions);

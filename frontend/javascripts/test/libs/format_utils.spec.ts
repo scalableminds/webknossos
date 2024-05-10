@@ -262,3 +262,22 @@ test("Format number to volume", (t) => {
 
   t.deepEqual(`0.01${ThinSpace}nm³`, formatNumberToVolume(1e-2, LengthUnit.nm, 2));
 });
+
+test("Test uncommon number formats", (t) => {
+  t.deepEqual(`1.0${ThinSpace}m`, formatNumberToLength(10, LengthUnit.dm, 2));
+  t.deepEqual(`0.55${ThinSpace}m`, formatNumberToLength(5.5, LengthUnit.dm, 2));
+  t.deepEqual(`1.0${ThinSpace}km`, formatNumberToLength(10, LengthUnit.hm, 2));
+  t.deepEqual(`0.55${ThinSpace}km`, formatNumberToLength(5.5, LengthUnit.hm, 2));
+  t.deepEqual(`1.0${ThinSpace}nm`, formatNumberToLength(10, LengthUnit.Å, 2));
+  t.deepEqual(`0.55${ThinSpace}nm`, formatNumberToLength(5.5, LengthUnit.Å, 2));
+  t.deepEqual(`0.25${ThinSpace}m`, formatNumberToLength(10, LengthUnit.in, 2));
+  t.deepEqual(`0.13${ThinSpace}m`, formatNumberToLength(5.5, LengthUnit.in, 2));
+  t.deepEqual(`3,05${ThinSpace}m`, formatNumberToLength(10, LengthUnit.ft, 2));
+  t.deepEqual(`1.68${ThinSpace}m`, formatNumberToLength(5.5, LengthUnit.ft, 2));
+  t.deepEqual(`9.14${ThinSpace}m`, formatNumberToLength(10, LengthUnit.yd, 2));
+  t.deepEqual(`5.03${ThinSpace}m`, formatNumberToLength(5.5, LengthUnit.yd, 2));
+  t.deepEqual(`16.09${ThinSpace}m`, formatNumberToLength(10, LengthUnit.mi, 2));
+  t.deepEqual(`8.85139${ThinSpace}km`, formatNumberToLength(5.5, LengthUnit.mi, 2));
+  t.deepEqual(`308.57${ThinSpace}Pm`, formatNumberToLength(10, LengthUnit.pc, 2));
+  t.deepEqual(`169.72${ThinSpace}Pm`, formatNumberToLength(5.5, LengthUnit.pc, 2));
+});

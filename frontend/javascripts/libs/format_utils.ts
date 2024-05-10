@@ -84,8 +84,8 @@ const uncommonLengthUnitsToCommon: Map<LengthUnit, LengthUnit> = new Map([
   [LengthUnit.hm, LengthUnit.m],
   [LengthUnit.Å, LengthUnit.pm],
   [LengthUnit.in, LengthUnit.mm],
-  [LengthUnit.ft, LengthUnit.dm],
-  [LengthUnit.yd, LengthUnit.dm],
+  [LengthUnit.ft, LengthUnit.mm],
+  [LengthUnit.yd, LengthUnit.mm],
   [LengthUnit.mi, LengthUnit.km],
   [LengthUnit.pc, LengthUnit.Pm],
 ]);

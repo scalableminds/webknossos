@@ -807,17 +807,12 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
     const splitMapping = new Map(
       Array.from(activeMapping.mapping as NumberLikeMap, ([segmentId, agglomerateId]) => {
-        if (
-          mappingAfterSplit.has(
-            // @ts-ignore has() is expected to accept the type that segmentId has
-            segmentId,
-          )
-        ) {
-          return [
-            segmentId,
-            // @ts-ignore get() is expected to accept the type that segmentId has
-            mappingAfterSplit.get(segmentId),
-          ];
+        const mappedId = mappingAfterSplit.get(
+          // @ts-ignore get() is expected to accept the type that segmentId has
+          segmentId,
+        );
+        if (mappedId != null) {
+          return [segmentId, mappedId];
         }
         return [segmentId, agglomerateId];
       }),

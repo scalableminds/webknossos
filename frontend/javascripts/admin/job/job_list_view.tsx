@@ -297,7 +297,8 @@ function JobListView() {
       job.type === APIJobType.INFER_NUCLEI ||
       job.type === APIJobType.INFER_NEURONS ||
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
-      job.type === APIJobType.COMPUTE_MESH_FILE
+      job.type === APIJobType.COMPUTE_MESH_FILE ||
+      job.type === APIJobType.INFER_WITH_MODEL
     ) {
       return (
         <span>
@@ -309,7 +310,7 @@ function JobListView() {
           )}
         </span>
       );
-    } else if (job.type === APIJobType.INFER_WITH_MODEL) {
+    } else if (job.type === APIJobType.TRAIN_MODEL) {
       return (
         <span>
           The model may now be selected from the &quot;AI Analysis&quot; button when viewing a

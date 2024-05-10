@@ -62,11 +62,11 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
     maxScaleBarWidthFactor,
   );
   const tooltip = [
-    formatNumberToLength(viewportWidthInDSUnit, datasetScaleUnit),
+    formatNumberToLength(viewportWidthInDSUnit, datasetScaleUnit, 1, true),
     ThinSpace,
     MultiplicationSymbol,
     ThinSpace,
-    formatNumberToLength(viewportHeightInDSUnit, datasetScaleUnit),
+    formatNumberToLength(viewportHeightInDSUnit, datasetScaleUnit, 1, true),
   ].join("");
   const collapseScalebar = viewportWidthInPixels < minWidthToFillScalebar;
   const limitScalebar = scaleBarWidthFactor === maxScaleBarWidthFactor;

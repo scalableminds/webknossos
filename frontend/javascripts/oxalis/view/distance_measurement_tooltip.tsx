@@ -86,7 +86,6 @@ export default function DistanceMeasurementTooltip() {
     valueInMetricUnit = formatNumberToLength(
       lineMeasurementGeometry.getDistance(datasetScale),
       datasetScale.unit,
-      1,
     );
   } else if (activeTool === AnnotationToolEnum.AREA_MEASUREMENT) {
     const { areaMeasurementGeometry } = getSceneController();
@@ -94,7 +93,6 @@ export default function DistanceMeasurementTooltip() {
     valueInMetricUnit = formatNumberToArea(
       areaMeasurementGeometry.getArea(datasetScale),
       datasetScale.unit,
-      1,
     );
   }
   const {

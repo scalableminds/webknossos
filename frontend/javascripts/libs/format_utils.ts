@@ -212,10 +212,16 @@ export function formatNumberToLength(
   length: number,
   unit: string,
   decimalPrecision: number = 1,
+  preferShorterDecimals: boolean = false,
 ): string {
   const unitDimension = { unit, dimension: 1 };
-  const s = formatNumberToUnit(length, unitDimension, nmFactorToUnit, true, decimalPrecision);
-  return s;
+  return formatNumberToUnit(
+    length,
+    unitDimension,
+    nmFactorToUnit,
+    preferShorterDecimals,
+    decimalPrecision,
+  );
 }
 
 export const nmFactorToUnit2D = new Map([
@@ -244,10 +250,16 @@ export function formatNumberToArea(
   lengthInUnit2: number,
   unit: string,
   decimalPrecision: number = 1,
+  preferShorterDecimals: boolean = false,
 ): string {
   const unitDimension = { unit, dimension: 2 };
-  console.log(nmFactorToUnit2D);
-  return formatNumberToUnit(lengthInUnit2, unitDimension, nmFactorToUnit2D, true, decimalPrecision);
+  return formatNumberToUnit(
+    lengthInUnit2,
+    unitDimension,
+    nmFactorToUnit2D,
+    preferShorterDecimals,
+    decimalPrecision,
+  );
 }
 
 export const nmFactorToUnit3D = new Map([
@@ -275,9 +287,16 @@ export function formatNumberToVolume(
   lengthInUnit3: number,
   unit: string,
   decimalPrecision: number = 1,
+  preferShorterDecimals: boolean = false,
 ): string {
   const unitDimension = { unit, dimension: 3 };
-  return formatNumberToUnit(lengthInUnit3, unitDimension, nmFactorToUnit3D, true, decimalPrecision);
+  return formatNumberToUnit(
+    lengthInUnit3,
+    unitDimension,
+    nmFactorToUnit3D,
+    preferShorterDecimals,
+    decimalPrecision,
+  );
 }
 
 const byteFactorToUnit = new Map([
@@ -341,13 +360,17 @@ export function findClosestToUnitFactorAndUnit(
   let closestUnit = sortedFactorsAndUnits[0][1];
 
   const minimumToRoundUpToOne = 0.95;
-
   for (const [factor, unit] of sortedFactorsAndUnits) {
     const currentConversionFactor = factor / currentFactorFromSmallestCommonUnit;
+    const convertedNumber = number / currentConversionFactor;
+    const isEqualInUnit =
+      Math.round(convertedNumber * 10 ** decimalPrecision) / 10 ** decimalPrecision ===
+      convertedNumber;
     if (
+      isEqualInUnit ||
       number >=
-      currentConversionFactor *
-        (preferShorterDecimals ? minimumToRoundUpToOne * 10 ** -decimalPrecision : 1)
+        currentConversionFactor *
+          (preferShorterDecimals ? minimumToRoundUpToOne * 10 ** -decimalPrecision : 1)
     ) {
       closestConversionFactor = currentConversionFactor;
       closestUnit = unit;
@@ -473,3 +496,7 @@ export function formatBytes(nbytes: number) {
 export function formatNumber(num: number): string {
   return new Intl.NumberFormat("en-US").format(num);
 }
+
+(() => {
+  formatNumberToVolume(1e-1, LengthUnit.nm);
+})();

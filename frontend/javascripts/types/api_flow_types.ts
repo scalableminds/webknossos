@@ -998,7 +998,6 @@ export type VoxelyticsWorkflowListingRun = (
   hostname: string;
   voxelyticsVersion: string;
   taskCounts: TaskCounts;
-  wkUser: string;
   userFirstName: string;
   userLastName: string;
 };

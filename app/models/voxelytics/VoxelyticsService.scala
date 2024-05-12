@@ -86,8 +86,7 @@ case class WorkflowListingRunEntry(id: ObjectId,
                                    endTime: Option[Instant],
                                    taskCounts: TaskCounts,
                                    userFirstName: String,
-                                   userLastName: String,
-                                   wkUser: String)
+                                   userLastName: String)
 
 object WorkflowListingRunEntry {
   implicit val jsonFormat: OFormat[WorkflowListingRunEntry] = Json.format[WorkflowListingRunEntry]

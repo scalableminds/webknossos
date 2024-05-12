@@ -85,6 +85,8 @@ case class WorkflowListingRunEntry(id: ObjectId,
                                    beginTime: Option[Instant],
                                    endTime: Option[Instant],
                                    taskCounts: TaskCounts,
+                                   userFirstName: String,
+                                   userLastName: String,
                                    wkUser: String)
 
 object WorkflowListingRunEntry {

@@ -72,6 +72,8 @@ export default function WorkflowListView() {
         id: "", // used to distinguish between workflows and runs when rendering
         username: uniqueify(workflow.runs.map((run) => run.username)).join(", "),
         hostname: uniqueify(workflow.runs.map((run) => run.hostname)).join(", "),
+        userFirstName: uniqueify(workflow.runs.map((run) => run.userFirstName)).join(", "),
+        userLastName: uniqueify(workflow.runs.map((run) => run.userLastName)).join(", "),
         wkUserId: uniqueify(workflow.runs.map((run) => run.wkUser)).join(", "),
         voxelyticsVersion: uniqueify(workflow.runs.map((run) => run.voxelyticsVersion)).join(", "),
         taskCounts: workflow.taskCounts,
@@ -116,7 +118,7 @@ export default function WorkflowListView() {
           percent={Math.round(
             ((run.taskCounts.complete + run.taskCounts.cancelled + run.taskCounts.failed) /
               run.taskCounts.total) *
-              100,
+            100,
           )}
           status={runStateToStatus(run.state)}
           success={{ percent: Math.round((run.taskCounts.complete / run.taskCounts.total) * 100) }}
@@ -157,6 +159,16 @@ export default function WorkflowListView() {
             title: "Webknossos User",
             dataIndex: "wkUserId",
             key: "wkUser",
+          },
+          {
+            title: "First Name",
+            dataIndex: "userFirstName",
+            key: "userFirstName",
+          },
+          {
+            title: "Last Name",
+            dataIndex: "userLastName",
+            key: "userLastName",
           },
           {
             title: "Host User",

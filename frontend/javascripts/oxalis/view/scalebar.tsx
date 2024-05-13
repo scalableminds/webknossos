@@ -104,7 +104,9 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
             borderRight: "1px solid",
           }}
         >
-          {collapseScalebar ? "i" : formatNumberToLength(scalebarWidthInDSUnit, datasetScaleUnit)}
+          {collapseScalebar
+            ? "i"
+            : formatNumberToLength(scalebarWidthInDSUnit, datasetScaleUnit, 1, true)}
         </div>
       </div>
     </Tooltip>

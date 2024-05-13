@@ -1151,7 +1151,6 @@ class TracingApi {
 
     const state = Store.getState();
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
-
     while (priorityQueue.length > 0) {
       const [nextNodeId, distance] = priorityQueue.dequeue();
       const nextNodePosition = getPos(sourceTree.nodes.get(nextNodeId));
@@ -1167,12 +1166,11 @@ class TracingApi {
           distanceMap[neighbourNodeId] = neighbourDistance;
           parentMap[neighbourNodeId] = source === nextNodeId ? source : target;
           const neighbourDistanceVx = V3.length(V3.sub(nextNodePosition, neighbourPosition));
-          distanceMapVx[neighbourNodeId] = neighbourDistanceVx;
+          distanceMapVx[neighbourNodeId] = neighbourDistanceVx + distanceMapVx[nextNodeId];
           priorityQueue.queue([neighbourNodeId, neighbourDistance]);
         }
       }
     }
-
     // Retrace the shortest path from the target node.
     let nodeId = targetNodeId;
     const shortestPath = [targetNodeId];
@@ -1192,7 +1190,7 @@ class TracingApi {
    * Returns the length of the shortest path between two nodes in nanometer and in voxels.
    */
   measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): [number, number] {
-    const { lengthInUnit: lengthInUnit, lengthInVx } = this.findShortestPathBetweenNodes(
+    const { lengthInUnit, lengthInVx } = this.findShortestPathBetweenNodes(
       sourceNodeId,
       targetNodeId,
     );

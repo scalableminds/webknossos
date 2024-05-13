@@ -1166,8 +1166,7 @@ class TracingApi {
           distanceMap[neighbourNodeId] = neighbourDistance;
           parentMap[neighbourNodeId] = source === nextNodeId ? source : target;
           const neighbourDistanceVx = V3.length(V3.sub(nextNodePosition, neighbourPosition));
-          const currentNeighbourDistanceInVx = distanceMapVx[nextNodeId] || 0;
-          distanceMapVx[neighbourNodeId] = neighbourDistanceVx + currentNeighbourDistanceInVx;
+          distanceMapVx[neighbourNodeId] = neighbourDistanceVx + distanceMapVx[nextNodeId];
           priorityQueue.queue([neighbourNodeId, neighbourDistance]);
         }
       }

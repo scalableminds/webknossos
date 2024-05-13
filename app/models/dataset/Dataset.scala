@@ -415,7 +415,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
-                   FROM$existingCollectionName
+                   FROM $existingCollectionName
                    WHERE _publication = $publicationId
                    AND $accessQuery""".as[DatasetsRow]).map(_.toList)
       parsed <- parseAll(r)

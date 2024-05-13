@@ -1,0 +1,8 @@
+[codespell]
+# Ref: https://github.com/codespell-project/codespell#using-a-config-file
+skip = .git*,*.svg,*.lock,.codespellrc
+check-hidden = true
+# some names and camelCased variables etc
+ignore-regex = \b(Manuel|[a-z]+[A-Z][a-zA-Z]*|H Mattern|Nat Commun|couldn&apos;t)\b
+# Full of unfortunate choices for short names
+ignore-words-list = lod,bais,iis,nd,ue,inbetween

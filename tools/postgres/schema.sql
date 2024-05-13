@@ -100,6 +100,7 @@ CREATE TABLE webknossos.publications(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TYPE webknossos.LENGTH_UNIT AS ENUM ('ym', 'zm', 'am', 'fm', 'pm', 'nm', 'µm', 'mm', 'cm', 'dm', 'm', 'hm', 'km', 'Mm', 'Gm', 'Tm', 'Pm', 'Em', 'Zm', 'Ym', 'Å', 'in', 'ft', 'yd', 'mi', 'pc');
 CREATE TABLE webknossos.datasets(
   _id CHAR(24) PRIMARY KEY,
   _dataStore VARCHAR(256) NOT NULL,
@@ -115,7 +116,8 @@ CREATE TABLE webknossos.datasets(
   isPublic BOOLEAN NOT NULL DEFAULT false,
   isUsable BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL,
-  scale webknossos.VECTOR3,
+  voxelSizeValue webknossos.VECTOR3,
+  voxelSizeUnit webknossos.LENGTH_UNIT,
   status VARCHAR(1024) NOT NULL DEFAULT '',
   sharingToken CHAR(256),
   logoUrl VARCHAR(2048),

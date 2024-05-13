@@ -51,7 +51,6 @@ class Plane {
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
     const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
-    console.log("Plane", "constructor", "baseVoxelFactors", baseVoxelFactors);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.baseScaleVector = new THREE.Vector3(...scaleArray);
     this.createMeshes();

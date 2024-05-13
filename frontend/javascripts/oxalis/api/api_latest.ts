@@ -1075,7 +1075,6 @@ class TracingApi {
       lengthInUnitAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), datasetScaleFactor);
       lengthInVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
     }
-    console.log("measureTreeLength", lengthInUnitAcc, lengthInVxAcc);
     return [lengthInUnitAcc, lengthInVxAcc];
   }
 

@@ -181,7 +181,6 @@ export class QuickSelectGeometry {
     this.rectangle = new THREE.Mesh(geometry, material);
 
     const baseWidth = getBaseVoxelInUnit(Store.getState().dataset.dataSource.scale.factor);
-    console.log("QuickSelectGeometry -> baseWidth", baseWidth);
     const centerGeometry = new THREE.PlaneGeometry(baseWidth, baseWidth);
     const centerMaterial = new THREE.MeshBasicMaterial({
       color: this.centerMarkerColor,
@@ -237,7 +236,6 @@ export class QuickSelectGeometry {
         ...Dimensions.transDim(scaleFactor.map((el) => 1 / el) as Vector3, activeViewport),
       ),
     );
-    console.log("QuickSelectGeometry rotateToViewport -> scaleFactor", scaleFactor);
   }
 
   setColor(color: THREE.Color) {

@@ -101,10 +101,6 @@ class CameraController extends React.PureComponent<Props> {
         );
         api.tracing.rotate3DViewToDiagonal(false);
         const tdData = Store.getState().viewModeData.plane.tdCamera;
-        console.log(
-          "Setting 3d camera based on the following values -------------------------------------",
-          tdData,
-        );
         this.updateTDCamera(tdData);
       }, 0);
     });
@@ -119,7 +115,6 @@ class CameraController extends React.PureComponent<Props> {
     const state = Store.getState();
     const { clippingDistance } = state.userConfiguration;
     const scaleFactor = getBaseVoxelInUnit(state.dataset.dataSource.scale.factor);
-    console.log("CameraController", "updateCamViewport", "scaleFactor", scaleFactor);
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const [width, height] = getPlaneExtentInVoxelFromStore(
@@ -227,7 +222,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
   const { tdCamera } = state.viewModeData.plane;
   const flycamPos = voxelToUnit(dataset.dataSource.scale, getPosition(state.flycam));
   const datasetExtent = getDatasetExtentInUnit(dataset);
-  console.log("CameraController", "rotate3DViewTo", "datasetExtent", datasetExtent);
   // This distance ensures that the 3D camera is so far "in the back" that all elements in the scene
   // are in front of it and thus visible.
   const clippingOffsetFactor = Math.max(
@@ -296,7 +290,6 @@ export function rotate3DViewTo(id: OrthoView, animate: boolean = true): void {
     Store.getState().dataset.dataSource.scale,
     getPosition(Store.getState().flycam),
   ) || [0, 0, 0];
-  console.log("CameraController", "rotate3DViewTo", "currentFlycamPos", currentFlycamPos);
   // Compute current and target orientation as quaternion. When tweening between
   // these orientations, we compute the new camera position by keeping the distance
   // (radius) to currentFlycamPos constant. Consequently, the camera moves on the

@@ -235,14 +235,6 @@ class TDController extends React.PureComponent<Props> {
           hitPosition.toArray() as Vector3,
           this.props.scale.factor,
         );
-        console.log(
-          "TDController",
-          "leftclick",
-          "unscaledPosition",
-          unscaledPosition,
-          "scale factor",
-          this.props.scale.factor,
-        );
 
         if (event.shiftKey) {
           Store.dispatch(setPositionAction(unscaledPosition));
@@ -357,7 +349,6 @@ class TDController extends React.PureComponent<Props> {
       ? setTDCameraAction
       : setTDCameraWithoutTimeTrackingAction;
     // Write threeJS camera into store
-    console.log("TDController", "onTDCameraChanged", "tdCamera", tdCamera);
     Store.dispatch(setCameraAction(threeCameraToCameraData(tdCamera)));
   };
 

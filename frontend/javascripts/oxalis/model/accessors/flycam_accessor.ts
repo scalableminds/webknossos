@@ -141,13 +141,6 @@ export function _getMaximumZoomForAllResolutions(
   // because the entire scene is scaled with that.
   const maxSupportedZoomValue =
     2 ** MAX_SUPPORTED_MAGNIFICATION_COUNT * Math.max(...datasetScaleFactor);
-  console.log(
-    "_getMaximumZoomForAllResolutions",
-    "maxSupportedZoomValue",
-    maxSupportedZoomValue,
-    "datasetScaleFactor",
-    datasetScaleFactor,
-  );
   // Since the viewports can be quite large, it can happen that even a zoom value of 1 is not feasible.
   // That's why we start the search with a smaller value than 1. We use the ZOOM_STEP_INTERVAL factor
   // to ensure that the calculated thresholds correspond to the normal zoom behavior.

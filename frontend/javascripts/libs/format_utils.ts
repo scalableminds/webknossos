@@ -142,7 +142,7 @@ export function formatScale(scale: DatasetScale | null | undefined, roundTo: num
     const scaleFactor = scale.factor;
     const smallestScaleFactor = Math.min(...scaleFactor);
     const unitDimension = { unit: scale.unit, dimension: 1 };
-    const [conversionFactor, newUnit] = findClosestToUnitFactorAndUnit(
+    const [conversionFactor, newUnit] = findBestUnitForFormatting(
       smallestScaleFactor,
       unitDimension,
       nmFactorToUnit,
@@ -160,20 +160,25 @@ export function formatScale(scale: DatasetScale | null | undefined, roundTo: num
   return "";
 }
 
-function formatNumberToUnit(
+function toOptionalFixed(num: number, decimalPrecision: number): string {
+  const roundedValue = Number.parseFloat(num.toFixed(decimalPrecision));
+  const isInt = roundedValue % 1 === 0;
+  return isInt ? roundedValue.toFixed(Math.min(decimalPrecision, 1)) : roundedValue.toString();
+}
+
+function formatNumberInUnit(
   number: number,
   unitDimension: UnitDimension,
   unitMap: Map<number, string>,
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
 ): string {
-  // TODO: Properly rename formatNumberToUnit and findClosestToUnitFactorAndUnit to better match their purpose.
   let unit = unitDimension.unit;
   let valueInUnit = number;
   if (number === 0) {
     unit = adjustUnitToDimension(unit, unitDimension.dimension);
   } else {
-    const [conversionFactor, newUnit] = findClosestToUnitFactorAndUnit(
+    const [conversionFactor, newUnit] = findBestUnitForFormatting(
       number,
       unitDimension,
       unitMap,
@@ -184,7 +189,7 @@ function formatNumberToUnit(
     valueInUnit = number / conversionFactor;
     unit = newUnit;
   }
-  return `${valueInUnit.toFixed(decimalPrecision)}${ThinSpace}${unit}`;
+  return `${toOptionalFixed(valueInUnit, decimalPrecision)}${ThinSpace}${unit}`;
 }
 
 export const nmFactorToUnit = new Map([
@@ -215,7 +220,7 @@ export function formatNumberToLength(
   preferShorterDecimals: boolean = false,
 ): string {
   const unitDimension = { unit, dimension: 1 };
-  return formatNumberToUnit(
+  return formatNumberInUnit(
     length,
     unitDimension,
     nmFactorToUnit,
@@ -253,7 +258,7 @@ export function formatNumberToArea(
   preferShorterDecimals: boolean = false,
 ): string {
   const unitDimension = { unit, dimension: 2 };
-  return formatNumberToUnit(
+  return formatNumberInUnit(
     lengthInUnit2,
     unitDimension,
     nmFactorToUnit2D,
@@ -290,7 +295,7 @@ export function formatNumberToVolume(
   preferShorterDecimals: boolean = false,
 ): string {
   const unitDimension = { unit, dimension: 3 };
-  return formatNumberToUnit(
+  return formatNumberInUnit(
     lengthInUnit3,
     unitDimension,
     nmFactorToUnit3D,
@@ -312,7 +317,7 @@ export function formatCountToDataAmountUnit(
   decimalPrecision: number = 1,
 ): string {
   const unitDimension = { unit: "B", dimension: 1 };
-  return formatNumberToUnit(
+  return formatNumberInUnit(
     count,
     unitDimension,
     byteFactorToUnit,
@@ -333,7 +338,7 @@ function adjustUnitToDimension(unit: string, dimension: number): string {
 }
 
 // TODO: This needs to potentially be adjusted to handle multidimensional units as the ensurance of uncommon length units only supports 1D units.
-export function findClosestToUnitFactorAndUnit(
+export function findBestUnitForFormatting(
   number: number,
   { unit, dimension }: UnitDimension,
   unitMap: Map<number, string>,
@@ -362,15 +367,10 @@ export function findClosestToUnitFactorAndUnit(
   const minimumToRoundUpToOne = 0.95;
   for (const [factor, unit] of sortedFactorsAndUnits) {
     const currentConversionFactor = factor / currentFactorFromSmallestCommonUnit;
-    const convertedNumber = number / currentConversionFactor;
-    const isEqualInUnit =
-      Math.round(convertedNumber * 10 ** decimalPrecision) / 10 ** decimalPrecision ===
-      convertedNumber;
     if (
-      isEqualInUnit ||
       number >=
-        currentConversionFactor *
-          (preferShorterDecimals ? minimumToRoundUpToOne * 10 ** -decimalPrecision : 1)
+      currentConversionFactor *
+        (preferShorterDecimals ? minimumToRoundUpToOne * 10 ** -decimalPrecision : 1)
     ) {
       closestConversionFactor = currentConversionFactor;
       closestUnit = unit;

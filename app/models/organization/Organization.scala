@@ -69,32 +69,32 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     }
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
-    q"""((_id in (select _organization from webknossos.users_ where _multiUser = (select _multiUser from webknossos.users_ where _id = $requestingUserId)))
-      or 'true' in (select isSuperUser from webknossos.multiUsers_ where _id in (select _multiUser from webknossos.users_ where _id = $requestingUserId)))"""
+    q"""(_id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser = (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId)))
+      OR TRUE in (SELECT isSuperUser FROM webknossos.multiUsers_ WHERE _id IN (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId))"""
 
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = sharingToken match {
-    case Some(_) => q"${true}"
-    case _       => q"${false}"
+    case Some(_) => q"TRUE"
+    case _       => q"FALSE"
   }
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where $accessQuery".as[OrganizationsRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[OrganizationsRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Organization] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where name = $name and $accessQuery".as[OrganizationsRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE name = $name AND $accessQuery".as[OrganizationsRow])
       parsed <- parseFirst(r, name)
     } yield parsed
 
   def findIdByName(name: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select _id from $existingCollectionName where name = $name and $accessQuery".as[ObjectId])
+      r <- run(q"SELECT _id FROM $existingCollectionName WHERE name = $name AND $accessQuery".as[ObjectId])
       parsed <- r.headOption
     } yield parsed
 
@@ -114,18 +114,18 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def findOrganizationTeamId(organizationId: ObjectId): Fox[ObjectId] =
     for {
-      rList <- run(q"select _id from webknossos.organizationTeams where _organization = $organizationId".as[String])
+      rList <- run(q"SELECT _id FROM webknossos.organizationTeams WHERE _organization = $organizationId".as[String])
       r <- rList.headOption.toFox
       parsed <- ObjectId.fromString(r)
     } yield parsed
 
   def findOrganizationNameForAnnotation(annotationId: ObjectId): Fox[String] =
     for {
-      rList <- run(q"""select o.name
-              from webknossos.annotations_ a
-              join webknossos.datasets_ d on a._dataset = d._id
-              join webknossos.organizations_ o on d._organization = o._id
-              where a._id = $annotationId""".as[String])
+      rList <- run(q"""SELECT o.name
+                       FROM webknossos.annotations_ a
+                       JOIN webknossos.datasets_ d ON a._dataset = d._id
+                       JOIN webknossos.organizations_ o ON d._organization = o._id
+                       WHERE a._id = $annotationId""".as[String])
       r <- rList.headOption.toFox
     } yield r
 
@@ -133,9 +133,11 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
-      _ <- run(q"""update webknossos.organizations
-                      set displayName = $displayName, newUserMailingList = $newUserMailingList
-                      where _id = $organizationId""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.organizations
+                   SET
+                     displayName = $displayName,
+                     newUserMailingList = $newUserMailingList
+                   WHERE _id = $organizationId""".asUpdate)
     } yield ()
 
   def deleteUsedStorage(organizationId: ObjectId): Fox[Unit] =
@@ -212,11 +214,10 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     for {
       _ <- assertUpdateAccess(organizationId)
       _ <- run(q"""UPDATE webknossos.organizations
-                      SET
-                        lastTermsOfServiceAcceptanceTime = $timestamp,
-                        lastTermsOfServiceAcceptanceVersion = $version
-                      WHERE _id = $organizationId
-                   """.asUpdate)
+                   SET
+                     lastTermsOfServiceAcceptanceTime = $timestamp,
+                     lastTermsOfServiceAcceptanceVersion = $version
+                   WHERE _id = $organizationId""".asUpdate)
     } yield ()
 
 }

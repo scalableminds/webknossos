@@ -111,6 +111,7 @@ const Toast = {
     if (!this.notificationAPI) {
       return;
     }
+    const localNotificationAPI = this.notificationAPI;
     const message = this.buildContentWithDetails(rawMessage, details);
     const timeout = config.timeout != null ? config.timeout : 6000;
     const key = config.key || (typeof message === "string" ? message : undefined);
@@ -171,8 +172,8 @@ const Toast = {
       };
       this.closePendingToastsEarlyMap[key] = closeToastEarly;
     }
-    // Show the toast.
-    this.notificationAPI[type](toastConfig);
+    // Show the toast deferred by some timeout as instantly reopening a toast leads to a flickering effect.
+    setTimeout(() => localNotificationAPI[type](toastConfig), 100);
   },
 
   info(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {

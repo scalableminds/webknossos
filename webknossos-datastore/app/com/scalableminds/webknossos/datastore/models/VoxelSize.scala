@@ -8,7 +8,7 @@ import play.api.libs.json.{Format, JsResult, JsValue, Json}
 case class VoxelSize(factor: Vec3Double, unit: LengthUnit)
 
 object VoxelSize {
-  private val DEFAULT_UNIT: LengthUnit = LengthUnit.µm // TODO: final default should be nm
+  private val DEFAULT_UNIT: LengthUnit = LengthUnit.nm
 
   def fromFactorWithDefaultUnit(factor: Vec3Double): VoxelSize = VoxelSize(factor, DEFAULT_UNIT)
 
@@ -20,5 +20,8 @@ object VoxelSize {
 
     def writes(voxelSize: VoxelSize): JsValue = Json.writes[VoxelSize].writes(voxelSize)
   }
+
+  def fromFactorAndUnitWithDefault(factor: Vec3Double, unit: Option[LengthUnit]): VoxelSize =
+    unit.map(u => VoxelSize(factor, u)).getOrElse(fromFactorWithDefaultUnit(factor))
 
 }

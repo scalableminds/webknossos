@@ -386,7 +386,7 @@ class AnnotationIOController @Inject()(
           "temp",
           fetchedAnnotationLayers,
           Some(annotation),
-          dataset.scale,
+          dataset.voxelSize,
           None,
           organizationName,
           conf.Http.uri,
@@ -414,7 +414,7 @@ class AnnotationIOController @Inject()(
                                                 volumeVersion,
                                                 skipVolumeData,
                                                 volumeDataZipFormat,
-                                                dataset.scale)
+                                                dataset.voxelSize)
         } ?~> "annotation.download.fetchVolumeLayer.failed"
         fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
           skeletonAnnotationLayer =>
@@ -426,7 +426,7 @@ class AnnotationIOController @Inject()(
           name,
           fetchedSkeletonLayers ::: fetchedVolumeLayers,
           Some(annotation),
-          dataset.scale,
+          dataset.voxelSize,
           None,
           organizationName,
           conf.Http.uri,

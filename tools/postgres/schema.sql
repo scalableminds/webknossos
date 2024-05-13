@@ -116,7 +116,7 @@ CREATE TABLE webknossos.datasets(
   isPublic BOOLEAN NOT NULL DEFAULT false,
   isUsable BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL,
-  voxelSizeValue webknossos.VECTOR3,
+  voxelSizeFactor webknossos.VECTOR3,
   voxelSizeUnit webknossos.LENGTH_UNIT,
   status VARCHAR(1024) NOT NULL DEFAULT '',
   sharingToken CHAR(256),

@@ -213,7 +213,7 @@ class WKRemoteTracingStoreClient(
           .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
           .addQueryStringOptional("version", version.map(_.toString))
           .addQueryStringOptional("voxelSize", voxelSize.map(_.factor.toUriLiteral))
-          .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit))
+          .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
           .getWithBytesResponse
       }
       fetchedAnnotationLayer <- FetchedAnnotationLayer.fromAnnotationLayer(annotationLayer, Right(tracing), data)
@@ -231,7 +231,7 @@ class WKRemoteTracingStoreClient(
         .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
         .addQueryStringOptional("version", version.map(_.toString))
         .addQueryStringOptional("voxelSize", voxelSize.map(_.factor.toUriLiteral))
-        .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit))
+        .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
         .getWithBytesResponse
     } yield data
   }

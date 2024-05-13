@@ -326,7 +326,7 @@ class AnnotationService @Inject()(
                                                 None,
                                                 skipVolumeData = true,
                                                 volumeDataZipFormat = VolumeDataZipFormat.wkw,
-                                                dataset.scale)
+                                                dataset.voxelSize)
         } yield Some(oldPrecedenceLayerFetched)
 
     def extractPrecedenceProperties(oldPrecedenceLayer: FetchedAnnotationLayer): RedundantTracingProperties =
@@ -759,7 +759,7 @@ class AnnotationService @Inject()(
               .getVolumeData(tracingId,
                              version = None,
                              volumeDataZipFormat = volumeDataZipFormat,
-                             voxelSize = dataset.scale)
+                             voxelSize = dataset.voxelSize)
               .map(Some(_))
         }
       } yield tracingDataObjects
@@ -767,7 +767,7 @@ class AnnotationService @Inject()(
     def getDatasetScale(datasetId: ObjectId) =
       for {
         dataset <- datasetDAO.findOne(datasetId)
-      } yield dataset.scale
+      } yield dataset.voxelSize
 
     val annotationsGrouped: Map[ObjectId, List[Annotation]] = annotations.groupBy(_._dataset)
     val tracingsGrouped = annotationsGrouped.map {

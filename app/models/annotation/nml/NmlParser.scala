@@ -2,6 +2,7 @@ package models.annotation.nml
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
+import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
@@ -68,6 +69,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         organizationName = if (overwritingDatasetName.isDefined) None
         else parseOrganizationName(parameters \ "experiment")
         remoteDataStoreClientOpt = getRemoteDataStoreClient(datasetName, organizationName.getOrElse(""))
+        _ <- bool2Box(volumes.length == volumes.map(_.name).distinct.length) ?~ Messages(
+          "nml.duplicateVolumeLayerNames")
         canHaveSegmentIndexBools <- Fox
           .combined(
             volumes

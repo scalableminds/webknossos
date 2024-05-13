@@ -105,7 +105,7 @@ def parseObjFile(objFile, options):
                         normalsIndex.append(verts[2] - 1)
                 
             # HANDLE QUADS / POLYGONS
-            # triangulate face woth more than three vertices
+            # triangulate face worth more than three vertices
             else:
                 polygonFaces = []
                 polygonTextures = []
@@ -142,7 +142,7 @@ def parseObjFile(objFile, options):
     ''' Flatten all the list and loose the "vector" structure. This is necassary 
     in order to properly export everything.
     Btw, yes I know all of these 3 arrays have the same length and could therefore be 
-    interated over in one loop. :-)
+    iterated over in one loop. :-)
     ''' 
     vertices = [number for vertex in vertices for number in vertex]
     vertexNormals = [number for normal in vertexNormals for number in normal]

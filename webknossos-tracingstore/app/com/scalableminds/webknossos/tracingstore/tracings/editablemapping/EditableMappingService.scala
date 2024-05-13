@@ -263,10 +263,38 @@ class EditableMappingService @Inject()(
 
   def update(editableMappingId: String,
              updateActionGroup: EditableMappingUpdateActionGroup,
-             newVersion: Long): Fox[Unit] =
+             newVersion: Long,
+             remoteFallbackLayer: RemoteFallbackLayer,
+             userToken: Option[String]): Fox[Unit] =
     for {
       actionsWithTimestamp <- Fox.successful(updateActionGroup.actions.map(_.addTimestamp(updateActionGroup.timestamp)))
+      _ <- dryApplyUpdates(editableMappingId, newVersion, actionsWithTimestamp, remoteFallbackLayer, userToken) ?~> "editableMapping.dryUpdate.failed"
       _ <- tracingDataStore.editableMappingUpdates.put(editableMappingId, newVersion, actionsWithTimestamp)
+    } yield ()
+
+  private def dryApplyUpdates(editableMappingId: String,
+                              newVersion: Long,
+                              updates: List[EditableMappingUpdateAction],
+                              remoteFallbackLayer: RemoteFallbackLayer,
+                              userToken: Option[String]): Fox[Unit] =
+    for {
+      (previousInfo, previousVersion) <- getInfoAndActualVersion(editableMappingId,
+                                                                 None,
+                                                                 remoteFallbackLayer,
+                                                                 userToken)
+      updater = new EditableMappingUpdater(
+        editableMappingId,
+        previousInfo.baseMappingName,
+        previousVersion,
+        newVersion,
+        remoteFallbackLayer,
+        userToken,
+        remoteDatastoreClient,
+        this,
+        tracingDataStore,
+        relyOnAgglomerateIds = updates.length <= 1
+      )
+      updated <- updater.applyUpdatesAndSave(previousInfo, updates, dry = true) ?~> "editableMapping.update.failed"
     } yield ()
 
   def applyPendingUpdates(editableMappingId: String,

@@ -434,7 +434,12 @@ class VolumeTracingController @Inject()(
             urlOrHeaderToken(token, request)
           )
           _ <- remoteWebknossosClient.reportTracingUpdates(report)
-          _ <- editableMappingService.update(mappingName, updateGroup, updateGroup.version)
+          remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+          _ <- editableMappingService.update(mappingName,
+                                             updateGroup,
+                                             updateGroup.version,
+                                             remoteFallbackLayer,
+                                             urlOrHeaderToken(token, request))
         } yield Ok
       }
     }

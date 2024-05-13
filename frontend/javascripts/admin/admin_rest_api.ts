@@ -41,7 +41,8 @@ import type {
   APITaskType,
   APITeam,
   APITimeInterval,
-  APITimeTracking,
+  APITimeTrackingPerAnnotation,
+  APITimeTrackingSpan,
   APITracingStore,
   APIUpdateActionBatch,
   APIUser,
@@ -68,6 +69,7 @@ import type {
   AdditionalCoordinate,
   RenderAnimationOptions,
   LayerLink,
+  APITimeTrackingPerUser,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
@@ -1905,6 +1907,44 @@ export function getEditableMappingInfo(
   );
 }
 
+export function getAgglomerateIdForSegmentId(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentId: number,
+): Promise<number> {
+  return doWithToken(async (token) => {
+    const urlParams = new URLSearchParams({
+      token,
+      segmentId: `${segmentId}`,
+    });
+    const { agglomerateId } = await Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateIdForSegmentId?${urlParams.toString()}`,
+    );
+    return agglomerateId;
+  });
+}
+
+export function getPositionForSegmentInAgglomerate(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingName: string,
+  segmentId: number,
+): Promise<Vector3> {
+  return doWithToken(async (token) => {
+    const urlParams = new URLSearchParams({
+      token,
+      segmentId: `${segmentId}`,
+    });
+    const position = await Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${urlParams.toString()}`,
+    );
+    return position;
+  });
+}
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1962,24 +2002,42 @@ export function updateUserConfiguration(
   });
 }
 
-export async function getTimeTrackingForUser(
+export async function getTimeTrackingForUserSummedPerAnnotation(
   userId: string,
   startDate: dayjs.Dayjs,
   endDate: dayjs.Dayjs,
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
   projectIds?: string[] | null,
-): Promise<Array<APITimeTracking>> {
+): Promise<Array<APITimeTrackingPerAnnotation>> {
   const params = new URLSearchParams({
-    startDate: startDate.valueOf().toString(),
-    endDate: endDate.valueOf().toString(),
+    start: startDate.valueOf().toString(),
+    end: endDate.valueOf().toString(),
   });
   if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0)
     params.append("projectIds", projectIds.join(","));
-  const timeTrackingData = await Request.receiveJSON(`/api/time/user/${userId}?${params}`);
-  const { timelogs } = timeTrackingData;
-  assertResponseLimit(timelogs);
-  return timelogs;
+  const timeTrackingData = await Request.receiveJSON(
+    `/api/time/user/${userId}/summedByAnnotation?${params}`,
+  );
+  assertResponseLimit(timeTrackingData);
+  return timeTrackingData;
+}
+
+export async function getTimeTrackingForUserSpans(
+  userId: string,
+  startDate: number,
+  endDate: number,
+  annotationTypes: "Explorational" | "Task" | "Task,Explorational",
+  projectIds?: string[] | null,
+): Promise<Array<APITimeTrackingSpan>> {
+  const params = new URLSearchParams({
+    start: startDate.toString(),
+    end: endDate.toString(),
+  });
+  if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
+  if (projectIds != null && projectIds.length > 0)
+    params.append("projectIds", projectIds.join(","));
+  return await Request.receiveJSON(`/api/time/user/${userId}/spans?${params}`);
 }
 
 export async function getTimeEntries(
@@ -1988,7 +2046,7 @@ export async function getTimeEntries(
   teamIds: string[],
   selectedTypes: AnnotationTypeFilterEnum,
   projectIds: string[],
-) {
+): Promise<Array<APITimeTrackingPerUser>> {
   const params = new URLSearchParams({
     start: startMs.toString(),
     end: endMs.toString(),
@@ -2479,8 +2537,8 @@ export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   segmentsInfo: {
-    segmentPosition1: Vector3;
-    segmentPosition2: Vector3;
+    segmentId1: number;
+    segmentId2: number;
     mag: Vector3;
     agglomerateId: number;
     editableMappingId: string;
@@ -2505,7 +2563,7 @@ export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
   segmentInfo: {
-    segmentPosition: Vector3;
+    segmentId: number;
     mag: Vector3;
     agglomerateId: number;
     editableMappingId: string;

@@ -1,7 +1,7 @@
 import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
 import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps, Modal } from "antd";
-import { connect, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import React, { createContext, MouseEvent, useContext, useEffect, useState } from "react";
 import type {
   APIConnectomeFile,
@@ -55,6 +55,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { formatNumberToLength, formatLengthAsVx, formatNumberToVolume } from "libs/format_utils";
 import {
+  getActiveCellId,
   getActiveSegmentationTracing,
   getSegmentsForLayer,
   hasAgglomerateMapping,
@@ -124,15 +125,17 @@ import {
   ensureLayerMappingsAreLoadedAction,
   ensureSegmentIndexIsLoadedAction,
 } from "oxalis/model/actions/dataset_actions";
+import { hideContextMenuAction } from "oxalis/model/actions/ui_actions";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
 
 // The newest eslint version thinks the props listed below aren't used.
 type OwnProps = {
-  contextMenuPosition: [number, number] | null | undefined;
+  contextMenuPosition: Readonly<[number, number]> | null | undefined;
   maybeClickedNodeId: number | null | undefined;
   maybeClickedMeshId: number | null | undefined;
+  maybeUnmappedSegmentId: number | null | undefined;
   maybeMeshIntersectionPosition: Vector3 | null | undefined;
   clickedBoundingBoxId: number | null | undefined;
   globalPosition: Vector3 | null | undefined;
@@ -360,36 +363,168 @@ function getMaybeMinCutItem(
 }
 
 function getMeshItems(
-  maybeClickedMeshId: number | null | undefined,
-  maybeMeshIntersectionPosition: Vector3 | null | undefined,
+  volumeTracing: VolumeTracing | null | undefined,
+  clickedMeshId: number | null | undefined,
+  meshIntersectionPosition: Vector3 | null | undefined,
+  maybeUnmappedSegmentId: number | null | undefined,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
   datasetScale: Vector3,
 ): MenuItemType[] {
   if (
-    maybeClickedMeshId == null ||
-    maybeMeshIntersectionPosition == null ||
-    visibleSegmentationLayer == null
+    clickedMeshId == null ||
+    meshIntersectionPosition == null ||
+    visibleSegmentationLayer == null ||
+    volumeTracing == null
   ) {
     return [];
   }
+  const state = Store.getState();
+  const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
+  const activeCellId = getActiveCellId(volumeTracing);
+  const { activeUnmappedSegmentId } = volumeTracing;
+  const segments = getSegmentsForLayer(state, volumeTracing.tracingId);
+  // The cut and merge operations depend on the active segment. The volume tracing *always* has an activeCellId.
+  // However, the ID be 0 or it could be an unused ID (this is the default when creating a new
+  // volume tracing). Therefore, merging/splitting with that ID won't work. We can avoid this
+  // by looking the segment id up the segments list and checking against null.
+  const activeSegmentMissing = segments.getNullable(activeCellId) == null;
 
+  const maybeProofreadingItems: MenuItemType[] = isProofreadingActive
+    ? [
+        {
+          key: "merge-agglomerate-skeleton",
+          disabled:
+            !isProofreadingActive ||
+            activeSegmentMissing ||
+            clickedMeshId === activeCellId ||
+            maybeUnmappedSegmentId == null,
+          onClick: () => {
+            if (maybeUnmappedSegmentId == null) {
+              // Should not happen due to the disabled property.
+              return;
+            }
+            return Store.dispatch(proofreadMerge(null, maybeUnmappedSegmentId, clickedMeshId));
+          },
+          label: (
+            <Tooltip
+              title={
+                !isProofreadingActive
+                  ? "Cannot merge because the proofreading tool is not active."
+                  : maybeUnmappedSegmentId == null
+                    ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
+                    : activeSegmentMissing
+                      ? "Select a segment first."
+                      : null
+              }
+            >
+              Merge with active segment
+            </Tooltip>
+          ),
+        },
+        {
+          key: "min-cut-agglomerate-at-position",
+          disabled:
+            !isProofreadingActive ||
+            activeSegmentMissing ||
+            clickedMeshId !== activeCellId ||
+            maybeUnmappedSegmentId == null ||
+            activeUnmappedSegmentId == null ||
+            maybeUnmappedSegmentId === activeUnmappedSegmentId,
+          onClick: () => {
+            if (maybeUnmappedSegmentId == null) {
+              // Should not happen due to the disabled property.
+              return;
+            }
+            Store.dispatch(
+              minCutAgglomerateWithPositionAction(null, maybeUnmappedSegmentId, clickedMeshId),
+            );
+          },
+          label: (
+            <Tooltip
+              title={
+                !isProofreadingActive
+                  ? "Cannot split because the proofreading tool is not active."
+                  : maybeUnmappedSegmentId == null
+                    ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
+                    : activeSegmentMissing
+                      ? "Select a segment first."
+                      : null
+              }
+            >
+              Split from active segment
+            </Tooltip>
+          ),
+        },
+        {
+          key: "split-from-all-neighbors",
+          disabled: maybeUnmappedSegmentId == null,
+          onClick: () => {
+            if (maybeUnmappedSegmentId == null) {
+              // Should not happen due to the disabled property.
+              return;
+            }
+            Store.dispatch(
+              cutAgglomerateFromNeighborsAction(null, null, maybeUnmappedSegmentId, clickedMeshId),
+            );
+          },
+          label: (
+            <Tooltip
+              title={
+                !isProofreadingActive
+                  ? "Cannot split because the proofreading tool is not active."
+                  : maybeUnmappedSegmentId == null
+                    ? "The mesh wasn't loaded in proofreading mode. Please reload the mesh."
+                    : null
+              }
+            >
+              Split from all neighboring segments
+            </Tooltip>
+          ),
+        },
+      ]
+    : [];
+
+  const segmentIdLabel =
+    isProofreadingActive && maybeUnmappedSegmentId != null
+      ? `within Segment ${clickedMeshId}`
+      : clickedMeshId;
+  const segmentOrSuperVoxel =
+    isProofreadingActive && maybeUnmappedSegmentId != null ? "Super-Voxel" : "Segment";
+  const isAlreadySelected =
+    activeUnmappedSegmentId === maybeUnmappedSegmentId && activeCellId === clickedMeshId;
   return [
+    isProofreadingActive && activeUnmappedSegmentId != null && isAlreadySelected
+      ? {
+          // If a supervoxel is selected (and thus highlighted), allow to select it.
+          key: "deactivate-segment",
+          onClick: () =>
+            Store.dispatch(setActiveCellAction(clickedMeshId, undefined, undefined, undefined)),
+          label: `Deselect ${segmentOrSuperVoxel} (${segmentIdLabel})`,
+        }
+      : {
+          key: "activate-segment",
+          onClick: () =>
+            Store.dispatch(
+              setActiveCellAction(clickedMeshId, undefined, undefined, maybeUnmappedSegmentId),
+            ),
+          disabled: isAlreadySelected,
+          label: `Select ${segmentOrSuperVoxel} (${segmentIdLabel})`,
+        },
     {
       key: "hide-mesh",
-      onClick: () =>
-        Actions.hideMesh(Store.dispatch, visibleSegmentationLayer.name, maybeClickedMeshId),
+      onClick: () => Actions.hideMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),
       label: "Hide Mesh",
     },
     {
       key: "reload-mesh",
       onClick: () =>
-        Actions.refreshMesh(Store.dispatch, visibleSegmentationLayer.name, maybeClickedMeshId),
+        Actions.refreshMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),
       label: "Reload Mesh",
     },
     {
       key: "jump-to-mesh",
       onClick: () => {
-        const unscaledPosition = V3.divide3(maybeMeshIntersectionPosition, datasetScale);
+        const unscaledPosition = V3.divide3(meshIntersectionPosition, datasetScale);
         Actions.setPosition(Store.dispatch, unscaledPosition);
       },
       label: "Jump to Position",
@@ -397,9 +532,10 @@ function getMeshItems(
     {
       key: "remove-mesh",
       onClick: () =>
-        Actions.removeMesh(Store.dispatch, visibleSegmentationLayer.name, maybeClickedMeshId),
+        Actions.removeMesh(Store.dispatch, visibleSegmentationLayer.name, clickedMeshId),
       label: "Remove Mesh",
     },
+    ...maybeProofreadingItems,
   ];
 }
 
@@ -408,6 +544,7 @@ function getNodeContextMenuOptions({
   clickedNodeId,
   maybeClickedMeshId,
   maybeMeshIntersectionPosition,
+  maybeUnmappedSegmentId,
   visibleSegmentationLayer,
   datasetScale,
   useLegacyBindings,
@@ -449,8 +586,10 @@ function getNodeContextMenuOptions({
   }
 
   const meshItems = getMeshItems(
+    volumeTracing,
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
+    maybeUnmappedSegmentId,
     visibleSegmentationLayer,
     datasetScale,
   );
@@ -762,6 +901,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     additionalCoordinates,
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
+    maybeUnmappedSegmentId,
     viewport,
     visibleSegmentationLayer,
     segmentIdAtPosition,
@@ -792,6 +932,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       Toast.info("No segment found at the clicked position");
       return;
     }
+    const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
 
     Store.dispatch(
       loadPrecomputedMeshAction(
@@ -799,6 +940,8 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         globalPosition,
         additionalCoordinates,
         currentMeshFile.meshFileName,
+        undefined,
+        !isProofreadingActive,
       ),
     );
   };
@@ -939,7 +1082,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                     title={
                       isProofreadingActive
                         ? undefined
-                        : "Cannot merge because the proofreading tool is not active."
+                        : "Cannot split because the proofreading tool is not active."
                     }
                   >
                     <span>
@@ -1043,6 +1186,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                     setActiveCellAction(segmentIdAtPosition, globalPosition, additionalCoordinates),
                   );
                 },
+                disabled: segmentIdAtPosition === getActiveCellId(volumeTracing),
                 label: (
                   <>
                     Activate Segment ({segmentIdAtPosition}){" "}
@@ -1074,8 +1218,10 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   let allActions: ItemType[] = [];
 
   const meshRelatedItems = getMeshItems(
+    volumeTracing,
     maybeClickedMeshId,
     maybeMeshIntersectionPosition,
+    maybeUnmappedSegmentId,
     visibleSegmentationLayer,
     datasetScale,
   );
@@ -1103,7 +1249,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
 }
 
 export function GenericContextMenuContainer(props: {
-  contextMenuPosition: [number, number] | null | undefined;
+  contextMenuPosition: Readonly<[number, number]> | null | undefined;
   hideContextMenu: () => void;
   children: React.ReactElement;
   positionAbsolute?: boolean;
@@ -1175,9 +1321,58 @@ export function GenericContextMenuContainer(props: {
   );
 }
 
-function ContextMenuContainer(props: Props) {
+const hideContextMenu = () => Store.dispatch(hideContextMenuAction());
+function WkContextMenu() {
+  const props = useSelector((state: OxalisState) => {
+    const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
+    const mappingInfo = getMappingInfo(
+      state.temporaryConfiguration.activeMappingByLayer,
+      visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
+    );
+    const someTracing = maybeGetSomeTracing(state.tracing);
+    const { contextInfo } = state.uiInformation;
+    return {
+      skeletonTracing: state.tracing.skeleton,
+      volumeTracing: getActiveSegmentationTracing(state),
+      datasetScale: state.dataset.dataSource.scale,
+      activeTool: state.uiInformation.activeTool,
+      dataset: state.dataset,
+      allowUpdate: state.tracing.restrictions.allowUpdate,
+      visibleSegmentationLayer,
+      currentMeshFile:
+        visibleSegmentationLayer != null
+          ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+          : null,
+      currentConnectomeFile:
+        visibleSegmentationLayer != null
+          ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
+              .currentConnectomeFile
+          : null,
+      useLegacyBindings: state.userConfiguration.useLegacyBindings,
+      userBoundingBoxes: someTracing != null ? someTracing.userBoundingBoxes : [],
+      segments:
+        visibleSegmentationLayer != null
+          ? getSegmentsForLayer(state, visibleSegmentationLayer.name)
+          : null,
+      mappingInfo,
+      maybeClickedNodeId: contextInfo.clickedNodeId,
+      clickedBoundingBoxId: contextInfo.clickedBoundingBoxId,
+      globalPosition: contextInfo.globalPosition,
+      additionalCoordinates: state.flycam.additionalCoordinates || undefined,
+      contextMenuPosition: contextInfo.contextMenuPosition,
+      maybeViewport: contextInfo.viewport,
+      maybeClickedMeshId: contextInfo.meshId,
+      maybeMeshIntersectionPosition: contextInfo.meshIntersectionPosition,
+      maybeUnmappedSegmentId: contextInfo.unmappedSegmentId,
+      hideContextMenu,
+    };
+  });
+
   return (
-    <GenericContextMenuContainer {...props}>
+    <GenericContextMenuContainer
+      hideContextMenu={hideContextMenu}
+      contextMenuPosition={props.contextMenuPosition}
+    >
       <ContextMenuInner {...props} />
     </GenericContextMenuContainer>
   );
@@ -1592,39 +1787,4 @@ const Actions = {
   },
 };
 
-function mapStateToProps(state: OxalisState): StateProps {
-  const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-  const mappingInfo = getMappingInfo(
-    state.temporaryConfiguration.activeMappingByLayer,
-    visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
-  );
-  const someTracing = maybeGetSomeTracing(state.tracing);
-  return {
-    skeletonTracing: state.tracing.skeleton,
-    volumeTracing: getActiveSegmentationTracing(state),
-    datasetScale: state.dataset.dataSource.scale,
-    activeTool: state.uiInformation.activeTool,
-    dataset: state.dataset,
-    allowUpdate: state.tracing.restrictions.allowUpdate,
-    visibleSegmentationLayer,
-    currentMeshFile:
-      visibleSegmentationLayer != null
-        ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
-        : null,
-    currentConnectomeFile:
-      visibleSegmentationLayer != null
-        ? state.localSegmentationData[visibleSegmentationLayer.name].connectomeData
-            .currentConnectomeFile
-        : null,
-    useLegacyBindings: state.userConfiguration.useLegacyBindings,
-    userBoundingBoxes: someTracing != null ? someTracing.userBoundingBoxes : [],
-    segments:
-      visibleSegmentationLayer != null
-        ? getSegmentsForLayer(state, visibleSegmentationLayer.name)
-        : null,
-    mappingInfo,
-  };
-}
-
-const connector = connect(mapStateToProps);
-export default connector(ContextMenuContainer);
+export default WkContextMenu;

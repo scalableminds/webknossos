@@ -147,7 +147,7 @@ Note that you need to first press CTRL/CMD + K, release these keys and press the
 | Key Binding                                            | Operation                                                   |
 | ------------------------------------------------------ | ----------------------------------------------------------- |
 | Shift + Click on a mesh in the 3D viewport          | Move the camera to the clicked position          |
-| CTRL/CMD + Click on a mesh in the 3D viewport           | Unload the mesh from WEBKNOSSOS    |
+| CTRL/CMD + Click on a mesh in the 3D viewport           | Select the mesh and its segment ID    |
 
 ## Agglomerate File Mapping Skeleton
 

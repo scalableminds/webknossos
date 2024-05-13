@@ -51,7 +51,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   private def visibleRunsQ(currentUser: User, allowUnlisted: Boolean) = {
     val organizationId = currentUser._organization
     val readAccessQ =
-      if (currentUser.isAdmin || currentUser.isDatasetManager || allowUnlisted) q"${true}"
+      if (currentUser.isAdmin || currentUser.isDatasetManager || allowUnlisted) q"TRUE"
       else q"(__r._user = ${currentUser._id})"
     q"""SELECT __r.*
         FROM webknossos.voxelytics_runs __r
@@ -538,7 +538,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
 
   def getRunIdByNameAndWorkflowHash(runName: String, workflowHash: String, currentUser: User): Fox[ObjectId] = {
     val readAccessQ =
-      if (currentUser.isAdmin) q"${true}"
+      if (currentUser.isAdmin) q"TRUE"
       else q"_user = ${currentUser._id}"
     for {
       objectIdList <- run(q"""

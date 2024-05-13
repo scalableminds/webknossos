@@ -51,8 +51,8 @@ class TimeController @Inject()(userService: UserService,
                                     start: Long,
                                     end: Long,
                                     annotationTypes: String,
-                                    projectIds: Option[String],
-                                    annotationStates: String): Action[AnyContent] = sil.SecuredAction.async {
+                                    annotationStates: String,
+                                    projectIds: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         userIdValidated <- ObjectId.fromString(userId)
@@ -75,8 +75,8 @@ class TimeController @Inject()(userService: UserService,
                       start: Long,
                       end: Long,
                       annotationTypes: String,
-                      projectIds: Option[String],
-                      annotationStates: String): Action[AnyContent] =
+                      annotationStates: String,
+                      projectIds: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.fromString(userId)
@@ -98,9 +98,9 @@ class TimeController @Inject()(userService: UserService,
   def timeOverview(start: Long,
                    end: Long,
                    annotationTypes: String,
+                   annotationStates: String,
                    teamIds: Option[String],
-                   projectIds: Option[String],
-                   annotationStates: String): Action[AnyContent] =
+                   projectIds: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         teamIdsValidated <- ObjectId.fromCommaSeparated(teamIds) ?~> "invalidTeamId"

@@ -43,7 +43,6 @@ type Props = {
   groupTree: SegmentHierarchyNode[];
 };
 
-// TODO: volumeInNm3 to dtatsource unit!
 type SegmentInfo = {
   key: number;
   additionalCoordinates: string;
@@ -163,7 +162,7 @@ export function SegmentStatisticsModal({
           const additionalCoordStringForCsv =
             getAdditionalCoordinatesAsString(additionalCoordinates);
           for (let i = 0; i < segments.length; i++) {
-            // segments in request and their statistics in the response are in the same order
+            // Segments in request and their statistics in the response are in the same order
             const currentSegment = segments[i];
             const currentBoundingBox = boundingBoxes[i];
             const boundingBoxInMag1 = getBoundingBoxInMag1(
@@ -171,7 +170,6 @@ export function SegmentStatisticsModal({
               layersFinestResolution,
             );
             const currentSegmentSizeInVx = segmentSizes[i];
-            // TODO: This might need to be changed to the actual dataset unit and thus the SegmentInfo type.
             const volumeInUnit3 = voxelToVolumeInUnit(
               datasetScale,
               layersFinestResolution,

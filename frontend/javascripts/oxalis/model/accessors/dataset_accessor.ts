@@ -37,7 +37,6 @@ import {
   Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
-import { datasetScaleFactorToNm } from "../scaleinfo";
 
 function _getResolutionInfo(resolutions: Array<Vector3>): ResolutionInfo {
   return new ResolutionInfo(resolutions);
@@ -310,10 +309,6 @@ function getDatasetExtentWithScale(dataset: APIDataset, scale: Vector3): Boundin
     depth: extentInVoxel.depth * scale[2],
   };
   return extent;
-}
-export function getDatasetExtentInNm(dataset: APIDataset): BoundingBoxObject {
-  const datasetScaleInNm = datasetScaleFactorToNm(dataset.dataSource.scale);
-  return getDatasetExtentWithScale(dataset, datasetScaleInNm);
 }
 export function getDatasetExtentInUnit(dataset: APIDataset): BoundingBoxObject {
   return getDatasetExtentWithScale(dataset, dataset.dataSource.scale.factor);

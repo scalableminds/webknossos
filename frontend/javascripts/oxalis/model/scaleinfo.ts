@@ -1,20 +1,11 @@
-import { LengthUnitsMap } from "libs/format_utils";
-import { map3 } from "libs/utils";
-import { LengthUnit, type Vector3 } from "oxalis/constants";
+import { type Vector3 } from "oxalis/constants";
 import { DatasetScale } from "types/api_flow_types";
-
-// TODO: Check where this is used and whether it is necessary / correct there.
-export function datasetScaleFactorToNm(datasetScale: DatasetScale): Vector3 {
-  const conversionToNmFactor = LengthUnitsMap[datasetScale.unit] / LengthUnitsMap[LengthUnit.nm];
-  return map3((factor) => factor * conversionToNmFactor, datasetScale.factor);
-}
 
 export function getBaseVoxelInUnit(datasetScaleFactor: Vector3): number {
   // base voxel should be a cube with highest resolution
   return Math.min(...datasetScaleFactor);
 }
 
-// TODO: Check where this is used and whether it is necessary / correct there.
 export function voxelToVolumeInUnit(
   datasetScale: DatasetScale,
   mag: Vector3,
@@ -45,16 +36,13 @@ export function getBaseVoxelFactorsInUnit(datasetScale: DatasetScale): Vector3 {
   return result;
 }
 
-// TODO: Check where this is used and whether it is necessary / correct there.
-export function getVoxelPerNm(datasetScale: DatasetScale): Vector3 {
-  const voxelPerNM = [0, 0, 0] as Vector3;
-  const scaleFactorInNm = datasetScaleFactorToNm(datasetScale);
+export function getVoxelPerUnit(datasetScale: DatasetScale): Vector3 {
+  const voxelPerUnit = [0, 0, 0] as Vector3;
 
   for (let i = 0; i < 3; i++) {
-    voxelPerNM[i] = 1 / scaleFactorInNm[i];
+    voxelPerUnit[i] = 1 / datasetScale.factor[i];
   }
-  console.log("getVoxelPerNm", "result", voxelPerNM);
-  return voxelPerNM;
+  return voxelPerUnit;
 }
 
 export function voxelToUnit(datasetScale: DatasetScale, posArray: Vector3): Vector3 {

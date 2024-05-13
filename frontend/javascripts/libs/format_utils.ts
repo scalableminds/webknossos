@@ -250,7 +250,6 @@ export const nmFactorToUnit2D = new Map([
   [1e66, "Ym²"],
 ]);
 
-// TODO: Support conversion from uncommon units in 2d
 export function formatNumberToArea(
   lengthInUnit2: number,
   unit: string,
@@ -287,7 +286,7 @@ export const nmFactorToUnit3D = new Map([
   [1e90, "Zm³"],
   [1e99, "Ym³"],
 ]);
-// TODO: Support conversion from uncommon units in 3d
+
 export function formatNumberToVolume(
   lengthInUnit3: number,
   unit: string,
@@ -337,7 +336,6 @@ function adjustUnitToDimension(unit: string, dimension: number): string {
   return (unit = dimension === 1 ? unit : dimension === 2 ? `${unit}²` : `${unit}³`);
 }
 
-// TODO: This needs to potentially be adjusted to handle multidimensional units as the ensurance of uncommon length units only supports 1D units.
 export function findBestUnitForFormatting(
   number: number,
   { unit, dimension }: UnitDimension,

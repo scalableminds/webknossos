@@ -7,7 +7,6 @@ import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import { getPlaneExtentInVoxelFromStore } from "oxalis/model/accessors/view_mode_accessor";
 import Dimensions from "oxalis/model/dimensions";
 
-// TODO: Check whether this function usage is correct.
 export function* getHalfViewportExtentsInVx(activeViewport: OrthoView): Saga<Vector2> {
   const zoom = yield* select((state) => state.flycam.zoomStep);
   const baseVoxelFactors = yield* select((state) =>
@@ -23,7 +22,7 @@ export function* getHalfViewportExtentsInVx(activeViewport: OrthoView): Saga<Vec
   ) as Vector2;
   return halfViewportExtents;
 }
-// TODO: Check whether this function usage is correct.
+
 export function getHalfViewportExtentsInUnitFromState(
   state: OxalisState,
   activeViewport: OrthoView,

@@ -73,11 +73,11 @@ test("Format number to volume", (t) => {
 
 test("Test uncommon number formats", (t) => {
   t.is(`1.0${ThinSpace}m`, formatNumberToLength(10, LengthUnit.dm, 2));
-  t.is(`55.0${ThinSpace}cm`, formatNumberToLength(5.5, LengthUnit.dm, 2));
+  t.is(`5500.0${ThinSpace}cm³`, formatNumberToVolume(5.5, LengthUnit.dm, 2));
   t.is(`1.0${ThinSpace}km`, formatNumberToLength(10, LengthUnit.hm, 2));
   t.is(`550.0${ThinSpace}m`, formatNumberToLength(5.5, LengthUnit.hm, 2));
   t.is(`1.0${ThinSpace}nm`, formatNumberToLength(10, LengthUnit.Å, 2));
-  t.is(`550.0${ThinSpace}pm`, formatNumberToLength(5.5, LengthUnit.Å, 2));
+  t.is(`55000.0${ThinSpace}pm²`, formatNumberToArea(5.5, LengthUnit.Å, 2));
   t.is(`25.4${ThinSpace}cm`, formatNumberToLength(10, LengthUnit.in, 2));
   t.is(`13.97${ThinSpace}cm`, formatNumberToLength(5.5, LengthUnit.in, 2));
   t.is(`3.05${ThinSpace}m`, formatNumberToLength(10, LengthUnit.ft, 2));
@@ -90,7 +90,6 @@ test("Test uncommon number formats", (t) => {
   t.is(`169.71${ThinSpace}Pm`, formatNumberToLength(5.5, LengthUnit.pc, 2));
 });
 
-// TODO test precision and preferShorterDecimals
 test("Test precision in formatting numbers", (t) => {
   t.is(`1.2${ThinSpace}cm`, formatNumberToLength(1.23456789, LengthUnit.cm));
   t.is(`1.23${ThinSpace}cm`, formatNumberToLength(1.23456789, LengthUnit.cm, 2));
@@ -100,7 +99,6 @@ test("Test precision in formatting numbers", (t) => {
   t.is(`1.234568${ThinSpace}cm³`, formatNumberToVolume(1.23456789, LengthUnit.cm, 6));
 });
 
-// TODO Write test to prefer shorter decimals in case of no precision loss: 0.1m stays 0.1 meter instead of 10 cm
 test("Test preferShorterDecimals in formatting numbers", (t) => {
   t.is(`0.1${ThinSpace}m`, formatNumberToLength(0.1, LengthUnit.m, 1, true));
   t.is(`1.2${ThinSpace}cm`, formatNumberToLength(1.23456789, LengthUnit.cm, 1, true));
@@ -112,5 +110,3 @@ test("Test formatting cuts off trailing zeros", (t) => {
   t.is(`12.0${ThinSpace}cm`, formatNumberToLength(0.12, LengthUnit.m, 3));
   t.is(`0.001${ThinSpace}km`, formatNumberToLength(1, LengthUnit.m, 3, true));
 });
-
-// TODO Write test to test trailing 0s are cut off: precision: 2 -> 1.0m stays 1.0m and not 1.00 meter

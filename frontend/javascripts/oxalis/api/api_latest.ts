@@ -1761,7 +1761,6 @@ class DataApi {
       dimensions.roundCoordinate(getPosition(state.flycam)),
       viewport,
     );
-    // This s
     const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsInUnitFromState(
       state,
       viewport,

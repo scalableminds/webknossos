@@ -387,7 +387,6 @@ class VolumeLayer {
     const { brushSize } = state.userConfiguration;
     const radius = Math.round(brushSize / 2);
     // Use the baseVoxelFactors to scale the rectangle, otherwise it'll become deformed
-    // TODO: This might be correct as it references the voxel space. But maybe it needs unit conversion. Check this.
     const scale = this.get2DCoordinate(
       scaleGlobalPositionWithResolutionFloat(
         getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),

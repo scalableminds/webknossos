@@ -113,8 +113,8 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def insertOne(i: Invite): Fox[Unit] =
     for {
       _ <- run(
-        q"""insert into webknossos.invites(_id, tokenValue, _organization, autoActivate, expirationDateTime, created, isDeleted)
-            values(${i._id}, ${i.tokenValue}, ${i._organization}, ${i.autoActivate},
+        q"""INSERT INTO webknossos.invites(_id, tokenValue, _organization, autoActivate, expirationDateTime, created, isDeleted)
+            VALUES(${i._id}, ${i.tokenValue}, ${i._organization}, ${i.autoActivate},
             ${i.expirationDateTime}, ${i.created}, ${i.isDeleted})""".asUpdate)
     } yield ()
 

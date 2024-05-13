@@ -128,22 +128,22 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       for {
         tuples <- run(
           q"""SELECT ts._user, mu.email, o.name, d.name, a._id, t._id, p.name, tt._id, tt.summary, ts._id, ts.created, ts.time
-                        FROM webknossos.timespans_ ts
-                        JOIN webknossos.annotations_ a on ts._annotation = a._id
-                        JOIN webknossos.users_ u on ts._user = u._id
-                        JOIN webknossos.multiUsers_ mu on u._multiUser = mu._id
-                        JOIN webknossos.datasets_ d on a._dataset = d._id
-                        JOIN webknossos.organizations_ o on d._organization = o._id
-                        LEFT JOIN webknossos.tasks_ t on a._task = t._id
-                        LEFT JOIN webknossos.projects_ p on t._project = p._id
-                        LEFT JOIN webknossos.taskTypes_ tt on t._taskType = tt._id
-                        WHERE ts._user = $userId
-                        AND ts.time > 0
-                        AND ts.created >= $start
-                        AND ts.created < $end
-                        AND $projectQuery
-                        AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
-                        AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
+              FROM webknossos.timespans_ ts
+              JOIN webknossos.annotations_ a on ts._annotation = a._id
+              JOIN webknossos.users_ u on ts._user = u._id
+              JOIN webknossos.multiUsers_ mu on u._multiUser = mu._id
+              JOIN webknossos.datasets_ d on a._dataset = d._id
+              JOIN webknossos.organizations_ o on d._organization = o._id
+              LEFT JOIN webknossos.tasks_ t on a._task = t._id
+              LEFT JOIN webknossos.projects_ p on t._project = p._id
+              LEFT JOIN webknossos.taskTypes_ tt on t._taskType = tt._id
+              WHERE ts._user = $userId
+              AND ts.time > 0
+              AND ts.created >= $start
+              AND ts.created < $end
+              AND $projectQuery
+              AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
+              AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
             """.as[(String,
                     String,
                     String,

@@ -1,7 +1,6 @@
 [codespell]
 # Ref: https://github.com/codespell-project/codespell#using-a-config-file
-skip = .git*,*.svg,*.lock,.codespellrc
-check-hidden = true
+skip = *.svg,*.sublime-workspace,*.lock,.codespellrc,./util/target/,./binaryData,./node_modules,./pg,./project/target,./target,./webknossos-datastore/target,./webknossos-jni/target,./webknossos-tracingstore/target,./util/target,./coverage,./public-test,./tools/proxy/node_modules,./docs/publications.md
 # some names and camelCased variables etc
 ignore-regex = \b(Manuel|[a-z]+[A-Z][a-zA-Z]*|H Mattern|Nat Commun|couldn&apos;t)\b
 # Full of unfortunate choices for short names

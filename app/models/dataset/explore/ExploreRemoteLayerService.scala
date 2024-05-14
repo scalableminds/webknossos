@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreLayerUtils,
+  ExploreRemoteLayerParameters,
   N5ArrayExplorer,
   N5MultiscalesExplorer,
   NeuroglancerUriExplorer,
@@ -36,13 +37,13 @@ import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
-case class ExploreRemoteDatasetParameters(remoteUri: String,
-                                          credentialIdentifier: Option[String],
-                                          credentialSecret: Option[String],
-                                          preferredVoxelSize: Option[Vec3Double])
+case class WKExploreRemoteDatasetParameters(remoteUri: String,
+                                            credentialIdentifier: Option[String],
+                                            credentialSecret: Option[String],
+                                            preferredVoxelSize: Option[Vec3Double])
 
-object ExploreRemoteDatasetParameters {
-  implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
+object WKExploreRemoteDatasetParameters {
+  implicit val jsonFormat: OFormat[WKExploreRemoteDatasetParameters] = Json.format[WKExploreRemoteDatasetParameters]
 }
 
 case class ExploreAndAddRemoteDatasetParameters(remoteUri: String, datasetName: String, folderPath: Option[String])
@@ -64,6 +65,27 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
     with LazyLogging {
 
   private lazy val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
+
+  def exploreRemoteDatasource(
+      parameters: List[WKExploreRemoteDatasetParameters],
+      requestIdentity: WkEnv#I, // TODO report comes from datastore
+      reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[GenericDataSource[DataLayer]] =
+    for {
+      credentialIds <- Fox.serialCombined(parameters)(parameters =>
+        storeCredentials(parameters.remoteUri, parameters.credentialIdentifier, parameters.credentialSecret))
+      adaptedParameters = parameters.zip(credentialIds).map {
+        case (originalParameters, credentialId) =>
+          ExploreRemoteLayerParameters(originalParameters.remoteUri,
+                                       credentialId.map(_.toString),
+                                       originalParameters.preferredVoxelSize)
+      }
+      client: WKRemoteDataStoreClient <- new WKRemoteDataStoreClient()
+      (dataSource, report) <- client.exploreRemoteDataset(adaptedParameters)
+    } yield (dataSource, report)
+
+  private def storeCredentials(remoteUri: String,
+                               credentialIdentifier: Option[String],
+                               credentialSecret: Option[String]): Fox[Option[ObjectId]] = ???
 
   def addRemoteDatasource(dataSource: GenericDataSource[DataLayer],
                           datasetName: String,
@@ -91,17 +113,19 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
   // TODO: move to datastore
 
   def exploreRemoteDatasource(
-      parameters: List[ExploreRemoteDatasetParameters],
+      parameters: List[WKExploreRemoteDatasetParameters],
       requestIdentity: WkEnv#I,
       reportMutable: ListBuffer[String])(implicit ec: ExecutionContext): Fox[GenericDataSource[DataLayer]] =
     for {
       exploredLayersNested <- Fox.serialCombined(parameters)(
         parameters =>
-          exploreRemoteLayersForUri(parameters.remoteUri,
-                                    parameters.credentialIdentifier,
-                                    parameters.credentialSecret,
-                                    reportMutable,
-                                    requestIdentity))
+          exploreRemoteLayersForOneUri(
+            parameters.remoteUri,
+            parameters.credentialIdentifier, // TODO, take ExploreRemoteDatasetParameters instead of WK ones, look up credentials
+            parameters.credentialSecret,
+            reportMutable,
+            requestIdentity
+        ))
       layersWithVoxelSizes = exploredLayersNested.flatten
       preferredVoxelSize = parameters.flatMap(_.preferredVoxelSize).headOption
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
@@ -113,7 +137,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       )
     } yield dataSource
 
-  private def exploreRemoteLayersForUri(
+  private def exploreRemoteLayersForOneUri(
       layerUri: String,
       credentialIdentifier: Option[String],
       credentialSecret: Option[String],

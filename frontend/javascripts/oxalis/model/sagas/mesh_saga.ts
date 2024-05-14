@@ -171,8 +171,9 @@ function clipPositionToCubeBoundary(
   zoomStep: number,
   resolutionInfo: ResolutionInfo,
 ): Vector3 {
-  const currentCube = V3.floor(V3.divide3(position, getCubeSizeInMag1(zoomStep, resolutionInfo)));
-  const clippedPosition = V3.scale3(currentCube, getCubeSizeInMag1(zoomStep, resolutionInfo));
+  const cubeSizeInMag1 = getCubeSizeInMag1(zoomStep, resolutionInfo);
+  const currentCube = V3.floor(V3.divide3(position, cubeSizeInMag1));
+  const clippedPosition = V3.scale3(currentCube, cubeSizeInMag1);
   return clippedPosition;
 }
 
@@ -193,10 +194,11 @@ function getNeighborPosition(
   resolutionInfo: ResolutionInfo,
 ): Vector3 {
   const neighborMultiplier = NEIGHBOR_LOOKUP[neighborId];
+  const cubeSizeInMag1 = getCubeSizeInMag1(zoomStep, resolutionInfo);
   const neighboringPosition: Vector3 = [
-    clippedPosition[0] + neighborMultiplier[0] * getCubeSizeInMag1(zoomStep, resolutionInfo)[0],
-    clippedPosition[1] + neighborMultiplier[1] * getCubeSizeInMag1(zoomStep, resolutionInfo)[1],
-    clippedPosition[2] + neighborMultiplier[2] * getCubeSizeInMag1(zoomStep, resolutionInfo)[2],
+    clippedPosition[0] + neighborMultiplier[0] * cubeSizeInMag1[0],
+    clippedPosition[1] + neighborMultiplier[1] * cubeSizeInMag1[1],
+    clippedPosition[2] + neighborMultiplier[2] * cubeSizeInMag1[2],
   ];
   return neighboringPosition;
 }

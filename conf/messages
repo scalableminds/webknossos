@@ -158,6 +158,7 @@ nml.treegroup.id.invalid=Invalid tree group id {0}
 nml.segmentGroup.id.invalid=Invalid segment group id {0}
 nml.boundingbox.id.invalid=Invalid user bounding box id {0}
 nml.additionalCoordinates.notUnique=Additional coordinates do not have unique names
+nml.duplicateVolumeLayerNames=Annotations with multiple volume layers must have a unique name for each layer.
 
 project.name.alreadyTaken=The name “{0}” is already being used for a different project. Please choose a different name.
 project.name.invalidChars=The project name contains invalid characters. Please use only letters and numbers.

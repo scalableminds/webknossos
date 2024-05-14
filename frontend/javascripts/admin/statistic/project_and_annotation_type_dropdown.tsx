@@ -106,6 +106,7 @@ function ProjectAndAnnotationTypeDropdown({
       placeholder="Filter type or projects"
       style={style}
       options={filterOptions}
+      optionFilterProp="label"
       value={selectedFilters}
       onDeselect={(removedKey: string) => onDeselect(removedKey)}
       onSelect={(newSelection: string) => setSelectedProjects(selectedFilters, newSelection)}

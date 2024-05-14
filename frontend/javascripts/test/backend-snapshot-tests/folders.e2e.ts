@@ -1,5 +1,4 @@
 import _ from "lodash";
-import Request from "libs/request";
 import {
   tokenUserA,
   tokenUserC,
@@ -8,6 +7,7 @@ import {
   replaceVolatileValues,
   writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
+import Request from "libs/request";
 import * as foldersApi from "admin/api/folders";
 import test from "ava";
 test.before("Reset database and change token", async () => {

@@ -25,6 +25,12 @@ export default class FixedExpandableTable extends React.PureComponent<TableProps
     return dataSource != null && canUseRowKey ? dataSource.map((row) => row[rowKey]) : [];
   }
 
+  componentDidUpdate(prevProps: Readonly<Props<any>>): void {
+    if (prevProps.dataSource !== this.props.dataSource) {
+      this.setState({ expandedRows: [] });
+    }
+  }
+
   render() {
     const { expandedRows } = this.state;
     const { className, expandable, ...restProps } = this.props;

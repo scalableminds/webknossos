@@ -662,17 +662,23 @@ const dummyMapping = {
   mappingType: "JSON",
 } as const;
 
+export function getMappingInfoOrNull(
+  activeMappingInfos: Record<string, ActiveMappingInfo>,
+  layerName: string | null | undefined,
+): ActiveMappingInfo | null {
+  if (layerName != null && activeMappingInfos[layerName]) {
+    return activeMappingInfos[layerName];
+  }
+  return null;
+}
+
 export function getMappingInfo(
   activeMappingInfos: Record<string, ActiveMappingInfo>,
   layerName: string | null | undefined,
 ): ActiveMappingInfo {
-  if (layerName != null && activeMappingInfos[layerName]) {
-    return activeMappingInfos[layerName];
-  }
-
   // Return a dummy object (this mirrors webKnossos' behavior before the support of
   // multiple segmentation layers)
-  return dummyMapping;
+  return getMappingInfoOrNull(activeMappingInfos, layerName) || dummyMapping;
 }
 export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {
   const layer = getSegmentationLayerWithMappingSupport(state);

@@ -26,7 +26,6 @@
 @import "olvy_overwrites.less";
 // @import "react_sortable_tree_overwrites.less";
 @import "_admin.less";
-@import "_google-charts-overwrites.less";
 @import "flex_layout_overwrites.less";
 @import "_drawings.less";
 @import "dark.less";
@@ -648,14 +647,25 @@ button.narrow {
   display: inherit;
 }
 
-.project-and-annotation-type-dropdown{
+.project-and-annotation-type-dropdown {
   width: 200px;
 }
 
-.task-annotation-view{
+.task-annotation-view {
   width: 31%
 }
 
 .organization-switch-menu > ul {
   max-height: calc(100vh - var(--navbar-height) - 200px) !important;
+}
+
+.time-tracking-details {
+  .ant-col {
+    display: grid;
+    align-content: center;
+  }
+
+  .ant-row {
+    margin-left: 20px;
+  }
 }

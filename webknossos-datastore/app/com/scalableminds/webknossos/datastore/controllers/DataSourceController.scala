@@ -29,7 +29,7 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
@@ -39,6 +39,13 @@ import play.api.libs.Files
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+
+// TODO move elsewhere
+case class ExploreRemoteDatasetRequest(uri: String, organizationName: String)
+
+object ExploreRemoteDatasetRequest {
+  implicit val jsonFormat: OFormat[ExploreRemoteDatasetRequest] = Json.format[ExploreRemoteDatasetRequest]
+}
 
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,
@@ -743,6 +750,14 @@ class DataSourceController @Inject()(
                                                           request.body.mappingName)
           }
         } yield Ok(Json.toJson(boxes))
+      }
+    }
+
+  def exploreRemoteDataset(token: Option[String]): Action[ExploreRemoteDatasetRequest] =
+    Action.async(validateJson[ExploreRemoteDatasetRequest]) { implicit request =>
+      val userToken = urlOrHeaderToken(token, request)
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organizationName), token) {
+        Fox.successful(Ok)
       }
     }
 

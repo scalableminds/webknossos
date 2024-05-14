@@ -375,7 +375,9 @@ type UserBoundingBoxInputProps = {
   onVisibilityChange: (arg0: boolean) => void;
   onNameChange: (arg0: string) => void;
   onColorChange: (arg0: Vector3) => void;
-  allowUpdate: boolean;
+  disabled: boolean;
+  isLockedByUser: boolean;
+  isOwner: boolean;
 };
 type State = {
   isEditing: boolean;
@@ -477,7 +479,9 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       onExport,
       isExportEnabled,
       onGoToBoundingBox,
-      allowUpdate,
+      disabled,
+      isLockedByUser,
+      isOwner,
     } = this.props;
     const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
     const iconStyle = {
@@ -496,6 +500,10 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
         </Tooltip>
       </Col>
     ) : null;
+    const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
+      isLockedByUser,
+      isOwner,
+    );
     return (
       <React.Fragment>
         <Row
@@ -515,7 +523,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           </Col>
 
           <Col span={SETTING_RIGHT_SPAN}>
-            <Tooltip title={allowUpdate ? null : messages["tracing.read_only_mode_notification"]}>
+            <Tooltip title={disabled ? editingDisallowedExplanation : null}>
               <span>
                 <Input
                   defaultValue={name}
@@ -527,23 +535,17 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                   }}
                   onPressEnter={this.handleNameChanged}
                   onBlur={this.handleNameChanged}
-                  disabled={!allowUpdate}
+                  disabled={disabled}
                 />
               </span>
             </Tooltip>
           </Col>
           {exportColumn}
           <Col span={2}>
-            <Tooltip
-              title={
-                allowUpdate
-                  ? "Delete this bounding box."
-                  : messages["tracing.read_only_mode_notification"]
-              }
-            >
+            <Tooltip title={disabled ? editingDisallowedExplanation : "Delete this bounding box."}>
               <DeleteOutlined
-                onClick={allowUpdate ? onDelete : () => {}}
-                style={allowUpdate ? iconStyle : disabledIconStyle}
+                onClick={disabled ? () => {} : onDelete}
+                style={disabled ? disabledIconStyle : iconStyle}
               />
             </Tooltip>
           </Col>
@@ -561,8 +563,8 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           </Col>
           <Col span={SETTING_RIGHT_SPAN}>
             <Tooltip
-              trigger={allowUpdate ? ["focus"] : ["hover"]}
-              title={allowUpdate ? tooltipTitle : messages["tracing.read_only_mode_notification"]}
+              trigger={disabled ? ["hover"] : ["focus"]}
+              title={disabled ? editingDisallowedExplanation : tooltipTitle}
               placement="topLeft"
               // @ts-expect-error ts-migrate(2322) FIXME: Type '{ backgroundColor: string; } | null' is not ... Remove this comment to see the full error message
               overlayStyle={tooltipStyle}
@@ -575,19 +577,19 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                   value={this.state.text}
                   placeholder="0, 0, 0, 512, 512, 512"
                   size="small"
-                  disabled={!allowUpdate}
+                  disabled={disabled}
                 />
               </span>
             </Tooltip>
           </Col>
           <Col span={2}>
-            <Tooltip title={allowUpdate ? null : messages["tracing.read_only_mode_notification"]}>
+            <Tooltip title={disabled ? messages["tracing.read_only_mode_notification"] : null}>
               <span>
                 <ColorSetting
                   value={Utils.rgbToHex(upscaledColor)}
                   onChange={this.handleColorChange}
                   style={iconStyle}
-                  disabled={!allowUpdate}
+                  disabled={disabled}
                 />
               </span>
             </Tooltip>

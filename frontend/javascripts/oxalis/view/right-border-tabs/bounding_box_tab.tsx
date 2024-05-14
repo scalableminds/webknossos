@@ -11,6 +11,7 @@ import {
   deleteUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { allowUpdateAndIsNotLocked } from "oxalis/model/accessors/annotation_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import * as Utils from "libs/utils";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
@@ -20,8 +21,11 @@ import { APIJobType } from "types/api_flow_types";
 export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const tracing = useSelector((state: OxalisState) => state.tracing);
-  const allowUpdate = tracing.restrictions.allowUpdate;
+  const allowUpdate = allowUpdateAndIsNotLocked(tracing);
+  const isLockedByUser = tracing.isLockedByUser;
+  const isOwner = !!(activeUser && activeUser?.id === tracing.owner?.id);
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const { userBoundingBoxes } = getSomeTracing(tracing);
   const dispatch = useDispatch();
@@ -123,7 +127,9 @@ export default function BoundingBoxTab() {
             onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
             onNameChange={_.partial(setBoundingBoxName, bb.id)}
             onColorChange={_.partial(setBoundingBoxColor, bb.id)}
-            allowUpdate={allowUpdate}
+            disabled={allowUpdate}
+            isLockedByUser={isLockedByUser}
+            isOwner={isOwner}
           />
         ))
       ) : (

@@ -199,8 +199,12 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.compound_project_not_found":
     "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",
   "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
-  "tracing.read_only_mode_notification":
-    "This annotation is in read-only mode and cannot be updated.",
+  "tracing.read_only_mode_notification": (isAnnotationLockedByUser: boolean, isOwner: boolean) =>
+    isAnnotationLockedByUser
+      ? `This annotation is in read-only mode and cannot be updated. It is currently locked by ${
+          isOwner ? "you" : "the owner"
+        }.`
+      : "This annotation is in read-only mode and cannot be updated.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.volume_layer_name_duplication":
     "This layer name already exists! Please change it to resolve duplicates.",

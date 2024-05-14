@@ -11,6 +11,8 @@ import {
   CopyOutlined,
   TeamOutlined,
   UserOutlined,
+  LockOutlined,
+  UnlockOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -31,6 +33,7 @@ import {
   downloadAnnotation,
   getCompactAnnotationsForUser,
   getReadableAnnotations,
+  editLockedState,
 } from "admin/admin_rest_api";
 import { formatHash, stringToColor } from "libs/format_utils";
 import { handleGenericError } from "libs/error_handling";
@@ -96,6 +99,8 @@ function formatUserName(user: APIUserCompact) {
   return `${user.firstName} ${user.lastName}`;
 }
 
+const LOCKED_TAG = "locked";
+
 class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   state: State = {
     shouldShowArchivedTracings: false,
@@ -143,6 +148,24 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     } else {
       return this.state.unarchivedModeState;
     }
+  };
+
+  updateTracingInLocalState = (
+    tracing: APIAnnotationInfo,
+    callback: (arg0: APIAnnotationInfo) => APIAnnotationInfo,
+  ) => {
+    const tracings = this.getCurrentTracings();
+    let updatedTracing = tracing;
+    const newTracings = tracings.map((currentTracing) => {
+      if (currentTracing.id !== tracing.id) {
+        return currentTracing;
+      } else {
+        updatedTracing = callback(currentTracing);
+        return updatedTracing;
+      }
+    });
+    this.setModeState({ tracings: newTracings }, this.state.shouldShowArchivedTracings);
+    return updatedTracing;
   };
 
   setModeState = (modeShape: Partial<TracingModeState>, useArchivedTracings: boolean) =>
@@ -259,10 +282,20 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     state: type === "reopen" ? "Active" : "Finished",
   });
 
+  // TODO: use! and show locked icon
+  setLockedState = async (tracing: APIAnnotationInfo, locked: boolean) => {
+    const newTracing = await editLockedState(tracing.id, tracing.typ, locked);
+    Toast.success(messages["annotation.was_edited"]);
+    this.updateTracingInLocalState(tracing, (_t) => newTracing);
+    trackAction("Lock/Unlock explorative annotation");
+    this.editTagFromAnnotation(tracing, locked, LOCKED_TAG);
+  };
+
   renderActions = (tracing: APIAnnotationInfo) => {
     if (tracing.typ !== "Explorational") {
       return null;
     }
+    const isActiveUserOwner = tracing.owner?.id === this.props.activeUser.id;
 
     const { typ, id, state } = tracing;
 
@@ -295,6 +328,28 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             </AsyncLink>
           ) : null}
           <br />
+          <AsyncLink
+            href="#"
+            title={
+              !isActiveUserOwner
+                ? `Only the owner can ${
+                    tracing.isLockedByUser ? "unlock" : "lock"
+                  } this annotation.`
+                : undefined
+            }
+            disabled={!isActiveUserOwner}
+            onClick={() => this.setLockedState(tracing, !tracing.isLockedByUser)}
+            icon={
+              tracing.isLockedByUser ? (
+                <LockOutlined key="lock" className="icon-margin-right" />
+              ) : (
+                <UnlockOutlined key="unlock" className="icon-margin-right" />
+              )
+            }
+          >
+            {tracing.isLockedByUser ? "Unlock" : "Lock"}
+          </AsyncLink>
+          <br />
         </div>
       );
     } else {
@@ -324,24 +379,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   renameTracing(tracing: APIAnnotationInfo, name: string) {
-    const tracings = this.getCurrentTracings();
-    const newTracings = tracings.map((currentTracing) => {
-      if (currentTracing.id !== tracing.id) {
-        return currentTracing;
-      } else {
-        return update(currentTracing, {
-          name: {
-            $set: name,
-          },
-        });
-      }
-    });
-    this.setModeState(
-      {
-        tracings: newTracings,
-      },
-      this.state.shouldShowArchivedTracings,
-    );
+    this.updateTracingInLocalState(tracing, (t) => update(t, { name: { $set: name } }));
     editAnnotation(tracing.id, tracing.typ, {
       name,
     }).then(() => {
@@ -397,9 +435,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     annotation: APIAnnotationInfo,
     shouldAddTag: boolean,
     tag: string,
-    event: React.SyntheticEvent,
+    event?: React.SyntheticEvent,
   ): void => {
-    event.stopPropagation(); // prevent the onClick event
+    event?.stopPropagation(); // prevent the onClick event
 
     this.setState((prevState) => {
       const newTracings = prevState.unarchivedModeState.tracings.map((t) => {
@@ -707,7 +745,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                   tag={tag}
                   closable={
                     !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
-                    !this.state.shouldShowArchivedTracings
+                    !this.state.shouldShowArchivedTracings &&
+                    tag !== LOCKED_TAG
                   }
                 />
               ))}

@@ -352,7 +352,7 @@ function TaskListView({ initialFieldValues }: Props) {
       key: "actions",
       width: 170,
       fixed: "right",
-      render: (_, task: APITask) => (
+      render: (_unused, task: APITask) => (
         <>
           {task.status.finished > 0 ? (
             <div>

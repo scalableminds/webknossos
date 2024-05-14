@@ -39,7 +39,8 @@ import { ArbitraryVectorInput } from "libs/vector_input";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import ButtonComponent from "./components/button_component";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
-import { StartAIJobModalState, StartAIJobModal } from "./action-bar/starting_job_modals";
+import { type StartAIJobModalState, StartAIJobModal } from "./action-bar/starting_job_modals";
+import { isUserAdminOrTeamManager } from "libs/utils";
 
 const VersionRestoreWarning = (
   <Alert
@@ -245,7 +246,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
       hasSkeleton,
       layoutProps,
       viewMode,
+      activeUser,
     } = this.props;
+    const isAdminOrDatasetManager = activeUser && isUserAdminOrTeamManager(activeUser);
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const isArbitrarySupported = hasSkeleton || isViewMode;
     const isAIAnalysisEnabled = () => {
@@ -281,7 +284,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
           <DatasetPositionView />
           <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
-          {isAIAnalysisEnabled() ? this.renderStartAIJobButton(!datasetHasColorLayer) : null}
+          {isAIAnalysisEnabled() && isAdminOrDatasetManager
+            ? this.renderStartAIJobButton(!datasetHasColorLayer)
+            : null}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}
         </div>

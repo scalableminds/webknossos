@@ -307,6 +307,7 @@ export const addPrecomputedMeshAction = (
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
+  areChunksMerged: boolean,
   mappingName: string | null | undefined,
 ) =>
   ({
@@ -316,6 +317,7 @@ export const addPrecomputedMeshAction = (
     seedPosition,
     seedAdditionalCoordinates,
     meshFileName,
+    areChunksMerged,
     mappingName,
   }) as const;
 

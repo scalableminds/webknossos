@@ -250,6 +250,9 @@ export const getCrossHairOverlay: ShaderModule = {
       crossHairColor.a = float(
         // Only show the cross hair in proofreading mode ...
         isProofreading &&
+        // ... when no supervoxel is highlighted in 3D viewport (the cross
+        // position might not reflect the selected supervoxel which can be confusing).
+        !isUnmappedSegmentHighlighted &&
         // ... on the exact w-slice ...
         flooredGlobalPosUVW.z == floor(activeSegmentPosUVW.z) &&
         // ... with this extent ...
@@ -265,12 +268,12 @@ export const getCrossHairOverlay: ShaderModule = {
   `,
 };
 
-export const getSegmentationId: ShaderModule = {
+export const getSegmentId: ShaderModule = {
   requirements: [binarySearchIndex, getRgbaAtIndex],
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    vec4[2] getSegmentationId_<%= segmentationName %>(vec3 worldPositionUVW) {
+    vec4[2] getSegmentId_<%= segmentationName %>(vec3 worldPositionUVW) {
       vec4[2] volume_color;
       vec3 transformedCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
       if (isOutsideOfBoundingBox(transformedCoordUVW)) {

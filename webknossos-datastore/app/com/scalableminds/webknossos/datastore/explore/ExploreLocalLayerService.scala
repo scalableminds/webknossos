@@ -22,7 +22,7 @@ import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 
 class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
-    extends ExploreLayerService
+    extends ExploreLayerUtils
     with FoxImplicits {
 
   def exploreLocal(path: Path, dataSourceId: DataSourceId, layerDirectory: String = "")(

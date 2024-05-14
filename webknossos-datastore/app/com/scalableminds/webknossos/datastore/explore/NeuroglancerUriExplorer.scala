@@ -13,10 +13,9 @@ import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
-                                        exploreLayerService: ExploreLayerService,
-                                        implicit val ec: ExecutionContext)
-    extends RemoteLayerExplorer {
+class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val ec: ExecutionContext)
+    extends RemoteLayerExplorer
+    with ExploreLayerUtils {
   override def name: String = "Neuroglancer URI Explorer"
 
   override def explore(remotePath: VaultPath,
@@ -30,7 +29,7 @@ class NeuroglancerUriExplorer @Inject()(dataVaultService: DataVaultService,
       exploredLayers = layerSpecs.value.map(exploreNeuroglancerLayer).toList
       layerLists <- Fox.combined(exploredLayers)
       layers = layerLists.flatten
-      renamedLayers = exploreLayerService.makeLayerNamesUnique(layers.map(_._1))
+      renamedLayers = makeLayerNamesUnique(layers.map(_._1))
     } yield renamedLayers.zip(layers.map(_._2))
 
   private def exploreNeuroglancerLayer(layerSpec: JsValue): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =

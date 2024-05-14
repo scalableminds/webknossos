@@ -3,9 +3,10 @@ package models.dataset.explore
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.explore.{
-  ExploreLayerService,
+  ExploreLayerUtils,
   N5ArrayExplorer,
   N5MultiscalesExplorer,
   NeuroglancerUriExplorer,
@@ -51,19 +52,43 @@ object ExploreAndAddRemoteDatasetParameters {
     Json.format[ExploreAndAddRemoteDatasetParameters]
 }
 
-class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
-                                          dataVaultService: DataVaultService,
-                                          organizationDAO: OrganizationDAO,
-                                          dataStoreDAO: DataStoreDAO,
-                                          datasetService: DatasetService,
-                                          wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                                          exploreLayerService: ExploreLayerService,
-                                          rpc: RPC,
-                                          wkConf: WkConf)
+class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService,
+                                            dataVaultService: DataVaultService,
+                                            organizationDAO: OrganizationDAO,
+                                            dataStoreDAO: DataStoreDAO,
+                                            datasetService: DatasetService,
+                                            wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+                                            rpc: RPC,
+                                            wkConf: WkConf)
     extends FoxImplicits
     with LazyLogging {
 
   private lazy val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
+
+  def addRemoteDatasource(dataSource: GenericDataSource[DataLayer],
+                          datasetName: String,
+                          user: User,
+                          folderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      organization <- organizationDAO.findOne(user._organization)
+      dataStore <- dataStoreDAO.findOneWithUploadsAllowed
+      _ <- datasetService.assertValidDatasetName(datasetName)
+      _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
+      client = new WKRemoteDataStoreClient(dataStore, rpc)
+      userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
+      _ <- client.addDataSource(organization.name, datasetName, dataSource, folderId, userToken)
+    } yield ()
+
+}
+
+class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
+                                          dataVaultService: DataVaultService,
+                                          dataStoreConfig: DataStoreConfig)
+    extends ExploreLayerUtils
+    with FoxImplicits
+    with LazyLogging {
+
+  // TODO: move to datastore
 
   def exploreRemoteDatasource(
       parameters: List[ExploreRemoteDatasetParameters],
@@ -80,27 +105,13 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       layersWithVoxelSizes = exploredLayersNested.flatten
       preferredVoxelSize = parameters.flatMap(_.preferredVoxelSize).headOption
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
-      (layers, voxelSize) <- exploreLayerService.adaptLayersAndVoxelSize(layersWithVoxelSizes, preferredVoxelSize)
+      (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, preferredVoxelSize)
       dataSource = GenericDataSource[DataLayer](
         DataSourceId("", ""), // Frontend will prompt user for a good name
         layers,
         voxelSize
       )
     } yield dataSource
-
-  def addRemoteDatasource(dataSource: GenericDataSource[DataLayer],
-                          datasetName: String,
-                          user: User,
-                          folderId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      organization <- organizationDAO.findOne(user._organization)
-      dataStore <- dataStoreDAO.findOneWithUploadsAllowed
-      _ <- datasetService.assertValidDatasetName(datasetName)
-      _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
-      client = new WKRemoteDataStoreClient(dataStore, rpc)
-      userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
-      _ <- client.addDataSource(organization.name, datasetName, dataSource, folderId, userToken)
-    } yield ()
 
   private def exploreRemoteLayersForUri(
       layerUri: String,
@@ -109,7 +120,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       reportMutable: ListBuffer[String],
       requestingUser: User)(implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
     for {
-      uri <- tryo(new URI(exploreLayerService.removeHeaderFileNamesFromUriSuffix(layerUri))) ?~> s"Received invalid URI: $layerUri"
+      uri <- tryo(new URI(removeHeaderFileNamesFromUriSuffix(layerUri))) ?~> s"Received invalid URI: $layerUri"
       _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
       _ <- assertLocalPathInWhitelist(uri)
       credentialOpt = credentialService.createCredentialOpt(uri,
@@ -125,21 +136,22 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
         credentialId.map(_.toString),
         reportMutable,
         List(
-          new ZarrArrayExplorer(Vec3Int.ones, ec),
+          new ZarrArrayExplorer(Vec3Int.ones),
           new NgffExplorer,
           new WebknossosZarrExplorer,
           new N5ArrayExplorer,
           new N5MultiscalesExplorer,
           new PrecomputedExplorer,
           new Zarr3ArrayExplorer,
-          new NeuroglancerUriExplorer(dataVaultService, exploreLayerService, ec)
+          new NeuroglancerUriExplorer(dataVaultService)
         )
       )
     } yield layersWithVoxelSizes
 
   private def assertLocalPathInWhitelist(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
     if (uri.getScheme == DataVaultService.schemeFile) {
-      bool2Fox(wkConf.Datastore.localFolderWhitelist.exists(whitelistEntry => uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localFolderWhitelist"
+      bool2Fox(dataStoreConfig.Datastore.localFolderWhitelist.exists(whitelistEntry =>
+        uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localFolderWhitelist"
     } else Fox.successful(())
 
   private def exploreRemoteLayersForRemotePath(remotePath: VaultPath,

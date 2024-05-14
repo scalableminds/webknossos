@@ -563,6 +563,7 @@ class VolumeTracingController @Inject()(
           fallbackLayer <- tracingService.getFallbackLayer(tracingId)
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           mappingName <- tracingService.baseMappingName(tracing)
+          _ <- bool2Fox(DataLayer.bucketSize <= request.body.cubeSize) ?~> "cubeSize must be at least one bucket (32³)"
           bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
             .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
               fallbackLayer,

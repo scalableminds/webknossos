@@ -38,6 +38,10 @@ import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import type { MenuProps } from "rc-menu";
 import { Comparator } from "types/globals";
+import {
+  allowUpdateAndIsNotLocked,
+  isAnnotationOwner,
+} from "oxalis/model/accessors/annotation_accessor";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {
@@ -74,7 +78,9 @@ function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparato
 
 type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
-  allowUpdate: boolean;
+  editAllowed: boolean;
+  isAnnotationLockedByUser: boolean;
+  isOwner: boolean;
   setActiveNode: (nodeId: number) => void;
   deleteComment: () => void;
   createComment: (text: string) => void;
@@ -312,7 +318,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
   };
 
   renderMarkdownModal() {
-    if (!this.props.allowUpdate) {
+    if (!this.props.editAllowed) {
       return null;
     }
     const activeCommentMaybe = this.getActiveComment(true);
@@ -405,7 +411,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
       .replace(/\r?\n/g, "\\n");
     const isMultilineComment = activeCommentContent.indexOf("\\n") !== -1;
     const activeNodeMaybe = getActiveNode(this.props.skeletonTracing);
-    const isEditingDisabled = activeNodeMaybe.isNothing || !this.props.allowUpdate;
+    const isEditingDisabled = activeNodeMaybe.isNothing || !this.props.editAllowed;
 
     const findCommentIndexFn = (commentOrTree: Tree | CommentType) =>
       "nodeId" in commentOrTree && commentOrTree.nodeId === this.props.skeletonTracing.activeNodeId;
@@ -433,6 +439,11 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
               this.getData(),
               activeCommentMaybe.isJust ? findCommentIndexFn : findTreeIndexFn,
             );
+            const { isAnnotationLockedByUser, isOwner } = this.props;
+            const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
+              isAnnotationLockedByUser,
+              isOwner,
+            );
 
             return (
               <React.Fragment>
@@ -454,11 +465,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   <InputComponent
                     value={activeCommentContent}
                     disabled={isEditingDisabled}
-                    title={
-                      this.props.allowUpdate
-                        ? undefined
-                        : messages["tracing.read_only_mode_notification"]
-                    }
+                    title={this.props.editAllowed ? undefined : isEditingDisabledMessage}
                     onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
                       this.handleChangeInput(evt.target.value, true)
                     }
@@ -474,9 +481,9 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     onClick={() => this.setMarkdownModalVisibility(true)}
                     disabled={isEditingDisabled}
                     title={
-                      this.props.allowUpdate
+                      this.props.editAllowed
                         ? "Open dialog to edit comment in multi-line mode"
-                        : messages["tracing.read_only_mode_notification"]
+                        : isEditingDisabledMessage
                     }
                     type={isMultilineComment ? "primary" : "default"}
                     icon={<EditOutlined />}
@@ -541,7 +548,9 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
 
 const mapStateToProps = (state: OxalisState) => ({
   skeletonTracing: state.tracing.skeleton,
-  allowUpdate: state.tracing.restrictions.allowUpdate,
+  editAllowed: allowUpdateAndIsNotLocked(state.tracing),
+  isAnnotationLockedByUser: state.tracing.isLockedByUser,
+  isOwner: isAnnotationOwner(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

@@ -24,6 +24,13 @@ export function allowUpdateAndIsNotLocked(annotation: APIAnnotation | Annotation
   );
 }
 
+export function isAnnotationOwner(state: OxalisState) {
+  const activeUser = state.activeUser;
+  const owner = state.tracing.owner;
+
+  return !!(activeUser && owner?.id === activeUser.id);
+}
+
 export type SkeletonTracingStats = {
   treeCount: number;
   nodeCount: number;

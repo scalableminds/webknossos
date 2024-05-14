@@ -99,6 +99,10 @@ import { api } from "oxalis/singletons";
 import messages from "messages";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
+import {
+  allowUpdateAndIsNotLocked,
+  isAnnotationOwner,
+} from "oxalis/model/accessors/annotation_accessor";
 
 const { confirm } = Modal;
 const treeTabId = "tree-list";
@@ -682,7 +686,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         treeGroups={this.props.skeletonTracing.treeGroups}
         activeTreeId={this.props.skeletonTracing.activeTreeId}
         activeGroupId={this.props.skeletonTracing.activeGroupId}
-        allowUpdate={this.props.allowUpdate}
+        editAllowed={this.props.editAllowed}
         sortBy={sortBy}
         selectedTrees={this.state.selectedTrees}
         onSelectTree={this.onSelectTree}
@@ -723,7 +727,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   }
 
   getActionsDropdown(): MenuProps {
-    const isEditingDisabled = !this.props.allowUpdate;
+    const isEditingDisabled = !this.props.editAllowed;
     return {
       items: [
         {
@@ -829,7 +833,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       title = "Importing NML";
     }
     const { groupToDelete } = this.state;
-    const isEditingDisabled = !this.props.allowUpdate;
+    const isEditingDisabled = !this.props.editAllowed;
+    const { isAnnotationLockedByUser, isOwner } = this.props;
+    const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
+      isAnnotationLockedByUser,
+      isOwner,
+    );
 
     return (
       <div id={treeTabId} className="padded-tab-content">
@@ -863,22 +872,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   </AdvancedSearchPopover>
                   <ButtonComponent
                     onClick={this.props.onCreateTree}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : "Create new Tree (C)"
-                    }
+                    title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
                     disabled={isEditingDisabled}
                   >
                     <i className="fas fa-plus" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.handleDelete}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : "Delete Selected Trees"
-                    }
+                    title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
                     disabled={isEditingDisabled}
                   >
                     <i className="far fa-trash-alt" />
@@ -915,11 +916,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onChange={this.handleChangeName}
                     value={activeTreeName || activeGroupName}
                     disabled={noTreesAndGroups || isEditingDisabled}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : undefined
-                    }
+                    title={isEditingDisabled ? isEditingDisabledMessage : undefined}
                     style={{ width: "70%" }}
                   />
                   <ButtonComponent
@@ -988,10 +985,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState) => ({
   annotation: state.tracing,
-  allowUpdate: state.tracing.restrictions.allowUpdate,
+  editAllowed: allowUpdateAndIsNotLocked(state.tracing),
   skeletonTracing: state.tracing.skeleton,
   userConfiguration: state.userConfiguration,
   isSkeletonLayerTransformed: isSkeletonLayerTransformed(state),
+  isAnnotationLockedByUser: state.tracing.isLockedByUser,
+  isOwner: isAnnotationOwner(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

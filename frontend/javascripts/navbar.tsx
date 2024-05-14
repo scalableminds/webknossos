@@ -63,6 +63,8 @@ import { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
 import { MaintenanceBanner } from "maintenance_banner";
 import { getSystemColorTheme } from "theme";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import { isAnnotationOwner as isAnnotationOwnerAccessor } from "oxalis/model/accessors/annotation_accessor";
 
 const { Header } = Layout;
 
@@ -82,6 +84,9 @@ type StateProps = {
   hasOrganizations: boolean;
   othersMayEdit: boolean;
   allowUpdate: boolean;
+  isLockedByUser: boolean;
+  isAnnotationOwner: boolean;
+  annotationOwnerName: string;
   blockedByUser: APIUserCompact | null | undefined;
   navbarHeight: number;
 };
@@ -776,6 +781,14 @@ function AnnotationLockedByUserTag({
   );
 }
 
+function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwner: boolean }) {
+  return (
+    <Tooltip title={messages["tracing.read_only_mode_notification"](true, props.isOwner)}>
+      <Tag color="warning">Locked by {props.annotationOwnerName}</Tag>
+    </Tooltip>
+  );
+}
+
 function Navbar({
   activeUser,
   isAuthenticated,
@@ -784,7 +797,10 @@ function Navbar({
   othersMayEdit,
   blockedByUser,
   allowUpdate,
+  annotationOwnerName,
+  isLockedByUser,
   navbarHeight,
+  isAnnotationOwner,
 }: Props) {
   const history = useHistory();
 
@@ -847,12 +863,21 @@ function Navbar({
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    if (othersMayEdit && !allowUpdate) {
+    if (othersMayEdit && !allowUpdate && !isLockedByUser) {
       trailingNavItems.push(
         <AnnotationLockedByUserTag
           key="locked-by-user-tag"
           blockedByUser={blockedByUser}
           activeUser={activeUser}
+        />,
+      );
+    }
+    if (isLockedByUser) {
+      trailingNavItems.push(
+        <AnnotationLockedByOwnerTag
+          key="locked-by-owner-tag"
+          annotationOwnerName={annotationOwnerName}
+          isOwner={isAnnotationOwner}
         />,
       );
     }
@@ -957,6 +982,9 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   othersMayEdit: state.tracing.othersMayEdit,
   blockedByUser: state.tracing.blockedByUser,
   allowUpdate: state.tracing.restrictions.allowUpdate,
+  isLockedByUser: state.tracing.isLockedByUser,
+  annotationOwnerName: formatUserName(state.activeUser, state.tracing.owner),
+  isAnnotationOwner: isAnnotationOwnerAccessor(state),
   navbarHeight: state.uiInformation.navbarHeight,
 });
 

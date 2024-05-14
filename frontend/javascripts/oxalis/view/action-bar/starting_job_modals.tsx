@@ -435,6 +435,25 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
               </Space>
             </Card>
           </Radio.Button>
+          <Radio.Button
+            className="aIJobSelection"
+            checked={aIJobModalState === "mitochondria_inferral"}
+            disabled={!Store.getState().activeUser?.isSuperUser}
+            onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
+          >
+            <Card bordered={false}>
+              <Space direction="vertical" size="small">
+                <Row className="ai-job-title">Mitochondria detection</Row>
+                <Row>
+                  <img
+                    src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
+                    alt={"Mitochondria detection example"}
+                    style={centerImageStyle}
+                  />
+                </Row>
+              </Space>
+            </Card>
+          </Radio.Button>
           <Tooltip title="Coming soon">
             <Radio.Button
               className="aIJobSelection"
@@ -449,27 +468,6 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
                     <img
                       src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
                       alt={"Nuclei detection example"}
-                      style={centerImageStyle}
-                    />
-                  </Row>
-                </Space>
-              </Card>
-            </Radio.Button>
-          </Tooltip>
-          <Tooltip title="Coming soon">
-            <Radio.Button
-              className="aIJobSelection"
-              checked={aIJobModalState === "mitochondria_inferral"}
-              disabled={!Store.getState().activeUser?.isSuperUser}
-              onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
-            >
-              <Card bordered={false}>
-                <Space direction="vertical" size="small">
-                  <Row className="ai-job-title">Mitochondria detection</Row>
-                  <Row>
-                    <img
-                      src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
-                      alt={"Mitochondria detection example"}
                       style={centerImageStyle}
                     />
                   </Row>

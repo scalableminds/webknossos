@@ -26,9 +26,9 @@ export class AbstractPrefetchStrategy {
   roundTripTimeRangeEnd: number = 0;
   contentTypes: Array<ContentTypes> = [];
   name: string = "ABSTRACT";
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'u' has no initializer and is not definit... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'u' has no initializer and is not definite... Remove this comment to see the full error message
   u: DimensionIndices;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'v' has no initializer and is not definit... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'v' has no initializer and is not definite... Remove this comment to see the full error message
   v: DimensionIndices;
 
   forContentType(givenContentTypes: Record<ContentTypes, boolean>): boolean {
@@ -77,7 +77,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
   roundTripTimeRangeEnd = Infinity;
   preloadingSlides = 0;
   preloadingPriorityOffset = 0;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'w' has no initializer and is not definit... Remove this comment to see the full error message
+  // @ts-expect-error ts-migrate(2564) FIXME: Property 'w' has no initializer and is not definite... Remove this comment to see the full error message
   w: DimensionIndices;
 
   prefetch(

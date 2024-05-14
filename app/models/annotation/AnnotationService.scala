@@ -469,7 +469,7 @@ class AnnotationService @Inject()(
           executeFinish
         } else if (annotation.state == Finished) {
           logger.info(
-            s"Silently not finishing annotation ${annotation._id.toString} for it is aready finished. Access context: ${ctx.toStringAnonymous}")
+            s"Silently not finishing annotation ${annotation._id.toString} for it is already finished. Access context: ${ctx.toStringAnonymous}")
           Fox.successful("annotation.finished")
         } else {
           logger.info(

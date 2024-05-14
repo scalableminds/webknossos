@@ -177,7 +177,7 @@ test("SkeletonTracing should add nodes to a different tree", (t) => {
     resolution,
   );
   const createTreeAction = SkeletonTracingActions.createTreeAction();
-  // add a node to inital tree, then create a second tree and add two nodes
+  // add a node to initial tree, then create a second tree and add two nodes
   let newState = SkeletonTracingReducer(initialState, createNodeAction);
   newState = SkeletonTracingReducer(newState, createTreeAction);
   newState = SkeletonTracingReducer(newState, createNodeAction);
@@ -608,7 +608,7 @@ test("SkeletonTracing should set a new node radius", (t) => {
     resolution,
   );
   const setNodeRadiusAction = SkeletonTracingActions.setNodeRadiusAction(newRadius);
-  // Create a node and change its readius
+  // Create a node and change its radius
   let newState = SkeletonTracingReducer(initialState, createNodeAction);
   newState = SkeletonTracingReducer(newState, setNodeRadiusAction);
   t.not(newState, initialState);

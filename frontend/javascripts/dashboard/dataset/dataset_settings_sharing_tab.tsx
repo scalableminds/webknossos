@@ -87,7 +87,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
     const panelLabel = (
       <span>
         All users with access permission to work with this dataset{" "}
-        <Tooltip title="Based on the specified team permissions and individiual user roles. Any changes will only appear after pressing the Save button.">
+        <Tooltip title="Based on the specified team permissions and individual user roles. Any changes will only appear after pressing the Save button.">
           <InfoCircleOutlined style={{ color: "gray" }} />
         </Tooltip>
       </span>

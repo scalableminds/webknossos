@@ -297,7 +297,7 @@ function removeMeshWithoutVoxels(
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
 ) {
   // If no voxels were added to the scene (e.g. because the segment doesn't have any voxels in this n-dimension),
-  // remove it from the store's state aswell.
+  // remove it from the store's state as well.
   const { segmentMeshController } = getSceneController();
   if (!segmentMeshController.hasMesh(segmentId, layerName, additionalCoordinates)) {
     Store.dispatch(removeMeshAction(layerName, segmentId));

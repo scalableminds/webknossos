@@ -1,6 +1,6 @@
 import { Button, Table, TableProps } from "antd";
 import { GetRowKey } from "antd/lib/table/interface";
-import * as React from "react";
+import React from "react";
 
 type State = {
   expandedRows: Array<string>;
@@ -23,6 +23,12 @@ export default class FixedExpandableTable extends React.PureComponent<TableProps
   ) {
     const canUseRowKey = typeof rowKey === "string";
     return dataSource != null && canUseRowKey ? dataSource.map((row) => row[rowKey]) : [];
+  }
+
+  componentDidUpdate(prevProps: Readonly<TableProps<any>>): void {
+    if (prevProps.dataSource !== this.props.dataSource) {
+      this.setState({ expandedRows: [] });
+    }
   }
 
   render() {

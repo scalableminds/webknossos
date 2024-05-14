@@ -41,21 +41,21 @@ class EmailVerificationKeyDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
 
   def insertOne(evk: EmailVerificationKey): Fox[Unit] =
     for {
-      _ <- run(q"""insert into webknossos.emailVerificationKeys(_id, key, email, _multiUser, validUntil, isUsed)
-                         values(${evk._id}, ${evk.key}, ${evk.email}, ${evk._multiUser}, ${evk.validUntil}, ${evk.isUsed})""".asUpdate)
+      _ <- run(q"""INSERT INTO webknossos.emailVerificationKeys(_id, key, email, _multiUser, validUntil, isUsed)
+                   VALUES(${evk._id}, ${evk.key}, ${evk.email}, ${evk._multiUser}, ${evk.validUntil}, ${evk.isUsed})""".asUpdate)
     } yield ()
 
   def findOneByKey(key: String): Fox[EmailVerificationKey] =
     for {
-      r <- run(q"select $columns from webknossos.emailVerificationKeys where key = $key".as[EmailverificationkeysRow])
+      r <- run(q"SELECT $columns FROM webknossos.emailVerificationKeys WHERE key = $key".as[EmailverificationkeysRow])
       parsed <- parseFirst(r, key)
     } yield parsed
 
   def markAsUsed(emailVerificationKeyId: ObjectId): Fox[Unit] =
     for {
-      _ <- run(q"""update webknossos.emailVerificationKeys set
-                          isused = true
-                   where _id = $emailVerificationKeyId""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.emailVerificationKeys
+                   SET isused = true
+                   WHERE _id = $emailVerificationKeyId""".asUpdate)
     } yield ()
 
 }

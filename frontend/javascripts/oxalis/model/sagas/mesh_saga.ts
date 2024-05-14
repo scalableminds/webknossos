@@ -107,7 +107,7 @@ const adhocMeshesMapByLayer: Record<string, Record<string, Map<number, ThreeDMap
 function marchingCubeSizeInTargetMag(): Vector3 {
   return (window as any).__marchingCubeSizeInTargetMag != null
     ? (window as any).__marchingCubeSizeInTargetMag
-    : [128, 128, 128];
+    : [64, 64, 64];
 }
 const modifiedCells: Set<number> = new Set();
 export function isMeshSTL(buffer: ArrayBuffer): boolean {

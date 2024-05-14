@@ -21,7 +21,7 @@ import * as Utils from "libs/utils";
 
 const INITIAL_DELAY = 5000;
 const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000; // 1min
-const UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY = "upgradeBannerWasClickedAwayy";
+const UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY = "upgradeBannerWasClickedAway";
 
 const BANNER_STYLE: React.CSSProperties = {
   position: "absolute",
@@ -119,10 +119,18 @@ export function MaintenanceBanner() {
     setClosestUpcomingMaintenance(_.first(closestUpcomingMaintenance));
   }
 
-  useEffect(() => {
-    const shouldShowUpcomingMaintenanceBanner =
-      closestUpcomingMaintenance != null && activeUser != null;
+  const [shouldShowUpcomingMaintenanceBanner, setShouldShowUpcomingMaintenanceBanner] =
+    useState(false);
 
+  useEffect(() => {
+    const newShouldShowUpcomingMaintenanceBanner =
+      closestUpcomingMaintenance != null && activeUser != null;
+    if (newShouldShowUpcomingMaintenanceBanner !== shouldShowUpcomingMaintenanceBanner) {
+      setShouldShowUpcomingMaintenanceBanner(newShouldShowUpcomingMaintenanceBanner);
+    }
+  }, [closestUpcomingMaintenance, activeUser, shouldShowUpcomingMaintenanceBanner]);
+
+  useEffect(() => {
     if (currentMaintenance || shouldShowUpcomingMaintenanceBanner) {
       setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.BANNER_HEIGHT);
     }
@@ -131,7 +139,7 @@ export function MaintenanceBanner() {
       // Reset Navbar height if maintenance is over
       setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
     }
-  }, [currentMaintenance, closestUpcomingMaintenance, activeUser]);
+  }, [currentMaintenance, closestUpcomingMaintenance, shouldShowUpcomingMaintenanceBanner]);
 
   useEffect(() => {
     // Do an initial fetch of the maintenance status so that users are notified
@@ -166,20 +174,23 @@ export function UpgradeVersionBanner() {
     color: white,
     fontSize: "medium",
     minWidth: "fit-content",
+    zIndex: 999,
   };
   const currentDate = dayjs();
 
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
+
   const isVersionOutdated = useFetch(
     async () => {
-      Utils.sleep(INITIAL_DELAY);
+      if (!activeUser) return false;
+      await Utils.sleep(INITIAL_DELAY);
       let buildInfo = await getBuildInfo();
       const lastCommitDate = parseCTimeDefaultDate(buildInfo.webknossos.commitDate);
       const needsUpdate = currentDate.diff(lastCommitDate, "month") >= 6;
       return needsUpdate;
     },
     false,
-    [],
+    [activeUser],
   );
 
   const [shouldBannerBeShown, setShouldBannerBeShown] = useState(false);
@@ -215,7 +226,7 @@ export function UpgradeVersionBanner() {
       message={
         <Space size="middle">
           <Space size="small">
-            You are using an old version of WEBKNOSSOS. Switch to
+            You are using an outdated version of WEBKNOSSOS. Switch to
             <a
               className="upgrade-banner-wk-link"
               target="_blank"

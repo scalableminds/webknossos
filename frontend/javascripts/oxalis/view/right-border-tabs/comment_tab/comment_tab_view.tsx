@@ -1,6 +1,6 @@
 import { AutoSizer, List } from "react-virtualized";
 import type { Dispatch } from "redux";
-import { Dropdown, Tooltip, Space } from "antd";
+import { Dropdown, Tooltip, Space, Tree as AntdTree, TreeProps} from "antd";
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
@@ -31,13 +31,21 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
-import type { CommentType, OxalisState, SkeletonTracing, Tree, TreeMap } from "oxalis/store";
+import type {
+  CommentType,
+  MutableCommentType,
+  OxalisState,
+  SkeletonTracing,
+  Tree,
+  TreeMap,
+} from "oxalis/store";
 import Store from "oxalis/store";
 import TreeWithComments from "oxalis/view/right-border-tabs/comment_tab/tree_with_comments";
 import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import type { MenuProps } from "rc-menu";
 import { Comparator } from "types/globals";
+import { title } from "process";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {
@@ -86,7 +94,7 @@ type PropsWithSkeleton = Props & {
 type CommentTabState = {
   isSortedAscending: boolean;
   sortBy: SortByEnumType;
-  collapsedTreeIds: Record<number, boolean>;
+  collapsedTreeIds: Record<string, boolean>;
   isMarkdownModalOpen: boolean;
 };
 const RELEVANT_ACTIONS_FOR_COMMENTS = [
@@ -97,35 +105,34 @@ const RELEVANT_ACTIONS_FOR_COMMENTS = [
   "deleteEdge",
   "revertToVersion",
 ];
-const memoizedDeriveData = memoizeOne(
-  (trees: TreeMap, state: CommentTabState): Array<Tree | CommentType> => {
-    const sortedTrees = _.values(trees)
-      .filter((tree) => tree.comments.length > 0)
-      .sort(getTreeSorter(state));
+const memoizedDeriveData = memoizeOne((trees: TreeMap, state: CommentTabState): Tree[] => {
+  const sortedTrees = _.values(trees)
+    .filter((tree) => tree.comments.length > 0)
+    .sort(getTreeSorter(state));
 
-    const commentSorter = getCommentSorter(state);
-    const data = [];
+  return sortedTrees;
+  const commentSorter = getCommentSorter(state);
+  const data = [];
 
-    for (const tree of sortedTrees) {
-      data.push(tree);
-      const isCollapsed = state.collapsedTreeIds[tree.treeId];
+  for (const tree of sortedTrees) {
+    data.push(tree);
+    const isCollapsed = state.collapsedTreeIds[tree.treeId];
 
-      if (!isCollapsed && tree.comments.length > 0) {
-        const sortedComments = tree.comments.slice().sort(commentSorter);
+    if (!isCollapsed && tree.comments.length > 0) {
+      const sortedComments = tree.comments.slice().sort(commentSorter);
 
-        // Don't use concat to avoid creating a new `data` array for each tree
-        for (const comment of sortedComments) {
-          data.push(comment);
-        }
+      // Don't use concat to avoid creating a new `data` array for each tree
+      for (const comment of sortedComments) {
+        data.push(comment);
       }
     }
+  }
 
-    return data;
-  },
-);
+  return data;
+});
 
 class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState> {
-  listRef: List | null | undefined;
+  listRef = React.createRef<typeof AntdTree>();
   storePropertyUnsubscribers: Array<() => void> = [];
   keyboard = new InputKeyboard(
     {
@@ -272,10 +279,10 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     });
   };
 
-  toggleExpand = (treeId: number) => {
+  toggleExpand = (expandedKeys: React.Key[]) => {
     this.setState((prevState) => ({
       collapsedTreeIds: update(prevState.collapsedTreeIds, {
-        $toggle: [treeId],
+        $toggle: [expandedKeys[0].toString()],
       }),
     }));
   };
@@ -363,37 +370,65 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     };
   }
 
-  getData(): Array<Tree | CommentType> {
+  getData(): Tree[] {
     return memoizedDeriveData(this.props.skeletonTracing.trees, this.state);
   }
 
-  renderRow = ({
-    index,
-    key,
-    style,
-  }: {
-    index: number;
-    key: string;
-    style: React.CSSProperties;
-  }) => {
-    const element = this.getData()[index];
-    if ("treeId" in element) {
-      const tree = element;
-      return (
-        <TreeWithComments
-          key={key}
-          style={style}
-          tree={tree}
-          collapsed={this.state.collapsedTreeIds[tree.treeId]}
-          onExpand={this.toggleExpand}
-          isActive={tree.treeId === this.props.skeletonTracing.activeTreeId}
-        />
-      );
-    } else {
-      const comment = element;
-      const isActive = comment.nodeId === this.props.skeletonTracing.activeNodeId;
-      return <Comment key={key} style={style} comment={comment} isActive={isActive} />;
-    }
+  // renderRow = ({
+  //   index,
+  //   key,
+  //   style,
+  // }: {
+  //   index: number;
+  //   key: string;
+  //   style: React.CSSProperties;
+  // }) => {
+  //   const element = this.getData()[index];
+  //   if ("treeId" in element) {
+  //     const tree = element;
+  //     return (
+  //       <TreeWithComments
+  //         key={key}
+  //         style={style}
+  //         tree={tree}
+  //         collapsed={this.state.collapsedTreeIds[tree.treeId]}
+  //         onExpand={this.toggleExpand}
+  //         isActive={tree.treeId === this.props.skeletonTracing.activeTreeId}
+  //       />
+  //     );
+  //   } else {
+  //     const comment = element;
+  //     const isActive = comment.nodeId === this.props.skeletonTracing.activeNodeId;
+  //     return <Comment key={key} style={style} comment={comment} isActive={isActive} />;
+  //   }
+  // };
+
+  renderCommentTree = () => {
+    const skeletonTracingTrees = this.getData();
+    
+    const treeData: TreeProps["treeData"] = skeletonTracingTrees.map((tree) => {
+      const commentSorter = getCommentSorter(this.state);
+
+      return {
+        key: tree.treeId.toString(),
+        title: tree.name,
+        expanded: true,
+        children: tree.comments
+          .slice()
+          .sort(commentSorter)
+          .map((comment) => {
+            const key = `comment-${tree.treeId}-${comment.nodeId}`;
+            const isActive = comment.nodeId === this.props.skeletonTracing.activeNodeId;
+            return { key: key, title: <Comment key={key} comment={comment} isActive={isActive} /> };
+          }),
+      };
+    });
+
+    const expandedKeys = Object.keys(this.state.collapsedTreeIds)
+
+    return (
+      <AntdTree key={commentListId} treeData={treeData} expandedKeys={expandedKeys} onExpand={this.toggleExpand} ref={this.listRef} defaultExpandParent autoExpandParent blockNode showLine />
+    );
   };
 
   render() {
@@ -503,8 +538,9 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     marginTop: 20,
                     listStyle: "none",
                   }}
-                >
-                  <AutoSizer>
+                  >
+                  {this.renderCommentTree()}
+                  {/* <AutoSizer>
                     {({ height, width }) => (
                       <div
                         style={{
@@ -528,7 +564,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                         />
                       </div>
                     )}
-                  </AutoSizer>
+                  </AutoSizer> */}
                 </div>
               </React.Fragment>
             );

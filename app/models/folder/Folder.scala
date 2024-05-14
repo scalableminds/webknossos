@@ -148,9 +148,9 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     rawAccessQ(write = true, requestingUserId, prefix = q"")
 
   private def rawAccessQ(write: Boolean, requestingUserId: ObjectId, prefix: SqlToken): SqlToken = {
-    val writeAccessPredicate = if (write) q"tr.isTeamManager" else q"${true}"
+    val writeAccessPredicate = if (write) q"tr.isTeamManager" else q"TRUE"
     val breadCrumbsAccessForFolder =
-      if (write) q"${false}"
+      if (write) q"FALSE"
       else
         q"""
        -- only for read access: you may read the ancestors of a folder you can access
@@ -166,7 +166,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
        )
        """
     val breadCrumbsAccessForDataset =
-      if (write) q"${false}"
+      if (write) q"FALSE"
       else
         q"""
        -- only for read access: you may read the ancestors of a dataset you can access
@@ -230,7 +230,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override def findOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Folder] =
     for {
       accessQuery <- readAccessQuery
-      rows <- run(q"SELECT $columns FROM webknossos.folders WHERE _id = $folderId and $accessQuery".as[FoldersRow])
+      rows <- run(q"SELECT $columns FROM webknossos.folders WHERE _id = $folderId AND $accessQuery".as[FoldersRow])
       parsed <- parseFirst(rows, "id")
     } yield parsed
 

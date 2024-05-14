@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Table, Tag, Spin, Button, Input, Modal, Card, Alert, App } from "antd";
+import { Tag, Spin, Button, Input, Modal, Card, Alert, App, TableProps } from "antd";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -39,7 +39,6 @@ import messages from "messages";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import UserSelectionComponent from "admin/user/user_selection_component";
 
-const { Column } = Table;
 const { Search, TextArea } = Input;
 
 type Props = {
@@ -237,6 +236,176 @@ function TaskListView({ initialFieldValues }: Props) {
   const marginRight = {
     marginRight: 20,
   };
+
+  const columns: TableProps["columns"] = [
+    {
+      title: "ID",
+      dataIndex: "id",
+      key: "id",
+      sorter: Utils.localeCompareBy<APITask>((task) => task.id),
+      className: "monospace-id",
+      width: 100,
+    },
+    {
+      title: "Project",
+      dataIndex: "projectName",
+      key: "projectName",
+      width: 130,
+      sorter: Utils.localeCompareBy<APITask>((task) => task.projectName),
+      render: (projectName: string) => <a href={`/projects#${projectName}`}>{projectName}</a>,
+    },
+    {
+      title: "Type",
+      dataIndex: "type",
+      key: "type",
+      width: 200,
+      sorter: Utils.localeCompareBy<APITask>((task) => task.type.summary),
+      render: (taskType: APITaskType) => (
+        <a href={`/taskTypes#${taskType.id}`}>{taskType.summary}</a>
+      ),
+    },
+    {
+      title: "Dataset",
+      dataIndex: "dataSet",
+      key: "dataSet",
+      sorter: Utils.localeCompareBy<APITask>((task) => task.dataSet),
+    },
+    {
+      title: "Stats",
+      dataIndex: "status",
+      key: "status",
+      render: (status: APITask["status"], task: APITask) => (
+        <div className="nowrap">
+          <span title="Pending Instances">
+            <PlayCircleOutlined className="icon-margin-right" />
+            {status.pending}
+          </span>
+          <br />
+          <span title="Active Instances">
+            <ForkOutlined className="icon-margin-right" />
+            {status.active}
+          </span>
+          <br />
+          <span title="Finished Instances">
+            <CheckCircleOutlined className="icon-margin-right" />
+            {status.finished}
+          </span>
+          <br />
+          <span title="Annotation Time">
+            <ClockCircleOutlined className="icon-margin-right" />
+            {formatSeconds((task.tracingTime || 0) / 1000)}
+          </span>
+        </div>
+      ),
+      filters: [
+        {
+          text: "Has Pending Instances",
+          value: "pending",
+        },
+        {
+          text: "Has Active Instances",
+          value: "active",
+        },
+        {
+          text: "Has Finished Instances",
+          value: "finished",
+        },
+      ],
+      onFilter: (key: any, task: APITask) => task.status[key as unknown as keyof TaskStatus] > 0,
+    },
+    {
+      title: "Edit Position / Bounding Box",
+      dataIndex: "editPosition",
+      key: "editPosition",
+      width: 150,
+      render: (_, task: APITask) => (
+        <div className="nowrap">
+          {formatTuple(task.editPosition)} <br />
+          <span>{formatTuple(task.boundingBoxVec6)}</span>
+        </div>
+      ),
+    },
+    {
+      title: "Experience",
+      dataIndex: "neededExperience",
+      key: "neededExperience",
+      sorter: Utils.localeCompareBy<APITask>((task) => task.neededExperience.domain),
+      width: 250,
+      render: (neededExperience: APITask["neededExperience"]) =>
+        neededExperience.domain !== "" || neededExperience.value > 0 ? (
+          <Tag>
+            {neededExperience.domain} : {neededExperience.value}
+          </Tag>
+        ) : null,
+    },
+    {
+      title: "Creation Date",
+      dataIndex: "created",
+      key: "created",
+      width: 200,
+      sorter: Utils.compareBy<APITask>((task) => task.created),
+      render: (created: APITask["created"]) => <FormattedDate timestamp={created} />,
+      defaultSortOrder: "descend",
+    },
+    {
+      title: "Action",
+      key: "actions",
+      width: 170,
+      fixed: "right",
+      render: (_unused, task: APITask) => (
+        <>
+          {task.status.finished > 0 ? (
+            <div>
+              <a
+                href={`/annotations/CompoundTask/${task.id}`}
+                title="View all Finished Annotations"
+              >
+                <EyeOutlined className="icon-margin-right" />
+                View
+              </a>
+            </div>
+          ) : null}
+          <div>
+            <a href={`/tasks/${task.id}/edit`} title="Edit Task">
+              ,
+              <EditOutlined className="icon-margin-right" />
+              Edit
+            </a>
+          </div>
+          {task.status.pending > 0 ? (
+            <div>
+              <LinkButton onClick={_.partial(assignTaskToUser, task)}>
+                <UserAddOutlined className="icon-margin-right" />
+                Manually Assign to User
+              </LinkButton>
+            </div>
+          ) : null}
+          {task.status.finished > 0 ? (
+            <div>
+              <AsyncLink
+                href="#"
+                onClick={() => {
+                  const includesVolumeData = task.type.tracingType !== "skeleton";
+                  return downloadAnnotationAPI(task.id, "CompoundTask", includesVolumeData);
+                }}
+                title="Download all Finished Annotations"
+                icon={<DownloadOutlined className="icon-margin-right" />}
+              >
+                Download
+              </AsyncLink>
+            </div>
+          ) : null}
+          <div>
+            <LinkButton onClick={_.partial(deleteTask, task)}>
+              <DeleteOutlined className="icon-margin-right" />
+              Delete
+            </LinkButton>
+          </div>
+        </>
+      ),
+    },
+  ];
+
   return (
     <div className="container">
       <div className="pull-right">
@@ -323,6 +492,7 @@ function TaskListView({ initialFieldValues }: Props) {
         <FixedExpandableTable
           dataSource={getFilteredTasks()}
           rowKey="id"
+          columns={columns}
           pagination={{
             defaultPageSize: 50,
           }}
@@ -336,174 +506,8 @@ function TaskListView({ initialFieldValues }: Props) {
           locale={{
             emptyText: renderPlaceholder(),
           }}
-        >
-          <Column
-            title="ID"
-            dataIndex="id"
-            key="id"
-            sorter={Utils.localeCompareBy<APITask>((task) => task.id)}
-            className="monospace-id"
-            width={100}
-          />
-          <Column
-            title="Project"
-            dataIndex="projectName"
-            key="projectName"
-            width={130}
-            sorter={Utils.localeCompareBy<APITask>((task) => task.projectName)}
-            render={(projectName: string) => <a href={`/projects#${projectName}`}>{projectName}</a>}
-          />
-          <Column
-            title="Type"
-            dataIndex="type"
-            key="type"
-            width={200}
-            sorter={Utils.localeCompareBy<APITask>((task) => task.type.summary)}
-            render={(taskType: APITaskType) => (
-              <a href={`/taskTypes#${taskType.id}`}>{taskType.summary}</a>
-            )}
-          />
-          <Column
-            title="Dataset"
-            dataIndex="dataSet"
-            key="dataSet"
-            sorter={Utils.localeCompareBy<APITask>((task) => task.dataSet)}
-          />
-          <Column
-            title="Stats"
-            dataIndex="status"
-            key="status"
-            render={(status, task: APITask) => (
-              <div className="nowrap">
-                <span title="Pending Instances">
-                  <PlayCircleOutlined className="icon-margin-right" />
-                  {status.pending}
-                </span>
-                <br />
-                <span title="Active Instances">
-                  <ForkOutlined className="icon-margin-right" />
-                  {status.active}
-                </span>
-                <br />
-                <span title="Finished Instances">
-                  <CheckCircleOutlined className="icon-margin-right" />
-                  {status.finished}
-                </span>
-                <br />
-                <span title="Annotation Time">
-                  <ClockCircleOutlined className="icon-margin-right" />
-                  {formatSeconds((task.tracingTime || 0) / 1000)}
-                </span>
-              </div>
-            )}
-            filters={[
-              {
-                text: "Has Pending Instances",
-                value: "pending",
-              },
-              {
-                text: "Has Active Instances",
-                value: "active",
-              },
-              {
-                text: "Has Finished Instances",
-                value: "finished",
-              },
-            ]}
-            onFilter={(key, task: APITask) => task.status[key as unknown as keyof TaskStatus] > 0}
-          />
-          <Column
-            title="Edit Position / Bounding Box"
-            dataIndex="editPosition"
-            key="editPosition"
-            width={150}
-            render={(__, task: APITask) => (
-              <div className="nowrap">
-                {formatTuple(task.editPosition)} <br />
-                <span>{formatTuple(task.boundingBoxVec6)}</span>
-              </div>
-            )}
-          />
-          <Column
-            title="Experience"
-            dataIndex="neededExperience"
-            key="neededExperience"
-            sorter={Utils.localeCompareBy<APITask>((task) => task.neededExperience.domain)}
-            width={250}
-            render={(neededExperience) =>
-              neededExperience.domain !== "" || neededExperience.value > 0 ? (
-                <Tag>
-                  {neededExperience.domain} : {neededExperience.value}
-                </Tag>
-              ) : null
-            }
-          />
-          <Column
-            title="Creation Date"
-            dataIndex="created"
-            key="created"
-            width={200}
-            sorter={Utils.compareBy<APITask>((task) => task.created)}
-            render={(created) => <FormattedDate timestamp={created} />}
-            defaultSortOrder={"descend"}
-          />
-          <Column
-            title="Action"
-            key="actions"
-            width={170}
-            fixed="right"
-            render={(__, task: APITask) => (
-              <>
-                {task.status.finished > 0 ? (
-                  <div>
-                    <a
-                      href={`/annotations/CompoundTask/${task.id}`}
-                      title="View all Finished Annotations"
-                    >
-                      <EyeOutlined className="icon-margin-right" />
-                      View
-                    </a>
-                  </div>
-                ) : null}
-                <div>
-                  <a href={`/tasks/${task.id}/edit`} title="Edit Task">
-                    <EditOutlined className="icon-margin-right" />
-                    Edit
-                  </a>
-                </div>
-                {task.status.pending > 0 ? (
-                  <div>
-                    <LinkButton onClick={_.partial(assignTaskToUser, task)}>
-                      <UserAddOutlined className="icon-margin-right" />
-                      Manually Assign to User
-                    </LinkButton>
-                  </div>
-                ) : null}
-                {task.status.finished > 0 ? (
-                  <div>
-                    <AsyncLink
-                      href="#"
-                      onClick={() => {
-                        const includesVolumeData = task.type.tracingType !== "skeleton";
-                        return downloadAnnotationAPI(task.id, "CompoundTask", includesVolumeData);
-                      }}
-                      title="Download all Finished Annotations"
-                      icon={<DownloadOutlined className="icon-margin-right" />}
-                    >
-                      Download
-                    </AsyncLink>
-                  </div>
-                ) : null}
-                <div>
-                  <LinkButton onClick={_.partial(deleteTask, task)}>
-                    <DeleteOutlined className="icon-margin-right" />
-                    Delete
-                  </LinkButton>
-                </div>
-              </>
-            )}
-          />
-        </FixedExpandableTable>
+        />
+
         {getAnonymousTaskLinkModal()}
       </Spin>
     </div>

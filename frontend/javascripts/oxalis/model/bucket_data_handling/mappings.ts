@@ -59,8 +59,6 @@ class Mappings {
   async updateMappingTextures(mapping: Mapping | null | undefined): Promise<void> {
     if (mapping == null) return;
     console.time("Time to create mapping texture");
-    console.log("Mapping Texture", performance.now());
-    console.log("Mapping size", mapping.size);
     const mappingSize = mapping.size;
     // The typed arrays need to be padded with 0s so that their length is a multiple of MAPPING_TEXTURE_WIDTH
     const paddedLength =

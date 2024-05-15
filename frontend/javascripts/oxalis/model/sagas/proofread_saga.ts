@@ -509,6 +509,14 @@ function* performMinCut(
       yield* put(deleteEdgeAction(firstNodeId, secondNodeId, Date.now(), "PROOFREADING"));
     }
 
+    console.log(
+      "Splitting agglomerate",
+      sourceAgglomerateId,
+      "with segment ids",
+      edge.segmentId1,
+      "and",
+      edge.segmentId2,
+    );
     items.push(
       splitAgglomerate(sourceAgglomerateId, edge.segmentId1, edge.segmentId2, agglomerateFileMag),
     );
@@ -744,6 +752,16 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       ),
     );
 
+    console.log(
+      "Merging agglomerate",
+      sourceAgglomerateId,
+      "with",
+      targetAgglomerateId,
+      "and segment ids",
+      sourceInfo.unmappedId,
+      targetInfo.unmappedId,
+    );
+
     const mergedMapping = new Map(
       Array.from(activeMapping.mapping as NumberLikeMap, ([key, value]) =>
         value === targetAgglomerateId ? [key, sourceAgglomerateId] : [key, value],
@@ -786,6 +804,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   yield* call([Model, Model.ensureSavedState]);
 
   if (action.type === "MIN_CUT_AGGLOMERATE_WITH_POSITION") {
+    console.log("start updating the mapping after a min-cut");
     if (sourceAgglomerateId !== targetAgglomerateId) {
       Toast.error(
         "The selected positions are not part of the same agglomerate and cannot be split.",
@@ -818,11 +837,13 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       }),
     ) as Mapping;
 
+    console.log("dispatch setMappingAction in proofreading saga");
     yield* put(
       setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
         mapping: splitMapping,
       }),
     );
+    console.log("finished updating the mapping after a min-cut");
   }
 
   if (action.type === "PROOFREAD_MERGE") {
@@ -1006,6 +1027,7 @@ function* prepareSplitOrMerge(): Saga<{
     );
   };
 
+  console.log("Accessing mapping for proofreading");
   const mapping = yield* select(
     (state) =>
       getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, volumeTracing.tracingId)

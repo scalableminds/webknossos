@@ -77,14 +77,14 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* take("INITIALIZE_SKELETONTRACING");
   yield* take("WK_READY");
   yield* takeEveryUnlessBusy(
-    ["DELETE_EDGE", "MERGE_TREES", "MIN_CUT_AGGLOMERATE"],
+    ["DELETE_EDGE", "MERGE_TREES", "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"],
     handleSkeletonProofreadingAction,
     "Proofreading in progress",
   );
   yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
   yield* takeEvery(["CLEAR_PROOFREADING_BY_PRODUCTS"], clearProofreadingByproducts);
   yield* takeEveryUnlessBusy(
-    ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE_WITH_POSITION"],
+    ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE"],
     handleProofreadMergeOrMinCut,
     "Proofreading in progress",
   );
@@ -279,7 +279,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   if (
     action.type !== "MERGE_TREES" &&
     action.type !== "DELETE_EDGE" &&
-    action.type !== "MIN_CUT_AGGLOMERATE"
+    action.type !== "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"
   ) {
     return;
   }
@@ -390,7 +390,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         agglomerateFileMag,
       ),
     );
-  } else if (action.type === "MIN_CUT_AGGLOMERATE") {
+  } else if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS") {
     const hasErrored = yield* call(
       performMinCut,
       sourceAgglomerateId,
@@ -624,7 +624,7 @@ const MISSING_INFORMATION_WARNING =
 function* handleProofreadMergeOrMinCut(action: Action) {
   // Actually, action is ProofreadMergeAction | MinCutAgglomerateWithPositionAction
   // but the takeEveryUnlessBusy wrapper does not understand this.
-  if (action.type !== "PROOFREAD_MERGE" && action.type !== "MIN_CUT_AGGLOMERATE_WITH_POSITION") {
+  if (action.type !== "PROOFREAD_MERGE" && action.type !== "MIN_CUT_AGGLOMERATE") {
     return;
   }
 
@@ -772,7 +772,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
         mapping: mergedMapping,
       }),
     );
-  } else if (action.type === "MIN_CUT_AGGLOMERATE_WITH_POSITION") {
+  } else if (action.type === "MIN_CUT_AGGLOMERATE") {
     if (sourceInfo.unmappedId === targetInfo.unmappedId) {
       Toast.error(
         "The selected positions are both part of the same base segment and cannot be split. Please select another position or use the nodes of the agglomerate skeleton to perform the split.",
@@ -803,7 +803,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   yield* put(pushSaveQueueTransaction(items, "mapping", volumeTracingId));
   yield* call([Model, Model.ensureSavedState]);
 
-  if (action.type === "MIN_CUT_AGGLOMERATE_WITH_POSITION") {
+  if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
     if (sourceAgglomerateId !== targetAgglomerateId) {
       Toast.error(

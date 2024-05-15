@@ -50,7 +50,7 @@ export const proofreadMerge = (
 
 export const minCutAgglomerateAction = (sourceNodeId: number, targetNodeId: number) =>
   ({
-    type: "MIN_CUT_AGGLOMERATE", // todop: rename to MIN_CUT_AGGLOMERATE_WITH_NODE_IDS
+    type: "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS",
     sourceNodeId,
     targetNodeId,
   }) as const;
@@ -61,7 +61,7 @@ export const minCutAgglomerateWithPositionAction = (
   agglomerateId?: number | null,
 ) =>
   ({
-    type: "MIN_CUT_AGGLOMERATE_WITH_POSITION", // todop: rename to MIN_CUT_AGGLOMERATE ?
+    type: "MIN_CUT_AGGLOMERATE",
     position,
     segmentId,
     agglomerateId,

@@ -24,7 +24,7 @@ case class NmlParameters(
     organizationName: String,
     description: Option[String],
     wkUrl: String,
-    scale: Option[VoxelSize],
+    voxelSize: Option[VoxelSize],
     createdTimestamp: Long,
     editPosition: Vec3IntProto,
     editRotation: Vec3DoubleProto,
@@ -185,11 +185,11 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("wkUrl", parameters.wkUrl)
       }
       Xml.withinElementSync("scale") {
-        writer.writeAttribute("x", parameters.scale.map(_.factor.x).getOrElse(-1).toString)
-        writer.writeAttribute("y", parameters.scale.map(_.factor.y).getOrElse(-1).toString)
-        writer.writeAttribute("z", parameters.scale.map(_.factor.z).getOrElse(-1).toString)
-        parameters.scale.foreach { scale =>
-          writer.writeAttribute("unit", scale.unit)
+        writer.writeAttribute("x", parameters.voxelSize.map(_.factor.x).getOrElse(-1).toString)
+        writer.writeAttribute("y", parameters.voxelSize.map(_.factor.y).getOrElse(-1).toString)
+        writer.writeAttribute("z", parameters.voxelSize.map(_.factor.z).getOrElse(-1).toString)
+        parameters.voxelSize.foreach { scale =>
+          writer.writeAttribute("unit", scale.unit.toString)
         }
       }
       Xml.withinElementSync("offset") {

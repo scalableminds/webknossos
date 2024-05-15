@@ -1,31 +1,11 @@
 package com.scalableminds.webknossos.datastore.models
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
 import play.api.libs.json._
 
 import scala.annotation.nowarn
-
-// Defines the real-world size in a spatial unit for a mag1-voxel.
-case class VoxelSize(factor: Vec3Double, unit: String)
-
-object VoxelSize {
-  private val DEFAULT_UNIT: String = "µm" // TODO make enum. // TODO: final default should be nm
-  //private val DEFAULT_UNIT: String = "nm" // TODO make enum. // TODO: final default should be nm
-
-  def fromFactorWithDefaultUnit(factor: Vec3Double): VoxelSize = VoxelSize(factor, DEFAULT_UNIT)
-
-  implicit val voxelSizeFormat: Format[VoxelSize] = new Format[VoxelSize] {
-    def reads(json: JsValue): JsResult[VoxelSize] =
-      Vec3Double.Vec3DoubleReads.reads(json).map(VoxelSize.fromFactorWithDefaultUnit).orElse {
-        Json.reads[VoxelSize].reads(json)
-      }
-
-    def writes(voxelSize: VoxelSize): JsValue = Json.writes[VoxelSize].writes(voxelSize)
-  }
-
-}
 
 package object datasource {
 

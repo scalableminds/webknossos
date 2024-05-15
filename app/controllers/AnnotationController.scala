@@ -129,7 +129,7 @@ class AnnotationController @Inject()(
     }
   }
 
-  def merge(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] = {
+  def merge(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotationA <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
@@ -141,7 +141,6 @@ class AnnotationController @Inject()(
         js <- annotationService.publicWrites(mergedAnnotation, Some(request.identity), Some(restrictions)) ?~> "annotation.write.failed"
       } yield JsonOk(js, Messages("annotation.merge.success"))
     }
-  }
 
   def mergeWithoutType(id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
@@ -152,7 +151,7 @@ class AnnotationController @Inject()(
     }
 
   def reset(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {  // TODO: Question: Why isn't the restrictions used here? Yes
+    for { // TODO: Question: Why isn't the restrictions used here? Yes
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, annotation._team))
       _ <- annotationService.resetToBase(annotation) ?~> "annotation.reset.failed"
@@ -180,17 +179,18 @@ class AnnotationController @Inject()(
     } yield JsonOk(json, Messages("annotation.reopened"))
   }
 
-  def editLockedState(typ: String, id: String, isLockedByUser: Boolean): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      annotation <- provider.provideAnnotation(typ, id, request.identity)
-      _ <- bool2Fox(annotation._user == request.identity._id) ?~> "annotation.isLockedByUser.notAllowed"
-      _ <- bool2Fox(annotation.typ == AnnotationType.Explorational) ?~> "annotation.isLockedByUser.explorationalsOnly"
-      _ = logger.info(
-        s"Locking annotation $id, new locked state will be ${isLockedByUser.toString}, access context: ${request.identity.toStringAnonymous}")
-      _ <- annotationDAO.updateLockedState(annotation._id, isLockedByUser) ?~> "annotation.invalid"
-      updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
-      json <- annotationService.publicWrites(updatedAnnotation, Some(request.identity)) ?~> "annotation.write.failed"
-    } yield JsonOk(json, Messages("annotation.IsLockedByUser.success"))
+  def editLockedState(typ: String, id: String, isLockedByUser: Boolean): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "annotation.isLockedByUser.notAllowed"
+        _ <- bool2Fox(annotation.typ == AnnotationType.Explorational) ?~> "annotation.isLockedByUser.explorationalsOnly"
+        _ = logger.info(
+          s"Locking annotation $id, new locked state will be ${isLockedByUser.toString}, access context: ${request.identity.toStringAnonymous}")
+        _ <- annotationDAO.updateLockedState(annotation._id, isLockedByUser) ?~> "annotation.invalid"
+        updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
+        json <- annotationService.publicWrites(updatedAnnotation, Some(request.identity)) ?~> "annotation.write.failed"
+      } yield JsonOk(json, Messages("annotation.IsLockedByUser.success"))
   }
 
   def addAnnotationLayer(typ: String, id: String): Action[AnnotationLayerParameters] =
@@ -217,10 +217,9 @@ class AnnotationController @Inject()(
     }
 
   def deleteAnnotationLayer(typ: String, id: String, layerName: String): Action[AnyContent] =
-      // TODO: Question: Why isn't the restrictions used here? Yes
+    // TODO: Question: Why isn't the restrictions used here? Yes
     sil.SecuredAction.async { implicit request =>
-
-    for {
+      for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.deleteLayer.explorationalsOnly"
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         _ <- bool2Fox(annotation._user == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
@@ -316,8 +315,7 @@ class AnnotationController @Inject()(
 
   def downsample(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
-      for {  // TODO: Question: Why isn't the restrictions used here? Yes
-
+      for { // TODO: Question: Why isn't the restrictions used here? Yes
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.downsample.explorationalsOnly"
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         annotationLayer <- annotation.annotationLayers
@@ -512,7 +510,7 @@ class AnnotationController @Inject()(
   }
 
   def transfer(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-  for {
+    for {
       restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
       _ <- restrictions.allowFinish(request.identity) ?~> "notAllowed" ~> FORBIDDEN
       newUserId <- (request.body \ "userId").asOpt[String].toFox ?~> "user.id.notFound" ~> NOT_FOUND
@@ -634,7 +632,7 @@ class AnnotationController @Inject()(
 
   def tryAcquiringAnnotationMutex(id: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-    logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
+      logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
         for {
           idValidated <- ObjectId.fromString(id)
           annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND

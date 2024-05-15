@@ -348,8 +348,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val tracingIds = parseArrayLiteral(<<[String])
     val annotationLayerNames = parseArrayLiteral(<<[String])
     val annotationLayerTypes = parseArrayLiteral(<<[String])
-    val annotationLayerStatistics = parseArrayLiteral(<<[String]).map(layerStats =>
-      Json.parse(layerStats).validate[JsObject].getOrElse(Json.obj()))
+    val annotationLayerStatistics =
+      parseArrayLiteral(<<[String]).map(layerStats => Json.parse(layerStats).validate[JsObject].getOrElse(Json.obj()))
 
     // format: off
     AnnotationCompactInfo(id, typ, name,description,ownerId,ownerFirstName,ownerLastName, othersMayEdit,teamIds,
@@ -429,8 +429,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                   ORDER BY a._id DESC
                   LIMIT $limit
                   OFFSET ${pageNumber * limit}"""
-      rows <- run(
-        query.as[AnnotationCompactInfo])
+      rows <- run(query.as[AnnotationCompactInfo])
     } yield rows.toList
 
   def countAllListableExplorationals(isFinished: Option[Boolean])(implicit ctx: DBAccessContext): Fox[Long] = {
@@ -687,7 +686,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
         query.withTransactionIsolation(Serializable),
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError)) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
-      _ = logger.info(s"Updated isLockedByUser of Annotation $id to $isLocked, access context: ${ctx.toStringAnonymous}")
+      _ = logger.info(
+        s"Updated isLockedByUser of Annotation $id to $isLocked, access context: ${ctx.toStringAnonymous}")
     } yield ()
 
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext): Fox[Unit] =

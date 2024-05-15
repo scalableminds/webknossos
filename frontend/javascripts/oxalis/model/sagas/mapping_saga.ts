@@ -8,11 +8,12 @@ import {
   takeEvery,
   takeLatest,
   take,
-  throttle,
   put,
+  race,
   actionChannel,
+  flush,
 } from "typed-redux-saga";
-import { Channel, eventChannel } from "redux-saga";
+import { Channel, buffers, eventChannel } from "redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { message } from "antd";
 import type {
@@ -52,7 +53,8 @@ import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 import DataCube from "../bucket_data_handling/data_cube";
-import { chainIterators } from "libs/utils";
+import { chainIterators, sleep } from "libs/utils";
+import { Action } from "../actions/actions";
 
 type APIMappings = Record<string, APIMapping>;
 type PreviousMappingObject = { mapping: Mapping };
@@ -111,15 +113,16 @@ export default function* watchActivatedMappings(): Saga<void> {
   yield* takeLatestMappingChange(setMappingEnabledActionChannel, previousMappingObject);
 }
 
-function createBucketChannel(dataCube: DataCube) {
+function createBucketDataChangedChannel(dataCube: DataCube) {
   return eventChannel((emit) => {
     const bucketDataChangedHandler = () => {
+      console.log("emit BUCKET_DATA_CHANGED");
       emit("BUCKET_DATA_CHANGED");
     };
 
     const unbind = dataCube.emitter.on("bucketDataChanged", bucketDataChangedHandler);
     return unbind;
-  });
+  }, buffers.sliding<string>(1));
 }
 
 function* watchChangedBucketsForLayer(
@@ -127,9 +130,31 @@ function* watchChangedBucketsForLayer(
   previousMappingObject: PreviousMappingObject,
 ): Saga<void> {
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
-  const bucketChannel = yield* call(createBucketChannel, dataCube);
+  const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
 
-  yield throttle(1000, bucketChannel, function* handler() {
+  while (true) {
+    yield take(bucketChannel);
+    // We received a BUCKET_DATA_CHANGED event. `handler` needs to be invoked.
+    // However, let's throttle¹ this by waiting and then discarding all other events
+    // that might have accumulated in between.
+    yield* call(sleep, 5000);
+    yield flush(bucketChannel);
+    // After flushing and while the handler below is running,
+    // the bucketChannel might fill up again. This means, the
+    // next loop will immediately take from the channel which
+    // is what we need.
+    yield* call(handler);
+
+    // Addendum:
+    // ¹ We don't use redux-saga's throttle, because that would
+    //   cause call `handler` in parallel if enough events are
+    //   consumed across over throttling duration.
+    //   However, running `handler` in parallel would be a waste
+    //   of computation. Therefore, we invoke `handler` strictly
+    //   sequentially.
+  }
+
+  function* handler() {
     const dataset = yield* select((state) => state.dataset);
     const layerInfo = getLayerByName(dataset, layerName);
     const mappingInfo = yield* select((state) =>
@@ -137,17 +162,57 @@ function* watchChangedBucketsForLayer(
     );
     const { mappingName, mappingType, mappingStatus } = mappingInfo;
 
-    if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) return;
+    if (mappingName == null || mappingStatus !== MappingStatusEnum.ENABLED) {
+      return;
+    }
 
-    yield* call(
-      updateHdf5Mapping,
-      layerName,
-      layerInfo,
-      mappingName,
-      mappingType,
-      previousMappingObject,
-    );
-  });
+    console.log("starting updateHdf5 because a bucket changed");
+
+    // Updating the HDF5 mapping is an async task which requires communication with
+    // the back-end. If the front-end does a proofreading operation in parallel,
+    // there is a risk of a race condition. Therefore, we cancel the updateHdf5
+    // saga as soon as WK enters a busy state and retry afterwards.
+    while (true) {
+      let isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
+      if (!isBusy) {
+        const { cancel } = yield* race({
+          updateHdf5: call(
+            updateHdf5Mapping,
+            layerName,
+            layerInfo,
+            mappingName,
+            mappingType,
+            previousMappingObject,
+          ),
+          cancel: take(
+            (action: Action) =>
+              action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && action.value.isBusy,
+            //   [
+            //   // todop: maybe do something like PROOFREAD_* ?
+            //   "PROOFREAD_MERGE",
+            //   "MIN_CUT_AGGLOMERATE_WITH_POSITION",
+            //   "CUT_AGGLOMERATE_FROM_NEIGHBORS",
+            // ]
+          ),
+        });
+        if (!cancel) {
+          return;
+        }
+        console.log("cancelled updateHdf5");
+      }
+
+      isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
+      console.log("isBusy", isBusy);
+      if (isBusy) {
+        yield* take(
+          (action: Action) =>
+            action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy,
+        );
+      }
+
+      console.log("retrying updateHdf5");
+    }
+  }
 }
 
 function* loadLayerMappings(layerName: string, updateInStore: boolean): Saga<[string[], string[]]> {

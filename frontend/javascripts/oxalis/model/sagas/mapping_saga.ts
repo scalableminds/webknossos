@@ -55,6 +55,7 @@ import { MappingStatusEnum } from "oxalis/constants";
 import DataCube from "../bucket_data_handling/data_cube";
 import { chainIterators, sleep } from "libs/utils";
 import { Action } from "../actions/actions";
+import { ActionPattern } from "redux-saga/effects";
 
 type APIMappings = Record<string, APIMapping>;
 type PreviousMappingObject = { mapping: Mapping };
@@ -185,14 +186,9 @@ function* watchChangedBucketsForLayer(
             previousMappingObject,
           ),
           cancel: take(
-            (action: Action) =>
-              action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && action.value.isBusy,
-            //   [
-            //   // todop: maybe do something like PROOFREAD_* ?
-            //   "PROOFREAD_MERGE",
-            //   "MIN_CUT_AGGLOMERATE_WITH_POSITION",
-            //   "CUT_AGGLOMERATE_FROM_NEIGHBORS",
-            // ]
+            ((action: Action) =>
+              action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
+              action.value.isBusy) as ActionPattern,
           ),
         });
         if (!cancel) {
@@ -205,8 +201,9 @@ function* watchChangedBucketsForLayer(
       console.log("isBusy", isBusy);
       if (isBusy) {
         yield* take(
-          (action: Action) =>
-            action.type === "SET_BUSY_BLOCKING_INFO_ACTION" && !action.value.isBusy,
+          ((action: Action) =>
+            action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
+            action.value.isBusy) as ActionPattern,
         );
       }
 

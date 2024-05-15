@@ -137,7 +137,7 @@ function* watchChangedBucketsForLayer(
     // We received a BUCKET_DATA_CHANGED event. `handler` needs to be invoked.
     // However, let's throttle¹ this by waiting and then discarding all other events
     // that might have accumulated in between.
-    yield* call(sleep, 5000);
+    yield* call(sleep, 500);
     yield flush(bucketChannel);
     // After flushing and while the handler below is running,
     // the bucketChannel might fill up again. This means, the
@@ -431,7 +431,6 @@ function* updateHdf5Mapping(
           mappingName,
           newUniqueSegmentIds,
         );
-  yield* call(sleep, 5000);
   console.log("received mapped segment ids from server", newEntries);
 
   const a = [...previousMapping.entries()] as Array<[NumberLike, NumberLike]>;

@@ -396,7 +396,7 @@ const isMac = (() => {
 export const AltOrOptionKey = isMac ? "⌥" : "Alt";
 export const CtrlOrCmdKey = isMac ? "Cmd" : "Ctrl";
 
-export enum LengthUnit {
+export enum Unit {
   ym = "ym",
   zm = "zm",
   am = "am",
@@ -425,7 +425,7 @@ export enum LengthUnit {
   pc = "pc",
 }
 
-export const LengthUnitLongNames: Record<LengthUnit, string> = {
+export const UnitLongNames: Record<Unit, string> = {
   ym: "yoctometer",
   zm: "zeptometer",
   am: "attometer",
@@ -454,4 +454,4 @@ export const LengthUnitLongNames: Record<LengthUnit, string> = {
   pc: "parsec",
 };
 
-export const AllLengthUnits = Object.values(LengthUnit);
+export const AllUnits = Object.values(Unit);

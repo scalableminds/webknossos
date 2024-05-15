@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { M4x4, V3 } from "libs/mjs";
-import { LengthUnit, OrthoViews } from "oxalis/constants";
+import { Unit, OrthoViews } from "oxalis/constants";
 import update from "immutability-helper";
 import {
   getPosition,
@@ -25,7 +25,7 @@ function equalWithEpsilon(t, a, b, epsilon = 1e-10) {
 const initialState = {
   dataset: {
     dataSource: {
-      scale: { factor: [1, 1, 2], unit: LengthUnit.nm },
+      scale: { factor: [1, 1, 2], unit: Unit.nm },
       dataLayers: [{ name: "color", type: "color", additionalCoordinates: [] }],
     },
   },

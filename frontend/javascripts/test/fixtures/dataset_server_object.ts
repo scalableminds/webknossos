@@ -1,4 +1,4 @@
-import { LengthUnit } from "oxalis/constants";
+import { Unit } from "oxalis/constants";
 
 export default {
   name: "ROI2017_wkw",
@@ -57,7 +57,7 @@ export default {
         tracingId: null,
       },
     ],
-    scale: { factor: [11.239999771118164, 11.239999771118164, 28], unit: LengthUnit.nm },
+    scale: { factor: [11.239999771118164, 11.239999771118164, 28], unit: Unit.nm },
   },
   dataStore: {
     name: "localhost",

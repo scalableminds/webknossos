@@ -31,7 +31,7 @@ import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
 import { APIDataLayer, APIDataset, APIJobType } from "types/api_flow_types";
 import { useStartAndPollJob } from "admin/job/job_hooks";
-import { AllLengthUnits, LengthUnitLongNames, Vector3 } from "oxalis/constants";
+import { AllUnits, UnitLongNames, Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 
 const FormItem = Form.Item;
@@ -248,11 +248,11 @@ function SimpleDatasetForm({
                 >
                   <Select
                     style={{ width: 120 }}
-                    options={AllLengthUnits.map((unit) => ({
+                    options={AllUnits.map((unit) => ({
                       value: unit,
                       label: (
                         <span>
-                          <Tooltip title={LengthUnitLongNames[unit]}>{unit}</Tooltip>
+                          <Tooltip title={UnitLongNames[unit]}>{unit}</Tooltip>
                         </span>
                       ),
                     }))}

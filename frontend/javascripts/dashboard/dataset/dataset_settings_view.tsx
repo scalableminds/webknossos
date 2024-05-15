@@ -29,7 +29,7 @@ import type {
   APIUnimportedDatasource,
   DatasetScale,
 } from "types/api_flow_types";
-import { LengthUnit, Unicode } from "oxalis/constants";
+import { Unit, Unicode } from "oxalis/constants";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
 import LinkButton from "components/link_button";
 import { diffObjects, jsonStringify } from "libs/utils";
@@ -128,7 +128,7 @@ function ensureValidScaleOnInferredDataSource(
   const savedScale =
     "dataLayers" in savedDataSourceOnServer
       ? savedDataSourceOnServer.scale
-      : ({ factor: [0, 0, 0], unit: LengthUnit.nm } as DatasetScale);
+      : ({ factor: [0, 0, 0], unit: Unit.nm } as DatasetScale);
   if (_.isEqual(inferredDataSource.scale, [0, 0, 0]) && !_.isEqual(savedScale, [0, 0, 0])) {
     inferredDataSourceClone.scale = savedScale;
   }

@@ -1,5 +1,5 @@
 import { presetPalettes } from "@ant-design/colors";
-import { LengthUnit, type Vector3, type Vector6 } from "oxalis/constants";
+import { Unit, type Vector3, type Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -49,7 +49,7 @@ const COLOR_MAP: Array<string> = [
   "#750790",
 ];
 
-export const LengthUnitsMap: Record<LengthUnit, number> = {
+export const LengthUnitsMap: Record<Unit, number> = {
   ym: 1e-15,
   zm: 1e-12,
   am: 1e-9,
@@ -78,22 +78,22 @@ export const LengthUnitsMap: Record<LengthUnit, number> = {
   pc: 3.085677581e25,
 };
 
-const uncommonLengthUnitsToCommon: Map<LengthUnit, LengthUnit> = new Map([
-  [LengthUnit.cm, LengthUnit.mm],
-  [LengthUnit.dm, LengthUnit.mm],
-  [LengthUnit.hm, LengthUnit.m],
-  [LengthUnit.Å, LengthUnit.pm],
-  [LengthUnit.in, LengthUnit.mm],
-  [LengthUnit.ft, LengthUnit.mm],
-  [LengthUnit.yd, LengthUnit.mm],
-  [LengthUnit.mi, LengthUnit.km],
-  [LengthUnit.pc, LengthUnit.Pm],
+const uncommonLengthUnitsToCommon: Map<Unit, Unit> = new Map([
+  [Unit.cm, Unit.mm],
+  [Unit.dm, Unit.mm],
+  [Unit.hm, Unit.m],
+  [Unit.Å, Unit.pm],
+  [Unit.in, Unit.mm],
+  [Unit.ft, Unit.mm],
+  [Unit.yd, Unit.mm],
+  [Unit.mi, Unit.km],
+  [Unit.pc, Unit.Pm],
 ]);
 
 function getFactorToNextSmallestCommonUnit(
-  unit: LengthUnit,
+  unit: Unit,
   dimensionsCount: number = 1,
-): [number, LengthUnit] {
+): [number, Unit] {
   const commonUnit = uncommonLengthUnitsToCommon.get(unit);
   if (commonUnit == null) {
     return [1, unit];
@@ -348,7 +348,7 @@ export function findBestUnitForFormatting(
   if (isLengthUnit) {
     // In case of an length unit, ensure it is among the common length units that we support conversion for.
     [factorToNextSmallestCommonUnit, unit] = getFactorToNextSmallestCommonUnit(
-      unit as LengthUnit,
+      unit as Unit,
       dimension,
     );
   }
@@ -496,5 +496,5 @@ export function formatNumber(num: number): string {
 }
 
 (() => {
-  formatNumberToVolume(1e-1, LengthUnit.nm);
+  formatNumberToVolume(1e-1, Unit.nm);
 })();

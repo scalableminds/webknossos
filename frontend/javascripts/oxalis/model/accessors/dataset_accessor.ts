@@ -299,19 +299,19 @@ export function getDatasetExtentInVoxel(dataset: APIDataset) {
   };
   return extent;
 }
-function getDatasetExtentWithScale(dataset: APIDataset, scale: Vector3): BoundingBoxObject {
+export function getDatasetExtentInUnit(dataset: APIDataset): BoundingBoxObject {
   const extentInVoxel = getDatasetExtentInVoxel(dataset);
-  const topLeft = extentInVoxel.topLeft.map((val, index) => val * scale[index]) as any as Vector3;
+  const scaleFactor = dataset.dataSource.scale.factor;
+  const topLeft = extentInVoxel.topLeft.map(
+    (val, index) => val * scaleFactor[index],
+  ) as any as Vector3;
   const extent = {
     topLeft,
-    width: extentInVoxel.width * scale[0],
-    height: extentInVoxel.height * scale[1],
-    depth: extentInVoxel.depth * scale[2],
+    width: extentInVoxel.width * scaleFactor[0],
+    height: extentInVoxel.height * scaleFactor[1],
+    depth: extentInVoxel.depth * scaleFactor[2],
   };
   return extent;
-}
-export function getDatasetExtentInUnit(dataset: APIDataset): BoundingBoxObject {
-  return getDatasetExtentWithScale(dataset, dataset.dataSource.scale.factor);
 }
 export function getDatasetExtentAsString(
   dataset: APIMaybeUnimportedDataset,

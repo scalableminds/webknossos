@@ -236,7 +236,7 @@ function SimpleDatasetForm({
                 </FormItemWithInfo>
                 <Space size="large" />
                 <FormItemWithInfo
-                  name={["dataSource", "unit"]}
+                  name={["dataSource", "scale", "unit"]}
                   label="Unit"
                   info="The unit in which the voxel size is defined."
                   rules={[

@@ -1151,6 +1151,7 @@ class TracingApi {
 
     const state = Store.getState();
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
+
     while (priorityQueue.length > 0) {
       const [nextNodeId, distance] = priorityQueue.dequeue();
       const nextNodePosition = getPos(sourceTree.nodes.get(nextNodeId));

@@ -178,6 +178,7 @@ function estimateFileSize(
   );
 }
 
+// TODO: Check whether this is correct. Or whether the output doesn't make sense.
 function formatSelectedScale(dataset: APIDataset, mag: Vector3) {
   const scaledScale = dataset.dataSource.scale.factor.map((f, i) => f * mag[i]);
   const unit = dataset.dataSource.scale.unit;

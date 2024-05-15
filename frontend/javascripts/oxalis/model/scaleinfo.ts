@@ -1,4 +1,4 @@
-import { type Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import { DatasetScale } from "types/api_flow_types";
 
 export function getBaseVoxelInUnit(datasetScaleFactor: Vector3): number {
@@ -28,12 +28,7 @@ export function getBaseVoxelFactorsInUnit(datasetScale: DatasetScale): Vector3 {
   const baseVoxel = getBaseVoxelInUnit(scaleFactor);
   // scale factor to calculate the voxels in a certain
   // dimension from baseVoxels
-  const result = [
-    baseVoxel / scaleFactor[0],
-    baseVoxel / scaleFactor[1],
-    baseVoxel / scaleFactor[2],
-  ] as Vector3;
-  return result;
+  return [baseVoxel / scaleFactor[0], baseVoxel / scaleFactor[1], baseVoxel / scaleFactor[2]];
 }
 
 export function getVoxelPerUnit(datasetScale: DatasetScale): Vector3 {

@@ -6,7 +6,6 @@ import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import Dimensions from "oxalis/model/dimensions";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
-import { DatasetScale } from "types/api_flow_types";
 
 export const CONTOUR_COLOR_NORMAL = new THREE.Color(0x0000ff);
 export const CONTOUR_COLOR_DELETE = new THREE.Color(0xff0000);
@@ -112,7 +111,7 @@ export class ContourGeometry {
     this.connectingLine.geometry.computeBoundingSphere();
   }
 
-  getArea(datasetScale: DatasetScale): number {
+  getArea(datasetScaleFactor: Vector3): number {
     // This algorithm is based on the Trapezoid formula for calculating the polygon area.
     // Source: https://www.mathopenref.com/coordpolygonarea2.html.
     let accAreaInUnit = 0;
@@ -121,8 +120,8 @@ export class ContourGeometry {
     let previousPointIndex = pointCount - 1;
     const dimIndices = Dimensions.getIndices(this.viewport);
     const scaleVector = new THREE.Vector2(
-      datasetScale.factor[dimIndices[0]],
-      datasetScale.factor[dimIndices[1]],
+      datasetScaleFactor[dimIndices[0]],
+      datasetScaleFactor[dimIndices[1]],
     );
     for (let i = 0; i < pointCount; i++) {
       const start = new THREE.Vector2(
@@ -414,8 +413,8 @@ export class LineMeasurementGeometry {
     app.vent.emit("rerender");
   }
 
-  getDistance(datasetScale: DatasetScale): number {
-    const scaleVector = new THREE.Vector3(...datasetScale.factor);
+  getDistance(datasetScaleFactor: Vector3): number {
+    const scaleVector = new THREE.Vector3(...datasetScaleFactor);
     const points = this.vertexBuffer.getBuffer();
     const pointCount = this.vertexBuffer.getLength();
     if (pointCount < 2) {

@@ -49,7 +49,7 @@ const COLOR_MAP: Array<string> = [
   "#750790",
 ];
 
-export const LengthUnitsMap: Record<Unit, number> = {
+export const UnitsMap: Record<Unit, number> = {
   ym: 1e-15,
   zm: 1e-12,
   am: 1e-9,
@@ -78,7 +78,7 @@ export const LengthUnitsMap: Record<Unit, number> = {
   pc: 3.085677581e25,
 };
 
-const uncommonLengthUnitsToCommon: Map<Unit, Unit> = new Map([
+const uncommonUnitsToCommon: Map<Unit, Unit> = new Map([
   [Unit.cm, Unit.mm],
   [Unit.dm, Unit.mm],
   [Unit.hm, Unit.m],
@@ -94,11 +94,11 @@ function getFactorToNextSmallestCommonUnit(
   unit: Unit,
   dimensionsCount: number = 1,
 ): [number, Unit] {
-  const commonUnit = uncommonLengthUnitsToCommon.get(unit);
+  const commonUnit = uncommonUnitsToCommon.get(unit);
   if (commonUnit == null) {
     return [1, unit];
   }
-  const conversionFactor = (LengthUnitsMap[unit] / LengthUnitsMap[commonUnit]) ** dimensionsCount;
+  const conversionFactor = (UnitsMap[unit] / UnitsMap[commonUnit]) ** dimensionsCount;
   return [conversionFactor, commonUnit];
 }
 
@@ -138,26 +138,24 @@ export function formatTuple(tuple: (Array<number> | Vector3 | Vector6) | null | 
   }
 }
 export function formatScale(scale: DatasetScale | null | undefined, roundTo: number = 2): string {
-  if (scale != null && scale.factor.length > 0) {
-    const scaleFactor = scale.factor;
-    const smallestScaleFactor = Math.min(...scaleFactor);
-    const unitDimension = { unit: scale.unit, dimension: 1 };
-    const [conversionFactor, newUnit] = findBestUnitForFormatting(
-      smallestScaleFactor,
-      unitDimension,
-      nmFactorToUnit,
-      false,
-      roundTo,
-    );
-    const scaleInNmRounded = Utils.map3(
-      (value) => Utils.roundTo(value / conversionFactor, roundTo),
-      scaleFactor,
-    );
-    return `${scaleInNmRounded.join(
-      ThinSpace + MultiplicationSymbol + ThinSpace,
-    )} ${newUnit}³/voxel`;
+  if (scale == null) {
+    return "";
   }
-  return "";
+  const scaleFactor = scale.factor;
+  const smallestScaleFactor = Math.min(...scaleFactor);
+  const unitDimension = { unit: scale.unit, dimension: 1 };
+  const [conversionFactor, newUnit] = findBestUnitForFormatting(
+    smallestScaleFactor,
+    unitDimension,
+    nmFactorToUnit,
+    false,
+    roundTo,
+  );
+  const scaleInNmRounded = Utils.map3(
+    (value) => Utils.roundTo(value / conversionFactor, roundTo),
+    scaleFactor,
+  );
+  return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${newUnit}³/voxel`;
 }
 
 function toOptionalFixed(num: number, decimalPrecision: number): string {
@@ -343,7 +341,7 @@ export function findBestUnitForFormatting(
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
 ): [number, string] {
-  const isLengthUnit = unit in LengthUnitsMap;
+  const isLengthUnit = unit in UnitsMap;
   let factorToNextSmallestCommonUnit = 1;
   if (isLengthUnit) {
     // In case of an length unit, ensure it is among the common length units that we support conversion for.
@@ -494,7 +492,3 @@ export function formatBytes(nbytes: number) {
 export function formatNumber(num: number): string {
   return new Intl.NumberFormat("en-US").format(num);
 }
-
-(() => {
-  formatNumberToVolume(1e-1, Unit.nm);
-})();

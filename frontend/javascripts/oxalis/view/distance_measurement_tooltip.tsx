@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from "react-redux";
 import _ from "lodash";
 import React, { useEffect, useRef } from "react";
 import type { OxalisState } from "oxalis/store";
-import { AnnotationToolEnum, Unit, MeasurementTools } from "oxalis/constants";
+import { AnnotationToolEnum, MeasurementTools, Vector3 } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -21,7 +21,6 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import { clamp } from "libs/utils";
 import dimensions from "oxalis/model/dimensions";
-import { DatasetScale } from "types/api_flow_types";
 
 const TOOLTIP_HEIGHT = 48;
 const ADDITIONAL_OFFSET = 12;
@@ -77,21 +76,19 @@ export default function DistanceMeasurementTooltip() {
   }
   let valueInVx = "";
   let valueInMetricUnit = "";
-  // This DatasetScale is needed for the measurements in voxel unit and does not result
-  // in any scaling as it is the same as the default scale.
-  const in3DSpaceScale = { factor: [1, 1, 1], unit: Unit.nm } as DatasetScale;
+  const notScalingFactor = [1, 1, 1] as Vector3;
   if (activeTool === AnnotationToolEnum.LINE_MEASUREMENT) {
     const { lineMeasurementGeometry } = getSceneController();
-    valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(in3DSpaceScale), 1);
+    valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(notScalingFactor), 1);
     valueInMetricUnit = formatNumberToLength(
-      lineMeasurementGeometry.getDistance(datasetScale),
+      lineMeasurementGeometry.getDistance(datasetScale.factor),
       datasetScale.unit,
     );
   } else if (activeTool === AnnotationToolEnum.AREA_MEASUREMENT) {
     const { areaMeasurementGeometry } = getSceneController();
-    valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea(in3DSpaceScale), 1);
+    valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea(notScalingFactor), 1);
     valueInMetricUnit = formatNumberToArea(
-      areaMeasurementGeometry.getArea(datasetScale),
+      areaMeasurementGeometry.getArea(datasetScale.factor),
       datasetScale.unit,
     );
   }

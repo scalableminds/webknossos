@@ -177,13 +177,6 @@ export const jsConvertCellIdToRGBA = (
     // - the lower 16 bits of the upper 32 bits
     // are used to derive the color.
     // In JS, we do it similarly:
-    try {
-      // todop: try to reproduce the scenario where id is not an integer
-      BigInt(id);
-    } catch (error) {
-      console.error("Cannot convert", id, "to bigint", error);
-      debugger;
-    }
     const bigId = BigInt(id);
     const highPart = Number((bigId >> 32n) % 2n ** 16n);
     const lowPart = id % 2 ** 16;

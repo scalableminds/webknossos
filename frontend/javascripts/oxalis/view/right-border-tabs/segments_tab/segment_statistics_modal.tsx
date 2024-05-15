@@ -29,8 +29,8 @@ const MODAL_ERROR_MESSAGE =
 const CONSOLE_ERROR_MESSAGE =
   "Segment statistics could not be fetched due to the following reason:";
 
-const getSegmentStatistsicsCSVHeader = (datasourceUnit: string) =>
-  `segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeIn${datasourceUnit}3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ`;
+const getSegmentStatisticsCSVHeader = (dataSourceUnit: string) =>
+  `segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeIn${dataSourceUnit}3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ`;
 
 const ADDITIONAL_COORDS_COLUMN = "additionalCoordinates";
 
@@ -84,8 +84,8 @@ const exportStatisticsToCSV = (
     .join("\n");
 
   const csv_header = hasAdditionalCoords
-    ? [ADDITIONAL_COORDS_COLUMN, getSegmentStatistsicsCSVHeader(datasetScale.unit)].join(",")
-    : getSegmentStatistsicsCSVHeader(datasetScale.unit);
+    ? [ADDITIONAL_COORDS_COLUMN, getSegmentStatisticsCSVHeader(datasetScale.unit)].join(",")
+    : getSegmentStatisticsCSVHeader(datasetScale.unit);
   const csv = [csv_header, segmentStatisticsAsString].join("\n");
   const filename =
     groupIdToExport === -1

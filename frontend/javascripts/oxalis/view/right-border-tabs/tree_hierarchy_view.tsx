@@ -396,12 +396,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   handleMeasureSkeletonLength = (treeId: number, treeName: string) => {
-    const datasourceUnit = Store.getState().dataset.dataSource.scale.unit;
+    const dataSourceUnit = Store.getState().dataset.dataSource.scale.unit;
     const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
     notification.open({
       message: messages["tracing.tree_length_notification"](
         treeName,
-        formatNumberToLength(lengthInUnit, datasourceUnit),
+        formatNumberToLength(lengthInUnit, dataSourceUnit),
         formatLengthAsVx(lengthInVx),
       ),
       icon: <i className="fas fa-ruler" />,

@@ -52,7 +52,7 @@ export default class FixedExpandableTable extends React.PureComponent<TableProps
         onClick={() => this.setState({ expandedRows: [] })}
       />
     );
-    const columnsWithAdjustedFixedProp: TableProps["columns"] = (this.props.columns || []).map(
+    const columnsWithAdjustedFixedProp: TableProps["columns"] = this.props.columns?.map(
       (column) => {
         const columnFixed = expandedRows.length > 0 ? false : column.fixed;
         return { ...column, fixed: columnFixed };

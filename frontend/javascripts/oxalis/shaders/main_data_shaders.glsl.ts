@@ -104,6 +104,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
 <% } %>
 
 uniform float sphericalCapRadius;
+uniform bool selectiveVisibilityInProofreading;
 uniform float viewMode;
 uniform float alpha;
 uniform bool renderBucketIndices;
@@ -290,7 +291,17 @@ void main() {
       /// float hoverAlphaIncrement = isHoveredSegment && <%= segmentationName %>_alpha > 0.0 ? 1.2 : 0.0;
       /// float proofreadingHoverAlphaIncrement = isActiveCell
       /// float proofreadingAlphaIncrement = isActiveCell && isProofreading && <%= segmentationName %>_alpha > 0.0 ? 0.4 : -1.0;
-      float alphaIncrement = isProofreading ? (isActiveCell ? (isHoveredUnmappedSegment ? 0.3 : 0.0): (isHoveredSegment ? 0.2 : -0.2)) : (isHoveredSegment ? 0.2 : 0.0);
+      float alphaIncrement = isProofreading
+        ? (isActiveCell
+            ? (isHoveredUnmappedSegment ? 0.3 : 0.0)
+            : (isHoveredSegment
+                ? 0.2
+                // We are in proofreading mode, but the current voxel neither belongs
+                // to the active segment nor is it hovered. When selective visibility
+                // is enabled, lower the opacity.
+                : (selectiveVisibilityInProofreading ? -0.2 : 0.0)
+            )
+        ) : (isHoveredSegment ? 0.2 : 0.0);
       gl_FragColor = vec4(mix(
         data_color.rgb,
         convertCellIdToRGB(<%= segmentationName %>_id_high, <%= segmentationName %>_id_low),

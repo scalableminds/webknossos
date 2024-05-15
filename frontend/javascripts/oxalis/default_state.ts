@@ -50,6 +50,7 @@ const defaultState: OxalisState = {
   userConfiguration: {
     autoSaveLayouts: true,
     autoRenderMeshInProofreading: true,
+    selectiveVisibilityInProofreading: true,
     brushSize: 50,
     clippingDistance: 50,
     clippingDistanceArbitrary: 64,

@@ -324,7 +324,9 @@ export const getSegmentId: ShaderModule = {
             <%= mappingTextureWidth %>,
             index
           );
-        } else if (hideUnmappedIds) {
+        } else if (hideUnmappedIds ||
+          isProofreading // todop: instead of isProofreading it should be, usesHdf5Mapping or something like that
+        ) {
           mapped_id[1] = vec4(0.0);
         }
       }

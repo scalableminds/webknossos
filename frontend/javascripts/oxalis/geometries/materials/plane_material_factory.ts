@@ -140,6 +140,9 @@ class PlaneMaterialFactory {
       sphericalCapRadius: {
         value: 140,
       },
+      selectiveVisibilityInProofreading: {
+        value: true,
+      },
       is3DViewBeingRendered: {
         value: true,
       },
@@ -522,7 +525,15 @@ class PlaneMaterialFactory {
         true,
       ),
     );
-
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (storeState) => storeState.userConfiguration.selectiveVisibilityInProofreading,
+        (selectiveVisibilityInProofreading) => {
+          this.uniforms.selectiveVisibilityInProofreading.value = selectiveVisibilityInProofreading;
+        },
+        true,
+      ),
+    );
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         (storeState) => getResolutionInfoByLayer(storeState.dataset),

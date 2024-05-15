@@ -149,6 +149,10 @@ const handleToggleAutomaticMeshRendering = (value: boolean) => {
   Store.dispatch(updateUserSettingAction("autoRenderMeshInProofreading", value));
 };
 
+const handleToggleSelectiveVisibilityInProofreading = (value: boolean) => {
+  Store.dispatch(updateUserSettingAction("selectiveVisibilityInProofreading", value));
+};
+
 const handleSetTool = (event: RadioChangeEvent) => {
   const value = event.target.value as AnnotationTool;
   Store.dispatch(setToolAction(value));
@@ -1383,9 +1387,16 @@ function ProofReadingComponents() {
   const autoRenderMeshes = useSelector(
     (state: OxalisState) => state.userConfiguration.autoRenderMeshInProofreading,
   );
-  const buttonStyle = autoRenderMeshes ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE;
+  const selectiveVisibilityInProofreading = useSelector(
+    (state: OxalisState) => state.userConfiguration.selectiveVisibilityInProofreading,
+  );
+
   return (
-    <>
+    <Space.Compact
+      style={{
+        marginLeft: 10,
+      }}
+    >
       <ButtonComponent
         title="Clear auxiliary meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
         onClick={handleClearProofreading}
@@ -1396,12 +1407,29 @@ function ProofReadingComponents() {
       </ButtonComponent>
       <ButtonComponent
         title={`${autoRenderMeshes ? "Disable" : "Enable"} automatic loading of meshes`}
-        style={{ ...buttonStyle, opacity: autoRenderMeshes ? 1 : 0.5 }}
+        style={{
+          ...(autoRenderMeshes ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE),
+          opacity: autoRenderMeshes ? 1 : 0.5,
+        }}
         onClick={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
       >
         <i className="fas fa-dice-d20" />
       </ButtonComponent>
-    </>
+      <ButtonComponent
+        title={`${
+          selectiveVisibilityInProofreading ? "Disable" : "Enable"
+        } selective segment visibility. When enabled, only hovered or active segments will be shown.`}
+        style={{
+          ...(selectiveVisibilityInProofreading ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE),
+          opacity: selectiveVisibilityInProofreading ? 1 : 0.5,
+        }}
+        onClick={() =>
+          handleToggleSelectiveVisibilityInProofreading(!selectiveVisibilityInProofreading)
+        }
+      >
+        <i className="fas fa-highlighter" />
+      </ButtonComponent>
+    </Space.Compact>
   );
 }
 

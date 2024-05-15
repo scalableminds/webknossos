@@ -179,7 +179,9 @@ class DataCube {
   }
 
   mapId(idToMap: number): number {
-    let mappedId = null;
+    // todop: should this function be async since the mapping
+    // might be partially loaded?
+    let mappedId: number | null | undefined = null;
     const mapping = this.getMapping();
 
     if (mapping != null && this.isMappingEnabled()) {
@@ -187,6 +189,9 @@ class DataCube {
         ? mapping.get(Number(idToMap))
         : // TODO #6581: Uint64 Support
           Number(mapping.get(BigInt(idToMap)));
+    }
+    if (mappedId == null || isNaN(mappedId)) {
+      mappedId = idToMap;
     }
 
     if (this.shouldHideUnmappedIds() && mappedId == null) {

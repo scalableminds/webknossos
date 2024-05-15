@@ -12,6 +12,7 @@ type State = {
  *  and the scroll prop as this is already done by the wrapper.
  */
 
+// Enforce the "columns" prop which is optional by default otherwise 
 type OwnTableProps<RecordType = any> = TableProps<RecordType> & {
   columns: ColumnsType<RecordType>;
 };

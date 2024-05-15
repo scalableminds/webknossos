@@ -385,32 +385,37 @@ function* updateHdf5Mapping(
   );
 
   const cube = Model.getCubeByLayerName(layerName);
-  const valueSet = cube.getValueSetForAllBuckets();
+  const segmentIds = cube.getValueSetForAllBuckets();
 
-  const { mapping: previousMapping } = previousMappingObject;
+  const previousMapping = yield* select(
+    (store) =>
+      store.temporaryConfiguration.activeMappingByLayer[layerName].mapping ||
+      (new Map() as Mapping),
+  );
 
-  const newValues: Set<NumberLike> = getSetWithoutMapKeys(
-    // @ts-ignore valueSet and previousMapping are expected to have the same value type
-    valueSet,
+  const newSegmentIds: Set<NumberLike> = getSetWithoutMapKeys(
+    // @ts-ignore segmentIds and previousMapping are expected to have the same value type
+    segmentIds,
     previousMapping,
   );
 
   const remainingValues: Set<NumberLike> = getSetIntersectedMapKeys(
-    // @ts-ignore valueSet and previousMapping are expected to have the same value type
+    // @ts-ignore segmentIds and previousMapping are expected to have the same value type
     previousMapping.keys(),
-    valueSet,
+    segmentIds,
   );
-  const newUniqueSegmentIds = [...newValues].sort(<T extends NumberLike>(a: T, b: T) => a - b);
+  const newUniqueSegmentIds = [...newSegmentIds].sort(<T extends NumberLike>(a: T, b: T) => a - b);
   console.log(
     "New values",
-    newValues.size,
+    newSegmentIds.size,
     "remaining values",
     remainingValues.size,
     "previous size",
     previousMapping.size,
   );
 
-  const newMapping =
+  console.log("asking server to map segment ids");
+  const newEntries =
     isEditableMappingActive && editableMapping != null
       ? yield* call(
           getAgglomeratesForSegmentsFromTracingstore,
@@ -426,22 +431,25 @@ function* updateHdf5Mapping(
           mappingName,
           newUniqueSegmentIds,
         );
+  yield* call(sleep, 5000);
+  console.log("received mapped segment ids from server", newEntries);
 
   const a = [...previousMapping.entries()] as Array<[NumberLike, NumberLike]>;
 
-  const filtered = a.filter(([key, _]) => remainingValues.has(key));
-  const remainingMapping = new Map<NumberLike, NumberLike>(filtered) as Mapping;
-  const remainingEntries = remainingMapping.entries();
+  const remainingEntries = a.filter(([key, _]) => remainingValues.has(key));
+  // const filtered = a.filter(([key, _]) => remainingValues.has(key));
+  // const remainingMapping = new Map<NumberLike, NumberLike>(filtered) as Mapping;
+  // const remainingEntries = remainingMapping.entries();
   const chainedIterator = chainIterators<NumberLike>(
-    // @ts-ignore remainingEntries and newMapping are expected to have the same value type
+    // @ts-ignore remainingEntries and newEntries are expected to have the same value type
     remainingEntries,
-    newMapping.entries(),
+    newEntries.entries(),
   );
   const mapping = new Map(chainedIterator) as Mapping;
 
   previousMappingObject.mapping = mapping;
 
-  console.timeEnd("MappingSaga");
+  console.log("dispatch setMappingAction in mapping saga");
   yield* put(setMappingAction(layerName, mappingName, mappingType, { mapping }));
 }
 

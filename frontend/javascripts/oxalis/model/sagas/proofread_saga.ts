@@ -66,7 +66,7 @@ import {
   refreshMeshAction,
   removeMeshAction,
 } from "oxalis/model/actions/annotation_actions";
-import { Mapping, NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
+import { ActiveMappingInfo, Mapping, NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
 import _ from "lodash";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
@@ -90,7 +90,7 @@ export default function* proofreadRootSaga(): Saga<void> {
   );
   yield* takeEveryUnlessBusy(
     ["CUT_AGGLOMERATE_FROM_NEIGHBORS"],
-    handleProofreadCutNeighbors,
+    handleProofreadCutFromNeighbors,
     "Proofreading in progress",
   );
 
@@ -731,7 +731,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   const activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingId],
   );
-  // Source ID is ID of active agglomerate, this ID is kept.
+
   if (activeMapping.mapping == null) {
     Toast.error("Mapping is not available, cannot proofread.");
     return;
@@ -812,30 +812,11 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       return;
     }
 
-    const splitSegmentIds = Array.from(activeMapping.mapping as NumberLikeMap)
-      .filter(([_segmentId, agglomerateId]) => agglomerateId === sourceAgglomerateId)
-      .map(([segmentId, _agglomerateId]) => segmentId);
-
-    const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
-    const mappingAfterSplit = yield* call(
-      getAgglomeratesForSegmentsFromTracingstore,
-      tracingStoreHost,
+    const splitMapping = yield* splitMappingWithAgglomerateId(
+      activeMapping,
+      sourceAgglomerateId,
       volumeTracingId,
-      splitSegmentIds,
     );
-
-    const splitMapping = new Map(
-      Array.from(activeMapping.mapping as NumberLikeMap, ([segmentId, agglomerateId]) => {
-        const mappedId = mappingAfterSplit.get(
-          // @ts-ignore get() is expected to accept the type that segmentId has
-          segmentId,
-        );
-        if (mappedId != null) {
-          return [segmentId, mappedId];
-        }
-        return [segmentId, agglomerateId];
-      }),
-    ) as Mapping;
 
     console.log("dispatch setMappingAction in proofreading saga");
     yield* put(
@@ -853,6 +834,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   /* Reload meshes */
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  // todop: fetching this should be avoidable.
   const newSourceAgglomerateId = yield* call(
     getAgglomerateIdForSegmentId,
     tracingStoreUrl,
@@ -880,7 +862,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   ]);
 }
 
-function* handleProofreadCutNeighbors(action: Action) {
+function* handleProofreadCutFromNeighbors(action: Action) {
   // Actually, action is CutAgglomerateFromNeighborsAction but the
   // takeEveryUnlessBusy wrapper does not understand this.
   if (action.type !== "CUT_AGGLOMERATE_FROM_NEIGHBORS") {
@@ -899,6 +881,13 @@ function* handleProofreadCutNeighbors(action: Action) {
   }
   const { agglomerateFileMag, getDataValue, volumeTracing } = preparation;
   const { tracingId: volumeTracingId } = volumeTracing;
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingId],
+  );
+  if (activeMapping.mapping == null) {
+    Toast.error("Mapping is not available, cannot proofread.");
+    return;
+  }
 
   let idInfos;
   let targetPosition = null;
@@ -942,25 +931,31 @@ function* handleProofreadCutNeighbors(action: Action) {
     action.tree,
     items,
   );
-  if (didCancel) {
-    return;
-  }
-
-  if (items.length === 0) {
+  if (didCancel || items.length === 0) {
     return;
   }
 
   yield* put(pushSaveQueueTransaction(items, "mapping", volumeTracingId));
   yield* call([Model, Model.ensureSavedState]);
 
-  /* Reload the segmentation */
-  yield* call([api.data, api.data.reloadBuckets], volumeTracingId, (bucket) =>
-    bucket.containsValue(targetAgglomerateId),
+  const mappingAfterSplit = yield* splitMappingWithAgglomerateId(
+    activeMapping,
+    targetAgglomerateId,
+    volumeTracingId,
+  );
+
+  console.log("dispatch setMappingAction in proofreading saga");
+  yield* put(
+    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, {
+      mapping: mappingAfterSplit,
+    }),
   );
 
   const [newTargetAgglomerateId, ...newNeighborAgglomerateIds] = yield* all([
-    call(getDataValue, targetPosition),
-    ...neighborInfo.neighbors.map((neighbor) => call(getDataValue, neighbor.position)),
+    call(getDataValue, targetPosition, mappingAfterSplit),
+    ...neighborInfo.neighbors.map((neighbor) =>
+      call(getDataValue, neighbor.position, mappingAfterSplit),
+    ),
   ]);
 
   /* Reload meshes */
@@ -982,7 +977,7 @@ function* handleProofreadCutNeighbors(action: Action) {
 
 function* prepareSplitOrMerge(): Saga<{
   agglomerateFileMag: Vector3;
-  getDataValue: (position: Vector3) => Promise<number>;
+  getDataValue: (position: Vector3, overrideMapping?: Mapping | null) => Promise<number>;
   getMappedAndUnmapped: (
     position: Vector3,
   ) => Promise<{ agglomerateId: number; unmappedId: number }>;
@@ -1039,11 +1034,15 @@ function* prepareSplitOrMerge(): Saga<{
     return null;
   }
 
-  const getDataValue = async (position: Vector3): Promise<number> => {
+  const getDataValue = async (
+    position: Vector3,
+    overrideMapping: Mapping | null = null,
+  ): Promise<number> => {
+    const mappingToAccess = overrideMapping ?? mapping;
     const unmappedId = await getUnmappedDataValue(position);
-    const mappedId = isNumberMap(mapping)
-      ? mapping.get(unmappedId)
-      : Number(mapping.get(BigInt(unmappedId)));
+    const mappedId = isNumberMap(mappingToAccess)
+      ? mappingToAccess.get(unmappedId)
+      : Number(mappingToAccess.get(BigInt(unmappedId)));
     if (mappedId == null) {
       // todop: this can throw when the current id wasn't loaded into the mapping yet. how can we await this?
       throw new Error(
@@ -1190,4 +1189,36 @@ function* getPositionForSegmentId(volumeTracing: VolumeTracing, segmentId: numbe
     segmentId,
   );
   return position;
+}
+
+function* splitMappingWithAgglomerateId(
+  activeMapping: ActiveMappingInfo,
+  sourceAgglomerateId: number,
+  volumeTracingId: string,
+) {
+  const splitSegmentIds = Array.from(activeMapping.mapping as NumberLikeMap)
+    .filter(([_segmentId, agglomerateId]) => agglomerateId === sourceAgglomerateId)
+    .map(([segmentId, _agglomerateId]) => segmentId);
+
+  const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
+  const mappingAfterSplit = yield* call(
+    getAgglomeratesForSegmentsFromTracingstore,
+    tracingStoreHost,
+    volumeTracingId,
+    splitSegmentIds,
+  );
+
+  const splitMapping = new Map(
+    Array.from(activeMapping.mapping as NumberLikeMap, ([segmentId, agglomerateId]) => {
+      const mappedId = mappingAfterSplit.get(
+        // @ts-ignore get() is expected to accept the type that segmentId has
+        segmentId,
+      );
+      if (mappedId != null) {
+        return [segmentId, mappedId];
+      }
+      return [segmentId, agglomerateId];
+    }),
+  ) as Mapping;
+  return splitMapping;
 }

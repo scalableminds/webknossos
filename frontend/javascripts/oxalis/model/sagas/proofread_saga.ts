@@ -48,7 +48,6 @@ import {
 import {
   NeighborInfo,
   getAgglomeratesForSegmentsFromTracingstore,
-  getAgglomerateIdForSegmentId,
   getEdgesForAgglomerateMinCut,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
@@ -833,19 +832,18 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   }
 
   /* Reload meshes */
-  const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
-  // todop: fetching this should be avoidable.
+  const newMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingId].mapping,
+  );
   const newSourceAgglomerateId = yield* call(
-    getAgglomerateIdForSegmentId,
-    tracingStoreUrl,
-    volumeTracing.tracingId,
+    preparation.mapSegmentId,
     sourceInfo.unmappedId,
+    newMapping,
   );
   const newTargetAgglomerateId = yield* call(
-    getAgglomerateIdForSegmentId,
-    tracingStoreUrl,
-    volumeTracing.tracingId,
+    preparation.mapSegmentId,
     targetInfo.unmappedId,
+    newMapping,
   );
 
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
@@ -978,6 +976,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
 function* prepareSplitOrMerge(): Saga<{
   agglomerateFileMag: Vector3;
   getDataValue: (position: Vector3, overrideMapping?: Mapping | null) => Promise<number>;
+  mapSegmentId: (segmentId: number, overrideMapping?: Mapping | null) => number;
   getMappedAndUnmapped: (
     position: Vector3,
   ) => Promise<{ agglomerateId: number; unmappedId: number }>;
@@ -1038,15 +1037,19 @@ function* prepareSplitOrMerge(): Saga<{
     position: Vector3,
     overrideMapping: Mapping | null = null,
   ): Promise<number> => {
-    const mappingToAccess = overrideMapping ?? mapping;
     const unmappedId = await getUnmappedDataValue(position);
+    return mapSegmentId(unmappedId, overrideMapping);
+  };
+
+  const mapSegmentId = (segmentId: number, overrideMapping: Mapping | null = null): number => {
+    const mappingToAccess = overrideMapping ?? mapping;
     const mappedId = isNumberMap(mappingToAccess)
-      ? mappingToAccess.get(unmappedId)
-      : Number(mappingToAccess.get(BigInt(unmappedId)));
+      ? mappingToAccess.get(segmentId)
+      : Number(mappingToAccess.get(BigInt(segmentId)));
     if (mappedId == null) {
       // todop: this can throw when the current id wasn't loaded into the mapping yet. how can we await this?
       throw new Error(
-        `Could not map id ${unmappedId} at position. Is mapping up to date? maybe await updateHdf5Mapping somehow?`,
+        `Could not map id ${segmentId} at position. Is mapping up to date? maybe await updateHdf5Mapping somehow?`,
       );
     }
     return mappedId;
@@ -1071,6 +1074,7 @@ function* prepareSplitOrMerge(): Saga<{
     agglomerateFileMag,
     getDataValue,
     getMappedAndUnmapped,
+    mapSegmentId,
     volumeTracing: { ...volumeTracing, mappingName },
   };
 }

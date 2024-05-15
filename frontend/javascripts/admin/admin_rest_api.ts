@@ -1912,6 +1912,7 @@ export function getEditableMappingInfo(
   );
 }
 
+// todop: not used anymore?
 export function getAgglomerateIdForSegmentId(
   tracingStoreUrl: string,
   tracingId: string,

@@ -48,6 +48,7 @@ import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
 
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
@@ -177,6 +178,7 @@ function _ShareModalView(props: Props) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const isAnnotationLockedByUser = tracing.isLockedByUser;
 
   const annotationVisibility = tracing.visibility;
   const [visibility, setVisibility] = useState(annotationVisibility);
@@ -299,8 +301,12 @@ function _ShareModalView(props: Props) {
 
   const maybeShowWarning = () => {
     let message;
-
-    if (!hasUpdatePermissions) {
+    if (isAnnotationLockedByUser) {
+      message = `You can't change the visibility of this annotation because it is locked by ${formatUserName(
+        activeUser,
+        tracing.owner,
+      )}.`;
+    } else if (!hasUpdatePermissions) {
       message = "You don't have the permission to edit the visibility of this annotation.";
     } else if (!dataset.isPublic && visibility === "Public") {
       message =

@@ -753,13 +753,17 @@ function AnnotationLockedByUserTag({
   if (blockedByUser == null) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
-        <Tag color="warning">Locked by unknown user.</Tag>
+        <Tag color="warning" className="flex-center-child">
+          Locked by unknown user.
+        </Tag>
       </Tooltip>
     );
   } else if (blockedByUser.id === activeUser.id) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
-        <Tag color="success">Locked by you. Reload to edit.</Tag>
+        <Tag color="success" className="flex-center-child">
+          Locked by you. Reload to edit.
+        </Tag>
       </Tooltip>
     );
   } else {
@@ -770,7 +774,9 @@ function AnnotationLockedByUserTag({
           userName: blockingUserName,
         })}
       >
-        <Tag color="warning">Locked by {blockingUserName}</Tag>
+        <Tag color="warning" className="flex-center-child">
+          Locked by {blockingUserName}
+        </Tag>
       </Tooltip>
     );
   }
@@ -784,7 +790,9 @@ function AnnotationLockedByUserTag({
 function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwner: boolean }) {
   return (
     <Tooltip title={messages["tracing.read_only_mode_notification"](true, props.isOwner)}>
-      <Tag color="warning">Locked by {props.annotationOwnerName}</Tag>
+      <Tag color="warning" className="flex-center-child">
+        Locked by {props.annotationOwnerName}
+      </Tag>
     </Tooltip>
   );
 }

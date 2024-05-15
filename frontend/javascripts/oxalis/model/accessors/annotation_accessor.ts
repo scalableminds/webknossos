@@ -12,7 +12,8 @@ export function mayEditAnnotationProperties(state: OxalisState) {
     restrictions.allowUpdate &&
     restrictions.allowSave &&
     activeUser &&
-    owner?.id === activeUser.id
+    owner?.id === activeUser.id &&
+    !state.tracing.isLockedByUser
   );
 }
 

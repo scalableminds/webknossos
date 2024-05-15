@@ -27,6 +27,8 @@ import {
   hasEditableMapping,
   isMappingLocked,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import messages from "messages";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 
 const { Option, OptGroup } = Select;
 
@@ -48,6 +50,8 @@ type StateProps = {
   isMergerModeEnabled: boolean;
   allowUpdate: boolean;
   isEditableMappingActive: boolean;
+  isAnnotationLockedByUser: boolean;
+  isOwner: boolean;
 } & typeof mapDispatchToProps;
 type Props = OwnProps & StateProps;
 type State = {
@@ -133,21 +137,32 @@ class MappingSettingsView extends React.Component<Props, State> {
   };
 
   render() {
-    const availableMappings =
-      this.props.segmentationLayer?.mappings != null ? this.props.segmentationLayer.mappings : [];
-    const availableAgglomerates =
-      this.props.segmentationLayer?.agglomerates != null
-        ? this.props.segmentationLayer.agglomerates
-        : [];
+    const {
+      segmentationLayer,
+      mappingName,
+      editableMapping,
+      isMergerModeEnabled,
+      mapping,
+      hideUnmappedIds,
+      isMappingEnabled,
+      isMappingLocked,
+      allowUpdate,
+      isEditableMappingActive,
+      isAnnotationLockedByUser,
+      isOwner,
+    } = this.props;
+
+    const availableMappings = segmentationLayer?.mappings != null ? segmentationLayer.mappings : [];
+    const availableAgglomerates = segmentationLayer?.agglomerates || [];
     // Antd does not render the placeholder when a value is defined (even when it's null).
     // That's why, we only pass the value when it's actually defined.
     const selectValueProp =
-      this.props.mappingName != null
+      mappingName != null
         ? {
             value:
-              this.props.editableMapping != null
-                ? `${this.props.editableMapping.baseMappingName} (${this.props.mappingName})`
-                : this.props.mappingName,
+              editableMapping != null
+                ? `${editableMapping.baseMappingName} (${mappingName})`
+                : mappingName,
           }
         : {};
 
@@ -170,17 +185,18 @@ class MappingSettingsView extends React.Component<Props, State> {
 
     // The mapping toggle should be active if either the user clicked on it (this.state.shouldMappingBeEnabled)
     // or a mapping was activated, e.g. from the API or by selecting one from the dropdown (this.props.isMappingEnabled).
-    const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || this.props.isMappingEnabled;
+    const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || isMappingEnabled;
     const renderHideUnmappedSegmentsSwitch =
-      (shouldMappingBeEnabled || this.props.isMergerModeEnabled) &&
-      this.props.mapping &&
-      this.props.hideUnmappedIds != null;
-    const isDisabled = this.props.isEditableMappingActive || this.props.isMappingLocked;
-    const disabledMessage = this.props.isEditableMappingActive
-      ? "The mapping has been edited through proofreading actions and can no longer be disabled or changed."
-      : this.props.mapping
-        ? "This mapping has been locked to this annotation, because the segmentation was modified while it was active. It can no longer be disabled or changed."
-        : "The segmentation was modified while no mapping was active. To ensure a consistent state, mappings can no longer be enabled.";
+      (shouldMappingBeEnabled || isMergerModeEnabled) && mapping && hideUnmappedIds != null;
+    // TODO: Ask whether changing the mapping should be disabled when the annotation is locked.
+    const isDisabled = isMappingLocked || !allowUpdate;
+    const disabledMessage = !allowUpdate
+      ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner)
+      : isEditableMappingActive
+        ? "The mapping has been edited through proofreading actions and can no longer be disabled or changed."
+        : mapping
+          ? "This mapping has been locked to this annotation, because the segmentation was modified while it was active. It can no longer be disabled or changed."
+          : "The segmentation was modified while no mapping was active. To ensure a consistent state, mappings can no longer be enabled.";
     return (
       <React.Fragment>
         {
@@ -199,9 +215,7 @@ class MappingSettingsView extends React.Component<Props, State> {
                     value={shouldMappingBeEnabled}
                     label="ID Mapping"
                     // Assume that the mappings are being loaded if they are null
-                    loading={
-                      shouldMappingBeEnabled && this.props.segmentationLayer?.mappings == null
-                    }
+                    loading={shouldMappingBeEnabled && segmentationLayer?.mappings == null}
                     disabled={isDisabled}
                   />
                 </div>
@@ -234,7 +248,7 @@ class MappingSettingsView extends React.Component<Props, State> {
         {renderHideUnmappedSegmentsSwitch ? (
           <SwitchSetting
             onChange={this.handleChangeHideUnmappedSegments}
-            value={this.props.hideUnmappedIds === true}
+            value={hideUnmappedIds}
             label="Hide unmapped segments"
             loading={this.state.isRefreshingMappingList}
           />
@@ -275,6 +289,8 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
     isMappingLocked: isMappingLocked(state, ownProps.layerName),
+    isAnnotationLockedByUser: state.tracing.isLockedByUser,
+    isOwner: isAnnotationOwner(state),
   };
 }
 

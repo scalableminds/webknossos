@@ -22,6 +22,7 @@ import {
   StopOutlined,
   VerticalLeftOutlined,
   VerticalRightOutlined,
+  UnlockOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -35,6 +36,7 @@ import {
   finishAnnotation,
   reOpenAnnotation,
   createExplorational,
+  editLockedState,
 } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import {
@@ -95,7 +97,7 @@ type StateProps = {
   isRenderAnimationModalOpen: boolean;
   busyBlockingInfo: BusyBlockingInfo;
   annotationOwner: APIUserBase | null | undefined;
-  othersMayEdit: boolean;
+  isAnnotationLockedByUser: boolean;
 };
 type Props = OwnProps & StateProps;
 type State = {
@@ -449,6 +451,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     });
   };
 
+  handleUnlockAnnotation = async () => {
+    await editLockedState(this.props.annotationId, this.props.annotationType, false);
+    location.reload();
+  };
+
   render() {
     const { viewMode, controlMode } = Store.getState().temporaryConfiguration;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
@@ -461,16 +468,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       activeUser,
       layoutMenu,
       busyBlockingInfo,
-      othersMayEdit,
+      isAnnotationLockedByUser,
       annotationOwner,
     } = this.props;
-    const copyAnnotationText =
-      !restrictions.allowUpdate &&
-      activeUser != null &&
-      annotationOwner?.id === activeUser.id &&
-      othersMayEdit
-        ? "Duplicate"
-        : "Copy To My Account";
+    const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
+    const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
     const saveButton = restrictions.allowUpdate
       ? [
@@ -575,6 +577,14 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         onClick: this.handleFinish,
         icon: <CheckCircleOutlined />,
         label: archiveButtonText,
+      });
+    }
+    if (isAnnotationLockedByUser && isAnnotationOwner) {
+      menuItems.push({
+        key: "unlock-button",
+        onClick: this.handleUnlockAnnotation,
+        icon: <UnlockOutlined />,
+        label: "Unlock Annotation",
       });
     }
 
@@ -729,7 +739,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     isShareModalOpen: state.uiInformation.showShareModal,
     isRenderAnimationModalOpen: state.uiInformation.showRenderAnimationModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
-    othersMayEdit: state.tracing.othersMayEdit,
+    isAnnotationLockedByUser: state.tracing.isLockedByUser,
   };
 }
 

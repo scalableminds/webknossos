@@ -1023,8 +1023,10 @@ function* prepareSplitOrMerge(): Saga<{
       ? mapping.get(unmappedId)
       : Number(mapping.get(BigInt(unmappedId)));
     if (mappedId == null) {
-      // todop: are we sure that this will not throw unexpectedly?
-      throw new Error(`Could not map id ${unmappedId} at position. Is mapping up to date?`);
+      // todop: this can throw when the current id wasn't loaded into the mapping yet. how can we await this?
+      throw new Error(
+        `Could not map id ${unmappedId} at position. Is mapping up to date? maybe await updateHdf5Mapping somehow?`,
+      );
     }
     return mappedId;
   };
@@ -1036,8 +1038,10 @@ function* prepareSplitOrMerge(): Saga<{
       : Number(mapping.get(BigInt(unmappedId)));
 
     if (agglomerateId == null) {
-      // todop: are we sure that this will not throw unexpectedly?
-      throw new Error(`Could not map id ${unmappedId} at position. Is mapping up to date?`);
+      // todop: this can throw when the current id wasn't loaded into the mapping yet. how can we await this?
+      throw new Error(
+        `Could not map id ${unmappedId} at position. Is mapping up to date? maybe await updateHdf5Mapping somehow?`,
+      );
     }
     return { agglomerateId, unmappedId };
   };
@@ -1059,15 +1063,21 @@ function* getAgglomerateInfos(
   agglomerateId: number;
   unmappedId: number;
 }> | null> {
-  const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
-  if (idInfos.find((idInfo) => idInfo.agglomerateId === 0 || idInfo.unmappedId === 0) != null) {
-    Toast.warning(
-      "One of the selected segments has the id 0 which is the background. Cannot merge/split.",
-    );
-    console.warn("At least one id was zero:", idInfos);
+  try {
+    const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
+    if (idInfos.find((idInfo) => idInfo.agglomerateId === 0 || idInfo.unmappedId === 0) != null) {
+      Toast.warning(
+        "One of the selected segments has the id 0 which is the background. Cannot merge/split.",
+      );
+      console.warn("At least one id was zero:", idInfos);
+      return null;
+    }
+    return idInfos;
+  } catch (exception) {
+    Toast.error("Cannot do proofreading operation. Please retry. See console for details.");
+    console.error(exception);
     return null;
   }
-  return idInfos;
 }
 
 function* refreshAffectedMeshes(

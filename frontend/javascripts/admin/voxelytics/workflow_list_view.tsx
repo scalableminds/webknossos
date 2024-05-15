@@ -37,6 +37,7 @@ function uniqueify<T>(array: Array<T>): Array<T> {
 type RenderRunInfo = VoxelyticsWorkflowListingRun & {
   workflowName: string;
   workflowHash: string;
+  userDisplayName: string | undefined;
   children?: Array<VoxelyticsWorkflowListingRun>;
 };
 
@@ -59,6 +60,13 @@ export default function WorkflowListView() {
 
   usePolling(loadData, VX_POLLING_INTERVAL);
 
+  const getUserDisplayName = (run: VoxelyticsWorkflowListingRun | RenderRunInfo) => {
+    const mergedName = [run.userFirstName, run.userLastName].join(" ");
+    console.log(mergedName)
+    return mergedName != null ? mergedName : run.hostusername;
+
+  }
+
   // todo fix state enum typing
   const renderRuns: Array<RenderRunInfo> = useMemo(
     () =>
@@ -70,10 +78,11 @@ export default function WorkflowListView() {
         endTime: workflow.runs[0].endTime,
         name: "",
         id: "", // used to distinguish between workflows and runs when rendering
-        username: uniqueify(workflow.runs.map((run) => run.username)).join(", "),
+        hostusername: uniqueify(workflow.runs.map((run) => run.hostusername)).join(", "),
         hostname: uniqueify(workflow.runs.map((run) => run.hostname)).join(", "),
         userFirstName: uniqueify(workflow.runs.map((run) => run.userFirstName)).join(", "),
         userLastName: uniqueify(workflow.runs.map((run) => run.userLastName)).join(", "),
+        userDisplayName: uniqueify(workflow.runs.map((run) => getUserDisplayName(run))).join(", "),
         voxelyticsVersion: uniqueify(workflow.runs.map((run) => run.voxelyticsVersion)).join(", "),
         taskCounts: workflow.taskCounts,
         children: workflow.runs.map((run) => ({
@@ -117,7 +126,7 @@ export default function WorkflowListView() {
           percent={Math.round(
             ((run.taskCounts.complete + run.taskCounts.cancelled + run.taskCounts.failed) /
               run.taskCounts.total) *
-              100,
+            100,
           )}
           status={runStateToStatus(run.state)}
           success={{ percent: Math.round((run.taskCounts.complete / run.taskCounts.total) * 100) }}
@@ -155,37 +164,20 @@ export default function WorkflowListView() {
               ),
           },
           {
-            title: "First Name",
-            dataIndex: "userFirstName",
-            key: "userFirstName",
+            title: "User",
+            key: "userName",
+            render: (run: RenderRunInfo) => run.userDisplayName,
           },
           {
-            title: "Last Name",
-            dataIndex: "userLastName",
-            key: "userLastName",
-          },
-          {
-            title: "Host User",
-            dataIndex: "username",
+            title: "Host",
+            render: (run: RenderRunInfo) => run.hostname,
             key: "user",
-            filters: uniqueify(renderRuns.map((run) => run.username)).map((username) => ({
-              text: username,
-              value: username,
-            })),
-            onFilter: (value: string | number | boolean, run: RenderRunInfo) =>
-              run.username.startsWith(String(value)),
-            filterSearch: true,
-          },
-          {
-            title: "Hostname",
-            dataIndex: "hostname",
-            key: "hostname",
             filters: uniqueify(renderRuns.map((run) => run.hostname)).map((hostname) => ({
               text: hostname,
               value: hostname,
             })),
             onFilter: (value: string | number | boolean, run: RenderRunInfo) =>
-              run.hostname.startsWith(String(value)),
+              run.hostusername.startsWith(String(value)),
             filterSearch: true,
           },
           {

@@ -994,7 +994,7 @@ export type VoxelyticsWorkflowListingRun = (
 ) & {
   id: string;
   name: string;
-  username: string;
+  hostusername: string;
   hostname: string;
   voxelyticsVersion: string;
   taskCounts: TaskCounts;

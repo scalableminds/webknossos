@@ -1373,7 +1373,7 @@ function WkContextMenu() {
       hideContextMenu={hideContextMenu}
       contextMenuPosition={props.contextMenuPosition}
     >
-      <ContextMenuInner {...props} />
+      {props.contextMenuPosition != null ? <ContextMenuInner {...props} /> : <div />}
     </GenericContextMenuContainer>
   );
 }
@@ -1709,16 +1709,17 @@ function ContextMenuInner(propsWithInputRef: Props) {
   return (
     <React.Fragment>
       <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
-      <Dropdown
-        menu={menu}
-        overlayClassName="dropdown-overlay-container-for-context-menu"
-        open={contextMenuPosition != null}
-        getPopupContainer={() => refContent}
-        // @ts-ignore
-        destroyPopupOnHide
-      >
-        <div />
-      </Dropdown>
+      {
+        <Dropdown
+          menu={menu}
+          overlayClassName="dropdown-overlay-container-for-context-menu"
+          open={contextMenuPosition != null}
+          getPopupContainer={() => refContent}
+          destroyPopupOnHide
+        >
+          <div />
+        </Dropdown>
+      }
     </React.Fragment>
   );
 }

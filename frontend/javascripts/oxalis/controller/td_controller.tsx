@@ -254,18 +254,15 @@ class TDController extends React.PureComponent<Props> {
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (this.props.planeView == null) return null;
         const intersection = this.getMeshIntersection(pos);
-        if (intersection == null) {
-          return;
-        }
         handleOpenContextMenu(
           this.props.planeView,
           pos,
           plane,
           isTouch,
           event,
-          intersection.meshId,
-          intersection.meshClickedPosition,
-          intersection.unmappedSegmentId,
+          intersection?.meshId,
+          intersection?.meshClickedPosition,
+          intersection?.unmappedSegmentId,
         );
       },
     };

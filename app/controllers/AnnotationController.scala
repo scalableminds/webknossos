@@ -168,6 +168,7 @@ class AnnotationController @Inject()(
         _ <- bool2Fox(isAdminOrTeamManager || annotation._user == user._id) ?~> "annotation.reopen.notAllowed"
         _ <- bool2Fox(isAdminOrTeamManager || (annotation.modified + taskReopenAllowed).isPast) ?~> "annotation.reopen.tooLate"
       } yield ()
+
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity)
       _ <- isReopenAllowed(request.identity, annotation) ?~> "annotation.reopen.failed"
@@ -424,7 +425,6 @@ class AnnotationController @Inject()(
   }
 
   def finishAll(typ: String, timestamp: Long): Action[JsValue] = sil.SecuredAction.async(parse.json) {
-
     implicit request =>
       log() {
         withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
@@ -498,6 +498,7 @@ class AnnotationController @Inject()(
         case _ =>
           Fox.successful(JsonOk(Messages("annotation.finished")))
       }
+
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, annotation._team))

@@ -422,7 +422,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                   WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
                   GROUP BY
                     a._id, a.name, a.description, a._user, a.othersmayedit, a.modified,
-                    a.tags, a.state,  a.isLockedByUser, a.typ, a.visibility, a.tracingtime,
+                    a.tags, a.state,  a.islockedbyuser, a.typ, a.visibility, a.tracingtime,
                     u.firstname, u.lastname,
                     teams_agg.team_ids, teams_agg.team_names, teams_agg.team_organization_ids,
                     d.name, o.name

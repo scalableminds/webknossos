@@ -58,18 +58,13 @@ export function Comment({ comment, isActive }: CommentProps) {
     Store.dispatch(setActiveNodeAction(comment.nodeId));
   };
 
-  const liClassName = classNames("markdown", "markdown-small", "nowrap", "comment", {
-    "comment-active": isActive,
-  });
-  const iClassName = classNames("fa", "fa-fw", {
-    "fa-angle-right": isActive,
-  });
+  const liClassName = classNames("markdown", "markdown-small", "nowrap");
+
   const isMultiLine = comment.content.indexOf("\n") !== -1;
 
   return (
     <div className={liClassName}>
       <span>
-        <i className={iClassName} />
         <a onClick={handleClick}>{comment.nodeId}</a>
         {" - "}
       </span>

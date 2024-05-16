@@ -1,4 +1,4 @@
-import { Dropdown, Tooltip, Space, Tree as AntdTree, TreeProps } from "antd";
+import { Dropdown, Tooltip, Space, Tree as AntdTree, TreeProps, GetRef } from "antd";
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
@@ -11,7 +11,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import Maybe from "data.maybe";
 import React, { useEffect, useRef, useState } from "react";
-import _, { get } from "lodash";
+import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
 import { toNullable, compareBy, localeCompareBy, zipMaybe } from "libs/utils";
@@ -23,7 +23,6 @@ import {
   getActiveNode,
   getSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import {
   setActiveNodeAction,
   createCommentAction,
@@ -32,13 +31,21 @@ import {
 import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import InputComponent from "oxalis/view/components/input_component";
-import type { CommentType, OxalisState, SkeletonTracing, Tree, TreeMap } from "oxalis/store";
+import type {
+  CommentType,
+  MutableCommentType,
+  OxalisState,
+  SkeletonTracing,
+  Tree,
+  TreeMap,
+} from "oxalis/store";
 import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import type { MenuProps } from "rc-menu";
 import { Comparator } from "types/globals";
-import type RcTree from "rc-tree";
 import { EventDataNode } from "antd/es/tree";
+import { AutoSizer } from "react-virtualized";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {
@@ -86,87 +93,50 @@ const memoizedDeriveData = memoizeOne(
   },
 );
 
-function CommentTabView(props: {
+type Props = {
   skeletonTracing: SkeletonTracing;
-}) {
-  // const storePropertyUnsubscribers =  Array<() => void> = [];
-  // const keyboard = new InputKeyboard(
-  //   {
-  //     n: () => nextComment(),
-  //     p: () => previousComment(),
-  //   },
-  //   {
-  //     delay: Store.getState().userConfiguration.keyboardDelay,
-  //   },
-  // );
+};
 
-  const treeRef = useRef<AntdTree>();
+function CommentTabView(props: Props) {
+  const treeRef = useRef<GetRef<typeof AntdTree>>(null);
 
   const [isSortedAscending, setIsSortedAscending] = useState(true);
   const [sortBy, setSortBy] = useState(SortByEnum.NAME);
   const [collapsedTreeIds, setCollapsedTreeIds] = useState<React.Key[]>([]);
+  const [highlightedNodeIds, setHighlightedNodeIds] = useState<React.Key[]>([]);
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
 
   const dispatch = useDispatch();
-  const allowUpdate = useSelector((state: OxalisState) => state.tracing.restrictions.allowUpdate);
 
-  useEffect(() => {
+  const allowUpdate = useSelector((state: OxalisState) => state.tracing.restrictions.allowUpdate);
+  const keyboardDelay = useSelector((state: OxalisState) => state.userConfiguration.keyboardDelay);
+
+  
+  useEffectOnlyOnce(() => {
+    // expand all trees by default
     const defaultCollapsedTreeIds = getData().map((tree) => tree.treeId.toString());
     setCollapsedTreeIds(defaultCollapsedTreeIds);
-  }, []);
+    
+    if (props.skeletonTracing.activeNodeId) 
+      setActiveNode(props.skeletonTracing.activeNodeId);
+  });
 
-  // useEffect(()=> {
-  //   storePropertyUnsubscribers.push(
-  //     listenToStoreProperty(
-  //       (state) => userConfiguration.keyboardDelay,
-  //       (keyboardDelay) => {
-  //         if (keyboard != null) {
-  //           keyboard.delay = keyboardDelay;
-  //         }
-  //       },
-  //     ),
-  //   );
-  // }, [])
+  const keyboard = new InputKeyboard(
+    {
+      n: () => nextComment(),
+      p: () => previousComment(),
+    },
+    {
+      delay: keyboardDelay,
+    },
+  );
 
-  // shouldComponentUpdate(nextProps: PropsWithSkeleton, nextState: CommentTabState) {
-  //   if (nextState !== state) {
-  //     return true;
-  //   }
-
-  //   if (props.skeletonTracing.activeNodeId !== nextProps.skeletonTracing.activeNodeId) {
-  //     return true;
-  //   }
-
-  //   if (props.skeletonTracing.activeTreeId !== nextProps.skeletonTracing.activeTreeId) {
-  //     return true;
-  //   }
-
-  //   const updateActions = Array.from(
-  //     cachedDiffTrees(props.skeletonTracing.trees, nextProps.skeletonTracing.trees),
-  //   );
-  //   const relevantUpdateActions = updateActions.filter(
-  //     (ua) =>
-  //       RELEVANT_ACTIONS_FOR_COMMENTS.includes(ua.name) ||
-  //       (ua.name === "createTree" && ua.value.comments.length > 0),
-  //   );
-  //   return relevantUpdateActions.length > 0;
-  // }
-
-  // componentDidUpdate(prevProps: PropsWithSkeleton) {
-  //   if (
-  //     listRef != null &&
-  //     prevProps.skeletonTracing.trees !== props.skeletonTracing.trees
-  //   ) {
-  //     // Force the virtualized list to update if a comment was changed
-  //     // as it only rerenders if the rowCount changed otherwise
-  //     listRef.forceUpdateGrid();
-  //   }
-  // }
-
-  // componentWillUnmount() {
-  //   keyboard.destroy();
-  //   unsubscribeStoreListeners();
-  // }
+  useEffect(() => {
+    keyboard.delay = keyboardDelay;
+    return () => {
+      keyboard.destroy();
+    };
+  }, [keyboard, keyboardDelay]);
 
   function nextComment(forward: boolean = true) {
     getActiveNode(props.skeletonTracing).map((activeNode) => {
@@ -194,6 +164,7 @@ function CommentTabView(props: {
 
   function setActiveNode(nodeId: number) {
     dispatch(setActiveNodeAction(nodeId));
+    setHighlightedNodeIds([`comment-${nodeId}`]);
   }
 
   function previousComment() {
@@ -235,18 +206,15 @@ function CommentTabView(props: {
     setCollapsedTreeIds(expandedKeys);
   }
 
-  function onSelect(_selectedKeys: React.Key[], { node }) {
-    if (node.key.startsWith("comment")) {
-      // "comment" keys have the format "comment-{treeId}-{nodeId}"
-      const nodeId = parseInt(node.key.split("-")[2]);
-      setActiveNode(nodeId);
+  function onSelect(
+    _selectedKeys: React.Key[],
+    { node }: { node: EventDataNode<MutableCommentType> },
+  ) {
+    // Careful, this method is called both when clicking on a skeleton tree ("root-node") or a comment ("child node")
+    if ("nodeId" in node) {
+      setActiveNode(node.nodeId);
     }
   }
-
-  // function unsubscribeStoreListeners() {
-  //   storePropertyUnsubscribers.forEach((unsubscribe) => unsubscribe());
-  //   storePropertyUnsubscribers = [];
-  // }
 
   function getActiveComment(createIfNotExisting: boolean = false) {
     return zipMaybe(
@@ -328,11 +296,6 @@ function CommentTabView(props: {
     return memoizedDeriveData(props.skeletonTracing.trees, sortBy, isSortedAscending);
   }
 
-  function highlightActiveNode(node: EventDataNode) {
-    const activeNodeId = props.skeletonTracing.activeNodeId;
-    return node.key.endsWith(activeNodeId);
-  }
-
   function renderCommentTree() {
     const skeletonTracingTrees = getData();
 
@@ -347,27 +310,44 @@ function CommentTabView(props: {
           .slice()
           .sort(commentSorter)
           .map((comment) => {
-            const key = `comment-${tree.treeId}-${comment.nodeId}`;
+            const key = `comment-${comment.nodeId}`;
             const isActive = comment.nodeId === props.skeletonTracing.activeNodeId;
-            return { key: key, title: <Comment key={key} comment={comment} isActive={isActive} /> };
+            return {
+              ...comment,
+              key: key,
+              title: <Comment key={key} comment={comment} isActive={isActive} />,
+            };
           }),
       };
     });
 
     return (
-      <AntdTree
-        key={commentListId}
-        treeData={treeData}
-        expandedKeys={collapsedTreeIds}
-        onExpand={onExpand}
-        onSelect={onSelect}
-        switcherIcon={<DownOutlined />}
-        filterTreeNode={highlightActiveNode}
-        ref={treeRef}
-        blockNode
-        showLine
-        defaultExpandAll
-      />
+      <AutoSizer defaultHeight={500}>
+        {({ height, width }) => (
+          <div
+            style={{
+              height,
+              width,
+            }}
+          >
+            <AntdTree
+              key={commentListId}
+              treeData={treeData}
+              expandedKeys={collapsedTreeIds}
+              selectedKeys={highlightedNodeIds}
+              onExpand={onExpand}
+              // @ts-ignore
+              onSelect={onSelect}
+              switcherIcon={<DownOutlined />}
+              height={height}
+              ref={treeRef}
+              blockNode
+              showLine
+              defaultExpandAll
+            />
+          </div>
+        )}
+      </AutoSizer>
     );
   }
 
@@ -484,11 +464,35 @@ function CommentTabView(props: {
   );
 }
 
+const CommentTabViewMemo = React.memo(
+  CommentTabView,
+  function shouldComponentUpdate(prevPops: Props, nextProps: Props) {
+    if (prevPops.skeletonTracing.activeNodeId !== nextProps.skeletonTracing.activeNodeId) {
+      return true;
+    }
+
+    const updateActions = Array.from(
+      cachedDiffTrees(prevPops.skeletonTracing.trees, nextProps.skeletonTracing.trees),
+    );
+    const relevantUpdateActions = updateActions.filter(
+      (ua) =>
+        RELEVANT_ACTIONS_FOR_COMMENTS.includes(ua.name) ||
+        (ua.name === "createTree" && ua.value.comments.length > 0),
+    );
+    return relevantUpdateActions.length > 0;
+  },
+);
+
 function CommentTabViewWrapper() {
+  // This wrapper component serves 2 purposes:
+  // 1. Prevent excessive re-renders
+  // 2. Safe-guard that a skeleton tracing is available
+
   const skeletonTracing = useSelector((state: OxalisState) =>
     getSkeletonTracing(state.tracing).getOrElse(null),
   );
-  if (skeletonTracing) return <CommentTabView skeletonTracing={skeletonTracing} />;
+
+  if (skeletonTracing) return <CommentTabViewMemo skeletonTracing={skeletonTracing} />;
 
   return null;
 }

@@ -517,7 +517,7 @@ function OrganizationFilterInput({
 }: { onChange: (val: string) => void; isVisible: boolean; onPressEnter: () => void }) {
   const ref = useRef<InputRef>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesnt understand that ref.current is accessed?
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesn't understand that ref.current is accessed?
   useEffect(() => {
     if (ref?.current && isVisible) {
       setTimeout(() => {

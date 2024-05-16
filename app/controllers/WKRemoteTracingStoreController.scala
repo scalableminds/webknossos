@@ -82,7 +82,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     }
 
   private def ensureAnnotationNotFinished(annotation: Annotation) =
-    if (annotation.state == Finished) Fox.failure("annotation already finshed")
+    if (annotation.state == Finished) Fox.failure("annotation already finished")
     else Fox.successful(())
 
   def dataSourceForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =

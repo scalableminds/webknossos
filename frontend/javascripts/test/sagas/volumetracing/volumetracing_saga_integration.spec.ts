@@ -473,7 +473,7 @@ test.serial("Brushing/Tracing with already existing backend data", async (t) => 
   );
 });
 // The binary parameters control whether the test will assert additional
-// constraints inbetween. Since getDataValue() has the side effect of awaiting
+// constraints in between. Since getDataValue() has the side effect of awaiting
 // the loaded bucket, the test hits different execution paths. For example,
 // older code failed for test ii and and iv.
 test.serial("Brushing/Tracing with undo (Ia i)", undoTestHelper, false, false);

@@ -34,7 +34,7 @@ export function createDebouncedAbortableCallable<T, C>(
     debouncedAbortableSagaRunner,
     debounceThreshold,
     triggerChannel,
-    // @ts-expect-error TS thinks fn doesnt match, but it does.
+    // @ts-expect-error TS thinks fn doesn't match, but it does.
     fn,
     context,
   );

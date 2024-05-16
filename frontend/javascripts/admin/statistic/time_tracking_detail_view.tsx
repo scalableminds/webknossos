@@ -17,8 +17,8 @@ type TimeTrackingDetailViewProps = {
   projectIds: string[];
 };
 
-const ANNOTATION_OR_TASK_NAME_SPAN = 12;
-const STATISTICS_SPAN = 8;
+const ANNOTATION_OR_TASK_NAME_SPAN = 16;
+const STATISTICS_SPAN = 4;
 const TIMESPAN_SPAN = 4;
 
 const STYLING_CLASS_NAME = "time-tracking-details";

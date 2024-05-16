@@ -28,7 +28,7 @@ class PushQueue {
   // user edited the buckets in a certain time window).
   private pendingBuckets: Set<DataBucket>;
 
-  // Everytime the pendingBuckets is flushed, its content is put into a transaction.
+  // Every time the pendingBuckets is flushed, its content is put into a transaction.
   // That transaction is compressed asynchronously before it is sent to the store.
   // Buckets that are currently being compressed, are counted in this property.
   private compressingBucketCount: number = 0;

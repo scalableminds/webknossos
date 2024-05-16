@@ -60,7 +60,7 @@ trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHel
   private def jsonMessages(msgs: JsArray): JsObject =
     Json.obj("messages" -> msgs)
 
-  // Override this in your controller to add the CORS headers to these results of its actions
+  // Override this in your controller to add the CORS headers to the results of its actions
   def allowRemoteOrigin: Boolean = false
 
   private def allowRemoteOriginIfSelected(result: Result): Result =

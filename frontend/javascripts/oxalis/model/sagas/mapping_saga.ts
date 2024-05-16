@@ -58,11 +58,9 @@ import { Action } from "../actions/actions";
 import { ActionPattern } from "redux-saga/effects";
 
 type APIMappings = Record<string, APIMapping>;
-type PreviousMappingObject = { mapping: Mapping };
 
 const takeLatestMappingChange = (
   setMappingEnabledActionChannel: Channel<SetMappingEnabledAction>,
-  previousMappingObject: PreviousMappingObject,
 ) =>
   fork(function* () {
     let lastTask;
@@ -85,22 +83,19 @@ const takeLatestMappingChange = (
       if (action.type === "SET_MAPPING_ENABLED" && !action.isMappingEnabled) continue;
 
       console.log("Start new bucket watcher for layer", action.layerName);
-      lastTask = yield* fork(watchChangedBucketsForLayer, action.layerName, previousMappingObject);
+      lastTask = yield* fork(watchChangedBucketsForLayer, action.layerName);
       lastLayerName = action.layerName;
       lastMappingEnabled = action.isMappingEnabled;
     }
   });
 
 export default function* watchActivatedMappings(): Saga<void> {
-  const previousMappingObject = {
-    mapping: new Map(),
-  };
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
   const setMappingEnabledActionChannel =
     yield* actionChannel<SetMappingEnabledAction>("SET_MAPPING_ENABLED");
   yield* take("WK_READY");
-  yield* takeLatest(setMappingActionChannel, handleSetMapping, previousMappingObject);
+  yield* takeLatest(setMappingActionChannel, handleSetMapping);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
     function* handler(action: EnsureLayerMappingsAreLoadedAction) {
@@ -111,7 +106,7 @@ export default function* watchActivatedMappings(): Saga<void> {
       }
     },
   );
-  yield* takeLatestMappingChange(setMappingEnabledActionChannel, previousMappingObject);
+  yield* takeLatestMappingChange(setMappingEnabledActionChannel);
 }
 
 function createBucketDataChangedChannel(dataCube: DataCube) {
@@ -126,10 +121,7 @@ function createBucketDataChangedChannel(dataCube: DataCube) {
   }, buffers.sliding<string>(1));
 }
 
-function* watchChangedBucketsForLayer(
-  layerName: string,
-  previousMappingObject: PreviousMappingObject,
-): Saga<void> {
+function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
   const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
 
@@ -177,14 +169,7 @@ function* watchChangedBucketsForLayer(
       let isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
       if (!isBusy) {
         const { cancel } = yield* race({
-          updateHdf5: call(
-            updateHdf5Mapping,
-            layerName,
-            layerInfo,
-            mappingName,
-            mappingType,
-            previousMappingObject,
-          ),
+          updateHdf5: call(updateHdf5Mapping, layerName, layerInfo, mappingName, mappingType),
           cancel: take(
             ((action: Action) =>
               action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
@@ -243,10 +228,7 @@ function* loadLayerMappings(layerName: string, updateInStore: boolean): Saga<[st
   return [jsonMappings, serverHdf5Mappings];
 }
 
-function* handleSetMapping(
-  previousMappingObject: PreviousMappingObject,
-  action: SetMappingAction,
-): Saga<void> {
+function* handleSetMapping(action: SetMappingAction): Saga<void> {
   const {
     layerName,
     mappingName,
@@ -326,14 +308,7 @@ function* handleSetMapping(
   if (mappingType === "JSON") {
     yield* call(handleSetJsonMapping, layerName, layerInfo, mappingName, mappingType);
   } else if (mappingType === "HDF5") {
-    yield* call(
-      handleSetHdf5Mapping,
-      layerName,
-      layerInfo,
-      mappingName,
-      mappingType,
-      previousMappingObject,
-    );
+    yield* call(handleSetHdf5Mapping, layerName, layerInfo, mappingName, mappingType);
   }
 }
 
@@ -342,16 +317,8 @@ function* handleSetHdf5Mapping(
   layerInfo: APIDataLayer,
   mappingName: string,
   mappingType: MappingType,
-  previousMappingObject: PreviousMappingObject,
 ): Saga<void> {
-  yield* call(
-    updateHdf5Mapping,
-    layerName,
-    layerInfo,
-    mappingName,
-    mappingType,
-    previousMappingObject,
-  );
+  yield* call(updateHdf5Mapping, layerName, layerInfo, mappingName, mappingType);
 }
 
 function getSetWithoutMapKeys<T>(valueSet: Iterable<T>, map: Map<T, T>): Set<T> {
@@ -366,7 +333,6 @@ function* updateHdf5Mapping(
   layerInfo: APIDataLayer,
   mappingName: string,
   mappingType: MappingType,
-  previousMappingObject: PreviousMappingObject,
 ): Saga<void> {
   const dataset = yield* select((state) => state.dataset);
   const annotation = yield* select((state) => state.tracing);
@@ -442,8 +408,6 @@ function* updateHdf5Mapping(
     newEntries.entries(),
   );
   const mapping = new Map(chainedIterator) as Mapping;
-
-  previousMappingObject.mapping = mapping;
 
   console.log("dispatch setMappingAction in mapping saga");
   yield* put(setMappingAction(layerName, mappingName, mappingType, { mapping }));

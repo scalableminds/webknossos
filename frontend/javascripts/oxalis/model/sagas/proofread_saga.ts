@@ -371,7 +371,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       return;
     }
     items.push(
-      // todop: how to serialize bigint for server?
       mergeAgglomerate(
         sourceAgglomerateId,
         targetAgglomerateId,
@@ -397,7 +396,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       return;
     }
     items.push(
-      // todop: how to serialize bigint for server?
       splitAgglomerate(
         sourceAgglomerateId,
         sourceInfo.unmappedId,

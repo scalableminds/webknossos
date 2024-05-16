@@ -126,7 +126,7 @@ GET           /tracingstores/:name/dataSource                                   
 GET           /tracingstores/:name/dataSourceId                                                 controllers.WKRemoteTracingStoreController.dataSourceIdForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataStoreUri/:datasetName                                    controllers.WKRemoteTracingStoreController.dataStoreUriForDataset(name: String, key: String, organizationName: Option[String], datasetName: String)
 
-# User access tokens for datastore authentification
+# User access tokens for datastore authentication
 POST          /userToken/generate                                                               controllers.UserTokenController.generateTokenForDataStore()
 
 # Annotations

@@ -25,7 +25,7 @@ test.beforeEach(async (t) => {
 });
 
 test.serial(
-  "Brushing/Tracing should not crash when a lot of buckets are labeled at once without saving inbetween",
+  "Brushing/Tracing should not crash when a lot of buckets are labeled at once without saving in between",
   async (t) => {
     // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
     await t.context.api.tracing.save();

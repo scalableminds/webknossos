@@ -38,7 +38,7 @@ function AvailableTasksReportView() {
     <div className="container">
       <h3>Available Task Assignments</h3>
       <Typography.Paragraph type="secondary">
-        Select a team to show an overview of its users and the number of available task assigments
+        Select a team to show an overview of its users and the number of available task assignments
         they qualify for. Task availability for each user is determined by assigned experiences,
         team memberships, the number of pending task instances, etc. For tasks with multiple
         instances, each user will get at most one. Note that individual tasks may be listed as

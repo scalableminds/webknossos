@@ -788,7 +788,7 @@ class TracingApi {
               { groupId: parentGroupId === MISSING_GROUP_ID ? null : parentGroupId },
               volumeTracing.tracingId,
               // The parameter createsNewUndoState is not passed, since the action
-              // is added to a batch and batch updates always crate a new undo state.
+              // is added to a batch and batch updates always create a new undo state.
             ),
           );
         }

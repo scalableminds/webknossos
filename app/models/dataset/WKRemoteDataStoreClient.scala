@@ -3,6 +3,8 @@ package models.dataset
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.controllers.{ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse}
+import com.scalableminds.webknossos.datastore.explore.ExploreRemoteLayerParameters
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, GenericDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -102,6 +104,10 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     )
   }
 
-  def exploreRemoteDataset()
+  def exploreRemoteDataset(layerParameters: List[ExploreRemoteLayerParameters],
+                           organizationName: String): Fox[ExploreRemoteDatasetResponse] =
+    rpc(s"${dataStore.url}/data/datasets/exploreRemote")
+      .postJsonWithJsonResponse[ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse](
+        ExploreRemoteDatasetRequest(layerParameters, organizationName))
 
 }

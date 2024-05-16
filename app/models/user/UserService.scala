@@ -22,7 +22,6 @@ import play.silhouette.api.services.IdentityService
 import play.silhouette.api.util.PasswordInfo
 import play.silhouette.impl.providers.CredentialsProvider
 import security.{PasswordHasher, TokenDAO}
-import slick.lifted.Functions.user
 import utils.sql.SqlEscaping
 import utils.{ObjectId, WkConf}
 
@@ -73,12 +72,6 @@ class UserService @Inject()(conf: WkConf,
         } yield identity
       case None => userDAO.findFirstByMultiUser(multiUser._id)
     }
-
-  def findOneByEmailAndOrganization(email: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
-    for {
-      multiUser <- multiUserDAO.findOneByEmail(email)
-      user <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUser._id)
-    } yield user
 
   def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: ObjectId): Fox[Unit] =
     for {

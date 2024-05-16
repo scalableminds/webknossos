@@ -22,6 +22,7 @@ import play.silhouette.api.services.IdentityService
 import play.silhouette.api.util.PasswordInfo
 import play.silhouette.impl.providers.CredentialsProvider
 import security.{PasswordHasher, TokenDAO}
+import slick.lifted.Functions.user
 import utils.sql.SqlEscaping
 import utils.{ObjectId, WkConf}
 
@@ -371,7 +372,7 @@ class UserService @Inject()(conf: WkConf,
     }
   }
 
-  def publicWritesCompact(user: User, userCompactInfo: UserCompactInfo): Fox[JsObject] =
+  def publicWritesCompact(userCompactInfo: UserCompactInfo): Fox[JsObject] =
     for {
       _ <- Fox.successful(())
       teamsJson = parseArrayLiteral(userCompactInfo.teamIdsAsArrayLiteral).indices.map(
@@ -390,24 +391,24 @@ class UserService @Inject()(conf: WkConf,
       novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject]
     } yield {
       Json.obj(
-        "id" -> user._id.toString,
+        "id" -> userCompactInfo._id,
         "email" -> userCompactInfo.email,
-        "firstName" -> user.firstName,
-        "lastName" -> user.lastName,
-        "isAdmin" -> user.isAdmin,
-        "isOrganizationOwner" -> user.isOrganizationOwner,
-        "isDatasetManager" -> user.isDatasetManager,
-        "isActive" -> !user.isDeactivated,
+        "firstName" -> userCompactInfo.firstName,
+        "lastName" -> userCompactInfo.lastName,
+        "isAdmin" -> userCompactInfo.isAdmin,
+        "isOrganizationOwner" -> userCompactInfo.isOrganizationOwner,
+        "isDatasetManager" -> userCompactInfo.isDatasetManager,
+        "isActive" -> !userCompactInfo.isDeactivated,
         "teams" -> teamsJson,
         "experiences" -> experienceJson,
-        "lastActivity" -> user.lastActivity,
+        "lastActivity" -> userCompactInfo.lastActivity,
         "isAnonymous" -> false,
         "isEditable" -> userCompactInfo.isEditable,
         "organization" -> userCompactInfo.organizationName,
         "novelUserExperienceInfos" -> novelUserExperienceInfos,
         "selectedTheme" -> userCompactInfo.selectedTheme,
-        "created" -> user.created,
-        "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
+        "created" -> userCompactInfo.created,
+        "lastTaskTypeId" -> userCompactInfo.lastTaskTypeId,
         "isSuperUser" -> userCompactInfo.isSuperUser,
         "isEmailVerified" -> userCompactInfo.isEmailVerified,
       )

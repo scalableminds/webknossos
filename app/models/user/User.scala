@@ -65,8 +65,8 @@ case class UserCompactInfo(
     _id: ObjectId,
     _multiUserId: ObjectId,
     email: String,
-    firstname: String,
-    lastname: String,
+    firstName: String,
+    lastName: String,
     userConfiguration: String,
     isAdmin: Boolean,
     isOrganizationOwner: Boolean,
@@ -87,30 +87,7 @@ case class UserCompactInfo(
     isSuperUser: Boolean,
     isEmailVerified: Boolean,
     isEditable: Boolean
-) {
-  def toUser(implicit ec: ExecutionContext): Fox[User] =
-    for {
-      userConfiguration <- Fox.box2Fox(parseAndValidateJson[JsObject](userConfiguration))
-    } yield {
-      User(
-        _id,
-        _multiUserId,
-        organizationId,
-        firstname,
-        lastname,
-        lastActivity,
-        userConfiguration,
-        LoginInfo(User.default_login_provider_id, _id.toString),
-        isAdmin,
-        isOrganizationOwner,
-        isDatasetManager,
-        isDeactivated,
-        isUnlisted = false,
-        created,
-        lastTaskTypeId.map(ObjectId(_))
-      )
-    }
-}
+)
 
 class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[User, UsersRow, Users](sqlClient) {
@@ -231,11 +208,10 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     // format: on
   }
 
-  def findAllCompactWithFilters(
-      isEditable: Option[Boolean],
-      isTeamManagerOrAdmin: Option[Boolean],
-      isAdmin: Option[Boolean],
-      requestingUser: User)(implicit ctx: DBAccessContext): Fox[(List[User], List[UserCompactInfo])] =
+  def findAllCompactWithFilters(isEditable: Option[Boolean],
+                                isTeamManagerOrAdmin: Option[Boolean],
+                                isAdmin: Option[Boolean],
+                                requestingUser: User)(implicit ctx: DBAccessContext): Fox[List[UserCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(isEditable,
                                                       isTeamManagerOrAdmin,
@@ -254,7 +230,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         OR COUNT(autr.team_ids) = 0
         AS iseditable
         """
-      r <- run(q"""
+      rows <- run(q"""
           WITH
           -- agg_experiences and agg_user_team_roles are extracted to avoid left-join fanout.
           agg_experiences AS (
@@ -315,9 +291,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           m._id, m.email, m.novelUserExperienceinfos, m.selectedTheme, m.isSuperUser, m.isEmailVerified,
           autr.team_ids, autr.team_names, autr.team_managers, aux.experience_values, aux.experience_domains
          """.as[UserCompactInfo])
-      users <- Fox.combined(r.toList.map(_.toUser))
-      compactInfos = r.toList
-    } yield (users, compactInfos)
+    } yield rows.toList
 
   // NOTE: This will not return admins. They have “access to all teams”. Consider fetching those too when you use this
   def findAllByTeams(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =

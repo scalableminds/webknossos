@@ -1014,6 +1014,13 @@ function _getLoadChunksTasks(
                 // Compute vertex normals to achieve smooth shading
                 bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
 
+                // Check if the mesh scale is different to the dataset scale and warn in the console to make debugging easier in such a case.
+                if (!_.isEqual(scale, dataset.dataSource.scale.factor)) {
+                  console.warn(
+                    `Scale of mesh ${id} is different to dataset scale. Mesh scale: ${scale}, Dataset scale: ${dataset.dataSource.scale.factor}. This might lead to unexpected rendering results.`,
+                  );
+                }
+
                 yield* call(
                   {
                     context: segmentMeshController,

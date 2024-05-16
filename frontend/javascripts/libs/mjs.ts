@@ -243,7 +243,7 @@ const V2 = {
 
 const _tmpVec: Vector3 = [0, 0, 0];
 
-// @ts-ignore TS claims that the implementation doesnt match the overloading
+// @ts-ignore TS claims that the implementation doesn't match the overloading
 function round(v: Vector3, r?: Vector3 | null | undefined): Vector3;
 function round(v: Vector3Like, r?: Float32Array | null | undefined) {
   if (r == null) {
@@ -256,7 +256,7 @@ function round(v: Vector3Like, r?: Float32Array | null | undefined) {
   return r;
 }
 
-// @ts-ignore TS claims that the implementation doesnt match the overloading
+// @ts-ignore TS claims that the implementation doesn't match the overloading
 function divide3(a: Vector3, k: Vector3, r?: Vector3): Vector3;
 function divide3(a: Float32Array, k: Float32Array, r?: Float32Array) {
   if (r == null) r = new Float32Array(3);

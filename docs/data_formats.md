@@ -35,7 +35,7 @@ A dataset consists of one or more layers.
 For microscopy/CT/MRI data, there is usually a `color` layer that holds the raw grayscale image data.
 Additionally, there may be one or more `segmentation` layers that hold manually or automatically generated volume annotations (one ID per voxel).
 
-A WEBKNOSSOS dataset can contain several `color` and `segmentation` layers which can be rendered individually or overlayed on top of each other. The maximum number of visible layers depends on your GPU hardware - typically 16 layers.
+A WEBKNOSSOS dataset can contain several `color` and `segmentation` layers which can be rendered individually or overlaid on top of each other. The maximum number of visible layers depends on your GPU hardware - typically 16 layers.
 
 ![Color and Segmentation Layers](images/datalayers.jpeg)
 

@@ -52,7 +52,7 @@ export const getRgbaAtXYIndex: ShaderModule = {
 
     <% _.each(layerNamesWithSegmentation, (name) => { %>
       vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float x, float y) {
-        // Since WebGL 1 doesnt allow dynamic texture indexing, we use an exhaustive if-else-construct
+        // Since WebGL 1 doesn't allow dynamic texture indexing, we use an exhaustive if-else-construct
         // here which checks for each case individually. The else-if-branches are constructed via
         // lodash templates.
 

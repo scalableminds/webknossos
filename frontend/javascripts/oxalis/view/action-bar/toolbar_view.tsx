@@ -267,7 +267,7 @@ function OverwriteModeSwitch({
     // - switching from state (1) to (2) (or vice versa)
     // - switching from state (2) to (4) (or vice versa)
     // Consequently, the mode is only toggled effectively, when CTRL is pressed.
-    // Alternatively, we could store the selected value and the overriden value
+    // Alternatively, we could store the selected value and the overridden value
     // separately in the store. However, this solution works, too.
     const needsModeToggle =
       (!isShiftPressed &&
@@ -908,7 +908,7 @@ export default function ToolbarView() {
       !disabledInfosForTools[lastForcefulDisabledTool].isDisabled &&
       activeTool === AnnotationToolEnum.MOVE
     ) {
-      // Reenable the tool that was disabled before.
+      // Re-enable the tool that was disabled before.
       setLastForcefulDisabledTool(null);
       Store.dispatch(setToolAction(lastForcefulDisabledTool));
     } else if (activeTool !== AnnotationToolEnum.MOVE) {

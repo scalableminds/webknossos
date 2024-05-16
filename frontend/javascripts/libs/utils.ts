@@ -401,7 +401,7 @@ export function localeCompareBy<T>(
 export function stringToNumberArray(s: string): Array<number> {
   // remove leading/trailing whitespaces
   s = s.trim();
-  // replace remaining whitespaces with commata
+  // replace remaining whitespaces with commas
   s = s.replace(/,?\s+,?/g, ",");
   const stringArray = s.split(",");
   const result = [];

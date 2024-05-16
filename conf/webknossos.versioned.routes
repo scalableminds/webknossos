@@ -8,7 +8,7 @@
  # new in v5: annotation layers (changed annotation json result, changed createExplorational params)
  # new in v4: project queried by id, not name (changed route parameters)
  # new in v3: annotation info and finish request now take timestamp
- # new in v2: annotation json constains visibility enum instead of booleans
+ # new in v2: annotation json contains visibility enum instead of booleans
 
 ->       /v6/                                                                 webknossos.latest.Routes
 

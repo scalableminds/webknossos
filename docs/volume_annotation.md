@@ -93,7 +93,7 @@ Note that it is recommended to proofread the interpolated slices afterward since
 ### Volume Extrusion
 
 Similar to the above interpolation feature, you can also extrude the currently active segment.
-This means, that you can label a segment on one slice (e.g., z=10), move a few slices forward (e.g., z=12) and copy the segment to the relevant slices (e.g., z=11, z=12). In contrast to interpolation mode, WEBKNOSSOS will not adapat the shape/boundary of the extruded segments to fit between the source and target segment. Instead, the extruded volume will retain the shape of the source segment and extend that along the z-axis.
+This means, that you can label a segment on one slice (e.g., z=10), move a few slices forward (e.g., z=12) and copy the segment to the relevant slices (e.g., z=11, z=12). In contrast to interpolation mode, WEBKNOSSOS will not adapt the shape/boundary of the extruded segments to fit between the source and target segment. Instead, the extruded volume will retain the shape of the source segment and extend that along the z-axis.
 The extrusion can be triggered by using the extrude button in the toolbar (also available as a dropdown next to the interpolation/extrusion button).
 
 ![youtube-video](https://www.youtube.com/embed/GucpEA6Wev8)
@@ -112,7 +112,7 @@ For larger areas we recommend working with the [proofreading tool](./proof_readi
 WEBKNOSSOS provides handy statistics about your labelled segments, such as the volume and bounding box of a segment.
 
 There is several ways to access this information: 
-1. Right-click any segment to bring up the context menu. The segment statics are listed at the end of the context menu.
+1. Right-click any segment to bring up the context menu. The segment statistics are listed at the end of the context menu.
 2. In the `Segments` tab in the right-hand panel, right-click on any group of segments (or the "Root" group) to bring up a context menu. Select `Show Segment Statistics` to access a summary table with statistics for a whole group of labelled segments. These can be exported as CSV files for further analysis outside of WEBKNOSSOS.
 
 In cases, where you only wish to measure a simple distance or surface area, use the [`Measurement Tool`](./tracing_ui.md#the-toolbar) instead.

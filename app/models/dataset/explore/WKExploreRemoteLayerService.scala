@@ -1,10 +1,14 @@
 package models.dataset.explore
 
+import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.controllers.ExploreRemoteDatasetResponse
-import com.scalableminds.webknossos.datastore.explore.{ExploreLayerUtils, ExploreRemoteLayerParameters}
+import com.scalableminds.webknossos.datastore.explore.{
+  ExploreLayerUtils,
+  ExploreRemoteDatasetResponse,
+  ExploreRemoteLayerParameters
+}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
@@ -71,24 +75,18 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       datastore <- selectDataStore(parameters.map(_.dataStoreName))
       client: WKRemoteDataStoreClient = new WKRemoteDataStoreClient(datastore, rpc)
       organization <- organizationDAO.findOne(requestingUser._organization)(GlobalAccessContext)
-      exploreResponse <- client.exploreRemoteDataset(parametersWithCredentialId, organization.name)
+      userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(requestingUser)
+      exploreResponse <- client.exploreRemoteDataset(parametersWithCredentialId, organization.name, userToken)
     } yield exploreResponse
 
   private def selectDataStore(dataStoreNames: List[Option[String]])(implicit ec: ExecutionContext): Fox[DataStore] =
     for {
-      dataStoreNameOpt <- findUniqueElement(dataStoreNames) ?~> "explore.dataStore.mustBeEqualForAll"
+      dataStoreNameOpt <- SequenceUtils.findUniqueElement(dataStoreNames) ?~> "explore.dataStore.mustBeEqualForAll"
       dataStore <- dataStoreNameOpt match {
         case Some(dataStoreName) => dataStoreDAO.findOneByName(dataStoreName)(GlobalAccessContext)
         case None                => dataStoreDAO.findOneWithUploadsAllowed(GlobalAccessContext)
       }
     } yield dataStore
-
-  // TODO move to utils. use also in annotation upload
-  private def findUniqueElement[T](list: List[T]): Option[T] = {
-    val uniqueElements = list.distinct
-    if (uniqueElements.length == 1) Some(uniqueElements.head)
-    else None
-  }
 
   private def storeCredentials(layerUri: String,
                                credentialIdentifier: Option[String],

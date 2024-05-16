@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceId,
   GenericDataSource
 }
+import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{DataVaultCredential, DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
@@ -21,6 +22,18 @@ import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
+case class ExploreRemoteDatasetRequest(layerParameters: List[ExploreRemoteLayerParameters], organizationName: String)
+
+object ExploreRemoteDatasetRequest {
+  implicit val jsonFormat: OFormat[ExploreRemoteDatasetRequest] = Json.format[ExploreRemoteDatasetRequest]
+}
+
+case class ExploreRemoteDatasetResponse(dataSource: Option[GenericDataSource[DataLayer]], report: String)
+
+object ExploreRemoteDatasetResponse {
+  implicit val jsonFormat: OFormat[ExploreRemoteDatasetResponse] = Json.format[ExploreRemoteDatasetResponse]
+}
+
 case class ExploreRemoteLayerParameters(remoteUri: String,
                                         credentialId: Option[String],
                                         preferredVoxelSize: Option[Vec3Double])
@@ -29,7 +42,10 @@ object ExploreRemoteLayerParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteLayerParameters] = Json.format[ExploreRemoteLayerParameters]
 }
 
-class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService, dataStoreConfig: DataStoreConfig)
+// Calls explorers on dataset uris compatible with DataVaults (can also be file:/// for local)
+class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
+                                          remoteWebknossosClient: DSRemoteWebknossosClient,
+                                          dataStoreConfig: DataStoreConfig)
     extends ExploreLayerUtils
     with FoxImplicits
     with LazyLogging {
@@ -63,7 +79,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService, da
       uri <- tryo(new URI(removeHeaderFileNamesFromUriSuffix(layerUri))) ?~> s"Received invalid URI: $layerUri"
       _ <- bool2Fox(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
       _ <- assertLocalPathInWhitelist(uri)
-      credentialOpt: Option[DataVaultCredential] <- lookUpCredentials(credentialId)
+      credentialOpt: Option[DataVaultCredential] <- Fox.runOptional(credentialId)(remoteWebknossosClient.getCredential)
       remoteSource = RemoteSourceDescriptor(uri, credentialOpt)
       remotePath <- dataVaultService.getVaultPath(remoteSource) ?~> "dataVault.setup.failed"
       layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
@@ -82,8 +98,6 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService, da
         )
       )
     } yield layersWithVoxelSizes
-
-  private def lookUpCredentials(credentailId: Option[String]): Fox[Option[DataVaultCredential]] = ??? // TODO
 
   private def assertLocalPathInWhitelist(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
     if (uri.getScheme == DataVaultService.schemeFile) {

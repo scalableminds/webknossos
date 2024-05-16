@@ -10,7 +10,6 @@ import net.liftweb.common.Box.tryo
 import play.api.libs.json._
 
 import java.net.URI
-import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val ec: ExecutionContext)

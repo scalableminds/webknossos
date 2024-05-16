@@ -4,7 +4,11 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.explore.{ExploreRemoteLayerParameters, ExploreRemoteLayerService}
+import com.scalableminds.webknossos.datastore.explore.{
+  ExploreRemoteDatasetRequest,
+  ExploreRemoteDatasetResponse,
+  ExploreRemoteLayerService
+}
 import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
   GetSegmentIndexParameters,
@@ -30,7 +34,7 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
 import play.api.i18n.Messages
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
@@ -41,19 +45,6 @@ import play.api.libs.Files
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
-
-// TODO move elsewhere
-case class ExploreRemoteDatasetRequest(layerParameters: List[ExploreRemoteLayerParameters], organizationName: String)
-
-object ExploreRemoteDatasetRequest {
-  implicit val jsonFormat: OFormat[ExploreRemoteDatasetRequest] = Json.format[ExploreRemoteDatasetRequest]
-}
-
-case class ExploreRemoteDatasetResponse(dataSource: Option[GenericDataSource[DataLayer]], report: String)
-
-object ExploreRemoteDatasetResponse {
-  implicit val jsonFormat: OFormat[ExploreRemoteDatasetResponse] = Json.format[ExploreRemoteDatasetResponse]
-}
 
 class DataSourceController @Inject()(
     dataSourceRepository: DataSourceRepository,

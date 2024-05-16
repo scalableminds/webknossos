@@ -151,7 +151,7 @@ class AnnotationController @Inject()(
     }
 
   def reset(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for { // TODO: Question: Why isn't the restrictions used here? Yes
+    for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, annotation._team))
       _ <- annotationService.resetToBase(annotation) ?~> "annotation.reset.failed"
@@ -194,10 +194,11 @@ class AnnotationController @Inject()(
   }
 
   def addAnnotationLayer(typ: String, id: String): Action[AnnotationLayerParameters] =
-    // TODO: Question: Why isn't the restrictions used here? Yes
     sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
+        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         newLayerName = request.body.name.getOrElse(AnnotationLayer.defaultNameForType(request.body.typ))
         _ <- bool2Fox(!annotation.annotationLayers.exists(_.name == newLayerName)) ?~> "annotation.addLayer.nameInUse"
@@ -217,7 +218,6 @@ class AnnotationController @Inject()(
     }
 
   def deleteAnnotationLayer(typ: String, id: String, layerName: String): Action[AnyContent] =
-    // TODO: Question: Why isn't the restrictions used here? Yes
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.deleteLayer.explorationalsOnly"
@@ -293,10 +293,11 @@ class AnnotationController @Inject()(
     }
 
   def makeHybrid(typ: String, id: String, fallbackLayerName: Option[String]): Action[AnyContent] =
-    // TODO: Question: Why isn't the restrictions used here? Yes
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
+        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- annotationService.makeAnnotationHybrid(annotation, organization.name, fallbackLayerName) ?~> "annotation.makeHybrid.failed"
@@ -315,8 +316,10 @@ class AnnotationController @Inject()(
 
   def downsample(typ: String, id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
-      for { // TODO: Question: Why isn't the restrictions used here? Yes
+      for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.downsample.explorationalsOnly"
+        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         annotationLayer <- annotation.annotationLayers
           .find(_.tracingId == tracingId)

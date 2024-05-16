@@ -88,11 +88,10 @@ export default function WorkflowListView() {
   usePolling(loadData, VX_POLLING_INTERVAL);
 
   const getUserDisplayName = (run: VoxelyticsWorkflowListingRun | RenderRunInfo) => {
-    const mergedName = [run.userFirstName, run.userLastName].join(" ");
-    console.log(mergedName)
-    return mergedName != null ? mergedName : run.hostusername;
-
-  }
+    return run.userFirstName != null || run.userLastName != null
+      ? [run.userFirstName, run.userLastName].join(" ")
+      : run.hostusername;
+  };
 
   // todo fix state enum typing
   const renderRuns: Array<RenderRunInfo> = useMemo(
@@ -118,7 +117,7 @@ export default function WorkflowListView() {
           ...run,
         })),
       })),
-    [workflows],
+    [workflows, getUserDisplayName],
   );
 
   function renderProgress(run: RenderRunInfo) {
@@ -153,7 +152,7 @@ export default function WorkflowListView() {
           percent={Math.round(
             ((run.taskCounts.complete + run.taskCounts.cancelled + run.taskCounts.failed) /
               run.taskCounts.total) *
-            100,
+              100,
           )}
           status={runStateToStatus(run.state)}
           success={{ percent: Math.round((run.taskCounts.complete / run.taskCounts.total) * 100) }}
@@ -200,7 +199,7 @@ export default function WorkflowListView() {
           {
             title: "User",
             key: "userName",
-            render: (run: RenderRunInfo) => run.userDisplayName,
+            render: (run: RenderRunInfo) => getUserDisplayName(run),
           },
           {
             title: "Host",

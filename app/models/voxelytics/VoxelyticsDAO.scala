@@ -369,7 +369,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
               RunEntry(
                 id = ObjectId(row._1),
                 name = row._2,
-                username = row._3,
+                hostusername = row._3,
                 hostname = row._4,
                 voxelyticsVersion = row._5,
                 workflow_hash = row._6,
@@ -492,7 +492,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           ) ta ON ta._task = t._id
           GROUP BY t._run
         ) tasks ON tasks._run = r._id
-        JOIN webknossos.users_ u ON r._user = u._id
+        LEFT JOIN webknossos.users_ u ON r._user = u._id
         WHERE r._organization = $organizationId
         """.as[(String,
                 String,
@@ -521,7 +521,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
               WorkflowListingRunEntry(
                 id = ObjectId(row._1),
                 name = row._2,
-                username = row._3,
+                hostusername = row._3,
                 hostname = row._4,
                 voxelyticsVersion = row._5,
                 workflow_hash = row._6,

@@ -1010,7 +1010,6 @@ export type VoxelyticsWorkflowListing = {
   state: VoxelyticsRunState;
   taskCounts: TaskCounts;
   runs: Array<VoxelyticsWorkflowListingRun>;
-  wkUser: string;
 };
 
 type Statistics = {

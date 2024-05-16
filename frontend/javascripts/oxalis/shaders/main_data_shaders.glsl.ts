@@ -293,13 +293,19 @@ void main() {
       /// float proofreadingAlphaIncrement = isActiveCell && isProofreading && <%= segmentationName %>_alpha > 0.0 ? 0.4 : -1.0;
       float alphaIncrement = isProofreading
         ? (isActiveCell
-            ? (isHoveredUnmappedSegment ? 0.3 : (isHoveredSegment ? 0.2 : 0.1))
+            ? (isHoveredUnmappedSegment
+              ? 0.4     // Highlight the hovered super-voxel of the active segment
+              : (isHoveredSegment
+                ? 0.15  // Highlight the not-hovered super-voxels of the hovered segment
+                : 0.0
+              )
+          )
             : (isHoveredSegment
-                ? 0.2
-                // We are in proofreading mode, but the current voxel neither belongs
-                // to the active segment nor is it hovered. When selective visibility
-                // is enabled, lower the opacity.
-                : (selectiveVisibilityInProofreading ? -0.2 : 0.0)
+              ? 0.2
+              // We are in proofreading mode, but the current voxel neither belongs
+              // to the active segment nor is it hovered. When selective visibility
+              // is enabled, lower the opacity.
+              : (selectiveVisibilityInProofreading ? -0.2 : 0.0)
           )
         ) : (isHoveredSegment ? 0.2 : 0.0);
       gl_FragColor = vec4(mix(

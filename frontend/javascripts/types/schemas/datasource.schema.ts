@@ -406,16 +406,21 @@ export default {
           },
         },
         scale: {
-          type: "array",
-          items: {
-            type: "number",
-            exclusiveMinimum: 0,
+          type: "object",
+          properties: {
+            factor: {
+              type: "array",
+              items: {
+                type: "number",
+                exclusiveMinimum: 0,
+              },
+              minItems: 3,
+              maxItems: 3,
+            },
+            unit: {
+              enum: Object.keys(UnitLongNames),
+            },
           },
-          minItems: 3,
-          maxItems: 3,
-        },
-        unit: {
-          enum: Object.keys(UnitLongNames),
         },
         defaultViewConfiguration: {
           $ref: "#/definitions/types::OptionalDatasetViewConfiguration",

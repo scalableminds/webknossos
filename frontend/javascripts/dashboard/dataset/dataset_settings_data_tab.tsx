@@ -211,7 +211,7 @@ function SimpleDatasetForm({
               </Col>
               <Col span={24} xl={12}>
                 <FormItemWithInfo
-                  name={["dataSource", "scale"]}
+                  name={["dataSource", "scale", "factor"]}
                   label="Voxel Size"
                   info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
                   rules={[

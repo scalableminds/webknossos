@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/24.05.0...HEAD)
 
 ### Added
+- Added the ability to change the unit of the dataset scale to any supported unit of the [ome/ngff standard](https://github.com/ome/ngff/blob/39605eec64ceff481bb3a98f0adeaa330ab1ef26/latest/index.bs#L192). This allows users to upload and work with low-resultion dataset with a different base unit than nanometer. [#7783](https://github.com/scalableminds/webknossos/pull/7783)
 - Within the proofreading tool, the user can now interact with the super voxels of a mesh in the 3D viewport. For example, this allows to merge or cut super voxels from another. As before, the proofreading tool requires an agglomerate file. [#7742](https://github.com/scalableminds/webknossos/pull/7742)
 
 ### Changed

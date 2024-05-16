@@ -1644,7 +1644,6 @@ type ExplorationResult = {
 
 export async function exploreRemoteDataset(
   remoteUris: string[],
-  datastoreName: string,
   credentials?: { username: string; pass: string } | null,
   preferredVoxelSize?: Vector3,
 ): Promise<ExplorationResult> {
@@ -1653,7 +1652,6 @@ export async function exploreRemoteDataset(
       const extendedUri = {
         remoteUri: uri.trim(),
         preferredVoxelSize,
-        datastoreName,
       };
 
       if (credentials) {

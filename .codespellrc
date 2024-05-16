@@ -2,6 +2,5 @@
 # Ref: https://github.com/codespell-project/codespell#using-a-config-file
 skip = *.svg,*.sublime-workspace,*.lock,.codespellrc,./util/target/,./binaryData,./node_modules,./pg,./project/target,./target,./webknossos-datastore/target,./webknossos-jni/target,./webknossos-tracingstore/target,./util/target,./coverage,./public-test,./tools/proxy/node_modules,./docs/publications.md
 # some names and camelCased variables etc
-ignore-regex = \b(Manuel|[a-z]+[A-Z][a-zA-Z]*|H Mattern|Nat Commun|couldn&apos;t)\b
-# Full of unfortunate choices for short names
-ignore-words-list = lod,bais,iis,nd,ue,inbetween
+ignore-regex = \b([a-z]+[A-Z][a-zA-Z]*|H Mattern|Manuel|Nat Commun)\b
+ignore-words-list = lod,nd,ue

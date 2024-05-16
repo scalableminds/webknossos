@@ -15,7 +15,11 @@ import {
   removeSegmentAction,
   setMappingIsEditableAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import type { ProofreadAtPositionAction } from "oxalis/model/actions/proofread_actions";
+import type {
+  MinCutAgglomerateWithPositionAction,
+  ProofreadAtPositionAction,
+  ProofreadMergeAction,
+} from "oxalis/model/actions/proofread_actions";
 import {
   enforceSkeletonTracing,
   findTreeByNodeId,
@@ -635,85 +639,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
   const { agglomerateFileMag, volumeTracing } = preparation;
-  const { tracingId: volumeTracingId, activeCellId, activeUnmappedSegmentId } = volumeTracing;
-  if (activeCellId === 0) return;
-
-  const segments = yield* select((store) => getSegmentsForLayer(store, volumeTracingId));
-  const activeSegment = segments.getNullable(activeCellId);
-  if (activeSegment == null) return;
-  const activeSegmentPositionFloat = activeSegment.somePosition;
-  if (activeSegmentPositionFloat == null) return;
-
-  const activeSegmentPosition = V3.floor(activeSegmentPositionFloat);
-  let sourcePosition;
-
-  let targetPosition: Vector3 | undefined;
-  let idInfos;
-  if (action.position) {
-    if (activeUnmappedSegmentId != null) {
-      // The user has selected a super-voxel in the 3D viewport and then clicked
-      // in a data viewport to select the second merge partner. However, this mix
-      // is currently not supported.
-      Toast.warning(MISSING_INFORMATION_WARNING);
-      return;
-    }
-    // The action was triggered via a data viewport (not 3D). In this case,
-    // the active segment's position can be used as a source.
-    sourcePosition = activeSegmentPosition;
-    targetPosition = V3.floor(action.position);
-    idInfos = yield* call(getAgglomerateInfos, preparation.getMappedAndUnmapped, [
-      sourcePosition,
-      targetPosition,
-    ]);
-  } else {
-    // The action was triggered in the 3D viewport. In this case, we don't have
-    // a mouse position and also the active segment position isn't necessarily
-    // a position of the clicked super-voxel.
-    if (
-      action.agglomerateId == null ||
-      activeCellId == null ||
-      activeUnmappedSegmentId == null ||
-      action.segmentId == null
-    ) {
-      Toast.warning(MISSING_INFORMATION_WARNING);
-      console.log("Some fields were null:", {
-        agglomerateId: action.agglomerateId,
-        activeCellId,
-        activeUnmappedSegmentId,
-        segmentId: action.segmentId,
-      });
-      return;
-    }
-    const targetSegmentId = action.segmentId;
-    if (targetSegmentId == null) {
-      Toast.warning(MISSING_INFORMATION_WARNING);
-      console.log(`No position is known for agglomerate ${action.agglomerateId}`);
-      return;
-    }
-    if (action.type === "PROOFREAD_MERGE") {
-      // When merging two segments, they can share the same seed position afterwards.
-      // Also, using the active segment position is fine because it's definitely
-      // matching the active agglomerate.
-      // Therefore, we do so to avoid another roundtrip to the server.
-      sourcePosition = activeSegmentPosition;
-      targetPosition = activeSegmentPosition;
-    } else {
-      // When splitting two segments, we don't really have reliable positions at hand.
-      // For the source position, we cannot rely on the active segment position, because
-      // the active super-voxel doesn't necessarily match the last click position within
-      // the data viewports.
-      // For the target position, we also don't have reliable information available.
-      [sourcePosition, targetPosition] = yield* all([
-        call(getPositionForSegmentId, volumeTracing, activeUnmappedSegmentId),
-        call(getPositionForSegmentId, volumeTracing, targetSegmentId),
-      ]);
-    }
-
-    idInfos = [
-      { agglomerateId: activeCellId, unmappedId: activeUnmappedSegmentId },
-      { agglomerateId: action.agglomerateId, unmappedId: action.segmentId },
-    ];
-  }
+  const { tracingId: volumeTracingId } = volumeTracing;
+  const idInfos = gatherInfoForOperation(action, preparation);
 
   if (idInfos == null) {
     return;
@@ -850,12 +777,12 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     {
       agglomerateId: sourceAgglomerateId,
       newAgglomerateId: newSourceAgglomerateId,
-      nodePosition: sourcePosition,
+      nodePosition: sourceInfo.position,
     },
     {
       agglomerateId: targetAgglomerateId,
       newAgglomerateId: newTargetAgglomerateId,
-      nodePosition: targetPosition,
+      nodePosition: targetInfo.position,
     },
   ]);
 }
@@ -973,7 +900,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
 
 // Helper functions
 
-function* prepareSplitOrMerge(): Saga<{
+type Preparation = {
   agglomerateFileMag: Vector3;
   getDataValue: (position: Vector3, overrideMapping?: Mapping | null) => Promise<number>;
   mapSegmentId: (segmentId: number, overrideMapping?: Mapping | null) => number;
@@ -981,7 +908,9 @@ function* prepareSplitOrMerge(): Saga<{
     position: Vector3,
   ) => Promise<{ agglomerateId: number; unmappedId: number }>;
   volumeTracing: VolumeTracing & { mappingName: string };
-} | null> {
+};
+
+function* prepareSplitOrMerge(): Saga<Preparation | null> {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracingLayer == null || volumeTracing == null) {
@@ -1225,4 +1154,104 @@ function* splitMappingWithAgglomerateId(
     }),
   ) as Mapping;
   return splitMapping;
+}
+
+function* gatherInfoForOperation(
+  action: ProofreadMergeAction | MinCutAgglomerateWithPositionAction,
+  preparation: Preparation,
+): Saga<Array<{
+  agglomerateId: number;
+  unmappedId: number;
+  position: Vector3;
+}> | null> {
+  const { volumeTracing } = preparation;
+  const { tracingId: volumeTracingId, activeCellId, activeUnmappedSegmentId } = volumeTracing;
+  if (activeCellId === 0) return null;
+
+  const segments = yield* select((store) => getSegmentsForLayer(store, volumeTracingId));
+  const activeSegment = segments.getNullable(activeCellId);
+  if (activeSegment == null) return null;
+  const activeSegmentPositionFloat = activeSegment.somePosition;
+  if (activeSegmentPositionFloat == null) return null;
+
+  const activeSegmentPosition = V3.floor(activeSegmentPositionFloat);
+
+  let sourcePosition: Vector3 | undefined;
+  let targetPosition: Vector3 | undefined;
+
+  if (action.position) {
+    // The action was triggered via a data viewport (not 3D). In this case,
+    // the active segment's position can be used as a source.
+    if (activeUnmappedSegmentId != null) {
+      // The user has selected a super-voxel in the 3D viewport and then clicked
+      // in a data viewport to select the second merge partner. However, this mix
+      // is currently not supported.
+      Toast.warning(MISSING_INFORMATION_WARNING);
+      return null;
+    }
+    sourcePosition = activeSegmentPosition;
+    targetPosition = V3.floor(action.position);
+    const idInfos = yield* call(getAgglomerateInfos, preparation.getMappedAndUnmapped, [
+      sourcePosition,
+      targetPosition,
+    ]);
+    if (idInfos == null) {
+      return null;
+    }
+    const [idInfo1, idInfo2] = idInfos;
+    return [
+      { ...idInfo1, position: sourcePosition },
+      { ...idInfo2, position: targetPosition },
+    ];
+  }
+
+  // The action was triggered in the 3D viewport. In this case, we don't have
+  // a mouse position and also the active segment position isn't necessarily
+  // a position of the clicked super-voxel.
+  if (
+    action.agglomerateId == null ||
+    activeCellId == null ||
+    activeUnmappedSegmentId == null ||
+    action.segmentId == null
+  ) {
+    Toast.warning(MISSING_INFORMATION_WARNING);
+    console.log("Some fields were null:", {
+      agglomerateId: action.agglomerateId,
+      activeCellId,
+      activeUnmappedSegmentId,
+      segmentId: action.segmentId,
+    });
+    return null;
+  }
+  const targetSegmentId = action.segmentId;
+  if (targetSegmentId == null) {
+    Toast.warning(MISSING_INFORMATION_WARNING);
+    console.log(`No position is known for agglomerate ${action.agglomerateId}`);
+    return null;
+  }
+  if (action.type === "PROOFREAD_MERGE") {
+    // When merging two segments, they can share the same seed position afterwards.
+    // Also, using the active segment position is fine because it's definitely
+    // matching the active agglomerate.
+    // Therefore, we do so to avoid another roundtrip to the server.
+    sourcePosition = activeSegmentPosition;
+    targetPosition = activeSegmentPosition;
+  } else {
+    // When splitting two segments, we don't really have reliable positions at hand.
+    // For the source position, we cannot rely on the active segment position, because
+    // the active super-voxel doesn't necessarily match the last click position within
+    // the data viewports.
+    // For the target position, we also don't have reliable information available.
+    [sourcePosition, targetPosition] = yield* all([
+      call(getPositionForSegmentId, volumeTracing, activeUnmappedSegmentId),
+      call(getPositionForSegmentId, volumeTracing, targetSegmentId),
+    ]);
+  }
+
+  const idInfos = [
+    { agglomerateId: activeCellId, unmappedId: activeUnmappedSegmentId, position: sourcePosition },
+    { agglomerateId: action.agglomerateId, unmappedId: action.segmentId, position: targetPosition },
+  ];
+
+  return idInfos;
 }

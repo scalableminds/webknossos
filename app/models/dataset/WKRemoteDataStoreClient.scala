@@ -91,4 +91,6 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         .getWithJsonResponse[Boolean]
     } yield hasIndexFile
 
+  def exploreRemoteDataset()
+
 }

@@ -39,7 +39,7 @@ const DEFAULT_PADDING: Vector3 = [50, 50, 50];
 const MIN_DIST_TO_SEED = 30;
 const TimeoutError = new Error("Timeout");
 const PartitionFailedError = new Error(
-  "Segmentation could not be partioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
+  "Segmentation could not be partitioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
 );
 // If the min-cut does not succeed after 10 seconds
 // in the selected mag, the next mag is tried.

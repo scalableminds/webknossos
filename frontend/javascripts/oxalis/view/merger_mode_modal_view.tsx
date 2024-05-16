@@ -46,7 +46,7 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
       )}
       You just enabled the merger mode. This mode allows to merge segmentation cells by creating
       trees and nodes. Each tree maps the marked segments (the ones where nodes were created in) to
-      one new segment. Create separate trees for different segements.
+      one new segment. Create separate trees for different segments.
       <br />
       <br />
       Additionally available keyboard shortcuts:

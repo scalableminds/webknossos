@@ -35,14 +35,14 @@ function RegistrationFormWKOrg(props: Props) {
     await Request.sendJSONReceiveJSON("/api/auth/createOrganizationWithAdmin", {
       data: {
         ...formValues,
-        firstName: formValues.firstName.trim(),
-        lastName: formValues.lastName.trim(),
+        firstName: formValues.firstName,
+        lastName: formValues.lastName,
         password: {
           password1: formValues.password.password1,
           password2: formValues.password.password1,
         },
         organization: organizationName.current,
-        organizationDisplayName: `${formValues.firstName.trim()} ${formValues.lastName.trim()} Lab`,
+        organizationDisplayName: `${formValues.firstName} ${formValues.lastName} Lab`,
       },
     });
     const [user, organization] = await loginUser({
@@ -67,6 +67,7 @@ function RegistrationFormWKOrg(props: Props) {
                 message: messages["auth.registration_firstName_input"],
               },
             ]}
+            normalize={(str) => str.trim()}
           >
             <Input
               prefix={
@@ -91,6 +92,7 @@ function RegistrationFormWKOrg(props: Props) {
                 message: messages["auth.registration_lastName_input"],
               },
             ]}
+            normalize={(str) => str.trim()}
           >
             <Input
               prefix={

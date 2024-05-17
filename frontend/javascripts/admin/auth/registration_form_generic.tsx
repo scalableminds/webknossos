@@ -142,7 +142,6 @@ function RegistrationFormGeneric(props: Props) {
                 message: messages["auth.registration_firstName_input"],
               },
             ]}
-            normalize={(str) => str.trim()}
           >
             <Input
               prefix={
@@ -168,7 +167,6 @@ function RegistrationFormGeneric(props: Props) {
                 message: messages["auth.registration_lastName_input"],
               },
             ]}
-            normalize={(str) => str.trim()}
           >
             <Input
               prefix={

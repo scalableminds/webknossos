@@ -46,6 +46,8 @@ import { Comparator } from "types/globals";
 import { EventDataNode } from "antd/es/tree";
 import { AutoSizer } from "react-virtualized";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
+import { ColoredDotIconForSegment } from "../segments_tab/segment_list_item";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {
@@ -111,14 +113,21 @@ function CommentTabView(props: Props) {
   const allowUpdate = useSelector((state: OxalisState) => state.tracing.restrictions.allowUpdate);
   const keyboardDelay = useSelector((state: OxalisState) => state.userConfiguration.keyboardDelay);
 
-  
   useEffectOnlyOnce(() => {
     // expand all trees by default
     const defaultCollapsedTreeIds = getData().map((tree) => tree.treeId.toString());
     setCollapsedTreeIds(defaultCollapsedTreeIds);
-    
-    if (props.skeletonTracing.activeNodeId) 
-      setActiveNode(props.skeletonTracing.activeNodeId);
+
+    // scroll to active comment
+    if (props.skeletonTracing.activeNodeId) {
+      const commentNodeKey = `comment-${props.skeletonTracing.activeNodeId}`;
+      setHighlightedNodeIds([commentNodeKey]);
+
+      setTimeout(() => {
+        // use a timeout in hope that React has already finished rendering otherwise there is no scroll target available yet
+        scrollToActiveCommentorTree();
+      }, 500);
+    }
   });
 
   const keyboard = new InputKeyboard(
@@ -138,13 +147,43 @@ function CommentTabView(props: Props) {
     };
   }, [keyboard, keyboardDelay]);
 
+  useEffect(() => {
+    // If the activeNode has a comment, scroll to it,
+    // otherwise scroll to the activeTree
+    scrollToActiveCommentorTree();
+
+    // highlight active node
+    const commentNodeKey = `comment-${props.skeletonTracing.activeNodeId}`;
+    setHighlightedNodeIds([commentNodeKey]);
+  }, [props.skeletonTracing.activeNodeId, props.skeletonTracing.activeTreeId]);
+
+  function scrollToActiveCommentorTree() {
+    // scroll to the current comment of the active node
+    // or in case there is no comment to it's parent tree
+    if (treeRef.current) {
+      const commentKey = getActiveComment()
+        .map((comment) => `comment-${comment.nodeId}`)
+        .getOrElse(null);
+
+      if (commentKey) {
+        treeRef.current.scrollTo({ key: commentKey, align: "top" });
+        setHighlightedNodeIds([commentKey]);
+      } else if (props.skeletonTracing.activeTreeId) {
+        treeRef.current.scrollTo({
+          key: props.skeletonTracing.activeTreeId.toString(),
+          align: "top",
+        });
+      }
+    }
+  }
+
   function nextComment(forward: boolean = true) {
     getActiveNode(props.skeletonTracing).map((activeNode) => {
       const sortAscending = forward ? isSortedAscending : !isSortedAscending;
       const { trees } = props.skeletonTracing;
 
       // Create a sorted, flat array of all comments across all trees
-      const sortedTrees = _.values(trees).slice().sort(getTreeSorter(sortBy, isSortedAscending));
+      const sortedTrees = _.values(trees).slice().sort(getTreeSorter(sortBy, sortAscending));
 
       const sortedComments = _.flatMap(sortedTrees, (tree: Tree): CommentType[] =>
         tree.comments.slice().sort(getCommentSorter(sortBy, sortAscending)),
@@ -164,7 +203,6 @@ function CommentTabView(props: Props) {
 
   function setActiveNode(nodeId: number) {
     dispatch(setActiveNodeAction(nodeId));
-    setHighlightedNodeIds([`comment-${nodeId}`]);
   }
 
   function previousComment() {
@@ -304,7 +342,12 @@ function CommentTabView(props: Props) {
 
       return {
         key: tree.treeId.toString(),
-        title: tree.name,
+        title: (
+          <>
+            <ColoredDotIconForSegment segmentColorHSLA={[...jsRgb2hsl(tree.color), 1.0]} />{" "}
+            {tree.name}
+          </>
+        ),
         expanded: true,
         children: tree.comments
           .slice()
@@ -361,12 +404,6 @@ function CommentTabView(props: Props) {
   const activeNodeMaybe = getActiveNode(props.skeletonTracing);
   const isEditingDisabled = activeNodeMaybe.isNothing || !allowUpdate;
 
-  const findCommentIndexFn = (commentOrTree: Tree | CommentType) =>
-    "nodeId" in commentOrTree && commentOrTree.nodeId === props.skeletonTracing.activeNodeId;
-
-  const findTreeIndexFn = (commentOrTree: Tree | CommentType) =>
-    "treeId" in commentOrTree && commentOrTree.treeId === props.skeletonTracing.activeTreeId;
-
   return (
     <div
       id={commentTabId}
@@ -380,13 +417,6 @@ function CommentTabView(props: Props) {
           if (!isVisibleInDom && !isMarkdownModalOpen) {
             return null;
           }
-
-          // If the activeNode has a comment, scroll to it,
-          // otherwise scroll to the activeTree
-          const scrollIndex = _.findIndex(
-            getData(),
-            activeCommentMaybe.isJust ? findCommentIndexFn : findTreeIndexFn,
-          );
 
           return (
             <React.Fragment>
@@ -466,9 +496,9 @@ function CommentTabView(props: Props) {
 
 const CommentTabViewMemo = React.memo(
   CommentTabView,
-  function shouldComponentUpdate(prevPops: Props, nextProps: Props) {
+  function arePropsEqual(prevPops: Props, nextProps: Props) {
     if (prevPops.skeletonTracing.activeNodeId !== nextProps.skeletonTracing.activeNodeId) {
-      return true;
+      return false;
     }
 
     const updateActions = Array.from(
@@ -479,7 +509,7 @@ const CommentTabViewMemo = React.memo(
         RELEVANT_ACTIONS_FOR_COMMENTS.includes(ua.name) ||
         (ua.name === "createTree" && ua.value.comments.length > 0),
     );
-    return relevantUpdateActions.length > 0;
+    return relevantUpdateActions.length === 0;
   },
 );
 

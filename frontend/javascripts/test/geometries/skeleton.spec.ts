@@ -141,7 +141,7 @@ test.serial("Skeleton should invalidate a node upon deletion", async (t) => {
   const skeleton = skeletonCreator();
   // do index lookup before "dispatch" because index will be deleted as well
   const id = skeleton.combineIds(1, 1);
-  const index = skeleton.nodes.idToBufferPosition.getOrThrow(id).index;
+  const index = skeleton.nodes.idToBufferPosition.get(id).index;
   Store.dispatch(deleteNodeAction(1, 1));
   await Utils.sleep(50);
   t.is(
@@ -153,7 +153,7 @@ test.serial("Skeleton should invalidate an edge upon deletion", async (t) => {
   const skeleton = skeletonCreator();
   // do index lookup before "dispatch" because index will be deleted as well
   const id = skeleton.combineIds(2, 1);
-  const index = skeleton.nodes.idToBufferPosition.getOrThrow(id).index;
+  const index = skeleton.nodes.idToBufferPosition.get(id).index;
   Store.dispatch(deleteNodeAction(2, 1));
   await Utils.sleep(50);
   t.deepEqual(
@@ -166,7 +166,7 @@ test.serial("Skeleton should update node types for branchpoints", async (t) => {
   Store.dispatch(createBranchPointAction(3, 1));
   await Utils.sleep(50);
   const id = skeleton.combineIds(3, 1);
-  const index = skeleton.nodes.idToBufferPosition.getOrThrow(id).index;
+  const index = skeleton.nodes.idToBufferPosition.get(id).index;
   t.is(
     skeleton.nodes.buffers[0].geometry.attributes.type.array[index],
     NodeShader.NodeTypes.BRANCH_POINT,
@@ -179,7 +179,7 @@ test.serial.cb("Skeleton should update node radius", (t) => {
     Store.dispatch(setNodeRadiusAction(2));
     await Utils.sleep(50);
     const id = skeleton.combineIds(activeNodeId, activeTreeId);
-    const index = skeleton.nodes.idToBufferPosition.getOrThrow(id).index;
+    const index = skeleton.nodes.idToBufferPosition.get(id).index;
     t.is(skeleton.nodes.buffers[0].geometry.attributes.radius.array[index], 2);
     t.end();
   });

@@ -1,5 +1,5 @@
 import { Popover, Tooltip } from "antd";
-import Markdown from "react-remarkable";
+import Markdown from "react-markdown";
 import * as React from "react";
 import type { EditableTextLabelProp } from "oxalis/view/components/editable_text_label";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
@@ -26,14 +26,7 @@ class TextWithDescription extends React.PureComponent<Props> {
           maxWidth: 400,
         }}
       >
-        <Markdown
-          source={description}
-          options={{
-            html: false,
-            breaks: true,
-            linkify: true,
-          }}
-        />
+        <Markdown>{description}</Markdown>
       </div>
     );
     return (
@@ -74,15 +67,9 @@ class TextWithDescription extends React.PureComponent<Props> {
               }}
             >
               {this.props.markdown ? (
-                <Markdown
-                  source={this.props.value}
-                  options={{
-                    html: false,
-                    breaks: true,
-                    linkify: true,
-                  }}
-                  container="span"
-                />
+                <span>
+                  <Markdown>{this.props.value}</Markdown>
+                </span>
               ) : (
                 this.props.value
               )}

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
 import { Table, Tag, Spin, Button, Input, App } from "antd";
-import Markdown from "react-remarkable";
+import Markdown from "react-markdown";
 import * as React from "react";
 import _ from "lodash";
 import { AsyncLink } from "components/async_clickables";
@@ -177,14 +177,7 @@ function TaskTypeListView({ initialSearchValue }: Props) {
             sorter={Utils.localeCompareBy<APITaskType>((taskType) => taskType.description)}
             render={(description) => (
               <div className="task-type-description short">
-                <Markdown
-                  source={description}
-                  options={{
-                    html: false,
-                    breaks: true,
-                    linkify: true,
-                  }}
-                />
+                <Markdown>{description}</Markdown>
               </div>
             )}
           />

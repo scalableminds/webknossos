@@ -1,7 +1,7 @@
 import React from "react";
 import { JSONTree } from "react-json-tree";
 import { Progress, Tabs, TabsProps, Tooltip } from "antd";
-import Markdown from "react-remarkable";
+import Markdown from "react-markdown";
 import {
   VoxelyticsArtifactConfig,
   VoxelyticsRunState,
@@ -81,16 +81,7 @@ function TaskView({
     tabs.unshift({
       label: "Description",
       key: "0",
-      children: (
-        <Markdown
-          source={task.description}
-          options={{
-            html: false,
-            breaks: true,
-            linkify: true,
-          }}
-        />
-      ),
+      children: <Markdown>{task.description}</Markdown>,
     });
 
   if (Object.keys(artifacts).length > 0)

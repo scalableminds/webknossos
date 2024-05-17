@@ -1,5 +1,5 @@
 import { Row, Col, Card } from "antd";
-import Markdown from "react-remarkable";
+import Markdown from "react-markdown";
 import React from "react";
 import type { APIOrganization } from "types/api_flow_types";
 import { getOperatorData, getDefaultOrganization } from "admin/admin_rest_api";
@@ -48,28 +48,13 @@ export class Imprint extends LegalBase {
           <Col offset={6} span={12}>
             <h2>Imprint</h2>
             <Card>
-              <Markdown
-                source={this.state.operatorData}
-                options={{
-                  html: false,
-                  breaks: true,
-                  linkify: true,
-                }}
-              />
+              <Markdown>{this.state.operatorData}</Markdown>
             </Card>
             <p />
-            {/* @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'. */}
-            {this.state.defaultOrganization?.additionalInformation ? (
+            {this.state.defaultOrganization != null ? (
               <Card>
-                <Markdown
-                  // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-                  source={this.state.defaultOrganization.additionalInformation}
-                  options={{
-                    html: false,
-                    breaks: true,
-                    linkify: true,
-                  }}
-                />
+                {/* @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'. */}
+                <Markdown>{this.state.defaultOrganization?.additionalInformation}</Markdown>
               </Card>
             ) : null}
           </Col>
@@ -168,14 +153,7 @@ export class Privacy extends LegalBase {
             ) : null}
 
             <h3>Data processor</h3>
-            <Markdown
-              source={this.state.operatorData}
-              options={{
-                html: false,
-                breaks: true,
-                linkify: true,
-              }}
-            />
+            <Markdown>{this.state.operatorData}</Markdown>
 
             <h3>Your Data</h3>
             <ul>

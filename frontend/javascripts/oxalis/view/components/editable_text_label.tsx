@@ -1,6 +1,6 @@
 import { Input, InputProps, Tooltip } from "antd";
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
-import Markdown from "react-remarkable";
+import Markdown from "react-markdown";
 import * as React from "react";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import Toast from "libs/toast";
@@ -179,17 +179,9 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           onContextMenu={this.props.onContextMenu}
         >
           {this.props.markdown ? (
-            <Markdown
-              className="flex-item"
-              source={this.props.value}
-              options={{
-                html: false,
-                breaks: true,
-                linkify: true,
-              }}
-              container="span"
-              style={isInvalidStyleMaybe}
-            />
+            <span style={isInvalidStyleMaybe}>
+              <Markdown className="flex-item">{this.props.value}</Markdown>
+            </span>
           ) : (
             <span style={isInvalidStyleMaybe}>{this.props.value}</span>
           )}

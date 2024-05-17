@@ -12,7 +12,7 @@ import {
 import { Link } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
 import { connect } from "react-redux";
-import Markdown from "react-remarkable";
+import Markdown from "react-markdown";
 import * as React from "react";
 
 import classNames from "classnames";
@@ -498,14 +498,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           <Row gutter={16}>
             <Col span={16}>
               <div className={descriptionClassName}>
-                <Markdown
-                  source={task.type.description}
-                  options={{
-                    html: false,
-                    breaks: true,
-                    linkify: true,
-                  }}
-                />
+                <Markdown>{task.type.description}</Markdown>
               </div>
             </Col>
             <Col span={8}>

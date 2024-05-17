@@ -1,6 +1,7 @@
 module.exports = function (env = {}) {
   /* eslint import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   const webpack = require("webpack");
+  const { EsbuildPlugin } = require("esbuild-loader");
   const path = require("path");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const TerserPlugin = require("terser-webpack-plugin");
@@ -11,6 +12,14 @@ module.exports = function (env = {}) {
   const nodePath = "node_modules";
   const protoPath = path.join(__dirname, "webknossos-datastore/proto/");
   const publicPath = "/assets/bundle/";
+
+  const buildTarget = browserslistToEsbuild([
+    "last 3 Chrome versions",
+    "last 3 Firefox versions",
+    "last 2 Edge versions",
+    "last 1 Safari versions",
+    "last 1 iOS versions",
+  ]);
 
   const plugins = [
     new webpack.DefinePlugin({
@@ -83,18 +92,21 @@ module.exports = function (env = {}) {
           ],
         },
         {
-          test: /\.tsx?$/,
+          test: /\.tsx$/,
           exclude: /(node_modules|bower_components)/,
           loader: "esbuild-loader",
           options: {
+            target: buildTarget,
             loader: "tsx", // also supports 'ts'
-            target: browserslistToEsbuild([
-              "last 3 Chrome versions",
-              "last 3 Firefox versions",
-              "last 2 Edge versions",
-              "last 1 Safari versions",
-              "last 1 iOS versions",
-            ]),
+          },
+        },
+        {
+          test: /\.ts$/,
+          exclude: /(node_modules|bower_components)/,
+          loader: "esbuild-loader",
+          options: {
+            target: buildTarget,
+            loader: "ts",
           },
         },
         {
@@ -144,6 +156,12 @@ module.exports = function (env = {}) {
         },
         { test: /\.jpg$/, type: "asset/resource" },
         { test: /\.proto$/, use: ["json-loader", "proto-loader6"] },
+        {
+          test: /\.m?js/,
+          resolve: {
+            fullySpecified: false,
+          },
+        },
       ],
     },
     resolve: {
@@ -166,6 +184,11 @@ module.exports = function (env = {}) {
     },
     optimization: {
       minimize: env.production,
+      minimizer: [
+        new EsbuildPlugin({
+          target: buildTarget, // Syntax to transpile to (see options below for possible values)
+        }),
+      ],
       splitChunks: {
         chunks: "all",
         // Use a consistent name for the vendors chunk

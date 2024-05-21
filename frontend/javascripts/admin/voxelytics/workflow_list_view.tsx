@@ -93,7 +93,6 @@ export default function WorkflowListView() {
       : run.hostusername;
   };
 
-  // todo fix state enum typing
   const renderRuns: Array<RenderRunInfo> = useMemo(
     () =>
       workflows.map((workflow) => ({

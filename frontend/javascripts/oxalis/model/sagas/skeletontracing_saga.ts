@@ -496,13 +496,13 @@ function* diffNodes(
   }
 
   for (const nodeId of addedNodeIds) {
-    const node = nodes.get(nodeId);
+    const node = nodes.getOrThrow(nodeId);
     yield createNode(treeId, node);
   }
 
   for (const nodeId of changedNodeIds) {
-    const node = nodes.get(nodeId);
-    const prevNode = prevNodes.get(nodeId);
+    const node = nodes.getOrThrow(nodeId);
+    const prevNode = prevNodes.getOrThrow(nodeId);
 
     if (updateNodePredicate(prevNode, node)) {
       yield updateNode(treeId, node);

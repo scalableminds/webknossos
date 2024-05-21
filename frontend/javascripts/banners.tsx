@@ -1,10 +1,13 @@
 import {
+  getBuildInfo,
   listCurrentAndUpcomingMaintenances,
   updateNovelUserExperienceInfos,
 } from "admin/admin_rest_api";
-import { Alert } from "antd";
+import { Alert, Button, Space } from "antd";
 import FormattedDate from "components/formatted_date";
-import { useInterval } from "libs/react_helpers";
+import dayjs from "dayjs";
+import { useFetch, useInterval } from "libs/react_helpers";
+import { parseCTimeDefaultDate } from "libs/utils";
 import _ from "lodash";
 import constants from "oxalis/constants";
 import { setNavbarHeightAction } from "oxalis/model/actions/ui_actions";
@@ -14,15 +17,17 @@ import { OxalisState } from "oxalis/store";
 import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { MaintenanceInfo } from "types/api_flow_types";
+import * as Utils from "libs/utils";
 
 const INITIAL_DELAY = 5000;
 const INTERVAL_TO_FETCH_MAINTENANCES_MS = 60000; // 1min
+const UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY = "upgradeBannerWasClickedAway";
 
 const BANNER_STYLE: React.CSSProperties = {
   position: "absolute",
   top: 0,
   left: 0,
-  height: constants.MAINTENANCE_BANNER_HEIGHT,
+  height: constants.BANNER_HEIGHT,
 };
 
 function setNavbarHeight(newNavbarHeight: number) {
@@ -114,16 +119,27 @@ export function MaintenanceBanner() {
     setClosestUpcomingMaintenance(_.first(closestUpcomingMaintenance));
   }
 
+  const [shouldShowUpcomingMaintenanceBanner, setShouldShowUpcomingMaintenanceBanner] =
+    useState(false);
+
   useEffect(() => {
-    if (currentMaintenance || closestUpcomingMaintenance) {
-      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.MAINTENANCE_BANNER_HEIGHT);
+    const newShouldShowUpcomingMaintenanceBanner =
+      closestUpcomingMaintenance != null && activeUser != null;
+    if (newShouldShowUpcomingMaintenanceBanner !== shouldShowUpcomingMaintenanceBanner) {
+      setShouldShowUpcomingMaintenanceBanner(newShouldShowUpcomingMaintenanceBanner);
+    }
+  }, [closestUpcomingMaintenance, activeUser, shouldShowUpcomingMaintenanceBanner]);
+
+  useEffect(() => {
+    if (currentMaintenance || shouldShowUpcomingMaintenanceBanner) {
+      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.BANNER_HEIGHT);
     }
 
     if (currentMaintenance == null && closestUpcomingMaintenance == null) {
       // Reset Navbar height if maintenance is over
       setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
     }
-  }, [currentMaintenance, closestUpcomingMaintenance]);
+  }, [currentMaintenance, closestUpcomingMaintenance, shouldShowUpcomingMaintenanceBanner]);
 
   useEffect(() => {
     // Do an initial fetch of the maintenance status so that users are notified
@@ -143,4 +159,105 @@ export function MaintenanceBanner() {
   }
 
   return null;
+}
+
+export function UpgradeVersionBanner() {
+  const white = "var(--ant-color-text-primary)";
+  const blue = "var(--ant-color-primary)";
+  const UPGRADE_BANNER_STYLE: React.CSSProperties = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    height: constants.BANNER_HEIGHT,
+    textAlign: "center",
+    backgroundColor: blue,
+    color: white,
+    fontSize: "medium",
+    minWidth: "fit-content",
+    zIndex: 999,
+  };
+  const currentDate = dayjs();
+
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+
+  const isVersionOutdated = useFetch(
+    async () => {
+      if (!activeUser) return false;
+      await Utils.sleep(INITIAL_DELAY);
+      let buildInfo = await getBuildInfo();
+      const lastCommitDate = parseCTimeDefaultDate(buildInfo.webknossos.commitDate);
+      const needsUpdate = currentDate.diff(lastCommitDate, "month") >= 6;
+      return needsUpdate;
+    },
+    false,
+    [activeUser],
+  );
+
+  const [shouldBannerBeShown, setShouldBannerBeShown] = useState(false);
+
+  useEffect(() => {
+    if (!isVersionOutdated || activeUser == null) {
+      setShouldBannerBeShown(false);
+      return;
+    }
+    const lastTimeBannerWasClickedAway = localStorage.getItem(
+      UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY,
+    );
+    if (lastTimeBannerWasClickedAway == null) {
+      setShouldBannerBeShown(true);
+      return;
+    }
+
+    const parsedDate = dayjs(lastTimeBannerWasClickedAway);
+    setShouldBannerBeShown(currentDate.diff(parsedDate, "day") >= 3);
+  }, [activeUser, isVersionOutdated, currentDate]);
+
+  useEffect(() => {
+    if (shouldBannerBeShown) {
+      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT + constants.BANNER_HEIGHT);
+    } else {
+      setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
+    }
+  }, [shouldBannerBeShown]);
+
+  return shouldBannerBeShown ? (
+    <Alert
+      className="upgrade-banner"
+      message={
+        <Space size="middle">
+          <Space size="small">
+            You are using an outdated version of WEBKNOSSOS. Switch to
+            <a
+              className="upgrade-banner-wk-link"
+              target="_blank"
+              href="https://webknossos.org"
+              rel="noreferrer noopener"
+            >
+              webknossos.org
+            </a>
+            for automatic updates and exclusive features!
+          </Space>
+          <Button
+            className="upgrade-banner-button"
+            href="https://webknossos.org/self-hosted-upgrade"
+            size="small"
+          >
+            Learn more
+          </Button>
+        </Space>
+      }
+      banner
+      style={UPGRADE_BANNER_STYLE}
+      closable
+      onClose={() => {
+        localStorage.setItem(
+          UPGRADE_BANNER_DISMISSAL_TIMESTAMP_LOCAL_STORAGE_KEY,
+          dayjs().toISOString(),
+        );
+        setNavbarHeight(constants.DEFAULT_NAVBAR_HEIGHT);
+      }}
+      type="info"
+      showIcon={false}
+    />
+  ) : null;
 }

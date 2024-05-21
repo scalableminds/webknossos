@@ -1,5 +1,5 @@
 import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/admin_rest_api";
-import { Card, Select, Spin, Table, Button, DatePicker, type TimeRangePickerProps } from "antd";
+import { Card, Select, Spin, Button, DatePicker, type TimeRangePickerProps } from "antd";
 import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
 import React, { useState } from "react";
@@ -20,7 +20,6 @@ import { APITimeTrackingPerUser } from "types/api_flow_types";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import dayjs, { type Dayjs } from "dayjs";
-const { Column } = Table;
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER_PER_USER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
@@ -146,6 +145,59 @@ function TimeTrackingOverview() {
     );
   };
 
+  const timeTrackingTableColumns = [
+    {
+      title: "User",
+      dataIndex: "user",
+      key: "user",
+      render: (user: APITimeTrackingPerUser["user"]) =>
+        `${user.lastName}, ${user.firstName} (${user.email})`,
+      sorter: Utils.localeCompareBy<APITimeTrackingPerUser>(
+        (timeEntry) =>
+          `${timeEntry.user.lastName}, ${timeEntry.user.firstName} (${timeEntry.user.email})`,
+      ),
+    },
+    {
+      title: "No. tasks / annotations",
+      dataIndex: "annotationCount",
+      key: "numberAnn",
+      sorter: Utils.compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.annotationCount),
+    },
+    {
+      title: "Avg. time per task / annotation",
+      key: "avgTime",
+      render: (item: APITimeTrackingPerUser) =>
+        formatMilliseconds(item.timeMillis / item.annotationCount),
+      sorter: Utils.compareBy<APITimeTrackingPerUser>(
+        (timeEntry) => timeEntry.timeMillis / timeEntry.annotationCount,
+      ),
+    },
+    {
+      title: "Total time",
+      dataIndex: "timeMillis",
+      key: "tracingTimes",
+      render: (tracingTimeInMs: APITimeTrackingPerUser["timeMillis"]) =>
+        formatMilliseconds(tracingTimeInMs),
+      sorter: Utils.compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.timeMillis),
+    },
+    {
+      key: "details",
+      dataIndex: "user",
+      render: (user: APITimeTrackingPerUser["user"]) => {
+        return (
+          <LinkButton
+            onClick={async () => {
+              downloadTimeSpans(user.id, startDate, endDate, selectedTypes, selectedProjectIds);
+            }}
+          >
+            <DownloadOutlined className="icon-margin-right" />
+            Download time spans
+          </LinkButton>
+        );
+      },
+    },
+  ];
+
   return (
     <Card
       title={"Annotation Time per User"}
@@ -203,6 +255,7 @@ function TimeTrackingOverview() {
             marginBottom: 30,
           }}
           pagination={false}
+          columns={timeTrackingTableColumns}
           expandable={{
             expandedRowRender: (entry) => (
               <TimeTrackingDetailView
@@ -216,63 +269,7 @@ function TimeTrackingOverview() {
           locale={{
             emptyText: renderPlaceholder(),
           }}
-        >
-          <Column
-            title="User"
-            dataIndex="user"
-            key="user"
-            render={(user) => `${user.lastName}, ${user.firstName} (${user.email})`}
-            sorter={Utils.localeCompareBy<APITimeTrackingPerUser>(
-              (timeEntry) =>
-                `${timeEntry.user.lastName}, ${timeEntry.user.firstName} (${timeEntry.user.email})`,
-            )}
-          />
-          <Column
-            title="No. tasks / annotations"
-            dataIndex="annotationCount"
-            key="numberAnn"
-            sorter={Utils.compareBy<APITimeTrackingPerUser>(
-              (timeEntry) => timeEntry.annotationCount,
-            )}
-          />
-          <Column
-            title="Avg. time per task / annotation"
-            key="avgTime"
-            render={(item) => formatMilliseconds(item.timeMillis / item.annotationCount)}
-            sorter={Utils.compareBy<APITimeTrackingPerUser>(
-              (timeEntry) => timeEntry.timeMillis / timeEntry.annotationCount,
-            )}
-          />
-          <Column
-            title="Total time"
-            dataIndex="timeMillis"
-            key="tracingTimes"
-            render={(tracingTimeInMs) => formatMilliseconds(tracingTimeInMs)}
-            sorter={Utils.compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.timeMillis)}
-          />
-          <Column
-            key="details"
-            dataIndex="user"
-            render={(user) => {
-              return (
-                <LinkButton
-                  onClick={async () => {
-                    downloadTimeSpans(
-                      user.id,
-                      startDate,
-                      endDate,
-                      selectedTypes,
-                      selectedProjectIds,
-                    );
-                  }}
-                >
-                  <DownloadOutlined className="icon-margin-right" />
-                  Download time spans
-                </LinkButton>
-              );
-            }}
-          />
-        </FixedExpandableTable>
+        />
       </Spin>
       <Button
         type="primary"

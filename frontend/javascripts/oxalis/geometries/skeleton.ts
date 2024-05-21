@@ -222,7 +222,7 @@ class Skeleton {
     const mesh = helper.buildMesh(geometry, material);
     // Frustum culling is disabled because nodes that are transformed
     // wouldn't be culled correctly.
-    // In basic testing, culling didn't provide a noticable performance
+    // In basic testing, culling didn't provide a noticeable performance
     // improvement (tested with 500k skeleton nodes).
     mesh.frustumCulled = false;
     this.rootGroup.add(mesh);

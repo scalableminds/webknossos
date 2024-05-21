@@ -191,7 +191,7 @@ export default class SegmentMeshController {
     const segmentationTracing = getActiveSegmentationTracing(Store.getState());
     if (segmentationTracing != null) {
       // addMeshFromGeometries is often called multiple times for different sets of geometries.
-      // Therefore, used a throttled varaint of the highlightUnmappedSegmentId method.
+      // Therefore, used a throttled variant of the highlightUnmappedSegmentId method.
       this.throttledHighlightUnmappedSegmentId(segmentationTracing.activeUnmappedSegmentId);
     }
   }

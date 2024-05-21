@@ -1,6 +1,6 @@
 import { Button, Table, TableProps } from "antd";
-import { GetRowKey } from "antd/lib/table/interface";
-import * as React from "react";
+import { ColumnsType, GetRowKey } from "antd/lib/table/interface";
+import React from "react";
 
 type State = {
   expandedRows: Array<string>;
@@ -12,7 +12,11 @@ type State = {
  *  and the scroll prop as this is already done by the wrapper.
  */
 
-export default class FixedExpandableTable extends React.PureComponent<TableProps, State> {
+// Enforce the "columns" prop which is optional by default otherwise
+type OwnTableProps<RecordType = any> = TableProps<RecordType> & {
+  columns: ColumnsType<RecordType>;
+};
+export default class FixedExpandableTable extends React.PureComponent<OwnTableProps, State> {
   state: State = {
     expandedRows: [],
   };
@@ -25,7 +29,7 @@ export default class FixedExpandableTable extends React.PureComponent<TableProps
     return dataSource != null && canUseRowKey ? dataSource.map((row) => row[rowKey]) : [];
   }
 
-  componentDidUpdate(prevProps: Readonly<Props<any>>): void {
+  componentDidUpdate(prevProps: Readonly<TableProps<any>>): void {
     if (prevProps.dataSource !== this.props.dataSource) {
       this.setState({ expandedRows: [] });
     }
@@ -52,14 +56,10 @@ export default class FixedExpandableTable extends React.PureComponent<TableProps
         onClick={() => this.setState({ expandedRows: [] })}
       />
     );
-    // Don't use React.Children.map here, since this adds .$ prefixes
-    // to the keys. However, the keys are needed when managing the sorters
-    // of the table.
-    const columnsWithAdjustedFixedProp: TableProps["columns"] = (this.props.columns || [])
-      .map((column) => {
-        const columnFixed = expandedRows.length > 0 ? false : column.fixed;
-        return { ...column, fixed: columnFixed };
-      });
+    const columnsWithAdjustedFixedProp: TableProps["columns"] = this.props.columns.map((column) => {
+      const columnFixed = expandedRows.length > 0 ? false : column.fixed;
+      return { ...column, fixed: columnFixed };
+    });
     const expandableProp = {
       ...expandable,
       expandedRowKeys: expandedRows,

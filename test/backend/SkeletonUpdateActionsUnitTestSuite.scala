@@ -100,7 +100,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
   }
 
   "MoveTreeComponentSkeletonAction" should {
-    "move the specified (seperate) nodes" in {
+    "move the specified (separate) nodes" in {
       val moveTreeComponentSkeletonAction =
         new MoveTreeComponentSkeletonAction(Dummies.comp1Nodes.map(_.id).toList, sourceId = 3, targetId = 4)
       val result = moveTreeComponentSkeletonAction.applyOn(Dummies.componentSkeletonTracing)

@@ -73,12 +73,6 @@ class UserService @Inject()(conf: WkConf,
       case None => userDAO.findFirstByMultiUser(multiUser._id)
     }
 
-  def findOneByEmailAndOrganization(email: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
-    for {
-      multiUser <- multiUserDAO.findOneByEmail(email)
-      user <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUser._id)
-    } yield user
-
   def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: ObjectId): Fox[Unit] =
     for {
       userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).futureBox
@@ -371,7 +365,7 @@ class UserService @Inject()(conf: WkConf,
     }
   }
 
-  def publicWritesCompact(user: User, userCompactInfo: UserCompactInfo): Fox[JsObject] =
+  def publicWritesCompact(userCompactInfo: UserCompactInfo): Fox[JsObject] =
     for {
       _ <- Fox.successful(())
       teamsJson = parseArrayLiteral(userCompactInfo.teamIdsAsArrayLiteral).indices.map(
@@ -390,24 +384,24 @@ class UserService @Inject()(conf: WkConf,
       novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject]
     } yield {
       Json.obj(
-        "id" -> user._id.toString,
+        "id" -> userCompactInfo._id,
         "email" -> userCompactInfo.email,
-        "firstName" -> user.firstName,
-        "lastName" -> user.lastName,
-        "isAdmin" -> user.isAdmin,
-        "isOrganizationOwner" -> user.isOrganizationOwner,
-        "isDatasetManager" -> user.isDatasetManager,
-        "isActive" -> !user.isDeactivated,
+        "firstName" -> userCompactInfo.firstName,
+        "lastName" -> userCompactInfo.lastName,
+        "isAdmin" -> userCompactInfo.isAdmin,
+        "isOrganizationOwner" -> userCompactInfo.isOrganizationOwner,
+        "isDatasetManager" -> userCompactInfo.isDatasetManager,
+        "isActive" -> !userCompactInfo.isDeactivated,
         "teams" -> teamsJson,
         "experiences" -> experienceJson,
-        "lastActivity" -> user.lastActivity,
+        "lastActivity" -> userCompactInfo.lastActivity,
         "isAnonymous" -> false,
         "isEditable" -> userCompactInfo.isEditable,
-        "organization" -> userCompactInfo.organization_name,
+        "organization" -> userCompactInfo.organizationName,
         "novelUserExperienceInfos" -> novelUserExperienceInfos,
         "selectedTheme" -> userCompactInfo.selectedTheme,
-        "created" -> user.created,
-        "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
+        "created" -> userCompactInfo.created,
+        "lastTaskTypeId" -> userCompactInfo.lastTaskTypeId,
         "isSuperUser" -> userCompactInfo.isSuperUser,
         "isEmailVerified" -> userCompactInfo.isEmailVerified,
       )

@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { SyncOutlined } from "@ant-design/icons";
-import { Table, Progress, Tooltip, Button } from "antd";
+import { Table, Progress, Tooltip, Button, Input } from "antd";
 import { Link } from "react-router-dom";
 import { getVoxelyticsWorkflows } from "admin/admin_rest_api";
 import {
@@ -12,6 +12,18 @@ import { usePolling } from "libs/react_hooks";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
 import Toast from "libs/toast";
 import { runStateToStatus, VX_POLLING_INTERVAL } from "./utils";
+import Persistence from "libs/persistence";
+import * as Utils from "libs/utils";
+import { PropTypes } from "@scalableminds/prop-types";
+
+const { Search } = Input;
+
+const persistence = new Persistence<Pick<{ searchQuery: string }, "searchQuery">>(
+  {
+    searchQuery: PropTypes.string,
+  },
+  "workflowList",
+);
 
 function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun): VoxelyticsWorkflowListingRun {
   return {
@@ -43,6 +55,21 @@ type RenderRunInfo = VoxelyticsWorkflowListingRun & {
 export default function WorkflowListView() {
   const [isLoading, setIsLoading] = useState(false);
   const [workflows, setWorkflows] = useState<Array<VoxelyticsWorkflowListing>>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
+    setSearchQuery(event.target.value);
+  }
+
+  useEffect(() => {
+    const { searchQuery } = persistence.load();
+    setSearchQuery(searchQuery || "");
+    loadData();
+  }, []);
+
+  useEffect(() => {
+    persistence.persist({ searchQuery });
+  }, [searchQuery]);
 
   async function loadData() {
     setIsLoading(true);
@@ -127,9 +154,16 @@ export default function WorkflowListView() {
   return (
     <div className="container voxelytics-view">
       <div className="pull-right">
-        <Button onClick={() => loadData()}>
+        <Button onClick={() => loadData()} style={{ marginRight: 20 }}>
           <SyncOutlined spin={isLoading} /> Refresh
         </Button>
+        <Search
+          style={{
+            width: 200,
+          }}
+          onChange={handleSearch}
+          value={searchQuery}
+        />
       </div>
       <h3>Voxelytics Workflows</h3>
       <Table
@@ -218,7 +252,7 @@ export default function WorkflowListView() {
             render: (run: RenderRunInfo) => run.endTime && formatDateMedium(run.endTime),
           },
         ]}
-        dataSource={renderRuns}
+        dataSource={Utils.filterWithSearchQueryAND(renderRuns, ["workflowName"], searchQuery)}
       />
     </div>
   );

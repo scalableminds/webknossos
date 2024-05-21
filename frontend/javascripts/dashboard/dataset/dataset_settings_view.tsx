@@ -377,7 +377,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     const { appliedSuggestions, isJSONFormatValid } = dataSourceSettingsStatus;
 
     // No info shown, when:
-    // - The parsing succedded
+    // - The parsing succeeded
     if (
       (isJSONFormatValid === IsJSONFormatValidEnum.Yes &&
         appliedSuggestions !== AppliedSuggestionsEnum.No) ||

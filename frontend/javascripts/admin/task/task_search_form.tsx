@@ -92,7 +92,7 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
     const queryObject: QueryObject = {
       ids: formValues.taskId
         ?.trim()
-        .replace(/,?\s+,?/g, ",") // replace remaining whitespaces with commata
+        .replace(/,?\s+,?/g, ",") // replace remaining whitespaces with commas
         .split(",")
         .filter((taskId: string) => taskId.length > 0),
       taskType: formValues.taskTypeId,

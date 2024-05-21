@@ -50,7 +50,7 @@ case class WebknossosAdHocMeshRequest(
     mag: Vec3Int,
     cubeSize: Vec3Int, // In target mag
     segmentId: Long,
-    scale: Vec3Double,
+    scale: Vec3Double, // voxel size factor, assumed to be in dataset’s unit
     mapping: Option[String] = None,
     mappingType: Option[String] = None,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,

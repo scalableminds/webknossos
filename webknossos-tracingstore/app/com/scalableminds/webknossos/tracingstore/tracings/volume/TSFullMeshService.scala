@@ -117,7 +117,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
             mag = mag,
             cubeSize = Vec3Int.full(DataLayer.bucketLength + 1),
             fullMeshRequest.segmentId,
-            voxelSize.factor, // TODO unit
+            voxelSize.factor,
             fullMeshRequest.mappingName,
             fullMeshRequest.mappingType,
             fullMeshRequest.additionalCoordinates,
@@ -146,7 +146,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         mag = mag,
         cubeSize = Vec3Int(chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
         fullMeshRequest.segmentId,
-        voxelSize.factor, // TODO unit
+        voxelSize.factor,
         fullMeshRequest.mappingName,
         fullMeshRequest.mappingType,
         fullMeshRequest.additionalCoordinates

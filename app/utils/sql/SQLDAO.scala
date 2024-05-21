@@ -97,13 +97,4 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
     } yield ()
   }
 
-  protected def updateTimestampCol(id: ObjectId, column: X => Rep[java.sql.Timestamp], newValue: Instant)(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
-    val query = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
-    for {
-      _ <- assertUpdateAccess(id)
-      _ <- run(query.update(newValue.toSql))
-    } yield ()
-  }
-
 }

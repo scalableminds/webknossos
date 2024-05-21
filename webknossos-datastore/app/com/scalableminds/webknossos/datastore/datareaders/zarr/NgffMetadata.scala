@@ -2,7 +2,9 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr;
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.models.VoxelSize
+import com.scalableminds.util.tools.Fox.option2Fox
+import com.scalableminds.webknossos.datastore.models
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
@@ -26,6 +28,11 @@ object NgffGroupHeader {
 }
 
 case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) {
+
+  def lengthUnit(implicit ec: ExecutionContext): Fox[models.LengthUnit.Value] = unit match {
+    case Some(someUnit) => LengthUnit.fromString(someUnit).toFox
+    case None           => Fox.successful(VoxelSize.DEFAULT_UNIT)
+  }
 
   def spaceUnitToNmFactor(implicit ec: ExecutionContext): Fox[Double] =
     if (`type` != "space")

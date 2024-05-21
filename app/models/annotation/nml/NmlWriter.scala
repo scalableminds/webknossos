@@ -126,7 +126,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                                        organizationName: String,
                                        wkUrl: String,
                                        datasetName: String,
-                                       scale: Option[VoxelSize]): Fox[NmlParameters] =
+                                       voxelSize: Option[VoxelSize]): Fox[NmlParameters] =
     for {
       parameterSourceAnnotationLayer <- selectLayerWithPrecedence(skeletonLayers, volumeLayers)
       nmlParameters = parameterSourceAnnotationLayer.tracing match {
@@ -136,7 +136,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             organizationName,
             annotation.map(_.description),
             wkUrl,
-            scale,
+            voxelSize,
             s.createdTimestamp,
             s.editPosition,
             s.editRotation,
@@ -153,7 +153,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             organizationName,
             annotation.map(_.description),
             wkUrl,
-            scale,
+            voxelSize,
             v.createdTimestamp,
             v.editPosition,
             v.editRotation,

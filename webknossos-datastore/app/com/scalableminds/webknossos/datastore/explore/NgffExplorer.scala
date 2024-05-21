@@ -8,7 +8,8 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, Z
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.VoxelSize
+import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
@@ -61,11 +62,12 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
                                        isSegmentation: Boolean = false): Fox[List[(ZarrLayer, VoxelSize)]] =
     for {
       axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
-      axisUnitFactors <- extractAxisUnitFactors(multiscale.axes, axisOrder) ?~> "Could not extract axis unit-to-nm factors"
+      unifiedAxisUnit <- selectAxisUnit(multiscale.axes, axisOrder)
+      axisUnitFactors <- extractAxisUnitFactors(unifiedAxisUnit, multiscale.axes, axisOrder) ?~> "Could not extract axis unit-to-nm factors"
       voxelSizeInAxisUnits <- extractVoxelSizeInAxisUnits(
         multiscale.datasets.map(_.coordinateTransformations),
         axisOrder) ?~> "Could not extract voxel size from scale transforms"
-      voxelSizeNanometers = voxelSizeInAxisUnits * axisUnitFactors
+      voxelSizeFactor = voxelSizeInAxisUnits * axisUnitFactors
       nameFromPath = guessNameFromPath(remotePath)
       name = multiscale.name.getOrElse(nameFromPath)
       layerTuples <- Fox.serialCombined((0 until channelCount).toList)({ channelIndex: Int =>
@@ -133,7 +135,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
               additionalAxes = Some(additionalAxes),
               defaultViewConfiguration = Some(viewConfig)
             )
-        } yield (layer, VoxelSize.fromFactorWithDefaultUnit(voxelSizeNanometers))
+        } yield (layer, VoxelSize(voxelSizeFactor, unifiedAxisUnit))
       })
     } yield layerTuples
 
@@ -264,12 +266,25 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
       }
   }
 
-  private def extractAxisUnitFactors(axes: List[NgffAxis], axisOrder: AxisOrder): Fox[Vec3Double] =
+  private def selectAxisUnit(axes: List[NgffAxis], axisOrder: AxisOrder): Fox[LengthUnit] =
     for {
-      xUnitFactor <- axes(axisOrder.x).spaceUnitToNmFactor
-      yUnitFactor <- axes(axisOrder.y).spaceUnitToNmFactor
-      zUnitFactor <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).spaceUnitToNmFactor)
-    } yield Vec3Double(xUnitFactor, yUnitFactor, zUnitFactor.getOrElse(1))
+      xUnit <- axes(axisOrder.x).lengthUnit
+      yUnit <- axes(axisOrder.y).lengthUnit
+      zUnitOpt <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).lengthUnit)
+      units: List[LengthUnit] = List(Some(xUnit), Some(yUnit), zUnitOpt).flatten
+    } yield units.minBy(LengthUnit.toNanometer)
+
+  private def extractAxisUnitFactors(unifiedAxisUnit: LengthUnit,
+                                     axes: List[NgffAxis],
+                                     axisOrder: AxisOrder): Fox[Vec3Double] =
+    for {
+      xUnitToNm <- axes(axisOrder.x).spaceUnitToNmFactor
+      yUnitToNm <- axes(axisOrder.y).spaceUnitToNmFactor
+      zUnitToNmOpt <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).spaceUnitToNmFactor)
+      xUnitToTarget = xUnitToNm / LengthUnit.toNanometer(unifiedAxisUnit)
+      yUnitToTarget = yUnitToNm / LengthUnit.toNanometer(unifiedAxisUnit)
+      zUnitToTargetOpt = zUnitToNmOpt.map(_ / LengthUnit.toNanometer(unifiedAxisUnit))
+    } yield Vec3Double(xUnitToTarget, yUnitToTarget, zUnitToTargetOpt.getOrElse(1))
 
   private def magFromTransforms(coordinateTransforms: List[NgffCoordinateTransformation],
                                 voxelSizeInAxisUnits: Vec3Double,

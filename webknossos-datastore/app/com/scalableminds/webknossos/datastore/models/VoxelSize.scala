@@ -11,7 +11,7 @@ case class VoxelSize(factor: Vec3Double, unit: LengthUnit) {
 }
 
 object VoxelSize {
-  private val DEFAULT_UNIT: LengthUnit = LengthUnit.nm
+  val DEFAULT_UNIT: LengthUnit = LengthUnit.nm
 
   def fromFactorWithDefaultUnit(factor: Vec3Double): VoxelSize = VoxelSize(factor, DEFAULT_UNIT)
 

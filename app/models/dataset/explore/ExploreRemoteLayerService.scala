@@ -1,7 +1,7 @@
 package models.dataset.explore
 
 import com.scalableminds.util.accesscontext.DBAccessContext
-import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.explore.{
@@ -39,7 +39,7 @@ import scala.concurrent.ExecutionContext
 case class ExploreRemoteDatasetParameters(remoteUri: String,
                                           credentialIdentifier: Option[String],
                                           credentialSecret: Option[String],
-                                          preferredVoxelSize: Option[Vec3Double])
+                                          preferredVoxelSize: Option[VoxelSize])
 
 object ExploreRemoteDatasetParameters {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetParameters] = Json.format[ExploreRemoteDatasetParameters]
@@ -81,9 +81,7 @@ class ExploreRemoteLayerService @Inject()(credentialService: CredentialService,
       layersWithVoxelSizes = exploredLayersNested.flatten
       preferredVoxelSize = parameters.flatMap(_.preferredVoxelSize).headOption
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
-      (layers, voxelSize) <- exploreLayerService.adaptLayersAndVoxelSize(
-        layersWithVoxelSizes,
-        preferredVoxelSize.map(VoxelSize.fromFactorWithDefaultUnit)) // TODO unit
+      (layers, voxelSize) <- exploreLayerService.adaptLayersAndVoxelSize(layersWithVoxelSizes, preferredVoxelSize)
       dataSource = GenericDataSource[DataLayer](
         DataSourceId("", ""), // Frontend will prompt user for a good name
         layers,

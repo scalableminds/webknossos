@@ -420,7 +420,7 @@ class ConnectomeView extends React.Component<Props, State> {
         (node) => node.data.type !== "synapse",
       ),
     );
-    // Auto-load the skeletons of the active agglomerates and check all occurences of the same agglomerate
+    // Auto-load the skeletons of the active agglomerates and check all occurrences of the same agglomerate
     const topLevelCheckedKeys = treeData.map((topLevelTreeNode) => topLevelTreeNode.key);
     const checkedKeys = Array.from(
       mapAndFilterTreeData(

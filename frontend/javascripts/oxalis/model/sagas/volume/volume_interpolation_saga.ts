@@ -480,7 +480,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 
   // Theoretically, the user might extrude (or interpolate, even though this is less likely) multiple
-  // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything inbetween manually.
+  // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything in between manually.
   // In that case, the interpolation/extrusion would always start from slice 0 which is unexpected and leads
   // to additional performance overhead (also the maximum interpolation depth will be exceeded at some point).
   // As a counter measure, we simply use the current position to update the current direction (and with it

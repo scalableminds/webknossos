@@ -1,5 +1,6 @@
 package models.dataset
 
+import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest}
@@ -12,7 +13,13 @@ import play.api.libs.json.JsObject
 import play.utils.UriEncoding
 import utils.ObjectId
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
+
 class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLogging {
+
+  private lazy val hasSegmentIndexFileCache: AlfuCache[(String, String, String), Boolean] =
+    AlfuCache(timeToLive = 1 minute)
 
   def getDataLayerThumbnail(organizationName: String,
                             dataset: Dataset,
@@ -82,13 +89,17 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         .put(dataSource)
     } yield ()
 
-  def hasSegmentIndexFile(organizationName: String, datasetName: String, layerName: String): Fox[Boolean] =
-    for {
-      hasIndexFile <- rpc(
-        s"${dataStore.url}/data/datasets/$organizationName/$datasetName/layers/$layerName/hasSegmentIndex")
-        .addQueryString("token" -> RpcTokenHolder.webknossosToken)
-        .silent
-        .getWithJsonResponse[Boolean]
-    } yield hasIndexFile
+  def hasSegmentIndexFile(organizationName: String, datasetName: String, layerName: String)(
+      implicit ec: ExecutionContext): Fox[Boolean] = {
+    val cacheKey = (organizationName, datasetName, layerName)
+    hasSegmentIndexFileCache.getOrLoad(
+      cacheKey,
+      k =>
+        rpc(s"${dataStore.url}/data/datasets/${k._1}/${k._2}/layers/${k._3}/hasSegmentIndex")
+          .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+          .silent
+          .getWithJsonResponse[Boolean]
+    )
+  }
 
 }

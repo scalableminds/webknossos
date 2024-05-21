@@ -357,10 +357,18 @@ img.keyboard-mouse-icon:first-child {
   .ant-input,
   .ant-input-number,
   .ant-radio-button-wrapper,
-  .ant-select > .ant-select-selector {
+  .ant-select > .ant-select-selector{
     background-color: @dark-bg !important;
     color: @dark-fg !important;
     border-color: @dark-border;
+
+    &.upgrade-banner-button{
+        background-color: var(--ant-button-primary-color) !important;
+        color: var(--ant-color-primary) !important;
+        border-color: var(--ant-button-primary-color);
+        display: flex;
+        align-items: center;
+      }
 
     &:hover {
       border-color: var(--color-blue-zircon) !important;
@@ -383,6 +391,7 @@ img.keyboard-mouse-icon:first-child {
         background-color: @dark-border !important;
       }
     }
+    
   }
 
   .ant-btn[disabled],
@@ -463,6 +472,24 @@ img.keyboard-mouse-icon:first-child {
   }
   .right-border-button.footer-button {
     right: 8px;
+  }
+
+  .upgrade-banner {
+    .upgrade-banner-wk-link {
+      margin-inline: -2; 
+      color: var(--ant-color-text-primary); 
+      font-weight: bold;
+
+      &:hover{
+        color: var(--color-blue-zircon);
+      }
+    }
+    
+    .ant-alert-close-icon {
+      .anticon, .anticon-close {
+        color: var(--ant-color-text-primary);
+      }
+    }
   }
 }
 

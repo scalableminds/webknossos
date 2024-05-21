@@ -99,7 +99,7 @@ export default function WorkflowListView() {
       workflows.map((workflow) => ({
         workflowName: workflow.name,
         workflowHash: workflow.hash,
-        state: VoxelyticsRunState[workflow.state],
+        state: workflow.state,
         beginTime: workflow.runs[0].beginTime,
         endTime: workflow.runs[0].endTime,
         name: "",

@@ -846,6 +846,15 @@ export enum VoxelyticsRunState {
   CANCELLED = "CANCELLED",
   STALE = "STALE",
 }
+
+export enum VoxelyticsBasicRunState {
+  RUNNING = "RUNNING",
+  COMPLETE = "COMPLETE",
+  FAILED = "FAILED",
+  CANCELLED = "CANCELLED",
+  STALE = "STALE",
+}
+
 type DistributionConfig = {
   strategy: string;
   resources?: Record<string, string>;
@@ -976,22 +985,7 @@ export type VoxelyticsWorkflowReport = {
   };
 };
 
-export type VoxelyticsWorkflowListingRun = (
-  | {
-      state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
-      endTime: null;
-    }
-  | {
-      state:
-        | VoxelyticsRunState.COMPLETE
-        | VoxelyticsRunState.FAILED
-        | VoxelyticsRunState.CANCELLED
-        | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
-    }
-) & {
+export type VoxelyticsWorkflowListingRun = {
   id: string;
   name: string;
   hostusername: string;
@@ -1000,6 +994,9 @@ export type VoxelyticsWorkflowListingRun = (
   taskCounts: TaskCounts;
   userFirstName: string;
   userLastName: string;
+  state: VoxelyticsRunState;
+  beginTime: Date;
+  endTime: Date | null;
 };
 
 export type VoxelyticsWorkflowListing = {

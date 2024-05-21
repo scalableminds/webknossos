@@ -335,10 +335,10 @@ function CommentTabView(props: Props) {
       return {
         key: tree.treeId.toString(),
         title: (
-          <>
+          <div style={{ wordBreak: "break-all" }}>
             <ColoredDotIconForSegment segmentColorHSLA={[...jsRgb2hsl(tree.color), 1.0]} />{" "}
             {tree.name}
-          </>
+          </div>
         ),
         expanded: true,
         children: tree.comments

@@ -9,20 +9,15 @@ import {
   ShrinkOutlined,
 } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
-import Maybe from "data.maybe";
 import React, { useEffect, useRef, useState } from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
-import { toNullable, compareBy, localeCompareBy, zipMaybe } from "libs/utils";
+import { compareBy, localeCompareBy } from "libs/utils";
 import { InputKeyboard } from "libs/input";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
-import {
-  getActiveTree,
-  getActiveNode,
-  getSkeletonTracing,
-} from "oxalis/model/accessors/skeletontracing_accessor";
+import { getActiveNode, getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setActiveNodeAction,
   createCommentAction,
@@ -113,21 +108,12 @@ function CommentTabView(props: Props) {
   const allowUpdate = useSelector((state: OxalisState) => state.tracing.restrictions.allowUpdate);
   const keyboardDelay = useSelector((state: OxalisState) => state.userConfiguration.keyboardDelay);
 
+  const activeComment = useSelector((_state: OxalisState) => getActiveComment());
+
   useEffectOnlyOnce(() => {
     // expand all trees by default
     const defaultCollapsedTreeIds = getData().map((tree) => tree.treeId.toString());
     setCollapsedTreeIds(defaultCollapsedTreeIds);
-
-    // scroll to active comment
-    if (props.skeletonTracing.activeNodeId) {
-      const commentNodeKey = `comment-${props.skeletonTracing.activeNodeId}`;
-      setHighlightedNodeIds([commentNodeKey]);
-
-      setTimeout(() => {
-        // use a timeout in hope that React has already finished rendering otherwise there is no scroll target available yet
-        scrollToActiveCommentorTree();
-      }, 500);
-    }
   });
 
   const keyboard = new InputKeyboard(
@@ -150,31 +136,35 @@ function CommentTabView(props: Props) {
   useEffect(() => {
     // If the activeNode has a comment, scroll to it,
     // otherwise scroll to the activeTree
-    scrollToActiveCommentorTree();
+    scrollToActiveCommentOrTree(activeComment, props.skeletonTracing.activeTreeId);
+  }, [activeComment, props.skeletonTracing.activeTreeId]);
 
-    // highlight active node
-    const commentNodeKey = `comment-${props.skeletonTracing.activeNodeId}`;
-    setHighlightedNodeIds([commentNodeKey]);
-  }, [props.skeletonTracing.activeNodeId, props.skeletonTracing.activeTreeId]);
-
-  function scrollToActiveCommentorTree() {
+  function scrollToActiveCommentOrTree(
+    activeComment: MutableCommentType | undefined,
+    activeTreeId: number | undefined | null,
+  ) {
     // scroll to the current comment of the active node
     // or in case there is no comment to it's parent tree
-    if (treeRef.current) {
-      const commentKey = getActiveComment()
-        .map((comment) => `comment-${comment.nodeId}`)
-        .getOrElse(null);
 
-      if (commentKey) {
-        treeRef.current.scrollTo({ key: commentKey, align: "top" });
-        setHighlightedNodeIds([commentKey]);
-      } else if (props.skeletonTracing.activeTreeId) {
-        treeRef.current.scrollTo({
-          key: props.skeletonTracing.activeTreeId.toString(),
-          align: "top",
-        });
-      }
-    }
+    // Technically the comment is now present in the tree and it can also be found while debugging
+    // this class. But due to some React or virtual rendering magic in the scrollTo function,
+    // the new comment isn't found right away in the tree data, thus the timeout is used as a work-around.
+
+    setTimeout(() => {
+      if (treeRef.current)
+        if (activeComment) {
+          const commentNodeKey = `comment-${activeComment.nodeId}`;
+          treeRef.current.scrollTo({ key: commentNodeKey, align: "top" });
+          setHighlightedNodeIds([commentNodeKey]);
+        } else if (activeTreeId) {
+          const treeNodeKey = activeTreeId.toString();
+          treeRef.current.scrollTo({
+            key: treeNodeKey,
+            align: "top",
+          });
+          setHighlightedNodeIds([treeNodeKey]);
+        }
+    });
   }
 
   function nextComment(forward: boolean = true) {
@@ -220,6 +210,10 @@ function CommentTabView(props: Props) {
   function handleChangeInput(commentText: string, insertLineBreaks: boolean = false) {
     if (commentText) {
       createComment(insertLineBreaks ? commentText.replace(/\\n/g, "\n") : commentText);
+
+      // make sure that the skeleton tree node is expanded
+      if (props.skeletonTracing.activeTreeId)
+        setCollapsedTreeIds([...collapsedTreeIds, props.skeletonTracing.activeTreeId.toString()]);
     } else {
       deleteComment();
     }
@@ -254,24 +248,17 @@ function CommentTabView(props: Props) {
     }
   }
 
-  function getActiveComment(createIfNotExisting: boolean = false) {
-    return zipMaybe(
-      getActiveTree(props.skeletonTracing),
-      getActiveNode(props.skeletonTracing),
-    ).chain(([tree, activeNode]) =>
-      Maybe.fromNullable(tree.comments.find((comment) => comment.nodeId === activeNode.id)).orElse(
-        () =>
-          // If there is no active comment and createIfNotExisting is set, create an empty comment
-          Maybe.fromNullable(
-            createIfNotExisting
-              ? {
-                  nodeId: activeNode.id,
-                  content: "",
-                }
-              : null,
-          ),
-      ),
-    );
+  function getActiveComment(): MutableCommentType | undefined {
+    const { activeTreeId, activeNodeId } = props.skeletonTracing;
+
+    if (activeTreeId && activeNodeId) {
+      const activeComment = props.skeletonTracing.trees[activeTreeId].comments.find(
+        (comment) => comment.nodeId === activeNodeId,
+      );
+
+      return activeComment;
+    }
+    return undefined;
   }
 
   function setMarkdownModalVisibility(visible: boolean) {
@@ -279,24 +266,29 @@ function CommentTabView(props: Props) {
   }
 
   function renderMarkdownModal() {
-    if (!allowUpdate) {
+    if (!allowUpdate || !props.skeletonTracing.activeNodeId) {
       return null;
     }
-    const activeCommentMaybe = getActiveComment(true);
 
     const onOk = () => setMarkdownModalVisibility(false);
 
-    return toNullable(
-      activeCommentMaybe.map((comment) => (
-        <MarkdownModal
-          key={comment.nodeId}
-          source={comment.content}
-          isOpen={isMarkdownModalOpen}
-          onChange={handleChangeInput}
-          onOk={onOk}
-          label="Comment"
-        />
-      )),
+    let comment = activeComment;
+    if (!comment) {
+      comment = {
+        nodeId: props.skeletonTracing.activeNodeId,
+        content: "",
+      };
+    }
+
+    return (
+      <MarkdownModal
+        key={comment.nodeId}
+        source={comment.content}
+        isOpen={isMarkdownModalOpen}
+        onChange={handleChangeInput}
+        onOk={onOk}
+        label="Comment"
+      />
     );
   }
 
@@ -394,13 +386,9 @@ function CommentTabView(props: Props) {
     );
   }
 
-  const activeCommentMaybe = getActiveComment();
   // Replace line breaks as they will otherwise be stripped when shown in an input field
-  const activeCommentContent = activeCommentMaybe
-    .map((comment) => comment.content)
-    .getOrElse("")
-    .replace(/\r?\n/g, "\\n");
-  const isMultilineComment = activeCommentContent.indexOf("\\n") !== -1;
+  const activeCommentContent = activeComment?.content.replace(/\r?\n/g, "\\n");
+  const isMultilineComment = activeCommentContent?.indexOf("\\n") !== -1;
   const activeNodeMaybe = getActiveNode(props.skeletonTracing);
   const isEditingDisabled = activeNodeMaybe.isNothing || !allowUpdate;
 

@@ -664,6 +664,7 @@ export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | 
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
 export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
 export enum APIJobType {
+  ALIGN_SECTIONS  = "align_sections",
   CONVERT_TO_WKW = "convert_to_wkw",
   EXPORT_TIFF = "export_tiff",
   RENDER_ANIMATION = "render_animation",
@@ -672,6 +673,7 @@ export enum APIJobType {
   FIND_LARGEST_SEGMENT_ID = "find_largest_segment_id",
   INFER_NUCLEI = "infer_nuclei",
   INFER_NEURONS = "infer_neurons",
+  INFER_MITOCHONDRIA = "infer_mitochondria",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
 }
 

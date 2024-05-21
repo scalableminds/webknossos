@@ -1354,7 +1354,7 @@ export function startAlignSectionsJob(
     newDatasetName,
   });
   return Request.receiveJSON(
-    `/api/jobs/run/inferMitochondria/${organizationName}/${datasetName}?${urlParams.toString()}`,
+    `/api/jobs/run/alignSections/${organizationName}/${datasetName}?${urlParams.toString()}`,
     {
       method: "POST",
     },

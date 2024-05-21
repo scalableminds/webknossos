@@ -68,7 +68,7 @@ const jobNameToImagePath: Record<
   neuron_inferral: "neuron_inferral_example.jpg",
   nuclei_inferral: "nuclei_inferral_example.jpg",
   mitochondria_inferral: "mito_inferral_example.jpg",
-  align_sections: "mito_inferral_example.jpg",
+  align_sections: "align_example.jpg",
   materialize_volume_annotation: "materialize_volume_annotation_example.jpg",
   invisible: "",
 };
@@ -406,7 +406,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
   };
   return aIJobModalState !== "invisible" ? (
     <Modal
-      width={667}
+      width={875}
       open
       title={
         <>
@@ -505,7 +505,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
         {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
         {aIJobModalState === "nuclei_inferral" ? <NucleiDetectionForm /> : null}
         {aIJobModalState === "mitochondria_inferral" ? <MitochondriaSegmentationForm /> : null}
-        {aIJobModalState === "mitochondria_inferral" ? <AlignSectionsForm /> : null}
+        {aIJobModalState === "align_sections" ? <AlignSectionsForm /> : null}
       </Space>
     </Modal>
   ) : null;
@@ -807,8 +807,8 @@ export function AlignSectionsForm() {
       jobName={"align_sections"}
       buttonLabel="Start section alignment job"
       title="Section Alignment"
-      suggestedDatasetSuffix="with_mitochondria_detected"
-      isBoundingBoxConfigurable
+      suggestedDatasetSuffix="aligned"
+      isBoundingBoxConfigurable={false}
       jobApiCall={async ({
         newDatasetName,
         selectedLayer: colorLayer,

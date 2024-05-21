@@ -1374,7 +1374,7 @@ class SegmentsView extends React.Component<Props, State> {
   getSelectedSegments = (): Segment[] => {
     const allSegments = this.props.segments;
     if (allSegments == null) return [];
-    return this.props.selectedIds.segments.map((segmentId) => allSegments.get(segmentId));
+    return this.props.selectedIds.segments.map((segmentId) => allSegments.getOrThrow(segmentId));
   };
 
   getSelectedItemKeys = () => {

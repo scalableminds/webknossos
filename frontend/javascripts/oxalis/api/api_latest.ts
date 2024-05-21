@@ -379,7 +379,10 @@ class TracingApi {
     if (treeId != null) {
       tree = skeletonTracing.trees[treeId];
       assertExists(tree, `Couldn't find tree ${treeId}.`);
-      assertExists(tree.nodes.get(nodeId), `Couldn't find node ${nodeId} in tree ${treeId}.`);
+      assertExists(
+        tree.nodes.getOrThrow(nodeId),
+        `Couldn't find node ${nodeId} in tree ${treeId}.`,
+      );
     } else {
       tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nodeId));
       assertExists(tree, `Couldn't find node ${nodeId}.`);
@@ -599,7 +602,7 @@ class TracingApi {
    * console.log(segment.groupId)
    */
   getSegment(segmentId: number, layerName: string): Segment {
-    const segment = getSegmentsForLayer(Store.getState(), layerName).get(segmentId);
+    const segment = getSegmentsForLayer(Store.getState(), layerName).getOrThrow(segmentId);
     // Return a copy to avoid mutations by third-party code.
     return { ...segment };
   }
@@ -1070,8 +1073,8 @@ class TracingApi {
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
 
     for (const edge of tree.edges.all()) {
-      const sourceNode = tree.nodes.get(edge.source);
-      const targetNode = tree.nodes.get(edge.target);
+      const sourceNode = tree.nodes.getOrThrow(edge.source);
+      const targetNode = tree.nodes.getOrThrow(edge.target);
       lengthNmAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), datasetScale);
       lengthVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
     }
@@ -1155,12 +1158,12 @@ class TracingApi {
 
     while (priorityQueue.length > 0) {
       const [nextNodeId, distance] = priorityQueue.dequeue();
-      const nextNodePosition = getPos(sourceTree.nodes.get(nextNodeId));
+      const nextNodePosition = getPos(sourceTree.nodes.getOrThrow(nextNodeId));
 
       // Calculate the distance to all neighbours and update the distances.
       for (const { source, target } of sourceTree.edges.getEdgesForNode(nextNodeId)) {
         const neighbourNodeId = source === nextNodeId ? target : source;
-        const neighbourPosition = getPos(sourceTree.nodes.get(neighbourNodeId));
+        const neighbourPosition = getPos(sourceTree.nodes.getOrThrow(neighbourNodeId));
         const neighbourDistance =
           distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScale);
 

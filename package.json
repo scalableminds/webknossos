@@ -194,7 +194,7 @@
     "react-dropzone": "^11.3.1",
     "react-flow-renderer": "^10.3.16",
     "react-json-tree": "^0.17.0",
-    "react-markdown": "^9.0.1",
+    "react-markdown": "^8.0.7",
     "react-redux": "^7.2.0",
     "react-router-dom": "^5.1.2",
     "react-sortable-hoc": "^2.0.0",

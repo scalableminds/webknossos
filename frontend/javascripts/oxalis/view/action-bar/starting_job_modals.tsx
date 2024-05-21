@@ -19,6 +19,7 @@ import {
   startMaterializingVolumeAnnotationJob,
   startNeuronInferralJob,
   startMitochondriaInferralJob,
+  startAlignSectionsJob,
 } from "admin/admin_rest_api";
 import { useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
@@ -56,6 +57,7 @@ export type StartAIJobModalState =
   | "neuron_inferral"
   | "nuclei_inferral"
   | "mitochondria_inferral"
+  | "align_sections"
   | "invisible";
 
 // "materialize_volume_annotation" is only used in this module
@@ -66,6 +68,7 @@ const jobNameToImagePath: Record<
   neuron_inferral: "neuron_inferral_example.jpg",
   nuclei_inferral: "nuclei_inferral_example.jpg",
   mitochondria_inferral: "mito_inferral_example.jpg",
+  align_sections: "mito_inferral_example.jpg",
   materialize_volume_annotation: "materialize_volume_annotation_example.jpg",
   invisible: "",
 };
@@ -459,6 +462,27 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
           <Tooltip title="Coming soon">
             <Radio.Button
               className="aIJobSelection"
+              checked={aIJobModalState === "align_sections"}
+              disabled={!Store.getState().activeUser?.isSuperUser}
+              onClick={() => Store.dispatch(setAIJobModalStateAction("align_sections"))}
+            >
+              <Card bordered={false}>
+                <Space direction="vertical" size="small">
+                  <Row className="ai-job-title">Align Sections</Row>
+                  <Row>
+                    <img
+                      src={`/assets/images/${jobNameToImagePath.align_sections}`}
+                      alt={"Mitochondria detection example"}
+                      style={centerImageStyle}
+                    />
+                  </Row>
+                </Space>
+              </Card>
+            </Radio.Button>
+          </Tooltip>
+          <Tooltip title="Coming soon">
+            <Radio.Button
+              className="aIJobSelection"
               disabled
               checked={aIJobModalState === "nuclei_inferral"}
               onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
@@ -481,6 +505,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
         {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
         {aIJobModalState === "nuclei_inferral" ? <NucleiDetectionForm /> : null}
         {aIJobModalState === "mitochondria_inferral" ? <MitochondriaSegmentationForm /> : null}
+        {aIJobModalState === "mitochondria_inferral" ? <AlignSectionsForm /> : null}
       </Space>
     </Modal>
   ) : null;
@@ -763,6 +788,48 @@ export function MitochondriaSegmentationForm() {
               <Alert
                 message="Please note that this feature is experimental and currently only works with electron
                 microscopy data."
+                type="warning"
+                showIcon
+              />
+            </Row>
+          </Space>
+        </>
+      }
+    />
+  );
+}
+
+export function AlignSectionsForm() {
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  return (
+    <StartJobForm
+      handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
+      jobName={"align_sections"}
+      buttonLabel="Start section alignment job"
+      title="Section Alignment"
+      suggestedDatasetSuffix="with_mitochondria_detected"
+      isBoundingBoxConfigurable
+      jobApiCall={async ({
+        newDatasetName,
+        selectedLayer: colorLayer,
+      }) => {
+
+        return startAlignSectionsJob(
+          dataset.owningOrganization,
+          dataset.name,
+          colorLayer.name,
+          newDatasetName,
+        );
+      }}
+      description={
+        <>
+          <Space direction="vertical" size="middle">
+            <Row>
+              This job will automatically align all the sections of the dataset.
+            </Row>
+            <Row style={{ display: "grid", marginBottom: 16 }}>
+              <Alert
+                message="Please note that this feature is experimental."
                 type="warning"
                 showIcon
               />

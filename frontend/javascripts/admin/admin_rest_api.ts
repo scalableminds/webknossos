@@ -1343,6 +1343,25 @@ export function startMitochondriaInferralJob(
   );
 }
 
+export function startAlignSectionsJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+  newDatasetName: string,
+): Promise<APIJob> {
+  const urlParams = new URLSearchParams({
+    layerName,
+    newDatasetName,
+  });
+  return Request.receiveJSON(
+    `/api/jobs/run/inferMitochondria/${organizationName}/${datasetName}?${urlParams.toString()}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+
 export function startRenderAnimationJob(
   organizationName: string,
   datasetName: string,

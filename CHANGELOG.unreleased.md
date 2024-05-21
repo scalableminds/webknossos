@@ -23,5 +23,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where some annotation times would be shown double. [#7787](https://github.com/scalableminds/webknossos/pull/7787)
 
 ### Removed
+- HTTP API versions 1 and 2 are no longer supported. Current is 7.
 
 ### Breaking Changes

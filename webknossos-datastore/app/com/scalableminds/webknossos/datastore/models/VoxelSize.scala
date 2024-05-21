@@ -5,7 +5,10 @@ import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
 // Defines the real-world size in a length unit for a mag1-voxel.
-case class VoxelSize(factor: Vec3Double, unit: LengthUnit)
+case class VoxelSize(factor: Vec3Double, unit: LengthUnit) {
+  def toNanometer: Vec3Double =
+    factor * LengthUnit.toNanometer(unit)
+}
 
 object VoxelSize {
   private val DEFAULT_UNIT: LengthUnit = LengthUnit.nm

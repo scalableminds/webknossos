@@ -35,12 +35,14 @@ function RegistrationFormWKOrg(props: Props) {
     await Request.sendJSONReceiveJSON("/api/auth/createOrganizationWithAdmin", {
       data: {
         ...formValues,
+        firstName: formValues.firstName.trim(),
+        lastName: formValues.lastName.trim(),
         password: {
           password1: formValues.password.password1,
           password2: formValues.password.password1,
         },
         organization: organizationName.current,
-        organizationDisplayName: `${formValues.firstName} ${formValues.lastName} Lab`,
+        organizationDisplayName: `${formValues.firstName.trim()} ${formValues.lastName.trim()} Lab`,
       },
     });
     const [user, organization] = await loginUser({

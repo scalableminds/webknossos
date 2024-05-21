@@ -114,6 +114,7 @@ export default function WorkflowListView() {
         children: workflow.runs.map((run) => ({
           workflowName: workflow.name,
           workflowHash: workflow.hash,
+          userDisplayName: getUserDisplayName(run),
           ...run,
         })),
       })),
@@ -199,7 +200,7 @@ export default function WorkflowListView() {
           {
             title: "User",
             key: "userName",
-            render: (run: RenderRunInfo) => getUserDisplayName(run),
+            render: (run: RenderRunInfo) => run.userDisplayName,
           },
           {
             title: "Host",

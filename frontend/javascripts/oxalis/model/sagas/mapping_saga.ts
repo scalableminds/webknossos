@@ -13,15 +13,16 @@ import {
   actionChannel,
   flush,
 } from "typed-redux-saga";
-import { Channel, buffers, eventChannel } from "redux-saga";
+import { api } from "oxalis/singletons";
+import { buffers, eventChannel } from "redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { message } from "antd";
 import type {
   OptionalMappingProperties,
   SetMappingAction,
-  SetMappingEnabledAction,
+  // SetMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
-import { setMappingAction } from "oxalis/model/actions/settings_actions";
+import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import {
   fetchMapping,
   getMappingsForDatasetLayer,
@@ -39,7 +40,13 @@ import {
   getMappingInfo,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
-import type { Mapping, MappingType, NumberLike, NumberLikeMap } from "oxalis/store";
+import type {
+  ActiveMappingInfo,
+  Mapping,
+  MappingType,
+  NumberLike,
+  NumberLikeMap,
+} from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
 import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
 import { Model } from "oxalis/singletons";
@@ -47,6 +54,8 @@ import {
   isMappingActivationAllowed,
   hasEditableMapping,
   getEditableMappingForVolumeTracingId,
+  needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
+  getVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
 import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
@@ -56,46 +65,78 @@ import DataCube from "../bucket_data_handling/data_cube";
 import { chainIterators, sleep } from "libs/utils";
 import { Action } from "../actions/actions";
 import { ActionPattern } from "redux-saga/effects";
+import { listenToStoreProperty } from "../helpers/listener_helpers";
 
 type APIMappings = Record<string, APIMapping>;
+type Box<T> = { value: T };
 
 const takeLatestMappingChange = (
-  setMappingEnabledActionChannel: Channel<SetMappingEnabledAction>,
-) =>
-  fork(function* () {
-    let lastTask;
-    let lastLayerName: string | null | undefined;
-    let lastMappingEnabled: boolean = false;
+  // setMappingEnabledActionChannel: Channel<SetMappingEnabledAction>,
+  oldActiveMappingByLayer: Box<Record<string, ActiveMappingInfo>>,
+  layerName: string,
+) => {
+  return fork(function* () {
+    let lastWatcherTask;
+
+    const needsLocalMappingChangedChannel = createNeedsLocalMappingChangedChannel(layerName);
+
     while (true) {
-      const action = yield* take(setMappingEnabledActionChannel);
-      console.log("RECEIVED SET_MAPPING_ENABLED", action);
+      // todop: what if the annotation is loaded and immediately the watcher is needed?
+      const needsLocalHdf5Mapping = yield* take(needsLocalMappingChangedChannel);
 
-      // Don't cancel the watcher if the enabled state was not changed
-      if (action.layerName === lastLayerName && action.isMappingEnabled === lastMappingEnabled)
-        continue;
-
-      if (lastTask) {
+      if (lastWatcherTask) {
         console.log("Cancel old bucket watcher");
-        yield cancel(lastTask);
+        yield cancel(lastWatcherTask);
+        lastWatcherTask = null;
       }
 
-      // Don't start a new watcher if the mapping was disabled
-      if (action.type === "SET_MAPPING_ENABLED" && !action.isMappingEnabled) continue;
+      yield* call(maybeReloadData, oldActiveMappingByLayer, { layerName }, true);
+      if (needsLocalHdf5Mapping) {
+        // Start a new watcher
+        console.log("Start new bucket watcher for layer", layerName);
+        lastWatcherTask = yield* fork(watchChangedBucketsForLayer, layerName);
+      } else {
+        const mappingInfo = yield* select((state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+        );
 
-      console.log("Start new bucket watcher for layer", action.layerName);
-      lastTask = yield* fork(watchChangedBucketsForLayer, action.layerName);
-      lastLayerName = action.layerName;
-      lastMappingEnabled = action.isMappingEnabled;
+        yield* put(
+          setMappingAction(layerName, mappingInfo.mappingName, mappingInfo.mappingType, {
+            mapping: undefined,
+            showLoadingIndicator: true,
+          }),
+        );
+      }
     }
   });
+};
+
+// function runWhenSelectorChanged<T>(selector: (state: OxalisState) => T, saga: (t: T) => Saga<any>) {
+//   return fork(function* () {
+//     let previous = yield* select(selector);
+//     while (true) {
+//       yield* take();
+//       const next = yield* select(selector);
+//       if (next !== previous) {
+//         yield* call(saga, next);
+//         previous = next;
+//       }
+//     }
+//   });
+// }
+
+// function* handleChangeOfNeedsLocalHdf5Mapping(layerName: string, needsLocalHdf5Mapping: boolean) {}
 
 export default function* watchActivatedMappings(): Saga<void> {
+  const oldActiveMappingByLayer = {
+    value: yield* select((state) => state.temporaryConfiguration.activeMappingByLayer),
+  };
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
-  const setMappingEnabledActionChannel =
-    yield* actionChannel<SetMappingEnabledAction>("SET_MAPPING_ENABLED");
+  // const setMappingEnabledActionChannel =
+  //   yield* actionChannel<SetMappingEnabledAction>("SET_MAPPING_ENABLED");
   yield* take("WK_READY");
-  yield* takeLatest(setMappingActionChannel, handleSetMapping);
+  yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
     function* handler(action: EnsureLayerMappingsAreLoadedAction) {
@@ -106,19 +147,81 @@ export default function* watchActivatedMappings(): Saga<void> {
       }
     },
   );
-  yield* takeLatestMappingChange(setMappingEnabledActionChannel);
+  const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
+  for (const tracing of volumeTracings) {
+    // The following two sagas will fork internally.
+    yield* takeLatestMappingChange(
+      // setMappingEnabledActionChannel,
+      oldActiveMappingByLayer,
+      tracing.tracingId,
+    );
+
+    // const selector = (state: OxalisState) => getNeedsLocalHdf5Mapping(state, layerName);
+
+    // yield* runWhenSelectorChanged(
+    //   selector,
+    //   handleChangeOfNeedsLocalHdf5Mapping.bind(null, layerName),
+    // );
+  }
+}
+
+const isAgglomerate = (mapping: ActiveMappingInfo) => {
+  return mapping.mappingType === "HDF5";
+};
+
+function* maybeReloadData(
+  oldActiveMappingByLayer: Box<Record<string, ActiveMappingInfo>>,
+  action: { layerName: string },
+  forceReload: boolean = false,
+): Saga<void> {
+  // todop: respect needsLocalHdf5Mapping?
+  const { layerName } = action;
+  const oldMapping = getMappingInfo(oldActiveMappingByLayer.value, layerName);
+  const activeMappingByLayer = yield* select(
+    (state) => state.temporaryConfiguration.activeMappingByLayer,
+  );
+  const mapping = getMappingInfo(activeMappingByLayer, layerName);
+  const isAgglomerateMappingInvolved = isAgglomerate(oldMapping) || isAgglomerate(mapping);
+  const hasChanged = oldMapping !== mapping;
+  const shouldReload = isAgglomerateMappingInvolved && hasChanged;
+
+  if (forceReload || shouldReload) {
+    console.log("reload", forceReload, shouldReload);
+    yield* call([api.data, api.data.reloadBuckets], layerName);
+  } else {
+    console.log("don't reload");
+  }
+
+  // If an agglomerate mapping is being activated, the data reload is the last step
+  // of the mapping activation. For JSON mappings, the last step of the mapping activation
+  // is the texture creation in mappings.js
+  if (isAgglomerate(mapping) && mapping.mappingStatus === MappingStatusEnum.ACTIVATING) {
+    yield* put(setMappingEnabledAction(layerName, true));
+    message.destroy(MAPPING_MESSAGE_KEY);
+  }
+
+  oldActiveMappingByLayer.value = activeMappingByLayer;
 }
 
 function createBucketDataChangedChannel(dataCube: DataCube) {
   return eventChannel((emit) => {
     const bucketDataChangedHandler = () => {
-      console.log("emit BUCKET_DATA_CHANGED");
       emit("BUCKET_DATA_CHANGED");
     };
 
     const unbind = dataCube.emitter.on("bucketDataChanged", bucketDataChangedHandler);
     return unbind;
   }, buffers.sliding<string>(1));
+}
+
+function createNeedsLocalMappingChangedChannel(layerName: string) {
+  return eventChannel((emit) => {
+    const unbind = listenToStoreProperty(
+      (state) => getNeedsLocalHdf5Mapping(state, layerName),
+      (needsLocalHdf5Mapping) => emit(needsLocalHdf5Mapping),
+    );
+    return unbind;
+  }, buffers.sliding<boolean>(1));
 }
 
 function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
@@ -169,7 +272,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
       let isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
       if (!isBusy) {
         const { cancel } = yield* race({
-          updateHdf5: call(updateHdf5Mapping, layerName, layerInfo, mappingName, mappingType),
+          updateHdf5: call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName, mappingType),
           cancel: take(
             ((action: Action) =>
               action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
@@ -228,7 +331,10 @@ function* loadLayerMappings(layerName: string, updateInStore: boolean): Saga<[st
   return [jsonMappings, serverHdf5Mappings];
 }
 
-function* handleSetMapping(action: SetMappingAction): Saga<void> {
+function* handleSetMapping(
+  oldActiveMappingByLayer: Box<Record<string, ActiveMappingInfo>>,
+  action: SetMappingAction,
+): Saga<void> {
   const {
     layerName,
     mappingName,
@@ -308,7 +414,15 @@ function* handleSetMapping(action: SetMappingAction): Saga<void> {
   if (mappingType === "JSON") {
     yield* call(handleSetJsonMapping, layerName, layerInfo, mappingName, mappingType);
   } else if (mappingType === "HDF5") {
-    yield* call(handleSetHdf5Mapping, layerName, layerInfo, mappingName, mappingType);
+    yield* call(
+      handleSetHdf5Mapping,
+      layerName,
+      layerInfo,
+      mappingName,
+      mappingType,
+      action,
+      oldActiveMappingByLayer,
+    );
   }
 }
 
@@ -317,8 +431,14 @@ function* handleSetHdf5Mapping(
   layerInfo: APIDataLayer,
   mappingName: string,
   mappingType: MappingType,
+  action: SetMappingAction,
+  oldActiveMappingByLayer: Box<Record<string, ActiveMappingInfo>>,
 ): Saga<void> {
-  yield* call(updateHdf5Mapping, layerName, layerInfo, mappingName, mappingType);
+  if (yield* select((state) => getNeedsLocalHdf5Mapping(state, layerName))) {
+    yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName, mappingType);
+  } else {
+    yield* call(maybeReloadData, oldActiveMappingByLayer, action);
+  }
 }
 
 function getSetWithoutMapKeys<T>(valueSet: Iterable<T>, map: Map<T, T>): Set<T> {
@@ -328,7 +448,7 @@ function getSetIntersectedMapKeys<T>(valueSet: Iterable<T>, map: Map<T, T>): Set
   return new Set([...valueSet].filter((i) => map.has(i)));
 }
 
-function* updateHdf5Mapping(
+function* updateLocalHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
   mappingName: string,

@@ -778,3 +778,27 @@ export function getMeshInfoForSegment(
   if (meshesForAddCoords == null) return null;
   return meshesForAddCoords[segmentId];
 }
+
+export function needsLocalHdf5Mapping(state: OxalisState, layerName: string) {
+  const volumeTracing = getVolumeTracingByLayerName(state.tracing, layerName);
+  if (volumeTracing == null) {
+    return false;
+  }
+  return (
+    volumeTracing.mappingIsEditable ||
+    state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD
+  );
+}
+
+// function _needsLocalHdf5MappingByVolumeTracingId(state: OxalisState) {
+//   const dict: Record<string, boolean> = {};
+
+//   for (const volumeTracing of getVolumeTracings(state.tracing)) {
+//     dict[volumeTracing.tracingId] = needsLocalHdf5Mapping(state, volumeTracing.tracingId);
+//   }
+//   return dict;
+// }
+
+// export const needsLocalHdf5MappingByVolumeTracingId = reuseInstanceOnEquality(
+//   _needsLocalHdf5MappingByVolumeTracingId,
+// );

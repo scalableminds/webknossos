@@ -250,6 +250,7 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_MAPPING": {
+      console.log("received SET_MAPPING with", action.mapping);
       const { mappingName, mapping, mappingColors, mappingType, layerName } = action;
 
       // Editable mappings cannot be disabled or switched for now

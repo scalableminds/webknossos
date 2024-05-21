@@ -8,7 +8,10 @@ import {
   getResolutionInfo,
   getMappingInfo,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getVolumeTracingById,
+  needsLocalHdf5Mapping,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { parseMaybe } from "libs/utils";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
@@ -113,18 +116,14 @@ export async function requestWithFallback(
     "tracingId" in layerInfo && layerInfo.tracingId != null
       ? getVolumeTracingById(state.tracing, layerInfo.tracingId)
       : null;
-  const activeMapping = getMappingInfo(
-    state.temporaryConfiguration.activeMappingByLayer,
-    layerInfo.name,
-  );
-  // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL
-  // TODO: Change this back once the tracingstore sends the original segment IDs even if an agglomerate mapping is enabled
-  // Only when the mapping is editable, we can do the shortcut via the datastore.
+
+  // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL.
+  // We also use the data store, if a hdf5 mapping should be locally applied. This is only the
+  // case if the proofreading tool is active or the layer was already proofread. In that case,
+  // no changes can exist on the tracing store.
   const shouldUseDataStore =
-    maybeVolumeTracing == null ||
-    (activeMapping != null &&
-      activeMapping.mappingStatus !== MappingStatusEnum.DISABLED &&
-      activeMapping.mappingType === "HDF5");
+    maybeVolumeTracing == null || needsLocalHdf5Mapping(state, layerInfo.name);
+
   const requestUrl = shouldUseDataStore
     ? getDataStoreUrl(maybeVolumeTracing?.fallbackLayer)
     : getTracingStoreUrl();
@@ -179,15 +178,39 @@ export async function requestFromStore(
   const state = Store.getState();
   const isSegmentation = isSegmentationLayer(state.dataset, layerInfo.name);
   const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
-  // Mappings are applied in the frontend
-  const applyAgglomerates = null;
+
+  // Mappings can be applied in the frontend or on the server.
+  const applyAgglomeratesOnServer = (() => {
+    if (!isSegmentation) {
+      return null;
+    }
+    if (needsLocalHdf5Mapping(state, layerInfo.name)) {
+      return null;
+    }
+    const activeMapping = getMappingInfo(
+      state.temporaryConfiguration.activeMappingByLayer,
+      layerInfo.name,
+    );
+    return activeMapping != null && // Start to request mapped data during mapping activation phase already
+      activeMapping.mappingStatus !== MappingStatusEnum.DISABLED &&
+      activeMapping.mappingType === "HDF5"
+      ? activeMapping.mappingName
+      : null;
+  })();
+
   const resolutionInfo = getResolutionInfo(layerInfo.resolutions);
   const version =
     !isVolumeFallback && isSegmentation && maybeVolumeTracing != null
       ? maybeVolumeTracing.version
       : null;
   const bucketInfo = batch.map((zoomedAddress) =>
-    createRequestBucketInfo(zoomedAddress, resolutionInfo, fourBit, applyAgglomerates, version),
+    createRequestBucketInfo(
+      zoomedAddress,
+      resolutionInfo,
+      fourBit,
+      applyAgglomeratesOnServer,
+      version,
+    ),
   );
 
   try {

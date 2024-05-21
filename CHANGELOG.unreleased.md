@@ -15,6 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Minor improvements for the timetracking overview (faster data loading, styling). [#7789](https://github.com/scalableminds/webknossos/pull/7789)
 - Updated several backend dependencies for optimized stability and performance. [#7782](https://github.com/scalableminds/webknossos/pull/7782)
 - Voxelytics workflows can be searched by name and hash. [#7790](https://github.com/scalableminds/webknossos/pull/7790)
+- If a self-hosted WEBKNOSSOS instance has not been updated for six months or more, a closable banner proposes an upgrade to webknossos.org. [#7768](https://github.com/scalableminds/webknossos/pull/7768)
 
 ### Changed
 - Non-admin or -manager users can no longer start long-running jobs that create datasets. This includes annotation materialization and AI inferrals. [#7753](https://github.com/scalableminds/webknossos/pull/7753)
@@ -27,6 +28,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where no columns were shown in the time tracking overview. [#7803](https://github.com/scalableminds/webknossos/pull/7803)
 - Fixed a bug where ad-hoc meshes for coarse magnifications would have gaps. [#7799](https://github.com/scalableminds/webknossos/pull/7799)
 - Fixed that the context menu didn't open correctly in the 3D viewport when right-clicking a node. [#7809](https://github.com/scalableminds/webknossos/pull/7809)
+- Fixed that right-clicking a mesh in the 3D viewport did crash when the corresponding segmentation layer was not visible. [#7811](https://github.com/scalableminds/webknossos/pull/7811)
 
 ### Removed
 

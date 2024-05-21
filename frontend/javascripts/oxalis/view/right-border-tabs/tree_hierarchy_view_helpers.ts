@@ -10,6 +10,7 @@ const GroupTypeEnum = {
 };
 
 type TreeOrGroup = keyof typeof GroupTypeEnum;
+
 export type TreeNode = {
   name: string;
   id: number;
@@ -19,12 +20,13 @@ export type TreeNode = {
   containsTrees: boolean;
   timestamp: number;
   type: TreeOrGroup;
-  children: Array<TreeNode>;
+  children: TreeNode[];
 };
+
 export function makeBasicGroupObject(
   groupId: number,
   name: string,
-  children: Array<TreeGroup> = [],
+  children: TreeGroup[] = [],
 ): TreeGroup {
   return {
     groupId,
@@ -65,18 +67,18 @@ function makeTreeNodeFromGroup(group: TreeGroup, optionalProperties: Partial<Tre
   return makeTreeNode(group.groupId, group.name, TYPE_GROUP, optionalProperties);
 }
 
-export function removeTreesAndTransform(groupTree: Array<TreeNode>): Array<TreeGroup> {
+export function removeTreesAndTransform(groupTree: TreeNode[]): TreeGroup[] {
   // Remove all trees from the group hierarchy and transform groups to their basic form
   return _.filter(groupTree, (treeNode) => treeNode.type === TYPE_GROUP).map((group) =>
     makeBasicGroupObject(group.id, group.name, removeTreesAndTransform(group.children)),
   );
 }
 export function insertTreesAndTransform(
-  groups: Array<TreeGroup>,
-  groupToTreesMap: Record<number, Array<Tree>>,
+  groups: TreeGroup[],
+  groupToTreesMap: Record<number, Tree[]>,
   expandedGroupIds: Record<number, boolean>,
   sortBy: string,
-): Array<TreeNode> {
+): TreeNode[] {
   // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
   return groups.map((group) => {
     const { groupId } = group;
@@ -110,18 +112,18 @@ export function insertTreesAndTransform(
   });
 }
 export function callDeep(
-  groups: Array<TreeGroup>,
+  groups: TreeGroup[],
   groupId: number,
   callback: (
     group: TreeGroup,
     index: number,
-    treeGroups: Array<TreeGroup>,
+    treeGroups: TreeGroup[],
     parentGroupId: number | null | undefined,
   ) => void,
   parentGroupId: number | null | undefined = MISSING_GROUP_ID,
 ) {
   // Deeply traverse the group hierarchy and execute the callback function when the treeNode with id groupId is found
-  groups.forEach((group: TreeGroup, index: number, array: Array<TreeGroup>) => {
+  groups.forEach((group: TreeGroup, index: number, array: TreeGroup[]) => {
     if (group.groupId === groupId) {
       callback(group, index, array, parentGroupId);
     } else if (group.children) {
@@ -130,19 +132,19 @@ export function callDeep(
   });
 }
 export function callDeepWithChildren(
-  groups: Array<TreeGroup>,
+  groups: TreeGroup[],
   groupId: number | undefined,
   callback: (
     group: TreeGroup,
     index: number,
-    treeGroups: Array<TreeGroup>,
+    treeGroups: TreeGroup[],
     parentGroupId: number | null | undefined,
   ) => void,
   parentGroupId: number | null | undefined = MISSING_GROUP_ID,
   isWithinTargetGroup: boolean = false,
 ) {
   // Deeply traverse the group hierarchy and execute the callback function when the treeNode with id groupId is found
-  groups.forEach((group: TreeGroup, index: number, array: Array<TreeGroup>) => {
+  groups.forEach((group: TreeGroup, index: number, array: TreeGroup[]) => {
     const shouldVisit = isWithinTargetGroup || group.groupId === groupId;
 
     if (shouldVisit) {
@@ -155,7 +157,7 @@ export function callDeepWithChildren(
   });
 }
 
-export function findGroup(groups: Array<TreeGroup>, groupId: number): TreeGroup | null | undefined {
+export function findGroup(groups: TreeGroup[], groupId: number): TreeGroup | null | undefined {
   let foundGroup = null;
   callDeep(groups, groupId, (group, _index, _groups) => {
     foundGroup = group;
@@ -164,7 +166,7 @@ export function findGroup(groups: Array<TreeGroup>, groupId: number): TreeGroup 
 }
 
 export function findParentIdForGroupId(
-  groups: Array<TreeGroup>,
+  groups: TreeGroup[],
   groupId: number,
 ): number | undefined | null {
   let foundParentGroupId: number | undefined | null = null;
@@ -174,7 +176,7 @@ export function findParentIdForGroupId(
   return foundParentGroupId;
 }
 
-export function forEachTreeNode(groups: Array<TreeNode>, callback: (arg0: TreeNode) => void) {
+export function forEachTreeNode(groups: TreeNode[], callback: (arg0: TreeNode) => void) {
   for (const group of groups) {
     callback(group);
 
@@ -183,7 +185,7 @@ export function forEachTreeNode(groups: Array<TreeNode>, callback: (arg0: TreeNo
     }
   }
 }
-export function anySatisfyDeep(groups: Array<TreeNode>, testFunction: (arg0: TreeNode) => boolean) {
+export function anySatisfyDeep(groups: TreeNode[], testFunction: (arg0: TreeNode) => boolean) {
   for (const group of groups) {
     if (testFunction(group)) {
       return true;
@@ -198,11 +200,7 @@ export function anySatisfyDeep(groups: Array<TreeNode>, testFunction: (arg0: Tre
 
   return false;
 }
-export function findTreeNode(
-  groups: Array<TreeNode>,
-  id: number,
-  callback: (arg0: TreeNode) => any,
-) {
+export function findTreeNode(groups: TreeNode[], id: number, callback: (arg0: TreeNode) => any) {
   for (const group of groups) {
     if (group.id === id) {
       callback(group);
@@ -212,7 +210,7 @@ export function findTreeNode(
   }
 }
 
-export function createGroupToTreesMap(trees: TreeMap): Record<number, Array<Tree>> {
+export function createGroupToTreesMap(trees: TreeMap): Record<number, Tree[]> {
   return _.groupBy(trees, (tree) => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
 }
 
@@ -230,9 +228,9 @@ export function createGroupToSegmentsMap(segments: SegmentMap): Record<number, S
 }
 
 export function getGroupByIdWithSubgroups(
-  treeGroups: Array<TreeGroup>,
+  treeGroups: TreeGroup[],
   groupId: number | undefined,
-): Array<number> {
+): number[] {
   const groupWithSubgroups: number[] = [];
   callDeepWithChildren(treeGroups, groupId, (treeGroup) => {
     groupWithSubgroups.push(treeGroup.groupId);

@@ -1,5 +1,5 @@
 import { Row, Col, Card } from "antd";
-import Markdown from "react-markdown";
+import Markdown from "libs/markdown_adapter";
 import React from "react";
 import type { APIOrganization } from "types/api_flow_types";
 import { getOperatorData, getDefaultOrganization } from "admin/admin_rest_api";

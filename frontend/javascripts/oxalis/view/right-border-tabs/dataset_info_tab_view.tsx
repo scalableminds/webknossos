@@ -2,7 +2,7 @@ import type { Dispatch } from "redux";
 import { Tooltip, Typography, Tag } from "antd";
 import { SettingOutlined, InfoCircleOutlined, EditOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
-import Markdown from "react-markdown";
+import Markdown from "libs/markdown_adapter";
 import React, { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";

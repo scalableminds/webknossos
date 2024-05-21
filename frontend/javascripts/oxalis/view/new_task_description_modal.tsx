@@ -1,5 +1,5 @@
 import { Modal, Button } from "antd";
-import Markdown from "react-markdown";
+import Markdown from "libs/markdown_adapter";
 import * as React from "react";
 type Props = {
   description: string;

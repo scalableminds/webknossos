@@ -1,7 +1,7 @@
 import React from "react";
 import { JSONTree } from "react-json-tree";
 import { Progress, Tabs, TabsProps, Tooltip } from "antd";
-import Markdown from "react-markdown";
+import Markdown from "libs/markdown_adapter";
 import {
   VoxelyticsArtifactConfig,
   VoxelyticsRunState,

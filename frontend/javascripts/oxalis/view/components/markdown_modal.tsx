@@ -1,5 +1,5 @@
 import { Alert, Modal, Button, Row, Col, Input } from "antd";
-import Markdown from "react-markdown";
+import Markdown from "libs/markdown_adapter";
 import * as React from "react";
 
 function getFirstLine(comment: string) {

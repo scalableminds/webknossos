@@ -1,5 +1,5 @@
 import { Popover, Tooltip } from "antd";
-import Markdown from "react-markdown";
+import Markdown from "libs/markdown_adapter";
 import * as React from "react";
 import type { EditableTextLabelProp } from "oxalis/view/components/editable_text_label";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";

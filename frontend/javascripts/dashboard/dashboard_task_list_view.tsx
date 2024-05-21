@@ -12,7 +12,7 @@ import {
 import { Link } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
 import { connect } from "react-redux";
-import Markdown from "react-markdown";
+import Markdown from "libs/markdown_adapter";
 import * as React from "react";
 
 import classNames from "classnames";

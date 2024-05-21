@@ -1,6 +1,6 @@
 import { Card, Button, Tooltip } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
-import Markdown from "react-markdown";
+import Markdown from "libs/markdown_adapter";
 import React, { useState } from "react";
 import classNames from "classnames";
 import { Link } from "react-router-dom";

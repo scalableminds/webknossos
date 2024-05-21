@@ -1,12 +1,10 @@
 package controllers
 
 import play.silhouette.api.Silhouette
-import play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceLike}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import models.dataset.DatasetService
 import models.organization.OrganizationDAO
@@ -334,18 +332,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     List(skeletonParameters, volumeParameters).flatten
   }
 
-  private def insertVisibilityInJsObject(jsObject: JsObject) = {
-    val isPublic = (jsObject \ "isPublic").as[Boolean]
-    val newJson = jsObject + ("visibility" -> Json.toJson(if (isPublic) "Public" else "Internal"))
-    newJson - "isPublic"
-  }
-
-  private def replaceVisibility(jsObject: JsObject) = {
-    val visibilityString = (jsObject \ "visibility").as[String]
-    val newJson = jsObject + ("isPublic" -> Json.toJson(visibilityString == "Public"))
-    Fox.successful(newJson - "visibility")
-  }
-
   private def replaceAnnotationLayers(jsObject: JsObject) = {
     val annotationLayers = (jsObject \ "annotationLayers").as[List[AnnotationLayer]]
     val skeletonTracingId = annotationLayers.find(_.typ == AnnotationLayerType.Skeleton).map(_.tracingId)
@@ -371,10 +357,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
         } yield newValue
     }
   }
-
-  private def replaceInResult(replacement1: JsObject => Fox[JsObject], replacement2: JsObject => Fox[JsObject])(
-      result: Result): Fox[Result] =
-    replaceInResult(Fox.chainFunctions(List(replacement1, replacement2)))(result)
 
   private def replaceInResult(replacement: JsObject => Fox[JsObject])(result: Result): Fox[Result] =
     if (result.header.status == 200) {

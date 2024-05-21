@@ -4,7 +4,6 @@ import { useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
   APIOrganization,
-  VoxelyticsRunInfo,
   VoxelyticsRunState,
   VoxelyticsTaskConfig,
   VoxelyticsTaskConfigWithHierarchy,
@@ -140,12 +139,11 @@ function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport
     },
     dag,
     runs: report.runs.map(
-      (run) =>
-        ({
-          ...run,
-          beginTime: run.beginTime != null ? new Date(run.beginTime) : null,
-          endTime: run.endTime != null ? new Date(run.endTime) : null,
-        }) as VoxelyticsRunInfo,
+      (run) => ({
+        ...run,
+        beginTime: run.beginTime != null ? new Date(run.beginTime) : null,
+        endTime: run.endTime != null ? new Date(run.endTime) : null,
+      }), // I want to remove the cast but there is another typing problem
     ),
     tasks,
   };

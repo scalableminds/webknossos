@@ -847,14 +847,6 @@ export enum VoxelyticsRunState {
   STALE = "STALE",
 }
 
-export enum VoxelyticsBasicRunState {
-  RUNNING = "RUNNING",
-  COMPLETE = "COMPLETE",
-  FAILED = "FAILED",
-  CANCELLED = "CANCELLED",
-  STALE = "STALE",
-}
-
 type DistributionConfig = {
   strategy: string;
   resources?: Record<string, string>;
@@ -890,27 +882,15 @@ export type VoxelyticsArtifactConfig = {
   };
 };
 
-export type VoxelyticsRunInfo = (
-  | {
-      state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
-      endTime: null;
-    }
-  | {
-      state:
-        | VoxelyticsRunState.COMPLETE
-        | VoxelyticsRunState.FAILED
-        | VoxelyticsRunState.CANCELLED
-        | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
-    }
-) & {
+export type VoxelyticsRunInfo = {
   id: string;
   name: string;
   username: string;
   hostname: string;
   voxelyticsVersion: string;
+  state: VoxelyticsRunState;
+  beginTime: Date | null;
+  endTime: Date | null;
 };
 
 export type VoxelyticsWorkflowDagEdge = { source: string; target: string; label: string };

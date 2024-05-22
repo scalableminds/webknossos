@@ -1653,7 +1653,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     );
   }
   if (segments != null && maybeClickedMeshId != null) {
-    const segmentName = segments.get(maybeClickedMeshId)?.name;
+    const segmentName = segments.getNullable(maybeClickedMeshId)?.name;
     if (segmentName != null) {
       const maxSegmentNameLength = 18;
       infoRows.push(

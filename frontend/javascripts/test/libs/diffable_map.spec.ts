@@ -10,7 +10,7 @@ test("DiffableMap should be empty", (t) => {
   const emptyMap = new DiffableMap<number, number>();
   t.is(emptyMap.size(), 0);
   t.false(emptyMap.has(1));
-  t.throws(() => emptyMap.get(1));
+  t.throws(() => emptyMap.getOrThrow(1));
 });
 test("DiffableMap should behave immutable on set/delete operations", (t) => {
   const emptyMap = new DiffableMap();
@@ -19,12 +19,12 @@ test("DiffableMap should behave immutable on set/delete operations", (t) => {
   t.false(emptyMap.has(1));
   t.is(map1.size(), 1);
   t.true(map1.has(1));
-  t.is(map1.get(1), 1);
+  t.is(map1.getOrThrow(1), 1);
   const map2 = map1.set(1, 2);
-  t.is(map1.get(1), 1);
-  t.is(map2.get(1), 2);
+  t.is(map1.getOrThrow(1), 1);
+  t.is(map2.getOrThrow(1), 2);
   const map3 = map2.delete(1);
-  t.is(map2.get(1), 2);
+  t.is(map2.getOrThrow(1), 2);
   t.false(map3.has(1));
 });
 test("DiffableMap should be clonable and mutable on clone/mutableSet", (t) => {
@@ -32,9 +32,9 @@ test("DiffableMap should be clonable and mutable on clone/mutableSet", (t) => {
   const map2 = map1.clone();
   map2.mutableSet(1, 2);
   map2.mutableSet(2, 2);
-  t.is(map2.get(1), 2);
-  t.is(map2.get(2), 2);
-  t.is(map1.get(1), 1);
+  t.is(map2.getOrThrow(1), 2);
+  t.is(map2.getOrThrow(2), 2);
+  t.is(map1.getOrThrow(1), 1);
   t.false(map1.has(2));
   // Id should be the same since the internal structures look the same
   t.is(map1.getId(), map2.getId());
@@ -46,8 +46,8 @@ test("DiffableMap should be instantiable with Array<[key, value]>", (t) => {
     [1, 2],
     [3, 4],
   ]);
-  t.is(map.get(1), 2);
-  t.is(map.get(3), 4);
+  t.is(map.getOrThrow(1), 2);
+  t.is(map.getOrThrow(3), 4);
   t.is(map.size(), 2);
 });
 test("DiffableMap should work properly when it handles more items than the batch size", (t) => {
@@ -61,7 +61,7 @@ test("DiffableMap should work properly when it handles more items than the batch
 
   // Check for [i, 2*i] values
   for (let i = 0; i < 100; i++) {
-    t.is(currentMap.get(i), 2 * i);
+    t.is(currentMap.getOrThrow(i), 2 * i);
   }
 
   t.is(emptyMap.size(), 0);
@@ -78,7 +78,7 @@ test("DiffableMap should work properly when it handles more items than the batch
     if (i % 10 === 0) {
       t.false(currentMap.has(i));
     } else {
-      t.is(currentMap.get(i), 2 * i);
+      t.is(currentMap.getOrThrow(i), 2 * i);
     }
   }
 });

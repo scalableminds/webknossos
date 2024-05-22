@@ -96,6 +96,8 @@ source "$HOME/.sdkman/bin/sdkman-init.sh"
 sdk install scala 2.13.12
 sdk install sbt
 sdk install java 21.0.2-tem
+# Source sdkman-init.sh again to load environment variables like JAVA_HOME
+source "$HOME/.sdkman/bin/sdkman-init.sh"
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"

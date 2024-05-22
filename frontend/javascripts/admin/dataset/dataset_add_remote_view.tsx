@@ -204,8 +204,8 @@ function DatasetAddRemoteView(props: Props) {
     await form.validateFields();
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
 
-    const datastoreToUse = props.datastores.find(
-      (datastore) => datastore.allowsUpload && form.getFieldValue("datastoreUrl") === datastore.url,
+    const datastoreToUse = uploadableDatastores.find(
+      (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
     );
     if (!datastoreToUse) {
       Toast.error("Could not find datastore that allows uploading.");
@@ -244,12 +244,7 @@ function DatasetAddRemoteView(props: Props) {
     <div style={{ padding: 5 }}>
       <CardContainer title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset">
         <Form form={form} layout="vertical">
-          <DatastoreFormItem
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ form: FormInstance<any> | null; datastores... Remove this comment to see the full error message
-            form={form}
-            datastores={uploadableDatastores}
-            hidden={hasOnlyOneDatastoreOrNone}
-          />
+          <DatastoreFormItem datastores={uploadableDatastores} hidden={hasOnlyOneDatastoreOrNone} />
           <Modal
             title="Add Layer"
             width={800}
@@ -259,7 +254,7 @@ function DatasetAddRemoteView(props: Props) {
           >
             <AddRemoteLayer
               form={form}
-              datastores={uploadableDatastores}
+              uploadableDatastores={uploadableDatastores}
               setDatasourceConfigStr={setDatasourceConfigStr}
               onSuccess={() => setShowAddLayerModal(false)}
               dataSourceEditMode={dataSourceEditMode}
@@ -269,7 +264,7 @@ function DatasetAddRemoteView(props: Props) {
           {hideDatasetUI && (
             <AddRemoteLayer
               form={form}
-              datastores={uploadableDatastores}
+              uploadableDatastores={uploadableDatastores}
               setDatasourceConfigStr={setDatasourceConfigStr}
               dataSourceEditMode={dataSourceEditMode}
             />
@@ -369,13 +364,13 @@ function DatasetAddRemoteView(props: Props) {
 
 function AddRemoteLayer({
   form,
-  datastores,
+  uploadableDatastores,
   setDatasourceConfigStr,
   onSuccess,
   dataSourceEditMode,
 }: {
   form: FormInstance;
-  datastores: APIDataStore[];
+  uploadableDatastores: APIDataStore[];
   setDatasourceConfigStr: (dataSourceJson: string) => void;
   onSuccess?: () => void;
   dataSourceEditMode: "simple" | "advanced";
@@ -418,8 +413,8 @@ function AddRemoteLayer({
     // Sync simple with advanced and get newest datasourceJson
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
-    const datastoreToUse = datastores.find(
-      (datastore) => datastore.allowsUpload && form.getFieldValue("datastoreUrl") === datastore.url,
+    const datastoreToUse = uploadableDatastores.find(
+      (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
     );
     if (!datastoreToUse) {
       Toast.error("Could not find datastore that allows uploading.");

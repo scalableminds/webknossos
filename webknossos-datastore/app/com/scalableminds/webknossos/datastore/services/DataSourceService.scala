@@ -9,7 +9,13 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
-import com.scalableminds.webknossos.datastore.dataformats.layers.{N5Layer, PrecomputedLayer, Zarr3Layer, ZarrLayer}
+import com.scalableminds.webknossos.datastore.dataformats.layers.{
+  N5Layer,
+  PrecomputedLayer,
+  WKWLayer,
+  Zarr3Layer,
+  ZarrLayer
+}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -248,6 +254,7 @@ class DataSourceService @Inject()(
           case layer: PrecomputedLayer => Some(layer.mags)
           case layer: ZarrLayer        => Some(layer.mags)
           case layer: Zarr3Layer       => Some(layer.mags)
+          case layer: WKWLayer         => Some(layer.mags)
           case _                       => None
         }
         removedEntriesCount = magsOpt match {

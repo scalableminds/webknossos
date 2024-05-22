@@ -157,7 +157,7 @@
     "deep-freeze": "0.0.1",
     "dice-coefficient": "^2.1.0",
     "distance-transform": "^1.0.2",
-    "esbuild-loader": "^4.0.1",
+    "esbuild-loader": "^4.1.0",
     "file-saver": "^2.0.1",
     "flexlayout-react": "^0.5.5",
     "hammerjs": "^2.0.8",

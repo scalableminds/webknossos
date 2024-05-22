@@ -4,7 +4,6 @@ module.exports = function (env = {}) {
   const { EsbuildPlugin } = require("esbuild-loader");
   const path = require("path");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-  const TerserPlugin = require("terser-webpack-plugin");
   const browserslistToEsbuild = require("browserslist-to-esbuild");
   const CopyPlugin = require("copy-webpack-plugin");
 
@@ -46,20 +45,6 @@ module.exports = function (env = {}) {
       ],
     }),
   ];
-
-  if (env.production) {
-    plugins.push(
-      new TerserPlugin({
-        terserOptions: {
-          // compress is bugged, see https://github.com/mishoo/UglifyJS2/issues/2842
-          // even inline: 1 causes bugs, see https://github.com/scalableminds/webknossos/pull/2713
-          // Update 20.01.2022: Doesn't seem to be bugged any longer, but the size gains (~5%) are not
-          // worth the increased build time (~60%).
-          compress: false,
-        },
-      }),
-    );
-  }
 
   const cssLoaderUrlFilter = {
     // Don't try to handle urls that already point to the assets directory

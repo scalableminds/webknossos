@@ -67,6 +67,7 @@ import { Store } from "oxalis/singletons";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
 import { EmptyObject } from "types/globals";
+import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 
 const { Content } = Layout;
 
@@ -305,6 +306,11 @@ class ReactRouter extends React.Component<Props> {
                 path="/users"
                 component={UserListView}
                 requiresAdminOrManagerRole
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/import"
+                component={DatasetURLImport}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}

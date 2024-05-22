@@ -52,6 +52,7 @@ type OwnProps = {
     needsConversion?: boolean | null | undefined,
   ) => Promise<void>;
   datastores: APIDataStore[];
+  defaultDatasetUrl?: string | null;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -172,7 +173,7 @@ export function GoogleAuthFormItem({
 }
 
 function DatasetAddRemoteView(props: Props) {
-  const { activeUser, onAdded, datastores } = props;
+  const { activeUser, onAdded, datastores, defaultDatasetUrl } = props;
 
   const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
   const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
@@ -239,6 +240,7 @@ function DatasetAddRemoteView(props: Props) {
   }
 
   const hideDatasetUI = maybeDataLayers == null || maybeDataLayers.length === 0;
+  console.log("proops", defaultDatasetUrl)
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
@@ -267,6 +269,7 @@ function DatasetAddRemoteView(props: Props) {
               uploadableDatastores={uploadableDatastores}
               setDatasourceConfigStr={setDatasourceConfigStr}
               dataSourceEditMode={dataSourceEditMode}
+              defaultUri={defaultDatasetUrl}
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -368,21 +371,31 @@ function AddRemoteLayer({
   setDatasourceConfigStr,
   onSuccess,
   dataSourceEditMode,
+  defaultUri,
 }: {
   form: FormInstance;
   uploadableDatastores: APIDataStore[];
   setDatasourceConfigStr: (dataSourceJson: string) => void;
   onSuccess?: () => void;
   dataSourceEditMode: "simple" | "advanced";
+  defaultUri?: string | null | undefined
 }) {
   const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
   const datasourceUrl: string | null = Form.useWatch("url", form);
+  console.log("useWatch", datasourceUrl)
   const [exploreLog, setExploreLog] = useState<string | null>(null);
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
   const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https" | "gs">("https");
   const [fileList, setFileList] = useState<FileList>([]);
+
+  useEffect(() => {
+    form.setFieldValue("url", defaultUri);
+    if (datasourceUrl != null) {
+      handleExplore();
+    }
+  }, [defaultUri, form.setFieldValue, datasourceUrl != null])
 
   const handleChange = (info: UploadChangeParam<UploadFile<any>>) => {
     // Restrict the upload list to the latest file
@@ -490,6 +503,7 @@ function AddRemoteLayer({
       onSuccess();
     }
   }
+  console.log("l. 497", defaultUri)
 
   return (
     <>

@@ -53,7 +53,7 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
       duration = Instant.since(before)
       _ = if (duration > (1 second)) {
         logger.warn(
-          s"Opening ${dataLayer.dataFormat}-DatasetArray for ${readInstruction.layerSummary} was slow ($duration)"
+          s"Opening ${dataLayer.dataFormat} DatasetArray for ${readInstruction.layerSummary} was slow ($duration)"
         )
       }
     } yield result

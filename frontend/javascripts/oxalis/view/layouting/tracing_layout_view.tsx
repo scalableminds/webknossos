@@ -265,7 +265,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       files: Array<File>,
       createGroupForEachFile: boolean,
     ): Promise<void> => {
-      console.log(this.props.organization);
       const response = await Request.sendMultipartFormReceiveJSON("/api/annotations/upload", {
         data: {
           nmlFile: files,

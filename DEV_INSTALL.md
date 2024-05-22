@@ -80,6 +80,7 @@ sudo apt install -y curl ca-certificates wget
 # Install nvm, node 18
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
 source ~/.bashrc
+nvm install 18
 nvm use 18
 
 # Adding repositories for yarn

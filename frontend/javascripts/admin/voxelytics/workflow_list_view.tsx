@@ -200,6 +200,13 @@ export default function WorkflowListView() {
             title: "User",
             key: "userName",
             render: (run: RenderRunInfo) => run.userDisplayName,
+            filters: uniqueify(renderRuns.map((run) => run.userDisplayName)).map((username) => ({
+              text: username || "",
+              value: username || "",
+            })),
+            onFilter: (value: string | number | boolean, run: RenderRunInfo) =>
+              run.userDisplayName?.startsWith(String(value)) || false,
+            filterSearch: true,
           },
           {
             title: "Host",
@@ -210,7 +217,7 @@ export default function WorkflowListView() {
               value: hostname,
             })),
             onFilter: (value: string | number | boolean, run: RenderRunInfo) =>
-              run.hostusername.startsWith(String(value)),
+              run.hostname.startsWith(String(value)),
             filterSearch: true,
           },
           {

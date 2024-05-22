@@ -88,7 +88,7 @@ curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 sudo apt update
-sudo apt install -y git postgresql postgresql-client unzip zip yarn redis-server build-essential libblosc1 libbrotli1 libdraco-dev
+sudo apt install -y git postgresql postgresql-client unzip zip yarn redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
 
  # Install sdkman, java, scala and sbt
 curl -s "https://get.sdkman.io" | bash

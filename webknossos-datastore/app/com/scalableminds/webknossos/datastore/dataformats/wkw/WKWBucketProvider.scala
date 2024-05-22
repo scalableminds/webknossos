@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayHandle, MagLocator}
+import com.scalableminds.webknossos.datastore.dataformats.{DatasetArrayBucketProvider, MagLocator}
+import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.wkw.WKWArray
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -16,13 +17,13 @@ import scala.concurrent.ExecutionContext
 
 class WKWBucketProvider(layer: WKWLayer,
                         dataSourceId: DataSourceId,
-                        val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                        override val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                         sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
-    extends BucketProvider
+    extends DatasetArrayBucketProvider(layer, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
     with LazyLogging {
 
   override def openDatasetArrayHandle(readInstruction: DataReadInstruction)(
-      implicit ec: ExecutionContext): Fox[DatasetArrayHandle] = {
+      implicit ec: ExecutionContext): Fox[DatasetArray] = {
     val magLocatorOpt: Option[MagLocator] =
       layer.wkwResolutions.find(_.resolution == readInstruction.bucket.mag).map(wkwResolutionToMagLocator)
 
@@ -37,10 +38,8 @@ class WKWBucketProvider(layer: WKWLayer,
                                                                                readInstruction.dataLayer.name,
                                                                                magLocator)
               chunkContentsCache <- sharedChunkContentsCache.toFox
-              cubeHandle <- WKWArray
-                .open(magPath, dataSourceId, layer.name, chunkContentsCache)
-                .map(new DatasetArrayHandle(_))
-            } yield cubeHandle
+              datasetArray <- WKWArray.open(magPath, dataSourceId, layer.name, chunkContentsCache)
+            } yield datasetArray
           case None => Empty
         }
     }

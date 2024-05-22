@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
+import com.scalableminds.webknossos.datastore.dataformats.{AbstractBucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
@@ -21,10 +21,12 @@ trait WKWLayer extends DataLayer {
 
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,
-                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
+                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): AbstractBucketProvider =
     new WKWBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
   def wkwResolutions: List[WKWResolution]
+
+  def magLocators: List[MagLocator] = wkwResolutions.map(wkwResolution => MagLocator(wkwResolution.resolution))
 
   def resolutions: List[Vec3Int] = wkwResolutions.map(_.resolution)
 
@@ -43,7 +45,7 @@ case class WKWDataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     additionalAxes: Option[Seq[AdditionalAxis]] = None
-) extends WKWLayer
+) extends WKWLayer {}
 
 object WKWDataLayer {
   implicit val jsonFormat: OFormat[WKWDataLayer] = Json.format[WKWDataLayer]

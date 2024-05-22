@@ -18,7 +18,7 @@ trait N5Layer extends DataLayerWithMagLocators {
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
     new N5BucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
-  def resolutions: List[Vec3Int] = mags.map(_.mag)
+  def resolutions: List[Vec3Int] = magLocators.map(_.mag)
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
 
@@ -26,16 +26,16 @@ trait N5Layer extends DataLayerWithMagLocators {
 }
 
 case class N5DataLayer(
-    name: String,
-    category: Category.Value,
-    boundingBox: BoundingBox,
-    elementClass: ElementClass.Value,
-    mags: List[MagLocator],
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    override val numChannels: Option[Int] = Some(1),
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
+                        name: String,
+                        category: Category.Value,
+                        boundingBox: BoundingBox,
+                        elementClass: ElementClass.Value,
+                        magLocators: List[MagLocator],
+                        defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+                        adminViewConfiguration: Option[LayerViewConfiguration] = None,
+                        coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+                        override val numChannels: Option[Int] = Some(1),
+                        additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends N5Layer
 
 object N5DataLayer {
@@ -43,17 +43,17 @@ object N5DataLayer {
 }
 
 case class N5SegmentationLayer(
-    name: String,
-    boundingBox: BoundingBox,
-    elementClass: ElementClass.Value,
-    mags: List[MagLocator],
-    largestSegmentId: Option[Long],
-    mappings: Option[Set[String]] = None,
-    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-    adminViewConfiguration: Option[LayerViewConfiguration] = None,
-    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-    override val numChannels: Option[Int] = Some(1),
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
+                                name: String,
+                                boundingBox: BoundingBox,
+                                elementClass: ElementClass.Value,
+                                magLocators: List[MagLocator],
+                                largestSegmentId: Option[Long],
+                                mappings: Option[Set[String]] = None,
+                                defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+                                adminViewConfiguration: Option[LayerViewConfiguration] = None,
+                                coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+                                override val numChannels: Option[Int] = Some(1),
+                                additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends SegmentationLayer
     with N5Layer
 

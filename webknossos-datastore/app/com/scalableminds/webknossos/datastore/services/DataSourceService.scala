@@ -247,10 +247,10 @@ class DataSourceService @Inject()(
         dataLayerOpt <- dataLayers
         dataLayer <- dataLayerOpt
         magsOpt = dataLayer match {
-          case layer: N5Layer          => Some(layer.mags)
-          case layer: PrecomputedLayer => Some(layer.mags)
-          case layer: ZarrLayer        => Some(layer.mags)
-          case layer: Zarr3Layer       => Some(layer.mags)
+          case layer: N5Layer          => Some(layer.magLocators)
+          case layer: PrecomputedLayer => Some(layer.magLocators)
+          case layer: ZarrLayer        => Some(layer.magLocators)
+          case layer: Zarr3Layer       => Some(layer.magLocators)
           case _                       => None
         }
         removedEntriesCount = magsOpt match {

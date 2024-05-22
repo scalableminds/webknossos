@@ -4,7 +4,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
+import com.scalableminds.webknossos.datastore.dataformats.{AbstractBucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -19,16 +19,15 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.storage.{DataCubeCache, RemoteSourceDescriptorService}
+import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 
 import scala.concurrent.ExecutionContext
 
-class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
+class EditableMappingBucketProvider(layer: EditableMappingLayer)
+    extends AbstractBucketProvider
+    with ProtoGeometryImplicits {
 
-  override def remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService] = None
-
-  override def load(readInstruction: DataReadInstruction, cache: DataCubeCache)(
-      implicit ec: ExecutionContext): Fox[Array[Byte]] = {
+  override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket
     for {
       editableMappingId <- Fox.successful(layer.name)
@@ -79,6 +78,8 @@ case class EditableMappingLayer(name: String,
                                 tracingId: String,
                                 editableMappingService: EditableMappingService)
     extends SegmentationLayer {
+  override val magLocators: List[MagLocator] = List.empty
+
   override def dataFormat: DataFormat.Value = DataFormat.wkw
 
   override def coordinateTransformations: Option[List[CoordinateTransformation]] = None
@@ -87,7 +88,7 @@ case class EditableMappingLayer(name: String,
 
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,
-                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
+                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): AbstractBucketProvider =
     new EditableMappingBucketProvider(layer = this)
 
   override def bucketProviderCacheKey: String = s"$name-token=$token"

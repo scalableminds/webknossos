@@ -2,7 +2,8 @@ package com.scalableminds.webknossos.datastore.dataformats.zarr
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayHandle, MagLocator}
+import com.scalableminds.webknossos.datastore.dataformats.{DatasetArrayBucketProvider, MagLocator}
+import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
@@ -16,15 +17,15 @@ import scala.concurrent.ExecutionContext
 
 class ZarrBucketProvider(layer: ZarrLayer,
                          dataSourceId: DataSourceId,
-                         val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                         override val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                          sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
-    extends BucketProvider
+    extends DatasetArrayBucketProvider(layer, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
     with LazyLogging {
 
   override def openDatasetArrayHandle(readInstruction: DataReadInstruction)(
-      implicit ec: ExecutionContext): Fox[DatasetArrayHandle] = {
+      implicit ec: ExecutionContext): Fox[DatasetArray] = {
     val magLocatorOpt: Option[MagLocator] =
-      layer.mags.find(_.mag == readInstruction.bucket.mag)
+      layer.magLocators.find(_.mag == readInstruction.bucket.mag)
 
     magLocatorOpt match {
       case None => Fox.empty
@@ -37,15 +38,13 @@ class ZarrBucketProvider(layer: ZarrLayer,
                                                                                readInstruction.dataLayer.name,
                                                                                magLocator)
               chunkContentsCache <- sharedChunkContentsCache.toFox
-              cubeHandle <- ZarrArray
-                .open(magPath,
-                      dataSourceId,
-                      layer.name,
-                      magLocator.axisOrder,
-                      magLocator.channelIndex,
-                      layer.additionalAxes,
-                      chunkContentsCache)
-                .map(new DatasetArrayHandle(_))
+              cubeHandle <- ZarrArray.open(magPath,
+                                           dataSourceId,
+                                           layer.name,
+                                           magLocator.axisOrder,
+                                           magLocator.channelIndex,
+                                           layer.additionalAxes,
+                                           chunkContentsCache)
             } yield cubeHandle
           case None => Empty
         }

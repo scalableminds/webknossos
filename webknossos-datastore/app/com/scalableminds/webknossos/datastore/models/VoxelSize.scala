@@ -8,6 +8,14 @@ import play.api.libs.json.{Format, JsResult, JsValue, Json}
 case class VoxelSize(factor: Vec3Double, unit: LengthUnit) {
   def toNanometer: Vec3Double =
     factor * LengthUnit.toNanometer(unit)
+
+  def *(multiplier: Vec3Double): VoxelSize = VoxelSize(factor * multiplier, unit)
+
+  def /(other: VoxelSize): Vec3Double =
+    if (unit == other.unit)
+      factor / other.factor
+    else
+      this.toNanometer / other.toNanometer
 }
 
 object VoxelSize {

@@ -1,13 +1,10 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr;
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.models
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
+import net.liftweb.common.{Box, Failure, Full}
 import play.api.libs.json.{Json, OFormat}
-
-import scala.concurrent.ExecutionContext
 
 case class NgffCoordinateTransformation(`type`: String = "scale", scale: Option[List[Double]])
 
@@ -29,47 +26,15 @@ object NgffGroupHeader {
 
 case class NgffAxis(name: String, `type`: String, unit: Option[String] = None) {
 
-  def lengthUnit(implicit ec: ExecutionContext): Fox[models.LengthUnit.Value] = unit match {
-    case Some(someUnit) => LengthUnit.fromString(someUnit).toFox
-    case None           => Fox.successful(VoxelSize.DEFAULT_UNIT)
-  }
-
-  def spaceUnitToNmFactor(implicit ec: ExecutionContext): Fox[Double] =
+  def lengthUnit: Box[models.LengthUnit.Value] =
     if (`type` != "space")
-      Fox.failure(s"unit-to-nanometer factor requested for non-space axis ($name, type=${`type`})")
-    else
-      unit.map(_.toLowerCase) match {
-        case None               => Fox.successful(1.0)
-        case Some("")           => Fox.successful(1.0)
-        case Some("yoctometer") => Fox.successful(1e-15)
-        case Some("zeptometer") => Fox.successful(1e-12)
-        case Some("attometer")  => Fox.successful(1e-9)
-        case Some("femtometer") => Fox.successful(1e-6)
-        case Some("picometer")  => Fox.successful(1e-3)
-        case Some("nanometer")  => Fox.successful(1.0)
-        case Some("micrometer") => Fox.successful(1e3)
-        case Some("millimeter") => Fox.successful(1e6)
-        case Some("centimeter") => Fox.successful(1e7)
-        case Some("decimeter")  => Fox.successful(1e8)
-        case Some("meter")      => Fox.successful(1e9)
-        case Some("hectometer") => Fox.successful(1e11)
-        case Some("kilometer")  => Fox.successful(1e12)
-        case Some("megameter")  => Fox.successful(1e15)
-        case Some("gigameter")  => Fox.successful(1e18)
-        case Some("terameter")  => Fox.successful(1e21)
-        case Some("petameter")  => Fox.successful(1e24)
-        case Some("exameter")   => Fox.successful(1e27)
-        case Some("zettameter") => Fox.successful(1e30)
-        case Some("yottameter") => Fox.successful(1e33)
-        case Some("angstrom")   => Fox.successful(0.1)
-        case Some("inch")       => Fox.successful(25400000.0)
-        case Some("foot")       => Fox.successful(304800000.0)
-        case Some("yard")       => Fox.successful(914400000.0)
-        case Some("mile")       => Fox.successful(1609344000000.0)
-        case Some("parsec")     => Fox.successful(3.085677581e25)
-        case Some(unknownUnit)  => Fox.failure(s"Unknown space axis unit: $unknownUnit")
+      Failure(f"Could not convert NGFF unit $name of type ${`type`} to LengthUnit")
+    else {
+      unit match {
+        case None | Some("") => Full(VoxelSize.DEFAULT_UNIT)
+        case Some(someUnit)  => LengthUnit.fromString(someUnit)
       }
-
+    }
 }
 
 object NgffAxis {

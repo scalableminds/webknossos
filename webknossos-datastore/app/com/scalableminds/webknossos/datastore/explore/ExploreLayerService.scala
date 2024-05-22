@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
-import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader
@@ -22,16 +22,11 @@ class ExploreLayerService extends FoxImplicits {
                               preferredVoxelSize: Option[VoxelSize])(
       implicit ec: ExecutionContext): Fox[(List[DataLayerWithMagLocators], VoxelSize)] =
     for {
-      rescaledLayersAndVoxelSize <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes,
-                                                                   preferredVoxelSize.map(_.factor) // TODO unit
-      ) ?~> "Could not extract common voxel size from layers"
-      rescaledLayers = rescaledLayersAndVoxelSize._1
-      voxelSize = rescaledLayersAndVoxelSize._2
+      (rescaledLayers, voxelSize) <- rescaleLayersByCommonVoxelSize(layersWithVoxelSizes, preferredVoxelSize) ?~> "Could not extract common voxel size from layers"
       renamedLayers = makeLayerNamesUnique(rescaledLayers)
-      layersWithCoordinateTransformations = addCoordinateTransformationsToLayers(
-        renamedLayers,
-        preferredVoxelSize.map(_.factor), // TODO unit
-        voxelSize.factor) // TODO unit
+      layersWithCoordinateTransformations = addCoordinateTransformationsToLayers(renamedLayers,
+                                                                                 preferredVoxelSize,
+                                                                                 voxelSize)
     } yield (layersWithCoordinateTransformations, voxelSize)
 
   def makeLayerNamesUnique(layers: List[DataLayerWithMagLocators]): List[DataLayerWithMagLocators] = {
@@ -52,8 +47,8 @@ class ExploreLayerService extends FoxImplicits {
   }
 
   private def addCoordinateTransformationsToLayers(layers: List[DataLayerWithMagLocators],
-                                                   preferredVoxelSize: Option[Vec3Double],
-                                                   voxelSize: Vec3Double): List[DataLayerWithMagLocators] =
+                                                   preferredVoxelSize: Option[VoxelSize],
+                                                   voxelSize: VoxelSize): List[DataLayerWithMagLocators] =
     layers.map(l => {
       val coordinateTransformations = coordinateTransformationForVoxelSize(voxelSize, preferredVoxelSize)
       l.mapped(coordinateTransformations = coordinateTransformations)
@@ -68,7 +63,7 @@ class ExploreLayerService extends FoxImplicits {
     math.abs(l - l.round.toDouble) < epsilon
   }
 
-  private def magFromVoxelSize(minVoxelSize: Vec3Double, voxelSize: Vec3Double)(
+  private def magFromVoxelSize(minVoxelSize: VoxelSize, voxelSize: VoxelSize)(
       implicit ec: ExecutionContext): Fox[Vec3Int] = {
 
     val mag = (voxelSize / minVoxelSize).round.toVec3Int
@@ -82,7 +77,7 @@ class ExploreLayerService extends FoxImplicits {
       _ <- bool2Fox(magGroup.length == 1) ?~> s"detected mags are not unique, found $magGroup"
     } yield ()
 
-  private def findBaseVoxelSize(minVoxelSize: Vec3Double, preferredVoxelSizeOpt: Option[Vec3Double]): Vec3Double =
+  private def findBaseVoxelSize(minVoxelSize: VoxelSize, preferredVoxelSizeOpt: Option[VoxelSize]): VoxelSize =
     preferredVoxelSizeOpt match {
       case Some(preferredVoxelSize) =>
         val baseMag = minVoxelSize / preferredVoxelSize
@@ -95,8 +90,8 @@ class ExploreLayerService extends FoxImplicits {
     }
 
   private def coordinateTransformationForVoxelSize(
-      foundVoxelSize: Vec3Double,
-      preferredVoxelSize: Option[Vec3Double]): Option[List[CoordinateTransformation]] =
+      foundVoxelSize: VoxelSize,
+      preferredVoxelSize: Option[VoxelSize]): Option[List[CoordinateTransformation]] =
     preferredVoxelSize match {
       case None => None
       case Some(voxelSize) =>
@@ -118,17 +113,13 @@ class ExploreLayerService extends FoxImplicits {
     }
 
   private def rescaleLayersByCommonVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, VoxelSize)],
-                                             preferredVoxelSize: Option[Vec3Double])(
+                                             preferredVoxelSize: Option[VoxelSize])(
       implicit ec: ExecutionContext): Fox[(List[DataLayerWithMagLocators], VoxelSize)] = {
-    val allVoxelSizes = layersWithVoxelSizes
-      .flatMap(layerWithVoxelSize => {
-        val layer = layerWithVoxelSize._1
-        val voxelSize = layerWithVoxelSize._2.factor // TODO unit
-
-        layer.resolutions.map(resolution => voxelSize * resolution.toVec3Double)
-      })
-      .toSet
-    val minVoxelSizeOpt = Try(allVoxelSizes.minBy(_.toTuple)).toOption
+    val allVoxelSizes = layersWithVoxelSizes.flatMap {
+      case (layer, voxelSize) =>
+        layer.resolutions.map(mag => voxelSize * mag.toVec3Double)
+    }.toSet
+    val minVoxelSizeOpt = Try(allVoxelSizes.minBy(_.toNanometer.toTuple)).toOption
 
     for {
       minVoxelSize <- option2Fox(minVoxelSizeOpt)
@@ -137,13 +128,12 @@ class ExploreLayerService extends FoxImplicits {
         .map(_._2)}"
       groupedMags = allMags.groupBy(_.maxDim)
       _ <- Fox.combined(groupedMags.values.map(checkForDuplicateMags).toList)
-      rescaledLayers = layersWithVoxelSizes.map(layerWithVoxelSize => {
-        val layer = layerWithVoxelSize._1
-        val layerVoxelSize = layerWithVoxelSize._2.factor // TODO unit
-        val magFactors = (layerVoxelSize / baseVoxelSize).toVec3Int
-        layer.mapped(boundingBoxMapping = _ * magFactors, magMapping = mag => mag.copy(mag = mag.mag * magFactors))
-      })
-    } yield (rescaledLayers, VoxelSize.fromFactorWithDefaultUnit(baseVoxelSize))
+      rescaledLayers = layersWithVoxelSizes.map {
+        case (layer, layerVoxelSize) =>
+          val magFactors = (layerVoxelSize / baseVoxelSize).toVec3Int
+          layer.mapped(boundingBoxMapping = _ * magFactors, magMapping = mag => mag.copy(mag = mag.mag * magFactors))
+      }
+    } yield (rescaledLayers, baseVoxelSize)
   }
 
   def removeHeaderFileNamesFromUriSuffix(uri: String): String =

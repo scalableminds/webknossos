@@ -268,8 +268,8 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
 
   private def selectAxisUnit(axes: List[NgffAxis], axisOrder: AxisOrder): Fox[LengthUnit] =
     for {
-      xUnit <- axes(axisOrder.x).lengthUnit
-      yUnit <- axes(axisOrder.y).lengthUnit
+      xUnit <- axes(axisOrder.x).lengthUnit.toFox
+      yUnit <- axes(axisOrder.y).lengthUnit.toFox
       zUnitOpt <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).lengthUnit)
       units: List[LengthUnit] = List(Some(xUnit), Some(yUnit), zUnitOpt).flatten
     } yield units.minBy(LengthUnit.toNanometer)
@@ -278,9 +278,10 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
                                      axes: List[NgffAxis],
                                      axisOrder: AxisOrder): Fox[Vec3Double] =
     for {
-      xUnitToNm <- axes(axisOrder.x).spaceUnitToNmFactor
-      yUnitToNm <- axes(axisOrder.y).spaceUnitToNmFactor
-      zUnitToNmOpt <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).spaceUnitToNmFactor)
+      xUnitToNm <- axes(axisOrder.x).lengthUnit.map(LengthUnit.toNanometer).toFox
+      yUnitToNm <- axes(axisOrder.y).lengthUnit.map(LengthUnit.toNanometer).toFox
+      zUnitToNmOpt <- Fox.runIf(axisOrder.hasZAxis)(
+        axes(axisOrder.zWithFallback).lengthUnit.map(LengthUnit.toNanometer))
       xUnitToTarget = xUnitToNm / LengthUnit.toNanometer(unifiedAxisUnit)
       yUnitToTarget = yUnitToNm / LengthUnit.toNanometer(unifiedAxisUnit)
       zUnitToTargetOpt = zUnitToNmOpt.map(_ / LengthUnit.toNanometer(unifiedAxisUnit))

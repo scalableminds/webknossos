@@ -53,7 +53,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
         } yield layersWithVoxelSizes))
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes.flatten, None)
       relativeLayers = layers.map(selectLastTwoDirectories)
-      dataSource = new DataSourceWithMagLocators(dataSourceId, relativeLayers, voxelSize) // TODO unit
+      dataSource = new DataSourceWithMagLocators(dataSourceId, relativeLayers, voxelSize)
     } yield dataSource
 
   private def exploreLocalNgffArray(path: Path, dataSourceId: DataSourceId)(

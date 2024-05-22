@@ -4,6 +4,11 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
+import com.scalableminds.webknossos.datastore.explore.{
+  ExploreRemoteDatasetRequest,
+  ExploreRemoteDatasetResponse,
+  ExploreRemoteLayerService
+}
 import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
   GetSegmentIndexParameters,
@@ -15,7 +20,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
   InboxDataSourceLike,
   UnusableInboxDataSource
 }
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.uploading.{
   CancelUploadInformation,
@@ -34,9 +39,10 @@ import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
-import net.liftweb.common.Full
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
@@ -50,6 +56,7 @@ class DataSourceController @Inject()(
     segmentIndexFileService: SegmentIndexFileService,
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DatasetErrorLoggingService,
+    exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
     composeService: ComposeService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
@@ -743,6 +750,33 @@ class DataSourceController @Inject()(
                                                           request.body.mappingName)
           }
         } yield Ok(Json.toJson(boxes))
+      }
+    }
+
+  // Called directly by wk side
+  def exploreRemoteDataset(token: Option[String]): Action[ExploreRemoteDatasetRequest] =
+    Action.async(validateJson[ExploreRemoteDatasetRequest]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organizationName), token) {
+        val reportMutable = ListBuffer[String]()
+        for {
+          dataSourceBox: Box[GenericDataSource[DataLayer]] <- exploreRemoteLayerService
+            .exploreRemoteDatasource(request.body.layerParameters, reportMutable)
+            .futureBox
+          dataSourceOpt = dataSourceBox match {
+            case Full(dataSource) if dataSource.dataLayers.nonEmpty =>
+              reportMutable += s"Resulted in dataSource with ${dataSource.dataLayers.length} layers."
+              Some(dataSource)
+            case Full(_) =>
+              reportMutable += "Error when exploring as layer set: Resulted in zero layers."
+              None
+            case f: Failure =>
+              reportMutable += s"Error when exploring as layer set: ${Fox.failureChainAsString(f)}"
+              None
+            case Empty =>
+              reportMutable += "Error when exploring as layer set: Empty"
+              None
+          }
+        } yield Ok(Json.toJson(ExploreRemoteDatasetResponse(dataSourceOpt, reportMutable.mkString("\n"))))
       }
     }
 

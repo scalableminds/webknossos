@@ -3,11 +3,7 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
-  PrecomputedDataLayer,
-  PrecomputedLayer,
-  PrecomputedSegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.dataformats.layers.{PrecomputedDataLayer, PrecomputedLayer, PrecomputedSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.{PrecomputedHeader, PrecomputedScale}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath

@@ -26,7 +26,7 @@ trait WKWLayer extends DataLayer {
 
   def wkwResolutions: List[WKWResolution]
 
-  def magLocators: List[MagLocator] = wkwResolutions.map(wkwResolution => MagLocator(wkwResolution.resolution))
+  def mags: List[MagLocator] = wkwResolutions.map(wkwResolution => MagLocator(wkwResolution.resolution))
 
   def resolutions: List[Vec3Int] = wkwResolutions.map(_.resolution)
 

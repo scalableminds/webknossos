@@ -78,7 +78,7 @@ case class EditableMappingLayer(name: String,
                                 tracingId: String,
                                 editableMappingService: EditableMappingService)
     extends SegmentationLayer {
-  override val magLocators: List[MagLocator] = List.empty
+  override val mags: List[MagLocator] = List.empty
 
   override def dataFormat: DataFormat.Value = DataFormat.wkw
 

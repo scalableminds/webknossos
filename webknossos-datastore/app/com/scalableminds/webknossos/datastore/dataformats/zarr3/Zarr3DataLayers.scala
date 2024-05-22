@@ -27,7 +27,7 @@ trait Zarr3Layer extends DataLayerWithMagLocators {
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
     new Zarr3BucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
-  def resolutions: List[Vec3Int] = magLocators.map(_.mag)
+  def resolutions: List[Vec3Int] = mags.map(_.mag)
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
 
@@ -40,7 +40,7 @@ case class Zarr3DataLayer(
                            category: Category.Value,
                            boundingBox: BoundingBox,
                            elementClass: ElementClass.Value,
-                           magLocators: List[MagLocator],
+                           mags: List[MagLocator],
                            defaultViewConfiguration: Option[LayerViewConfiguration] = None,
                            adminViewConfiguration: Option[LayerViewConfiguration] = None,
                            coordinateTransformations: Option[List[CoordinateTransformation]] = None,
@@ -56,7 +56,7 @@ case class Zarr3SegmentationLayer(
                                    name: String,
                                    boundingBox: BoundingBox,
                                    elementClass: ElementClass.Value,
-                                   magLocators: List[MagLocator],
+                                   mags: List[MagLocator],
                                    largestSegmentId: Option[Long] = None,
                                    mappings: Option[Set[String]] = None,
                                    defaultViewConfiguration: Option[LayerViewConfiguration] = None,

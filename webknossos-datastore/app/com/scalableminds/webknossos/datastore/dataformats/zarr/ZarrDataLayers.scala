@@ -18,7 +18,7 @@ trait ZarrLayer extends DataLayerWithMagLocators {
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
     new ZarrBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
-  def resolutions: List[Vec3Int] = magLocators.map(_.mag)
+  def resolutions: List[Vec3Int] = mags.map(_.mag)
 
   def lengthOfUnderlyingCubes(resolution: Vec3Int): Int = Int.MaxValue // Prevents the wkw-shard-specific handle caching
 
@@ -27,16 +27,16 @@ trait ZarrLayer extends DataLayerWithMagLocators {
 }
 
 case class ZarrDataLayer(
-                          name: String,
-                          category: Category.Value,
-                          boundingBox: BoundingBox,
-                          elementClass: ElementClass.Value,
-                          magLocators: List[MagLocator],
-                          defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                          adminViewConfiguration: Option[LayerViewConfiguration] = None,
-                          coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-                          override val numChannels: Option[Int] = Some(1),
-                          override val additionalAxes: Option[Seq[AdditionalAxis]]
+    name: String,
+    category: Category.Value,
+    boundingBox: BoundingBox,
+    elementClass: ElementClass.Value,
+    mags: List[MagLocator],
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+    override val numChannels: Option[Int] = Some(1),
+    override val additionalAxes: Option[Seq[AdditionalAxis]]
 ) extends ZarrLayer
 
 object ZarrDataLayer {
@@ -44,17 +44,17 @@ object ZarrDataLayer {
 }
 
 case class ZarrSegmentationLayer(
-                                  name: String,
-                                  boundingBox: BoundingBox,
-                                  elementClass: ElementClass.Value,
-                                  magLocators: List[MagLocator],
-                                  largestSegmentId: Option[Long] = None,
-                                  mappings: Option[Set[String]] = None,
-                                  defaultViewConfiguration: Option[LayerViewConfiguration] = None,
-                                  adminViewConfiguration: Option[LayerViewConfiguration] = None,
-                                  coordinateTransformations: Option[List[CoordinateTransformation]] = None,
-                                  override val numChannels: Option[Int] = Some(1),
-                                  additionalAxes: Option[Seq[AdditionalAxis]] = None
+    name: String,
+    boundingBox: BoundingBox,
+    elementClass: ElementClass.Value,
+    mags: List[MagLocator],
+    largestSegmentId: Option[Long] = None,
+    mappings: Option[Set[String]] = None,
+    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
+    adminViewConfiguration: Option[LayerViewConfiguration] = None,
+    coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+    override val numChannels: Option[Int] = Some(1),
+    additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends SegmentationLayer
     with ZarrLayer
 

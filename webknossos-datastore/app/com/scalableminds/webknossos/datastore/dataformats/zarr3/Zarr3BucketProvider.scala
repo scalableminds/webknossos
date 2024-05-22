@@ -25,7 +25,7 @@ class Zarr3BucketProvider(layer: Zarr3Layer,
   override def openDatasetArrayHandle(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[DatasetArray] = {
     val magLocatorOpt: Option[MagLocator] =
-      layer.magLocators.find(_.mag == readInstruction.bucket.mag)
+      layer.mags.find(_.mag == readInstruction.bucket.mag)
 
     magLocatorOpt match {
       case None => Fox.empty

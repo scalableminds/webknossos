@@ -171,7 +171,7 @@ class VolumeTracingZarrStreamingController @Inject()(
             largestSegmentId = tracing.largestSegmentId,
             boundingBox = tracing.boundingBox,
             elementClass = tracing.elementClass,
-            magLocators = tracing.resolutions.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+            mags = tracing.resolutions.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
             mappings = None,
             numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1)
           )

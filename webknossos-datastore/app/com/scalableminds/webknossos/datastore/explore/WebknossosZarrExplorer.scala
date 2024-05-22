@@ -28,20 +28,20 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
       zarrLayers <- Fox.serialCombined(dataSource.dataLayers) {
         case l: Zarr3SegmentationLayer =>
           for {
-            mags <- adaptMags(l.magLocators, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
-          } yield l.copy(magLocators = mags)
+            mags <- adaptMags(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
+          } yield l.copy(mags = mags)
         case l: Zarr3DataLayer =>
           for {
-            mags <- adaptMags(l.magLocators, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
-          } yield l.copy(magLocators = mags)
+            mags <- adaptMags(l.mags, remotePath / l.name, Zarr3ArrayHeader.FILENAME_ZARR_JSON, credentialId)
+          } yield l.copy(mags = mags)
         case l: ZarrSegmentationLayer =>
           for {
-            mags <- adaptMags(l.magLocators, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY, credentialId)
-          } yield l.copy(magLocators = mags)
+            mags <- adaptMags(l.mags, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY, credentialId)
+          } yield l.copy(mags = mags)
         case l: ZarrDataLayer =>
           for {
-            mags <- adaptMags(l.magLocators, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY, credentialId)
-          } yield l.copy(magLocators = mags)
+            mags <- adaptMags(l.mags, remotePath / l.name, ZarrHeader.FILENAME_DOT_ZARRAY, credentialId)
+          } yield l.copy(mags = mags)
         case layer => Fox.failure(s"Only remote Zarr2 or Zarr3 layers are supported, got ${layer.getClass}.")
       }
       zarrLayersWithScale <- Fox.serialCombined(zarrLayers)(l => Fox.successful((l, dataSource.scale)))

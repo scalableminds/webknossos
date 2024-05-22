@@ -207,7 +207,7 @@ trait DataLayer extends DataLayerLike {
   lazy val bytesPerElement: Int =
     ElementClass.bytesPerElement(elementClass)
 
-  def magLocators: List[MagLocator]
+  def mags: List[MagLocator]
 }
 
 object DataLayer {
@@ -273,7 +273,7 @@ trait DataLayerWithMagLocators extends DataLayer {
         l.copy(
           boundingBox = boundingBoxMapping(l.boundingBox),
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
-          magLocators = l.magLocators.map(magMapping),
+          mags = l.mags.map(magMapping),
           name = name,
           coordinateTransformations = coordinateTransformations
         )
@@ -281,7 +281,7 @@ trait DataLayerWithMagLocators extends DataLayer {
         l.copy(
           boundingBox = boundingBoxMapping(l.boundingBox),
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
-          magLocators = l.magLocators.map(magMapping),
+          mags = l.mags.map(magMapping),
           name = name,
           coordinateTransformations = coordinateTransformations
         )
@@ -289,7 +289,7 @@ trait DataLayerWithMagLocators extends DataLayer {
         l.copy(
           boundingBox = boundingBoxMapping(l.boundingBox),
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
-          magLocators = l.magLocators.map(magMapping),
+          mags = l.mags.map(magMapping),
           name = name,
           coordinateTransformations = coordinateTransformations
         )
@@ -297,7 +297,7 @@ trait DataLayerWithMagLocators extends DataLayer {
         l.copy(
           boundingBox = boundingBoxMapping(l.boundingBox),
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
-          magLocators = l.magLocators.map(magMapping),
+          mags = l.mags.map(magMapping),
           name = name,
           coordinateTransformations = coordinateTransformations
         )
@@ -305,7 +305,7 @@ trait DataLayerWithMagLocators extends DataLayer {
         l.copy(
           boundingBox = boundingBoxMapping(l.boundingBox),
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
-          magLocators = l.magLocators.map(magMapping),
+          mags = l.mags.map(magMapping),
           name = name,
           coordinateTransformations = coordinateTransformations
         )
@@ -313,7 +313,7 @@ trait DataLayerWithMagLocators extends DataLayer {
         l.copy(
           boundingBox = boundingBoxMapping(l.boundingBox),
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
-          magLocators = l.magLocators.map(magMapping),
+          mags = l.mags.map(magMapping),
           name = name,
           coordinateTransformations = coordinateTransformations
         )
@@ -321,7 +321,7 @@ trait DataLayerWithMagLocators extends DataLayer {
         l.copy(
           boundingBox = boundingBoxMapping(l.boundingBox),
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
-          magLocators = l.magLocators.map(magMapping),
+          mags = l.mags.map(magMapping),
           name = name,
           coordinateTransformations = coordinateTransformations
         )
@@ -329,7 +329,7 @@ trait DataLayerWithMagLocators extends DataLayer {
         l.copy(
           boundingBox = boundingBoxMapping(l.boundingBox),
           defaultViewConfiguration = defaultViewConfigurationMapping(l.defaultViewConfiguration),
-          magLocators = l.magLocators.map(magMapping),
+          mags = l.mags.map(magMapping),
           name = name,
           coordinateTransformations = coordinateTransformations
         )

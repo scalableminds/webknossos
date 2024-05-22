@@ -1,27 +1,34 @@
+import { type TreeProps } from "antd";
+import { BasicDataNode, DataNode} from "antd/es/tree";
 import _ from "lodash";
 import { mapGroupsWithRoot } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Tree, TreeGroup, SegmentMap, Segment, TreeMap, SegmentGroup } from "oxalis/store";
+import { Children } from "react";
+
+
 export const MISSING_GROUP_ID = -1;
-export const TYPE_GROUP = "GROUP";
-export const TYPE_TREE = "TREE";
-const GroupTypeEnum = {
-  [TYPE_GROUP]: TYPE_GROUP,
-  [TYPE_TREE]: TYPE_TREE,
+
+export enum GroupTypeEnum {
+  GROUP = "Group",
+  TREE = "Tree",
 };
 
-type TreeOrGroup = keyof typeof GroupTypeEnum;
 
-export type TreeNode = {
+export type TreeFoo = TreeProps<TreeNode>["treeData"]
+
+
+export interface TreeNode extends DataNode {
   name: string;
   id: number;
-  expanded: boolean;
-  isChecked: boolean;
-  isIndeterminate: boolean;
-  containsTrees: boolean;
+  // expanded: boolean;
+  // isChecked: boolean;
+  // isIndeterminate: boolean;
+  // containsTrees: boolean;
   timestamp: number;
-  type: TreeOrGroup;
+  type: GroupTypeEnum;
   children: TreeNode[];
 };
+
 
 export function makeBasicGroupObject(
   groupId: number,
@@ -38,38 +45,34 @@ export function makeBasicGroupObject(
 function makeTreeNode(
   id: number,
   name: string,
-  type: TreeOrGroup,
-  optionalProperties: Partial<TreeNode>,
+  type: GroupTypeEnum,
+  optionalProperties: Partial<TreeNode> = {},
 ): TreeNode {
   return {
+    key: `${type}-${id.toString()}`,
     id,
     type,
     name,
     timestamp: 0,
-    isChecked: false,
-    isIndeterminate: false,
-    containsTrees: false,
     children: [],
-    expanded: true,
-    ...optionalProperties,
+    // disableCheckbox TODO
+    ...optionalProperties
   };
 }
 
 function makeTreeNodeFromTree(tree: Tree): TreeNode {
-  return makeTreeNode(tree.treeId, tree.name, TYPE_TREE, {
+  return makeTreeNode(tree.treeId, tree.name, GroupTypeEnum.TREE, {
     timestamp: tree.timestamp,
-    isChecked: tree.isVisible,
-    containsTrees: true,
   });
 }
 
 function makeTreeNodeFromGroup(group: TreeGroup, optionalProperties: Partial<TreeNode>): TreeNode {
-  return makeTreeNode(group.groupId, group.name, TYPE_GROUP, optionalProperties);
+  return makeTreeNode(group.groupId, group.name, GroupTypeEnum.GROUP, optionalProperties)
 }
 
 export function removeTreesAndTransform(groupTree: TreeNode[]): TreeGroup[] {
   // Remove all trees from the group hierarchy and transform groups to their basic form
-  return _.filter(groupTree, (treeNode) => treeNode.type === TYPE_GROUP).map((group) =>
+  return _.filter(groupTree, (treeNode) => treeNode.type === GroupTypeEnum.GROUP).map((group) =>
     makeBasicGroupObject(group.id, group.name, removeTreesAndTransform(group.children)),
   );
 }
@@ -85,7 +88,6 @@ export function insertTreesAndTransform(
     const treeNode = makeTreeNodeFromGroup(group, {
       // Ensure that groups are always at the top when sorting by timestamp
       timestamp: 0,
-      expanded: expandedGroupIds[groupId] != null ? expandedGroupIds[groupId] : false,
       children: insertTreesAndTransform(group.children, groupToTreesMap, expandedGroupIds, sortBy),
     });
 
@@ -95,19 +97,19 @@ export function insertTreesAndTransform(
     );
 
     treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(trees);
-    treeNode.isChecked = _.every(
-      treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
-      (groupOrTree) => groupOrTree.isChecked || !groupOrTree.containsTrees,
-    );
-    treeNode.isIndeterminate = treeNode.isChecked
-      ? false
-      : _.some(
-          treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
-          (groupOrTree) =>
-            (groupOrTree.isChecked || groupOrTree.isIndeterminate) && groupOrTree.containsTrees,
-        );
-    treeNode.containsTrees =
-      trees.length > 0 || _.some(treeNode.children, (groupOrTree) => groupOrTree.containsTrees);
+    // treeNode.isChecked = _.every(
+    //   treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
+    //   (groupOrTree) => groupOrTree.isChecked || !groupOrTree.containsTrees,
+    // );
+    // treeNode.isIndeterminate = treeNode.isChecked
+    //   ? false
+    //   : _.some(
+    //       treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
+    //       (groupOrTree) =>
+    //         (groupOrTree.isChecked || groupOrTree.isIndeterminate) && groupOrTree.containsTrees,
+    //     );
+    // treeNode.containsTrees =
+    //   trees.length > 0 || _.some(treeNode.children, (groupOrTree) => groupOrTree.containsTrees);
     return treeNode;
   });
 }

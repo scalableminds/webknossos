@@ -1,25 +1,25 @@
 import { AutoSizer } from "react-virtualized";
-import { Checkbox, Dropdown, MenuProps, Modal, Tooltip, notification } from "antd";
+import {
+  Dropdown,
+  MenuProps,
+  Modal,
+  Tooltip,
+  notification,
+  Tree as AndTree,
+  GetRef,
+} from "antd";
 import {
   DeleteOutlined,
   PlusOutlined,
   ShrinkOutlined,
   ExpandAltOutlined,
   ArrowRightOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import { useDispatch } from "react-redux";
 import { batchActions } from "redux-batched-actions";
-import React, { useState, useEffect } from "react";
-import {
-  ExtendedNodeData,
-  FullTree,
-  NodeData,
-  OnDragPreviousAndNextLocation,
-  OnMovePreviousAndNextLocation,
-  SortableTreeWithoutDndContext as SortableTree,
-} from "react-sortable-tree";
+import React, { useState, useEffect, useRef } from "react";
 import _ from "lodash";
-import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
 import { TreeTypeEnum, type TreeType, type Vector3 } from "oxalis/constants";
 
@@ -27,8 +27,6 @@ import {
   getGroupByIdWithSubgroups,
   TreeNode,
   MISSING_GROUP_ID,
-  TYPE_GROUP,
-  TYPE_TREE,
   callDeep,
   createGroupToTreesMap,
   insertTreesAndTransform,
@@ -37,6 +35,7 @@ import {
   forEachTreeNode,
   findTreeNode,
   anySatisfyDeep,
+  GroupTypeEnum,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -62,19 +61,15 @@ import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 
-const CHECKBOX_STYLE = { marginLeft: 4 };
-const CHECKBOX_PLACEHOLDER_STYLE = {
-  width: 16,
-  display: "inline-block",
-};
+import type CheckInfo from "rc-tree/lib/interface"
 
 type Props = {
   activeTreeId: number | null | undefined;
   activeGroupId: number | null | undefined;
-  treeGroups: Array<TreeGroup>;
+  treeGroups: TreeGroup[];
   sortBy: string;
   trees: TreeMap;
-  selectedTrees: Array<number>;
+  selectedTrees: number[];
   onSelectTree: (arg0: number) => void;
   deselectAllTrees: () => void;
   onDeleteGroup: (arg0: number) => void;
@@ -90,8 +85,8 @@ type Props = {
 //   onToggleAllTrees: () => void;
 //   onSetTreeColor: (arg0: number, arg1: Vector3) => void;
 //   onToggleTreeGroup: (arg0: number) => void;
-//   onUpdateTreeGroups: (arg0: Array<TreeGroup>) => void;
-//   onBatchActions: (arg0: Array<Action>, arg1: string) => void;
+//   onUpdateTreeGroups: (arg0: TreeGroup[]) => void;
+//   onBatchActions: (arg0: Action[], arg1: string) => void;
 //   onToggleHideInactiveTrees: () => void;
 //   onShuffleAllTreeColors: () => void;
 //   onSetTreeEdgesVisibility: (treeId: number, edgesAreVisible: boolean) => void;
@@ -121,6 +116,8 @@ function TreeHierarchyView(props: Props) {
   const [searchFocusOffset, setSearchFocusOffset] = useState(0);
   const [activeTreeDropdownId, setActiveTreeDropdownId] = useState<number | null>(null);
   const [activeGroupDropdownId, setActiveGroupDropdownId] = useState<number | null>(null);
+
+  const treeRef = useRef<GetRef<typeof AndTree>>(null);
 
   const dispatch = useDispatch();
 
@@ -171,20 +168,23 @@ function TreeHierarchyView(props: Props) {
 
   // }
 
-  function onChange(treeData: TreeNode[]) {
-    const expandedGroupIds: Record<number, boolean> = {};
-    forEachTreeNode(treeData, (node: TreeNode) => {
-      if (node.type === TYPE_GROUP && node.expanded) expandedGroupIds[node.id] = true;
-    });
-    setGroupTree(treeData);
-    setExpandedGroupIds(expandedGroupIds);
+  // function onChange(treeData: TreeNode[]) {
+  //   const expandedGroupIds: Record<number, boolean> = {};
+  //   forEachTreeNode(treeData, (node: TreeNode) => {
+  //     if (node.type === GroupTypeEnum.GROUP && node.expanded) expandedGroupIds[node.id] = true;
+  //   });
+  //   setGroupTree(treeData);
+  //   setExpandedGroupIds(expandedGroupIds);
+  // }
+  
+  function onExpand(expandedKeys: React.Key[], ) {
+    setExpandedGroupIds(expandedKeys);
   }
 
-  function onCheck(evt: React.MouseEvent<any>) {
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'node' does not exist on type 'EventTarge... Remove this comment to see the full error message
-    const { id, type } = evt.target.node;
+  function onCheck(_checkedKeysValue: React.Key[], info: typeof CheckInfo) {
+    const { id, type } = info.node;
 
-    if (type === TYPE_TREE) {
+    if (type === GroupTypeEnum.TREE) {
       onToggleTree(parseInt(id, 10));
     } else if (id === MISSING_GROUP_ID) {
       onToggleAllTrees();
@@ -193,8 +193,8 @@ function TreeHierarchyView(props: Props) {
     }
   }
 
-  function onSelectTree(evt: React.MouseEvent<any>) {
-    const treeId = parseInt(evt.currentTarget.getAttribute("data-id"), 10);
+  function onSelectTreeNode(node: TreeNode, evt) {
+    const treeId = node.id;
 
     if (evt.ctrlKey || evt.metaKey) {
       props.onSelectTree(treeId);
@@ -209,8 +209,8 @@ function TreeHierarchyView(props: Props) {
     onSetActiveTreeGroup(groupId);
   }
 
-  function onSelectGroup(evt: React.MouseEvent<any>) {
-    const groupId = parseInt(evt.currentTarget.getAttribute("data-id"), 10);
+  function onSelectGroupNode(node: TreeNode) {
+    const groupId = node.id;
     const numberOfSelectedTrees = props.selectedTrees.length;
 
     if (numberOfSelectedTrees > 0) {
@@ -242,7 +242,7 @@ function TreeHierarchyView(props: Props) {
         }
 
         forEachTreeNode(item.children, (node) => {
-          if (node.type === TYPE_GROUP) {
+          if (node.type === GroupTypeEnum.GROUP) {
             node.expanded = expanded;
             newExpandedGroupIds[node.id] = expanded;
           }
@@ -278,27 +278,25 @@ function TreeHierarchyView(props: Props) {
     }
   }
 
-  function onMoveNode(
-    params: NodeData<TreeNode> & FullTree<TreeNode> & OnMovePreviousAndNextLocation<TreeNode>,
-  ) {
-    const { nextParentNode, node, treeData } = params;
-    if (node.type === TYPE_TREE && nextParentNode) {
-      const allTreesToMove = [...props.selectedTrees, node.id];
-      // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
-      const moveActions = allTreesToMove.map((treeId) =>
-        setTreeGroupAction(
-          nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
-          treeId,
-        ),
-      );
-      onBatchActions(moveActions, "SET_TREE_GROUP");
-    } else {
-      // A group was dragged - update the groupTree
-      // Exclude root group and remove trees from groupTree object
-      const newTreeGroups = removeTreesAndTransform(treeData[0].children);
-      onUpdateTreeGroups(newTreeGroups);
-    }
-  }
+  // function onMoveNode(params) {
+  //   const { nextParentNode, node, treeData } = params;
+  //   if (node.type === GroupTypeEnum.TREE && nextParentNode) {
+  //     const allTreesToMove = [...props.selectedTrees, node.id];
+  //     // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
+  //     const moveActions = allTreesToMove.map((treeId) =>
+  //       setTreeGroupAction(
+  //         nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
+  //         treeId,
+  //       ),
+  //     );
+  //     onBatchActions(moveActions, "SET_TREE_GROUP");
+  //   } else {
+  //     // A group was dragged - update the groupTree
+  //     // Exclude root group and remove trees from groupTree object
+  //     const newTreeGroups = removeTreesAndTransform(treeData[0].children);
+  //     onUpdateTreeGroups(newTreeGroups);
+  //   }
+  // }
 
   function createGroup(groupId: number) {
     const newTreeGroups = _.cloneDeep(props.treeGroups);
@@ -369,16 +367,6 @@ function TreeHierarchyView(props: Props) {
     setActiveGroupDropdownId(null);
   }
 
-  function getNodeStyleClassForBackground(id: number) {
-    const isTreeSelected = props.selectedTrees.includes(id);
-
-    if (isTreeSelected) {
-      return "selected-tree-node";
-    }
-
-    return undefined;
-  }
-
   function handleMeasureSkeletonLength(treeId: number, treeName: string) {
     const [lengthInNm, lengthInVx] = api.tracing.measureTreeLength(treeId);
     notification.open({
@@ -391,19 +379,22 @@ function TreeHierarchyView(props: Props) {
     });
   }
 
-  function renderGroupActionsDropdown(node: TreeNode) {
+  function renderGroupNode(node: TreeNode) {
     // The root group must not be removed or renamed
     const { id, name } = node;
     const hasExpandedSubgroup = anySatisfyDeep(
       node.children,
-      (child) => child.expanded && child.type === TYPE_GROUP,
+      (child) => child.expanded && child.type === GroupTypeEnum.GROUP,
     );
     const hasCollapsedSubgroup = anySatisfyDeep(
       node.children,
-      (child) => !child.expanded && child.type === TYPE_GROUP,
+      (child) => !child.expanded && child.type === GroupTypeEnum.GROUP,
     );
     const isEditingDisabled = !props.allowUpdate;
-    const hasSubgroup = anySatisfyDeep(node.children, (child) => child.type === TYPE_GROUP);
+    const hasSubgroup = anySatisfyDeep(
+      node.children,
+      (child) => child.type === GroupTypeEnum.GROUP,
+    );
     const labelForActiveItems = getLabelForActiveItems();
     const menu: MenuProps = {
       items: [
@@ -501,7 +492,7 @@ function TreeHierarchyView(props: Props) {
     // Make sure the displayed name is not empty
     const displayableName = name.trim() || "<Unnamed Group>";
     return (
-      <div>
+      <div className="group-type">
         <Dropdown
           menu={menu}
           placement="bottom"
@@ -516,188 +507,132 @@ function TreeHierarchyView(props: Props) {
           }}
           trigger={["contextMenu"]}
         >
-          <span>
-            {node.containsTrees ? (
-              <Checkbox
-                checked={node.isChecked}
-                indeterminate={node.isIndeterminate}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '(evt: React.MouseEvent<any>) => void' is not... Remove this comment to see the full error message
-                onChange={onCheck}
-                node={node}
-                style={CHECKBOX_STYLE}
-              />
-            ) : (
-              <span style={CHECKBOX_PLACEHOLDER_STYLE} />
-            )}
-            <span
-              data-id={id}
-              onClick={onSelectGroup}
-              style={{
-                marginLeft: 9,
-              }}
-            >
-              {displayableName}
-            </span>
-          </span>
+          <span>{displayableName}</span>
         </Dropdown>
       </div>
     );
   }
 
-  function generateNodeProps(params: ExtendedNodeData<TreeNode>): GenerateNodePropsType {
-    // This method can be used to add props to each node of the SortableTree component
-    const { node } = params;
-    const nodeProps: GenerateNodePropsType = {};
+  function renderTreeNode(node: TreeNode): React.ReactNode {
+    const tree = props.trees[node.id];
+    const rgbColorString = tree.color.map((c) => Math.round(c * 255)).join(",");
+    const isEditingDisabled = !props.allowUpdate;
+    const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
+    // Defining background color of current node
 
-    if (node.type === TYPE_GROUP) {
-      nodeProps.title = renderGroupActionsDropdown(node);
-      nodeProps.className = "group-type";
-    } else {
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-      const tree = props.trees[parseInt(node.id, 10)];
-      const rgbColorString = tree.color.map((c) => Math.round(c * 255)).join(",");
-      const isEditingDisabled = !props.allowUpdate;
-      const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
-      // Defining background color of current node
-      const styleClass = getNodeStyleClassForBackground(node.id);
-
-      const createMenu = (): MenuProps => {
-        return {
-          items: [
-            {
-              key: "changeTreeColor",
-              disabled: isEditingDisabled,
-              icon: <i className="fas fa-eye-dropper fa-sm " />,
-              label: (
-                <ChangeColorMenuItemContent
-                  title="Change Tree Color"
-                  isDisabled={isEditingDisabled}
-                  onSetColor={(color) => {
-                    onSetTreeColor(tree.treeId, color);
-                  }}
-                  rgb={tree.color}
-                />
-              ),
-            },
-            {
-              key: "shuffleTreeColor",
-              onClick: () => onShuffleTreeColor(tree.treeId),
-              title: "Shuffle Tree Color",
-              disabled: isEditingDisabled,
-              icon: <i className="fas fa-adjust" />,
-              label: "Shuffle Tree Color",
-            },
-            {
-              key: "deleteTree",
-              onClick: () => onDeleteTree(tree.treeId),
-              title: "Delete Tree",
-              disabled: isEditingDisabled,
-              icon: <i className="fas fa-trash" />,
-              label: "Delete Tree",
-            },
-            {
-              key: "measureSkeleton",
-              onClick: () => {
-                handleMeasureSkeletonLength(tree.treeId, tree.name);
-                handleTreeDropdownMenuVisibility(tree.treeId, false);
-              },
-              title: "Measure Tree Length",
-              icon: <i className="fas fa-ruler" />,
-              label: "Measure Tree Length",
-            },
-            {
-              key: "hideTree",
-              onClick: () => {
-                onSetActiveTree(tree.treeId);
-                onToggleHideInactiveTrees();
-                handleTreeDropdownMenuVisibility(tree.treeId, false);
-              },
-              title: "Hide/Show All Other Trees",
-              icon: <i className="fas fa-eye" />,
-              label: "Hide/Show All Other Trees",
-            },
-            {
-              key: "hideTreeEdges",
-              onClick: () => {
-                onSetActiveTree(tree.treeId);
-                onSetTreeEdgesVisibility(tree.treeId, !tree.edgesAreVisible);
-                handleTreeDropdownMenuVisibility(tree.treeId, false);
-              },
-              title: "Hide/Show Edges of This Tree",
-              icon: <HideTreeEdgesIcon />,
-              label: "Hide/Show Edges of This Tree",
-            },
-            isAgglomerateSkeleton
-              ? {
-                  key: "convertToNormalSkeleton",
-                  onClick: () => {
-                    onSetTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
-                    handleTreeDropdownMenuVisibility(tree.treeId, false);
-                  },
-                  title: "Convert to Normal Tree",
-                  icon: <span className="fas fa-clipboard-check" />,
-                  label: "Convert to Normal Tree",
-                }
-              : null,
-          ],
-        };
-      };
-
-      const maybeProofreadingIcon =
-        tree.type === TreeTypeEnum.AGGLOMERATE ? (
-          <Tooltip title="Agglomerate Skeleton">
-            <i className="fas fa-clipboard-check icon-margin-right" />
-          </Tooltip>
-        ) : null;
-
-      nodeProps.title = (
-        <div className={styleClass}>
-          <Dropdown
-            menu={createMenu()} //
-            // AutoDestroy is used to remove the menu from DOM and keep up the performance.
-            // destroyPopupOnHide should also be an option according to the docs, but
-            // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
-            autoDestroy
-            placement="bottom"
-            open={activeTreeDropdownId === tree.treeId} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-            onOpenChange={(isVisible, info) => {
-              if (info.source === "trigger")
-                handleTreeDropdownMenuVisibility(tree.treeId, isVisible);
-            }}
-            trigger={["contextMenu"]}
-          >
-            <span>
-              <Checkbox
-                checked={tree.isVisible}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type '(evt: React.MouseEvent<any>) => void' is not... Remove this comment to see the full error message
-                onChange={onCheck}
-                node={node}
-                style={CHECKBOX_STYLE}
-              />
-              <div
-                data-id={node.id}
-                style={{
-                  marginLeft: 9,
-                  display: "inline",
+    const createMenu = (): MenuProps => {
+      return {
+        items: [
+          {
+            key: "changeTreeColor",
+            disabled: isEditingDisabled,
+            icon: <i className="fas fa-eye-dropper fa-sm " />,
+            label: (
+              <ChangeColorMenuItemContent
+                title="Change Tree Color"
+                isDisabled={isEditingDisabled}
+                onSetColor={(color) => {
+                  onSetTreeColor(tree.treeId, color);
                 }}
-                onClick={onSelectTree}
-              >
-                {`(${tree.nodes.size()}) `}
-                {maybeProofreadingIcon}
-                {tree.name}
-              </div>
-            </span>
-          </Dropdown>
-        </div>
-      );
-      nodeProps.className = "tree-type";
-      nodeProps.style = {
-        color: `rgb(${rgbColorString})`,
+                rgb={tree.color}
+              />
+            ),
+          },
+          {
+            key: "shuffleTreeColor",
+            onClick: () => onShuffleTreeColor(tree.treeId),
+            title: "Shuffle Tree Color",
+            disabled: isEditingDisabled,
+            icon: <i className="fas fa-adjust" />,
+            label: "Shuffle Tree Color",
+          },
+          {
+            key: "deleteTree",
+            onClick: () => onDeleteTree(tree.treeId),
+            title: "Delete Tree",
+            disabled: isEditingDisabled,
+            icon: <i className="fas fa-trash" />,
+            label: "Delete Tree",
+          },
+          {
+            key: "measureSkeleton",
+            onClick: () => {
+              handleMeasureSkeletonLength(tree.treeId, tree.name);
+              handleTreeDropdownMenuVisibility(tree.treeId, false);
+            },
+            title: "Measure Tree Length",
+            icon: <i className="fas fa-ruler" />,
+            label: "Measure Tree Length",
+          },
+          {
+            key: "hideTree",
+            onClick: () => {
+              onSetActiveTree(tree.treeId);
+              onToggleHideInactiveTrees();
+              handleTreeDropdownMenuVisibility(tree.treeId, false);
+            },
+            title: "Hide/Show All Other Trees",
+            icon: <i className="fas fa-eye" />,
+            label: "Hide/Show All Other Trees",
+          },
+          {
+            key: "hideTreeEdges",
+            onClick: () => {
+              onSetActiveTree(tree.treeId);
+              onSetTreeEdgesVisibility(tree.treeId, !tree.edgesAreVisible);
+              handleTreeDropdownMenuVisibility(tree.treeId, false);
+            },
+            title: "Hide/Show Edges of This Tree",
+            icon: <HideTreeEdgesIcon />,
+            label: "Hide/Show Edges of This Tree",
+          },
+          isAgglomerateSkeleton
+            ? {
+                key: "convertToNormalSkeleton",
+                onClick: () => {
+                  onSetTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
+                  handleTreeDropdownMenuVisibility(tree.treeId, false);
+                },
+                title: "Convert to Normal Tree",
+                icon: <span className="fas fa-clipboard-check" />,
+                label: "Convert to Normal Tree",
+              }
+            : null,
+        ],
       };
-    }
+    };
 
-    return nodeProps;
+    const maybeProofreadingIcon =
+      tree.type === TreeTypeEnum.AGGLOMERATE ? (
+        <Tooltip title="Agglomerate Skeleton">
+          <i className="fas fa-clipboard-check icon-margin-right" />
+        </Tooltip>
+      ) : null;
+
+    return (
+      <div>
+        <Dropdown
+          menu={createMenu()} //
+          // AutoDestroy is used to remove the menu from DOM and keep up the performance.
+          // destroyPopupOnHide should also be an option according to the docs, but
+          // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
+          autoDestroy
+          placement="bottom"
+          open={activeTreeDropdownId === tree.treeId} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
+          onOpenChange={(isVisible, info) => {
+            if (info.source === "trigger") handleTreeDropdownMenuVisibility(tree.treeId, isVisible);
+          }}
+          trigger={["contextMenu"]}
+        >
+          <div>
+            {`(${tree.nodes.size()}) `}
+            {maybeProofreadingIcon}
+            {tree.name}
+          </div>
+        </Dropdown>
+      </div>
+    );
   }
 
   function keySearchMethod(params: {
@@ -709,29 +644,28 @@ function TreeHierarchyView(props: Props) {
   }): boolean {
     const { node, searchQuery } = params;
     return (
-      (node.type === TYPE_TREE && node.id === searchQuery.activeTreeId) ||
-      (node.type === TYPE_GROUP && node.id === searchQuery.activeGroupId)
+      (node.type === GroupTypeEnum.TREE && node.id === searchQuery.activeTreeId) ||
+      (node.type === GroupTypeEnum.GROUP && node.id === searchQuery.activeGroupId)
     );
   }
 
   function getNodeKey({ node }: { node: TreeNode }): number {
     // The hierarchical tree contains group and tree nodes which share ids. To generate a unique
     // id number, use the [-1, ...] range for the group ids and the [..., -2] range for the tree ids.
-    return node.type === TYPE_GROUP ? node.id : -1 - node.id;
+    return node.type === GroupTypeEnum.GROUP ? node.id : -1 - node.id;
   }
 
-  function canDrop(params: OnDragPreviousAndNextLocation<TreeNode> & NodeData<TreeNode>) {
+  function canDrop(params) {
     const { nextParent } = params;
-    return props.allowUpdate && nextParent != null && nextParent.type === TYPE_GROUP;
+    return props.allowUpdate && nextParent != null && nextParent.type === GroupTypeEnum.GROUP;
   }
 
-  function canDrag(params: ExtendedNodeData): boolean {
-    const node = params.node as TreeNode;
+  function canDrag(node: TreeNode): boolean {
     return props.allowUpdate && node.id !== MISSING_GROUP_ID;
   }
 
   function canNodeHaveChildren(node: TreeNode) {
-    return node.type === TYPE_GROUP;
+    return node.type === GroupTypeEnum.GROUP;
   }
 
   function getLabelForActiveItems(): "trees" | "tree" | "group" | null {
@@ -747,6 +681,8 @@ function TreeHierarchyView(props: Props) {
   }
 
   const { activeTreeId, activeGroupId } = props;
+  const checkedKeys = groupTree?.filter(node => node.type === GroupTypeEnum.TREE ? props.trees[node.id].isVisible ).map(node: TreeNode => node.key)
+
   return (
     <AutoSizer>
       {({ height, width }) => (
@@ -756,7 +692,28 @@ function TreeHierarchyView(props: Props) {
             width,
           }}
         >
-          <SortableTree
+          <AndTree
+            treeData={groupTree}
+            height={height}
+            ref={treeRef}
+            titleRender={(node) =>
+              node.type === GroupTypeEnum.TREE ? renderTreeNode(node) : renderGroupNode(node)
+            }
+            switcherIcon={<DownOutlined />}
+            onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
+              info.node.type === GroupTypeEnum.TREE
+                ? onSelectTreeNode(info.node, info.nativeEvent)
+                : onSelectGroupNode(info.node)
+            }
+            onCheck={onCheck}
+            draggable={canDrag}
+            checkedKeys={checkedKeys}
+            checkable
+            blockNode
+            showLine
+            defaultExpandAll
+          />
+          {/* <SortableTree
             treeData={groupTree}
             onChange={onChange}
             onMoveNode={onMoveNode}
@@ -782,7 +739,7 @@ function TreeHierarchyView(props: Props) {
               height,
               width,
             }}
-          />
+          /> */}
         </div>
       )}
     </AutoSizer>
@@ -828,7 +785,7 @@ function TreeHierarchyView(props: Props) {
     dispatch(setTreeGroupsAction(treeGroups));
   }
 
-  function onBatchActions(actions: Array<Action>, actionName: string) {
+  function onBatchActions(actions: Action[], actionName: string) {
     dispatch(batchActions(actions, actionName));
   }
 

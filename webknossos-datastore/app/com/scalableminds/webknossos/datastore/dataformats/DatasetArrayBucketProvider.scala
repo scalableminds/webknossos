@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.dataformats
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Array
@@ -15,6 +16,7 @@ import com.scalableminds.webknossos.datastore.models.requests.DataReadInstructio
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Empty
+import scala.concurrent.duration._
 import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
@@ -28,12 +30,12 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
     with LazyLogging {
 
   // Cache the DatasetArrays of all mags of this layer
-  private lazy val arrayHandleCache = AlfuCache[Vec3Int, DatasetArray](maxCapacity = 50)
+  private lazy val datasetArrayCache = AlfuCache[Vec3Int, DatasetArray](maxCapacity = 50)
 
   def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      datasetArray <- arrayHandleCache.getOrLoad(readInstruction.bucket.mag,
-                                                 _ => openDatasetArrayHandleWithTimeout(readInstruction))
+      datasetArray <- datasetArrayCache.getOrLoad(readInstruction.bucket.mag,
+                                                  _ => openDatasetArrayWithTimeout(readInstruction))
       bucket = readInstruction.bucket
       shape = Vec3Int.full(bucket.bucketLength)
       offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
@@ -43,26 +45,21 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
                                                                     dataLayer.elementClass == ElementClass.uint24)
     } yield bucketData
 
-  private def openDatasetArrayHandleWithTimeout(readInstruction: DataReadInstruction)(
+  private def openDatasetArrayWithTimeout(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[DatasetArray] = {
-    val t = System.currentTimeMillis
+    val before = Instant.now
     for {
-      result <- openDatasetArrayHandle(readInstruction).futureBox
-      duration = System.currentTimeMillis - t
-      _ = if (duration > 500) {
-        val className = this.getClass.getName.split("\\.").last
+      result <- openDatasetArray(readInstruction).futureBox
+      duration = Instant.since(before)
+      _ = if (duration > (1 second)) {
         logger.warn(
-          s"Opening file in $className took ${if (duration > 3000) "really " else ""}long.\n"
-            + s"  duration: $duration ms\n"
-            + s"  dataSource: ${readInstruction.dataSource.id.name}\n"
-            + s"  dataLayer: ${readInstruction.dataLayer.name}\n"
-            + s"  cube: ${readInstruction.cube}"
+          s"Opening ${dataLayer.dataFormat}-DatasetArray for ${readInstruction.layerSummary} was slow ($duration)"
         )
       }
     } yield result
   }
 
-  private def openDatasetArrayHandle(readInstruction: DataReadInstruction)(
+  private def openDatasetArray(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[DatasetArray] = {
     val magLocatorOpt: Option[MagLocator] =
       dataLayer.mags.find(_.mag == readInstruction.bucket.mag)

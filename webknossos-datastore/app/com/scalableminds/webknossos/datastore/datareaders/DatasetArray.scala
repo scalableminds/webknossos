@@ -4,7 +4,6 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
-import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrArray
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate

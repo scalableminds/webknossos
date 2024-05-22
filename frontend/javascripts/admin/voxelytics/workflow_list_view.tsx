@@ -46,7 +46,7 @@ function uniqueify<T>(array: Array<T>): Array<T> {
   return [...new Set(array)];
 }
 
-type RenderRunInfo = VoxelyticsWorkflowListingRun & {
+type RenderRunInfo = Omit<VoxelyticsWorkflowListingRun, "userFirstName" | "userLastName"> & {
   workflowName: string;
   workflowHash: string;
   userDisplayName: string | undefined;
@@ -87,7 +87,7 @@ export default function WorkflowListView() {
 
   usePolling(loadData, VX_POLLING_INTERVAL);
 
-  const getUserDisplayName = (run: VoxelyticsWorkflowListingRun | RenderRunInfo) => {
+  const getUserDisplayName = (run: VoxelyticsWorkflowListingRun) => {
     return run.userFirstName != null || run.userLastName != null
       ? [run.userFirstName, run.userLastName].join(" ")
       : run.hostusername;
@@ -105,8 +105,6 @@ export default function WorkflowListView() {
         id: "", // used to distinguish between workflows and runs when rendering
         hostusername: uniqueify(workflow.runs.map((run) => run.hostusername)).join(", "),
         hostname: uniqueify(workflow.runs.map((run) => run.hostname)).join(", "),
-        userFirstName: uniqueify(workflow.runs.map((run) => run.userFirstName)).join(", "),
-        userLastName: uniqueify(workflow.runs.map((run) => run.userLastName)).join(", "),
         userDisplayName: uniqueify(workflow.runs.map((run) => getUserDisplayName(run))).join(", "),
         voxelyticsVersion: uniqueify(workflow.runs.map((run) => run.voxelyticsVersion)).join(", "),
         taskCounts: workflow.taskCounts,
@@ -199,7 +197,7 @@ export default function WorkflowListView() {
           {
             title: "User",
             key: "userName",
-            render: (run: RenderRunInfo) => run.userDisplayName,
+            dataIndex: "userDisplayName",
             filters: uniqueify(renderRuns.map((run) => run.userDisplayName)).map((username) => ({
               text: username || "",
               value: username || "",
@@ -210,7 +208,7 @@ export default function WorkflowListView() {
           },
           {
             title: "Host",
-            render: (run: RenderRunInfo) => run.hostname,
+            dataIndex: "hostname",
             key: "user",
             filters: uniqueify(renderRuns.map((run) => run.hostname)).map((hostname) => ({
               text: hostname,

@@ -6,7 +6,8 @@ import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrCoordinatesParser, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
+import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits

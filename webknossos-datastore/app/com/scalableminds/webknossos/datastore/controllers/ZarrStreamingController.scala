@@ -4,8 +4,8 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrCoordinatesParser.parseDotCoordinates
 import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.models.VoxelPosition
@@ -202,7 +202,7 @@ class ZarrStreamingController @Inject()(
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                 datasetName,
                                                                                 dataLayerName) ~> NOT_FOUND
-      (c, x, y, z) <- parseDotCoordinates(cxyz) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
+      (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
       magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
       _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       _ <- bool2Fox(c == 0) ~> "zarr.invalidFirstChunkCoord" ~> NOT_FOUND

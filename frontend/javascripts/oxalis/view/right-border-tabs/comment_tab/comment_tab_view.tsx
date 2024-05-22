@@ -489,6 +489,10 @@ const CommentTabViewMemo = React.memo(
       return false;
     }
 
+    if (prevPops.skeletonTracing.activeTreeId !== nextProps.skeletonTracing.activeTreeId) {
+      return false;
+    }
+
     const updateActions = Array.from(
       cachedDiffTrees(prevPops.skeletonTracing.trees, nextProps.skeletonTracing.trees),
     );

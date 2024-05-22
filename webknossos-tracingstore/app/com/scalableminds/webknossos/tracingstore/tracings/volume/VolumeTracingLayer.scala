@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.{AbstractBucketProvider, MagLocator}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -22,7 +22,7 @@ import scala.concurrent.ExecutionContext
 import ucar.ma2.{Array => MultiArray}
 
 trait AbstractVolumeTracingBucketProvider
-    extends AbstractBucketProvider
+    extends BucketProvider
     with VolumeTracingBucketHelper
     with FoxImplicits {
 
@@ -112,7 +112,7 @@ case class VolumeTracingLayer(
 
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,
-                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): AbstractBucketProvider =
+                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     volumeBucketProvider
 
   def bucketProvider: AbstractVolumeTracingBucketProvider = volumeBucketProvider

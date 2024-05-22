@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.webknossos.datastore.dataformats.{AbstractBucketProvider, MagLocator, MappingProvider}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.layers.{
@@ -199,7 +199,7 @@ trait DataLayer extends DataLayerLike {
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
-                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): AbstractBucketProvider
+                     sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider
 
   def bucketProviderCacheKey: String = this.name
 

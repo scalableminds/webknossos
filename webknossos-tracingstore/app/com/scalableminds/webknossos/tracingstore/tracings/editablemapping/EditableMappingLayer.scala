@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.dataformats.{AbstractBucketProvider, MagLocator}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -25,7 +25,7 @@ import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorServ
 import scala.concurrent.ExecutionContext
 
 class EditableMappingBucketProvider(layer: EditableMappingLayer)
-    extends AbstractBucketProvider
+    extends BucketProvider
     with ProtoGeometryImplicits {
 
   override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
@@ -89,7 +89,7 @@ case class EditableMappingLayer(name: String,
 
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,
-                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): AbstractBucketProvider =
+                              sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
 
   override def bucketProviderCacheKey: String = s"$name-token=$token"

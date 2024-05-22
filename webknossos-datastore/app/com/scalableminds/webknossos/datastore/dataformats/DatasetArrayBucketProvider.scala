@@ -23,7 +23,7 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
                                  dataSourceId: DataSourceId,
                                  val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                                  sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
-    extends AbstractBucketProvider
+    extends BucketProvider
     with FoxImplicits
     with LazyLogging {
 

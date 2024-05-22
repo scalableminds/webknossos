@@ -304,7 +304,7 @@ function splitTreeByNodes(
       // ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number | undefined' is not assig... Remove this comment to see the full error message
       const edges = activeTree.edges.getEdgesForNode(nodeId);
       visitedNodes[nodeId] = true;
-      newTree.nodes.mutableSet(nodeId, activeTree.nodes.get(nodeId));
+      newTree.nodes.mutableSet(nodeId, activeTree.nodes.getOrThrow(nodeId));
 
       for (const edge of edges) {
         const edgeHash = getEdgeHash(edge);
@@ -888,7 +888,7 @@ export function extractPathAsNewTree(
   ).map((newTree) => {
     let lastNodeId = null;
     for (const nodeId of pathOfNodeIds) {
-      const node: MutableNode = { ...sourceTree.nodes.get(nodeId) };
+      const node: MutableNode = { ...sourceTree.nodes.getOrThrow(nodeId) };
       newTree.nodes.mutableSet(nodeId, node);
       if (lastNodeId != null) {
         const newEdge: Edge = {

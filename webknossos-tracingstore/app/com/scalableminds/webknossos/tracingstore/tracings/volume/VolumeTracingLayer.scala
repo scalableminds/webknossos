@@ -21,10 +21,7 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException
 import scala.concurrent.ExecutionContext
 import ucar.ma2.{Array => MultiArray}
 
-trait AbstractVolumeTracingBucketProvider
-    extends BucketProvider
-    with VolumeTracingBucketHelper
-    with FoxImplicits {
+trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 
   def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
 

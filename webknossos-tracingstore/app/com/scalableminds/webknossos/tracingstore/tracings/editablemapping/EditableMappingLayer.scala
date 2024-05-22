@@ -24,9 +24,7 @@ import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorServ
 
 import scala.concurrent.ExecutionContext
 
-class EditableMappingBucketProvider(layer: EditableMappingLayer)
-    extends BucketProvider
-    with ProtoGeometryImplicits {
+class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketProvider with ProtoGeometryImplicits {
 
   override def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val bucket: BucketPosition = readInstruction.bucket

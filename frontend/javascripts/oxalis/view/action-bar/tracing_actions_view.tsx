@@ -37,6 +37,7 @@ import {
   reOpenAnnotation,
   createExplorational,
   editLockedState,
+  editAnnotation,
 } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import {
@@ -55,7 +56,7 @@ import {
   disableSavingAction,
 } from "oxalis/model/actions/save_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import Constants, { ControlModeEnum, LOCKED_TAG } from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import { Model } from "oxalis/singletons";
 import SaveButton from "oxalis/view/action-bar/save_button";
@@ -98,6 +99,7 @@ type StateProps = {
   busyBlockingInfo: BusyBlockingInfo;
   annotationOwner: APIUserBase | null | undefined;
   isAnnotationLockedByUser: boolean;
+  annotationTags: string[];
 };
 type Props = OwnProps & StateProps;
 type State = {
@@ -452,7 +454,12 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleUnlockAnnotation = async () => {
-    await editLockedState(this.props.annotationId, this.props.annotationType, false);
+    // TODO: remove tag from annotation
+    const { annotationId, annotationType, annotationTags } = this.props;
+    await editLockedState(annotationId, annotationType, false);
+    await editAnnotation(annotationId, annotationType, {
+      tags: annotationTags.filter((tag) => tag !== LOCKED_TAG),
+    });
     location.reload();
   };
 
@@ -740,6 +747,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     isRenderAnimationModalOpen: state.uiInformation.showRenderAnimationModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
     isAnnotationLockedByUser: state.tracing.isLockedByUser,
+    annotationTags: state.tracing.tags,
   };
 }
 

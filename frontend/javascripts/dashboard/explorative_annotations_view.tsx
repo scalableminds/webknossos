@@ -24,7 +24,7 @@ import {
   APIUser,
   APIUserCompact,
 } from "types/api_flow_types";
-import { AnnotationContentTypes } from "oxalis/constants";
+import { AnnotationContentTypes, LOCKED_TAG } from "oxalis/constants";
 import {
   finishAllAnnotations,
   editAnnotation,
@@ -98,8 +98,6 @@ const READ_ONLY_ICON = (
 function formatUserName(user: APIUserCompact) {
   return `${user.firstName} ${user.lastName}`;
 }
-
-const LOCKED_TAG = "locked";
 
 class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   state: State = {
@@ -323,6 +321,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               href="#"
               onClick={() => this.finishOrReopenAnnotation("finish", tracing)}
               icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
+              disabled={tracing.isLockedByUser}
+              title={tracing.isLockedByUser ? "Locked annotations cannot be archived." : undefined}
             >
               Archive
             </AsyncLink>

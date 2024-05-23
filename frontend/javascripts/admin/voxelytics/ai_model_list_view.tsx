@@ -1,7 +1,7 @@
 import _ from "lodash";
 import React, { useEffect, useState } from "react";
 import { SyncOutlined } from "@ant-design/icons";
-import { Table, Button } from "antd";
+import { Table, Button, Modal } from "antd";
 import { getAiModels } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import { AiModel } from "types/api_flow_types";
@@ -10,6 +10,7 @@ import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { JobState } from "admin/job/job_list_view";
+import { Link } from "react-router-dom";
 
 export default function AiModelListView() {
   const [isLoading, setIsLoading] = useState(false);
@@ -87,7 +88,61 @@ export default function AiModelListView() {
           },
           {
             title: "",
-            render: (_model: AiModel) => "TODO",
+            render: (model: AiModel) => {
+              if (model.trainingJob == null) {
+                return;
+              }
+              const { voxelyticsWorkflowHash, commandArgs } = model.trainingJob;
+              const trainingAnnotations =
+                commandArgs != null ? commandArgs["training_annotations"] : null;
+
+              return (
+                <div>
+                  {voxelyticsWorkflowHash != null ? (
+                    <Link to={`/workflows/${voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
+                  ) : null}
+                  {trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
+                    <a
+                      href="#"
+                      onClick={() => {
+                        Modal.info({
+                          content: (
+                            <div>
+                              The following annotations were used during training:
+                              <ul>
+                                {trainingAnnotations.map(
+                                  (annotation: { annotationId: string }, index: number) => (
+                                    <li>
+                                      <a
+                                        href={`/annotations/${annotation.annotationId}`}
+                                        target="_blank"
+                                        rel="noreferrer noopener"
+                                      >
+                                        Annotation {index + 1}
+                                      </a>
+                                    </li>
+                                  ),
+                                )}
+                              </ul>
+                            </div>
+                          ),
+                        });
+                      }}
+                    >
+                      Show Training Data
+                    </a>
+                  ) : (
+                    <a
+                      href={`/annotations/${trainingAnnotations[0].annotationId}`}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      Show Training Data
+                    </a>
+                  )}
+                </div>
+              );
+            },
             key: "actions",
           },
         ]}

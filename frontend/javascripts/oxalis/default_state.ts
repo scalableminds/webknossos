@@ -229,8 +229,7 @@ const defaultState: OxalisState = {
     showVersionRestore: false,
     showDownloadModal: false,
     showPythonClientModal: false,
-    // todop: revert to "invisible"
-    aIJobModalState: "neuron_inferral",
+    aIJobModalState: "invisible",
     showRenderAnimationModal: false,
     showShareModal: false,
     storedLayouts: {},

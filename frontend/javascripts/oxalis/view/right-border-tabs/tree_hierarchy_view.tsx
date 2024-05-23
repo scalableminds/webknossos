@@ -10,14 +10,14 @@ import {
 import { connect } from "react-redux";
 import { batchActions } from "redux-batched-actions";
 import React from "react";
-import {
+import type {
   ExtendedNodeData,
   FullTree,
   NodeData,
   OnDragPreviousAndNextLocation,
   OnMovePreviousAndNextLocation,
-  SortableTreeWithoutDndContext as SortableTree,
-} from "react-sortable-tree";
+} from "@nosferatu500/react-sortable-tree";
+import { SortableTreeWithoutDndContext as SortableTree } from "@nosferatu500/react-sortable-tree";
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
@@ -61,6 +61,8 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
+import { DndProvider } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
 const CHECKBOX_STYLE = { marginLeft: 4 };
 const CHECKBOX_PLACEHOLDER_STYLE = {
@@ -409,7 +411,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   renderGroupActionsDropdown = (node: TreeNode) => {
     // The root group must not be removed or renamed
-    const { id, name } = node;
+    const { id, title: name } = node;
     const hasExpandedSubgroup = anySatisfyDeep(
       node.children,
       (child) => child.expanded && child.type === TYPE_GROUP,
@@ -736,7 +738,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return node.type === TYPE_GROUP ? node.id : -1 - node.id;
   }
 
-  canDrop = (params: OnDragPreviousAndNextLocation<TreeNode> & NodeData<TreeNode>) => {
+  canDrop = (params: OnDragPreviousAndNextLocation<TreeNode> & TreeNode) => {
     const { nextParent } = params;
     return this.props.allowUpdate && nextParent != null && nextParent.type === TYPE_GROUP;
   };
@@ -764,46 +766,55 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   render() {
     const { activeTreeId, activeGroupId } = this.props;
+    // <AutoSizer>
+    //   {({ height, width }) => (
+    //     <divimport { SortableTreeWithoutDndContext as SortableTree } from '@nosferatu500/react-sortable-tree';
+    //       style={{
+    //         height,
+    //         width,
+    //       }}
+    //     >
     return (
-      <AutoSizer>
-        {({ height, width }) => (
-          <div
-            style={{
-              height,
-              width,
-            }}
-          >
+      <>
+        <div>FOOBAR</div>
+        <div style={{ height: 200, width: 200 }}>
+          <DndProvider backend={HTML5Backend}>
             <SortableTree
-              treeData={this.state.groupTree}
+              treeData={[{ title: "Chicken", expanded: true, children: [{ title: "Egg" }] }]}
               onChange={this.onChange}
-              onMoveNode={this.onMoveNode}
-              searchMethod={this.keySearchMethod}
-              searchQuery={{
-                activeTreeId,
-                activeGroupId,
-              }}
-              getNodeKey={this.getNodeKey}
-              generateNodeProps={this.generateNodeProps}
-              canDrop={this.canDrop}
-              canDrag={this.canDrag}
-              canNodeHaveChildren={this.canNodeHaveChildren}
-              rowHeight={24}
-              innerStyle={{
-                padding: 0,
-              }}
-              scaffoldBlockPxWidth={25}
-              searchFocusOffset={this.state.searchFocusOffset}
-              reactVirtualizedListProps={{
-                scrollToAlignment: "auto",
-                tabIndex: null,
-                height,
-                width,
-              }}
+              // onMoveNode={this.onMoveNode}
+              // searchMethod={this.keySearchMethod}
+              // searchQuery={{
+              //   activeTreeId,
+              //   activeGroupId,
+              // }}
+              // getNodeKey={this.getNodeKey}
+              // generateNodeProps={this.generateNodeProps}
+              // canDrop={this.canDrop}
+              // canDrag={this.canDrag}
+              // canNodeHaveChildren={this.canNodeHaveChildren}
+              // rowHeight={24}
+              // innerStyle={{
+              //   padding: 0,
+              // }}
+              // scaffoldBlockPxWidth={25}
+              // searchFocusOffset={this.state.searchFocusOffset}
+              // // reactVirtualizedListProps={{
+              //   scrollToAlignment: "auto",
+              //   tabIndex: null,
+              //   height: 1000,
+              //   width: 1000,
+              // }}
+              // />
             />
-          </div>
-        )}
-      </AutoSizer>
+          </DndProvider>
+        </div>
+        <div>FOOBAR</div>
+      </>
     );
+    //     </div>
+    //   )}
+    // </AutoSizer>
   }
 }
 

@@ -1,34 +1,25 @@
-import { type TreeProps } from "antd";
-import { BasicDataNode, DataNode} from "antd/es/tree";
+import { type DataNode } from "antd/es/tree";
 import _ from "lodash";
 import { mapGroupsWithRoot } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Tree, TreeGroup, SegmentMap, Segment, TreeMap, SegmentGroup } from "oxalis/store";
-import { Children } from "react";
-
 
 export const MISSING_GROUP_ID = -1;
 
 export enum GroupTypeEnum {
   GROUP = "Group",
   TREE = "Tree",
-};
-
-
-export type TreeFoo = TreeProps<TreeNode>["treeData"]
-
+}
 
 export interface TreeNode extends DataNode {
   name: string;
   id: number;
-  // expanded: boolean;
-  // isChecked: boolean;
-  // isIndeterminate: boolean;
-  // containsTrees: boolean;
+  expanded: boolean;
+  isChecked: boolean;
+  containsTrees: boolean;
   timestamp: number;
   type: GroupTypeEnum;
   children: TreeNode[];
-};
-
+}
 
 export function makeBasicGroupObject(
   groupId: number,
@@ -55,19 +46,23 @@ function makeTreeNode(
     name,
     timestamp: 0,
     children: [],
-    // disableCheckbox TODO
-    ...optionalProperties
+    expanded: true,
+    isChecked: true,
+    containsTrees: false,
+    ...optionalProperties,
   };
 }
 
 function makeTreeNodeFromTree(tree: Tree): TreeNode {
   return makeTreeNode(tree.treeId, tree.name, GroupTypeEnum.TREE, {
+    isChecked: tree.isVisible,
     timestamp: tree.timestamp,
+    containsTrees: true,
   });
 }
 
 function makeTreeNodeFromGroup(group: TreeGroup, optionalProperties: Partial<TreeNode>): TreeNode {
-  return makeTreeNode(group.groupId, group.name, GroupTypeEnum.GROUP, optionalProperties)
+  return makeTreeNode(group.groupId, group.name, GroupTypeEnum.GROUP, optionalProperties);
 }
 
 export function removeTreesAndTransform(groupTree: TreeNode[]): TreeGroup[] {
@@ -79,7 +74,6 @@ export function removeTreesAndTransform(groupTree: TreeNode[]): TreeGroup[] {
 export function insertTreesAndTransform(
   groups: TreeGroup[],
   groupToTreesMap: Record<number, Tree[]>,
-  expandedGroupIds: Record<number, boolean>,
   sortBy: string,
 ): TreeNode[] {
   // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
@@ -88,7 +82,7 @@ export function insertTreesAndTransform(
     const treeNode = makeTreeNodeFromGroup(group, {
       // Ensure that groups are always at the top when sorting by timestamp
       timestamp: 0,
-      children: insertTreesAndTransform(group.children, groupToTreesMap, expandedGroupIds, sortBy),
+      children: insertTreesAndTransform(group.children, groupToTreesMap, sortBy),
     });
 
     // Groups are always sorted by name and appear before the trees, trees are sorted according to the sortBy prop
@@ -97,19 +91,13 @@ export function insertTreesAndTransform(
     );
 
     treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(trees);
-    // treeNode.isChecked = _.every(
-    //   treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
-    //   (groupOrTree) => groupOrTree.isChecked || !groupOrTree.containsTrees,
-    // );
-    // treeNode.isIndeterminate = treeNode.isChecked
-    //   ? false
-    //   : _.some(
-    //       treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
-    //       (groupOrTree) =>
-    //         (groupOrTree.isChecked || groupOrTree.isIndeterminate) && groupOrTree.containsTrees,
-    //     );
-    // treeNode.containsTrees =
-    //   trees.length > 0 || _.some(treeNode.children, (groupOrTree) => groupOrTree.containsTrees);
+    treeNode.isChecked = _.every(
+      treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
+      (groupOrTree) => groupOrTree.isChecked || !groupOrTree.containsTrees,
+    );
+    
+    treeNode.containsTrees =
+      trees.length > 0 || _.some(treeNode.children, (groupOrTree) => groupOrTree.containsTrees);
     return treeNode;
   });
 }
@@ -202,6 +190,7 @@ export function anySatisfyDeep(groups: TreeNode[], testFunction: (arg0: TreeNode
 
   return false;
 }
+
 export function findTreeNode(groups: TreeNode[], id: number, callback: (arg0: TreeNode) => any) {
   for (const group of groups) {
     if (group.id === id) {
@@ -262,4 +251,21 @@ export function moveGroupsHelper(
         : parentGroup.children,
   }));
   return newGroups;
+}
+
+export function deepFlatFilter(
+  nodes: TreeNode[],
+  predicate: (node: TreeNode) => boolean,
+): TreeNode[] {
+  // apply a deep "filter" function to a Tree/Group hierarchy stucture traversing along their children
+  // the resulting items are flattened into a single array
+  return nodes.reduce((acc: TreeNode[], node: TreeNode) => {
+    if (predicate(node)) {
+      acc.push(node);
+    }
+    if (node.children) {
+      acc.push(...deepFlatFilter(node.children, predicate));
+    }
+    return acc;
+  }, []);
 }

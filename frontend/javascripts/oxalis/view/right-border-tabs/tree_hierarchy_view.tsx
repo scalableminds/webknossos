@@ -1,13 +1,5 @@
 import { AutoSizer } from "react-virtualized";
-import {
-  Dropdown,
-  MenuProps,
-  Modal,
-  Tooltip,
-  notification,
-  Tree as AndTree,
-  GetRef,
-} from "antd";
+import { Dropdown, MenuProps, Modal, Tooltip, notification, Tree as AndTree, GetRef } from "antd";
 import {
   DeleteOutlined,
   PlusOutlined,
@@ -36,6 +28,7 @@ import {
   findTreeNode,
   anySatisfyDeep,
   GroupTypeEnum,
+  deepFlatFilter,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -61,7 +54,8 @@ import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 
-import type CheckInfo from "rc-tree/lib/interface"
+import type CheckInfo from "rc-tree/lib/interface";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 
 type Props = {
   activeTreeId: number | null | undefined;
@@ -108,9 +102,9 @@ function didTreeDataChange(prevProps: Props, nextProps: Props): boolean {
 }
 
 function TreeHierarchyView(props: Props) {
-  const [expandedGroupIds, setExpandedGroupIds] = useState<Record<number, boolean>>({
-    [MISSING_GROUP_ID]: true,
-  });
+  const [expandedNodeKeys, setExpandedNodeKeys] = useState<React.Key[]>([
+    `Group-${MISSING_GROUP_ID}`,
+  ]);
   const [groupTree, setGroupTree] = useState<TreeNode[]>([]);
   const [prevProps, setPrevProps] = useState<Props | null>(null);
   const [searchFocusOffset, setSearchFocusOffset] = useState(0);
@@ -133,38 +127,38 @@ function TreeHierarchyView(props: Props) {
         children: props.treeGroups,
       };
 
-      const newExpandedGroupIds = _.cloneDeep(expandedGroupIds);
-
       const generatedGroupTree = insertTreesAndTransform(
         [rootGroup],
         groupToTreesMap,
-        newExpandedGroupIds,
         props.sortBy,
       );
       setGroupTree(generatedGroupTree);
-      setExpandedGroupIds(newExpandedGroupIds);
-      setPrevProps(props);
-    } else {
-      setPrevProps(props);
     }
+
+    setPrevProps(props);
   }, [props]);
 
-  useEffect(() => {
-    // async componentDidUpdate() {
-    // TODO: Workaround, remove after https://github.com/frontend-collective/react-sortable-tree/issues/305 is fixed
-    // Also remove the searchFocusOffset from the state and hard-code it as 0
-    if (prevProps) {
-      const didSearchTermChange =
-        prevProps.activeTreeId !== props.activeTreeId ||
-        prevProps.activeGroupId !== props.activeGroupId;
+  useEffectOnlyOnce(() => {
+    // set default expanded keys
+    setExpandedNodeKeys([...expandedNodeKeys, `Tree-${props.activeTreeId}`]);
+  });
 
-      if (didTreeDataChange(prevProps, props) && didSearchTermChange) {
-        setSearchFocusOffset(1);
-      } else {
-        setSearchFocusOffset(0);
-      }
-    }
-  }, [prevProps, props]);
+  // useEffect(() => {
+  //   // async componentDidUpdate() {
+  //   // TODO: Workaround, remove after https://github.com/frontend-collective/react-sortable-tree/issues/305 is fixed
+  //   // Also remove the searchFocusOffset from the state and hard-code it as 0
+  //   if (prevProps) {
+  //     const didSearchTermChange =
+  //       prevProps.activeTreeId !== props.activeTreeId ||
+  //       prevProps.activeGroupId !== props.activeGroupId;
+
+  //     if (didTreeDataChange(prevProps, props) && didSearchTermChange) {
+  //       setSearchFocusOffset(1);
+  //     } else {
+  //       setSearchFocusOffset(0);
+  //     }
+  //   }
+  // }, [prevProps, props]);
 
   // }
 
@@ -176,16 +170,16 @@ function TreeHierarchyView(props: Props) {
   //   setGroupTree(treeData);
   //   setExpandedGroupIds(expandedGroupIds);
   // }
-  
-  function onExpand(expandedKeys: React.Key[], ) {
-    setExpandedGroupIds(expandedKeys);
+
+  function onExpand(expandedKeys: React.Key[]) {
+    setExpandedNodeKeys(expandedKeys);
   }
 
   function onCheck(_checkedKeysValue: React.Key[], info: typeof CheckInfo) {
     const { id, type } = info.node;
 
     if (type === GroupTypeEnum.TREE) {
-      onToggleTree(parseInt(id, 10));
+      onToggleTree(id);
     } else if (id === MISSING_GROUP_ID) {
       onToggleAllTrees();
     } else {
@@ -193,7 +187,7 @@ function TreeHierarchyView(props: Props) {
     }
   }
 
-  function onSelectTreeNode(node: TreeNode, evt) {
+  function onSelectTreeNode(node: TreeNode, evt: MouseEvent) {
     const treeId = node.id;
 
     if (evt.ctrlKey || evt.metaKey) {
@@ -230,7 +224,7 @@ function TreeHierarchyView(props: Props) {
   }
 
   function setExpansionOfAllSubgroupsTo(groupId: number, expanded: boolean) {
-    const newExpandedGroupIds = Object.assign({}, expandedGroupIds);
+    const newExpandedGroupIds = Object.assign({}, expandedNodeKeys);
 
     const collapseAllGroups = (groupTree: TreeNode[]) => {
       const copyOfGroupTree = _.cloneDeep(groupTree);
@@ -252,7 +246,7 @@ function TreeHierarchyView(props: Props) {
     };
 
     setGroupTree((prevgroupTree) => collapseAllGroups(prevgroupTree));
-    setExpandedGroupIds(newExpandedGroupIds);
+    setExpandedNodeKeys(newExpandedGroupIds);
   }
 
   function onMoveWithContextAction(targetParentNode: TreeNode) {
@@ -626,9 +620,7 @@ function TreeHierarchyView(props: Props) {
           trigger={["contextMenu"]}
         >
           <div>
-            {`(${tree.nodes.size()}) `}
-            {maybeProofreadingIcon}
-            {tree.name}
+            {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
           </div>
         </Dropdown>
       </div>
@@ -664,10 +656,6 @@ function TreeHierarchyView(props: Props) {
     return props.allowUpdate && node.id !== MISSING_GROUP_ID;
   }
 
-  function canNodeHaveChildren(node: TreeNode) {
-    return node.type === GroupTypeEnum.GROUP;
-  }
-
   function getLabelForActiveItems(): "trees" | "tree" | "group" | null {
     // Only one type of component can be selected. It is not possible to select multiple groups.
     if (props.selectedTrees.length > 0) {
@@ -680,8 +668,7 @@ function TreeHierarchyView(props: Props) {
     return null;
   }
 
-  const { activeTreeId, activeGroupId } = props;
-  const checkedKeys = groupTree?.filter(node => node.type === GroupTypeEnum.TREE ? props.trees[node.id].isVisible ).map(node: TreeNode => node.key)
+  const checkedKeys = deepFlatFilter(groupTree, (node) => node.isChecked).map((node) => node.key);
 
   return (
     <AutoSizer>
@@ -706,40 +693,16 @@ function TreeHierarchyView(props: Props) {
                 : onSelectGroupNode(info.node)
             }
             onCheck={onCheck}
+            onExpand={onExpand}
             draggable={canDrag}
             checkedKeys={checkedKeys}
+            expandedKeys={expandedNodeKeys}
+            autoExpandParent
             checkable
             blockNode
             showLine
             defaultExpandAll
           />
-          {/* <SortableTree
-            treeData={groupTree}
-            onChange={onChange}
-            onMoveNode={onMoveNode}
-            searchMethod={keySearchMethod}
-            searchQuery={{
-              activeTreeId,
-              activeGroupId,
-            }}
-            getNodeKey={getNodeKey}
-            generateNodeProps={generateNodeProps}
-            canDrop={canDrop}
-            canDrag={canDrag}
-            canNodeHaveChildren={canNodeHaveChildren}
-            rowHeight={24}
-            innerStyle={{
-              padding: 0,
-            }}
-            scaffoldBlockPxWidth={25}
-            searchFocusOffset={searchFocusOffset}
-            reactVirtualizedListProps={{
-              scrollToAlignment: "auto",
-              tabIndex: null,
-              height,
-              width,
-            }}
-          /> */}
         </div>
       )}
     </AutoSizer>

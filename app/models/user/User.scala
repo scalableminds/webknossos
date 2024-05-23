@@ -19,7 +19,6 @@ import slick.lifted.Rep
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 import utils.ObjectId
 
-import java.sql.Timestamp
 import scala.concurrent.ExecutionContext
 
 object User {
@@ -63,11 +62,11 @@ case class User(
 }
 
 case class UserCompactInfo(
-    _id: String,
-    _multiUserId: String,
+    _id: ObjectId,
+    _multiUserId: ObjectId,
     email: String,
-    firstname: String,
-    lastname: String,
+    firstName: String,
+    lastName: String,
     userConfiguration: String,
     isAdmin: Boolean,
     isOrganizationOwner: Boolean,
@@ -78,40 +77,17 @@ case class UserCompactInfo(
     teamManagersAsArrayLiteral: String,
     experienceValuesAsArrayLiteral: String,
     experienceDomainsAsArrayLiteral: String,
-    lastActivity: Timestamp,
-    organization_id: String,
-    organization_name: String,
+    lastActivity: Instant,
+    organizationId: ObjectId,
+    organizationName: String,
     novelUserExperienceInfos: String,
     selectedTheme: String,
-    created: Timestamp,
+    created: Instant,
     lastTaskTypeId: Option[String],
     isSuperUser: Boolean,
     isEmailVerified: Boolean,
     isEditable: Boolean
-) {
-  def toUser(implicit ec: ExecutionContext): Fox[User] =
-    for {
-      userConfiguration <- Fox.box2Fox(parseAndValidateJson[JsObject](userConfiguration))
-    } yield {
-      User(
-        ObjectId(_id),
-        ObjectId(_multiUserId),
-        ObjectId(organization_id),
-        firstname,
-        lastname,
-        Instant.fromSql(lastActivity),
-        userConfiguration,
-        LoginInfo(User.default_login_provider_id, _id),
-        isAdmin,
-        isOrganizationOwner,
-        isDatasetManager,
-        isDeactivated,
-        isUnlisted = false,
-        Instant.fromSql(created),
-        lastTaskTypeId.map(ObjectId(_))
-      )
-    }
-}
+)
 
 class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[User, UsersRow, Users](sqlClient) {
@@ -222,23 +198,20 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
        """
 
   // Necessary since a tuple can only have 22 elements
-  implicit def GetResultUserCompactInfo(implicit e0: GetResult[String],
-                                        e1: GetResult[java.sql.Timestamp],
-                                        e2: GetResult[Boolean],
-                                        e3: GetResult[Option[String]]): GetResult[UserCompactInfo] = GetResult { prs =>
+  implicit def GetResultUserCompactInfo: GetResult[UserCompactInfo] = GetResult { prs =>
     import prs._
     // format: off
-    UserCompactInfo(<<[String],<<[String],<<[String],<<[String],<<[String],<<[String],<<[Boolean],<<[Boolean],
-      <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[java.sql.Timestamp],<<[String],
-      <<[String],<<[String],<<[String],<<[java.sql.Timestamp],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean]
+    UserCompactInfo(<<[ObjectId],<<[ObjectId],<<[String],<<[String],<<[String],<<[String],<<[Boolean],<<[Boolean],
+      <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],<<[ObjectId],
+      <<[String],<<[String],<<[String],<<[Instant],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean]
     )
     // format: on
   }
-  def findAllCompactWithFilters(
-      isEditable: Option[Boolean],
-      isTeamManagerOrAdmin: Option[Boolean],
-      isAdmin: Option[Boolean],
-      requestingUser: User)(implicit ctx: DBAccessContext): Fox[(List[User], List[UserCompactInfo])] =
+
+  def findAllCompactWithFilters(isEditable: Option[Boolean],
+                                isTeamManagerOrAdmin: Option[Boolean],
+                                isAdmin: Option[Boolean],
+                                requestingUser: User)(implicit ctx: DBAccessContext): Fox[List[UserCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(isEditable,
                                                       isTeamManagerOrAdmin,
@@ -257,7 +230,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         OR COUNT(autr.team_ids) = 0
         AS iseditable
         """
-      r <- run(q"""
+      rows <- run(q"""
           WITH
           -- agg_experiences and agg_user_team_roles are extracted to avoid left-join fanout.
           agg_experiences AS (
@@ -318,9 +291,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           m._id, m.email, m.novelUserExperienceinfos, m.selectedTheme, m.isSuperUser, m.isEmailVerified,
           autr.team_ids, autr.team_names, autr.team_managers, aux.experience_values, aux.experience_domains
          """.as[UserCompactInfo])
-      users <- Fox.combined(r.toList.map(_.toUser))
-      compactInfos = r.toList
-    } yield (users, compactInfos)
+    } yield rows.toList
 
   // NOTE: This will not return admins. They have “access to all teams”. Consider fetching those too when you use this
   def findAllByTeams(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[User]] =
@@ -471,7 +442,10 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def updateLastActivity(userId: ObjectId, lastActivity: Instant = Instant.now)(
       implicit ctx: DBAccessContext): Fox[Unit] =
-    updateTimestampCol(userId, _.lastactivity, lastActivity)
+    for {
+      _ <- assertUpdateAccess(userId)
+      _ <- run(q"UPDATE webknossos.users SET lastActivity = $lastActivity WHERE _id = $userId".asUpdate)
+    } yield ()
 
   def updateUserConfiguration(userId: ObjectId, userConfiguration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {

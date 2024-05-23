@@ -1,9 +1,6 @@
 import { Button, Table, TableProps } from "antd";
-import { GetRowKey } from "antd/lib/table/interface";
-import * as React from "react";
-type Props<RecordType extends object = any> = TableProps<RecordType> & {
-  children: Array<React.ReactElement<typeof Table.Column> | null>;
-};
+import { ColumnsType, GetRowKey } from "antd/lib/table/interface";
+import React from "react";
 
 type State = {
   expandedRows: Array<string>;
@@ -15,7 +12,11 @@ type State = {
  *  and the scroll prop as this is already done by the wrapper.
  */
 
-export default class FixedExpandableTable extends React.PureComponent<Props, State> {
+// Enforce the "columns" prop which is optional by default otherwise
+type OwnTableProps<RecordType = any> = TableProps<RecordType> & {
+  columns: ColumnsType<RecordType>;
+};
+export default class FixedExpandableTable extends React.PureComponent<OwnTableProps, State> {
   state: State = {
     expandedRows: [],
   };
@@ -28,7 +29,7 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
     return dataSource != null && canUseRowKey ? dataSource.map((row) => row[rowKey]) : [];
   }
 
-  componentDidUpdate(prevProps: Readonly<Props<any>>): void {
+  componentDidUpdate(prevProps: Readonly<TableProps<any>>): void {
     if (prevProps.dataSource !== this.props.dataSource) {
       this.setState({ expandedRows: [] });
     }
@@ -36,7 +37,7 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
 
   render() {
     const { expandedRows } = this.state;
-    const { children, className, expandable, ...restProps } = this.props;
+    const { className, expandable, ...restProps } = this.props;
     const { dataSource, rowKey } = this.props;
     const areAllRowsExpanded =
       dataSource != null && this.state.expandedRows.length === dataSource?.length;
@@ -55,20 +56,10 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
         onClick={() => this.setState({ expandedRows: [] })}
       />
     );
-    // Don't use React.Children.map here, since this adds .$ prefixes
-    // to the keys. However, the keys are needed when managing the sorters
-    // of the table.
-    const columnsWithAdjustedFixedProp = children
-      .filter((el) => el)
-      // @ts-ignore The previous filter removes null
-      .map((child: React.ReactElement<typeof Table.Column>) => {
-        // @ts-ignore
-        const columnFixed: boolean = expandedRows.length > 0 ? false : child.props.fixed;
-        return React.cloneElement(child, {
-          // @ts-ignore
-          fixed: columnFixed,
-        });
-      });
+    const columnsWithAdjustedFixedProp: TableProps["columns"] = this.props.columns.map((column) => {
+      const columnFixed = expandedRows.length > 0 ? false : column.fixed;
+      return { ...column, fixed: columnFixed };
+    });
     const expandableProp = {
       ...expandable,
       expandedRowKeys: expandedRows,
@@ -87,9 +78,8 @@ export default class FixedExpandableTable extends React.PureComponent<Props, Sta
           x: "max-content",
         }}
         className={`large-table ${className}`}
-      >
-        {columnsWithAdjustedFixedProp}
-      </Table>
+        columns={columnsWithAdjustedFixedProp}
+      />
     );
   }
 }

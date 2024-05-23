@@ -1503,7 +1503,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       nodeContextMenuTree = tree;
     });
   }
-  // TS doesnt understand the above initialization and assumes the values
+  // TS doesn't understand the above initialization and assumes the values
   // are always null. The following NOOP helps TS with the correct typing.
   nodeContextMenuTree = nodeContextMenuTree as Tree | null;
   nodeContextMenuNode = nodeContextMenuNode as MutableNode | null;
@@ -1653,7 +1653,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     );
   }
   if (segments != null && maybeClickedMeshId != null) {
-    const segmentName = segments.get(maybeClickedMeshId)?.name;
+    const segmentName = segments.getNullable(maybeClickedMeshId)?.name;
     if (segmentName != null) {
       const maxSegmentNameLength = 18;
       infoRows.push(

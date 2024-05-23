@@ -27,7 +27,7 @@ We have years of experience with automated machine learning analysis and [offer 
 We are also always interested in new collaborations. 
 Get in touch if you want to work together on a project resulting in new classifiers.
 
-WEBKNOSSOS does not allow you to run custom machine learning models on your data yet. As a work-around you can download your annotations from WEBKNOSSOS - either manually or scripted [through our Python libarary](https://docs.webknossos.org/webknossos-py) - and do your ML analysis offline and use WEBKNOSSOS to inspect the results. 
+WEBKNOSSOS does not allow you to run custom machine learning models on your data yet. As a work-around you can download your annotations from WEBKNOSSOS - either manually or scripted [through our Python library](https://docs.webknossos.org/webknossos-py) - and do your ML analysis offline and use WEBKNOSSOS to inspect the results. 
 
 ## How can I use my dataset with WEBKNOSSOS?
 

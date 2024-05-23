@@ -140,7 +140,7 @@ trait PathUtils extends LazyLogging {
     }
 
   /*
-   * removes the end of a path, after the last occurence of any of excludeFromPrefix
+   * removes the end of a path, after the last occurrence of any of excludeFromPrefix
    * example:  /path/to/color/layer/that/is/named/color/and/has/files
    *    becomes  /path/to/color/layer/that/is/named/color
    *    if "color" is in excludeFromPrefix

@@ -1657,6 +1657,7 @@ type ExplorationResult = {
 
 export async function exploreRemoteDataset(
   remoteUris: string[],
+  datastoreName: string,
   credentials?: { username: string; pass: string } | null,
   preferredVoxelSize?: Vector3,
 ): Promise<ExplorationResult> {
@@ -1665,6 +1666,7 @@ export async function exploreRemoteDataset(
       const extendedUri = {
         remoteUri: uri.trim(),
         preferredVoxelSize,
+        datastoreName,
       };
 
       if (credentials) {
@@ -2315,6 +2317,7 @@ export function computeAdHocMesh(
     additionalCoordinates,
     cubeSize,
     mappingName,
+    mag,
 
     ...rest
   } = meshRequest;
@@ -2330,11 +2333,12 @@ export function computeAdHocMesh(
           // The back-end needs a small padding at the border of the
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
-          position: V3.toArray(V3.sub(position, [1, 1, 1])),
+          position: V3.toArray(V3.sub(position, mag)), // position is in mag1
           additionalCoordinates,
-          cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])),
+          cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
+          mag,
           ...rest,
         },
       },

@@ -687,7 +687,7 @@ export function NeuronSegmentationForm() {
             <Row style={{ display: "grid", marginBottom: 16 }}>
               <Alert
                 message="Please note that this feature is experimental and currently only works with electron
-                microscopy data."
+                microscopy data. If the specified bounding box is too close to the border of the dataset's bounding box, its size might be reduced automatically."
                 type="warning"
                 showIcon
               />

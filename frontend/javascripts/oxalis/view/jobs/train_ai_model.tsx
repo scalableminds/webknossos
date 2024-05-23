@@ -1,5 +1,5 @@
 import React from "react";
-import { Form, Row, Col, Input, Button, Select } from "antd";
+import { Alert, Form, Row, Col, Input, Button, Select, Collapse } from "antd";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
@@ -17,6 +17,7 @@ import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracin
 import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 
+const { TextArea } = Input;
 const FormItem = Form.Item;
 
 export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
@@ -41,8 +42,7 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
       ],
       name: values.modelName,
       aiModelCategory: values.modelCategory,
-      // optional comment,
-      // optional workflowYaml
+      workflowYaml: values.workflowYaml,
     });
     Toast.success("The training has successfully started.");
     onClose();
@@ -67,6 +67,13 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
   );
   return (
     <Form onFinish={onFinish} form={form} initialValues={defaultValues} layout="vertical">
+      <Row style={{ display: "grid", marginBottom: 16 }}>
+        <Alert
+          message="Please note that this feature is experimental. Bounding boxes are expected to have sizes that are multiple of 20×20×18 voxel."
+          type="warning"
+          showIcon
+        />
+      </Row>
       <Row gutter={8}>
         <Col span={24}>
           <FormItem
@@ -100,7 +107,6 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
           <Select.Option value="em_nuclei">EM Nuclei</Select.Option>
         </Select>
       </FormItem>
-
       <FormItem
         hasFeedback
         name="imageDataLayer"
@@ -115,7 +121,6 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
       >
         <LayerSelection layers={colorLayers} tracing={tracing} style={{ width: "100%" }} />
       </FormItem>
-
       <LayerSelectionFormItem
         chooseSegmentationLayer
         layers={segmentationLayers}
@@ -123,13 +128,35 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
         tracing={tracing}
         label="Groundtruth Layer"
       />
+      <Collapse
+        style={{ marginBottom: 8 }}
+        items={[
+          {
+            key: "advanced",
+            label: "Advanced",
+            children: (
+              <FormItem name="workflowYaml" label="Workflow Description (yaml)">
+                <TextArea
+                  className="input-monospace"
+                  autoSize={{
+                    minRows: 6,
+                  }}
+                  style={{
+                    fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+                  }}
+                />
+              </FormItem>
+            ),
+          },
+        ]}
+        defaultActiveKey={[]}
+      />
 
       <FormItem hasFeedback name="dummy" label="Training Data">
         <div>
           {userBoundingBoxes.length} bounding boxes ({bboxesVoxelCount / 1000000} MVx)
         </div>
       </FormItem>
-
       <FormItem>
         <Button
           size="large"

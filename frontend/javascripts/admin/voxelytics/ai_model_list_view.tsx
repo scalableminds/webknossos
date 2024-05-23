@@ -77,7 +77,8 @@ export default function AiModelListView() {
             title: "Status",
             dataIndex: "trainingJob",
             key: "status",
-            render: (trainingJob: AiModel["trainingJob"]) => <JobState job={trainingJob} />,
+            render: (trainingJob: AiModel["trainingJob"]) =>
+              trainingJob && <JobState job={trainingJob} />,
           },
           {
             title: "Comment",

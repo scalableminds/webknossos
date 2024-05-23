@@ -211,7 +211,7 @@ function TaskCreateBulkView() {
 
   function getInvalidTaskIndices(tasks: NewTask[]): number[] {
     // returns the index / line number of an invalidly parsed task
-    // returned indicies start at 1 for easier matching by non-CS people
+    // returned indices start at 1 for easier matching by non-CS people
     const isValidTasks = tasks.map(isValidTask);
     const invalidTasks: number[] = [];
     return isValidTasks.reduce((result, isValid: boolean, i: number) => {
@@ -261,7 +261,7 @@ function TaskCreateBulkView() {
       <Spin spinning={isUploading}>
         <Card title={<h3>Bulk Create Tasks</h3>}>
           <p>
-            Specify each new task on a separate line as comma seperated values (CSV) in the
+            Specify each new task on a separate line as comma separated values (CSV) in the
             following format:
             <br />
             <a href="/dashboard">dataset</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,

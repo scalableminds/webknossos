@@ -37,7 +37,8 @@ import type {
   APITaskType,
   APITeam,
   APITimeInterval,
-  APITimeTracking,
+  APITimeTrackingPerAnnotation,
+  APITimeTrackingSpan,
   APITracingStore,
   APIUpdateActionBatch,
   APIUser,
@@ -63,6 +64,7 @@ import type {
   MaintenanceInfo,
   AdditionalCoordinate,
   LayerLink,
+  APITimeTrackingPerUser,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import type { LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
@@ -1329,6 +1331,7 @@ type ExplorationResult = {
 
 export async function exploreRemoteDataset(
   remoteUris: string[],
+  datastoreName: string,
   credentials?: { username: string; pass: string } | null,
   preferredVoxelSize?: Vector3,
 ): Promise<ExplorationResult> {
@@ -1337,6 +1340,7 @@ export async function exploreRemoteDataset(
       const extendedUri = {
         remoteUri: uri.trim(),
         preferredVoxelSize,
+        datastoreName,
       };
 
       if (credentials) {
@@ -1592,6 +1596,44 @@ export function getEditableMappingInfo(
   );
 }
 
+export function getAgglomerateIdForSegmentId(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentId: number,
+): Promise<number> {
+  return doWithToken(async (token) => {
+    const urlParams = new URLSearchParams({
+      token,
+      segmentId: `${segmentId}`,
+    });
+    const { agglomerateId } = await Request.receiveJSON(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateIdForSegmentId?${urlParams.toString()}`,
+    );
+    return agglomerateId;
+  });
+}
+
+export function getPositionForSegmentInAgglomerate(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingName: string,
+  segmentId: number,
+): Promise<Vector3> {
+  return doWithToken(async (token) => {
+    const urlParams = new URLSearchParams({
+      token,
+      segmentId: `${segmentId}`,
+    });
+    const position = await Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${urlParams.toString()}`,
+    );
+    return position;
+  });
+}
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1649,24 +1691,44 @@ export function updateUserConfiguration(
   });
 }
 
-export async function getTimeTrackingForUser(
+export async function getTimeTrackingForUserSummedPerAnnotation(
   userId: string,
   startDate: dayjs.Dayjs,
   endDate: dayjs.Dayjs,
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
   projectIds?: string[] | null,
-): Promise<Array<APITimeTracking>> {
+): Promise<Array<APITimeTrackingPerAnnotation>> {
   const params = new URLSearchParams({
-    startDate: startDate.valueOf().toString(),
-    endDate: endDate.valueOf().toString(),
+    start: startDate.valueOf().toString(),
+    end: endDate.valueOf().toString(),
   });
   if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0)
     params.append("projectIds", projectIds.join(","));
-  const timeTrackingData = await Request.receiveJSON(`/api/time/user/${userId}?${params}`);
-  const { timelogs } = timeTrackingData;
-  assertResponseLimit(timelogs);
-  return timelogs;
+  params.append("annotationStates", "Active,Finished");
+  const timeTrackingData = await Request.receiveJSON(
+    `/api/time/user/${userId}/summedByAnnotation?${params}`,
+  );
+  assertResponseLimit(timeTrackingData);
+  return timeTrackingData;
+}
+
+export async function getTimeTrackingForUserSpans(
+  userId: string,
+  startDate: number,
+  endDate: number,
+  annotationTypes: "Explorational" | "Task" | "Task,Explorational",
+  projectIds?: string[] | null,
+): Promise<Array<APITimeTrackingSpan>> {
+  const params = new URLSearchParams({
+    start: startDate.toString(),
+    end: endDate.toString(),
+  });
+  if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
+  if (projectIds != null && projectIds.length > 0)
+    params.append("projectIds", projectIds.join(","));
+  params.append("annotationStates", "Active,Finished");
+  return await Request.receiveJSON(`/api/time/user/${userId}/spans?${params}`);
 }
 
 export async function getTimeEntries(
@@ -1675,7 +1737,7 @@ export async function getTimeEntries(
   teamIds: string[],
   selectedTypes: AnnotationTypeFilterEnum,
   projectIds: string[],
-) {
+): Promise<Array<APITimeTrackingPerUser>> {
   const params = new URLSearchParams({
     start: startMs.toString(),
     end: endMs.toString(),
@@ -1684,6 +1746,7 @@ export async function getTimeEntries(
   // Omit empty parameters in request
   if (projectIds.length > 0) params.append("projectIds", projectIds.join(","));
   if (teamIds.length > 0) params.append("teamIds", teamIds.join(","));
+  params.append("annotationStates", "Active,Finished");
   return await Request.receiveJSON(`api/time/overview?${params}`);
 }
 
@@ -1928,6 +1991,7 @@ export function computeAdHocMesh(
     additionalCoordinates,
     cubeSize,
     mappingName,
+    mag,
 
     ...rest
   } = meshRequest;
@@ -1943,11 +2007,12 @@ export function computeAdHocMesh(
           // The back-end needs a small padding at the border of the
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
-          position: V3.toArray(V3.sub(position, [1, 1, 1])),
+          position: V3.toArray(V3.sub(position, mag)), // position is in mag1
           additionalCoordinates,
-          cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])),
+          cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
+          mag,
           ...rest,
         },
       },
@@ -2166,8 +2231,8 @@ export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   segmentsInfo: {
-    segmentPosition1: Vector3;
-    segmentPosition2: Vector3;
+    segmentId1: number;
+    segmentId2: number;
     mag: Vector3;
     agglomerateId: number;
     editableMappingId: string;
@@ -2192,7 +2257,7 @@ export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
   segmentInfo: {
-    segmentPosition: Vector3;
+    segmentId: number;
     mag: Vector3;
     agglomerateId: number;
     editableMappingId: string;

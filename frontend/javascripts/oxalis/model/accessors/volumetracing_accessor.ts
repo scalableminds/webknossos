@@ -349,6 +349,7 @@ export function getSegmentsForLayer(state: OxalisState, layerName: string): Segm
   return state.localSegmentationData[layer.name].segments;
 }
 
+const EMPTY_SEGMENT_GROUPS: SegmentGroup[] = [];
 export function getVisibleSegments(state: OxalisState): {
   segments: SegmentMap | null | undefined;
   segmentGroups: Array<SegmentGroup>;
@@ -366,7 +367,7 @@ export function getVisibleSegments(state: OxalisState): {
 
   // There aren't any segment groups for view-only layers
   const { segments } = state.localSegmentationData[layer.name];
-  return { segments, segmentGroups: [] };
+  return { segments, segmentGroups: EMPTY_SEGMENT_GROUPS };
 }
 
 // Next to returning a clean list of selected segments or group, this method returns

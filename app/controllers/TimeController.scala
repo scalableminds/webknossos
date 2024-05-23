@@ -3,7 +3,7 @@ package controllers
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationType
+import models.annotation.{AnnotationState, AnnotationType}
 
 import scala.collection.immutable.ListMap
 import javax.inject.Inject
@@ -47,38 +47,65 @@ class TimeController @Inject()(userService: UserService,
       }
     }
 
+  def timeSummedByAnnotationForUser(userId: String,
+                                    start: Long,
+                                    end: Long,
+                                    annotationTypes: String,
+                                    annotationStates: String,
+                                    projectIds: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        userIdValidated <- ObjectId.fromString(userId)
+        projectIdsValidated <- ObjectId.fromCommaSeparated(projectIds)
+        annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> "invalidAnnotationType"
+        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
+        user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
+        isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
+        _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
+        timesByAnnotation <- timeSpanDAO.summedByAnnotationForUser(user._id,
+                                                                   Instant(start),
+                                                                   Instant(end),
+                                                                   annotationTypesValidated,
+                                                                   annotationStatesValidated,
+                                                                   projectIdsValidated)
+      } yield Ok(timesByAnnotation)
+  }
+
   def timeSpansOfUser(userId: String,
-                      startDate: Long,
-                      endDate: Long,
+                      start: Long,
+                      end: Long,
                       annotationTypes: String,
+                      annotationStates: String,
                       projectIds: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         userIdValidated <- ObjectId.fromString(userId)
         projectIdsValidated <- ObjectId.fromCommaSeparated(projectIds)
         annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> "invalidAnnotationType"
+        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
         user <- userService.findOneCached(userIdValidated) ?~> "user.notFound" ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- bool2Fox(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
-        userJs <- userService.compactWrites(user)
         timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id,
-                                                         Instant(startDate),
-                                                         Instant(endDate),
+                                                         Instant(start),
+                                                         Instant(end),
                                                          annotationTypesValidated,
+                                                         annotationStatesValidated,
                                                          projectIdsValidated)
-      } yield Ok(Json.obj("user" -> userJs, "timelogs" -> timeSpansJs))
+      } yield Ok(timeSpansJs)
     }
 
   def timeOverview(start: Long,
                    end: Long,
                    annotationTypes: String,
+                   annotationStates: String,
                    teamIds: Option[String],
                    projectIds: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)) ?~> "notAllowed" ~> FORBIDDEN
         teamIdsValidated <- ObjectId.fromCommaSeparated(teamIds) ?~> "invalidTeamId"
         annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> "invalidAnnotationType"
+        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
         _ <- bool2Fox(annotationTypesValidated.nonEmpty) ?~> "annotationTypesEmpty"
         _ <- bool2Fox(annotationTypesValidated.forall(typ =>
           typ == AnnotationType.Explorational || typ == AnnotationType.Task)) ?~> "unsupportedAnnotationType"
@@ -86,11 +113,12 @@ class TimeController @Inject()(userService: UserService,
         usersByTeams <- if (teamIdsValidated.isEmpty) userDAO.findAll else userDAO.findAllByTeams(teamIdsValidated)
         admins <- userDAO.findAdminsByOrg(request.identity._organization)
         usersFiltered = (usersByTeams ++ admins).distinct
-        usersWithTimesJs <- timeSpanDAO.timeSummedSearch(Instant(start),
-                                                         Instant(end),
-                                                         usersFiltered.map(_._id),
-                                                         annotationTypesValidated,
-                                                         projectIdsValidated)
+        usersWithTimesJs <- timeSpanDAO.timeOverview(Instant(start),
+                                                     Instant(end),
+                                                     usersFiltered.map(_._id),
+                                                     annotationTypesValidated,
+                                                     annotationStatesValidated,
+                                                     projectIdsValidated)
       } yield Ok(Json.toJson(usersWithTimesJs))
     }
 

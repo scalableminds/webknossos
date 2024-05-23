@@ -16,6 +16,8 @@ import VisibilityAwareRaycaster, {
   type RaycastIntersection,
 } from "libs/visibility_aware_raycaster";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
+import { MeshSceneNode, SceneGroupForMeshes } from "oxalis/controller/segment_mesh_controller";
 
 const createDirLight = (
   position: Vector3,
@@ -33,7 +35,7 @@ const createDirLight = (
 };
 
 const raycaster = new VisibilityAwareRaycaster();
-let oldRaycasterHit: THREE.Object3D | null = null;
+let oldRaycasterHit: MeshSceneNode | null = null;
 const MESH_HOVER_THROTTLING_DELAY = 150;
 
 class PlaneView {
@@ -101,7 +103,7 @@ class PlaneView {
     // skip rendering if nothing has changed
     // This prevents the GPU/CPU from constantly
     // working and keeps your lap cool
-    // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
+    // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequency)
     if (forceRender || this.needsRerender) {
       const { renderer, scene } = SceneController;
       SceneController.update();
@@ -134,7 +136,8 @@ class PlaneView {
   ): RaycastIntersection<THREE.Object3D> | null | undefined {
     const storeState = Store.getState();
     const SceneController = getSceneController();
-    const { meshesLODRootGroup } = SceneController.segmentMeshController;
+    const { segmentMeshController } = SceneController;
+    const { meshesLODRootGroup } = segmentMeshController;
     const tdViewport = getInputCatcherRect(storeState, "TDView");
     const { hoveredSegmentId } = storeState.temporaryConfiguration;
 
@@ -160,7 +163,7 @@ class PlaneView {
     // The second parameter of intersectObjects is set to true to ensure that
     // the groups which contain the actual meshes are traversed.
     const intersections = raycaster.intersectObjects(intersectableObjects, true);
-    const hitObject = intersections.length > 0 ? intersections[0].object : null;
+    const hitObject = intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
 
     // Check whether we are hitting the same object as before, since we can return early
     // in this case.
@@ -170,28 +173,26 @@ class PlaneView {
 
     // Undo highlighting of old hit
     if (oldRaycasterHit?.parent != null) {
-      oldRaycasterHit.parent.children.forEach((meshPart) => {
-        // @ts-ignore
-        meshPart.material.emissive.setHex("#000000");
-      });
+      segmentMeshController.updateMeshAppearance(oldRaycasterHit, false);
+
       oldRaycasterHit = null;
     }
 
     oldRaycasterHit = hitObject;
 
     // Highlight new hit
-    if (hitObject != null) {
-      const hoveredColor = [0.7, 0.5, 0.1];
-      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-      hitObject.parent.children.forEach((meshPart) => {
-        // @ts-ignore
-        meshPart.material.emissive.setHSL(...hoveredColor);
-      });
-      // @ts-expect-error ts-migrate(2531) FIXME: Object is possibly 'null'.
-      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", hitObject.parent.cellId));
+    if (hitObject?.parent != null) {
+      segmentMeshController.updateMeshAppearance(hitObject, true);
+
+      Store.dispatch(
+        updateTemporarySettingAction(
+          "hoveredSegmentId",
+          (hitObject.parent as SceneGroupForMeshes).segmentId,
+        ),
+      );
       return intersections[0];
     } else {
-      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));
+      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", null));
       return null;
     }
   }
@@ -231,6 +232,9 @@ class PlaneView {
   }
 
   start(): void {
+    const SceneController = getSceneController();
+    const { segmentMeshController } = SceneController;
+
     this.unsubscribeFunctions.push(
       app.vent.on("rerender", () => {
         this.needsRerender = true;
@@ -253,6 +257,20 @@ class PlaneView {
       listenToStoreProperty(
         (storeState) => storeState.uiInformation.navbarHeight,
         () => this.resizeThrottled(),
+        true,
+      ),
+    );
+    this.unsubscribeFunctions.push(
+      listenToStoreProperty(
+        (storeState) => {
+          const segmentationTracing = getActiveSegmentationTracing(storeState);
+          if (segmentationTracing == null) {
+            return null;
+          }
+          return segmentationTracing.activeUnmappedSegmentId;
+        },
+        (activeUnmappedSegmentId) =>
+          segmentMeshController.highlightUnmappedSegmentId(activeUnmappedSegmentId),
         true,
       ),
     );

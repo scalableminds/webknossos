@@ -126,7 +126,7 @@ class JobService @Inject()(wkConf: WkConf,
           Some(
             genericEmailTemplate(
               "Dataset Animation",
-              "Your animation of a WEBKNOSSOS dataset has been sucessfully created and is ready for download."
+              "Your animation of a WEBKNOSSOS dataset has been successfully created and is ready for download."
             ))
         case _ => None
       }) ?~> "job.emailNotifactionsDisabled"

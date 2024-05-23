@@ -183,12 +183,14 @@ export const setActiveCellAction = (
   segmentId: number,
   somePosition?: Vector3,
   someAdditionalCoordinates?: AdditionalCoordinate[] | null,
+  activeUnmappedSegmentId?: number | null,
 ) =>
   ({
     type: "SET_ACTIVE_CELL",
     segmentId,
     somePosition,
     someAdditionalCoordinates,
+    activeUnmappedSegmentId,
   }) as const;
 
 export const clickSegmentAction = (

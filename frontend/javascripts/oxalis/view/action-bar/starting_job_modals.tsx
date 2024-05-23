@@ -410,27 +410,6 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
                 </Space>
               </Card>
             </Radio.Button>
-            <Tooltip title="Coming soon">
-              <Radio.Button
-                className="aIJobSelection"
-                disabled
-                checked={aIJobModalState === "nuclei_inferral"}
-                onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
-              >
-                <Card bordered={false}>
-                  <Space direction="vertical" size="small">
-                    <Row className="ai-job-title">Nuclei detection</Row>
-                    <Row>
-                      <img
-                        src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
-                        alt={"Nuclei detection example"}
-                        style={centerImageStyle}
-                      />
-                    </Row>
-                  </Space>
-                </Card>
-              </Radio.Button>
-            </Tooltip>
             <Tooltip title={!isSuperUser ? "Coming soon" : null}>
               <Radio.Button
                 className="aIJobSelection"
@@ -445,6 +424,27 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
                       <img
                         src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
                         alt={"Mitochondria detection example"}
+                        style={centerImageStyle}
+                      />
+                    </Row>
+                  </Space>
+                </Card>
+              </Radio.Button>
+            </Tooltip>
+            <Tooltip title="Coming soon">
+              <Radio.Button
+                className="aIJobSelection"
+                disabled
+                checked={aIJobModalState === "nuclei_inferral"}
+                onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
+              >
+                <Card bordered={false}>
+                  <Space direction="vertical" size="small">
+                    <Row className="ai-job-title">Nuclei detection</Row>
+                    <Row>
+                      <img
+                        src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
+                        alt={"Nuclei detection example"}
                         style={centerImageStyle}
                       />
                     </Row>

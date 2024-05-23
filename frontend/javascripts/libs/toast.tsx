@@ -1,6 +1,6 @@
 import { notification, Collapse } from "antd";
 import { CloseCircleOutlined } from "@ant-design/icons";
-import React from "react";
+import React, { useEffect } from "react";
 import { animationFrame, sleep } from "./utils";
 
 export type ToastStyle = "info" | "warning" | "success" | "error";
@@ -18,7 +18,33 @@ export type ToastConfig = {
   onClose?: () => void;
 };
 
+export type NotificationAPI = ReturnType<typeof notification.useNotification>[0];
+
+export function ToastContextMountRoot() {
+  const [toastAPI, contextHolder] = notification.useNotification();
+  useEffect(() => {
+    Toast.notificationAPI = toastAPI;
+  }, [toastAPI]);
+  return <>{contextHolder}</>;
+}
+
+type ToastParams = {
+  type: ToastStyle;
+  message: React.ReactNode;
+  config: ToastConfig;
+  details?: string;
+};
+
 const Toast = {
+  // The notificationAPI is designed to be a singleton spawned by the ToastContextMountRoot
+  // mounted in the GlobalThemeProvider.
+  // Once the notificationAPI is fully initialized, it is stored in this.notificationAPI.
+  // undefined means that the notificationAPI is not yet initialized.
+  notificationAPI: undefined as NotificationAPI | undefined,
+  // Stores the pending toast messages before the notificationAPI is initialized.
+  pendingToasts: [] as ToastParams[],
+  // Stores the pending manual timeouts for toasts to avoid multiple timeouts for the same toast.
+  closePendingToastsEarlyMap: {} as Record<string, () => void>,
   messages(messages: Message[]): void {
     const errorChainObject = messages.find((msg) => typeof msg.chain !== "undefined");
     const errorChainString: string | null | undefined = errorChainObject?.chain;
@@ -76,12 +102,16 @@ const Toast = {
     );
   },
 
-  async message(
+  _messageInternal(
     type: ToastStyle,
     rawMessage: string | React.ReactNode,
     config: ToastConfig,
     details?: string,
-  ): Promise<void> {
+  ) {
+    if (!this.notificationAPI) {
+      return;
+    }
+    const localNotificationAPI = this.notificationAPI;
     const message = this.buildContentWithDetails(rawMessage, details);
     const timeout = config.timeout != null ? config.timeout : 6000;
     const key = config.key || (typeof message === "string" ? message : undefined);
@@ -95,10 +125,12 @@ const Toast = {
       toastMessage = message;
     }
 
+    const timeOutInSeconds = timeout / 1000;
+    const useManualTimeout = !sticky && key != null;
     let toastConfig = {
       icon: undefined,
       key,
-      duration: 0,
+      duration: useManualTimeout || sticky ? 0 : timeOutInSeconds,
       message: toastMessage,
       style: {},
       className: "",
@@ -111,19 +143,37 @@ const Toast = {
       });
     }
 
-    notification[type](toastConfig);
-
     // Make sure that toasts don't just disappear while the user has WK in a background tab (e.g. while uploading large dataset).
     // Most browsers pause requestAnimationFrame() if the current tab is not active, but Firefox does not seem to do that.
-    if (!sticky && key != null) {
-      const splitTimeout = timeout / 2;
-      await animationFrame(); // ensure tab is active
-      await sleep(splitTimeout);
-      await animationFrame();
-      // If the user has switched the tab, show the toast again so that the user doesn't just see the toast dissapear.
-      await sleep(splitTimeout);
-      this.close(key);
+    if (useManualTimeout) {
+      // In case a toast with the same key is already open, close it first.
+      this.closePendingToastsEarlyMap[key]?.();
+      let cancelledTimeout = false;
+      const timeoutToastManually = async () => {
+        const splitTimeout = timeout / 2;
+        await animationFrame(); // ensure tab is active
+        await sleep(splitTimeout);
+        await animationFrame();
+        // If the user has switched the tab, show the toast again so that the user doesn't just see the toast disappear.
+        await sleep(splitTimeout);
+        if (cancelledTimeout) {
+          // If the toast has been closed early, don't close it again.
+          return;
+        }
+        this.close(key);
+        delete this.closePendingToastsEarlyMap[key];
+      };
+      // Start the toast timeout and store the cancel function.
+      timeoutToastManually();
+      const closeToastEarly = () => {
+        this.close(key);
+        cancelledTimeout = true;
+        delete this.closePendingToastsEarlyMap[key];
+      };
+      this.closePendingToastsEarlyMap[key] = closeToastEarly;
     }
+    // Show the toast deferred by some timeout as instantly reopening a toast leads to a flickering effect.
+    setTimeout(() => localNotificationAPI[type](toastConfig), 100);
   },
 
   info(message: React.ReactNode, config: ToastConfig = {}, details?: string | undefined): void {
@@ -153,7 +203,29 @@ const Toast = {
   },
 
   close(key: string) {
-    notification.destroy(key);
+    if (this.notificationAPI) {
+      this.notificationAPI.destroy(key);
+    }
+  },
+  message(
+    type: ToastStyle,
+    message: React.ReactNode = "Success :-)",
+    config: ToastConfig = {},
+    details?: string | undefined,
+  ) {
+    if (this.notificationAPI == null) {
+      // If the notificationAPI is still being initialized, queue the toast.
+      this.pendingToasts.push({ type, message, config, details });
+      return;
+    }
+    // First, show any pending toasts.
+    this.pendingToasts.forEach((toast) => {
+      this._messageInternal(toast.type, toast.message, toast.config, toast.details);
+    });
+    this.pendingToasts = [];
+
+    // If the notificationAPI is already initialized, use it.
+    this._messageInternal(type, message, config, details);
   },
 };
 export default Toast;

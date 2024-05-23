@@ -15,6 +15,7 @@ import type {
 } from "oxalis/constants";
 import window, { document, location } from "libs/window";
 import { ArbitraryObject, Comparator } from "types/globals";
+import dayjs from "dayjs";
 
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
@@ -400,7 +401,7 @@ export function localeCompareBy<T>(
 export function stringToNumberArray(s: string): Array<number> {
   // remove leading/trailing whitespaces
   s = s.trim();
-  // replace remaining whitespaces with commata
+  // replace remaining whitespaces with commas
   s = s.replace(/,?\s+,?/g, ",");
   const stringArray = s.split(",");
   const result = [];
@@ -450,6 +451,14 @@ export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
     y,
     z,
   };
+}
+
+export function transformToCSVRow(dataRow: any[]) {
+  return dataRow
+    .map(String) // convert every value to String
+    .map((v) => v.replaceAll('"', '""')) // escape double quotes
+    .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
+    .join(","); // comma-separated
 }
 
 export function isUserTeamManager(user: APIUser): boolean {
@@ -553,6 +562,15 @@ export function isFileExtensionEqualTo(
   }
 
   return passedExtension === extensionOrExtensions;
+}
+
+// Parses dates in format "Thu Jan 1 00:00:00 1970 +0000".
+export function parseCTimeDefaultDate(dateString: string) {
+  const commitDateWithoutWeekday = dateString.replace(
+    /(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/,
+    "",
+  );
+  return dayjs(commitDateWithoutWeekday, "MMM D HH:mm:ss YYYY ZZ");
 }
 
 // Only use this function if you really need a busy wait (useful

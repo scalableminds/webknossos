@@ -287,16 +287,6 @@ export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
 // that it can hold multiple slices per bucket (keyed by the W component,
 // e.g., z in XY viewport).
 export type LabelMasksByBucketAndW = Map<BucketAddress, Map<number, Uint8Array>>;
-export type ShowContextMenuFunction = (
-  arg0: number,
-  arg1: number,
-  arg2: number | null | undefined,
-  arg3: number | null | undefined,
-  arg4: Vector3 | null | undefined,
-  arg5: OrthoView,
-  arg6?: number | null | undefined,
-  arg7?: Vector3 | null | undefined,
-) => void;
 
 const Constants = {
   ARBITRARY_VIEW: 4,
@@ -313,7 +303,7 @@ const Constants = {
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
   DEFAULT_NAVBAR_HEIGHT: 48,
-  MAINTENANCE_BANNER_HEIGHT: 38,
+  BANNER_HEIGHT: 38,
   // For reference, the area of a large brush size (let's say, 300px) corresponds to
   // pi * 300 ^ 2 == 282690.
   // We multiply this with 5, since the labeling is not done

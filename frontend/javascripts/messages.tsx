@@ -234,8 +234,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You cannot place nodes outside of a segment in merger mode.",
   "tracing.not_mesh_available_to_download":
     "There is no mesh for the active segment id available to download.",
-  "tracing.mesh_listing_failed":
-    "A precomputed mesh could not be loaded for this segment. More information was printed to the browser's console.",
+  "tracing.mesh_listing_failed": (segmentId: number) =>
+    `A precomputed mesh could not be loaded for segment ${segmentId}. You may want to use ad-hoc meshing instead. More information was printed to the browser's console.`,
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",
   "tracing.agglomerate_skeleton.no_cell":
@@ -412,7 +412,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Your account has been created. An administrator is going to unlock you soon.",
   "auth.automatic_user_activation": "User was activated automatically",
   "auth.error_no_user": "No active user is logged in.",
-  "auth.error_no_organization": "No active organziation can be loaded.",
+  "auth.error_no_organization": "No active organization can be loaded.",
   "auth.invalid_organization_name":
     "The link is not valid, since the specified organization does not exist. You are being redirected to the general registration form.",
   "request.max_item_count_alert":

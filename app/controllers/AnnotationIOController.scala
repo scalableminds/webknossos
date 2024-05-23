@@ -1,5 +1,7 @@
 package controllers
 
+import collections.SequenceUtils
+
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.util.zip.Deflater
 import org.apache.pekko.actor.ActorSystem
@@ -24,6 +26,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   GenericDataSource,
   SegmentationLayer
 }
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
@@ -39,7 +42,7 @@ import models.annotation.AnnotationState._
 import models.annotation._
 import models.annotation.nml.NmlResults.{NmlParseResult, NmlParseSuccess}
 import models.annotation.nml.{NmlResults, NmlWriter}
-import models.dataset.{Dataset, DatasetDAO, DatasetService}
+import models.dataset.{DataStoreDAO, Dataset, DatasetDAO, DatasetService, WKRemoteDataStoreClient}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task._
@@ -68,7 +71,9 @@ class AnnotationIOController @Inject()(
     annotationService: AnnotationService,
     analyticsService: AnalyticsService,
     conf: WkConf,
+    rpc: RPC,
     sil: Silhouette[WkEnv],
+    dataStoreDAO: DataStoreDAO,
     provider: AnnotationInformationProvider,
     annotationUploadService: AnnotationUploadService)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
@@ -129,7 +134,7 @@ class AnnotationIOController @Inject()(
                                                            tracingStoreClient,
                                                            parsedFiles.otherFiles,
                                                            usableDataSource)
-            mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient, usableDataSource)
+            mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient)
             annotation <- annotationService.createFrom(request.identity,
                                                        dataset,
                                                        mergedSkeletonLayers ::: mergedVolumeLayers,
@@ -190,8 +195,7 @@ class AnnotationIOController @Inject()(
     }
 
   private def mergeAndSaveSkeletonLayers(skeletonTracings: List[SkeletonTracing],
-                                         tracingStoreClient: WKRemoteTracingStoreClient,
-                                         dataSource: DataSourceLike): Fox[List[AnnotationLayer]] =
+                                         tracingStoreClient: WKRemoteTracingStoreClient): Fox[List[AnnotationLayer]] =
     if (skeletonTracings.isEmpty)
       Fox.successful(List())
     else {
@@ -264,11 +268,7 @@ class AnnotationIOController @Inject()(
     }
 
   private def assertAllOnSameDataset(skeletons: List[SkeletonTracing], volumes: List[VolumeTracing]): Fox[String] =
-    for {
-      datasetName <- volumes.headOption.map(_.datasetName).orElse(skeletons.headOption.map(_.datasetName)).toFox
-      _ <- bool2Fox(skeletons.forall(_.datasetName == datasetName))
-      _ <- bool2Fox(volumes.forall(_.datasetName == datasetName))
-    } yield datasetName
+    SequenceUtils.findUniqueElement(volumes.map(_.datasetName) ++ skeletons.map(_.datasetName)).toFox
 
   private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
                                           volumes: List[VolumeTracing]): Fox[Option[String]] = {
@@ -283,15 +283,29 @@ class AnnotationIOController @Inject()(
                                                  dataset: Dataset): Fox[List[List[UploadedVolumeLayer]]] =
     for {
       dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
-      allAdapted = volumeLayersGrouped.map { volumeLayers =>
-        volumeLayers.map { volumeLayer =>
-          volumeLayer.copy(tracing = adaptPropertiesToFallbackLayer(volumeLayer.tracing, dataSource))
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(GlobalAccessContext) ?~> "dataStore.notFoundForDataset"
+      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext)
+      remoteDataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+      allAdapted <- Fox.serialCombined(volumeLayersGrouped) { volumeLayers =>
+        Fox.serialCombined(volumeLayers) { volumeLayer =>
+          for {
+            adaptedTracing <- adaptPropertiesToFallbackLayer(volumeLayer.tracing,
+                                                             dataSource,
+                                                             dataset,
+                                                             organization.name,
+                                                             remoteDataStoreClient)
+            adaptedAnnotationLayer = volumeLayer.copy(tracing = adaptedTracing)
+          } yield adaptedAnnotationLayer
         }
       }
     } yield allAdapted
 
-  private def adaptPropertiesToFallbackLayer[T <: DataLayerLike](volumeTracing: VolumeTracing,
-                                                                 dataSource: GenericDataSource[T]): VolumeTracing = {
+  private def adaptPropertiesToFallbackLayer[T <: DataLayerLike](
+      volumeTracing: VolumeTracing,
+      dataSource: GenericDataSource[T],
+      dataset: Dataset,
+      organizationName: String,
+      remoteDataStoreClient: WKRemoteDataStoreClient): Fox[VolumeTracing] = {
     val fallbackLayerOpt = dataSource.dataLayers.flatMap {
       case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name         => Some(layer)
       case layer: AbstractSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
@@ -303,16 +317,35 @@ class AnnotationIOController @Inject()(
     val elementClass = fallbackLayerOpt
       .map(layer => elementClassToProto(layer.elementClass))
       .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass))
-    volumeTracing.copy(
-      boundingBox = bbox,
-      elementClass = elementClass,
-      fallbackLayer = fallbackLayerOpt.map(_.name),
-      largestSegmentId =
-        annotationService.combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
-                                                               fallbackLayerOpt.map(_.largestSegmentId)),
-      resolutions = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto)
-    )
+    for {
+      tracingCanHaveSegmentIndex <- canHaveSegmentIndex(organizationName,
+                                                        dataset.name,
+                                                        fallbackLayerOpt.map(_.name),
+                                                        remoteDataStoreClient)
+    } yield
+      volumeTracing.copy(
+        boundingBox = bbox,
+        elementClass = elementClass,
+        fallbackLayer = fallbackLayerOpt.map(_.name),
+        largestSegmentId =
+          annotationService.combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
+                                                                 fallbackLayerOpt.map(_.largestSegmentId)),
+        resolutions = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto),
+        hasSegmentIndex = Some(tracingCanHaveSegmentIndex)
+      )
   }
+
+  private def canHaveSegmentIndex(
+      organizationName: String,
+      datasetName: String,
+      fallbackLayerName: Option[String],
+      remoteDataStoreClient: WKRemoteDataStoreClient)(implicit ec: ExecutionContext): Fox[Boolean] =
+    fallbackLayerName match {
+      case Some(layerName) =>
+        remoteDataStoreClient.hasSegmentIndexFile(organizationName, datasetName, layerName)
+      case None =>
+        Fox.successful(true)
+    }
 
   // NML or Zip file containing skeleton and/or volume data of this annotation. In case of Compound annotations, multiple such annotations wrapped in another zip
   def download(typ: String,

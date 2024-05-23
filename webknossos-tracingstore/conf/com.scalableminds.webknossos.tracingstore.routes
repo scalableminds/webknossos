@@ -37,6 +37,7 @@ POST        /mapping/:tracingId/update                          @com.scalablemin
 GET         /mapping/:tracingId/updateActionLog                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingUpdateActionLog(token: Option[String], tracingId: String)
 GET         /mapping/:tracingId/info                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingInfo(token: Option[String], tracingId: String, version: Option[Long])
 GET         /mapping/:tracingId/segmentsForAgglomerate          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingSegmentIdsForAgglomerate(token: Option[String], tracingId: String, agglomerateId: Long)
+GET         /mapping/:tracingId/agglomerateIdForSegmentId       @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingAgglomerateIdForSegmentId(token: Option[String], tracingId: String, segmentId: Long)
 
 # Zarr endpoints for volume annotations
 GET         /volume/zarr/json/:tracingId                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.volumeTracingFolderContentJson(token: Option[String], tracingId: String)

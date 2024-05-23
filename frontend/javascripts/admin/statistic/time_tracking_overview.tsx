@@ -1,53 +1,49 @@
-import { getProjects, getTeams, getTimeEntries } from "admin/admin_rest_api";
-import { Card, Select, Spin, Table, Button, DatePicker, type TimeRangePickerProps } from "antd";
+import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/admin_rest_api";
+import { Card, Select, Spin, Button, DatePicker, type TimeRangePickerProps } from "antd";
 import { useFetch } from "libs/react_helpers";
 import _ from "lodash";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import saveAs from "file-saver";
 import { formatMilliseconds } from "libs/format_utils";
-import { Link } from "react-router-dom";
 import ProjectAndAnnotationTypeDropdown, {
   AnnotationTypeFilterEnum,
 } from "./project_and_annotation_type_dropdown";
-import { isUserAdminOrTeamManager } from "libs/utils";
+import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
 import messages from "messages";
 import Toast from "libs/toast";
+import dayjs, { Dayjs } from "antd/node_modules/dayjs";
+import TimeTrackingDetailView from "./time_tracking_detail_view";
+import LinkButton from "components/link_button";
+import FixedExpandableTable from "components/fixed_expandable_table";
+import * as Utils from "libs/utils";
+import { APITimeTrackingPerUser } from "types/api_flow_types";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
-import dayjs, { Dayjs } from "antd/node_modules/dayjs";
-const { Column } = Table;
 const { RangePicker } = DatePicker;
 
-const TIMETRACKING_CSV_HEADER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
-
-type TimeEntry = {
-  user: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-  };
-  timeMillis: number;
-};
+const TIMETRACKING_CSV_HEADER_PER_USER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
+const TIMETRACKING_CSV_HEADER_SPANS = [
+  "userId,email,datasetOrga,datasetName,annotation,startTimeUnixTimestamp,durationInSeconds,taskId,projectName,taskTypeId,taskTypeSummary",
+];
 
 function TimeTrackingOverview() {
   const currentTime = dayjs();
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
   const [endDate, setEndeDate] = useState(currentTime);
   const [isFetching, setIsFetching] = useState(false);
-  const mayUserAccessView = useSelector((state: OxalisState) => {
+  const isCurrentUserAdminOrManager = useSelector((state: OxalisState) => {
     const activeUser = state.activeUser;
     return activeUser != null && isUserAdminOrTeamManager(activeUser);
   });
-  const [allTeams, numberOfAllProjects] = useFetch(
+  const allTeams = useFetch(
     async () => {
       setIsFetching(true);
-      const [allTeams, allProjects] = await Promise.all([getTeams(), getProjects()]);
+      const allTeams = await getTeams();
       setIsFetching(false);
-      return [allTeams, allProjects.length];
+      return allTeams;
     },
-    [[], 0],
+    [],
     [],
   );
 
@@ -56,18 +52,10 @@ function TimeTrackingOverview() {
     AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY,
   );
   const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
-  const [projectOrTypeQueryParam, setProjectOrTypeQueryParam] = useState("");
-  useEffect(() => {
-    if (selectedProjectIds.length > 0 && selectedProjectIds.length < numberOfAllProjects) {
-      setProjectOrTypeQueryParam(selectedProjectIds.join(","));
-    } else {
-      setProjectOrTypeQueryParam(selectedTypes);
-    }
-  }, [selectedProjectIds, selectedTypes, numberOfAllProjects]);
   const filteredTimeEntries = useFetch(
     async () => {
       setIsFetching(true);
-      const filteredEntries: TimeEntry[] = await getTimeEntries(
+      const filteredEntries = await getTimeEntries(
         startDate.valueOf(),
         endDate.valueOf(),
         selectedTeams,
@@ -82,25 +70,60 @@ function TimeTrackingOverview() {
   );
   const filterStyle = { marginInline: 10 };
 
+  const downloadTimeSpans = async (
+    userId: string,
+    start: Dayjs,
+    end: Dayjs,
+    annotationTypes: AnnotationTypeFilterEnum,
+    projectIds: string[] | null | undefined,
+  ) => {
+    const timeSpans = await getTimeTrackingForUserSpans(
+      userId,
+      start.valueOf(),
+      end.valueOf(),
+      annotationTypes,
+      projectIds,
+    );
+    const timeEntriesAsString = timeSpans
+      .map((row) => {
+        return transformToCSVRow([
+          row.userId,
+          row.userEmail,
+          row.datasetOrganization,
+          row.datasetName,
+          row.annotationId,
+          row.timeSpanCreated,
+          Math.ceil(row.timeSpanTimeMillis / 1000),
+          row.taskId,
+          row.projectName,
+          row.taskTypeId,
+          row.taskTypeSummary,
+        ]);
+      })
+      .join("\n"); // rows starting on new lines
+    const csv = [TIMETRACKING_CSV_HEADER_SPANS, timeEntriesAsString].join("\n");
+    const filename = `timetracking-user-export-${userId}.csv`;
+    const blob = new Blob([csv], {
+      type: "text/plain;charset=utf-8",
+    });
+    saveAs(blob, filename);
+  };
+
   const exportToCSV = () => {
-    if (filteredTimeEntries == null || filteredTimeEntries.length === 0) {
+    if (filteredTimeEntries?.length === null) {
       return;
     }
     const timeEntriesAsString = filteredTimeEntries
       .map((row) => {
-        return [
+        return transformToCSVRow([
           row.user.id,
           row.user.firstName,
           row.user.lastName,
           Math.round(row.timeMillis / 1000),
-        ]
-          .map(String) // convert every value to String
-          .map((v) => v.replaceAll('"', '""')) // escape double quotes
-          .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
-          .join(","); // comma-separated
+        ]);
       })
-      .join("\n"); // rows starting on new lines
-    const csv = [TIMETRACKING_CSV_HEADER, timeEntriesAsString].join("\n");
+      .join("\n");
+    const csv = [TIMETRACKING_CSV_HEADER_PER_USER, timeEntriesAsString].join("\n");
     const filename = "timetracking-export.csv";
     const blob = new Blob([csv], {
       type: "text/plain;charset=utf-8",
@@ -122,7 +145,60 @@ function TimeTrackingOverview() {
     );
   };
 
-  return mayUserAccessView ? (
+  const timeTrackingTableColumns = [
+    {
+      title: "User",
+      dataIndex: "user",
+      key: "user",
+      render: (user: APITimeTrackingPerUser["user"]) =>
+        `${user.lastName}, ${user.firstName} (${user.email})`,
+      sorter: Utils.localeCompareBy<APITimeTrackingPerUser>(
+        (timeEntry) =>
+          `${timeEntry.user.lastName}, ${timeEntry.user.firstName} (${timeEntry.user.email})`,
+      ),
+    },
+    {
+      title: "No. tasks / annotations",
+      dataIndex: "annotationCount",
+      key: "numberAnn",
+      sorter: Utils.compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.annotationCount),
+    },
+    {
+      title: "Avg. time per task / annotation",
+      key: "avgTime",
+      render: (item: APITimeTrackingPerUser) =>
+        formatMilliseconds(item.timeMillis / item.annotationCount),
+      sorter: Utils.compareBy<APITimeTrackingPerUser>(
+        (timeEntry) => timeEntry.timeMillis / timeEntry.annotationCount,
+      ),
+    },
+    {
+      title: "Total time",
+      dataIndex: "timeMillis",
+      key: "tracingTimes",
+      render: (tracingTimeInMs: APITimeTrackingPerUser["timeMillis"]) =>
+        formatMilliseconds(tracingTimeInMs),
+      sorter: Utils.compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.timeMillis),
+    },
+    {
+      key: "details",
+      dataIndex: "user",
+      render: (user: APITimeTrackingPerUser["user"]) => {
+        return (
+          <LinkButton
+            onClick={async () => {
+              downloadTimeSpans(user.id, startDate, endDate, selectedTypes, selectedProjectIds);
+            }}
+          >
+            <DownloadOutlined className="icon-margin-right" />
+            Download time spans
+          </LinkButton>
+        );
+      },
+    },
+  ];
+
+  return (
     <Card
       title={"Annotation Time per User"}
       style={{
@@ -142,6 +218,7 @@ function TimeTrackingOverview() {
         mode="multiple"
         placeholder="Filter teams"
         defaultValue={[]}
+        disabled={!isCurrentUserAdminOrManager}
         style={{ width: 200, ...filterStyle }}
         options={allTeams.map((team) => {
           return {
@@ -170,45 +247,29 @@ function TimeTrackingOverview() {
         }}
       />
       <Spin spinning={isFetching} size="large">
-        <Table
+        <FixedExpandableTable
           dataSource={filteredTimeEntries}
-          rowKey={(entry) => entry.user.id}
+          rowKey="user"
           style={{
             marginTop: 30,
             marginBottom: 30,
           }}
           pagination={false}
+          columns={timeTrackingTableColumns}
+          expandable={{
+            expandedRowRender: (entry) => (
+              <TimeTrackingDetailView
+                userId={entry.user.id}
+                dateRange={[startDate.valueOf(), endDate.valueOf()]}
+                annotationType={selectedTypes}
+                projectIds={selectedProjectIds}
+              />
+            ),
+          }}
           locale={{
             emptyText: renderPlaceholder(),
           }}
-        >
-          <Column
-            title="User"
-            dataIndex="user"
-            key="user"
-            render={(user) => `${user.lastName}, ${user.firstName} (${user.email})`}
-            sorter={true}
-          />
-          <Column
-            title="Time"
-            dataIndex="timeMillis"
-            key="tracingTimes"
-            render={(tracingTimeInMs) => formatMilliseconds(tracingTimeInMs)}
-            sorter={true}
-          />
-          <Column
-            key="details"
-            dataIndex="user"
-            render={(user) => {
-              const params = new URLSearchParams();
-              params.append("user", user.id);
-              params.append("start", startDate.valueOf().toString());
-              params.append("end", endDate.valueOf().toString());
-              params.append("projectsOrType", projectOrTypeQueryParam);
-              return <Link to={`/reports/timetracking?${params}`}>Details</Link>;
-            }}
-          />
-        </Table>
+        />
       </Spin>
       <Button
         type="primary"
@@ -220,8 +281,6 @@ function TimeTrackingOverview() {
         Export to CSV
       </Button>
     </Card>
-  ) : (
-    <>Sorry, you are not allowed to see this view.</>
   );
 }
 

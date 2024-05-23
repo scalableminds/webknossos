@@ -538,15 +538,33 @@ export type APIAnnotationWithTask = APIAnnotationBase & {
 export type APITaskWithAnnotation = APITask & {
   readonly annotation: APIAnnotation;
 };
-export type APITimeTracking = {
-  time: string;
-  timestamp: number;
+export type APITimeTrackingPerAnnotation = {
   annotation: string;
-  _id: string;
-  task_id: string | undefined;
-  project_name: string | undefined;
-  tasktype_id: string | undefined;
-  tasktype_summary: string | undefined;
+  task: string | undefined;
+  projectName: string | undefined;
+  timeMillis: number;
+  annotationLayerStats: Array<TracingStats>;
+};
+export type APITimeTrackingPerUser = {
+  user: APIUserCompact & {
+    email: string;
+  };
+  timeMillis: number;
+  annotationCount: number;
+};
+export type APITimeTrackingSpan = {
+  userId: string;
+  userEmail: string;
+  datasetOrganization: string;
+  datasetName: string;
+  annotationId: string;
+  taskId: string | undefined;
+  projectName: string | undefined;
+  taskTypeId: string | undefined;
+  taskTypeSummary: string | undefined;
+  timeSpanId: string;
+  timeSpanCreated: number;
+  timeSpanTimeMillis: number;
 };
 export type APIProjectProgressReport = {
   readonly projectName: string;

@@ -7,7 +7,6 @@ import { document, location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
 import CrossOriginApi from "oxalis/api/cross_origin_api";
-import type { OrthoView, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import type { ControllerStatus } from "oxalis/controller";
 import OxalisController from "oxalis/controller";
@@ -17,7 +16,7 @@ import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { Store } from "oxalis/singletons";
 import type { OxalisState, Theme, TraceOrViewCommand } from "oxalis/store";
 import ActionBarView from "oxalis/view/action_bar_view";
-import ContextMenuContainer from "oxalis/view/context_menu";
+import WkContextMenu from "oxalis/view/context_menu";
 import {
   initializeInputCatcherSizes,
   recalculateInputCatcherSizes,
@@ -68,13 +67,6 @@ type State = {
   activeLayoutName: string;
   hasError: boolean;
   status: ControllerStatus;
-  contextMenuPosition: [number, number] | null | undefined;
-  clickedNodeId: number | null | undefined;
-  contextMenuMeshId: number | null | undefined;
-  contextMenuMeshIntersectionPosition: Vector3 | null | undefined;
-  clickedBoundingBoxId: number | null | undefined;
-  contextMenuGlobalPosition: Vector3 | null | undefined;
-  contextMenuViewport: OrthoView | null | undefined;
   model: Record<string, any>;
   showFloatingMobileButtons: boolean;
 };
@@ -104,13 +96,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       activeLayoutName: lastActiveLayoutName,
       hasError: false,
       status: "loading",
-      contextMenuPosition: null,
-      clickedNodeId: null,
-      clickedBoundingBoxId: null,
-      contextMenuGlobalPosition: null,
-      contextMenuViewport: null,
-      contextMenuMeshId: null,
-      contextMenuMeshIntersectionPosition: null,
       model: layout,
       showFloatingMobileButtons: false,
     };
@@ -204,47 +189,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     this.lastTouchTimeStamp = null;
   };
 
-  showContextMenuAt = (
-    xPos: number,
-    yPos: number,
-    nodeId: number | null | undefined,
-    boundingBoxId: number | null | undefined,
-    globalPosition: Vector3 | null | undefined,
-    viewport: OrthoView,
-    meshId?: number | null | undefined,
-    meshIntersectionPosition?: Vector3 | null | undefined,
-  ) => {
-    // On Windows the right click to open the context menu is also triggered for the overlay
-    // of the context menu. This causes the context menu to instantly close after opening.
-    // Therefore delay the state update to delay that the context menu is rendered.
-    // Thus the context overlay does not get the right click as an event and therefore does not close.
-    setTimeout(
-      () =>
-        this.setState({
-          contextMenuPosition: [xPos, yPos],
-          clickedNodeId: nodeId,
-          clickedBoundingBoxId: boundingBoxId,
-          contextMenuGlobalPosition: globalPosition,
-          contextMenuViewport: viewport,
-          contextMenuMeshId: meshId,
-          contextMenuMeshIntersectionPosition: meshIntersectionPosition,
-        }),
-      0,
-    );
-  };
-
-  hideContextMenu = () => {
-    this.setState({
-      contextMenuPosition: null,
-      clickedNodeId: null,
-      clickedBoundingBoxId: null,
-      contextMenuGlobalPosition: null,
-      contextMenuViewport: null,
-      contextMenuMeshId: null,
-      contextMenuMeshIntersectionPosition: null,
-    });
-  };
-
   onLayoutChange = (model?: Record<string, any>, layoutName?: string) => {
     recalculateInputCatcherSizes();
     app.vent.emit("rerender");
@@ -307,7 +251,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
       );
     }
 
-    const { contextMenuPosition, contextMenuViewport, status, activeLayoutName } = this.state;
+    const { status, activeLayoutName } = this.state;
     const layoutType = determineLayout(
       this.props.initialCommandType.type,
       this.props.viewMode,
@@ -336,19 +280,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
         <PresentModernControls />
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 
-        {status === "loaded" && (
-          <ContextMenuContainer
-            hideContextMenu={this.hideContextMenu}
-            maybeClickedNodeId={this.state.clickedNodeId}
-            clickedBoundingBoxId={this.state.clickedBoundingBoxId}
-            globalPosition={this.state.contextMenuGlobalPosition}
-            additionalCoordinates={this.props.additionalCoordinates || undefined}
-            contextMenuPosition={contextMenuPosition}
-            maybeViewport={contextMenuViewport}
-            maybeClickedMeshId={this.state.contextMenuMeshId}
-            maybeMeshIntersectionPosition={this.state.contextMenuMeshIntersectionPosition}
-          />
-        )}
+        {status === "loaded" && <WkContextMenu />}
 
         {status === "loaded" && distanceMeasurementTooltipPosition != null && (
           <DistanceMeasurementTooltip />
@@ -364,7 +296,6 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
             initialCommandType={this.props.initialCommandType}
             controllerStatus={status}
             setControllerStatus={this.setControllerStatus}
-            showContextMenuAt={this.showContextMenuAt}
           />
           <CrossOriginApi />
           <Layout className="tracing-layout">

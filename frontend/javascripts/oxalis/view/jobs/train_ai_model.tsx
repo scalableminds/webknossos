@@ -43,6 +43,7 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
       name: values.modelName,
       aiModelCategory: values.modelCategory,
       workflowYaml: values.workflowYaml,
+      comment: values.comment,
     });
     Toast.success("The training has successfully started.");
     onClose();
@@ -128,6 +129,13 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
         tracing={tracing}
         label="Groundtruth Layer"
       />
+      <Row gutter={8}>
+        <Col span={24}>
+          <FormItem hasFeedback name="comment" label="Comment">
+            <Input />
+          </FormItem>
+        </Col>
+      </Row>
       <Collapse
         style={{ marginBottom: 8 }}
         items={[

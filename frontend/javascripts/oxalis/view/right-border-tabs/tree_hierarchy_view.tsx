@@ -23,12 +23,11 @@ import {
   createGroupToTreesMap,
   insertTreesAndTransform,
   makeBasicGroupObject,
-  removeTreesAndTransform,
-  forEachTreeNode,
-  findTreeNode,
   anySatisfyDeep,
   GroupTypeEnum,
   deepFlatFilter,
+  getNodeKey,
+  getNodeKeyFromNode,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -102,9 +101,7 @@ function didTreeDataChange(prevProps: Props, nextProps: Props): boolean {
 }
 
 function TreeHierarchyView(props: Props) {
-  const [expandedNodeKeys, setExpandedNodeKeys] = useState<React.Key[]>([
-    `Group-${MISSING_GROUP_ID}`,
-  ]);
+  const [expandedNodeKeys, setExpandedNodeKeys] = useState<React.Key[]>([]);
   const [groupTree, setGroupTree] = useState<TreeNode[]>([]);
   const [prevProps, setPrevProps] = useState<Props | null>(null);
   const [searchFocusOffset, setSearchFocusOffset] = useState(0);
@@ -140,7 +137,19 @@ function TreeHierarchyView(props: Props) {
 
   useEffectOnlyOnce(() => {
     // set default expanded keys
-    setExpandedNodeKeys([...expandedNodeKeys, `Tree-${props.activeTreeId}`]);
+    // the defaults should include the root node and at the active tree's group if applicable
+    let defaultExpandedKeys: React.Key[] = [
+      ...expandedNodeKeys,
+      getNodeKey(GroupTypeEnum.GROUP, MISSING_GROUP_ID),
+    ];
+    if (props.activeTreeId) {
+      const activeTreesGroupId = props.trees[props.activeTreeId].groupId;
+      if (activeTreesGroupId) {
+        defaultExpandedKeys.push(getNodeKey(GroupTypeEnum.GROUP, activeTreesGroupId));
+      }
+
+      setExpandedNodeKeys(defaultExpandedKeys);
+    }
   });
 
   // useEffect(() => {
@@ -223,30 +232,17 @@ function TreeHierarchyView(props: Props) {
     }
   }
 
-  function setExpansionOfAllSubgroupsTo(groupId: number, expanded: boolean) {
-    const newExpandedGroupIds = Object.assign({}, expandedNodeKeys);
+  function setExpansionOfAllSubgroupsTo(group: TreeNode, expanded: boolean) {
+    const selectedGroupIdKey = getNodeKeyFromNode(group);
+    const subGroupKeys = deepFlatFilter([group], (node) => node.type === GroupTypeEnum.GROUP).map(
+      (node) => node.key,
+    );
 
-    const collapseAllGroups = (groupTree: TreeNode[]) => {
-      const copyOfGroupTree = _.cloneDeep(groupTree);
-
-      findTreeNode(copyOfGroupTree, groupId, (item) => {
-        // If we expand all subgroups, the group itself should be expanded.
-        if (expanded) {
-          item.expanded = expanded;
-        }
-
-        forEachTreeNode(item.children, (node) => {
-          if (node.type === GroupTypeEnum.GROUP) {
-            node.expanded = expanded;
-            newExpandedGroupIds[node.id] = expanded;
-          }
-        });
-      });
-      return copyOfGroupTree;
-    };
-
-    setGroupTree((prevgroupTree) => collapseAllGroups(prevgroupTree));
-    setExpandedNodeKeys(newExpandedGroupIds);
+    if (expanded) {
+      setExpandedNodeKeys([...expandedNodeKeys, selectedGroupIdKey, ...subGroupKeys]);
+    } else {
+      setExpandedNodeKeys(_.without(expandedNodeKeys, selectedGroupIdKey, ...subGroupKeys));
+    }
   }
 
   function onMoveWithContextAction(targetParentNode: TreeNode) {
@@ -376,14 +372,15 @@ function TreeHierarchyView(props: Props) {
   function renderGroupNode(node: TreeNode) {
     // The root group must not be removed or renamed
     const { id, name } = node;
-    const hasExpandedSubgroup = anySatisfyDeep(
-      node.children,
-      (child) => child.expanded && child.type === GroupTypeEnum.GROUP,
-    );
-    const hasCollapsedSubgroup = anySatisfyDeep(
-      node.children,
-      (child) => !child.expanded && child.type === GroupTypeEnum.GROUP,
-    );
+    // TODO remove?
+    // const hasExpandedSubgroup = anySatisfyDeep(
+    //   node.children,
+    //   (child) => child.expanded && child.type === GroupTypeEnum.GROUP,
+    // );
+    // const hasCollapsedSubgroup = anySatisfyDeep(
+    //   node.children,
+    //   (child) => !child.expanded && child.type === GroupTypeEnum.GROUP,
+    // );
     const isEditingDisabled = !props.allowUpdate;
     const hasSubgroup = anySatisfyDeep(
       node.children,
@@ -424,9 +421,8 @@ function TreeHierarchyView(props: Props) {
         hasSubgroup
           ? {
               key: "collapseSubgroups",
-              disabled: !hasExpandedSubgroup,
               onClick: () => {
-                setExpansionOfAllSubgroupsTo(id, false);
+                setExpansionOfAllSubgroupsTo(node, false);
                 handleGroupDropdownMenuVisibility(id, false);
               },
               icon: <ShrinkOutlined />,
@@ -436,9 +432,8 @@ function TreeHierarchyView(props: Props) {
         hasSubgroup
           ? {
               key: "expandSubgroups",
-              disabled: !hasCollapsedSubgroup,
               onClick: () => {
-                setExpansionOfAllSubgroupsTo(id, true);
+                setExpansionOfAllSubgroupsTo(node, true);
                 handleGroupDropdownMenuVisibility(id, false);
               },
               icon: <ExpandAltOutlined />,
@@ -627,30 +622,24 @@ function TreeHierarchyView(props: Props) {
     );
   }
 
-  function keySearchMethod(params: {
-    node: TreeNode;
-    searchQuery: {
-      activeTreeId: number;
-      activeGroupId: number;
-    };
-  }): boolean {
-    const { node, searchQuery } = params;
-    return (
-      (node.type === GroupTypeEnum.TREE && node.id === searchQuery.activeTreeId) ||
-      (node.type === GroupTypeEnum.GROUP && node.id === searchQuery.activeGroupId)
-    );
-  }
+  // function keySearchMethod(params: {
+  //   node: TreeNode;
+  //   searchQuery: {
+  //     activeTreeId: number;
+  //     activeGroupId: number;
+  //   };
+  // }): boolean {
+  //   const { node, searchQuery } = params;
+  //   return (
+  //     (node.type === GroupTypeEnum.TREE && node.id === searchQuery.activeTreeId) ||
+  //     (node.type === GroupTypeEnum.GROUP && node.id === searchQuery.activeGroupId)
+  //   );
+  // }
 
-  function getNodeKey({ node }: { node: TreeNode }): number {
-    // The hierarchical tree contains group and tree nodes which share ids. To generate a unique
-    // id number, use the [-1, ...] range for the group ids and the [..., -2] range for the tree ids.
-    return node.type === GroupTypeEnum.GROUP ? node.id : -1 - node.id;
-  }
-
-  function canDrop(params) {
-    const { nextParent } = params;
-    return props.allowUpdate && nextParent != null && nextParent.type === GroupTypeEnum.GROUP;
-  }
+  // function canDrop(params) {
+  //   const { nextParent } = params;
+  //   return props.allowUpdate && nextParent != null && nextParent.type === GroupTypeEnum.GROUP;
+  // }
 
   function canDrag(node: TreeNode): boolean {
     return props.allowUpdate && node.id !== MISSING_GROUP_ID;

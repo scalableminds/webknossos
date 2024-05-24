@@ -40,7 +40,7 @@ function makeTreeNode(
   optionalProperties: Partial<TreeNode> = {},
 ): TreeNode {
   return {
-    key: `${type}-${id.toString()}`,
+    key: getNodeKey(type, id),
     id,
     type,
     name,
@@ -95,7 +95,7 @@ export function insertTreesAndTransform(
       treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
       (groupOrTree) => groupOrTree.isChecked || !groupOrTree.containsTrees,
     );
-    
+
     treeNode.containsTrees =
       trees.length > 0 || _.some(treeNode.children, (groupOrTree) => groupOrTree.containsTrees);
     return treeNode;
@@ -268,4 +268,12 @@ export function deepFlatFilter(
     }
     return acc;
   }, []);
+}
+
+export function getNodeKey(type: GroupTypeEnum, id: number): string {
+  return `${type}-${id.toString()}`;
+}
+
+export function getNodeKeyFromNode(node: TreeNode): string {
+  return getNodeKey(node.type, node.id);
 }

@@ -1,25 +1,20 @@
 import {
-  DeleteOutlined,
   EllipsisOutlined,
   EyeOutlined,
   LoadingOutlined,
-  PlusCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
-  WarningOutlined,
 } from "@ant-design/icons";
 import window from "libs/window";
 import { Link, LinkProps } from "react-router-dom";
 import * as React from "react";
 import type { APIDatasetId, APIDataset, APIDatasetCompact } from "types/api_flow_types";
-import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
+import { clearCache, getDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
-import { MenuProps, Modal, Typography } from "antd";
-import { confirmAsync } from "dashboard/dataset/helper_components";
-import { useQueryClient } from "@tanstack/react-query";
+import { MenuProps } from "antd";
 import { useState } from "react";
 
 const disabledStyle: React.CSSProperties = {
@@ -118,7 +113,6 @@ function LinkWithDisabled({
 }
 
 function DatasetActionView(props: Props) {
-  const queryClient = useQueryClient();
   const { dataset } = props;
 
   const [isReloading, setIsReloading] = useState(false);
@@ -137,54 +131,6 @@ function DatasetActionView(props: Props) {
     setIsReloading(false);
   };
 
-  const onDeleteDataset = async () => {
-    const dataset = await getDataset(props.dataset);
-
-    const deleteDataset = await confirmAsync({
-      title: "Danger Zone",
-      content: (
-        <>
-          <Typography.Title level={4} type="danger">
-            Deleting a dataset from disk cannot be undone. Are you certain to delete dataset{" "}
-            {dataset.name}?
-          </Typography.Title>
-          <Typography.Paragraph>
-            Note, WEBKNOSSOS cannot delete datasets that have annotations associated with them.
-          </Typography.Paragraph>
-        </>
-      ),
-      okText: "Yes, delete dataset from disk",
-      okType: "danger",
-    });
-
-    if (!deleteDataset) {
-      return;
-    }
-
-    await deleteDatasetOnDisk(dataset.dataStore.url, dataset);
-
-    Toast.success(
-      messages["dataset.delete_success"]({
-        datasetName: dataset.name,
-      }),
-    );
-
-    // Invalidate the dataset list cache to exclude the deleted dataset
-    queryClient.setQueryData(
-      ["datasetsByFolder", dataset.folderId],
-      (oldItems: APIDatasetCompact[] | undefined) => {
-        if (oldItems == null) {
-          return oldItems;
-        }
-        return oldItems.filter(
-          (item) =>
-            item.name !== dataset.name || item.owningOrganization !== dataset.owningOrganization,
-        );
-      },
-    );
-    queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
-  };
-
   const disabledWhenReloadingStyle = getDisabledWhenReloadingStyle(isReloading);
   const reloadLink = (
     <a
@@ -197,48 +143,8 @@ function DatasetActionView(props: Props) {
       Reload
     </a>
   );
-  const importLink = (
-    <div className="dataset-table-actions">
-      <Link
-        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
-        className="import-dataset"
-      >
-        <PlusCircleOutlined className="icon-margin-right" />
-        Import
-      </Link>
-      {reloadLink}
-      <a
-        onClick={() =>
-          Modal.error({
-            title: "Cannot load this dataset",
-            content: (
-              <div>
-                <p>{dataset.status}</p>
-                {dataset.status === "Deleted by user." ? (
-                  <p>
-                    Even though this dataset was deleted by a user, it is still shown here, because
-                    it was referenced by at least one annotation.
-                  </p>
-                ) : null}
-              </div>
-            ),
-          })
-        }
-      >
-        <WarningOutlined className="icon-margin-right" />
-        Show Error
-      </a>
-      {dataset.status !== "Deleted by user." ? (
-        <a onClick={() => onDeleteDataset()}>
-          <DeleteOutlined className="icon-margin-right" />
-          Delete Dataset
-        </a>
-      ) : null}
-    </div>
-  );
   return (
     <div>
-      {dataset.isEditable && !dataset.isActive ? importLink : null}
       {dataset.isActive ? (
         <div className="dataset-table-actions nowrap">
           <NewAnnotationLink
@@ -330,7 +236,7 @@ export function getDatasetActionContextMenu({
             },
           }
         : null,
-      dataset.isEditable && dataset.isActive
+      dataset.isEditable
         ? {
             key: "edit",
             label: "Open Settings",
@@ -340,15 +246,6 @@ export function getDatasetActionContextMenu({
           }
         : null,
 
-      dataset.isEditable && !dataset.isActive
-        ? {
-            key: "import",
-            label: "Import",
-            onClick: () => {
-              window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/import`;
-            },
-          }
-        : null,
       {
         key: "reload",
         label: "Reload",

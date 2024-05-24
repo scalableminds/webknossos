@@ -11,7 +11,6 @@ import type {
   APIBuildInfo,
   APIConnectomeFile,
   APIDataSource,
-  APIDataSourceWithMessages,
   APIDataStore,
   APIDataset,
   APIDatasetId,

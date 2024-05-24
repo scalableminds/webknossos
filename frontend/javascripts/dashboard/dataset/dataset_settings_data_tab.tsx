@@ -64,14 +64,12 @@ export default function DatasetSettingsDataTab({
   form,
   activeDataSourceEditMode,
   onChange,
-  additionalAlert,
   dataset,
 }: {
   allowRenamingDataset: boolean;
   form: FormInstance;
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
-  additionalAlert?: React.ReactNode | null | undefined;
   dataset?: APIDataset | null | undefined;
 }) {
   // Using the return value of useWatch for the `dataSource` var
@@ -112,8 +110,6 @@ export default function DatasetSettingsDataTab({
           />
         </Tooltip>
       </div>
-
-      {additionalAlert}
 
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>

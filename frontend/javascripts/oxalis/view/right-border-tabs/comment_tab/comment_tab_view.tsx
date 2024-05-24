@@ -43,6 +43,7 @@ import { AutoSizer } from "react-virtualized";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
 import { ColoredDotIconForSegment } from "../segments_tab/segment_list_item";
+import { useLifecycle } from "beautiful-react-hooks";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {
@@ -103,6 +104,10 @@ function CommentTabView(props: Props) {
   const [highlightedNodeIds, setHighlightedNodeIds] = useState<React.Key[]>([]);
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
 
+  const [keyboard, setKeyboard] = useState<InputKeyboard | null>(null);
+  const nextCommentRef = useRef<(arg0?: boolean) => void>();
+  const previousCommentRef = useRef<() => void>();
+
   const dispatch = useDispatch();
 
   const allowUpdate = useSelector((state: OxalisState) => state.tracing.restrictions.allowUpdate);
@@ -116,21 +121,34 @@ function CommentTabView(props: Props) {
     setCollapsedTreeIds(defaultCollapsedTreeIds);
   });
 
-  const keyboard = new InputKeyboard(
-    {
-      n: () => nextComment(),
-      p: () => previousComment(),
+  useLifecycle(
+    () => {
+      // This keyboard handler is created only once on the very first render.
+      // Instead of directly attaching callback function, we need to rely on React.refs instead
+      // to prevent the callbacks from becoming stale and outdated as the component changes
+      // its state or props.
+      const newKeyboard = new InputKeyboard(
+        {
+          n: () => {
+            if (nextCommentRef?.current) nextCommentRef.current();
+          },
+          p: () => {
+            if (previousCommentRef?.current) previousCommentRef.current();
+          },
+        },
+        {
+          delay: keyboardDelay,
+        },
+      );
+      if (keyboard === null) setKeyboard(newKeyboard);
     },
-    {
-      delay: keyboardDelay,
+    () => {
+      keyboard?.destroy();
     },
   );
 
   useEffect(() => {
-    keyboard.delay = keyboardDelay;
-    return () => {
-      keyboard.destroy();
-    };
+    if (keyboard) keyboard.delay = keyboardDelay;
   }, [keyboard, keyboardDelay]);
 
   useEffect(() => {
@@ -190,13 +208,15 @@ function CommentTabView(props: Props) {
       }
     });
   }
-
-  function setActiveNode(nodeId: number) {
-    dispatch(setActiveNodeAction(nodeId));
-  }
+  nextCommentRef.current = nextComment;
 
   function previousComment() {
     nextComment(false);
+  }
+  previousCommentRef.current = previousComment;
+
+  function setActiveNode(nodeId: number) {
+    dispatch(setActiveNodeAction(nodeId));
   }
 
   function deleteComment() {
@@ -242,7 +262,7 @@ function CommentTabView(props: Props) {
     _selectedKeys: React.Key[],
     { node }: { node: EventDataNode<MutableCommentType> },
   ) {
-    // Careful, this method is called both when clicking on a skeleton tree ("root-node") or a comment ("child node")
+    // Careful, this method is invoked both when clicking on a skeleton tree ("root-node") or a comment ("child node")
     if ("nodeId" in node) {
       setActiveNode(node.nodeId);
     }

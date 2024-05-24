@@ -28,7 +28,7 @@ import Toast from "libs/toast";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
-import { ArrayElement } from "libs/utils";
+import { ArrayElement } from "types/globals";
 
 type ControlsAndRenderingSettingsTabProps = {
   activeUser: APIUser | null | undefined;
@@ -62,7 +62,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   // This cannot be changed to componentDidMount, because this.onChangeUser is accessed in render
   UNSAFE_componentWillMount() {
     // cache onChange handler
-    // @ts-expect-error ts-migrate(2740) FIXME: Type 'Dictionary<boolean>' is missing the followin... Remove this comment to see the full error message
+    // @ts-expect-error ts-migrate(2740) FIXME: Type 'Dictionary<boolean>' is missing the following... Remove this comment to see the full error message
     this.onChangeUser = _.mapValues(
       this.props.userConfiguration,
       (__, propertyName: keyof UserConfiguration) =>

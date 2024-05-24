@@ -76,6 +76,7 @@ import { MenuInfo } from "rc-menu/lib/interface";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { APIJobType } from "types/api_flow_types";
+import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -266,7 +267,7 @@ function OverwriteModeSwitch({
     // - switching from state (1) to (2) (or vice versa)
     // - switching from state (2) to (4) (or vice versa)
     // Consequently, the mode is only toggled effectively, when CTRL is pressed.
-    // Alternatively, we could store the selected value and the overriden value
+    // Alternatively, we could store the selected value and the overridden value
     // separately in the store. However, this solution works, too.
     const needsModeToggle =
       (!isShiftPressed &&
@@ -406,6 +407,7 @@ function AdditionalSkeletonModesButtons() {
     (state: OxalisState) => state.userConfiguration.newNodeNewTree,
   );
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const isUserAdminOrManager = useIsActiveUserAdminOrManager();
 
   const segmentationTracingLayer = useSelector((state: OxalisState) =>
     getActiveSegmentationTracing(state),
@@ -464,7 +466,7 @@ function AdditionalSkeletonModesButtons() {
           alt="Merger Mode"
         />
       </ButtonComponent>
-      {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && (
+      {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && isUserAdminOrManager && (
         <ButtonComponent
           style={NARROW_BUTTON_STYLE}
           onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
@@ -906,7 +908,7 @@ export default function ToolbarView() {
       !disabledInfosForTools[lastForcefulDisabledTool].isDisabled &&
       activeTool === AnnotationToolEnum.MOVE
     ) {
-      // Reenable the tool that was disabled before.
+      // Re-enable the tool that was disabled before.
       setLastForcefulDisabledTool(null);
       Store.dispatch(setToolAction(lastForcefulDisabledTool));
     } else if (activeTool !== AnnotationToolEnum.MOVE) {

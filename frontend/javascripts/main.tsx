@@ -55,7 +55,7 @@ const localStoragePersister = createSyncStoragePersister({
 });
 
 async function loadActiveUser() {
-  // Try to retreive the currently active user if logged in
+  // Try to retrieve the currently active user if logged in
   try {
     const user = await getActiveUser({
       showErrorToast: false,

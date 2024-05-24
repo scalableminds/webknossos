@@ -25,7 +25,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
 import type { APIUser, APIOrganization } from "types/api_flow_types";
 import app from "app";
-import type { ShowContextMenuFunction, ViewMode } from "oxalis/constants";
+import type { ViewMode } from "oxalis/constants";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import messages from "messages";
 import window, { document, location } from "libs/window";
@@ -37,7 +37,6 @@ type OwnProps = {
   initialCommandType: TraceOrViewCommand;
   controllerStatus: ControllerStatus;
   setControllerStatus: (arg0: ControllerStatus) => void;
-  showContextMenuAt: ShowContextMenuFunction;
 };
 type StateProps = {
   viewMode: ViewMode;
@@ -160,7 +159,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
         }
       }
 
-      // eslint-disable-next-line no-useless-return, consistent-return
       return;
     };
 
@@ -193,13 +191,12 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       const content = await fetchGistContent(script.gist, script.name);
 
       try {
-        // eslint-disable-next-line no-eval
         eval(content);
       } catch (error) {
-        console.error(error);
         Toast.error(
           `Error executing the task script "${script.name}". See console for more information.`,
         );
+        console.error(error);
       }
     }
   }
@@ -342,7 +339,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     if (isArbitrary) {
       return <ArbitraryController viewMode={viewMode} />;
     } else if (isPlane) {
-      return <PlaneController showContextMenuAt={this.props.showContextMenuAt} />;
+      return <PlaneController />;
     } else {
       // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE
       // In case we add new viewmodes, the following error will be thrown.

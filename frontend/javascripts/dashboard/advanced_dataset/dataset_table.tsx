@@ -1,6 +1,6 @@
 import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { Dropdown, MenuProps, Table, Tag, Tooltip } from "antd";
+import { Dropdown, MenuProps, TableProps, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
 import * as React from "react";
 import _ from "lodash";
@@ -41,8 +41,6 @@ type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
 
 const { ThinSpace } = Unicode;
-const { Column } = Table;
-const typeHint: RowRenderer[] = [];
 const useLruRank = true;
 
 const THUMBNAIL_SIZE = 100;
@@ -355,6 +353,7 @@ class DatasetRenderer {
 class FolderRenderer {
   data: FolderItemWithName;
   datasetTable: DatasetTable;
+
   constructor(data: FolderItemWithName, datasetTable: DatasetTable) {
     this.data = data;
     this.datasetTable = datasetTable;
@@ -574,6 +573,36 @@ class DatasetTable extends React.PureComponent<Props, State> {
       selectedRowKeys = [context.selectedFolder?.key];
     }
 
+    const columns: TableProps["columns"] = [
+      {
+        title: "Name",
+        dataIndex: "name",
+        key: "name",
+        sorter: Utils.localeCompareBy<RowRenderer>((rowRenderer) => rowRenderer.data.name),
+        sortOrder: sortedInfo.columnKey === "name" ? sortedInfo.order : undefined,
+        render: (_name: string, rowRenderer: RowRenderer) => rowRenderer.renderNameColumn(),
+      },
+      {
+        width: 180,
+        title: "Creation Date",
+        dataIndex: "created",
+        key: "created",
+        sorter: Utils.compareBy<RowRenderer>((rowRenderer) =>
+          isRecordADataset(rowRenderer.data) ? rowRenderer.data.created : 0,
+        ),
+        sortOrder: sortedInfo.columnKey === "created" ? sortedInfo.order : undefined,
+        render: (_created, rowRenderer: RowRenderer) => rowRenderer.renderCreationDateColumn(),
+      },
+
+      {
+        width: 200,
+        title: "Actions",
+        key: "actions",
+        fixed: "right",
+        render: (__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn(),
+      },
+    ];
+
     return (
       <DndProvider backend={HTML5Backend}>
         <ContextMenuContainer
@@ -592,6 +621,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         <FixedExpandableTable
           expandable={{ childrenColumnName: "notUsed" }}
           dataSource={sortedDataSourceRenderers}
+          columns={columns}
           rowKey={(renderer: RowRenderer) => renderer.getRowKey()}
           components={components}
           pagination={{
@@ -730,38 +760,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               context.setSelectedFolder(null);
             },
           }}
-        >
-          <Column
-            title="Name"
-            dataIndex="name"
-            key="name"
-            sorter={Utils.localeCompareBy<RowRenderer>(
-              typeHint,
-              (rowRenderer) => rowRenderer.data.name,
-            )}
-            sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-            render={(_name: string, renderer: RowRenderer) => renderer.renderNameColumn()}
-          />
-          <Column
-            width={180}
-            title="Creation Date"
-            dataIndex="created"
-            key="created"
-            sorter={Utils.compareBy<RowRenderer>(typeHint, (rowRenderer) =>
-              isRecordADataset(rowRenderer.data) ? rowRenderer.data.created : 0,
-            )}
-            sortOrder={sortedInfo.columnKey === "created" ? sortedInfo.order : undefined}
-            render={(_created, rowRenderer: RowRenderer) => rowRenderer.renderCreationDateColumn()}
-          />
-
-          <Column
-            width={200}
-            title="Actions"
-            key="actions"
-            fixed="right"
-            render={(__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn()}
-          />
-        </FixedExpandableTable>
+        />
       </DndProvider>
     );
   }

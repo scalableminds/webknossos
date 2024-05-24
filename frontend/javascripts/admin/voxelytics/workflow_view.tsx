@@ -372,8 +372,8 @@ export default function WorkflowView() {
           error: err as Error,
         });
       } catch (accessibleBySwitchingError) {
-        console.log(accessibleBySwitchingError);
         Toast.error("Could not load workflow report.");
+        console.error(accessibleBySwitchingError);
         setLoadingState({ status: "FAILED", error: accessibleBySwitchingError as Error });
       }
     }

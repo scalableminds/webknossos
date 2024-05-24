@@ -37,9 +37,11 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   private lazy val Mailer: ActorSelection =
     actorSystem.actorSelection("/user/mailActor")
 
-  def logUserInteraction(timestamp: Instant, user: User, annotation: Annotation)(
+  def logUserInteractionIfTheyArePotentialContributor(timestamp: Instant, user: User, annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[Unit] =
-    logUserInteraction(Seq(timestamp), user, annotation)
+    if (user._id == annotation._user || annotation.othersMayEdit) {
+      logUserInteraction(Seq(timestamp), user, annotation)
+    } else Fox.successful(())
 
   def logUserInteraction(timestamps: Seq[Instant], user: User, annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[Unit] =
@@ -56,21 +58,19 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   private val lastUserActivities = mutable.HashMap.empty[ObjectId, TimeSpan]
 
   @SuppressWarnings(Array("TraversableHead", "TraversableLast")) // Only functions call this which put at least one timestamp in the seq
-  private def trackTime(timestamps: Seq[Instant], _user: ObjectId, _annotation: Annotation)(
+  private def trackTime(timestamps: Seq[Instant], userId: ObjectId, annotation: Annotation)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     if (timestamps.isEmpty) {
       logger.warn("Timetracking called with empty timestamps list.")
       Fox.successful(())
     } else {
-      // Only if the annotation belongs to the user, we are going to log the time on the annotation
-      val annotation = if (_annotation._user == _user) Some(_annotation) else None
       val start = timestamps.head
 
       var timeSpansToInsert: List[TimeSpan] = List()
       var timeSpansToUpdate: List[(TimeSpan, Instant)] = List()
 
-      def createNewTimeSpan(timestamp: Instant, _user: ObjectId, annotation: Option[Annotation]) = {
-        val timeSpan = TimeSpan.fromInstant(timestamp, _user, annotation.map(_._id))
+      def createNewTimeSpan(timestamp: Instant, _user: ObjectId, annotation: Annotation) = {
+        val timeSpan = TimeSpan.fromInstant(timestamp, _user, annotation._id)
         timeSpansToInsert = timeSpan :: timeSpansToInsert
         timeSpan
       }
@@ -88,10 +88,10 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       }
 
       var current = lastUserActivities
-        .get(_user)
+        .get(userId)
         .flatMap(lastActivity => {
           if (isNotInterrupted(start, lastActivity)) {
-            if (belongsToSameTracing(lastActivity, annotation)) {
+            if (belongsToSameAnnotation(lastActivity, annotation)) {
               Some(lastActivity)
             } else {
               updateTimeSpan(lastActivity, start)
@@ -99,7 +99,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
             }
           } else None
         })
-        .getOrElse(createNewTimeSpan(start, _user, annotation))
+        .getOrElse(createNewTimeSpan(start, userId, annotation))
 
       timestamps.sliding(2).foreach { pair =>
         val start = pair.head
@@ -107,11 +107,11 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
         val duration = end - start
         if (duration >= conf.WebKnossos.User.timeTrackingPause) {
           updateTimeSpan(current, start)
-          current = createNewTimeSpan(end, _user, annotation)
+          current = createNewTimeSpan(end, userId, annotation)
         }
       }
       current = updateTimeSpan(current, timestamps.last)
-      lastUserActivities.update(_user, current)
+      lastUserActivities.update(userId, current)
 
       flushToDb(timeSpansToInsert, timeSpansToUpdate)(ctx)
     }
@@ -119,8 +119,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   private def isNotInterrupted(current: Instant, last: TimeSpan) =
     current - last.lastUpdate < conf.WebKnossos.User.timeTrackingPause
 
-  private def belongsToSameTracing(last: TimeSpan, annotation: Option[Annotation]) =
-    last._annotation.map(_.id) == annotation.map(_.id)
+  private def belongsToSameAnnotation(last: TimeSpan, annotation: Annotation) =
+    last._annotation.contains(annotation._id)
 
   private def logTimeToAnnotation(duration: FiniteDuration, annotation: Option[ObjectId]): Fox[Unit] =
     // Log time to annotation

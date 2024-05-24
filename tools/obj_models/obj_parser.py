@@ -17,7 +17,7 @@ normalsIndex = []
 
 ''' Load a wavefront obj 3D file and parses it. It outputs the parsed
 values as a stream of binary interpretation. Output as Javascript arrays
-opitonal.
+optional.
 The method is far from complete.
 
 Features:
@@ -56,14 +56,14 @@ def parseObjFile(objFile, options):
     lines = myfile.read().split('\n')
     lines = filter(lambda x: len(x) > 0,[x.strip() for x in lines])
 
-    # SHOULD BE RESET AT THE FIRST OCCURANCE OF A "g" TAG
+    # SHOULD BE RESET AT THE FIRST OCCURRENCE OF A "g" TAG
     currentColor = 0
 
     for line in lines:    
         # HANDLE SUBGROUPS
         if line[0] == 'g':
             ''' TODO: proper support for grouping
-            FOR RIGTH NOW LETS HAVE SOME FUN WITH COLORS
+            FOR RIGHT NOW LETS HAVE SOME FUN WITH COLORS
             either use a user provided color or choose from a number predefined ones '''
             if len(options.color) == 0:
                 if currentColor < 11:
@@ -105,7 +105,7 @@ def parseObjFile(objFile, options):
                         normalsIndex.append(verts[2] - 1)
                 
             # HANDLE QUADS / POLYGONS
-            # triangulate face woth more than three vertices
+            # triangulate face worth more than three vertices
             else:
                 polygonFaces = []
                 polygonTextures = []
@@ -142,7 +142,7 @@ def parseObjFile(objFile, options):
     ''' Flatten all the list and loose the "vector" structure. This is necassary 
     in order to properly export everything.
     Btw, yes I know all of these 3 arrays have the same length and could therefore be 
-    interated over in one loop. :-)
+    iterated over in one loop. :-)
     ''' 
     vertices = [number for vertex in vertices for number in vertex]
     vertexNormals = [number for normal in vertexNormals for number in normal]
@@ -172,7 +172,7 @@ def parseObjFile(objFile, options):
         print "%s.js written" % objFile[:-4]
 
         
-'''Divide a polygone into triangles'''
+'''Divide a polygon into triangles'''
 def triangulate(l):
     triangles = []    
     for i in range(1,len(l)-1):

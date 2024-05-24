@@ -120,7 +120,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
           return messages["dataset.leave_with_unsaved_changes"];
         }
       }
-      // eslint-disable-next-line consistent-return, no-useless-return
       return;
     };
 

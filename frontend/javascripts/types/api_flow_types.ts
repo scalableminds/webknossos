@@ -6,6 +6,7 @@ import type {
   TreeGroup,
   RecommendedConfiguration,
   SegmentGroup,
+  MeshInformation,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type {
@@ -537,15 +538,33 @@ export type APIAnnotationWithTask = APIAnnotationBase & {
 export type APITaskWithAnnotation = APITask & {
   readonly annotation: APIAnnotation;
 };
-export type APITimeTracking = {
-  time: string;
-  timestamp: number;
+export type APITimeTrackingPerAnnotation = {
   annotation: string;
-  _id: string;
-  task_id: string | undefined;
-  project_name: string | undefined;
-  tasktype_id: string | undefined;
-  tasktype_summary: string | undefined;
+  task: string | undefined;
+  projectName: string | undefined;
+  timeMillis: number;
+  annotationLayerStats: Array<TracingStats>;
+};
+export type APITimeTrackingPerUser = {
+  user: APIUserCompact & {
+    email: string;
+  };
+  timeMillis: number;
+  annotationCount: number;
+};
+export type APITimeTrackingSpan = {
+  userId: string;
+  userEmail: string;
+  datasetOrganization: string;
+  datasetName: string;
+  annotationId: string;
+  taskId: string | undefined;
+  projectName: string | undefined;
+  taskTypeId: string | undefined;
+  taskTypeSummary: string | undefined;
+  timeSpanId: string;
+  timeSpanCreated: number;
+  timeSpanTimeMillis: number;
 };
 export type APIProjectProgressReport = {
   readonly projectName: string;
@@ -1092,9 +1111,11 @@ export enum MOVIE_RESOLUTIONS {
 
 export type RenderAnimationOptions = {
   layerName: string;
-  segmentationLayerName?: string;
-  meshFileName?: string;
-  meshSegmentIds: number[];
+  meshes: ({
+    layerName: string;
+    tracingId: string | null;
+    adhocMag: Vector3;
+  } & MeshInformation)[];
   boundingBox: BoundingBoxObject;
   includeWatermark: boolean;
   intensityMin: number;

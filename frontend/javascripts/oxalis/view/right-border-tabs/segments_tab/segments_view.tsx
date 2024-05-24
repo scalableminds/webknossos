@@ -85,7 +85,6 @@ import {
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type {
   ActiveMappingInfo,
-  Flycam,
   MeshInformation,
   OxalisState,
   Segment,
@@ -140,7 +139,7 @@ type StateProps = {
   dataset: APIDataset;
   isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
-  flycam: Flycam;
+  centeredSegmentId: number;
   hasVolumeTracing: boolean | undefined;
   isSegmentIndexAvailable: boolean | undefined;
   segments: SegmentMap | null | undefined;
@@ -190,7 +189,7 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     isJSONMappingEnabled:
       mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
     mappingInfo,
-    flycam: state.flycam,
+    centeredSegmentId: getSegmentIdForPosition(getPosition(state.flycam)),
     hasVolumeTracing: state.tracing.volumes.length > 0,
     isSegmentIndexAvailable,
     segments,
@@ -414,6 +413,7 @@ class SegmentsView extends React.Component<Props, State> {
     );
 
     if (
+      this.props.dataset.dataStore.jobsEnabled &&
       this.props.dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
         APIJobType.COMPUTE_MESH_FILE,
       )
@@ -1340,7 +1340,8 @@ class SegmentsView extends React.Component<Props, State> {
     groupId: number | null,
     isVisible: boolean,
   ) => {
-    const { flycam, meshes } = this.props;
+    const { flycam } = Store.getState();
+    const { meshes } = this.props;
     const additionalCoordinates = flycam.additionalCoordinates;
     this.handlePerSegment(groupId, (segment) => {
       if (meshes[segment.id] != null) {
@@ -1352,13 +1353,11 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   handleLoadMeshesAdHoc = (groupId: number | null) => {
+    const { flycam } = Store.getState();
+
     this.handlePerSegment(groupId, (segment) => {
       if (segment.somePosition == null) return;
-      this.props.loadAdHocMesh(
-        segment.id,
-        segment.somePosition,
-        this.props.flycam.additionalCoordinates,
-      );
+      this.props.loadAdHocMesh(segment.id, segment.somePosition, flycam.additionalCoordinates);
     });
   };
 
@@ -1375,7 +1374,7 @@ class SegmentsView extends React.Component<Props, State> {
   getSelectedSegments = (): Segment[] => {
     const allSegments = this.props.segments;
     if (allSegments == null) return [];
-    return this.props.selectedIds.segments.map((segmentId) => allSegments.get(segmentId));
+    return this.props.selectedIds.segments.map((segmentId) => allSegments.getOrThrow(segmentId));
   };
 
   getSelectedItemKeys = () => {
@@ -1569,7 +1568,7 @@ class SegmentsView extends React.Component<Props, State> {
         <DomVisibilityObserver targetId={segmentsTabId}>
           {(isVisibleInDom) => {
             if (!isVisibleInDom) return null;
-            const centeredSegmentId = getSegmentIdForPosition(getPosition(this.props.flycam));
+            const { centeredSegmentId } = this.props;
             const allSegments = this.props.segments;
             const isSegmentHierarchyEmpty = !(
               allSegments?.size() || this.props.segmentGroups.length

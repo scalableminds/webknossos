@@ -1,6 +1,5 @@
 {
   "name": "webknossos",
-  "version": "0.17.146",
   "license": "AGPL-3.0",
   "engines": {
     "node": ">=16"
@@ -18,6 +17,7 @@
     "@types/dagre": "^0.7.48",
     "@types/lodash": "^4.14.181",
     "@types/memoize-one": "^5.1.2",
+    "@types/merge-img": "^2.1.1",
     "@types/mock-require": "^2.0.1",
     "@types/ndarray": "^1.0.11",
     "@types/ndarray-ops": "^1.2.4",
@@ -29,7 +29,6 @@
     "@types/react-virtualized": "^9.21.21",
     "@types/sinon": "^10.0.11",
     "@types/url-join": "^4.0.0",
-    "@typescript-eslint/eslint-plugin": "^6.17.0",
     "abort-controller": "^3.0.0",
     "ava": "^3.13.0",
     "browserslist-to-esbuild": "^1.2.0",
@@ -39,6 +38,7 @@
     "css-loader": "^6.5.1",
     "documentation": "^14.0.2",
     "domexception": "^2.0.1",
+    "dpdm": "^3.14.0",
     "enzyme": "^3.7.0",
     "enzyme-adapter-react-16": "^1.9.1",
     "espree": "^3.5.4",
@@ -49,7 +49,6 @@
     "less": "^4.0.0",
     "less-loader": "^10.2.0",
     "lz4-wasm-nodejs": "^0.9.2",
-    "madge": "^5.0.1",
     "merge-img": "^2.1.2",
     "mock-require": "^1.2.1",
     "node-fetch": "^2.6.7",
@@ -107,8 +106,8 @@
     "licenses-backend": "sbt dumpLicenseReport",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/oxalis/api/api_loader.ts frontend/javascripts/oxalis/api/api_latest.ts --github --project-name \"WEBKNOSSOS Frontend API\" --format html --output public/docs/frontend-api",
     "refresh-schema": "./tools/postgres/dbtool.js refresh-schema && rm -f target/scala-2.13/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
-    "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; ./tools/postgres/dbtool.js enable-jobs",
-    "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; ./tools/postgres/dbtool.js disable-jobs",
+    "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = false/voxelyticsEnabled = true/g' ./conf/application.conf; ./tools/postgres/dbtool.js enable-jobs",
+    "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = true/voxelyticsEnabled = false/g' ./conf/application.conf; ./tools/postgres/dbtool.js disable-jobs",
     "coverage-local": "c8 report --reporter=html && echo Success! Open coverage/index.html",
     "coverage": "c8 report --reporter=text-lcov | coveralls",
     "postcheckout": "echo 'Deleting auto-generated typescript files...' && rm -f frontend/javascripts/test/snapshots/type-check/*.ts",
@@ -118,7 +117,7 @@
     "ts": "yarn tsc",
     "ts-watch": "yarn tsc --watch",
     "ts-coverage": "typescript-coverage-report",
-    "find-cyclic-dependencies": "madge --circular --extensions ts,tsx frontend/javascripts/main.tsx",
+    "find-cyclic-dependencies": "yarn run dpdm -T --tree false --warning false --extensions .ts,.tsx frontend/javascripts/main.tsx",
     "check-cyclic-dependencies": "node ./tools/check-cyclic-dependencies.js",
     "startf": "yarn rm-fossil-lock; yarn kill-listeners; yarn start"
   },
@@ -134,7 +133,6 @@
     "@tanstack/react-query-persist-client": "^4.14.1",
     "@types/file-saver": "^2.0.5",
     "@types/lz-string": "^1.3.34",
-    "@types/merge-img": "^2.1.1",
     "@types/pako": "^2.0.0",
     "@types/pixelmatch": "^5.2.4",
     "@types/pngjs": "^6.0.1",
@@ -195,7 +193,6 @@
     "react-dom": "^16.9.0",
     "react-dropzone": "^11.3.1",
     "react-flow-renderer": "^10.3.16",
-    "react-google-charts": "^2.0.0",
     "react-json-tree": "^0.17.0",
     "react-redux": "^7.2.0",
     "react-remarkable": "^1.1.3",
@@ -222,33 +219,14 @@
     "**/rc-tree": "^5.7.12"
   },
   "ava": {
-    "files": [
-      "./public-test/test-bundle/**/*.{js,jsx}"
-    ],
-    "ignoredByWatcher": [
-      "./binaryData/**/*.*"
-    ],
-    "require": [
-      "./frontend/javascripts/test/_ava_polyfill_provider.ts"
-    ],
+    "files": ["./public-test/test-bundle/**/*.{js,jsx}"],
+    "ignoredByWatcher": ["./binaryData/**/*.*"],
+    "require": ["./frontend/javascripts/test/_ava_polyfill_provider.ts"],
     "snapshotDir": "frontend/javascripts/test/snapshots",
     "concurrency": 8
   },
   "c8": {
-    "exclude": [
-      "public-test/test-bundle/test/**/*.*",
-      "frontend/javascripts/test/**/*.*"
-    ],
+    "exclude": ["public-test/test-bundle/test/**/*.*", "frontend/javascripts/test/**/*.*"],
     "reporter": "lcov"
-  },
-  "madge": {
-    "detectiveOptions": {
-      "ts": {
-        "skipTypeImports": true
-      },
-      "tsx": {
-        "skipTypeImports": true
-      }
-    }
   }
 }

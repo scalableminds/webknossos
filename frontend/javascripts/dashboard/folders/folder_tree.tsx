@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { Key, useCallback, useEffect, useRef, useState } from "react";
 import { ConnectDropTarget, DropTargetMonitor, useDrop } from "react-dnd";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
 import {
@@ -11,7 +11,6 @@ import { Dropdown, Modal, MenuProps, Tree } from "antd";
 import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
 import { DataNode, DirectoryTreeProps } from "antd/lib/tree";
-import { Key } from "antd/lib/table/interface";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 import { FolderItem } from "types/api_flow_types";

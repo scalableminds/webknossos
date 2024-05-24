@@ -10,10 +10,6 @@ export default function checkBrowserFeatures() {
     new BigUint64Array(1);
     "hello".replaceAll("l", "k");
   } catch (exception) {
-    console.error(
-      "This browser lacks support for some modern features. Exception caught during test of features:",
-      exception,
-    );
     Toast.warning(
       <div>
         Your browser seems to be outdated.{" "}
@@ -22,6 +18,10 @@ export default function checkBrowserFeatures() {
         </a>{" "}
         to avoid errors. See console for details.
       </div>,
+    );
+    console.error(
+      "This browser lacks support for some modern features. Exception caught during test of features:",
+      exception,
     );
   }
 }

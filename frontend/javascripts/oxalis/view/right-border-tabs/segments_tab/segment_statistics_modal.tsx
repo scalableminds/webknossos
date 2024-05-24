@@ -21,7 +21,7 @@ import {
   getAdditionalCoordinatesAsString,
   hasAdditionalCoordinates,
 } from "oxalis/model/accessors/flycam_accessor";
-import { pluralize } from "libs/utils";
+import { pluralize, transformToCSVRow } from "libs/utils";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 
 const MODAL_ERROR_MESSAGE =
@@ -68,7 +68,7 @@ const exportStatisticsToCSV = (
   const segmentStatisticsAsString = segmentInformation
     .map((row) => {
       const maybeAdditionalCoords = hasAdditionalCoords ? [row.additionalCoordinates] : [];
-      return [
+      return transformToCSVRow([
         ...maybeAdditionalCoords,
         row.segmentId,
         row.segmentName,
@@ -78,12 +78,9 @@ const exportStatisticsToCSV = (
         row.volumeInNm3,
         ...row.boundingBoxTopLeft,
         ...row.boundingBoxPosition,
-      ]
-        .map(String) // convert every value to String
-        .map((v) => v.replaceAll('"', '""')) // escape double quotes
-        .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)); // quote it if necessary
+      ]);
     })
-    .join("\n"); // rows starting on new lines
+    .join("\n");
 
   const csv_header = hasAdditionalCoords
     ? [ADDITIONAL_COORDS_COLUMN, SEGMENT_STATISTICS_CSV_HEADER].join(",")

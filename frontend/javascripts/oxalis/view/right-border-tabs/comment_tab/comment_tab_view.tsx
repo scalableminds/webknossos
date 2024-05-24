@@ -16,7 +16,7 @@ import _ from "lodash";
 import memoizeOne from "memoize-one";
 import update from "immutability-helper";
 import { Comment, commentListId } from "oxalis/view/right-border-tabs/comment_tab/comment";
-import { Comparator, toNullable, compareBy, localeCompareBy, zipMaybe } from "libs/utils";
+import { toNullable, compareBy, localeCompareBy, zipMaybe } from "libs/utils";
 import { InputKeyboard } from "libs/input";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
@@ -37,9 +37,8 @@ import TreeWithComments from "oxalis/view/right-border-tabs/comment_tab/tree_wit
 import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import type { MenuProps } from "rc-menu";
+import { Comparator } from "types/globals";
 
-const treeTypeHint = [] as Array<Tree>;
-const commentTypeHint = [] as Array<CommentType>;
 const commentTabId = "commentTabId";
 enum SortByEnum {
   NAME = "NAME",
@@ -55,9 +54,8 @@ type SortOptions = {
 
 function getTreeSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<Tree> {
   return sortBy === SortByEnum.ID
-    ? compareBy(treeTypeHint, (tree) => tree.treeId, isSortedAscending)
-    : localeCompareBy(
-        treeTypeHint,
+    ? compareBy<Tree>((tree) => tree.treeId, isSortedAscending)
+    : localeCompareBy<Tree>(
         (tree) => `${tree.name}_${tree.treeId}`,
         isSortedAscending,
         sortBy === SortByEnum.NATURAL,
@@ -66,9 +64,8 @@ function getTreeSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<T
 
 function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparator<CommentType> {
   return sortBy === SortByEnum.ID
-    ? compareBy([] as Array<CommentType>, (comment) => comment.nodeId, isSortedAscending)
-    : localeCompareBy(
-        commentTypeHint,
+    ? compareBy<CommentType>((comment) => comment.nodeId, isSortedAscending)
+    : localeCompareBy<CommentType>(
         (comment) => `${comment.content}_${comment.nodeId}`,
         isSortedAscending,
         sortBy === SortByEnum.NATURAL,
@@ -243,13 +240,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
     this.nextComment(false);
   };
 
-  handleChangeInput = (
-    evt: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-    insertLineBreaks: boolean = false,
-  ) => {
-    // @ts-ignore
-    const commentText = evt.target.value;
-
+  handleChangeInput = (commentText: string, insertLineBreaks: boolean = false) => {
     if (commentText) {
       this.props.createComment(insertLineBreaks ? commentText.replace(/\\n/g, "\n") : commentText);
     } else {
@@ -469,7 +460,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                         : messages["tracing.read_only_mode_notification"]
                     }
                     onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
-                      this.handleChangeInput(evt, true)
+                      this.handleChangeInput(evt.target.value, true)
                     }
                     onPressEnter={(evt: React.KeyboardEvent<HTMLInputElement>) =>
                       (evt.target as HTMLElement).blur()

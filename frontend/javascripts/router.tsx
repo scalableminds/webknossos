@@ -28,7 +28,6 @@ import TaskListView from "admin/task/task_list_view";
 import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import TaskTypeListView from "admin/tasktype/task_type_list_view";
 import TeamListView from "admin/team/team_list_view";
-import TimeLineView from "admin/time/time_line_view";
 import UserListView from "admin/user/user_list_view";
 import { Button, Col, Layout, Result, Row } from "antd";
 import DisableGenericDnd from "components/disable_generic_dnd";
@@ -292,6 +291,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/users/:userId/details"
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <DashboardView
                     userId={match.params.userId}
@@ -304,11 +304,13 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/users"
                 component={UserListView}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/teams"
                 component={TeamListView}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -320,6 +322,7 @@ class ReactRouter extends React.Component<Props> {
                 requiredPricingPlan={PricingPlanEnum.Team}
                 path="/reports/projectProgress"
                 component={ProjectProgressReportView}
+                requiresAdminOrManagerRole
                 exact
               />
               <RouteWithErrorBoundary
@@ -331,6 +334,7 @@ class ReactRouter extends React.Component<Props> {
                 requiredPricingPlan={PricingPlanEnum.Team}
                 path="/reports/availableTasks"
                 component={AvailableTasksReportView}
+                requiresAdminOrManagerRole
                 exact
               />
               <SecuredRouteWithErrorBoundary
@@ -338,6 +342,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/tasks"
                 requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskListView}
+                requiresAdminOrManagerRole
                 exact
               />
               <SecuredRouteWithErrorBoundary
@@ -345,11 +350,13 @@ class ReactRouter extends React.Component<Props> {
                 path="/tasks/create"
                 requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskCreateView}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId/edit"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <TaskCreateFormView taskId={match.params.taskId} />
                 )}
@@ -358,6 +365,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <TaskListView
                     initialFieldValues={{
@@ -370,6 +378,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/projects"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={(
                   { location }: ContextRouter, // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
                 ) => <ProjectListView initialSearchValue={location.hash.slice(1)} />}
@@ -379,12 +388,14 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/projects/create"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={() => <ProjectCreateView />}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/tasks"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <TaskListView
                     initialFieldValues={{
@@ -397,6 +408,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/edit"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <ProjectCreateView projectId={match.params.projectId} />
                 )}
@@ -428,11 +440,13 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
+                requiresAdminOrManagerRole
                 render={() => <DatasetAddView />}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/edit"
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <DatasetSettingsView
                     isEditingMode
@@ -448,6 +462,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes"
+                requiresAdminOrManagerRole
                 render={(
                   { location }: ContextRouter, // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
                 ) => <TaskTypeListView initialSearchValue={location.hash.slice(1)} />}
@@ -458,6 +473,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/taskTypes/create"
                 requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskTypeCreateView}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -466,6 +482,7 @@ class ReactRouter extends React.Component<Props> {
                 render={({ match }: ContextRouter) => (
                   <TaskTypeCreateView taskTypeId={match.params.taskTypeId} />
                 )}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -478,6 +495,7 @@ class ReactRouter extends React.Component<Props> {
                     }}
                   />
                 )}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -486,15 +504,18 @@ class ReactRouter extends React.Component<Props> {
                 render={({ match }: ContextRouter) => (
                   <ProjectListView taskTypeId={match.params.taskTypeId || ""} />
                 )}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/scripts/create"
                 render={() => <ScriptCreateView />}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/scripts/:scriptId/edit"
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <ScriptCreateView scriptId={match.params.scriptId} />
                 )}
@@ -503,6 +524,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/scripts"
                 component={ScriptListView}
+                requiresAdminOrManagerRole
                 exact
               />
               <SecuredRouteWithErrorBoundary
@@ -520,12 +542,6 @@ class ReactRouter extends React.Component<Props> {
                 render={() => (
                   <Redirect to="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html" />
                 )}
-              />
-              <SecuredRouteWithErrorBoundary
-                isAuthenticated={isAuthenticated}
-                path="/reports/timetracking"
-                requiredPricingPlan={PricingPlanEnum.Power}
-                component={TimeLineView}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}

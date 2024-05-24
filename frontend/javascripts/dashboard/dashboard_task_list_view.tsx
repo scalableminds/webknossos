@@ -10,10 +10,8 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
 import Markdown from "react-remarkable";
 import * as React from "react";
 
@@ -44,7 +42,6 @@ import messages from "messages";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 
-const typeHint: APITaskWithAnnotation[] = [];
 const pageLength: number = 1000;
 
 export type TaskModeState = {
@@ -441,8 +438,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   renderTaskList() {
     const tasks = this.getCurrentTasks().sort(
-      Utils.compareBy(
-        typeHint,
+      Utils.compareBy<APITaskWithAnnotation>(
         (task) => (this.state.showFinishedTasks ? task.annotation.modified : task.created),
         false,
       ),

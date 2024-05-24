@@ -10,6 +10,7 @@ import {
   Tag,
   Input,
   InputRef,
+  ConfigProvider,
 } from "antd";
 import _ from "lodash";
 import {
@@ -25,7 +26,7 @@ import {
 import { useHistory, Link } from "react-router-dom";
 
 import classnames from "classnames";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import React, { useState, useEffect, useRef } from "react";
 import Toast from "libs/toast";
 import type {
@@ -61,8 +62,8 @@ import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
-import { MaintenanceBanner } from "maintenance_banner";
-import { getSystemColorTheme } from "theme";
+import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
+import { getAntdTheme, getSystemColorTheme } from "theme";
 
 const { Header } = Layout;
 
@@ -278,7 +279,7 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
         key: "/timetracking",
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <Link to="/timetracking">Time Tracking Overview</Link>
+            <Link to="/timetracking">Time Tracking</Link>
           </PricingEnforcedSpan>
         ),
       },
@@ -308,7 +309,7 @@ function getTimeTrackingMenu(collapse: boolean): MenuItemType {
 
     label: (
       <Link
-        to="/reports/timetracking"
+        to="/timetracking"
         style={{
           fontWeight: 400,
         }}
@@ -482,8 +483,7 @@ function NotificationIcon({
         position: "relative",
         display: "flex",
         marginRight: 12,
-        paddingTop:
-          navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT : 0,
+        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
       }}
     >
       <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
@@ -517,7 +517,7 @@ function OrganizationFilterInput({
 }: { onChange: (val: string) => void; isVisible: boolean; onPressEnter: () => void }) {
   const ref = useRef<InputRef>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesnt understand that ref.current is accessed?
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesn't understand that ref.current is accessed?
   useEffect(() => {
     if (ref?.current && isVisible) {
       setTimeout(() => {
@@ -610,8 +610,7 @@ function LoggedInAvatar({
       selectedKeys={["prevent highlighting of this menu"]}
       mode="horizontal"
       style={{
-        paddingTop:
-          navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT : 0,
+        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
       }}
       theme="dark"
@@ -701,6 +700,9 @@ function LoggedInAvatar({
 }
 
 function AnonymousAvatar() {
+  const bannerHeight = useSelector(
+    (state: OxalisState) => state.uiInformation.navbarHeight - constants.DEFAULT_NAVBAR_HEIGHT,
+  );
   return (
     <Popover
       placement="bottomRight"
@@ -722,6 +724,7 @@ function AnonymousAvatar() {
         icon={<UserOutlined />}
         style={{
           marginLeft: 8,
+          marginTop: bannerHeight,
         }}
       />
     </Popover>
@@ -899,15 +902,15 @@ function Navbar({
       })}
     >
       <MaintenanceBanner />
+      <ConfigProvider theme={{ ...getAntdTheme("light") }}>
+        <UpgradeVersionBanner />
+      </ConfigProvider>
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}
         onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
-          paddingTop:
-            navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT
-              ? constants.MAINTENANCE_BANNER_HEIGHT
-              : 0,
+          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
           lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         }}
         theme="dark"
@@ -930,10 +933,7 @@ function Navbar({
         style={{
           flex: 1,
           display: "flex",
-          paddingTop:
-            navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT
-              ? constants.MAINTENANCE_BANNER_HEIGHT
-              : 0,
+          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         }}
       />
 

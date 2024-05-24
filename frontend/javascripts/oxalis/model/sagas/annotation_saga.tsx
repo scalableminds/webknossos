@@ -83,7 +83,6 @@ export function* pushAnnotationUpdateAsync(action: Action) {
     // we will only notify the user if the name, visibility or description could not be changed.
     // Otherwise, we won't notify the user and won't let the sagas crash as the actual skeleton/volume
     // tracings are handled separately.
-    console.error(error);
     ErrorHandling.notify(error as Error);
     if (
       ["SET_ANNOTATION_NAME", "SET_ANNOTATION_VISIBILITY", "SET_ANNOTATION_DESCRIPTION"].includes(
@@ -92,6 +91,7 @@ export function* pushAnnotationUpdateAsync(action: Action) {
     ) {
       Toast.error("Could not update annotation property. Please try again.");
     }
+    console.error(error);
   }
 }
 
@@ -191,7 +191,7 @@ export function* watchAnnotationAsync(): Saga<void> {
   // Consuming the latest action here handles an offline scenario better.
   // If the user is offline and performs multiple changes to the annotation
   // name, only the latest action is relevant. If `_takeEvery` was used,
-  // all updates to the annotation name would be retried regularily, which
+  // all updates to the annotation name would be retried regularly, which
   // would also cause race conditions.
   yield* takeLatest("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
   yield* takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);

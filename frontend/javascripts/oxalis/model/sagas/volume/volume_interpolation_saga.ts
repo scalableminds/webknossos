@@ -178,7 +178,7 @@ const isNonZero = cwise({
   // Also, cwise uses this function content to build
   // the target function. Adding a return here would not
   // yield the desired behavior for isNonZero.
-  // eslint-disable-next-line consistent-return, object-shorthand
+
   body: function (a) {
     if (a > 0) {
       return true;
@@ -186,7 +186,7 @@ const isNonZero = cwise({
   },
   // The following function is parsed by cwise which is why
   // the shorthand syntax is not supported.
-  // eslint-disable-next-line object-shorthand
+
   post: function () {
     return false;
   },
@@ -352,7 +352,6 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const stride = [1, size[0], size[0] * size[1]];
   const inputNd = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
-  // eslint-disable-next-line no-nested-ternary
   const adaptedInterpolationRange = onlyExtrude
     ? // When extruding and...
       directionFactor > 0
@@ -481,7 +480,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 
   // Theoretically, the user might extrude (or interpolate, even though this is less likely) multiple
-  // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything inbetween manually.
+  // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything in between manually.
   // In that case, the interpolation/extrusion would always start from slice 0 which is unexpected and leads
   // to additional performance overhead (also the maximum interpolation depth will be exceeded at some point).
   // As a counter measure, we simply use the current position to update the current direction (and with it

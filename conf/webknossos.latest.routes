@@ -126,7 +126,7 @@ GET           /tracingstores/:name/dataSource                                   
 GET           /tracingstores/:name/dataSourceId                                                 controllers.WKRemoteTracingStoreController.dataSourceIdForTracing(name: String, key: String, tracingId: String)
 GET           /tracingstores/:name/dataStoreUri/:datasetName                                    controllers.WKRemoteTracingStoreController.dataStoreUriForDataset(name: String, key: String, organizationName: Option[String], datasetName: String)
 
-# User access tokens for datastore authentification
+# User access tokens for datastore authentication
 POST          /userToken/generate                                                               controllers.UserTokenController.generateTokenForDataStore()
 
 # Annotations
@@ -250,8 +250,9 @@ GET           /termsOfService/acceptanceNeeded                                  
 
 # Time Tracking
 # Note, there is also /users/:id/loggedTime
-GET           /time/user/:userId                                                                controllers.TimeController.timeSpansOfUser(userId: String, startDate: Long, endDate: Long, annotationTypes: String, projectIds: Option[String])
-GET           /time/overview                                                                    controllers.TimeController.timeOverview(start: Long, end: Long, annotationTypes: String, teamIds: Option[String], projectIds: Option[String])
+GET           /time/user/:userId/spans                                                          controllers.TimeController.timeSpansOfUser(userId: String, start: Long, end: Long, annotationTypes: String, annotationStates: String, projectIds: Option[String])
+GET           /time/user/:userId/summedByAnnotation                                             controllers.TimeController.timeSummedByAnnotationForUser(userId: String, start: Long, end: Long, annotationTypes: String, annotationStates: String, projectIds: Option[String])
+GET           /time/overview                                                                    controllers.TimeController.timeOverview(start: Long, end: Long, annotationTypes: String, annotationStates: String, teamIds: Option[String], projectIds: Option[String])
 
 # Long-Running Jobs
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)
@@ -263,6 +264,7 @@ POST          /jobs/run/computeSegmentIndexFile/:organizationName/:datasetName  
 POST          /jobs/run/exportTiff/:organizationName/:datasetName                               controllers.JobsController.runExportTiffJob(organizationName: String, datasetName: String, bbox: String, layerName: Option[String], mag: Option[String], annotationLayerName: Option[String], annotationId: Option[String], asOmeTiff: Boolean)
 POST          /jobs/run/inferNuclei/:organizationName/:datasetName                              controllers.JobsController.runInferNucleiJob(organizationName: String, datasetName: String, layerName: String, newDatasetName: String)
 POST          /jobs/run/inferNeurons/:organizationName/:datasetName                             controllers.JobsController.runInferNeuronsJob(organizationName: String, datasetName: String, layerName: String, bbox: String, outputSegmentationLayerName: String, newDatasetName: String)
+POST          /jobs/run/inferMitochondria/:organizationName/:datasetName                        controllers.JobsController.runInferMitochondriaJob(organizationName: String, datasetName: String, layerName: String, bbox: String, outputSegmentationLayerName: String, newDatasetName: String)
 POST          /jobs/run/materializeVolumeAnnotation/:organizationName/:datasetName              controllers.JobsController.runMaterializeVolumeAnnotationJob(organizationName: String, datasetName: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, outputSegmentationLayerName: String, mergeSegments: Boolean, volumeLayerName: Option[String])
 POST          /jobs/run/findLargestSegmentId/:organizationName/:datasetName                     controllers.JobsController.runFindLargestSegmentIdJob(organizationName: String, datasetName: String, layerName: String)
 POST          /jobs/run/renderAnimation/:organizationName/:datasetName                          controllers.JobsController.runRenderAnimationJob(organizationName: String, datasetName: String)

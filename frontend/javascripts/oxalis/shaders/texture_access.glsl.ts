@@ -52,7 +52,7 @@ export const getRgbaAtXYIndex: ShaderModule = {
 
     <% _.each(layerNamesWithSegmentation, (name) => { %>
       vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float x, float y) {
-        // Since WebGL 1 doesnt allow dynamic texture indexing, we use an exhaustive if-else-construct
+        // Since WebGL 1 doesn't allow dynamic texture indexing, we use an exhaustive if-else-construct
         // here which checks for each case individually. The else-if-branches are constructed via
         // lodash templates.
 
@@ -345,7 +345,7 @@ export const getColorForCoords: ShaderModule = {
 
       if (packingDegree == 2.0) {
         // It's essentially irrelevant what we return as the 3rd and 4th value here as we only have 2 byte of information.
-        // The caller needs to unpack this vec4 according to the packingDegree, see getSegmentationId for an example.
+        // The caller needs to unpack this vec4 according to the packingDegree, see getSegmentId for an example.
         // The same goes for the following code where the packingDegree is 4 and we only have 1 byte of information.
         if (rgbaIndex == 0.0) {
           returnValue[1] = vec4(

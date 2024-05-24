@@ -4,19 +4,29 @@ import com.google.inject.Inject
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
+import com.scalableminds.webknossos.datastore.explore.{
+  ExploreRemoteDatasetRequest,
+  ExploreRemoteDatasetResponse,
+  ExploreRemoteLayerService
+}
 import com.scalableminds.webknossos.datastore.helpers.{
   GetMultipleSegmentIndexParameters,
   GetSegmentIndexParameters,
   SegmentIndexData,
   SegmentStatisticsParameters
 }
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, InboxDataSourceLike}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
+  InboxDataSource,
+  InboxDataSourceLike,
+  UnusableInboxDataSource
+}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, DataSourceId, GenericDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.uploading.{
   CancelUploadInformation,
   ComposeRequest,
   ComposeService,
+  ReserveManualUploadInformation,
   ReserveUploadInformation,
   UploadInformation,
   UploadService
@@ -29,8 +39,10 @@ import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
 
+import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
@@ -44,6 +56,7 @@ class DataSourceController @Inject()(
     segmentIndexFileService: SegmentIndexFileService,
     storageUsageService: DSUsedStorageService,
     datasetErrorLoggingService: DatasetErrorLoggingService,
+    exploreRemoteLayerService: ExploreRemoteLayerService,
     uploadService: UploadService,
     composeService: ComposeService,
     val dsRemoteWebknossosClient: DSRemoteWebknossosClient,
@@ -89,6 +102,29 @@ class DataSourceController @Inject()(
             (remoteWebknossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataset.upload.validation.failed")
               .flatMap(_ => uploadService.reserveUpload(request.body))
           } else Fox.successful(())
+        } yield Ok
+      }
+    }
+
+  // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
+  // and it can be put in a webknossos folder where they have access
+  def reserveManualUpload(token: Option[String]): Action[ReserveManualUploadInformation] =
+    Action.async(validateJson[ReserveManualUploadInformation]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organization),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          _ <- remoteWebknossosClient.reserveDataSourceUpload(
+            ReserveUploadInformation(
+              "aManualUpload",
+              request.body.datasetName,
+              request.body.organization,
+              0,
+              None,
+              request.body.initialTeamIds,
+              request.body.folderId
+            ),
+            urlOrHeaderToken(token, request)
+          ) ?~> "dataset.upload.validation.failed"
         } yield Ok
       }
     }
@@ -252,6 +288,25 @@ class DataSourceController @Inject()(
     }
   }
 
+  def positionForSegmentViaAgglomerateFile(
+      token: Option[String],
+      organizationName: String,
+      datasetName: String,
+      dataLayerName: String,
+      mappingName: String,
+      segmentId: Long
+  ): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
+                                      urlOrHeaderToken(token, request)) {
+      for {
+        agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+        position <- agglomerateService.positionForSegmentId(
+          AgglomerateFileKey(organizationName, datasetName, dataLayerName, mappingName),
+          segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
+      } yield Ok(Json.toJson(position))
+    }
+  }
+
   def largestAgglomerateId(
       token: Option[String],
       organizationName: String,
@@ -398,9 +453,13 @@ class DataSourceController @Inject()(
           organizationName)
         datasetErrorLoggingService.clearForDataset(organizationName, datasetName)
         for {
-          clearedVaultCacheEntries <- dataSourceService.invalidateVaultCache(reloadedDataSource, layerName)
-          _ = logger.info(
-            s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$datasetName: closed $closedDataCubeHandleCount data shard / array handles, $closedAgglomerateFileHandleCount agglomerate file handles, removed $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
+          clearedVaultCacheEntriesBox <- dataSourceService.invalidateVaultCache(reloadedDataSource, layerName).futureBox
+          _ = clearedVaultCacheEntriesBox match {
+            case Full(clearedVaultCacheEntries) =>
+              logger.info(
+                s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$datasetName: closed $closedDataCubeHandleCount data shard / array handles, $closedAgglomerateFileHandleCount agglomerate file handles, removed $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
+            case _ => ()
+          }
           _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
         } yield Ok(Json.toJson(reloadedDataSource))
       }
@@ -656,6 +715,33 @@ class DataSourceController @Inject()(
                                                           request.body.mappingName)
           }
         } yield Ok(Json.toJson(boxes))
+      }
+    }
+
+  // Called directly by wk side
+  def exploreRemoteDataset(token: Option[String]): Action[ExploreRemoteDatasetRequest] =
+    Action.async(validateJson[ExploreRemoteDatasetRequest]) { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organizationName), token) {
+        val reportMutable = ListBuffer[String]()
+        for {
+          dataSourceBox: Box[GenericDataSource[DataLayer]] <- exploreRemoteLayerService
+            .exploreRemoteDatasource(request.body.layerParameters, reportMutable)
+            .futureBox
+          dataSourceOpt = dataSourceBox match {
+            case Full(dataSource) if dataSource.dataLayers.nonEmpty =>
+              reportMutable += s"Resulted in dataSource with ${dataSource.dataLayers.length} layers."
+              Some(dataSource)
+            case Full(_) =>
+              reportMutable += "Error when exploring as layer set: Resulted in zero layers."
+              None
+            case f: Failure =>
+              reportMutable += s"Error when exploring as layer set: ${Fox.failureChainAsString(f)}"
+              None
+            case Empty =>
+              reportMutable += "Error when exploring as layer set: Empty"
+              None
+          }
+        } yield Ok(Json.toJson(ExploreRemoteDatasetResponse(dataSourceOpt, reportMutable.mkString("\n"))))
       }
     }
 

@@ -148,6 +148,7 @@ type DatasetSettingsProps = {
   controlMode: ControlMode;
   isArbitraryMode: boolean;
   isAdminOrDatasetManager: boolean;
+  isAdminOrManager: boolean;
   isSuperUser: boolean;
 };
 
@@ -558,7 +559,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerSettings: DatasetLayerConfiguration,
     hasLessThanTwoColorLayers: boolean = true,
   ) => {
-    const { tracing, dataset } = this.props;
+    const { tracing, dataset, isAdminOrManager } = this.props;
     const { intensityRange } = layerSettings;
     const layer = getLayerByName(dataset, layerName);
     const isSegmentation = layer.category === "segmentation";
@@ -611,7 +612,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       readableName,
     );
     const possibleItems: MenuProps["items"] = [
-      isVolumeTracing && !isDisabled && maybeFallbackLayer != null
+      isVolumeTracing && !isDisabled && maybeFallbackLayer != null && isAdminOrManager
         ? {
             label: this.getMergeWithFallbackLayerButton(layer),
             key: "mergeWithFallbackLayerButton",
@@ -816,13 +817,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             {isColorLayer ? null : this.getOptionalDownsampleVolumeIcon(maybeVolumeTracing)}
           </div>
         </div>
-        <Dropdown menu={{ items }} trigger={["hover"]} placement="bottomRight">
-          <div className="flex-container" style={{ cursor: "pointer" }}>
-            <div className="flex-item">
+        <div className="flex-container" style={{ cursor: "pointer" }}>
+          <div className="flex-item">
+            <Dropdown menu={{ items }} trigger={["hover"]} placement="bottomRight">
               <EllipsisOutlined />
-            </div>
+            </Dropdown>
           </div>
-        </Dropdown>
+        </div>
       </div>
     );
   };
@@ -1502,6 +1503,7 @@ const mapStateToProps = (state: OxalisState) => ({
   isArbitraryMode: Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
   isAdminOrDatasetManager:
     state.activeUser != null ? Utils.isUserAdminOrDatasetManager(state.activeUser) : false,
+  isAdminOrManager: state.activeUser != null ? Utils.isUserAdminOrManager(state.activeUser) : false,
   isSuperUser: state.activeUser?.isSuperUser || false,
 });
 

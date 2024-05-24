@@ -54,8 +54,8 @@ export async function tryToFetchDatasetsByName(
     );
     return datasets;
   } catch (exception) {
-    console.warn(exception);
     Toast.warning(userErrorMessage);
+    console.warn(exception);
     return null;
   }
 }

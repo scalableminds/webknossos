@@ -37,6 +37,14 @@ case class ReserveUploadInformation(
 object ReserveUploadInformation {
   implicit val reserveUploadInformation: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
 }
+case class ReserveManualUploadInformation(datasetName: String,
+                                          organization: String,
+                                          initialTeamIds: List[String],
+                                          folderId: Option[String])
+object ReserveManualUploadInformation {
+  implicit val reserveUploadInformation: OFormat[ReserveManualUploadInformation] =
+    Json.format[ReserveManualUploadInformation]
+}
 
 case class LinkedLayerIdentifier(organizationName: String,
                                  dataSetName: String,

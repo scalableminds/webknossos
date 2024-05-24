@@ -194,18 +194,19 @@ class AnnotationService @Inject()(
       VolumeTracingDefaults.largestSegmentId
     }
 
-  def addAnnotationLayer(
-      annotation: Annotation,
-      organizationName: String,
-      annotationLayerParameters: AnnotationLayerParameters)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addAnnotationLayer(annotation: Annotation,
+                         organizationName: String,
+                         annotationLayerParameters: AnnotationLayerParameters)(implicit ctx: DBAccessContext,
+                                                                               mp: MessagesProvider): Fox[Unit] =
     for {
       dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
       dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable) ?~> "dataSource.notFound"
-      newAnnotationLayers <- createTracingsForExplorational(dataset,
-                                                            dataSource,
-                                                            List(annotationLayerParameters),
-                                                            organizationName,
-                                                            annotation.annotationLayers)
+      newAnnotationLayers <- createTracingsForExplorational(
+        dataset,
+        dataSource,
+        List(annotationLayerParameters),
+        organizationName,
+        annotation.annotationLayers) ?~> "annotation.createTracings.failed"
       _ <- annotationLayersDAO.insertForAnnotation(annotation._id, newAnnotationLayers)
     } yield ()
 
@@ -219,7 +220,8 @@ class AnnotationService @Inject()(
                                              allAnnotationLayerParameters: List[AnnotationLayerParameters],
                                              datasetOrganizationName: String,
                                              existingAnnotationLayers: List[AnnotationLayer] = List())(
-      implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] = {
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[List[AnnotationLayer]] = {
 
     def getAutoFallbackLayerName: Option[String] =
       dataSource.dataLayers.find {
@@ -237,9 +239,12 @@ class AnnotationService @Inject()(
           }
           .headOption
           .toFox
-        _ <- bool2Fox(ElementClass.largestSegmentIdIsInRange(
+        _ <- bool2Fox(
+          ElementClass
+            .largestSegmentIdIsInRange(fallbackLayer.largestSegmentId, fallbackLayer.elementClass)) ?~> Messages(
+          "annotation.volume.largestSegmentIdExceedsRange",
           fallbackLayer.largestSegmentId,
-          fallbackLayer.elementClass)) ?~> "annotation.volume.largestSegmentIdExceedsRange"
+          fallbackLayer.elementClass)
       } yield fallbackLayer
 
     def createAndSaveAnnotationLayer(annotationLayerParameters: AnnotationLayerParameters,
@@ -387,17 +392,19 @@ class AnnotationService @Inject()(
       dataSource <- datasetService.dataSourceFor(dataset)
       datasetOrganization <- organizationDAO.findOne(dataset._organization)
       usableDataSource <- dataSource.toUsable ?~> Messages("dataset.notImported", dataSource.id.name)
-      annotationLayers <- createTracingsForExplorational(dataset,
-                                                         usableDataSource,
-                                                         annotationLayerParameters,
-                                                         datasetOrganization.name)
+      annotationLayers <- createTracingsForExplorational(
+        dataset,
+        usableDataSource,
+        annotationLayerParameters,
+        datasetOrganization.name) ?~> "annotation.createTracings.failed"
       teamId <- selectSuitableTeam(user, dataset) ?~> "annotation.create.forbidden"
       annotation = Annotation(ObjectId.generate, datasetId, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
 
   def makeAnnotationHybrid(annotation: Annotation, organizationName: String, fallbackLayerName: Option[String])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[Unit] =
     for {
       newAnnotationLayerType <- annotation.tracingType match {
         case TracingType.skeleton => Fox.successful(AnnotationLayerType.Volume)
@@ -462,7 +469,7 @@ class AnnotationService @Inject()(
           executeFinish
         } else if (annotation.state == Finished) {
           logger.info(
-            s"Silently not finishing annotation ${annotation._id.toString} for it is aready finished. Access context: ${ctx.toStringAnonymous}")
+            s"Silently not finishing annotation ${annotation._id.toString} for it is already finished. Access context: ${ctx.toStringAnonymous}")
           Fox.successful("annotation.finished")
         } else {
           logger.info(

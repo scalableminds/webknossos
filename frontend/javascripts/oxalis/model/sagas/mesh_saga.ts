@@ -4,7 +4,7 @@ import { V3 } from "libs/mjs";
 import { chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
-import { mergeBufferGeometries, mergeVertices } from "libs/BufferGeometryUtils";
+import { mergeBufferGeometries } from "libs/BufferGeometryUtils";
 import Deferred from "libs/async/deferred";
 
 import Store from "oxalis/store";
@@ -22,7 +22,7 @@ import {
 } from "oxalis/model/actions/segmentation_actions";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
-import { MappingStatusEnum } from "oxalis/constants";
+import { AnnotationToolEnum, MappingStatusEnum } from "oxalis/constants";
 import {
   UpdateMeshVisibilityAction,
   RemoveMeshAction,
@@ -47,8 +47,7 @@ import { stlMeshConstants } from "oxalis/view/right-border-tabs/segments_tab/seg
 import {
   computeAdHocMesh,
   sendAnalyticsEvent,
-  meshV0,
-  meshV3,
+  meshApi,
   getMeshfilesForDatasetLayer,
   getBucketPositionsForAdHocMesh,
 } from "admin/admin_rest_api";
@@ -58,7 +57,6 @@ import { Model } from "oxalis/singletons";
 import ThreeDMap from "libs/ThreeDMap";
 import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import parseStlBuffer from "libs/parse_stl_buffer";
 import window from "libs/window";
 import {
   getActiveSegmentationTracing,
@@ -82,6 +80,7 @@ import { type AdditionalCoordinate } from "types/api_flow_types";
 import Zip from "libs/zipjs_wrapper";
 import { FlycamAction } from "../actions/flycam_actions";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
+import { BufferGeometryWithInfo } from "oxalis/controller/segment_mesh_controller";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -105,10 +104,10 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
 // Maps from additional coordinates, layerName and segmentId to a ThreeDMap that stores for each chunk
 // (at x, y, z) position whether the mesh chunk was loaded.
 const adhocMeshesMapByLayer: Record<string, Record<string, Map<number, ThreeDMap<boolean>>>> = {};
-function marchingCubeSizeInMag1(): Vector3 {
-  return (window as any).__marchingCubeSizeInMag1 != null
-    ? (window as any).__marchingCubeSizeInMag1
-    : [128, 128, 128];
+function marchingCubeSizeInTargetMag(): Vector3 {
+  return (window as any).__marchingCubeSizeInTargetMag != null
+    ? (window as any).__marchingCubeSizeInTargetMag
+    : [64, 64, 64];
 }
 const modifiedCells: Set<number> = new Set();
 export function isMeshSTL(buffer: ArrayBuffer): boolean {
@@ -156,20 +155,25 @@ function removeMapForSegment(
   adhocMeshesMapByLayer[additionalCoordinateKey][layerName].delete(segmentId);
 }
 
-function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
-  // Convert marchingCubeSizeInMag1 to another resolution (zoomStep)
-  const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
-    [...marchingCubeSizeInMag1(), 0],
-    resolutionInfo,
-    zoomStep,
-  );
+function getCubeSizeInMag1(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
+  // Convert marchingCubeSizeInTargetMag to mag1 via zoomStep
   // Drop the last element of the Vector4;
+  const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
+    [...marchingCubeSizeInTargetMag(), zoomStep],
+    resolutionInfo,
+    0,
+  );
   return [x, y, z];
 }
 
-function clipPositionToCubeBoundary(position: Vector3): Vector3 {
-  const currentCube = V3.floor(V3.divide3(position, marchingCubeSizeInMag1()));
-  const clippedPosition = V3.scale3(currentCube, marchingCubeSizeInMag1());
+function clipPositionToCubeBoundary(
+  position: Vector3,
+  zoomStep: number,
+  resolutionInfo: ResolutionInfo,
+): Vector3 {
+  const cubeSizeInMag1 = getCubeSizeInMag1(zoomStep, resolutionInfo);
+  const currentCube = V3.floor(V3.divide3(position, cubeSizeInMag1));
+  const clippedPosition = V3.scale3(currentCube, cubeSizeInMag1);
   return clippedPosition;
 }
 
@@ -183,12 +187,18 @@ const NEIGHBOR_LOOKUP = [
   [1, 0, 0],
 ];
 
-function getNeighborPosition(clippedPosition: Vector3, neighborId: number): Vector3 {
+function getNeighborPosition(
+  clippedPosition: Vector3,
+  neighborId: number,
+  zoomStep: number,
+  resolutionInfo: ResolutionInfo,
+): Vector3 {
   const neighborMultiplier = NEIGHBOR_LOOKUP[neighborId];
+  const cubeSizeInMag1 = getCubeSizeInMag1(zoomStep, resolutionInfo);
   const neighboringPosition: Vector3 = [
-    clippedPosition[0] + neighborMultiplier[0] * marchingCubeSizeInMag1()[0],
-    clippedPosition[1] + neighborMultiplier[1] * marchingCubeSizeInMag1()[1],
-    clippedPosition[2] + neighborMultiplier[2] * marchingCubeSizeInMag1()[2],
+    clippedPosition[0] + neighborMultiplier[0] * cubeSizeInMag1[0],
+    clippedPosition[1] + neighborMultiplier[1] * cubeSizeInMag1[1],
+    clippedPosition[2] + neighborMultiplier[2] * cubeSizeInMag1[2],
   ];
   return neighboringPosition;
 }
@@ -298,7 +308,7 @@ function removeMeshWithoutVoxels(
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
 ) {
   // If no voxels were added to the scene (e.g. because the segment doesn't have any voxels in this n-dimension),
-  // remove it from the store's state aswell.
+  // remove it from the store's state as well.
   const { segmentMeshController } = getSceneController();
   if (!segmentMeshController.hasMesh(segmentId, layerName, additionalCoordinates)) {
     Store.dispatch(removeMeshAction(layerName, segmentId));
@@ -317,7 +327,7 @@ function* loadFullAdHocMesh(
 ): Saga<void> {
   let isInitialRequest = true;
   const { mappingName, mappingType } = meshExtraInfo;
-  const clippedPosition = clipPositionToCubeBoundary(position);
+  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
   yield* put(
     addAdHocMeshAction(
       layer.name,
@@ -330,7 +340,7 @@ function* loadFullAdHocMesh(
   );
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
 
-  const cubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
+  const cubeSize = marchingCubeSizeInTargetMag();
   const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
   const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
 
@@ -348,12 +358,12 @@ function* loadFullAdHocMesh(
 
   // Segment stats can only be used for volume tracings that have a segment index
   // and that don't have editable mappings.
-  const usePositionsFromSegmentStats =
+  const usePositionsFromSegmentIndex =
     volumeTracing?.hasSegmentIndex &&
     !volumeTracing.mappingIsEditable &&
     visibleSegmentationLayer?.tracingId != null;
-  let positionsToRequest = usePositionsFromSegmentStats
-    ? yield* getChunkPositionsFromSegmentStats(
+  let positionsToRequest = usePositionsFromSegmentIndex
+    ? yield* getChunkPositionsFromSegmentIndex(
         tracingStoreHost,
         layer,
         segmentId,
@@ -385,13 +395,13 @@ function* loadFullAdHocMesh(
       isInitialRequest,
       removeExistingMesh && isInitialRequest,
       useDataStore,
-      !usePositionsFromSegmentStats,
+      !usePositionsFromSegmentIndex,
     );
     isInitialRequest = false;
 
     // If we are using the positions from the segment index, the backend will
     // send an empty neighbors array, as it's not necessary to have them.
-    if (usePositionsFromSegmentStats && neighbors.length > 0) {
+    if (usePositionsFromSegmentIndex && neighbors.length > 0) {
       throw new Error("Retrieved neighbor positions even though these were not requested.");
     }
     positionsToRequest = positionsToRequest.concat(neighbors);
@@ -400,7 +410,7 @@ function* loadFullAdHocMesh(
   yield* put(finishedLoadingMeshAction(layer.name, segmentId));
 }
 
-function* getChunkPositionsFromSegmentStats(
+function* getChunkPositionsFromSegmentIndex(
   tracingStoreHost: string,
   layer: DataLayer,
   segmentId: number,
@@ -409,7 +419,7 @@ function* getChunkPositionsFromSegmentStats(
   clippedPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
 ) {
-  const unscaledPositions = yield* call(
+  const targetMagPositions = yield* call(
     getBucketPositionsForAdHocMesh,
     tracingStoreHost,
     layer.name,
@@ -418,8 +428,8 @@ function* getChunkPositionsFromSegmentStats(
     mag,
     additionalCoordinates,
   );
-  const positions = unscaledPositions.map((pos) => V3.scale3(pos, mag));
-  return sortByDistanceTo(positions, clippedPosition) as Vector3[];
+  const mag1Positions = targetMagPositions.map((pos) => V3.scale3(pos, mag));
+  return sortByDistanceTo(mag1Positions, clippedPosition) as Vector3[];
 }
 
 function hasMeshChunkExceededThrottleLimit(segmentId: number): boolean {
@@ -473,7 +483,7 @@ function* maybeLoadMeshChunk(
 
   const { segmentMeshController } = getSceneController();
 
-  const cubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
+  const cubeSize = marchingCubeSizeInTargetMag();
 
   while (retryCount < MAX_RETRY_COUNT) {
     try {
@@ -506,7 +516,9 @@ function* maybeLoadMeshChunk(
         layer.name,
         additionalCoordinates,
       );
-      return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
+      return neighbors.map((neighbor) =>
+        getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
+      );
     } catch (exception) {
       retryCount++;
       ErrorHandling.notify(exception as Error);
@@ -578,6 +590,9 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
   }
 
   if (meshInfo.isPrecomputed) {
+    const isProofreadingActive = yield* select(
+      (state) => state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD,
+    );
     yield* put(removeMeshAction(layerName, meshInfo.segmentId));
     yield* put(
       loadPrecomputedMeshAction(
@@ -586,6 +601,7 @@ function* refreshMesh(action: RefreshMeshAction): Saga<void> {
         meshInfo.seedAdditionalCoordinates,
         meshInfo.meshFileName,
         layerName,
+        !isProofreadingActive,
       ),
     );
   } else {
@@ -709,7 +725,14 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 }
 
 function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
-  const { segmentId, seedPosition, seedAdditionalCoordinates, meshFileName, layerName } = action;
+  const {
+    segmentId,
+    seedPosition,
+    seedAdditionalCoordinates,
+    meshFileName,
+    layerName,
+    mergeChunks,
+  } = action;
   const layer = yield* select((state) =>
     layerName != null
       ? getSegmentationLayerByName(state.dataset, layerName)
@@ -728,6 +751,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       seedAdditionalCoordinates,
       meshFileName,
       layer,
+      mergeChunks,
     ),
     cancel: take(
       (otherAction: Action) =>
@@ -738,7 +762,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   });
 }
 
-type ChunksMap = Record<number, Vector3[] | meshV3.MeshChunk[] | null | undefined>;
+type ChunksMap = Record<number, Vector3[] | meshApi.MeshChunk[] | null | undefined>;
 
 function* loadPrecomputedMeshForSegmentId(
   id: number,
@@ -746,10 +770,20 @@ function* loadPrecomputedMeshForSegmentId(
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
   segmentationLayer: APISegmentationLayer,
+  mergeChunks: boolean,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
+  const mappingName = yield* call(getMappingName, segmentationLayer);
   yield* put(
-    addPrecomputedMeshAction(layerName, id, seedPosition, seedAdditionalCoordinates, meshFileName),
+    addPrecomputedMeshAction(
+      layerName,
+      id,
+      seedPosition,
+      seedAdditionalCoordinates,
+      meshFileName,
+      mergeChunks,
+      mappingName,
+    ),
   );
   yield* put(startedLoadingMeshAction(layerName, id));
   const dataset = yield* select((state) => state.dataset);
@@ -769,6 +803,10 @@ function* loadPrecomputedMeshForSegmentId(
     Toast.error("Could not load mesh, since the requested mesh file was not found.");
     return;
   }
+  if (id === 0) {
+    Toast.error("Could not load mesh, since the clicked segment ID is 0.");
+    return;
+  }
 
   let availableChunksMap: ChunksMap = {};
   let scale: Vector3 | null = null;
@@ -785,8 +823,12 @@ function* loadPrecomputedMeshForSegmentId(
     scale = chunkDescriptors.scale;
     loadingOrder = chunkDescriptors.loadingOrder;
   } catch (exception) {
-    console.warn("Mesh chunk couldn't be loaded due to", exception);
-    Toast.warning(messages["tracing.mesh_listing_failed"]);
+    Toast.warning(messages["tracing.mesh_listing_failed"](id));
+    console.warn(
+      `Mesh chunks for segment ${id} couldn't be loaded due to`,
+      exception,
+      "\nOne possible explanation could be that the segment was not included in the mesh file because it's smaller than the dust threshold that was specified for the mesh computation.",
+    );
     yield* put(finishedLoadingMeshAction(layerName, id));
     yield* put(removeMeshAction(layerName, id));
     return;
@@ -803,16 +845,29 @@ function* loadPrecomputedMeshForSegmentId(
     loadingOrder,
     scale,
     additionalCoordinates,
+    mergeChunks,
   );
 
   try {
     yield* call(processTaskWithPool, loadChunksTasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
   } catch (exception) {
-    console.error(exception);
     Toast.warning(`Some mesh chunks could not be loaded for segment ${id}.`);
+    console.error(exception);
   }
 
   yield* put(finishedLoadingMeshAction(layerName, id));
+}
+
+function* getMappingName(segmentationLayer: APISegmentationLayer) {
+  const meshExtraInfo = yield* call(getMeshExtraInfo, segmentationLayer.name, null);
+  const editableMapping = yield* select((state) =>
+    getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
+  );
+
+  // meshExtraInfo.mappingName contains the currently active mapping
+  // (can be the id of an editable mapping). However, we always need to
+  // use the mapping name of the on-disk mapping.
+  return editableMapping != null ? editableMapping.baseMappingName : meshExtraInfo.mappingName;
 }
 
 function* _getChunkLoadingDescriptors(
@@ -826,13 +881,8 @@ function* _getChunkLoadingDescriptors(
   let loadingOrder: number[] = [];
 
   const { segmentMeshController } = getSceneController();
-  const currentLODIndex = yield* call({
-    context: segmentMeshController.meshesLODRootGroup,
-    fn: segmentMeshController.meshesLODRootGroup.getCurrentLOD,
-  });
   const version = meshFile.formatVersion;
   const { meshFileName } = meshFile;
-  const meshExtraInfo = yield* call(getMeshExtraInfo, segmentationLayer.name, null);
 
   const editableMapping = yield* select((state) =>
     getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
@@ -840,16 +890,10 @@ function* _getChunkLoadingDescriptors(
   const tracing = yield* select((state) =>
     getTracingForSegmentationLayer(state, segmentationLayer),
   );
-  const mappingName =
-    // meshExtraInfo.mappingName contains the currently active mapping
-    // (can be the id of an editable mapping). However, we always need to
-    // use the mapping name of the on-disk mapping.
-    editableMapping != null ? editableMapping.baseMappingName : meshExtraInfo.mappingName;
+  const mappingName = yield* call(getMappingName, segmentationLayer);
 
   if (version < 3) {
-    console.warn(
-      "The active mesh file uses a version lower than 3. webKnossos cannot check whether the mesh file was computed with the correct target mapping. Meshing requests will fail if the mesh file does not match the active mapping.",
-    );
+    console.warn("The active mesh file uses a version lower than 3, which is not supported");
   }
 
   // mappingName only exists for versions >= 3
@@ -859,39 +903,34 @@ function* _getChunkLoadingDescriptors(
     );
   }
 
-  if (version >= 3) {
-    const segmentInfo = yield* call(
-      meshV3.getMeshfileChunksForSegment,
-      dataset.dataStore.url,
-      dataset,
-      getBaseSegmentationName(segmentationLayer),
-      meshFileName,
-      id,
-      // The back-end should only receive a non-null mapping name,
-      // if it should perform extra (reverse) look ups to compute a mesh
-      // with a specific mapping from a mesh file that was computed
-      // without a mapping.
-      meshFile.mappingName == null ? mappingName : null,
-      editableMapping != null && tracing ? tracing.tracingId : null,
-    );
-    scale = [segmentInfo.transform[0][0], segmentInfo.transform[1][1], segmentInfo.transform[2][2]];
-    segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
-      availableChunksMap[lodIndex] = chunks?.chunks;
-      loadingOrder.push(lodIndex);
-    });
-    // Load the chunks closest to the current LOD first.
-    loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
-  } else {
-    availableChunksMap[NO_LOD_MESH_INDEX] = yield* call(
-      meshV0.getMeshfileChunksForSegment,
-      dataset.dataStore.url,
-      dataset,
-      getBaseSegmentationName(segmentationLayer),
-      meshFileName,
-      id,
-    );
-    loadingOrder = [NO_LOD_MESH_INDEX];
-  }
+  const segmentInfo = yield* call(
+    meshApi.getMeshfileChunksForSegment,
+    dataset.dataStore.url,
+    dataset,
+    getBaseSegmentationName(segmentationLayer),
+    meshFileName,
+    id,
+    // The back-end should only receive a non-null mapping name,
+    // if it should perform extra (reverse) look ups to compute a mesh
+    // with a specific mapping from a mesh file that was computed
+    // without a mapping.
+    meshFile.mappingName == null ? mappingName : null,
+    editableMapping != null && tracing ? tracing.tracingId : null,
+  );
+  scale = [segmentInfo.transform[0][0], segmentInfo.transform[1][1], segmentInfo.transform[2][2]];
+  segmentInfo.chunks.lods.forEach((chunks, lodIndex) => {
+    availableChunksMap[lodIndex] = chunks?.chunks;
+    loadingOrder.push(lodIndex);
+  });
+  const currentLODIndex = yield* call(
+    {
+      context: segmentMeshController.meshesLODRootGroup,
+      fn: segmentMeshController.meshesLODRootGroup.getCurrentLOD,
+    },
+    Math.max(...loadingOrder),
+  );
+  // Load the chunks closest to the current LOD first.
+  loadingOrder.sort((a, b) => Math.abs(a - currentLODIndex) - Math.abs(b - currentLODIndex));
 
   return {
     availableChunksMap,
@@ -911,9 +950,11 @@ function _getLoadChunksTasks(
   loadingOrder: number[],
   scale: Vector3 | null,
   additionalCoordinates: AdditionalCoordinate[] | null,
+  mergeChunks: boolean,
 ) {
   const { segmentMeshController } = getSceneController();
   const { meshFileName } = meshFile;
+  const loader = getDracoLoader();
   return _.compact(
     _.flatten(
       loadingOrder.map((lod) => {
@@ -924,128 +965,91 @@ function _getLoadChunksTasks(
         // Sort the chunks by distance to the seedPosition, so that the mesh loads from the inside out
         const sortedAvailableChunks = sortByDistanceTo(availableChunks, seedPosition);
 
-        let tasks;
-        if (sortedAvailableChunks.length > 0 && "position" in sortedAvailableChunks[0]) {
-          // V3
-          const batches = chunkDynamically(
-            sortedAvailableChunks as meshV3.MeshChunk[],
-            MIN_BATCH_SIZE_IN_BYTES,
-            (chunk) => chunk.byteSize,
-          );
+        const batches = chunkDynamically(
+          sortedAvailableChunks as meshApi.MeshChunk[],
+          MIN_BATCH_SIZE_IN_BYTES,
+          (chunk) => chunk.byteSize,
+        );
 
-          tasks = batches.map(
-            (chunks) =>
-              function* loadChunks(): Saga<void> {
-                // V3
-                const dataForChunks = yield* call(
-                  meshV3.getMeshfileChunkData,
-                  dataset.dataStore.url,
-                  dataset,
-                  getBaseSegmentationName(segmentationLayer),
-                  {
-                    meshFile: meshFileName,
-                    // Only extract the relevant properties
-                    requests: chunks.map(({ byteOffset, byteSize }) => ({ byteOffset, byteSize })),
-                  },
-                );
-                const loader = getDracoLoader();
+        const tasks = batches.map(
+          (chunks) =>
+            function* loadChunks(): Saga<void> {
+              const dataForChunks = yield* call(
+                meshApi.getMeshfileChunkData,
+                dataset.dataStore.url,
+                dataset,
+                getBaseSegmentationName(segmentationLayer),
+                {
+                  meshFile: meshFileName,
+                  // Only extract the relevant properties
+                  requests: chunks.map(({ byteOffset, byteSize }) => ({ byteOffset, byteSize })),
+                },
+              );
 
-                const errorsWithDetails = [];
+              const errorsWithDetails = [];
 
-                const chunksWithData = chunks.map((chunk, idx) => ({
-                  ...chunk,
-                  data: dataForChunks[idx],
-                }));
-                // Group chunks by position and merge meshes in the same chunk to keep the number
-                // of objects in the scene low for better performance. Ideally, more mesh geometries
-                // would be merged, but the meshes in different chunks need to be translated differently.
-                const chunksGroupedByPosition = _.groupBy(chunksWithData, "position");
-                for (const chunksForPosition of Object.values(chunksGroupedByPosition)) {
-                  // All chunks in chunksForPosition have the same position
-                  const position = chunksForPosition[0].position;
+              const chunksWithData = chunks.map((chunk, idx) => ({
+                ...chunk,
+                data: dataForChunks[idx],
+              }));
+              // Group chunks by position and merge meshes in the same chunk to keep the number
+              // of objects in the scene low for better performance. Ideally, more mesh geometries
+              // would be merged, but the meshes in different chunks need to be translated differently.
+              const chunksGroupedByPosition = _.groupBy(chunksWithData, "position");
+              for (const chunksForPosition of Object.values(chunksGroupedByPosition)) {
+                // All chunks in chunksForPosition have the same position
+                const position = chunksForPosition[0].position;
 
-                  const bufferGeometries = [];
-                  for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
-                    const chunk = chunksForPosition[chunkIdx];
-                    try {
-                      const bufferGeometry = yield* call(loader.decodeDracoFileAsync, chunk.data);
-                      bufferGeometries.push(bufferGeometry);
-                    } catch (error) {
-                      errorsWithDetails.push({ error, chunk });
-                    }
+                let bufferGeometries: BufferGeometryWithInfo[] = [];
+                for (let chunkIdx = 0; chunkIdx < chunksForPosition.length; chunkIdx++) {
+                  const chunk = chunksForPosition[chunkIdx];
+                  try {
+                    const bufferGeometry = (yield* call(
+                      loader.decodeDracoFileAsync,
+                      chunk.data,
+                    )) as BufferGeometryWithInfo;
+                    bufferGeometry.unmappedSegmentId = chunk.unmappedSegmentId;
+                    bufferGeometries.push(bufferGeometry);
+                  } catch (error) {
+                    errorsWithDetails.push({ error, chunk });
                   }
+                }
 
-                  const geometry = mergeBufferGeometries(bufferGeometries);
+                if (mergeChunks) {
+                  const geometry = mergeBufferGeometries(bufferGeometries, true);
 
                   // If mergeBufferGeometries does not succeed, the method logs the error to the console and returns null
                   if (geometry == null) continue;
-
-                  // Compute vertex normals to achieve smooth shading
-                  geometry.computeVertexNormals();
-
-                  yield* call(
-                    {
-                      context: segmentMeshController,
-                      fn: segmentMeshController.addMeshFromGeometry,
-                    },
-                    geometry,
-                    id,
-                    position,
-                    // Apply the scale from the segment info, which includes dataset scale and mag
-                    scale,
-                    lod,
-                    layerName,
-                    additionalCoordinates,
-                  );
+                  (geometry as BufferGeometryWithInfo).isMerged = true;
+                  bufferGeometries = [geometry as BufferGeometryWithInfo];
                 }
 
-                if (errorsWithDetails.length > 0) {
-                  console.warn("Errors occurred while decoding mesh chunks:", errorsWithDetails);
-                  // Use first error as representative
-                  throw errorsWithDetails[0].error;
-                }
-              },
-          );
-        } else {
-          tasks = (sortedAvailableChunks as Vector3[]).map(
-            (chunk) =>
-              function* loadChunk(): Saga<void> {
-                // V0
-                const stlData = yield* call(
-                  meshV0.getMeshfileChunkData,
-                  dataset.dataStore.url,
-                  dataset,
-                  getBaseSegmentationName(segmentationLayer),
-                  meshFileName,
-                  id,
-                  chunk,
-                );
-                let geometry = yield* call(parseStlBuffer, stlData);
-
-                // Delete existing vertex normals (since these are not interpolated
-                // across faces).
-                geometry.deleteAttribute("normal");
-                // Ensure that vertices of adjacent faces are shared.
-                geometry = mergeVertices(geometry);
-                // Recompute normals to achieve smooth shading
-                geometry.computeVertexNormals();
+                // Compute vertex normals to achieve smooth shading
+                bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
 
                 yield* call(
                   {
                     context: segmentMeshController,
-                    fn: segmentMeshController.addMeshFromGeometry,
+                    fn: segmentMeshController.addMeshFromGeometries,
                   },
-                  geometry,
+                  bufferGeometries,
                   id,
-                  null,
-                  null,
+                  position,
+                  // Apply the scale from the segment info, which includes dataset scale and mag
+                  scale,
                   lod,
                   layerName,
                   additionalCoordinates,
                 );
-              },
-          );
-        }
+              }
+
+              if (errorsWithDetails.length > 0) {
+                console.warn("Errors occurred while decoding mesh chunks:", errorsWithDetails);
+                // Use first error as representative
+                throw errorsWithDetails[0].error;
+              }
+            },
+        );
 
         return tasks;
       }),
@@ -1054,12 +1058,12 @@ function _getLoadChunksTasks(
 }
 
 function sortByDistanceTo(
-  availableChunks: Vector3[] | meshV3.MeshChunk[] | null | undefined,
+  availableChunks: Vector3[] | meshApi.MeshChunk[] | null | undefined,
   seedPosition: Vector3,
 ) {
-  return _.sortBy(availableChunks, (chunk: Vector3 | meshV3.MeshChunk) =>
+  return _.sortBy(availableChunks, (chunk: Vector3 | meshApi.MeshChunk) =>
     V3.length(V3.sub(seedPosition, "position" in chunk ? chunk.position : chunk)),
-  ) as Array<Vector3> | Array<meshV3.MeshChunk>;
+  ) as Array<Vector3> | Array<meshApi.MeshChunk>;
 }
 
 /*
@@ -1089,8 +1093,8 @@ function* downloadMeshCellById(cellName: string, segmentId: number, layerName: s
     yield* call(saveAs, blob, `${cellName}-${segmentId}.stl`);
   } catch (exception) {
     ErrorHandling.notify(exception as Error);
-    console.error(exception);
     Toast.error("Could not export to STL. See console for details");
+    console.error(exception);
   }
 }
 
@@ -1123,8 +1127,8 @@ function* downloadMeshCellsAsZIP(
     yield* call(saveAs, result as Blob, "mesh-export.zip");
   } catch (exception) {
     ErrorHandling.notify(exception as Error);
-    console.error(exception);
     Toast.error("Could not export meshes as STL files. See console for details");
+    console.error(exception);
   }
 }
 
@@ -1188,11 +1192,11 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
 
   while (true) {
     const action = (yield* take(["SET_ADDITIONAL_COORDINATES"]) as any) as FlycamAction;
-    //satisfy TS
+    // Satisfy TS
     if (action.type !== "SET_ADDITIONAL_COORDINATES") {
       throw new Error("Unexpected action type");
     }
-    const meshRecords = segmentMeshController.meshesGroupsPerSegmentationId;
+    const meshRecords = segmentMeshController.meshesGroupsPerSegmentId;
 
     if (action.values == null || action.values.length === 0) break;
     const newAdditionalCoordKey = getAdditionalCoordinatesAsString(action.values);

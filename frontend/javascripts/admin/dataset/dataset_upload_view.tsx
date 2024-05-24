@@ -108,7 +108,7 @@ function WkwExample() {
 
 function SingleLayerImageStackExample() {
   const description = `
-  great_dataset          # Root folder or zip archive (this outer container be omitted)
+  great_dataset          # Root folder or zip archive (this outer container may be omitted)
   ├─ file1.tif           # The files don't have to follow a certain naming pattern.
   ├─ file2.tif           # However, the files are sorted to obtain the final z-order.
   └─ file3.tif
@@ -123,7 +123,7 @@ function SingleLayerImageStackExample() {
 
 function MultiLayerImageStackExample() {
   const description = `
-  great_dataset          # Root folder or zip archive (this outer container be omitted)
+  great_dataset          # Root folder or zip archive (this outer container may be omitted)
   ├─ color               # 1st dataset layer (name may be arbitrary, e.g., color or segmentation)
   │  ├─ file1.tif        # The files don't have to follow a certain naming pattern.
   │  ├─ file2.tif        # However, the files are sorted to obtain the final z-order.
@@ -239,7 +239,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           }
         }
 
-        // eslint-disable-next-line no-useless-return, consistent-return
         return;
       };
 
@@ -621,7 +620,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   };
 
   render() {
-    const form = this.formRef.current;
     const { activeUser, withoutCard, datastores } = this.props;
     const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(this.props.activeUser);
 
@@ -713,8 +711,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             </FormItemWithInfo>
 
             <DatastoreFormItem
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ form: FormInstance<any> | null; datastores... Remove this comment to see the full error message
-              form={form}
               datastores={uploadableDatastores}
               hidden={hasOnlyOneDatastoreOrNone}
             />

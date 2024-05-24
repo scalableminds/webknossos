@@ -228,6 +228,7 @@ object DataLayer {
     * Defines the length of a bucket per axis. This is the minimal size that can be loaded from a wkw file.
     */
   val bucketLength: Int = 32
+  val bucketSize: Vec3Int = Vec3Int(bucketLength, bucketLength, bucketLength)
 
   implicit object dataLayerFormat extends Format[DataLayer] {
     override def reads(json: JsValue): JsResult[DataLayer] =

@@ -696,7 +696,7 @@ export type APIJob = {
   readonly resultLink: string | null | undefined;
   readonly createdAt: number;
   readonly voxelyticsWorkflowHash: string | null;
-  readonly commandArgs: Record<string, any> | null;
+  readonly trainingAnnotations: Array<{ annotationId: string }>;
 };
 
 export type AiModel = {

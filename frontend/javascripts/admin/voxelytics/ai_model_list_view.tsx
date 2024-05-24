@@ -92,9 +92,7 @@ export default function AiModelListView() {
               if (model.trainingJob == null) {
                 return;
               }
-              const { voxelyticsWorkflowHash, commandArgs } = model.trainingJob;
-              const trainingAnnotations =
-                commandArgs != null ? commandArgs["training_annotations"] : null;
+              const { voxelyticsWorkflowHash, trainingAnnotations } = model.trainingJob;
 
               return (
                 <div>

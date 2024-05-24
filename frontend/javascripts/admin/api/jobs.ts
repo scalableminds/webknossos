@@ -12,39 +12,7 @@ import type {
 } from "types/api_flow_types";
 import { assertResponseLimit } from "./api_utils";
 
-export async function getJobs(): Promise<APIJob[]> {
-  const jobs = await Request.receiveJSON("/api/jobs");
-  assertResponseLimit(jobs);
-  return (
-    jobs
-      .map(
-        (job: any): APIJob => ({
-          id: job.id,
-          type: job.command,
-          datasetName: job.commandArgs.dataset_name,
-          organizationName: job.commandArgs.organization_name,
-          layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
-          annotationLayerName: job.commandArgs.annotation_layer_name,
-          boundingBox: job.commandArgs.bbox,
-          exportFileName: job.commandArgs.export_file_name,
-          tracingId: job.commandArgs.volume_tracing_id,
-          annotationId: job.commandArgs.annotation_id,
-          annotationType: job.commandArgs.annotation_type,
-          mergeSegments: job.commandArgs.merge_segments,
-          state: adaptJobState(job.state, job.manualState),
-          manualState: job.manualState,
-          result: job.returnValue,
-          resultLink: job.resultLink,
-          createdAt: job.created,
-        }),
-      )
-      // Newest jobs should be first
-      .sort((a: APIJob, b: APIJob) => a.createdAt > b.createdAt)
-  );
-}
-
-export async function getJob(jobId: string): Promise<APIJob> {
-  const job = await Request.receiveJSON(`/api/jobs/${jobId}`);
+function transformBackendJobToAPIJob(job: any): APIJob {
   return {
     id: job.id,
     type: job.command,
@@ -58,12 +26,30 @@ export async function getJob(jobId: string): Promise<APIJob> {
     annotationId: job.commandArgs.annotation_id,
     annotationType: job.commandArgs.annotation_type,
     mergeSegments: job.commandArgs.merge_segments,
+    trainingAnnotations: job.commandArgs.training_annotations,
     state: adaptJobState(job.state, job.manualState),
     manualState: job.manualState,
     result: job.returnValue,
     resultLink: job.resultLink,
     createdAt: job.created,
+    voxelyticsWorkflowHash: job.voxelyticsWorkflowHash,
   };
+}
+
+export async function getJobs(): Promise<APIJob[]> {
+  const jobs = await Request.receiveJSON("/api/jobs");
+  assertResponseLimit(jobs);
+  return (
+    jobs
+      .map(transformBackendJobToAPIJob)
+      // Newest jobs should be first
+      .sort((a: APIJob, b: APIJob) => a.createdAt > b.createdAt)
+  );
+}
+
+export async function getJob(jobId: string): Promise<APIJob> {
+  const job = await Request.receiveJSON(`/api/jobs/${jobId}`);
+  return transformBackendJobToAPIJob(job);
 }
 
 function adaptJobState(
@@ -351,6 +337,10 @@ export function runInferenceJob(params: RunInferenceParameters) {
   });
 }
 
-export function getAiModels(): Promise<AiModel[]> {
-  return Request.receiveJSON("/api/aiModels");
+export async function getAiModels(): Promise<AiModel[]> {
+  const models = await Request.receiveJSON("/api/aiModels");
+  return models.map((model: any) => ({
+    ...model,
+    trainingJob: model.trainingJob == null ? null : transformBackendJobToAPIJob(model.trainingJob),
+  }));
 }

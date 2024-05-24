@@ -454,7 +454,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleUnlockAnnotation = async () => {
-    // TODO: remove tag from annotation
     const { annotationId, annotationType, annotationTags } = this.props;
     await editLockedState(annotationId, annotationType, false);
     await editAnnotation(annotationId, annotationType, {

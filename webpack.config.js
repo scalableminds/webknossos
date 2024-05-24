@@ -77,21 +77,11 @@ module.exports = function (env = {}) {
           ],
         },
         {
-          test: /\.tsx$/,
+          test: /\.tsx?$/,
           exclude: /(node_modules|bower_components)/,
           loader: "esbuild-loader",
           options: {
             target: buildTarget,
-            loader: "tsx", // also supports 'ts'
-          },
-        },
-        {
-          test: /\.ts$/,
-          exclude: /(node_modules|bower_components)/,
-          loader: "esbuild-loader",
-          options: {
-            target: buildTarget,
-            loader: "ts",
           },
         },
         {

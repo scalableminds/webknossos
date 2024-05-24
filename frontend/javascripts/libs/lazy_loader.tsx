@@ -4,10 +4,10 @@ export default function loadable<Props>(
   loader: () => Promise<{ default: React.ComponentType<Props> }>,
 ) {
   const InternalComponent = React.lazy(loader) as any;
-  return function AsyncComponent(_props: Props) {
+  return function AsyncComponent(props: Props) {
     return (
       <React.Suspense fallback={<div style={{ textAlign: "center" }}>Loading...</div>}>
-        <InternalComponent {..._props} />
+        <InternalComponent {...props} />
       </React.Suspense>
     );
   };

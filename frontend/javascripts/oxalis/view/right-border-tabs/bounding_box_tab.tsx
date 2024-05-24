@@ -11,10 +11,7 @@ import {
   deleteUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
-import {
-  allowUpdateAndIsNotLocked,
-  isAnnotationOwner,
-} from "oxalis/model/accessors/annotation_accessor";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import * as Utils from "libs/utils";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
@@ -25,7 +22,7 @@ export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
   const tracing = useSelector((state: OxalisState) => state.tracing);
-  const allowUpdate = allowUpdateAndIsNotLocked(tracing);
+  const allowUpdate = tracing.restrictions.allowUpdate;
   const isLockedByUser = tracing.isLockedByUser;
   const isOwner = useSelector((state: OxalisState) => isAnnotationOwner(state));
   const dataset = useSelector((state: OxalisState) => state.dataset);

@@ -1,7 +1,7 @@
 import _ from "lodash";
-import type { Annotation, OxalisState, Tracing } from "oxalis/store";
+import type { OxalisState, Tracing } from "oxalis/store";
 import { getVolumeTracingById } from "./volumetracing_accessor";
-import { APIAnnotation, APIAnnotationInfo } from "types/api_flow_types";
+import { APIAnnotationInfo } from "types/api_flow_types";
 import { EmptyObject } from "types/globals";
 
 export function mayEditAnnotationProperties(state: OxalisState) {
@@ -14,14 +14,6 @@ export function mayEditAnnotationProperties(state: OxalisState) {
     activeUser &&
     owner?.id === activeUser.id &&
     !state.tracing.isLockedByUser
-  );
-}
-
-export function allowUpdateAndIsNotLocked(annotation: APIAnnotation | Annotation) {
-  return !!(
-    annotation.restrictions.allowUpdate &&
-    annotation.restrictions.allowSave &&
-    !annotation.isLockedByUser
   );
 }
 

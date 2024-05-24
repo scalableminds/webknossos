@@ -77,7 +77,7 @@ type OwnProps = {
   onSelectTree: (arg0: number) => void;
   deselectAllTrees: () => void;
   onDeleteGroup: (arg0: number) => void;
-  editAllowed: boolean;
+  allowUpdate: boolean;
 };
 type Props = OwnProps & {
   onShuffleTreeColor: (arg0: number) => void;
@@ -418,7 +418,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       node.children,
       (child) => !child.expanded && child.type === TYPE_GROUP,
     );
-    const isEditingDisabled = !this.props.editAllowed;
+    const isEditingDisabled = !this.props.allowUpdate;
     const hasSubgroup = anySatisfyDeep(node.children, (child) => child.type === TYPE_GROUP);
     const labelForActiveItems = this.getLabelForActiveItems();
     const menu: MenuProps = {
@@ -572,7 +572,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
       const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map((c) => Math.round(c * 255)).join(",");
-      const isEditingDisabled = !this.props.editAllowed;
+      const isEditingDisabled = !this.props.allowUpdate;
       const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
       // Defining background color of current node
       const styleClass = this.getNodeStyleClassForBackground(node.id);
@@ -738,12 +738,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   canDrop = (params: OnDragPreviousAndNextLocation<TreeNode> & NodeData<TreeNode>) => {
     const { nextParent } = params;
-    return this.props.editAllowed && nextParent != null && nextParent.type === TYPE_GROUP;
+    return this.props.allowUpdate && nextParent != null && nextParent.type === TYPE_GROUP;
   };
 
   canDrag = (params: ExtendedNodeData): boolean => {
     const node = params.node as TreeNode;
-    return this.props.editAllowed && node.id !== MISSING_GROUP_ID;
+    return this.props.allowUpdate && node.id !== MISSING_GROUP_ID;
   };
 
   canNodeHaveChildren(node: TreeNode) {

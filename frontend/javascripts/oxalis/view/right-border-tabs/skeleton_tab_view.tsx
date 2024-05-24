@@ -99,10 +99,7 @@ import { api } from "oxalis/singletons";
 import messages from "messages";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
-import {
-  allowUpdateAndIsNotLocked,
-  isAnnotationOwner,
-} from "oxalis/model/accessors/annotation_accessor";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 
 const { confirm } = Modal;
 const treeTabId = "tree-list";
@@ -686,7 +683,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         treeGroups={this.props.skeletonTracing.treeGroups}
         activeTreeId={this.props.skeletonTracing.activeTreeId}
         activeGroupId={this.props.skeletonTracing.activeGroupId}
-        editAllowed={this.props.editAllowed}
+        allowUpdate={this.props.allowUpdate}
         sortBy={sortBy}
         selectedTrees={this.state.selectedTrees}
         onSelectTree={this.onSelectTree}
@@ -727,7 +724,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   }
 
   getActionsDropdown(): MenuProps {
-    const isEditingDisabled = !this.props.editAllowed;
+    const isEditingDisabled = !this.props.allowUpdate;
     return {
       items: [
         {
@@ -833,7 +830,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       title = "Importing NML";
     }
     const { groupToDelete } = this.state;
-    const isEditingDisabled = !this.props.editAllowed;
+    const isEditingDisabled = !this.props.allowUpdate;
     const { isAnnotationLockedByUser, isOwner } = this.props;
     const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
       isAnnotationLockedByUser,
@@ -985,7 +982,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState) => ({
   annotation: state.tracing,
-  editAllowed: allowUpdateAndIsNotLocked(state.tracing),
+  allowUpdate: state.tracing.restrictions.allowUpdate,
   skeletonTracing: state.tracing.skeleton,
   userConfiguration: state.userConfiguration,
   isSkeletonLayerTransformed: isSkeletonLayerTransformed(state),

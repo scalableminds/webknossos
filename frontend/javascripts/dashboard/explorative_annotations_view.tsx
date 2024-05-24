@@ -280,7 +280,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     state: type === "reopen" ? "Active" : "Finished",
   });
 
-  // TODO: use! and show locked icon
   setLockedState = async (tracing: APIAnnotationInfo, locked: boolean) => {
     const newTracing = await editLockedState(tracing.id, tracing.typ, locked);
     Toast.success(messages["annotation.was_edited"]);

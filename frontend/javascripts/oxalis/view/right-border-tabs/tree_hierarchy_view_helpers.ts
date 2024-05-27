@@ -11,7 +11,7 @@ const GroupTypeEnum = {
 
 type TreeOrGroup = keyof typeof GroupTypeEnum;
 export type TreeNode = {
-  title: string;
+  name: string;
   id: number;
   expanded: boolean;
   isChecked: boolean;
@@ -42,7 +42,7 @@ function makeTreeNode(
   return {
     id,
     type,
-    title: name,
+    name,
     timestamp: 0,
     isChecked: false,
     isIndeterminate: false,
@@ -68,7 +68,7 @@ function makeTreeNodeFromGroup(group: TreeGroup, optionalProperties: Partial<Tre
 export function removeTreesAndTransform(groupTree: Array<TreeNode>): Array<TreeGroup> {
   // Remove all trees from the group hierarchy and transform groups to their basic form
   return _.filter(groupTree, (treeNode) => treeNode.type === TYPE_GROUP).map((group) =>
-    makeBasicGroupObject(group.id, group.title, removeTreesAndTransform(group.children)),
+    makeBasicGroupObject(group.id, group.name, removeTreesAndTransform(group.children)),
   );
 }
 export function insertTreesAndTransform(

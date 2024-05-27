@@ -50,7 +50,7 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 import type { OxalisState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
-import React, { lazy, Suspense } from "react";
+import React from "react";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import { ContextRouter, Link, RouteProps } from "react-router-dom";
@@ -66,23 +66,15 @@ import ErrorBoundary from "components/error_boundary";
 import { Store } from "oxalis/singletons";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
+import loadable from "libs/lazy_loader";
 import { EmptyObject } from "types/globals";
 
 const { Content } = Layout;
 
-function loadable(loader: () => Promise<{ default: React.ComponentType<EmptyObject> }>) {
-  const InternalComponent = lazy(loader);
-  return function AsyncComponent() {
-    return (
-      <Suspense fallback={<div style={{ textAlign: "center" }}>Loading...</div>}>
-        <InternalComponent />
-      </Suspense>
-    );
-  };
-}
-
-const AsyncWorkflowView = loadable(() => import("admin/voxelytics/workflow_view"));
-const AsyncWorkflowListView = loadable(() => import("admin/voxelytics/workflow_list_view"));
+const AsyncWorkflowView = loadable<EmptyObject>(() => import("admin/voxelytics/workflow_view"));
+const AsyncWorkflowListView = loadable<EmptyObject>(
+  () => import("admin/voxelytics/workflow_list_view"),
+);
 
 type StateProps = {
   activeUser: APIUser | null | undefined;

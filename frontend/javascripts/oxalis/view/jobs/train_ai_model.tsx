@@ -20,6 +20,11 @@ import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 const { TextArea } = Input;
 const FormItem = Form.Item;
 
+enum AiModelCategory {
+  EM_NEURONS = "em_neurons",
+  EM_NUCLEI = "em_nuclei",
+}
+
 export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
   const [form] = Form.useForm();
 
@@ -53,7 +58,7 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
   const colorLayer = colorLayers[0];
 
   const defaultValues = {
-    modelCategory: "em_neurons",
+    modelCategory: AiModelCategory.EM_NEURONS,
     imageDataLayer: colorLayer.name,
   };
 
@@ -104,8 +109,8 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
         ]}
       >
         <Select>
-          <Select.Option value="em_neurons">EM Neurons</Select.Option>
-          <Select.Option value="em_nuclei">EM Nuclei</Select.Option>
+          <Select.Option value={AiModelCategory.EM_NEURONS}>EM Neurons</Select.Option>
+          <Select.Option value={AiModelCategory.EM_NUCLEI}>EM Nuclei</Select.Option>
         </Select>
       </FormItem>
       <FormItem

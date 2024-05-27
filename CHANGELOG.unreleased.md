@@ -16,6 +16,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Updated several backend dependencies for optimized stability and performance. [#7782](https://github.com/scalableminds/webknossos/pull/7782)
 - Voxelytics workflows can be searched by name and hash. [#7790](https://github.com/scalableminds/webknossos/pull/7790)
 - If a self-hosted WEBKNOSSOS instance has not been updated for six months or more, a closable banner proposes an upgrade to webknossos.org. [#7768](https://github.com/scalableminds/webknossos/pull/7768)
+- Uploading an annotation into a dataset that it was not created for now also works if the dataset is in a different organization. [#7816](https://github.com/scalableminds/webknossos/pull/7816)
 
 ### Changed
 - Non-admin or -manager users can no longer start long-running jobs that create datasets. This includes annotation materialization and AI inferrals. [#7753](https://github.com/scalableminds/webknossos/pull/7753)

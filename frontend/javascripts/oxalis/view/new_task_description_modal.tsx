@@ -1,5 +1,5 @@
 import { Modal, Button } from "antd";
-import Markdown from "react-remarkable";
+import Markdown from "libs/markdown_adapter";
 import * as React from "react";
 type Props = {
   description: string;
@@ -69,14 +69,7 @@ export default class NewTaskDescriptionModal extends React.Component<Props, Stat
           </Button>,
         ]}
       >
-        <Markdown
-          source={this.props.description}
-          options={{
-            html: false,
-            breaks: true,
-            linkify: true,
-          }}
-        />
+        <Markdown>{this.props.description}</Markdown>
       </Modal>
     );
   }

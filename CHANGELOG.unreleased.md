@@ -31,6 +31,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where ad-hoc meshes for coarse magnifications would have gaps. [#7799](https://github.com/scalableminds/webknossos/pull/7799)
 - Fixed that the context menu didn't open correctly in the 3D viewport when right-clicking a node. [#7809](https://github.com/scalableminds/webknossos/pull/7809)
 - Fixed that right-clicking a mesh in the 3D viewport did crash when the corresponding segmentation layer was not visible. [#7811](https://github.com/scalableminds/webknossos/pull/7811)
+- Fixed a bug where brushing on a fallback segmentation with active mapping and with segment index file would lead to failed saves. [#7833](https://github.com/scalableminds/webknossos/pull/7833)
 
 ### Removed
 

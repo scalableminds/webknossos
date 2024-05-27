@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import type { APIJob, APIDataLayer, AiModel } from "types/api_flow_types";
+import React, { useState } from "react";
+import type { APIJob, APIDataLayer } from "types/api_flow_types";
 import {
   Modal,
   Select,
@@ -56,6 +56,7 @@ import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { TrainAiModelTab } from "../jobs/train_ai_model";
 import { LayerSelectionFormItem } from "components/layer_selection";
+import { useGuardedFetch } from "libs/react_helpers";
 
 const { ThinSpace } = Unicode;
 
@@ -754,29 +755,18 @@ export function MitochondriaSegmentationForm() {
 function CustomAiModelInferenceForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
-  const [isLoading, setIsLoading] = useState(false);
-  const [aiModels, setAiModels] = useState<Array<AiModel>>([]);
 
-  async function loadData() {
-    setIsLoading(true);
-    try {
-      const _aiModels = await getAiModels();
-
-      setAiModels(
-        _aiModels.filter(
-          (aiModel) => aiModel.trainingJob == null || aiModel.trainingJob.state === "SUCCESS",
-        ),
+  const [aiModels, isLoading] = useGuardedFetch(
+    async function () {
+      const models = await getAiModels();
+      return models.filter(
+        (aiModel) => aiModel.trainingJob == null || aiModel.trainingJob.state === "SUCCESS",
       );
-    } catch (err) {
-      console.error(err);
-      Toast.error("Could not load model list.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-  useEffect(() => {
-    loadData();
-  }, []);
+    },
+    [],
+    [],
+    "Could not load model list.",
+  );
 
   return (
     <StartJobForm

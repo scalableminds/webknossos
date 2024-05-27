@@ -228,8 +228,7 @@ function startSegmentationAnnotationDependentJob(
 ): Promise<APIJob> {
   const requestURL = new URL(
     `/api/jobs/run/${jobURLPath}/${organizationName}/${datasetName}`,
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Location' is not assignable to parameter of type 'string | URL | undefined'.
-    location,
+    location.origin,
   );
   if (volumeLayerName != null) {
     requestURL.searchParams.append("volumeLayerName", volumeLayerName);

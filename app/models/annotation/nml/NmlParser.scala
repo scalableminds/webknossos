@@ -41,6 +41,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   def parse(name: String,
             nmlInputStream: InputStream,
             overwritingDatasetName: Option[String],
+            overwritingOrganizationName: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None)(
       implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
@@ -62,7 +63,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
         additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
         datasetName = overwritingDatasetName.getOrElse(parseDatasetName(parameters \ "experiment"))
-        organizationName = if (overwritingDatasetName.isDefined) None
+        organizationName = if (overwritingDatasetName.isDefined) overwritingOrganizationName
         else parseOrganizationName(parameters \ "experiment")
       } yield {
         val description = parseDescription(parameters \ "experiment")

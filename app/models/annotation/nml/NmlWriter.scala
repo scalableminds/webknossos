@@ -266,7 +266,9 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           if (!volumeTracing.mappingIsEditable.getOrElse(false)) {
             volumeTracing.mappingName.foreach { mappingName =>
               writer.writeAttribute("mappingName", mappingName)
-              writer.writeAttribute("mappingIsLocked", volumeTracing.mappingIsLocked.getOrElse(false).toString)
+            }
+            if (volumeTracing.mappingIsLocked.getOrElse(false)) {
+              writer.writeAttribute("mappingIsLocked", true.toString)
             }
           }
           writeVolumeSegmentMetadata(volumeTracing.segments)

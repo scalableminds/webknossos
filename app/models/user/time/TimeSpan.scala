@@ -3,6 +3,7 @@ package models.user.time
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
+import models.annotation.AnnotationState.AnnotationState
 import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 import slick.lifted.Rep
@@ -73,33 +74,34 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                                 start: Instant,
                                 end: Instant,
                                 annotationTypes: List[AnnotationType],
+                                annotationStates: List[AnnotationState],
                                 projectIds: List[ObjectId]): Fox[JsValue] =
     if (annotationTypes.isEmpty) Fox.successful(Json.arr())
     else {
       val projectQuery = projectIdsFilterQuery(projectIds)
       for {
         tuples <- run(
-          q"""WITH annotationLayerStatistics AS (
-                SELECT an._id AS _annotation, JSON_AGG(al.statistics) AS layerStatistics
-                FROM webknossos.annotation_layers al
-                JOIN webknossos.annotations an ON al._annotation = an._id
-                GROUP BY an._id
+          q"""WITH timeSummedPerAnnotation AS (
+                SELECT a._id AS _annotation, t._id AS _task, p.name AS projectName, SUM(ts.time) AS timeSummed
+                FROM webknossos.timespans_ ts
+                JOIN webknossos.annotations_ a ON ts._annotation = a._id
+                LEFT JOIN webknossos.tasks_ t ON a._task = t._id
+                LEFT JOIN webknossos.projects_ p ON t._project = p._id
+                WHERE ts._user = $userId
+                AND ts.time > 0
+                AND ts.created >= $start
+                AND ts.created < $end
+                AND $projectQuery
+                AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
+                AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
+                GROUP BY a._id, t._id, p.name
               )
-              SELECT a._id, t._id, p.name, SUM(ts.time), JSON_AGG(als.layerStatistics)->0 AS annotationLayerStatistics
-              FROM webknossos.timespans_ ts
-              JOIN webknossos.annotations_ a ON ts._annotation = a._id
-              JOIN annotationLayerStatistics AS als ON als._annotation = a._id
-              LEFT JOIN webknossos.tasks_ t ON a._task = t._id
-              LEFT JOIN webknossos.projects_ p ON t._project = p._id
-              WHERE ts._user = $userId
-              AND ts.time > 0
-              AND ts.created >= $start
-              AND ts.created < $end
-              AND $projectQuery
-              AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
-              GROUP BY a._id, t._id, p.name
-              ORDER BY a._id
-         """.as[(String, Option[String], Option[String], Long, String)]
+              SELECT ti._annotation, ti._task, ti.projectName, ti.timeSummed, JSON_AGG(al.statistics) AS layerStatistics
+              FROM timeSummedPerAnnotation ti
+              JOIN webknossos.annotation_layers al ON al._annotation = ti._annotation
+              GROUP BY ti._annotation, ti._task, ti.projectName, ti.timeSummed
+              ORDER BY ti._annotation
+          """.as[(String, Option[String], Option[String], Long, String)]
         )
         parsed = tuples.map { t =>
           val layerStats: JsArray = Json.parse(t._5).validate[JsArray].getOrElse(Json.arr())
@@ -118,6 +120,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                             start: Instant,
                             end: Instant,
                             annotationTypes: List[AnnotationType],
+                            annotationStates: List[AnnotationState],
                             projectIds: List[ObjectId]): Fox[JsValue] =
     if (annotationTypes.isEmpty) Fox.successful(Json.arr())
     else {
@@ -126,20 +129,21 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         tuples <- run(
           q"""SELECT ts._user, mu.email, o.name, d.name, a._id, t._id, p.name, tt._id, tt.summary, ts._id, ts.created, ts.time
               FROM webknossos.timespans_ ts
-              JOIN webknossos.annotations_ a ON ts._annotation = a._id
-              JOIN webknossos.users_ u ON ts._user = u._id
-              JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
-              JOIN webknossos.datasets_ d ON a._dataset = d._id
-              JOIN webknossos.organizations_ o ON d._organization = o._id
-              LEFT JOIN webknossos.tasks_ t ON a._task = t._id
-              LEFT JOIN webknossos.projects_ p ON t._project = p._id
-              LEFT JOIN webknossos.taskTypes_ tt ON t._taskType = tt._id
+              JOIN webknossos.annotations_ a on ts._annotation = a._id
+              JOIN webknossos.users_ u on ts._user = u._id
+              JOIN webknossos.multiUsers_ mu on u._multiUser = mu._id
+              JOIN webknossos.datasets_ d on a._dataset = d._id
+              JOIN webknossos.organizations_ o on d._organization = o._id
+              LEFT JOIN webknossos.tasks_ t on a._task = t._id
+              LEFT JOIN webknossos.projects_ p on t._project = p._id
+              LEFT JOIN webknossos.taskTypes_ tt on t._taskType = tt._id
               WHERE ts._user = $userId
               AND ts.time > 0
               AND ts.created >= $start
               AND ts.created < $end
               AND $projectQuery
               AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
+              AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
             """.as[(String,
                     String,
                     String,
@@ -191,6 +195,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    end: Instant,
                    users: List[ObjectId],
                    annotationTypes: List[AnnotationType],
+                   annotationStates: List[AnnotationState],
                    projectIds: List[ObjectId]): Fox[List[JsObject]] =
     if (users.isEmpty || annotationTypes.isEmpty) Fox.successful(List.empty)
     else {
@@ -207,6 +212,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           WHERE $projectQuery
           AND u._id IN ${SqlToken.tupleFromList(users)}
           AND a.typ IN ${SqlToken.tupleFromList(annotationTypes)}
+          AND a.state IN ${SqlToken.tupleFromList(annotationStates)}
           AND ts.time > 0
           AND ts.created >= $start
           AND ts.created < $end

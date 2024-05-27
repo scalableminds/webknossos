@@ -154,7 +154,7 @@ const Toast = {
         await animationFrame(); // ensure tab is active
         await sleep(splitTimeout);
         await animationFrame();
-        // If the user has switched the tab, show the toast again so that the user doesn't just see the toast dissapear.
+        // If the user has switched the tab, show the toast again so that the user doesn't just see the toast disappear.
         await sleep(splitTimeout);
         if (cancelledTimeout) {
           // If the toast has been closed early, don't close it again.

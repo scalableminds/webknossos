@@ -21,8 +21,9 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters.IteratorHasAsScala
 
+// Calls explorers on local datasets that have already been uploaded to the binaryData dir
 class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
-    extends ExploreLayerService
+    extends ExploreLayerUtils
     with FoxImplicits {
 
   def exploreLocal(path: Path, dataSourceId: DataSourceId, layerDirectory: String = "")(
@@ -49,7 +50,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
           mag <- Fox
             .option2Fox(Vec3Int.fromMagLiteral(dir.getFileName.toString, allowScalar = true)) ?~> s"invalid mag: ${dir.getFileName}"
           vaultPath <- dataVaultService.getVaultPath(remoteSourceDescriptor) ?~> "dataVault.setup.failed"
-          layersWithVoxelSizes <- (new ZarrArrayExplorer(mag, ec)).explore(vaultPath, None)
+          layersWithVoxelSizes <- new ZarrArrayExplorer(mag).explore(vaultPath, None)
         } yield layersWithVoxelSizes))
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes.flatten, None)
       relativeLayers = layers.map(selectLastTwoDirectories)

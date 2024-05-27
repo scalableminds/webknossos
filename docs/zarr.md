@@ -15,7 +15,7 @@ You can try the OME-Zarr support with the following datasets. Load them in WEBKN
     - `https://static.webknossos.org/data/l4_sample/`
     - Source: Dense connectomic reconstruction in layer 4 of the somatosensory cortex. Motta et al. Science 2019. [10.1126/science.aay3134](https://doi.org/10.1126/science.aay3134)
 
-## Zarr Folder Struture
+## Zarr Folder Structure
 WEBKNOSSOS expects the following file structure for OME-Zarr (v0.4) datasets:
 
 ```
@@ -117,7 +117,7 @@ if __name__ == "__main__":
 
 Read the full example in the WEBKNOSSOS [Python library documentation](https://docs.webknossos.org/webknossos-py/examples/create_dataset_from_images.html).
 
-## Time-Series and N-Dimensional Datsets
+## Time-Series and N-Dimensional Datasets
 
 WEBKNOSSOS also supports loading n-dimensional datasets, e.g. 4D = time series of 3D microscopy.
 This feature in currently only supported for Zarr dataset due to their flexbile structure and design for n-dimensional data.

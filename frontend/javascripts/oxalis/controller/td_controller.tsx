@@ -117,7 +117,7 @@ class TDController extends React.PureComponent<Props> {
       this.props.tracing &&
       this.props.tracing.skeleton
     ) {
-      // The rotation center of this viewport is not updated to the new position after selecing a node in the viewport.
+      // The rotation center of this viewport is not updated to the new position after selecting a node in the viewport.
       // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
       // Thus we do it manually whenever the active node changes.
       getActiveNode(this.props.tracing.skeleton).map((activeNode) =>
@@ -258,18 +258,15 @@ class TDController extends React.PureComponent<Props> {
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         if (this.props.planeView == null) return null;
         const intersection = this.getMeshIntersection(pos);
-        if (intersection == null) {
-          return;
-        }
         handleOpenContextMenu(
           this.props.planeView,
           pos,
           plane,
           isTouch,
           event,
-          intersection.meshId,
-          intersection.meshClickedPosition,
-          intersection.unmappedSegmentId,
+          intersection?.meshId,
+          intersection?.meshClickedPosition,
+          intersection?.unmappedSegmentId,
         );
       },
     };

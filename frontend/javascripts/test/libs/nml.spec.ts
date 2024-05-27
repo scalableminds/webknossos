@@ -304,7 +304,7 @@ test("NML serializing and parsing should yield the same state even when addition
   if (existingNodeMap == null) {
     throw new Error("Unexpected null value.");
   }
-  const existingNode = existingNodeMap.get(1);
+  const existingNode = existingNodeMap.getOrThrow(1);
   const newNodeMap = existingNodeMap.set(1, {
     ...existingNode,
     additionalCoordinates: [{ name: "t", value: 123 }],
@@ -416,7 +416,7 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
   if (existingNodeMap == null) {
     throw new Error("Unexpected null value.");
   }
-  const existingNode = existingNodeMap.get(1);
+  const existingNode = existingNodeMap.getOrThrow(1);
   const newNodeMap = existingNodeMap.set(1, {
     ...existingNode,
     additionalCoordinates: [{ name: "t", value: 123 }],
@@ -694,10 +694,10 @@ test("addTreesAndGroups reducer should assign new node and tree ids", (t) => {
   t.is(newSkeletonTracing.trees[3].treeId, 3);
   t.is(newSkeletonTracing.trees[4].treeId, 4);
   t.is(newSkeletonTracing.trees[3].nodes.size(), 4);
-  t.is(newSkeletonTracing.trees[3].nodes.get(8).id, 8);
-  t.is(newSkeletonTracing.trees[3].nodes.get(9).id, 9);
+  t.is(newSkeletonTracing.trees[3].nodes.getOrThrow(8).id, 8);
+  t.is(newSkeletonTracing.trees[3].nodes.getOrThrow(9).id, 9);
   t.is(newSkeletonTracing.trees[4].nodes.size(), 3);
-  t.is(newSkeletonTracing.trees[4].nodes.get(12).id, 12);
+  t.is(newSkeletonTracing.trees[4].nodes.getOrThrow(12).id, 12);
 
   const getSortedEdges = (edges: EdgeCollection) => _.sortBy(edges.asArray(), "source");
 

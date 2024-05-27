@@ -680,7 +680,7 @@ function splitTreeIntoComponents(
       color: tree.color,
       name: `${tree.name}_${i}`,
       comments: tree.comments.filter((comment) => nodeIdsSet.has(comment.nodeId)),
-      nodes: new DiffableMap(nodeIds.map((nodeId) => [nodeId, tree.nodes.get(nodeId)])),
+      nodes: new DiffableMap(nodeIds.map((nodeId) => [nodeId, tree.nodes.getOrThrow(nodeId)])),
       branchPoints: tree.branchPoints.filter((bp) => nodeIdsSet.has(bp.nodeId)),
       timestamp: tree.timestamp,
       edges: EdgeCollection.loadFromArray(edges),

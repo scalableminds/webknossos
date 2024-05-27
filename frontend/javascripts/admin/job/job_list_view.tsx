@@ -29,7 +29,7 @@ import { useInterval } from "libs/react_helpers";
 export const TOOLTIP_MESSAGES_AND_ICONS = {
   UNKNOWN: {
     tooltip:
-      "The status information for this job could not be retreived. Please try again in a few minutes, or contact us if you need assistance.",
+      "The status information for this job could not be retrieved. Please try again in a few minutes, or contact us if you need assistance.",
     icon: <QuestionCircleTwoTone twoToneColor="#a3a3a3" className="icon-margin-right" />,
   },
   SUCCESS: {

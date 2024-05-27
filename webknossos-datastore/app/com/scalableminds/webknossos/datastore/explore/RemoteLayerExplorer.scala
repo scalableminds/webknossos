@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.explore
 
 import com.scalableminds.util.geometry.BoundingBox
+import collections.SequenceUtils
 import com.scalableminds.util.tools.TextUtils.normalizeStrong
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -43,10 +44,7 @@ trait RemoteLayerExplorer extends FoxImplicits {
 
   protected def elementClassFromMags(magsWithAttributes: List[MagWithAttributes]): Fox[ElementClass.Value] = {
     val elementClasses = magsWithAttributes.map(_.elementClass)
-    for {
-      head <- elementClasses.headOption.toFox
-      _ <- bool2Fox(elementClasses.forall(_ == head)) ?~> s"Element class must be the same for all mags of a layer. got $elementClasses"
-    } yield head
+    SequenceUtils.findUniqueElement(elementClasses) ?~> s"Element class must be the same for all mags of a layer. got $elementClasses"
   }
 
   protected def boundingBoxFromMags(magsWithAttributes: List[MagWithAttributes]): BoundingBox =

@@ -104,10 +104,10 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
 // Maps from additional coordinates, layerName and segmentId to a ThreeDMap that stores for each chunk
 // (at x, y, z) position whether the mesh chunk was loaded.
 const adhocMeshesMapByLayer: Record<string, Record<string, Map<number, ThreeDMap<boolean>>>> = {};
-function marchingCubeSizeInMag1(): Vector3 {
-  return (window as any).__marchingCubeSizeInMag1 != null
-    ? (window as any).__marchingCubeSizeInMag1
-    : [128, 128, 128];
+function marchingCubeSizeInTargetMag(): Vector3 {
+  return (window as any).__marchingCubeSizeInTargetMag != null
+    ? (window as any).__marchingCubeSizeInTargetMag
+    : [64, 64, 64];
 }
 const modifiedCells: Set<number> = new Set();
 export function isMeshSTL(buffer: ArrayBuffer): boolean {
@@ -155,20 +155,25 @@ function removeMapForSegment(
   adhocMeshesMapByLayer[additionalCoordinateKey][layerName].delete(segmentId);
 }
 
-function getZoomedCubeSize(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
-  // Convert marchingCubeSizeInMag1 to another resolution (zoomStep)
-  const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
-    [...marchingCubeSizeInMag1(), 0],
-    resolutionInfo,
-    zoomStep,
-  );
+function getCubeSizeInMag1(zoomStep: number, resolutionInfo: ResolutionInfo): Vector3 {
+  // Convert marchingCubeSizeInTargetMag to mag1 via zoomStep
   // Drop the last element of the Vector4;
+  const [x, y, z] = zoomedAddressToAnotherZoomStepWithInfo(
+    [...marchingCubeSizeInTargetMag(), zoomStep],
+    resolutionInfo,
+    0,
+  );
   return [x, y, z];
 }
 
-function clipPositionToCubeBoundary(position: Vector3): Vector3 {
-  const currentCube = V3.floor(V3.divide3(position, marchingCubeSizeInMag1()));
-  const clippedPosition = V3.scale3(currentCube, marchingCubeSizeInMag1());
+function clipPositionToCubeBoundary(
+  position: Vector3,
+  zoomStep: number,
+  resolutionInfo: ResolutionInfo,
+): Vector3 {
+  const cubeSizeInMag1 = getCubeSizeInMag1(zoomStep, resolutionInfo);
+  const currentCube = V3.floor(V3.divide3(position, cubeSizeInMag1));
+  const clippedPosition = V3.scale3(currentCube, cubeSizeInMag1);
   return clippedPosition;
 }
 
@@ -182,12 +187,18 @@ const NEIGHBOR_LOOKUP = [
   [1, 0, 0],
 ];
 
-function getNeighborPosition(clippedPosition: Vector3, neighborId: number): Vector3 {
+function getNeighborPosition(
+  clippedPosition: Vector3,
+  neighborId: number,
+  zoomStep: number,
+  resolutionInfo: ResolutionInfo,
+): Vector3 {
   const neighborMultiplier = NEIGHBOR_LOOKUP[neighborId];
+  const cubeSizeInMag1 = getCubeSizeInMag1(zoomStep, resolutionInfo);
   const neighboringPosition: Vector3 = [
-    clippedPosition[0] + neighborMultiplier[0] * marchingCubeSizeInMag1()[0],
-    clippedPosition[1] + neighborMultiplier[1] * marchingCubeSizeInMag1()[1],
-    clippedPosition[2] + neighborMultiplier[2] * marchingCubeSizeInMag1()[2],
+    clippedPosition[0] + neighborMultiplier[0] * cubeSizeInMag1[0],
+    clippedPosition[1] + neighborMultiplier[1] * cubeSizeInMag1[1],
+    clippedPosition[2] + neighborMultiplier[2] * cubeSizeInMag1[2],
   ];
   return neighboringPosition;
 }
@@ -297,7 +308,7 @@ function removeMeshWithoutVoxels(
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
 ) {
   // If no voxels were added to the scene (e.g. because the segment doesn't have any voxels in this n-dimension),
-  // remove it from the store's state aswell.
+  // remove it from the store's state as well.
   const { segmentMeshController } = getSceneController();
   if (!segmentMeshController.hasMesh(segmentId, layerName, additionalCoordinates)) {
     Store.dispatch(removeMeshAction(layerName, segmentId));
@@ -316,7 +327,7 @@ function* loadFullAdHocMesh(
 ): Saga<void> {
   let isInitialRequest = true;
   const { mappingName, mappingType } = meshExtraInfo;
-  const clippedPosition = clipPositionToCubeBoundary(position);
+  const clippedPosition = clipPositionToCubeBoundary(position, zoomStep, resolutionInfo);
   yield* put(
     addAdHocMeshAction(
       layer.name,
@@ -329,7 +340,7 @@ function* loadFullAdHocMesh(
   );
   yield* put(startedLoadingMeshAction(layer.name, segmentId));
 
-  const cubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
+  const cubeSize = marchingCubeSizeInTargetMag();
   const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
   const mag = resolutionInfo.getResolutionByIndexOrThrow(zoomStep);
 
@@ -347,12 +358,12 @@ function* loadFullAdHocMesh(
 
   // Segment stats can only be used for volume tracings that have a segment index
   // and that don't have editable mappings.
-  const usePositionsFromSegmentStats =
+  const usePositionsFromSegmentIndex =
     volumeTracing?.hasSegmentIndex &&
     !volumeTracing.mappingIsEditable &&
     visibleSegmentationLayer?.tracingId != null;
-  let positionsToRequest = usePositionsFromSegmentStats
-    ? yield* getChunkPositionsFromSegmentStats(
+  let positionsToRequest = usePositionsFromSegmentIndex
+    ? yield* getChunkPositionsFromSegmentIndex(
         tracingStoreHost,
         layer,
         segmentId,
@@ -384,13 +395,13 @@ function* loadFullAdHocMesh(
       isInitialRequest,
       removeExistingMesh && isInitialRequest,
       useDataStore,
-      !usePositionsFromSegmentStats,
+      !usePositionsFromSegmentIndex,
     );
     isInitialRequest = false;
 
     // If we are using the positions from the segment index, the backend will
     // send an empty neighbors array, as it's not necessary to have them.
-    if (usePositionsFromSegmentStats && neighbors.length > 0) {
+    if (usePositionsFromSegmentIndex && neighbors.length > 0) {
       throw new Error("Retrieved neighbor positions even though these were not requested.");
     }
     positionsToRequest = positionsToRequest.concat(neighbors);
@@ -399,7 +410,7 @@ function* loadFullAdHocMesh(
   yield* put(finishedLoadingMeshAction(layer.name, segmentId));
 }
 
-function* getChunkPositionsFromSegmentStats(
+function* getChunkPositionsFromSegmentIndex(
   tracingStoreHost: string,
   layer: DataLayer,
   segmentId: number,
@@ -408,7 +419,7 @@ function* getChunkPositionsFromSegmentStats(
   clippedPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
 ) {
-  const unscaledPositions = yield* call(
+  const targetMagPositions = yield* call(
     getBucketPositionsForAdHocMesh,
     tracingStoreHost,
     layer.name,
@@ -417,8 +428,8 @@ function* getChunkPositionsFromSegmentStats(
     mag,
     additionalCoordinates,
   );
-  const positions = unscaledPositions.map((pos) => V3.scale3(pos, mag));
-  return sortByDistanceTo(positions, clippedPosition) as Vector3[];
+  const mag1Positions = targetMagPositions.map((pos) => V3.scale3(pos, mag));
+  return sortByDistanceTo(mag1Positions, clippedPosition) as Vector3[];
 }
 
 function hasMeshChunkExceededThrottleLimit(segmentId: number): boolean {
@@ -472,7 +483,7 @@ function* maybeLoadMeshChunk(
 
   const { segmentMeshController } = getSceneController();
 
-  const cubeSize = getZoomedCubeSize(zoomStep, resolutionInfo);
+  const cubeSize = marchingCubeSizeInTargetMag();
 
   while (retryCount < MAX_RETRY_COUNT) {
     try {
@@ -505,7 +516,9 @@ function* maybeLoadMeshChunk(
         layer.name,
         additionalCoordinates,
       );
-      return neighbors.map((neighbor) => getNeighborPosition(clippedPosition, neighbor));
+      return neighbors.map((neighbor) =>
+        getNeighborPosition(clippedPosition, neighbor, zoomStep, resolutionInfo),
+      );
     } catch (exception) {
       retryCount++;
       ErrorHandling.notify(exception as Error);

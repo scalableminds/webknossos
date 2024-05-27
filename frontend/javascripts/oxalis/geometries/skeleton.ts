@@ -222,7 +222,7 @@ class Skeleton {
     const mesh = helper.buildMesh(geometry, material);
     // Frustum culling is disabled because nodes that are transformed
     // wouldn't be culled correctly.
-    // In basic testing, culling didn't provide a noticable performance
+    // In basic testing, culling didn't provide a noticeable performance
     // improvement (tested with 500k skeleton nodes).
     mesh.frustumCulled = false;
     this.rootGroup.add(mesh);
@@ -346,8 +346,8 @@ class Skeleton {
 
         case "createEdge": {
           const tree = skeletonTracing.trees[update.value.treeId];
-          const source = tree.nodes.get(update.value.source);
-          const target = tree.nodes.get(update.value.target);
+          const source = tree.nodes.getOrThrow(update.value.source);
+          const target = tree.nodes.getOrThrow(update.value.target);
           this.createEdge(tree.treeId, source, target);
           break;
         }
@@ -507,8 +507,8 @@ class Skeleton {
     }
 
     for (const edge of tree.edges.all()) {
-      const source = tree.nodes.get(edge.source);
-      const target = tree.nodes.get(edge.target);
+      const source = tree.nodes.getOrThrow(edge.source);
+      const target = tree.nodes.getOrThrow(edge.target);
       this.createEdge(tree.treeId, source, target);
     }
 

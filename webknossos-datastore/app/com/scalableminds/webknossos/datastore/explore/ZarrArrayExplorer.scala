@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.Category
 
 import scala.concurrent.ExecutionContext
 
-class ZarrArrayExplorer(mag: Vec3Int = Vec3Int.ones, implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
+class ZarrArrayExplorer(mag: Vec3Int = Vec3Int.ones)(implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
 
   override def name: String = "Zarr Array"
 

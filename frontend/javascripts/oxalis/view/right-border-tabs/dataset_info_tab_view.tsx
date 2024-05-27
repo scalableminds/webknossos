@@ -195,7 +195,7 @@ export function AnnotationStats({
   const formatLabel = (str: string) => (asInfoBlock ? str : "");
   const useStyleWithMargin = withMargin != null ? withMargin : true;
   const styleWithLargeMarginBottom = { marginBottom: 14 };
-  const styleWithSmallMargin = { margin: "2px auto" };
+  const styleWithSmallMargin = { margin: 2 };
 
   return (
     <div

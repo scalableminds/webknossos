@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-class ExploreLayerService extends FoxImplicits {
+trait ExploreLayerUtils extends FoxImplicits {
 
   def adaptLayersAndVoxelSize(layersWithVoxelSizes: List[(DataLayerWithMagLocators, VoxelSize)],
                               preferredVoxelSize: Option[VoxelSize])(

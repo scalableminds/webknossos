@@ -178,6 +178,11 @@ export type OptionalMappingProperties = {
   hideUnmappedIds?: boolean;
   showLoadingIndicator?: boolean;
 };
+
+// todop: would it make sense to have an updateMappingAction if we "only" change `mapping` ?
+// currently, setMappingAction is dispatched twice when initializing a json mapping
+// 1) with a name
+// 2) with the actual mapping object
 export const setMappingAction = (
   layerName: string,
   mappingName: string | null | undefined,

@@ -784,6 +784,7 @@ export function needsLocalHdf5Mapping(state: OxalisState, layerName: string) {
   if (volumeTracing == null) {
     return false;
   }
+  // todop: rename in protobuf to hasEditableMapping
   return (
     volumeTracing.mappingIsEditable ||
     state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD

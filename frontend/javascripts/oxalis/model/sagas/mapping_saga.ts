@@ -14,12 +14,13 @@ import {
   flush,
 } from "typed-redux-saga";
 import { api } from "oxalis/singletons";
-import { buffers, eventChannel } from "redux-saga";
+import { Channel, buffers, eventChannel } from "redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { message } from "antd";
 import type {
   OptionalMappingProperties,
   SetMappingAction,
+  SetMappingEnabledAction,
   // SetMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
 import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
@@ -68,44 +69,60 @@ import { ActionPattern } from "redux-saga/effects";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
 
 type APIMappings = Record<string, APIMapping>;
-type Box<T> = { value: T };
+type Container<T> = { value: T };
 
 const takeLatestMappingChange = (
-  // setMappingEnabledActionChannel: Channel<SetMappingEnabledAction>,
-  oldActiveMappingByLayer: Box<Record<string, ActiveMappingInfo>>,
+  setMappingEnabledActionChannel: Channel<SetMappingEnabledAction>,
+  oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   layerName: string,
 ) => {
   return fork(function* () {
     let lastWatcherTask;
+    let lastNeedsLocalHdf5Mapping;
 
     const needsLocalMappingChangedChannel = createNeedsLocalMappingChangedChannel(layerName);
 
     while (true) {
-      // todop: what if the annotation is loaded and immediately the watcher is needed?
-      const needsLocalHdf5Mapping = yield* take(needsLocalMappingChangedChannel);
+      lastNeedsLocalHdf5Mapping = yield* select((state) =>
+        getNeedsLocalHdf5Mapping(state, layerName),
+      );
+      const { needsLocalHdf5Mapping } = yield* race({
+        needsLocalHdf5Mapping: take(needsLocalMappingChangedChannel),
+        setMappingEnabledAction: take(setMappingEnabledActionChannel),
+      });
 
-      if (lastWatcherTask) {
-        console.log("Cancel old bucket watcher");
-        yield cancel(lastWatcherTask);
-        lastWatcherTask = null;
-      }
+      if (needsLocalHdf5Mapping != null) {
+        if (lastWatcherTask) {
+          console.log("Cancel old bucket watcher");
+          yield cancel(lastWatcherTask);
+          lastWatcherTask = null;
+        }
 
-      yield* call(maybeReloadData, oldActiveMappingByLayer, { layerName }, true);
-      if (needsLocalHdf5Mapping) {
-        // Start a new watcher
-        console.log("Start new bucket watcher for layer", layerName);
-        lastWatcherTask = yield* fork(watchChangedBucketsForLayer, layerName);
+        yield* call(maybeReloadData, oldActiveMappingByLayer, { layerName }, true);
+        if (needsLocalHdf5Mapping) {
+          // Start a new watcher
+          console.log("Start new bucket watcher for layer", layerName);
+          lastWatcherTask = yield* fork(watchChangedBucketsForLayer, layerName);
+        } else {
+          const mappingInfo = yield* select((state) =>
+            getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+          );
+
+          yield* put(
+            setMappingAction(layerName, mappingInfo.mappingName, mappingInfo.mappingType, {
+              mapping: undefined,
+              showLoadingIndicator: true,
+            }),
+          );
+        }
       } else {
-        const mappingInfo = yield* select((state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
-        );
-
-        yield* put(
-          setMappingAction(layerName, mappingInfo.mappingName, mappingInfo.mappingType, {
-            mapping: undefined,
-            showLoadingIndicator: true,
-          }),
-        );
+        if (!lastNeedsLocalHdf5Mapping) {
+          // No watcher was running, so no cancelling needed.
+          // However, we need to reload the layer.
+          yield* call(maybeReloadData, oldActiveMappingByLayer, { layerName }, true);
+        } else {
+          // A local mapping was active before. Reloading the layer is not necessary.
+        }
       }
     }
   });
@@ -133,8 +150,8 @@ export default function* watchActivatedMappings(): Saga<void> {
   };
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
-  // const setMappingEnabledActionChannel =
-  //   yield* actionChannel<SetMappingEnabledAction>("SET_MAPPING_ENABLED");
+  const setMappingEnabledActionChannel =
+    yield* actionChannel<SetMappingEnabledAction>("SET_MAPPING_ENABLED");
   yield* take("WK_READY");
   yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
   yield* takeEvery(
@@ -151,7 +168,7 @@ export default function* watchActivatedMappings(): Saga<void> {
   for (const tracing of volumeTracings) {
     // The following two sagas will fork internally.
     yield* takeLatestMappingChange(
-      // setMappingEnabledActionChannel,
+      setMappingEnabledActionChannel,
       oldActiveMappingByLayer,
       tracing.tracingId,
     );
@@ -170,7 +187,7 @@ const isAgglomerate = (mapping: ActiveMappingInfo) => {
 };
 
 function* maybeReloadData(
-  oldActiveMappingByLayer: Box<Record<string, ActiveMappingInfo>>,
+  oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   action: { layerName: string },
   forceReload: boolean = false,
 ): Saga<void> {
@@ -332,7 +349,7 @@ function* loadLayerMappings(layerName: string, updateInStore: boolean): Saga<[st
 }
 
 function* handleSetMapping(
-  oldActiveMappingByLayer: Box<Record<string, ActiveMappingInfo>>,
+  oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   action: SetMappingAction,
 ): Saga<void> {
   const {
@@ -432,7 +449,7 @@ function* handleSetHdf5Mapping(
   mappingName: string,
   mappingType: MappingType,
   action: SetMappingAction,
-  oldActiveMappingByLayer: Box<Record<string, ActiveMappingInfo>>,
+  oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
 ): Saga<void> {
   if (yield* select((state) => getNeedsLocalHdf5Mapping(state, layerName))) {
     yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName, mappingType);

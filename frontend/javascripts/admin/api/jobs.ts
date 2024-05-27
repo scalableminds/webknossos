@@ -4,9 +4,9 @@ import type { Vector3, Vector6 } from "oxalis/constants";
 import type {
   APIAnnotationType,
   APIJob,
-  APIJobCeleryState,
-  APIJobManualState,
   APIJobState,
+  APIJobManualState,
+  APIEffectiveJobState,
   AiModel,
   RenderAnimationOptions,
 } from "types/api_flow_types";
@@ -53,9 +53,9 @@ export async function getJob(jobId: string): Promise<APIJob> {
 }
 
 function adaptJobState(
-  celeryState: APIJobCeleryState,
+  celeryState: APIJobState,
   manualState: APIJobManualState,
-): APIJobState {
+): APIEffectiveJobState {
   if (manualState) {
     return manualState;
   }

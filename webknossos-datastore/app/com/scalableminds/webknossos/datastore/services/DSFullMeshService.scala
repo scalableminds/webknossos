@@ -134,6 +134,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         fullMeshRequest.editableMappingTracingId,
         fullMeshRequest.segmentId,
         mappingNameForMeshFile,
+        omitMissing = false,
         token
       )
       chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegments(organizationName,

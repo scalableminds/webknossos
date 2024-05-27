@@ -16,6 +16,7 @@ import { Model } from "oxalis/singletons";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import { formatVoxels } from "libs/format_utils";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -167,7 +168,7 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
 
       <FormItem hasFeedback name="dummy" label="Training Data">
         <div>
-          {userBoundingBoxes.length} bounding boxes ({bboxesVoxelCount / 1000000} MVx)
+          {userBoundingBoxes.length} bounding boxes ({formatVoxels(bboxesVoxelCount)})
         </div>
       </FormItem>
       <FormItem>

@@ -76,59 +76,7 @@ export default function AiModelListView() {
           },
           {
             title: "",
-            render: (model: AiModel) => {
-              if (model.trainingJob == null) {
-                return;
-              }
-              const { voxelyticsWorkflowHash, trainingAnnotations } = model.trainingJob;
-
-              return (
-                <div>
-                  {voxelyticsWorkflowHash != null ? (
-                    <Link to={`/workflows/${voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
-                  ) : null}
-                  {trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
-                    <a
-                      href="#"
-                      onClick={() => {
-                        Modal.info({
-                          content: (
-                            <div>
-                              The following annotations were used during training:
-                              <ul>
-                                {trainingAnnotations.map(
-                                  (annotation: { annotationId: string }, index: number) => (
-                                    <li>
-                                      <a
-                                        href={`/annotations/${annotation.annotationId}`}
-                                        target="_blank"
-                                        rel="noreferrer noopener"
-                                      >
-                                        Annotation {index + 1}
-                                      </a>
-                                    </li>
-                                  ),
-                                )}
-                              </ul>
-                            </div>
-                          ),
-                        });
-                      }}
-                    >
-                      Show Training Data
-                    </a>
-                  ) : (
-                    <a
-                      href={`/annotations/${trainingAnnotations[0].annotationId}`}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                    >
-                      Show Training Data
-                    </a>
-                  )}
-                </div>
-              );
-            },
+            render: renderActionsForModel,
             key: "actions",
           },
         ]}
@@ -137,3 +85,57 @@ export default function AiModelListView() {
     </div>
   );
 }
+
+const renderActionsForModel = (model: AiModel) => {
+  if (model.trainingJob == null) {
+    return;
+  }
+  const { voxelyticsWorkflowHash, trainingAnnotations } = model.trainingJob;
+
+  return (
+    <div>
+      {voxelyticsWorkflowHash != null ? (
+        <Link to={`/workflows/${voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
+      ) : null}
+      {trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
+        <a
+          href="#"
+          onClick={() => {
+            Modal.info({
+              content: (
+                <div>
+                  The following annotations were used during training:
+                  <ul>
+                    {trainingAnnotations.map(
+                      (annotation: { annotationId: string }, index: number) => (
+                        <li>
+                          <a
+                            href={`/annotations/${annotation.annotationId}`}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                          >
+                            Annotation {index + 1}
+                          </a>
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                </div>
+              ),
+            });
+          }}
+        >
+          Show Training Data
+        </a>
+      ) : (
+        <a
+          href={`/annotations/${trainingAnnotations[0].annotationId}`}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          Show Training Data
+        </a>
+      )}
+    </div>
+  );
+};

@@ -70,23 +70,6 @@ type Props = {
   allowUpdate: boolean;
 };
 
-// type Props = OwnProps & {
-//   onShuffleTreeColor: (arg0: number) => void;
-//   onSetActiveTree: (arg0: number) => void;
-//   onSetActiveTreeGroup: (arg0: number) => void;
-//   onToggleTree: (arg0: number) => void;
-//   onDeleteTree: (arg0: number) => void;
-//   onToggleAllTrees: () => void;
-//   onSetTreeColor: (arg0: number, arg1: Vector3) => void;
-//   onToggleTreeGroup: (arg0: number) => void;
-//   onUpdateTreeGroups: (arg0: TreeGroup[]) => void;
-//   onBatchActions: (arg0: Action[], arg1: string) => void;
-//   onToggleHideInactiveTrees: () => void;
-//   onShuffleAllTreeColors: () => void;
-//   onSetTreeEdgesVisibility: (treeId: number, edgesAreVisible: boolean) => void;
-//   onSetTreeType: (treeId: number, type: TreeTypeEnum) => void;
-// };
-
 export type GenerateNodePropsType = {
   title?: JSX.Element;
   className?: string;
@@ -105,7 +88,6 @@ function TreeHierarchyView(props: Props) {
   const [expandedNodeKeys, setExpandedNodeKeys] = useState<React.Key[]>([]);
   const [groupTree, setGroupTree] = useState<TreeNode[]>([]);
   const [prevProps, setPrevProps] = useState<Props | null>(null);
-  const [searchFocusOffset, setSearchFocusOffset] = useState(0);
   const [activeTreeDropdownId, setActiveTreeDropdownId] = useState<number | null>(null);
   const [activeGroupDropdownId, setActiveGroupDropdownId] = useState<number | null>(null);
 
@@ -153,33 +135,21 @@ function TreeHierarchyView(props: Props) {
     }
   });
 
-  // useEffect(() => {
-  //   // async componentDidUpdate() {
-  //   // TODO: Workaround, remove after https://github.com/frontend-collective/react-sortable-tree/issues/305 is fixed
-  //   // Also remove the searchFocusOffset from the state and hard-code it as 0
-  //   if (prevProps) {
-  //     const didSearchTermChange =
-  //       prevProps.activeTreeId !== props.activeTreeId ||
-  //       prevProps.activeGroupId !== props.activeGroupId;
+  useEffect(() => {
+    // scroll to active tree if it changes
+    if (treeRef.current && props.activeTreeId) {
+      const activeTreeKey = getNodeKey(GroupTypeEnum.TREE, props.activeTreeId);
+      treeRef.current.scrollTo({ key: activeTreeKey, align: "top" });
+    }
+  }, [props.activeTreeId]);
 
-  //     if (didTreeDataChange(prevProps, props) && didSearchTermChange) {
-  //       setSearchFocusOffset(1);
-  //     } else {
-  //       setSearchFocusOffset(0);
-  //     }
-  //   }
-  // }, [prevProps, props]);
-
-  // }
-
-  // function onChange(treeData: TreeNode[]) {
-  //   const expandedGroupIds: Record<number, boolean> = {};
-  //   forEachTreeNode(treeData, (node: TreeNode) => {
-  //     if (node.type === GroupTypeEnum.GROUP && node.expanded) expandedGroupIds[node.id] = true;
-  //   });
-  //   setGroupTree(treeData);
-  //   setExpandedGroupIds(expandedGroupIds);
-  // }
+  useEffect(() => {
+    // scroll to active group if it changes
+    if (treeRef.current && props.activeGroupId) {
+      const activeGroupKey = getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId);
+      treeRef.current.scrollTo({ key: activeGroupKey, align: "top" });
+    }
+  }, [props.activeGroupId]);
 
   function onExpand(expandedKeys: React.Key[]) {
     setExpandedNodeKeys(expandedKeys);
@@ -615,27 +585,13 @@ function TreeHierarchyView(props: Props) {
           trigger={["contextMenu"]}
         >
           <div>
-            <ColoredDotIcon colorRGBA={[...tree.color, 1.0]}/>
+            <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
             {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
           </div>
         </Dropdown>
       </div>
     );
   }
-
-  // function keySearchMethod(params: {
-  //   node: TreeNode;
-  //   searchQuery: {
-  //     activeTreeId: number;
-  //     activeGroupId: number;
-  //   };
-  // }): boolean {
-  //   const { node, searchQuery } = params;
-  //   return (
-  //     (node.type === GroupTypeEnum.TREE && node.id === searchQuery.activeTreeId) ||
-  //     (node.type === GroupTypeEnum.GROUP && node.id === searchQuery.activeGroupId)
-  //   );
-  // }
 
   // function canDrop(params) {
   //   const { nextParent } = params;
@@ -659,7 +615,9 @@ function TreeHierarchyView(props: Props) {
   }
 
   const checkedKeys = deepFlatFilter(groupTree, (node) => node.isChecked).map((node) => node.key);
-  const selectedKeys = props.activeTreeId ? [getNodeKey(GroupTypeEnum.TREE, props.activeTreeId)] : []
+  const selectedKeys = props.activeTreeId
+    ? [getNodeKey(GroupTypeEnum.TREE, props.activeTreeId)]
+    : [];
 
   return (
     <AutoSizer>

@@ -32,6 +32,7 @@ import {
   createGroupToTreesMap,
   callDeep,
   MISSING_GROUP_ID,
+  GroupTypeEnum,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
@@ -350,13 +351,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
       const makeTree = (tree: Tree) => ({
         name: tree.name,
-        type: "TREE",
+        type: GroupTypeEnum.TREE,
         id: tree.treeId,
       });
 
       const makeGroup = (group: TreeGroup) => ({
         name: group.name,
-        type: "GROUP",
+        type: GroupTypeEnum.GROUP,
         id: group.groupId,
       });
 
@@ -664,7 +665,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   };
 
   handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
-    if (selectedElement.type === "TREE") {
+    if (selectedElement.type === GroupTypeEnum.TREE) {
       this.props.onSetActiveTree(selectedElement.id);
     } else {
       this.props.onSetActiveTreeGroup(selectedElement.id);

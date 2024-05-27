@@ -1,9 +1,8 @@
 import _ from "lodash";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { SyncOutlined } from "@ant-design/icons";
 import { Table, Button, Modal } from "antd";
 import { getAiModels } from "admin/admin_rest_api";
-import Toast from "libs/toast";
 import { AiModel } from "types/api_flow_types";
 import FormattedDate from "components/formatted_date";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
@@ -11,33 +10,22 @@ import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { JobState } from "admin/job/job_list_view";
 import { Link } from "react-router-dom";
+import { useGuardedFetch } from "libs/react_helpers";
 
 export default function AiModelListView() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [aiModels, setAiModels] = useState<Array<AiModel>>([]);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-
-  async function loadData() {
-    setIsLoading(true);
-    try {
-      const _aiModels = await getAiModels();
-      setAiModels(_aiModels);
-    } catch (err) {
-      console.error(err);
-      Toast.error("Could not load model list.");
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadData();
-  }, []);
+  const [refreshCounter, setRefreshCounter] = useState(0);
+  const [aiModels, isLoading] = useGuardedFetch(
+    getAiModels,
+    [],
+    [refreshCounter],
+    "Could not load model list.",
+  );
 
   return (
     <div className="container voxelytics-view">
       <div className="pull-right">
-        <Button onClick={() => loadData()}>
+        <Button onClick={() => setRefreshCounter((val) => val + 1)}>
           <SyncOutlined spin={isLoading} /> Refresh
         </Button>
       </div>

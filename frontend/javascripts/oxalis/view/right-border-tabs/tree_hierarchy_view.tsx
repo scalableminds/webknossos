@@ -55,6 +55,7 @@ import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 
 import type CheckInfo from "rc-tree/lib/interface";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import { ColoredDotIcon } from "./segments_tab/segment_list_item";
 
 type Props = {
   activeTreeId: number | null | undefined;
@@ -504,7 +505,6 @@ function TreeHierarchyView(props: Props) {
 
   function renderTreeNode(node: TreeNode): React.ReactNode {
     const tree = props.trees[node.id];
-    const rgbColorString = tree.color.map((c) => Math.round(c * 255)).join(",");
     const isEditingDisabled = !props.allowUpdate;
     const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
     // Defining background color of current node
@@ -615,6 +615,7 @@ function TreeHierarchyView(props: Props) {
           trigger={["contextMenu"]}
         >
           <div>
+            <ColoredDotIcon colorRGBA={[...tree.color, 1.0]}/>
             {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
           </div>
         </Dropdown>
@@ -658,6 +659,7 @@ function TreeHierarchyView(props: Props) {
   }
 
   const checkedKeys = deepFlatFilter(groupTree, (node) => node.isChecked).map((node) => node.key);
+  const selectedKeys = props.activeTreeId ? [getNodeKey(GroupTypeEnum.TREE, props.activeTreeId)] : []
 
   return (
     <AutoSizer>
@@ -686,6 +688,7 @@ function TreeHierarchyView(props: Props) {
             draggable={canDrag}
             checkedKeys={checkedKeys}
             expandedKeys={expandedNodeKeys}
+            selectedKeys={selectedKeys}
             autoExpandParent
             checkable
             blockNode

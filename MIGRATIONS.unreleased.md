@@ -8,7 +8,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ## Unreleased
 [Commits](https://github.com/scalableminds/webknossos/compare/24.05.0...HEAD)
 
-- Edited the annotations table to add the option to locked explorative annotations. Migration 114 needs to be executed to update the database schema.
-
 ### Postgres Evolutions:
 - [114-annotation-locked-by-user.sql](conf/evolutions/114-annotation-locked-by-user.sql)

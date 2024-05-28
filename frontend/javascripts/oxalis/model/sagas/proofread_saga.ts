@@ -13,7 +13,7 @@ import {
 import {
   initializeEditableMappingAction,
   removeSegmentAction,
-  setMappingIsEditableAction,
+  setHasEditableMappingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type {
   MinCutAgglomerateWithPositionAction,
@@ -251,7 +251,7 @@ function* createEditableMapping(): Saga<string> {
   // The server increments the volume tracing's version by 1 when switching the mapping to an editable one
   yield* put(setVersionNumberAction(upToDateVolumeTracing.version + 1, "volume", volumeTracingId));
   yield* put(setMappingNameAction(layerName, serverEditableMapping.mappingName, "HDF5"));
-  yield* put(setMappingIsEditableAction());
+  yield* put(setHasEditableMappingAction());
   yield* put(initializeEditableMappingAction(serverEditableMapping));
   return serverEditableMapping.mappingName;
 }
@@ -949,7 +949,7 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
     return null;
   }
 
-  if (!volumeTracing.mappingIsEditable) {
+  if (!volumeTracing.hasEditableMapping) {
     try {
       mappingName = yield* call(createEditableMapping);
     } catch (e) {

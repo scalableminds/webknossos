@@ -160,7 +160,7 @@ export function setMappingNameReducer(
   isMappingEnabled: boolean = true,
 ) {
   // Editable mappings or locked mappings cannot be disabled or switched for now
-  if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) {
+  if (volumeTracing.hasEditableMapping || volumeTracing.mappingIsLocked) {
     return state;
   }
   // Only HDF5 mappings are persisted in volume annotations for now

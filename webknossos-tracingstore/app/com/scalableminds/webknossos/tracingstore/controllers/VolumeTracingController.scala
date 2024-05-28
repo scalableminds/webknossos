@@ -164,7 +164,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            (data, indices) <- if (tracing.mappingIsEditable.getOrElse(false))
+            (data, indices) <- if (tracing.hasEditableMapping.getOrElse(false))
               editableMappingService.volumeData(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
             else tracingService.data(tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
@@ -199,9 +199,9 @@ class VolumeTracingController @Inject()(
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
-            remoteFallbackLayerOpt <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
+            remoteFallbackLayerOpt <- Fox.runIf(tracing.hasEditableMapping.contains(true))(
               tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId))
-            newEditableMappingId <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
+            newEditableMappingId <- Fox.runIf(tracing.hasEditableMapping.contains(true))(
               editableMappingService.duplicate(tracing.mappingName, version = None, remoteFallbackLayerOpt, userToken))
             (newId, newTracing) <- tracingService.duplicate(
               tracingId,
@@ -289,7 +289,7 @@ class VolumeTracingController @Inject()(
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          (vertices, neighbors) <- if (tracing.mappingIsEditable.getOrElse(false))
+          (vertices, neighbors) <- if (tracing.hasEditableMapping.getOrElse(false))
             editableMappingService.createAdHocMesh(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
           else tracingService.createAdHocMesh(tracingId, request.body, urlOrHeaderToken(token, request))
         } yield {
@@ -331,7 +331,7 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId)
-          _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Cannot query agglomerate skeleton for volume annotation"
+          _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Cannot query agglomerate skeleton for volume annotation"
           mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
           remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
           agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(
@@ -390,7 +390,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId)
-            _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+            _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Mapping is not editable"
             remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             edges <- editableMappingService.agglomerateGraphMinCut(request.body, remoteFallbackLayer, token)
           } yield Ok(Json.toJson(edges))
@@ -404,7 +404,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId)
-            _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+            _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Mapping is not editable"
             remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             (segmentId, edges) <- editableMappingService.agglomerateGraphNeighbors(request.body,
                                                                                    remoteFallbackLayer,
@@ -420,7 +420,7 @@ class VolumeTracingController @Inject()(
         for {
           tracing <- tracingService.find(tracingId)
           mappingName <- tracing.mappingName.toFox
-          _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+          _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Mapping is not editable"
           currentVersion <- editableMappingService.getClosestMaterializableVersionOrZero(mappingName, None)
           _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update request must contain exactly one update group"
           updateGroup <- request.body.headOption.toFox
@@ -451,7 +451,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             mappingName <- tracing.mappingName.toFox
-            _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+            _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Mapping is not editable"
             updateLog <- editableMappingService.updateActionLog(mappingName)
           } yield Ok(updateLog)
         }

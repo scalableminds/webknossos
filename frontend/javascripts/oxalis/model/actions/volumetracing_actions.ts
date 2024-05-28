@@ -42,7 +42,7 @@ export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
-export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
+export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappingAction>;
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
@@ -89,7 +89,7 @@ export type VolumeTracingAction =
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
   | SetSelectedSegmentsOrGroupAction
-  | SetMappingIsEditableAction
+  | SetHasEditableMappingAction
   | SetMappingIsLockedAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
@@ -113,7 +113,7 @@ export const VolumeTracingSaveRelevantActions = [
   "SET_MAPPING_ENABLED",
   "FINISH_MAPPING_INITIALIZATION_ACTION",
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
-  "SET_MAPPING_IS_EDITABLE",
+  "SET_HAS_EDITABLE_MAPPING",
   "SET_MAPPING_IS_LOCKED",
 ];
 
@@ -358,9 +358,9 @@ export const dispatchFloodfillAsync = async (
   await readyDeferred.promise();
 };
 
-export const setMappingIsEditableAction = () =>
+export const setHasEditableMappingAction = () =>
   ({
-    type: "SET_MAPPING_IS_EDITABLE",
+    type: "SET_HAS_EDITABLE_MAPPING",
   }) as const;
 
 export const setMappingIsLockedAction = () =>

@@ -139,7 +139,7 @@ export async function requestWithFallback(
     missingBucketIndices.length > 0 &&
     maybeVolumeTracing != null &&
     maybeVolumeTracing.fallbackLayer != null &&
-    !maybeVolumeTracing.mappingIsEditable;
+    !maybeVolumeTracing.hasEditableMapping;
 
   if (!retry) {
     return bucketBuffers;

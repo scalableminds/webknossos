@@ -699,7 +699,7 @@ function* ensureMappingsAreLoadedAndRequestedMappingExists(
 
   const editableMappings = yield* select((state) =>
     state.tracing.volumes
-      .filter((volumeTracing) => volumeTracing.mappingIsEditable)
+      .filter((volumeTracing) => volumeTracing.hasEditableMapping)
       .map((volumeTracing) => volumeTracing.mappingName),
   );
   const hdf5Mappings = [...serverHdf5Mappings, ...editableMappings];

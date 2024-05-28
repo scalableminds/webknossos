@@ -721,7 +721,7 @@ export function* diffVolumeTracing(
       // In case no mapping is active, this is denoted by setting the mapping name to null.
       const action = updateMappingName(
         volumeTracing.mappingName || null,
-        volumeTracing.mappingIsEditable || null,
+        volumeTracing.hasEditableMapping || null,
         volumeTracing.mappingIsLocked,
       );
       yield action;

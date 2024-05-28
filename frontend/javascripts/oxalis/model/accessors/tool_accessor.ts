@@ -289,7 +289,7 @@ function getDisabledVolumeInfo(state: OxalisState) {
     visibleSegmentationLayer != null &&
     visibleSegmentationLayer.name === segmentationTracingLayer.tracingId;
   const isEditableMappingActive =
-    segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsEditable;
+    segmentationTracingLayer != null && !!segmentationTracingLayer.hasEditableMapping;
 
   const isJSONMappingActive =
     segmentationTracingLayer != null &&
@@ -307,7 +307,7 @@ function getDisabledVolumeInfo(state: OxalisState) {
     isSegmentationTracingTransformed;
 
   const isUneditableMappingLocked =
-    (segmentationTracingLayer?.mappingIsLocked && !segmentationTracingLayer?.mappingIsEditable) ??
+    (segmentationTracingLayer?.mappingIsLocked && !segmentationTracingLayer?.hasEditableMapping) ??
     false;
 
   return isVolumeDisabled || isEditableMappingActive

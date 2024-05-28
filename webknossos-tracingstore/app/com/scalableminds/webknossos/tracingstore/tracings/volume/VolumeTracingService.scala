@@ -139,7 +139,7 @@ class VolumeTracingService @Inject()(
           case Full(tracing) =>
             action match {
               case a: UpdateBucketVolumeAction =>
-                if (tracing.getMappingIsEditable) {
+                if (tracing.getHasEditableMapping) {
                   Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
                 } else
                   updateBucket(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version) ?~> "Failed to save volume data."
@@ -212,10 +212,10 @@ class VolumeTracingService @Inject()(
     } yield volumeTracing
 
   override def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =
-    if (tracing.mappingIsEditable.getOrElse(false)) Some(tracingId) else None
+    if (tracing.hasEditableMapping.getOrElse(false)) Some(tracingId) else None
 
   override def baseMappingName(tracing: VolumeTracing): Fox[Option[String]] =
-    if (tracing.mappingIsEditable.getOrElse(false))
+    if (tracing.hasEditableMapping.getOrElse(false))
       tracing.mappingName.map(editableMappingService.getBaseMappingName).getOrElse(Fox.successful(None))
     else Fox.successful(tracing.mappingName)
 
@@ -1010,7 +1010,7 @@ class VolumeTracingService @Inject()(
   def dummyTracing: VolumeTracing = ???
 
   def mergeEditableMappings(tracingsWithIds: List[(VolumeTracing, String)], userToken: Option[String]): Fox[String] =
-    if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.mappingIsEditable.contains(true))) {
+    if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.hasEditableMapping.contains(true))) {
       for {
         remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
           remoteFallbackLayerFromVolumeTracing(tracingWithId._1, tracingWithId._2))
@@ -1020,7 +1020,7 @@ class VolumeTracingService @Inject()(
         _ <- bool2Fox(editableMappingIds.length == tracingsWithIds.length) ?~> "Not all volume tracings have editable mappings"
         newEditableMappingId <- editableMappingService.merge(editableMappingIds, remoteFallbackLayer, userToken)
       } yield newEditableMappingId
-    } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.mappingIsEditable.getOrElse(false))) {
+    } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.hasEditableMapping.getOrElse(false))) {
       Fox.empty
     } else {
       Fox.failure("Cannot merge tracings with and without editable mappings")

@@ -417,7 +417,7 @@ function AdditionalSkeletonModesButtons() {
     getActiveSegmentationTracing(state),
   );
   const isEditableMappingActive =
-    segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsEditable;
+    segmentationTracingLayer != null && !!segmentationTracingLayer.hasEditableMapping;
   const isMappingLocked =
     segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsLocked;
   const isMergerModeDisabled = isEditableMappingActive || isMappingLocked;

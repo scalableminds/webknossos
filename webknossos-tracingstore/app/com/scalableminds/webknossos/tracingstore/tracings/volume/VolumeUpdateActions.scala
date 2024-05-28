@@ -365,7 +365,7 @@ case class UpdateMappingNameAction(mappingName: Option[String],
     if (tracing.mappingIsLocked.getOrElse(false)) tracing // cannot change mapping name if it is locked
     else
       tracing.copy(mappingName = mappingName,
-                   mappingIsEditable = Some(isEditable.getOrElse(false)),
+                   hasEditableMapping = Some(isEditable.getOrElse(false)),
                    mappingIsLocked = Some(isLocked.getOrElse(false)))
 }
 

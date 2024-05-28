@@ -555,7 +555,7 @@ export function hasEditableMapping(
 
   if (volumeTracing == null) return false;
 
-  return !!volumeTracing.mappingIsEditable;
+  return !!volumeTracing.hasEditableMapping;
 }
 
 export function isMappingLocked(
@@ -784,9 +784,9 @@ export function needsLocalHdf5Mapping(state: OxalisState, layerName: string) {
   if (volumeTracing == null) {
     return false;
   }
-  // todop: rename in protobuf to hasEditableMapping
+
   return (
-    volumeTracing.mappingIsEditable ||
+    volumeTracing.hasEditableMapping ||
     state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD
   );
 }

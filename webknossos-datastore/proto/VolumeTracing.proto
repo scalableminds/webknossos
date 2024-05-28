@@ -40,7 +40,7 @@ message VolumeTracing {
     repeated Vec3IntProto resolutions = 15;
     repeated Segment segments = 16;
     optional string mappingName = 17; // either a mapping present in the fallback layer, or an editable mapping on the tracingstore
-    optional bool mappingIsEditable = 18; // the selected mapping is an editable mapping
+    optional bool hasEditableMapping = 18; // the selected mapping is an editable mapping
     repeated SegmentGroup segmentGroups = 19;
     optional bool hasSegmentIndex = 20;
     repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;

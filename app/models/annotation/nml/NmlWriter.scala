@@ -260,9 +260,6 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         case Right(volumeTracing) =>
           volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
           volumeTracing.largestSegmentId.foreach(id => writer.writeAttribute("largestSegmentId", id.toString))
-          if (skipVolumeData) {
-            writer.writeComment(f"Note that volume data was omitted when downloading this annotation.")
-          }
           if (!volumeTracing.mappingIsEditable.getOrElse(false)) {
             volumeTracing.mappingName.foreach { mappingName =>
               writer.writeAttribute("mappingName", mappingName)
@@ -270,6 +267,9 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
             if (volumeTracing.mappingIsLocked.getOrElse(false)) {
               writer.writeAttribute("mappingIsLocked", true.toString)
             }
+          }
+          if (skipVolumeData) {
+            writer.writeComment(f"Note that volume data was omitted when downloading this annotation.")
           }
           writeVolumeSegmentMetadata(volumeTracing.segments)
           Xml.withinElementSync("groups")(writeSegmentGroupsAsXml(volumeTracing.segmentGroups))

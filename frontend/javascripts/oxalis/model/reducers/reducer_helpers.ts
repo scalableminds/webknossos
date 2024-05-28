@@ -108,7 +108,7 @@ export function convertServerAnnotationToFrontendAnnotation(annotation: APIAnnot
     description,
     name,
     annotationType,
-    isLockedByOwner: isLockedByOwner,
+    isLockedByOwner,
     tracingStore,
     owner,
     contributors,

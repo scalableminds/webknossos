@@ -9,3 +9,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/24.05.0...HEAD)
 
 ### Postgres Evolutions:
+
+- [114-ai-models.sql](conf/evolutions/114-ai-models.sql)

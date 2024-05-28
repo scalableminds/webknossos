@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Table, Button, Modal, Tooltip, Tag, Row, Col, Card } from "antd";
+import { Spin, Input, Table, Button, Modal, Tooltip, Tag, Row, Col, Card, TableProps } from "antd";
 import {
   DownloadOutlined,
   FolderOpenOutlined,
@@ -57,7 +57,6 @@ import { SearchProps } from "antd/lib/input";
 import { getCombinedStatsFromServerAnnotation } from "oxalis/model/accessors/annotation_accessor";
 import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 
-const { Column } = Table;
 const { Search } = Input;
 const pageLength: number = 1000;
 
@@ -636,6 +635,123 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return this.getEmptyListPlaceholder();
     }
 
+    const columns: TableProps["columns"] = [
+      {
+        title: "ID",
+        dataIndex: "id",
+        width: 100,
+        render: (__: any, tracing: APIAnnotationInfo) => (
+          <>
+            <div className="monospace-id">{this.renderIdAndCopyButton(tracing)}</div>
+
+            {!this.isTracingEditable(tracing) ? (
+              <div style={{ color: "#7c7c7c" }}>
+                {READ_ONLY_ICON}
+                read-only
+              </div>
+            ) : null}
+          </>
+        ),
+        sorter: Utils.localeCompareBy((annotation) => annotation.id),
+      },
+      {
+        title: "Name",
+        width: 280,
+        dataIndex: "name",
+        sorter: Utils.localeCompareBy((annotation) => annotation.name),
+        render: (_name: string, tracing: APIAnnotationInfo) =>
+          this.renderNameWithDescription(tracing),
+      },
+      {
+        title: "Owner & Teams",
+        dataIndex: "owner",
+        width: 300,
+        filters: ownerAndTeamsFilters,
+        filterMode: "tree",
+        onFilter: (value: string | number | boolean, tracing: APIAnnotationInfo) =>
+          (tracing.owner != null && tracing.owner.id === value.toString()) ||
+          tracing.teams.some((team) => team.id === value),
+        sorter: Utils.localeCompareBy((annotation) => annotation.owner?.firstName || ""),
+        render: (owner: APIUser | null, tracing: APIAnnotationInfo) => {
+          const ownerName = owner != null ? renderOwner(owner) : null;
+          const teamTags = tracing.teams.map((t) => (
+            <Tag key={t.id} color={stringToColor(t.name)}>
+              {t.name}
+            </Tag>
+          ));
+
+          return (
+            <>
+              <div>
+                <UserOutlined />
+                {ownerName}
+              </div>
+              <div className="flex-container">
+                <div className="flex-item" style={{ flexGrow: 0 }}>
+                  {teamTags.length > 0 ? <TeamOutlined /> : null}
+                </div>
+                <div className="flex-item">{teamTags}</div>
+              </div>
+            </>
+          );
+        },
+      },
+      {
+        title: "Stats",
+        width: 150,
+        render: (__: any, annotation: APIAnnotationInfo) => (
+          <AnnotationStats
+            stats={getCombinedStatsFromServerAnnotation(annotation)}
+            asInfoBlock={false}
+            withMargin={false}
+          />
+        ),
+      },
+      {
+        title: "Tags",
+        dataIndex: "tags",
+        render: (tags: Array<string>, annotation: APIAnnotationInfo) => (
+          <div>
+            {tags.map((tag) => (
+              <CategorizationLabel
+                key={tag}
+                kind="annotations"
+                onClick={_.partial(this.addTagToSearch, tag)}
+                onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
+                tag={tag}
+                closable={
+                  !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
+                  !this.state.shouldShowArchivedTracings &&
+                  tag !== LOCKED_TAG
+                }
+              />
+            ))}
+            {this.state.shouldShowArchivedTracings ? null : (
+              <EditableTextIcon
+                icon={<PlusOutlined />}
+                onChange={_.partial(this.editTagFromAnnotation, annotation, true)}
+              />
+            )}
+          </div>
+        ),
+      },
+      {
+        title: "Modification Date",
+        dataIndex: "modified",
+        width: 200,
+        sorter: Utils.compareBy<APIAnnotationInfo>((annotation) => annotation.modified),
+        render: (modified) => <FormattedDate timestamp={modified} />,
+      },
+      {
+        width: 200,
+        fixed: "right",
+        title: "Actions",
+        className: "nowrap",
+        key: "action",
+        render: (__: any, tracing: APIAnnotationInfo) => this.renderActions(tracing),
+      },
+    ];
+
     return (
       <Table
         dataSource={filteredAndSortedTracings}
@@ -657,124 +773,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           this.currentPageData = currentPageData;
           return null;
         }}
-      >
-        <Column
-          title="ID"
-          dataIndex="id"
-          width={100}
-          render={(__, tracing: APIAnnotationInfo) => (
-            <>
-              <div className="monospace-id">{this.renderIdAndCopyButton(tracing)}</div>
-
-              {!this.isTracingEditable(tracing) ? (
-                <div style={{ color: "#7c7c7c" }}>
-                  {READ_ONLY_ICON}
-                  read-only
-                </div>
-              ) : null}
-            </>
-          )}
-          sorter={Utils.localeCompareBy((annotation) => annotation.id)}
-        />
-        <Column
-          title="Name"
-          width={280}
-          dataIndex="name"
-          sorter={Utils.localeCompareBy((annotation) => annotation.name)}
-          render={(_name: string, tracing: APIAnnotationInfo) =>
-            this.renderNameWithDescription(tracing)
-          }
-        />
-        <Column
-          title="Owner & Teams"
-          dataIndex="owner"
-          width={300}
-          filters={ownerAndTeamsFilters}
-          filterMode="tree"
-          onFilter={(value: string | number | boolean, tracing: APIAnnotationInfo) =>
-            (tracing.owner != null && tracing.owner.id === value.toString()) ||
-            tracing.teams.some((team) => team.id === value)
-          }
-          sorter={Utils.localeCompareBy((annotation) => annotation.owner?.firstName || "")}
-          render={(owner: APIUser | null, tracing: APIAnnotationInfo) => {
-            const ownerName = owner != null ? renderOwner(owner) : null;
-            const teamTags = tracing.teams.map((t) => (
-              <Tag key={t.id} color={stringToColor(t.name)}>
-                {t.name}
-              </Tag>
-            ));
-
-            return (
-              <>
-                <div>
-                  <UserOutlined />
-                  {ownerName}
-                </div>
-                <div className="flex-container">
-                  <div className="flex-item" style={{ flexGrow: 0 }}>
-                    {teamTags.length > 0 ? <TeamOutlined /> : null}
-                  </div>
-                  <div className="flex-item">{teamTags}</div>
-                </div>
-              </>
-            );
-          }}
-        />
-        <Column
-          title="Stats"
-          width={150}
-          render={(__, annotation: APIAnnotationInfo) => (
-            <AnnotationStats
-              stats={getCombinedStatsFromServerAnnotation(annotation)}
-              asInfoBlock={false}
-              withMargin={false}
-            />
-          )}
-        />
-        <Column
-          title="Tags"
-          dataIndex="tags"
-          render={(tags: Array<string>, annotation: APIAnnotationInfo) => (
-            <div>
-              {tags.map((tag) => (
-                <CategorizationLabel
-                  key={tag}
-                  kind="annotations"
-                  onClick={_.partial(this.addTagToSearch, tag)}
-                  onClose={_.partial(this.editTagFromAnnotation, annotation, false, tag)}
-                  tag={tag}
-                  closable={
-                    !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
-                    !this.state.shouldShowArchivedTracings &&
-                    tag !== LOCKED_TAG
-                  }
-                />
-              ))}
-              {this.state.shouldShowArchivedTracings ? null : (
-                <EditableTextIcon
-                  icon={<PlusOutlined />}
-                  onChange={_.partial(this.editTagFromAnnotation, annotation, true)}
-                />
-              )}
-            </div>
-          )}
-        />
-        <Column
-          title="Modification Date"
-          dataIndex="modified"
-          width={200}
-          sorter={Utils.compareBy<APIAnnotationInfo>((annotation) => annotation.modified)}
-          render={(modified) => <FormattedDate timestamp={modified} />}
-        />
-        <Column
-          width={200}
-          fixed="right"
-          title="Actions"
-          className="nowrap"
-          key="action"
-          render={(__, tracing: APIAnnotationInfo) => this.renderActions(tracing)}
-        />
-      </Table>
+        columns={columns}
+      />
     );
   }
 

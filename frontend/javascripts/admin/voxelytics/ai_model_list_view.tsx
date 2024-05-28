@@ -80,7 +80,7 @@ export default function AiModelListView() {
             key: "comment",
           },
           {
-            title: "",
+            title: "Actions",
             render: renderActionsForModel,
             key: "actions",
           },
@@ -100,7 +100,10 @@ const renderActionsForModel = (model: AiModel) => {
   return (
     <div>
       {voxelyticsWorkflowHash != null ? (
-        <Link to={`/workflows/${voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
+        <>
+          <Link to={`/workflows/${voxelyticsWorkflowHash}`}>Voxelytics Report</Link>
+          <br />
+        </>
       ) : null}
       {trainingAnnotations == null ? null : trainingAnnotations.length > 1 ? (
         <a

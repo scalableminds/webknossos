@@ -111,6 +111,7 @@ export const VolumeTracingSaveRelevantActions = [
   // Note that the following two actions are defined in settings_actions.ts
   "SET_MAPPING",
   "SET_MAPPING_ENABLED",
+  "FINISH_MAPPING_INITIALIZATION_ACTION",
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
   "SET_MAPPING_IS_EDITABLE",
   "SET_MAPPING_IS_LOCKED",

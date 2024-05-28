@@ -222,6 +222,16 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "FINISH_MAPPING_INITIALIZATION": {
+      const { layerName } = action;
+      return updateActiveMapping(
+        state,
+        {
+          mappingStatus: MappingStatusEnum.ENABLED,
+        },
+        layerName,
+      );
+    }
     case "SET_MAPPING_ENABLED": {
       const { isMappingEnabled, layerName } = action;
 

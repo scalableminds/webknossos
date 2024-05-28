@@ -4,7 +4,7 @@ import { createUpdatableTexture } from "oxalis/geometries/materials/plane_materi
 import { getMappings, getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getRenderer } from "oxalis/controller/renderer";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import { finishMappingInitializationAction } from "oxalis/model/actions/settings_actions";
 import type { Mapping } from "oxalis/store";
 import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
@@ -100,7 +100,7 @@ class Mappings {
       uint8Values.length / MAPPING_TEXTURE_WIDTH / 4,
     );
     message.destroy(MAPPING_MESSAGE_KEY);
-    Store.dispatch(setMappingEnabledAction(this.layerName, true));
+    Store.dispatch(finishMappingInitializationAction(this.layerName));
     console.timeEnd("MappingActivation");
   }
 

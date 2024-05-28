@@ -24,6 +24,9 @@ type SetFlightmodeRecordingAction = ReturnType<typeof setFlightmodeRecordingActi
 type SetControlModeAction = ReturnType<typeof setControlModeAction>;
 type InitializeGpuSetupAction = ReturnType<typeof initializeGpuSetupAction>;
 export type SetMappingEnabledAction = ReturnType<typeof setMappingEnabledAction>;
+export type FinishMappingInitializationAction = ReturnType<
+  typeof finishMappingInitializationAction
+>;
 export type SetMappingAction = ReturnType<typeof setMappingAction>;
 export type SetMappingNameAction = ReturnType<typeof setMappingNameAction>;
 type SetHideUnmappedIdsAction = ReturnType<typeof setHideUnmappedIdsAction>;
@@ -39,6 +42,7 @@ export type SettingAction =
   | SetFlightmodeRecordingAction
   | SetControlModeAction
   | SetMappingEnabledAction
+  | FinishMappingInitializationAction
   | SetMappingAction
   | SetMappingNameAction
   | SetHideUnmappedIdsAction
@@ -170,6 +174,12 @@ export const setMappingEnabledAction = (layerName: string, isMappingEnabled: boo
     type: "SET_MAPPING_ENABLED",
     layerName,
     isMappingEnabled,
+  }) as const;
+
+export const finishMappingInitializationAction = (layerName: string) =>
+  ({
+    type: "FINISH_MAPPING_INITIALIZATION",
+    layerName,
   }) as const;
 
 export type OptionalMappingProperties = {

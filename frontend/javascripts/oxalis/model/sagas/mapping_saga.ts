@@ -21,9 +21,11 @@ import type {
   OptionalMappingProperties,
   SetMappingAction,
   SetMappingEnabledAction,
-  // SetMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
-import { setMappingAction, setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import {
+  finishMappingInitializationAction,
+  setMappingAction,
+} from "oxalis/model/actions/settings_actions";
 import {
   fetchMapping,
   getMappingsForDatasetLayer,
@@ -213,7 +215,7 @@ function* maybeReloadData(
   // of the mapping activation. For JSON mappings, the last step of the mapping activation
   // is the texture creation in mappings.js
   if (isAgglomerate(mapping) && mapping.mappingStatus === MappingStatusEnum.ACTIVATING) {
-    yield* put(setMappingEnabledAction(layerName, true));
+    yield* put(finishMappingInitializationAction(layerName));
     message.destroy(MAPPING_MESSAGE_KEY);
   }
 

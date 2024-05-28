@@ -42,6 +42,7 @@ import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
 import {
+  FinishMappingInitializationAction,
   SetMappingAction,
   SetMappingEnabledAction,
   SetMappingNameAction,
@@ -238,7 +239,12 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
 
 function VolumeTracingReducer(
   state: OxalisState,
-  action: VolumeTracingAction | SetMappingAction | SetMappingEnabledAction | SetMappingNameAction,
+  action:
+    | VolumeTracingAction
+    | SetMappingAction
+    | FinishMappingInitializationAction
+    | SetMappingEnabledAction
+    | SetMappingNameAction,
 ): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
@@ -384,6 +390,13 @@ function VolumeTracingReducer(
 
     case "SET_MAPPING": {
       return setMappingNameReducer(state, volumeTracing, action.mappingName, action.mappingType);
+    }
+    case "FINISH_MAPPING_INITIALIZATION": {
+      const { mappingName, mappingType } = getMappingInfo(
+        state.temporaryConfiguration.activeMappingByLayer,
+        action.layerName,
+      );
+      return setMappingNameReducer(state, volumeTracing, mappingName, mappingType, true);
     }
 
     case "SET_MAPPING_ENABLED": {

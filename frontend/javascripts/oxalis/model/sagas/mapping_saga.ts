@@ -392,41 +392,15 @@ function* handleSetMapping(
     });
   }
 
-  const dataset = yield* select((state) => state.dataset);
-  const layerInfo = getLayerByName(dataset, layerName);
+  const layerInfo = yield* select((state) => getLayerByName(state.dataset, layerName));
 
-  // Make sure the available mappings are persisted in the store if they are not already
-  const areServerHdf5MappingsInStore =
-    "agglomerates" in layerInfo && layerInfo.agglomerates != null;
-  const [jsonMappings, serverHdf5Mappings] = yield* call(
-    loadLayerMappings,
-    layerName,
-    !areServerHdf5MappingsInStore,
+  const success = yield* call(
+    ensureMappingsAreLoadedAndRequestedMappingExists,
+    layerInfo,
+    mappingName,
+    mappingType,
   );
-
-  const editableMappings = yield* select((state) =>
-    state.tracing.volumes
-      .filter((volumeTracing) => volumeTracing.mappingIsEditable)
-      .map((volumeTracing) => volumeTracing.mappingName),
-  );
-  const hdf5Mappings = [...serverHdf5Mappings, ...editableMappings];
-  const mappingsWithCorrectType = mappingType === "JSON" ? jsonMappings : hdf5Mappings;
-
-  if (!mappingsWithCorrectType.includes(mappingName)) {
-    // Mapping does not exist, set mappingName back to null
-    const availableMappings = mappingsWithCorrectType.join(",");
-    const availableMappingsString =
-      availableMappings.length > 0
-        ? `Available ${mappingType} mappings are ${availableMappings}`
-        : `There are no available ${mappingType} mappings`;
-    const errorMessage = `Mapping with name ${mappingName} and type ${mappingType} does not exist. ${availableMappingsString}.`;
-    message.error({
-      content: errorMessage,
-      key: MAPPING_MESSAGE_KEY,
-      duration: 10,
-    });
-    console.error(errorMessage);
-    yield* put(setMappingAction(layerName, null, mappingType));
+  if (!success) {
     return;
   }
 
@@ -706,4 +680,48 @@ function getMappingChain(mappingName: string, fetchedMappings: APIMappings): Arr
   }
 
   return chain;
+}
+
+function* ensureMappingsAreLoadedAndRequestedMappingExists(
+  layerInfo: APIDataLayer,
+  mappingName: string,
+  mappingType: MappingType,
+) {
+  const { name: layerName } = layerInfo;
+  // Make sure the available mappings are persisted in the store if they are not already
+  const areServerHdf5MappingsInStore =
+    "agglomerates" in layerInfo && layerInfo.agglomerates != null;
+  const [jsonMappings, serverHdf5Mappings] = yield* call(
+    loadLayerMappings,
+    layerName,
+    !areServerHdf5MappingsInStore,
+  );
+
+  const editableMappings = yield* select((state) =>
+    state.tracing.volumes
+      .filter((volumeTracing) => volumeTracing.mappingIsEditable)
+      .map((volumeTracing) => volumeTracing.mappingName),
+  );
+  const hdf5Mappings = [...serverHdf5Mappings, ...editableMappings];
+  const mappingsWithCorrectType = mappingType === "JSON" ? jsonMappings : hdf5Mappings;
+
+  if (!mappingsWithCorrectType.includes(mappingName)) {
+    // Mapping does not exist, set mappingName back to null
+    const availableMappings = mappingsWithCorrectType.join(",");
+    const availableMappingsString =
+      availableMappings.length > 0
+        ? `Available ${mappingType} mappings are ${availableMappings}`
+        : `There are no available ${mappingType} mappings`;
+    const errorMessage = `Mapping with name ${mappingName} and type ${mappingType} does not exist. ${availableMappingsString}.`;
+    message.error({
+      content: errorMessage,
+      key: MAPPING_MESSAGE_KEY,
+      duration: 10,
+    });
+    console.error(errorMessage);
+    yield* put(setMappingAction(layerName, null, mappingType));
+    return false;
+  }
+
+  return true;
 }

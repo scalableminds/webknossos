@@ -759,6 +759,9 @@ export function MitochondriaSegmentationForm() {
 function CustomAiModelInferenceForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
+  const isViewMode = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  );
 
   const [aiModels, isLoading] = useGuardedFetch(
     async function () {
@@ -795,8 +798,9 @@ function CustomAiModelInferenceForm() {
 
         const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
 
+        const maybeAnnotationId = isViewMode ? {} : { annotationId };
         return runInferenceJob({
-          annotationId: annotationId,
+          ...maybeAnnotationId,
           aiModelId: form.getFieldValue("aiModel"),
           datasetName: dataset.name,
           colorLayerName: colorLayer.name,

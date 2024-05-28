@@ -319,7 +319,7 @@ export function runTraining(params: RunTrainingParameters) {
 }
 
 type RunInferenceParameters = {
-  annotationId: string;
+  annotationId?: string;
   aiModelId: string;
   datasetName: string;
   colorLayerName: string;

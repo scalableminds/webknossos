@@ -395,4 +395,3 @@ const isMac = (() => {
 
 export const AltOrOptionKey = isMac ? "⌥" : "Alt";
 export const CtrlOrCmdKey = isMac ? "Cmd" : "Ctrl";
-export const LOCKED_TAG = "locked";

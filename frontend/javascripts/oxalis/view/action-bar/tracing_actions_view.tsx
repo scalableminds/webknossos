@@ -37,7 +37,6 @@ import {
   reOpenAnnotation,
   createExplorational,
   editLockedState,
-  editAnnotation,
 } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import {
@@ -56,7 +55,7 @@ import {
   disableSavingAction,
 } from "oxalis/model/actions/save_actions";
 import ButtonComponent from "oxalis/view/components/button_component";
-import Constants, { ControlModeEnum, LOCKED_TAG } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import { Model } from "oxalis/singletons";
 import SaveButton from "oxalis/view/action-bar/save_button";
@@ -454,13 +453,15 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   };
 
   handleUnlockAnnotation = async () => {
-    const { annotationId, annotationType, annotationTags } = this.props;
-    await editLockedState(annotationId, annotationType, false);
-    await editAnnotation(annotationId, annotationType, {
-      tags: annotationTags.filter((tag) => tag !== LOCKED_TAG),
-    });
-    Toast.info(messages["annotation.unlock.success"]);
-    location.reload();
+    try {
+      const { annotationId, annotationType } = this.props;
+      await editLockedState(annotationId, annotationType, false);
+      Toast.info(messages["annotation.unlock.success"]);
+      location.reload();
+    } catch (error: any) {
+      Toast.error("Could not unlock the annotation. " + error?.message);
+      console.error("Could not unlock the annotation. ", error);
+    }
   };
 
   render() {

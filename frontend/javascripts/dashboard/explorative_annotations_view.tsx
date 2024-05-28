@@ -24,7 +24,7 @@ import {
   APIUser,
   APIUserCompact,
 } from "types/api_flow_types";
-import { AnnotationContentTypes, LOCKED_TAG } from "oxalis/constants";
+import { AnnotationContentTypes } from "oxalis/constants";
 import {
   finishAllAnnotations,
   editAnnotation,
@@ -273,11 +273,14 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   });
 
   setLockedState = async (tracing: APIAnnotationInfo, locked: boolean) => {
-    const newTracing = await editLockedState(tracing.id, tracing.typ, locked);
-    Toast.success(messages["annotation.was_edited"]);
-    this.updateTracingInLocalState(tracing, (_t) => newTracing);
-    trackAction("Lock/Unlock explorative annotation");
-    this.editTagFromAnnotation(tracing, locked, LOCKED_TAG);
+    try {
+      const newTracing = await editLockedState(tracing.id, tracing.typ, locked);
+      Toast.success(messages["annotation.was_edited"]);
+      this.updateTracingInLocalState(tracing, (_t) => newTracing);
+      trackAction("Lock/Unlock explorative annotation");
+    } catch (error) {
+      handleGenericError(error as Error, "Could not update the annotation lock state.");
+    }
   };
 
   renderActions = (tracing: APIAnnotationInfo) => {
@@ -370,19 +373,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   renameTracing(tracing: APIAnnotationInfo, name: string) {
-    const previousTracingName = tracing.name;
-    this.updateTracingInLocalState(tracing, (t) => update(t, { name: { $set: name } }));
-    editAnnotation(tracing.id, tracing.typ, {
-      name,
-    })
+    editAnnotation(tracing.id, tracing.typ, { name })
       .then(() => {
         Toast.success(messages["annotation.was_edited"]);
+        this.updateTracingInLocalState(tracing, (t) => update(t, { name: { $set: name } }));
       })
       .catch((error) => {
         handleGenericError(error as Error, "Could not update the annotation name.");
-        this.updateTracingInLocalState(tracing, (t) =>
-          update(t, { name: { $set: previousTracingName } }),
-        );
       });
   }
 
@@ -635,6 +632,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return this.getEmptyListPlaceholder();
     }
 
+    const disabledColor = { color: "var(--ant-color-text-disabled)" };
     const columns: TableProps["columns"] = [
       {
         title: "ID",
@@ -645,9 +643,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <div className="monospace-id">{this.renderIdAndCopyButton(tracing)}</div>
 
             {!this.isTracingEditable(tracing) ? (
-              <div style={{ color: "#7c7c7c" }}>
-                {READ_ONLY_ICON}
-                read-only
+              <div style={disabledColor}>{READ_ONLY_ICON} read-only</div>
+            ) : null}
+            {tracing.isLockedByOwner ? (
+              <div style={disabledColor}>
+                <LockOutlined style={{ marginLeft: 8, marginRight: 8 }} /> locked
               </div>
             ) : null}
           </>
@@ -721,8 +721,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                 tag={tag}
                 closable={
                   !(tag === annotation.dataSetName || AnnotationContentTypes.includes(tag)) &&
-                  !this.state.shouldShowArchivedTracings &&
-                  tag !== LOCKED_TAG
+                  !this.state.shouldShowArchivedTracings
                 }
               />
             ))}

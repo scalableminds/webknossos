@@ -6,7 +6,6 @@ DROP VIEW webknossos.jobs_;
 ALTER TABLE webknossos.jobs DROP COLUMN _voxelytics_workflowHash;
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
 
-DROP TABLE webknossos.aiModel_trainingAnnotations;
 DROP VIEW webknossos.aiModels_;
 DROP VIEW webknossos.aiInferences_;
 

@@ -19,12 +19,6 @@ CREATE TABLE webknossos.aiModels(
   UNIQUE (_organization, name)
 );
 
-CREATE TABLE webknossos.aiModel_trainingAnnotations(
-  _aiModel CHAR(24) NOT NULL,
-  _annotation CHAR(24) NOT NULL,
-  PRIMARY KEY(_aiModel,_annotation)
-);
-
 CREATE TABLE webknossos.aiInferences(
   _id CHAR(24) PRIMARY KEY,
   _organization CHAR(24) NOT NULL,
@@ -58,9 +52,6 @@ ALTER TABLE webknossos.aiInferences
   ADD FOREIGN KEY (_newDataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
   ADD FOREIGN KEY (_inferenceJob) REFERENCES webknossos.jobs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
-ALTER TABLE webknossos.aiModel_trainingAnnotations
-  ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
-  ADD FOREIGN KEY (_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 114;
 

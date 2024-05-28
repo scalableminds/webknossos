@@ -369,12 +369,12 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
               RunEntry(
                 id = ObjectId(row._1),
                 name = row._2,
-                hostusername = row._3,
-                hostname = row._4,
+                hostUsername = row._3,
+                hostName = row._4,
                 voxelyticsVersion = row._5,
-                workflow_hash = row._6,
-                workflow_yamlContent = row._7,
-                workflow_config = Json.parse(row._8).as[JsObject],
+                workflowHash = row._6,
+                workflowYamlContent = row._7,
+                workflowConfig = Json.parse(row._8).as[JsObject],
                 state = state,
                 beginTime = row._10,
                 endTime = row._11
@@ -521,10 +521,10 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
               WorkflowListingRunEntry(
                 id = ObjectId(row._1),
                 name = row._2,
-                hostusername = row._3,
-                hostname = row._4,
+                hostUsername = row._3,
+                hostName = row._4,
                 voxelyticsVersion = row._5,
-                workflow_hash = row._6,
+                workflowHash = row._6,
                 state = state,
                 beginTime = row._8,
                 endTime = row._9,
@@ -988,12 +988,12 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                 username: String,
                 hostname: String,
                 voxelyticsVersion: String,
-                workflow_hash: String,
-                workflow_yamlContent: Option[String],
-                workflow_config: JsValue): Fox[ObjectId] =
+                workflowHash: String,
+                workflowYamlContent: Option[String],
+                workflowConfig: JsValue): Fox[ObjectId] =
     for {
       _ <- run(q"""
-        INSERT INTO webknossos.voxelytics_runs (_id, _organization, _user, name, username, hostname, voxelyticsVersion, workflow_hash, workflow_yamlContent, workflow_config)
+        INSERT INTO webknossos.voxelytics_runs (_id, _organization, _user, name, username, hostname, voxelyticsVersion, workflowHash, workflowYamlContent, workflowConfig)
         VALUES ${SqlToken.tupleFromValues(ObjectId.generate,
                                           organizationId,
                                           userId,
@@ -1001,18 +1001,18 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                                           username,
                                           hostname,
                                           voxelyticsVersion,
-                                          workflow_hash,
-                                          workflow_yamlContent,
-                                          workflow_config)}
+                                          workflowHash,
+                                          workflowYamlContent,
+                                          workflowConfig)}
         ON CONFLICT (_organization, name)
           DO UPDATE SET
             _user = EXCLUDED._user,
             username = EXCLUDED.username,
             hostname = EXCLUDED.hostname,
             voxelyticsVersion = EXCLUDED.voxelyticsVersion,
-            workflow_hash = EXCLUDED.workflow_hash,
-            workflow_yamlContent = EXCLUDED.workflow_yamlContent,
-            workflow_config = EXCLUDED.workflow_config
+            workflowHash = EXCLUDED.workflowHash,
+            workflowYamlContent = EXCLUDED.workflowYamlContent,
+            workflowConfig = EXCLUDED.workflowConfig
         """.asUpdate)
       objectIdList <- run(q"""
         SELECT _id

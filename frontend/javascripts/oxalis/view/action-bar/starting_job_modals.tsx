@@ -57,6 +57,7 @@ import { InfoCircleOutlined } from "@ant-design/icons";
 import { TrainAiModelTab } from "../jobs/train_ai_model";
 import { LayerSelectionFormItem } from "components/layer_selection";
 import { useGuardedFetch } from "libs/react_helpers";
+import _ from "lodash";
 
 const { ThinSpace } = Unicode;
 
@@ -323,18 +324,21 @@ export function OutputSegmentationLayerNameFormItem({
 
 export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
   const onClose = () => Store.dispatch(setAIJobModalStateAction("invisible"));
-  const tabs = [
+  const isSuperUser = Store.getState().activeUser?.isSuperUser || false;
+  const tabs = _.compact([
     {
       label: "Run a model",
       key: "runModel",
       children: <RunAiModelTab aIJobModalState={aIJobModalState} />,
     },
-    {
-      label: "Train a model",
-      key: "trainModel",
-      children: <TrainAiModelTab onClose={onClose} />,
-    },
-  ];
+    isSuperUser
+      ? {
+          label: "Train a model",
+          key: "trainModel",
+          children: <TrainAiModelTab onClose={onClose} />,
+        }
+      : null,
+  ]);
   return aIJobModalState !== "invisible" ? (
     <Modal
       width={667}

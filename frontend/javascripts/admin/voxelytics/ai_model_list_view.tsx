@@ -11,6 +11,7 @@ import { OxalisState } from "oxalis/store";
 import { JobState } from "admin/job/job_list_view";
 import { Link } from "react-router-dom";
 import { useGuardedFetch } from "libs/react_helpers";
+import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
 
 export default function AiModelListView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -21,6 +22,10 @@ export default function AiModelListView() {
     [refreshCounter],
     "Could not load model list.",
   );
+
+  if (!activeUser?.isSuperUser) {
+    return <PageNotAvailableToNormalUser />;
+  }
 
   return (
     <div className="container voxelytics-view">

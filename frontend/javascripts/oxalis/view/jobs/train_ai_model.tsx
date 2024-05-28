@@ -1,7 +1,7 @@
 import React from "react";
-import { Alert, Form, Row, Col, Input, Button, Select, Collapse } from "antd";
+import { Alert, Form, Row, Col, Input, Button, Select, Collapse, Tooltip } from "antd";
 import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
+import { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
   getColorLayers,
@@ -17,6 +17,7 @@ import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracin
 import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { formatVoxels } from "libs/format_utils";
+import { V3 } from "libs/mjs";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -72,11 +73,14 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
   const bboxesVoxelCount = _.sum(
     userBoundingBoxes.map((bbox) => new BoundingBox(bbox.boundingBox).getVolume()),
   );
+
+  const { valid, reason } = areBoundingBoxesValid(userBoundingBoxes);
+
   return (
     <Form onFinish={onFinish} form={form} initialValues={defaultValues} layout="vertical">
       <Row style={{ display: "grid", marginBottom: 16 }}>
         <Alert
-          message="Please note that this feature is experimental. Bounding boxes are expected to have sizes that are multiple of 20×20×18 voxel."
+          message="Please note that this feature is experimental. All bounding boxes must be the same size, with equal width and height. Ensure the size is not too small (we recommend at least 10 Vx per dimension) and choose boxes that represent the data well."
           type="warning"
           showIcon
         />
@@ -172,18 +176,42 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
         </div>
       </FormItem>
       <FormItem>
-        <Button
-          size="large"
-          type="primary"
-          htmlType="submit"
-          style={{
-            width: "100%",
-          }}
-          disabled={userBoundingBoxes.length === 0}
-        >
-          Start Training
-        </Button>
+        <Tooltip title={reason}>
+          <Button
+            size="large"
+            type="primary"
+            htmlType="submit"
+            style={{
+              width: "100%",
+            }}
+            disabled={!valid}
+          >
+            Start Training
+          </Button>
+        </Tooltip>
       </FormItem>
     </Form>
   );
+}
+
+function areBoundingBoxesValid(userBoundingBoxes: UserBoundingBox[]): {
+  valid: boolean;
+  reason: string | null;
+} {
+  if (userBoundingBoxes.length === 0) {
+    return { valid: false, reason: "At least one bounding box must be defined." };
+  }
+  const getSize = (bbox: UserBoundingBox) => V3.sub(bbox.boundingBox.max, bbox.boundingBox.min);
+
+  const size = getSize(userBoundingBoxes[0]);
+  // width must equal height
+  if (size[0] !== size[1]) {
+    return { valid: false, reason: "The bounding box width must equal its height." };
+  }
+  // all bounding boxes must have the same size
+  const areSizesIdentical = userBoundingBoxes.every((bbox) => V3.isEqual(getSize(bbox), size));
+  if (areSizesIdentical) {
+    return { valid: true, reason: "" };
+  }
+  return { valid: false, reason: "All bounding boxes must have the same size." };
 }

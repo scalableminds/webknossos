@@ -263,6 +263,14 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           if (skipVolumeData) {
             writer.writeComment(f"Note that volume data was omitted when downloading this annotation.")
           }
+          if (!volumeTracing.mappingIsEditable.getOrElse(false)) {
+            volumeTracing.mappingName.foreach { mappingName =>
+              writer.writeAttribute("mappingName", mappingName)
+            }
+            if (volumeTracing.mappingIsLocked.getOrElse(false)) {
+              writer.writeAttribute("mappingIsLocked", true.toString)
+            }
+          }
           writeVolumeSegmentMetadata(volumeTracing.segments)
           Xml.withinElementSync("groups")(writeSegmentGroupsAsXml(volumeTracing.segmentGroups))
         case _ => ()

@@ -354,4 +354,8 @@ segmentAnything.getEmbedding.failed=Failed to get image embedding from SAM serve
 
 shortLink.notFound=No shortlink with this key could be found
 
-aiModels.delete.referencedByInferences=Cannot delete AI models that are referenced by existing inferences.
+aiModel.delete.referencedByInferences=Cannot delete AI models that are referenced by existing inferences.
+aiModel.notFound=Could not find requested AI model.
+aiModel.training.zeroAnnotations=Need at least one training annotation for model training.
+
+aiInference.notFound=Could not find requested AI inference.

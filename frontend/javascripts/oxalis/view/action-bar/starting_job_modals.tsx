@@ -795,7 +795,7 @@ function CustomAiModelInferenceForm() {
           annotationId: annotationId,
           aiModelId: form.getFieldValue("aiModel"),
           datasetName: dataset.name,
-          coloLayerName: colorLayer.name,
+          colorLayerName: colorLayer.name,
           boundingBox,
           newSegmentationLayerName: outputSegmentationLayerName,
           newDatasetName: newDatasetName,

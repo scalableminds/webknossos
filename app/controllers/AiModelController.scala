@@ -41,7 +41,7 @@ object RunTrainingParameters {
 case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   aiModelId: ObjectId,
                                   datasetName: String,
-                                  coloLayerName: String,
+                                  colorLayerName: String,
                                   boundingBox: String,
                                   newSegmentationLayerName: String,
                                   newDatasetName: String,
@@ -137,11 +137,11 @@ class AiModelController @Inject()(
           "model_id" -> modelId,
           "workflow_yaml" -> request.body.workflowYaml
         )
-        newTrainingJob <- jobService
-          .submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunTrainModel"
         existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
                                                                        request.identity._organization)
         _ <- bool2Fox(existingAiModelsCount == 0) ?~> "model.nameInUse"
+        newTrainingJob <- jobService
+          .submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunTrainModel"
         newAiModel = AiModel(
           _id = modelId,
           _organization = request.identity._organization,
@@ -165,15 +165,16 @@ class AiModelController @Inject()(
         organization <- organizationDAO.findOne(request.identity._organization)
         dataset <- datasetDAO.findOneByNameAndOrganization(request.body.datasetName, organization._id)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
-        // _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
+        _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         _ <- datasetService.assertNewDatasetName(request.body.newDatasetName, organization._id)
+        _ <- datasetService.assertValidLayerNameLax(request.body.newSegmentationLayerName)
         jobCommand = JobCommand.infer_with_model
         boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
           "organization_name" -> organization.name,
           "dataset_name" -> dataset.name,
-          "color_layer_name" -> request.body.coloLayerName,
+          "color_layer_name" -> request.body.colorLayerName,
           "bounding_box" -> boundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
           "new_segmentation_layer_name" -> request.body.newSegmentationLayerName,

@@ -322,7 +322,7 @@ type RunInferenceParameters = {
   annotationId: string;
   aiModelId: string;
   datasetName: string;
-  coloLayerName: string;
+  colorLayerName: string;
   boundingBox: Vector6;
   newSegmentationLayerName: string;
   newDatasetName: string;

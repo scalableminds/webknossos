@@ -628,10 +628,10 @@ export function editAnnotation(
 export function editLockedState(
   annotationId: string,
   annotationType: APIAnnotationType,
-  isLockedByUser: boolean,
+  isLockedByOwner: boolean,
 ): Promise<APIAnnotation> {
   return Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/editLockedState?isLockedByUser=${isLockedByUser}`,
+    `/api/annotations/${annotationType}/${annotationId}/editLockedState?isLockedByOwner=${isLockedByOwner}`,
     {
       method: "PATCH",
     },

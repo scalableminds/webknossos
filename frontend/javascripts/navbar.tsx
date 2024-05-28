@@ -85,7 +85,7 @@ type StateProps = {
   hasOrganizations: boolean;
   othersMayEdit: boolean;
   allowUpdate: boolean;
-  isLockedByUser: boolean;
+  isLockedByOwner: boolean;
   isAnnotationOwner: boolean;
   annotationOwnerName: string;
   blockedByUser: APIUserCompact | null | undefined;
@@ -809,7 +809,7 @@ function Navbar({
   blockedByUser,
   allowUpdate,
   annotationOwnerName,
-  isLockedByUser,
+  isLockedByOwner,
   navbarHeight,
   isAnnotationOwner,
 }: Props) {
@@ -874,7 +874,7 @@ function Navbar({
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    if (othersMayEdit && !allowUpdate && !isLockedByUser) {
+    if (othersMayEdit && !allowUpdate && !isLockedByOwner) {
       trailingNavItems.push(
         <AnnotationLockedByUserTag
           key="locked-by-user-tag"
@@ -883,7 +883,7 @@ function Navbar({
         />,
       );
     }
-    if (isLockedByUser) {
+    if (isLockedByOwner) {
       trailingNavItems.push(
         <AnnotationLockedByOwnerTag
           key="locked-by-owner-tag"
@@ -990,7 +990,7 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   othersMayEdit: state.tracing.othersMayEdit,
   blockedByUser: state.tracing.blockedByUser,
   allowUpdate: state.tracing.restrictions.allowUpdate,
-  isLockedByUser: state.tracing.isLockedByUser,
+  isLockedByOwner: state.tracing.isLockedByOwner,
   annotationOwnerName: formatUserName(state.activeUser, state.tracing.owner),
   isAnnotationOwner: isAnnotationOwnerAccessor(state),
   navbarHeight: state.uiInformation.navbarHeight,

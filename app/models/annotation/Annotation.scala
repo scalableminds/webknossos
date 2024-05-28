@@ -34,7 +34,7 @@ case class Annotation(
     name: String = "",
     viewConfiguration: Option[JsObject] = None,
     state: AnnotationState.Value = Active,
-    isLockedByUser: Boolean = false,
+    isLockedByOwner: Boolean = false,
     tags: Set[String] = Set.empty,
     tracingTime: Option[Long] = None,
     typ: AnnotationType.Value = AnnotationType.Explorational,
@@ -86,7 +86,7 @@ case class AnnotationCompactInfo(id: ObjectId,
                                  modified: Instant,
                                  tags: Set[String],
                                  state: AnnotationState.Value = Active,
-                                 isLockedByUser: Boolean,
+                                 isLockedByOwner: Boolean,
                                  dataSetName: String,
                                  visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
                                  tracingTime: Option[Long] = None,
@@ -217,7 +217,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
         r.name,
         viewconfigurationOpt,
         state,
-        r.islockedbyuser,
+        r.islockedbyowner,
         parseArrayLiteral(r.tags).toSet,
         r.tracingtime,
         typ,
@@ -339,7 +339,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val modified = <<[Instant]
     val tags = parseArrayLiteral(<<[String]).toSet
     val state = AnnotationState.fromString(<<[String]).getOrElse(AnnotationState.Active)
-    val isLockedByUser = <<[Boolean]
+    val isLockedByOwner = <<[Boolean]
     val dataSetName = <<[String]
     val typ = AnnotationType.fromString(<<[String]).getOrElse(AnnotationType.Explorational)
     val visibility = AnnotationVisibility.fromString(<<[String]).getOrElse(AnnotationVisibility.Internal)
@@ -353,7 +353,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
 
     // format: off
     AnnotationCompactInfo(id, typ, name,description,ownerId,ownerFirstName,ownerLastName, othersMayEdit,teamIds,
-      teamNames,teamOrganizationIds,modified,tags,state,isLockedByUser,dataSetName,visibility,tracingTime,
+      teamNames,teamOrganizationIds,modified,tags,state,isLockedByOwner,dataSetName,visibility,tracingTime,
       organizationName,tracingIds,annotationLayerNames,annotationLayerTypes,annotationLayerStatistics
     )
     // format: on
@@ -403,7 +403,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                     a.modified,
                     a.tags,
                     a.state,
-                    a.isLockedByUser,
+                    a.isLockedByOwner,
                     d.name,
                     a.typ,
                     a.visibility,
@@ -422,7 +422,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                   WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
                   GROUP BY
                     a._id, a.name, a.description, a._user, a.othersmayedit, a.modified,
-                    a.tags, a.state,  a.islockedbyuser, a.typ, a.visibility, a.tracingtime,
+                    a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
                     u.firstname, u.lastname,
                     teams_agg.team_ids, teams_agg.team_names, teams_agg.team_organization_ids,
                     d.name, o.name
@@ -681,13 +681,13 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def updateLockedState(id: ObjectId, isLocked: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
-      query = q"UPDATE webknossos.annotations SET isLockedByUser = $isLocked WHERE _id = $id".asUpdate
+      query = q"UPDATE webknossos.annotations SET isLockedByOwner = $isLocked WHERE _id = $id".asUpdate
       _ <- run(
         query.withTransactionIsolation(Serializable),
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError)) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
       _ = logger.info(
-        s"Updated isLockedByUser of Annotation $id to $isLocked, access context: ${ctx.toStringAnonymous}")
+        s"Updated isLockedByOwner of Annotation $id to $isLocked, access context: ${ctx.toStringAnonymous}")
     } yield ()
 
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext): Fox[Unit] =

@@ -23,7 +23,7 @@ export default function BoundingBoxTab() {
     useState<UserBoundingBox | null>(null);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const allowUpdate = tracing.restrictions.allowUpdate;
-  const isLockedByUser = tracing.isLockedByUser;
+  const isLockedByOwner = tracing.isLockedByOwner;
   const isOwner = useSelector((state: OxalisState) => isAnnotationOwner(state));
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const { userBoundingBoxes } = getSomeTracing(tracing);
@@ -127,7 +127,7 @@ export default function BoundingBoxTab() {
             onNameChange={_.partial(setBoundingBoxName, bb.id)}
             onColorChange={_.partial(setBoundingBoxColor, bb.id)}
             disabled={allowUpdate}
-            isLockedByUser={isLockedByUser}
+            isLockedByOwner={isLockedByOwner}
             isOwner={isOwner}
           />
         ))

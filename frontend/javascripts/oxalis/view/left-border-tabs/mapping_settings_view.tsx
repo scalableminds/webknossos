@@ -188,7 +188,6 @@ class MappingSettingsView extends React.Component<Props, State> {
     const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || isMappingEnabled;
     const renderHideUnmappedSegmentsSwitch =
       (shouldMappingBeEnabled || isMergerModeEnabled) && mapping && hideUnmappedIds != null;
-    // TODO: Ask whether changing the mapping should be disabled when the annotation is locked.
     const isDisabled = isMappingLocked || !allowUpdate;
     const disabledMessage = !allowUpdate
       ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner)
@@ -289,7 +288,7 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
     isMappingLocked: isMappingLocked(state, ownProps.layerName),
-    isAnnotationLockedByUser: state.tracing.isLockedByUser,
+    isAnnotationLockedByUser: state.tracing.isLockedByOwner,
     isOwner: isAnnotationOwner(state),
   };
 }

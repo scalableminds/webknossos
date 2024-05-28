@@ -376,7 +376,7 @@ type UserBoundingBoxInputProps = {
   onNameChange: (arg0: string) => void;
   onColorChange: (arg0: Vector3) => void;
   disabled: boolean;
-  isLockedByUser: boolean;
+  isLockedByOwner: boolean;
   isOwner: boolean;
 };
 type State = {
@@ -480,7 +480,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       isExportEnabled,
       onGoToBoundingBox,
       disabled,
-      isLockedByUser,
+      isLockedByOwner,
       isOwner,
     } = this.props;
     const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
@@ -501,7 +501,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       </Col>
     ) : null;
     const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
-      isLockedByUser,
+      isLockedByOwner,
       isOwner,
     );
     return (

@@ -178,7 +178,7 @@ function _ShareModalView(props: Props) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const isAnnotationLockedByUser = tracing.isLockedByUser;
+  const isAnnotationLockedByUser = tracing.isLockedByOwner;
 
   const annotationVisibility = tracing.visibility;
   const [visibility, setVisibility] = useState(annotationVisibility);

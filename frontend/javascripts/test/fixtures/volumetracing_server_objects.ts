@@ -116,5 +116,5 @@ export const annotation: APIAnnotation = {
   tracingTime: 0,
   contributors: [],
   othersMayEdit: false,
-  isLockedByUser: false,
+  isLockedByOwner: false,
 };

@@ -197,7 +197,7 @@ export type Annotation = {
   readonly contributors: APIUserBase[];
   readonly othersMayEdit: boolean;
   readonly blockedByUser: APIUserCompact | null | undefined;
-  readonly isLockedByUser: boolean;
+  readonly isLockedByOwner: boolean;
 };
 type TracingBase = {
   readonly createdTimestamp: number;

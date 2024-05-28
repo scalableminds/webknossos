@@ -165,7 +165,7 @@ export const annotation: APIAnnotation = {
   },
   contributors: [],
   othersMayEdit: false,
-  isLockedByUser: false,
+  isLockedByOwner: false,
   teams: [
     {
       id: "5b1e45f9a00000a000abc2c3",

@@ -459,6 +459,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     await editAnnotation(annotationId, annotationType, {
       tags: annotationTags.filter((tag) => tag !== LOCKED_TAG),
     });
+    Toast.info(messages["annotation.unlock.success"]);
     location.reload();
   };
 
@@ -745,7 +746,7 @@ function mapStateToProps(state: OxalisState): StateProps {
     isShareModalOpen: state.uiInformation.showShareModal,
     isRenderAnimationModalOpen: state.uiInformation.showRenderAnimationModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
-    isAnnotationLockedByUser: state.tracing.isLockedByUser,
+    isAnnotationLockedByUser: state.tracing.isLockedByOwner,
     annotationTags: state.tracing.tags,
   };
 }

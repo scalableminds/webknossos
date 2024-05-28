@@ -546,7 +546,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
 const mapStateToProps = (state: OxalisState) => ({
   skeletonTracing: state.tracing.skeleton,
   allowUpdate: state.tracing.restrictions.allowUpdate,
-  isAnnotationLockedByUser: state.tracing.isLockedByUser,
+  isAnnotationLockedByUser: state.tracing.isLockedByOwner,
   isOwner: isAnnotationOwner(state),
 });
 

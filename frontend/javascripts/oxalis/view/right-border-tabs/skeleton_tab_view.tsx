@@ -986,7 +986,7 @@ const mapStateToProps = (state: OxalisState) => ({
   skeletonTracing: state.tracing.skeleton,
   userConfiguration: state.userConfiguration,
   isSkeletonLayerTransformed: isSkeletonLayerTransformed(state),
-  isAnnotationLockedByUser: state.tracing.isLockedByUser,
+  isAnnotationLockedByUser: state.tracing.isLockedByOwner,
   isOwner: isAnnotationOwner(state),
 });
 

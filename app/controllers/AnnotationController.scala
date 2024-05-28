@@ -180,18 +180,18 @@ class AnnotationController @Inject()(
     } yield JsonOk(json, Messages("annotation.reopened"))
   }
 
-  def editLockedState(typ: String, id: String, isLockedByUser: Boolean): Action[AnyContent] = sil.SecuredAction.async {
+  def editLockedState(typ: String, id: String, isLockedByOwner: Boolean): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity)
-        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "annotation.isLockedByUser.notAllowed"
-        _ <- bool2Fox(annotation.typ == AnnotationType.Explorational) ?~> "annotation.isLockedByUser.explorationalsOnly"
+        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "annotation.isLockedByOwner.notAllowed"
+        _ <- bool2Fox(annotation.typ == AnnotationType.Explorational) ?~> "annotation.isLockedByOwner.explorationalsOnly"
         _ = logger.info(
-          s"Locking annotation $id, new locked state will be ${isLockedByUser.toString}, access context: ${request.identity.toStringAnonymous}")
-        _ <- annotationDAO.updateLockedState(annotation._id, isLockedByUser) ?~> "annotation.invalid"
+          s"Locking annotation $id, new locked state will be ${isLockedByOwner.toString}, access context: ${request.identity.toStringAnonymous}")
+        _ <- annotationDAO.updateLockedState(annotation._id, isLockedByOwner) ?~> "annotation.invalid"
         updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
         json <- annotationService.publicWrites(updatedAnnotation, Some(request.identity)) ?~> "annotation.write.failed"
-      } yield JsonOk(json, Messages("annotation.IsLockedByUser.success"))
+      } yield JsonOk(json, Messages("annotation.isLockedByOwner.success"))
   }
 
   def addAnnotationLayer(typ: String, id: String): Action[AnnotationLayerParameters] =

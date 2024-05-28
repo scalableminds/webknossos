@@ -153,17 +153,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     callback: (arg0: APIAnnotationInfo) => APIAnnotationInfo,
   ) => {
     const tracings = this.getCurrentTracings();
-    let updatedTracing = tracing;
-    const newTracings = tracings.map((currentTracing) => {
-      if (currentTracing.id !== tracing.id) {
-        return currentTracing;
-      } else {
-        updatedTracing = callback(currentTracing);
-        return updatedTracing;
-      }
-    });
+    const newTracings = tracings.map((currentTracing) =>
+      currentTracing.id !== tracing.id ? currentTracing : callback(currentTracing),
+    );
     this.setModeState({ tracings: newTracings }, this.state.shouldShowArchivedTracings);
-    return updatedTracing;
   };
 
   setModeState = (modeShape: Partial<TracingModeState>, useArchivedTracings: boolean) =>
@@ -320,8 +313,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               href="#"
               onClick={() => this.finishOrReopenAnnotation("finish", tracing)}
               icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
-              disabled={tracing.isLockedByUser}
-              title={tracing.isLockedByUser ? "Locked annotations cannot be archived." : undefined}
+              disabled={tracing.isLockedByOwner}
+              title={tracing.isLockedByOwner ? "Locked annotations cannot be archived." : undefined}
             >
               Archive
             </AsyncLink>
@@ -332,21 +325,21 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             title={
               !isActiveUserOwner
                 ? `Only the owner can ${
-                    tracing.isLockedByUser ? "unlock" : "lock"
+                    tracing.isLockedByOwner ? "unlock" : "lock"
                   } this annotation.`
                 : undefined
             }
             disabled={!isActiveUserOwner}
-            onClick={() => this.setLockedState(tracing, !tracing.isLockedByUser)}
+            onClick={() => this.setLockedState(tracing, !tracing.isLockedByOwner)}
             icon={
-              tracing.isLockedByUser ? (
+              tracing.isLockedByOwner ? (
                 <LockOutlined key="lock" className="icon-margin-right" />
               ) : (
                 <UnlockOutlined key="unlock" className="icon-margin-right" />
               )
             }
           >
-            {tracing.isLockedByUser ? "Unlock" : "Lock"}
+            {tracing.isLockedByOwner ? "Unlock" : "Lock"}
           </AsyncLink>
           <br />
         </div>
@@ -378,12 +371,20 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   renameTracing(tracing: APIAnnotationInfo, name: string) {
+    const previousTracingName = tracing.name;
     this.updateTracingInLocalState(tracing, (t) => update(t, { name: { $set: name } }));
     editAnnotation(tracing.id, tracing.typ, {
       name,
-    }).then(() => {
-      Toast.success(messages["annotation.was_edited"]);
-    });
+    })
+      .then(() => {
+        Toast.success(messages["annotation.was_edited"]);
+      })
+      .catch((error) => {
+        handleGenericError(error as Error, "Could not update the annotation name.");
+        this.updateTracingInLocalState(tracing, (t) =>
+          update(t, { name: { $set: previousTracingName } }),
+        );
+      });
   }
 
   archiveAll = () => {

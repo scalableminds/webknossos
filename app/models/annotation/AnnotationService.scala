@@ -899,7 +899,7 @@ class AnnotationService @Inject()(
       Json.obj(
         "modified" -> annotation.modified,
         "state" -> annotation.state,
-        "isLockedByUser" -> annotation.isLockedByUser,
+        "isLockedByOwner" -> annotation.isLockedByOwner,
         "id" -> annotation.id,
         "name" -> annotation.name,
         "description" -> annotation.description,
@@ -1002,7 +1002,7 @@ class AnnotationService @Inject()(
       "description" -> annotationInfo.description,
       "typ" -> annotationInfo.typ,
       "stats" -> Json.obj(), // included for legacy parsers
-      "isLockedByUser" -> annotationInfo.isLockedByUser,
+      "isLockedByOwner" -> annotationInfo.isLockedByOwner,
       "annotationLayers" -> annotationLayerJson,
       "dataSetName" -> annotationInfo.dataSetName,
       "organization" -> annotationInfo.organizationName,

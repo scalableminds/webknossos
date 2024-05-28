@@ -140,7 +140,7 @@ PATCH         /annotations/:typ/finish                                          
 PATCH         /annotations/:typ/:id/reopen                                                      controllers.AnnotationController.reopen(typ: String, id: String)
 PUT           /annotations/:typ/:id/reset                                                       controllers.AnnotationController.reset(typ: String, id: String)
 PATCH         /annotations/:typ/:id/transfer                                                    controllers.AnnotationController.transfer(typ: String, id: String)
-PATCH         /annotations/:typ/:id/editLockedState                                             controllers.AnnotationController.editLockedState(typ: String, id: String, isLockedByUser: Boolean)
+PATCH         /annotations/:typ/:id/editLockedState                                             controllers.AnnotationController.editLockedState(typ: String, id: String, isLockedByOwner: Boolean)
 
 GET           /annotations/:id/info                                                             controllers.AnnotationController.infoWithoutType(id: String, timestamp: Long)
 PATCH         /annotations/:id/makeHybrid                                                       controllers.AnnotationController.makeHybridWithoutType(id: String, fallbackLayerName: Option[String])

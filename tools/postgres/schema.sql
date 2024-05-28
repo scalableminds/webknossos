@@ -39,7 +39,7 @@ CREATE TABLE webknossos.annotations(
   name VARCHAR(256) NOT NULL DEFAULT '',
   viewConfiguration JSONB,
   state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Active',
-  isLockedByUser BOOLEAN NOT NULL DEFAULT FALSE,
+  isLockedByOwner BOOLEAN NOT NULL DEFAULT FALSE,
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   tracingTime BIGINT,
   typ webknossos.ANNOTATION_TYPE NOT NULL,

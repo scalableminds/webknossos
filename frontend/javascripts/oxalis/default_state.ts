@@ -164,7 +164,7 @@ const defaultState: OxalisState = {
     mappings: [],
     skeleton: null,
     owner: null,
-    isLockedByUser: false,
+    isLockedByOwner: false,
     contributors: [],
     othersMayEdit: false,
     blockedByUser: null,

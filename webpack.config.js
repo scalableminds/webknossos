@@ -1,9 +1,9 @@
 module.exports = function (env = {}) {
   /* eslint import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   const webpack = require("webpack");
+  const { EsbuildPlugin } = require("esbuild-loader");
   const path = require("path");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
-  const TerserPlugin = require("terser-webpack-plugin");
   const browserslistToEsbuild = require("browserslist-to-esbuild");
   const CopyPlugin = require("copy-webpack-plugin");
 
@@ -11,6 +11,14 @@ module.exports = function (env = {}) {
   const nodePath = "node_modules";
   const protoPath = path.join(__dirname, "webknossos-datastore/proto/");
   const publicPath = "/assets/bundle/";
+
+  const buildTarget = browserslistToEsbuild([
+    "last 3 Chrome versions",
+    "last 3 Firefox versions",
+    "last 2 Edge versions",
+    "last 1 Safari versions",
+    "last 1 iOS versions",
+  ]);
 
   const plugins = [
     new webpack.DefinePlugin({
@@ -37,20 +45,6 @@ module.exports = function (env = {}) {
       ],
     }),
   ];
-
-  if (env.production) {
-    plugins.push(
-      new TerserPlugin({
-        terserOptions: {
-          // compress is bugged, see https://github.com/mishoo/UglifyJS2/issues/2842
-          // even inline: 1 causes bugs, see https://github.com/scalableminds/webknossos/pull/2713
-          // Update 20.01.2022: Doesn't seem to be bugged any longer, but the size gains (~5%) are not
-          // worth the increased build time (~60%).
-          compress: false,
-        },
-      }),
-    );
-  }
 
   const cssLoaderUrlFilter = {
     // Don't try to handle urls that already point to the assets directory
@@ -87,14 +81,7 @@ module.exports = function (env = {}) {
           exclude: /(node_modules|bower_components)/,
           loader: "esbuild-loader",
           options: {
-            loader: "tsx", // also supports 'ts'
-            target: browserslistToEsbuild([
-              "last 3 Chrome versions",
-              "last 3 Firefox versions",
-              "last 2 Edge versions",
-              "last 1 Safari versions",
-              "last 1 iOS versions",
-            ]),
+            target: buildTarget,
           },
         },
         {
@@ -144,6 +131,12 @@ module.exports = function (env = {}) {
         },
         { test: /\.jpg$/, type: "asset/resource" },
         { test: /\.proto$/, use: ["json-loader", "proto-loader6"] },
+        {
+          test: /\.m?js/,
+          resolve: {
+            fullySpecified: false,
+          },
+        },
       ],
     },
     resolve: {
@@ -166,6 +159,11 @@ module.exports = function (env = {}) {
     },
     optimization: {
       minimize: env.production,
+      minimizer: [
+        new EsbuildPlugin({
+          target: buildTarget, // Syntax to transpile to (see options below for possible values)
+        }),
+      ],
       splitChunks: {
         chunks: "all",
         // Use a consistent name for the vendors chunk

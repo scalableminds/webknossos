@@ -145,38 +145,41 @@ function DatasetActionView(props: Props) {
   );
   return (
     <div>
-      {dataset.isActive ? (
-        <div className="dataset-table-actions nowrap">
-          <NewAnnotationLink
-            dataset={dataset}
-            isReloading={isReloading}
-            isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
-            onShowCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(true)}
-            onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
-          />
-          <LinkWithDisabled
-            to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
-            title="View Dataset"
-            disabled={isReloading}
-          >
-            <EyeOutlined className="icon-margin-right" />
-            View
-          </LinkWithDisabled>
-          {dataset.isEditable ? (
-            <React.Fragment>
-              <LinkWithDisabled
-                to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
-                title="Open Dataset Settings"
-                disabled={isReloading}
-              >
-                <SettingOutlined className="icon-margin-right" />
-                Settings
-              </LinkWithDisabled>
-              {reloadLink}
-            </React.Fragment>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="dataset-table-actions nowrap">
+        {dataset.isActive ? (
+          <>
+            {" "}
+            <NewAnnotationLink
+              dataset={dataset}
+              isReloading={isReloading}
+              isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
+              onShowCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(true)}
+              onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
+            />
+            <LinkWithDisabled
+              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
+              title="View Dataset"
+              disabled={isReloading}
+            >
+              <EyeOutlined className="icon-margin-right" />
+              View
+            </LinkWithDisabled>
+          </>
+        ) : null}
+        {dataset.isEditable ? (
+          <>
+            <LinkWithDisabled
+              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
+              title="Open Dataset Settings"
+              disabled={isReloading}
+            >
+              <SettingOutlined className="icon-margin-right" />
+              Settings
+            </LinkWithDisabled>
+          </>
+        ) : null}
+        {reloadLink}
+      </div>
     </div>
   );
 }

@@ -155,7 +155,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
 
       // Ensure that zarr layers (which aren't inferred by the back-end) are still
       // included in the inferred data source
-      // TODOM: handle case in which dataSource is null / could not be parsed by the server
       this.setState({ dataSource });
 
       if (dataSource == null) {

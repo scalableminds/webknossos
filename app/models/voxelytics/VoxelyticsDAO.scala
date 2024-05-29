@@ -993,7 +993,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                 workflowConfig: JsValue): Fox[ObjectId] =
     for {
       _ <- run(q"""
-        INSERT INTO webknossos.voxelytics_runs (_id, _organization, _user, name, username, hostname, voxelyticsVersion, workflowHash, workflowYamlContent, workflowConfig)
+        INSERT INTO webknossos.voxelytics_runs (_id, _organization, _user, name, username, hostname, voxelyticsVersion, workflow_hash, workflow_yamlContent, workflow_config)
         VALUES ${SqlToken.tupleFromValues(ObjectId.generate,
                                           organizationId,
                                           userId,
@@ -1010,9 +1010,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             username = EXCLUDED.username,
             hostname = EXCLUDED.hostname,
             voxelyticsVersion = EXCLUDED.voxelyticsVersion,
-            workflowHash = EXCLUDED.workflowHash,
-            workflowYamlContent = EXCLUDED.workflowYamlContent,
-            workflowConfig = EXCLUDED.workflowConfig
+            workflow_hash = EXCLUDED.workflow_hash,
+            workflow_yamlContent = EXCLUDED.workflow_yamlContent,
+            workflow_config = EXCLUDED.workflow_config
         """.asUpdate)
       objectIdList <- run(q"""
         SELECT _id

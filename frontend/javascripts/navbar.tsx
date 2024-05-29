@@ -96,9 +96,7 @@ function useOlvy() {
   useEffect(() => {
     const OlvyConfig = {
       organisation: "webknossos",
-      // This target needs to be defined (otherwise, Olvy crashes when using .show()). However,
-      // we don't want Olvy to add any notification icons, since we do this on our own. Therefore,
-      // provide a dummy value here.
+      // This target needs to be an empty string as else olvy will eagerly init the modal and thus fetch all its contents.
       target: "",
       type: "modal",
       view: {
@@ -473,7 +471,7 @@ function NotificationIcon({
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
-      // Setting the target lazily, to let olvy finally load the whats new modal
+      // Setting the target lazily, to finally let olvy  load the whats new modal as it should be shown now.
       window.Olvy.config.target = "#unused-olvy-target";
       window.Olvy.show();
     }

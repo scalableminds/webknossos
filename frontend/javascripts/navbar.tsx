@@ -99,7 +99,7 @@ function useOlvy() {
       // This target needs to be defined (otherwise, Olvy crashes when using .show()). However,
       // we don't want Olvy to add any notification icons, since we do this on our own. Therefore,
       // provide a dummy value here.
-      target: "#unused-olvy-target",
+      target: "",
       type: "modal",
       view: {
         showSearch: false,
@@ -473,6 +473,8 @@ function NotificationIcon({
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
+      // Setting the target lazily, to let olvy finally load the whats new modal
+      window.Olvy.config.target = "#unused-olvy-target";
       window.Olvy.show();
     }
   };

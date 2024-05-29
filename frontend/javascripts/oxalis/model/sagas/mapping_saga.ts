@@ -22,6 +22,7 @@ import type {
   SetMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import {
+  clearMappingAction,
   finishMappingInitializationAction,
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
@@ -115,16 +116,8 @@ const takeLatestMappingChange = (
         lastBucketRetrievalSource[1] === "LOCAL-MAPPING-APPLIED"
       ) {
         // needsLocalHdf5Mapping is false, but in the last iteration, a local mapping
-        // was applied. therefore, we have to set the mapping to undefined
-        const mappingInfo = yield* select((state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
-        );
-
-        yield* put(
-          setMappingAction(layerName, mappingInfo.mappingName, mappingInfo.mappingType, {
-            mapping: undefined,
-          }),
-        );
+        // was applied. Therefore, we have to set the mapping to undefined
+        yield* put(clearMappingAction(layerName));
       }
     }
   });

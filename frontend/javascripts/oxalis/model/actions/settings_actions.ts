@@ -27,6 +27,7 @@ export type SetMappingEnabledAction = ReturnType<typeof setMappingEnabledAction>
 export type FinishMappingInitializationAction = ReturnType<
   typeof finishMappingInitializationAction
 >;
+export type ClearMappingAction = ReturnType<typeof clearMappingAction>;
 export type SetMappingAction = ReturnType<typeof setMappingAction>;
 export type SetMappingNameAction = ReturnType<typeof setMappingNameAction>;
 type SetHideUnmappedIdsAction = ReturnType<typeof setHideUnmappedIdsAction>;
@@ -43,6 +44,7 @@ export type SettingAction =
   | SetControlModeAction
   | SetMappingEnabledAction
   | FinishMappingInitializationAction
+  | ClearMappingAction
   | SetMappingAction
   | SetMappingNameAction
   | SetHideUnmappedIdsAction
@@ -179,6 +181,16 @@ export const setMappingEnabledAction = (layerName: string, isMappingEnabled: boo
 export const finishMappingInitializationAction = (layerName: string) =>
   ({
     type: "FINISH_MAPPING_INITIALIZATION",
+    layerName,
+  }) as const;
+
+// This is not the same as disabling a mapping. A disabled mapping can simply be re-enabled.
+// Clearing a mapping sets the mapping dictionary to undefined. This is important when a
+// locally applied mapping should no longer be applied locally but by the back-end. In that case,
+// the mapping is still enabled, but we want to clear the local mapping dictionary.
+export const clearMappingAction = (layerName: string) =>
+  ({
+    type: "CLEAR_MAPPING",
     layerName,
   }) as const;
 

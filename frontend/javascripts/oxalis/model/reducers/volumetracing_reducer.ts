@@ -389,6 +389,8 @@ function VolumeTracingReducer(
     }
 
     case "SET_MAPPING": {
+      // We only need to store the name of the mapping here. Also see the settings_reducer where
+      // SET_MAPPING is also handled.
       return setMappingNameReducer(state, volumeTracing, action.mappingName, action.mappingType);
     }
     case "FINISH_MAPPING_INITIALIZATION": {

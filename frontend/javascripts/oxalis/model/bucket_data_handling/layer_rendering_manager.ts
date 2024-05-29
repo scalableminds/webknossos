@@ -24,12 +24,12 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import type { ViewMode, Vector3, Vector4, BucketAddress } from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import DiffableMap from "libs/diffable_map";
-import { CuckooTable } from "./cuckoo_table";
+import { CuckooTable } from "libs/cuckoo/cuckoo_table";
+import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
 import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
-import { CuckooTableVec5 } from "./cuckoo_table_vec5";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import app from "app";
 

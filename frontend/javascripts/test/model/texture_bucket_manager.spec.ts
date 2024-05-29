@@ -5,7 +5,7 @@ import { Vector4 } from "oxalis/constants";
 
 import "test/mocks/globals.mock";
 import "test/mocks/updatable_texture.mock";
-import { CuckooTableVec5 } from "oxalis/model/bucket_data_handling/cuckoo_table_vec5";
+import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 
 const LAYER_INDEX = 0;
 const CUCKOO_TEXTURE_WIDTH = 64;

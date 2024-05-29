@@ -47,7 +47,7 @@ import app from "app";
 import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_data_shaders.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
-import { CuckooTable } from "oxalis/model/bucket_data_handling/cuckoo_table";
+import { CuckooTable } from "libs/cuckoo/cuckoo_table";
 import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { V3 } from "libs/mjs";
 import TPS3D from "libs/thin_plate_spline";

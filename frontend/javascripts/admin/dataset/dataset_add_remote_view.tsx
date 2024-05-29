@@ -199,6 +199,13 @@ function DatasetAddRemoteView(props: Props) {
     form.validateFields();
   };
 
+  const getDefaultDatasetName = (url: string | null | undefined) => {
+    if (url == null) return null;
+    const indexOfLastSlash = url.lastIndexOf("/");
+    const subString = url.substring(indexOfLastSlash + 1);
+    if (subString.length > 2) return subString;
+    else return subString.padEnd(3, "0") // todo
+  }
   async function handleStoreDataset() {
     // Sync simple with advanced and get newest datasourceJson
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
@@ -240,7 +247,6 @@ function DatasetAddRemoteView(props: Props) {
   }
 
   const hideDatasetUI = maybeDataLayers == null || maybeDataLayers.length === 0;
-  console.log("proops", defaultDatasetUrl)
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
@@ -270,6 +276,7 @@ function DatasetAddRemoteView(props: Props) {
               setDatasourceConfigStr={setDatasourceConfigStr}
               dataSourceEditMode={dataSourceEditMode}
               defaultUri={defaultDatasetUrl}
+            //maybe add onsuccess here? but thats on success of first form...
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -302,7 +309,7 @@ function DatasetAddRemoteView(props: Props) {
 
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
-            <DatasetSettingsDataTab
+            <DatasetSettingsDataTab //!!!
               allowRenamingDataset
               form={form}
               activeDataSourceEditMode={dataSourceEditMode}
@@ -311,6 +318,7 @@ function DatasetAddRemoteView(props: Props) {
                 form.validateFields();
                 setDataSourceEditMode(activeEditMode);
               }}
+              defaultDatasetName={getDefaultDatasetName(defaultDatasetUrl)}
             />
           </Hideable>
           {!hideDatasetUI && (
@@ -503,7 +511,6 @@ function AddRemoteLayer({
       onSuccess();
     }
   }
-  console.log("l. 497", defaultUri)
 
   return (
     <>

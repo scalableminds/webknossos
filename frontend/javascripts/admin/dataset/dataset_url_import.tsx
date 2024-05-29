@@ -25,6 +25,7 @@ export function DatasetURLImport() {
         uploadedDatasetName: string,
         needsConversion: boolean | null | undefined,
     ): Promise<void> => {
+        console.log("added")
     };
     return hasFetched ? (
         <DatasetAddRemoteView

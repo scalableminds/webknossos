@@ -322,7 +322,6 @@ CREATE TABLE webknossos.organizations(
   displayName VARCHAR(1024) NOT NULL DEFAULT '',
   _rootFolder CHAR(24) NOT NULL UNIQUE,
   newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
-  overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
   pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
   paidUntil TIMESTAMPTZ DEFAULT NULL,

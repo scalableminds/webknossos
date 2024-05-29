@@ -13,7 +13,7 @@ import scala.util.Try
 
 case class RunEntry(id: ObjectId,
                     name: String,
-                    hostUsername: String,
+                    hostUserName: String,
                     hostName: String,
                     voxelyticsVersion: String,
                     workflowHash: String,
@@ -77,7 +77,7 @@ object ChunkCounts {
 
 case class WorkflowListingRunEntry(id: ObjectId,
                                    name: String,
-                                   hostUsername: String,
+                                   hostUserName: String,
                                    hostName: String,
                                    voxelyticsVersion: String,
                                    workflowHash: String,

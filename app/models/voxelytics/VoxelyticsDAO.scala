@@ -369,7 +369,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
               RunEntry(
                 id = ObjectId(row._1),
                 name = row._2,
-                hostUsername = row._3,
+                hostUserName = row._3,
                 hostName = row._4,
                 voxelyticsVersion = row._5,
                 workflowHash = row._6,
@@ -510,8 +510,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                 Long,
                 Long,
                 Long,
-                String,
-                String)])
+                Option[String],
+                Option[String])])
       results <- Fox.combined(
         r.toList.map(
           row =>
@@ -521,7 +521,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
               WorkflowListingRunEntry(
                 id = ObjectId(row._1),
                 name = row._2,
-                hostUsername = row._3,
+                hostUserName = row._3,
                 hostName = row._4,
                 voxelyticsVersion = row._5,
                 workflowHash = row._6,

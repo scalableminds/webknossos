@@ -28,17 +28,21 @@ const persistence = new Persistence<Pick<{ searchQuery: string }, "searchQuery">
 function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun) {
   return {
     ...runInfo,
-    beginTime: new Date(runInfo.beginTime),
-    endTime: runInfo.state === VoxelyticsRunState.COMPLETE ? new Date(runInfo.endTime) : null,
+    beginTime: runInfo.beginTime != null ? new Date(runInfo.beginTime) : null,
+    endTime: runInfo.endTime != null ? new Date(runInfo.endTime) : null,
   };
 }
 
 function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowListing): VoxelyticsWorkflowListing {
   return {
     ...workflowInfo,
-    runs: workflowInfo.runs
-      .map(parseRunInfo)
-      .sort((a, b) => b.beginTime.getTime() - a.beginTime.getTime()),
+    runs: workflowInfo.runs.map(parseRunInfo).sort((a, b) => {
+      if (a.beginTime != null && b.beginTime != null)
+        return b.beginTime.getTime() - a.beginTime.getTime();
+      else if (a.beginTime != null) return a.beginTime.getTime();
+      else if (b.beginTime != null) return b.beginTime.getTime();
+      else return 0;
+    }),
   };
 }
 
@@ -98,7 +102,7 @@ export default function WorkflowListView() {
       workflows.map((workflow) => ({
         workflowName: workflow.name,
         workflowHash: workflow.hash,
-        state: null,
+        state: workflow.state,
         beginTime: workflow.runs[0].beginTime,
         endTime: workflow.runs[0].endTime,
         name: "",
@@ -116,7 +120,7 @@ export default function WorkflowListView() {
         })),
       })),
     [workflows, getUserDisplayName],
-  ) as any as Array<RenderRunInfo>;
+  );
 
   function renderProgress(run: RenderRunInfo) {
     let label = "";

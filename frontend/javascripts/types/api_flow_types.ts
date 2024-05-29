@@ -882,27 +882,15 @@ export type VoxelyticsArtifactConfig = {
   };
 };
 
-export type VoxelyticsRunInfo = (
-  | {
-      state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
-      endTime: null;
-    }
-  | {
-      state:
-        | VoxelyticsRunState.COMPLETE
-        | VoxelyticsRunState.FAILED
-        | VoxelyticsRunState.CANCELLED
-        | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
-    }
-) & {
+export type VoxelyticsRunInfo = {
   id: string;
   name: string;
   userName: string;
   hostName: string;
   voxelyticsVersion: string;
+  state: VoxelyticsRunState;
+  beginTime: Date | null;
+  endTime: Date | null;
 };
 
 export type VoxelyticsWorkflowDagEdge = { source: string; target: string; label: string };
@@ -977,22 +965,7 @@ export type VoxelyticsWorkflowReport = {
   };
 };
 
-export type VoxelyticsWorkflowListingRun = (
-  | {
-      state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
-      endTime: null;
-    }
-  | {
-      state:
-        | VoxelyticsRunState.COMPLETE
-        | VoxelyticsRunState.FAILED
-        | VoxelyticsRunState.CANCELLED
-        | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
-    }
-) & {
+export type VoxelyticsWorkflowListingRun = {
   id: string;
   name: string;
   hostUserName: string;
@@ -1001,6 +974,9 @@ export type VoxelyticsWorkflowListingRun = (
   taskCounts: TaskCounts;
   userFirstName: string;
   userLastName: string;
+  state: VoxelyticsRunState;
+  beginTime: Date | null;
+  endTime: Date | null;
 };
 
 export type VoxelyticsWorkflowListing = {

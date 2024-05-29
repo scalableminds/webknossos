@@ -140,7 +140,7 @@ function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport
     dag,
     runs: report.runs.map((run) => ({
       ...run,
-      beginTime: new Date(run.beginTime),
+      beginTime: run.beginTime == null ? null : new Date(run.beginTime),
       endTime: run.endTime == null ? null : new Date(run.endTime),
     })),
     tasks,

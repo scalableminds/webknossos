@@ -25,12 +25,12 @@ const persistence = new Persistence<Pick<{ searchQuery: string }, "searchQuery">
   "workflowList",
 );
 
-function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun): VoxelyticsWorkflowListingRun {
+function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun) {
   return {
     ...runInfo,
     beginTime: new Date(runInfo.beginTime),
-    endTime: runInfo.endTime != null ? new Date(runInfo.endTime) : null,
-  } as any as VoxelyticsWorkflowListingRun;
+    endTime: runInfo.state === VoxelyticsRunState.COMPLETE ? new Date(runInfo.endTime) : null,
+  };
 }
 
 function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowListing): VoxelyticsWorkflowListing {
@@ -89,8 +89,8 @@ export default function WorkflowListView() {
 
   const getUserDisplayName = (run: VoxelyticsWorkflowListingRun) => {
     return run.userFirstName != null || run.userLastName != null
-      ? [run.userFirstName, run.userLastName].join(" ")
-      : run.hostusername;
+      ? [run.userFirstName, run.userLastName].join(" ").trim()
+      : run.hostUserName;
   };
 
   const renderRuns: Array<RenderRunInfo> = useMemo(
@@ -98,13 +98,13 @@ export default function WorkflowListView() {
       workflows.map((workflow) => ({
         workflowName: workflow.name,
         workflowHash: workflow.hash,
-        state: workflow.state,
+        state: null,
         beginTime: workflow.runs[0].beginTime,
         endTime: workflow.runs[0].endTime,
         name: "",
         id: "", // used to distinguish between workflows and runs when rendering
-        hostusername: uniqueify(workflow.runs.map((run) => run.hostusername)).join(", "),
-        hostname: uniqueify(workflow.runs.map((run) => run.hostname)).join(", "),
+        hostUserName: uniqueify(workflow.runs.map((run) => run.hostUserName)).join(", "),
+        hostName: uniqueify(workflow.runs.map((run) => run.hostName)).join(", "),
         userDisplayName: uniqueify(workflow.runs.map((run) => getUserDisplayName(run))).join(", "),
         voxelyticsVersion: uniqueify(workflow.runs.map((run) => run.voxelyticsVersion)).join(", "),
         taskCounts: workflow.taskCounts,
@@ -116,7 +116,7 @@ export default function WorkflowListView() {
         })),
       })),
     [workflows, getUserDisplayName],
-  );
+  ) as any as Array<RenderRunInfo>;
 
   function renderProgress(run: RenderRunInfo) {
     let label = "";
@@ -150,7 +150,7 @@ export default function WorkflowListView() {
           percent={Math.round(
             ((run.taskCounts.complete + run.taskCounts.cancelled + run.taskCounts.failed) /
               run.taskCounts.total) *
-              100,
+            100,
           )}
           status={runStateToStatus(run.state)}
           success={{ percent: Math.round((run.taskCounts.complete / run.taskCounts.total) * 100) }}
@@ -210,12 +210,12 @@ export default function WorkflowListView() {
             title: "Host",
             dataIndex: "hostname",
             key: "host",
-            filters: uniqueify(renderRuns.map((run) => run.hostname)).map((hostname) => ({
+            filters: uniqueify(renderRuns.map((run) => run.hostName)).map((hostname) => ({
               text: hostname,
               value: hostname,
             })),
             onFilter: (value: string | number | boolean, run: RenderRunInfo) =>
-              run.hostname.startsWith(String(value)),
+              run.hostName.startsWith(String(value)),
             filterSearch: true,
           },
           {

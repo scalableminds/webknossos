@@ -46,6 +46,7 @@ import messages from "messages";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { Store } from "oxalis/singletons";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
+import _ from "lodash";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -797,33 +798,28 @@ export type BucketRetrievalSource =
   | ["REQUESTED-WITHOUT-MAPPING", "LOCAL-MAPPING-APPLIED", string]
   | ["REQUESTED-WITH-MAPPING", string];
 
-function _getBucketRetrievalSource(state: OxalisState, layerName: string): BucketRetrievalSource {
-  const usesLocalHdf5Mapping = needsLocalHdf5Mapping(state, layerName);
+export const getBucketRetrievalSourceFn =
+  // The function that is passed to memoize will only be executed once
+  // per layerName. This is important since the function uses reuseInstanceOnEquality
+  // to create a function that ensures that identical BucketRetrievalSource tuples will be re-used between
+  // consecutive calls.
+  _.memoize((layerName: string) =>
+    reuseInstanceOnEquality((state: OxalisState): BucketRetrievalSource => {
+      const usesLocalHdf5Mapping = needsLocalHdf5Mapping(state, layerName);
 
-  const mappingInfo = getMappingInfoForVolumeTracing(state, layerName);
+      const mappingInfo = getMappingInfoForVolumeTracing(state, layerName);
 
-  if (mappingInfo.mappingStatus === MappingStatusEnum.DISABLED || mappingInfo.mappingName == null) {
-    return ["REQUESTED-WITHOUT-MAPPING", "NO-LOCAL-MAPPING-APPLIED"];
-  }
+      if (
+        mappingInfo.mappingStatus === MappingStatusEnum.DISABLED ||
+        mappingInfo.mappingName == null
+      ) {
+        return ["REQUESTED-WITHOUT-MAPPING", "NO-LOCAL-MAPPING-APPLIED"];
+      }
 
-  if (usesLocalHdf5Mapping || mappingInfo.mappingType === "JSON") {
-    return ["REQUESTED-WITHOUT-MAPPING", "LOCAL-MAPPING-APPLIED", mappingInfo.mappingName];
-  }
+      if (usesLocalHdf5Mapping || mappingInfo.mappingType === "JSON") {
+        return ["REQUESTED-WITHOUT-MAPPING", "LOCAL-MAPPING-APPLIED", mappingInfo.mappingName];
+      }
 
-  return ["REQUESTED-WITH-MAPPING", mappingInfo.mappingName];
-}
-// todop: problem when called for multiple layers?
-export const getBucketRetrievalSource = reuseInstanceOnEquality(_getBucketRetrievalSource);
-
-// function _needsLocalHdf5MappingByVolumeTracingId(state: OxalisState) {
-//   const dict: Record<string, boolean> = {};
-
-//   for (const volumeTracing of getVolumeTracings(state.tracing)) {
-//     dict[volumeTracing.tracingId] = needsLocalHdf5Mapping(state, volumeTracing.tracingId);
-//   }
-//   return dict;
-// }
-
-// export const needsLocalHdf5MappingByVolumeTracingId = reuseInstanceOnEquality(
-//   _needsLocalHdf5MappingByVolumeTracingId,
-// );
+      return ["REQUESTED-WITH-MAPPING", mappingInfo.mappingName];
+    }),
+  );

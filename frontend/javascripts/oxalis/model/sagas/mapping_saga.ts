@@ -59,7 +59,7 @@ import {
   getEditableMappingForVolumeTracingId,
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
   getVolumeTracings,
-  getBucketRetrievalSource,
+  getBucketRetrievalSourceFn,
   BucketRetrievalSource,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
@@ -84,11 +84,9 @@ const takeLatestMappingChange = (
     let lastBucketRetrievalSource;
 
     const needsLocalMappingChangedChannel = createNeedsLocalMappingChangedChannel(layerName);
-
+    const getBucketRetrievalSourceForLayer = getBucketRetrievalSourceFn(layerName);
     while (true) {
-      lastBucketRetrievalSource = yield* select((state) =>
-        getBucketRetrievalSource(state, layerName),
-      );
+      lastBucketRetrievalSource = yield* select((state) => getBucketRetrievalSourceForLayer(state));
       const bucketRetrievalSource = yield* take(needsLocalMappingChangedChannel);
 
       console.log("changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
@@ -221,9 +219,10 @@ function createBucketDataChangedChannel(dataCube: DataCube) {
 }
 
 function createNeedsLocalMappingChangedChannel(layerName: string) {
+  const getBucketRetrievalSourceForLayer = getBucketRetrievalSourceFn(layerName);
   return eventChannel((emit) => {
     const unbind = listenToStoreProperty(
-      (state) => getBucketRetrievalSource(state, layerName),
+      (state) => getBucketRetrievalSourceForLayer(state),
       (retrievalSource) => emit(retrievalSource),
     );
     return unbind;

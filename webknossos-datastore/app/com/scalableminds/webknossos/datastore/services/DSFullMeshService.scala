@@ -118,7 +118,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       organizationName: String,
       datasetName: String,
       layerName: String,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Array[Byte]] =
     for {
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "meshFileName.needed"
       before = Instant.now

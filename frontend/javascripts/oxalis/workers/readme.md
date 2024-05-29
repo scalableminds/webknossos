@@ -20,7 +20,7 @@ const result = await someFunction(parameters);
 ## Writing Web Worker Modules
 
 First, create a new file in this folder and ensure that it has the extension `*.worker.js`.
-The module should export a default function (or class) which is `expose`d via [comlink](https://github.com/GoogleChromeLabs/comlink).
+The module should export a default function (or class) which is `exposed` via [comlink](https://github.com/GoogleChromeLabs/comlink).
 See `compress.worker.js` for an example.
 
 ## Caveats

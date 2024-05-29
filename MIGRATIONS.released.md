@@ -6,6 +6,12 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [24.06.0](https://github.com/scalableminds/webknossos/releases/tag/24.06.0) - 2024-05-27
+[Commits](https://github.com/scalableminds/webknossos/compare/24.05.0...24.06.0)
+
+### Postgres Evolutions:
+None.
+
 ## [24.05.0](https://github.com/scalableminds/webknossos/releases/tag/24.05.0) - 2024-04-29
 [Commits](https://github.com/scalableminds/webknossos/compare/24.04.0...24.05.0)
 

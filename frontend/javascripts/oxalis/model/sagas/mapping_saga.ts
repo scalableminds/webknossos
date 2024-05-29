@@ -14,13 +14,12 @@ import {
   flush,
 } from "typed-redux-saga";
 import { api } from "oxalis/singletons";
-import { Channel, buffers, eventChannel } from "redux-saga";
+import { buffers, eventChannel } from "redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { message } from "antd";
 import type {
   OptionalMappingProperties,
   SetMappingAction,
-  SetMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   finishMappingInitializationAction,
@@ -59,6 +58,8 @@ import {
   getEditableMappingForVolumeTracingId,
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
   getVolumeTracings,
+  getBucketRetrievalSource,
+  BucketRetrievalSource,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
 import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
@@ -74,57 +75,56 @@ type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
 
 const takeLatestMappingChange = (
-  setMappingEnabledActionChannel: Channel<SetMappingEnabledAction>,
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   layerName: string,
 ) => {
   return fork(function* () {
     let lastWatcherTask;
-    let lastNeedsLocalHdf5Mapping;
+    let lastBucketRetrievalSource;
 
     const needsLocalMappingChangedChannel = createNeedsLocalMappingChangedChannel(layerName);
 
     while (true) {
-      lastNeedsLocalHdf5Mapping = yield* select((state) =>
+      lastBucketRetrievalSource = yield* select((state) =>
+        getBucketRetrievalSource(state, layerName),
+      );
+      const bucketRetrievalSource = yield* take(needsLocalMappingChangedChannel);
+
+      console.log("changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
+
+      if (lastWatcherTask) {
+        console.log("Cancel old bucket watcher");
+        yield cancel(lastWatcherTask);
+        lastWatcherTask = null;
+      }
+
+      // Changing between REQUESTED-WITH-MAPPING <> REQUESTED-WITHOUT-MAPPING
+      if (lastBucketRetrievalSource[0] !== bucketRetrievalSource[0]) {
+        yield* call(maybeReloadData, oldActiveMappingByLayer, { layerName }, true);
+      }
+
+      const needsLocalHdf5Mapping = yield* select((state) =>
         getNeedsLocalHdf5Mapping(state, layerName),
       );
-      const { needsLocalHdf5Mapping } = yield* race({
-        needsLocalHdf5Mapping: take(needsLocalMappingChangedChannel),
-        setMappingEnabledAction: take(setMappingEnabledActionChannel),
-      });
+      if (needsLocalHdf5Mapping) {
+        // Start a new watcher
+        console.log("Start new bucket watcher for layer", layerName);
+        lastWatcherTask = yield* fork(watchChangedBucketsForLayer, layerName);
+      } else if (
+        lastBucketRetrievalSource[0] === "REQUESTED-WITHOUT-MAPPING" &&
+        lastBucketRetrievalSource[1] === "LOCAL-MAPPING-APPLIED"
+      ) {
+        // needsLocalHdf5Mapping is false, but in the last iteration, a local mapping
+        // was applied. therefore, we have to set the mapping to undefined
+        const mappingInfo = yield* select((state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+        );
 
-      if (needsLocalHdf5Mapping != null) {
-        if (lastWatcherTask) {
-          console.log("Cancel old bucket watcher");
-          yield cancel(lastWatcherTask);
-          lastWatcherTask = null;
-        }
-
-        yield* call(maybeReloadData, oldActiveMappingByLayer, { layerName }, true);
-        if (needsLocalHdf5Mapping) {
-          // Start a new watcher
-          console.log("Start new bucket watcher for layer", layerName);
-          lastWatcherTask = yield* fork(watchChangedBucketsForLayer, layerName);
-        } else {
-          const mappingInfo = yield* select((state) =>
-            getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
-          );
-
-          yield* put(
-            setMappingAction(layerName, mappingInfo.mappingName, mappingInfo.mappingType, {
-              mapping: undefined,
-              showLoadingIndicator: true,
-            }),
-          );
-        }
-      } else {
-        if (!lastNeedsLocalHdf5Mapping) {
-          // No watcher was running, so no cancelling needed.
-          // However, we need to reload the layer.
-          yield* call(maybeReloadData, oldActiveMappingByLayer, { layerName }, true);
-        } else {
-          // A local mapping was active before. Reloading the layer is not necessary.
-        }
+        yield* put(
+          setMappingAction(layerName, mappingInfo.mappingName, mappingInfo.mappingType, {
+            mapping: undefined,
+          }),
+        );
       }
     }
   });
@@ -152,8 +152,6 @@ export default function* watchActivatedMappings(): Saga<void> {
   };
   // Buffer actions since they might be dispatched before WK_READY
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
-  const setMappingEnabledActionChannel =
-    yield* actionChannel<SetMappingEnabledAction>("SET_MAPPING_ENABLED");
   yield* take("WK_READY");
   yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
   yield* takeEvery(
@@ -169,11 +167,7 @@ export default function* watchActivatedMappings(): Saga<void> {
   const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
   for (const tracing of volumeTracings) {
     // The following two sagas will fork internally.
-    yield* takeLatestMappingChange(
-      setMappingEnabledActionChannel,
-      oldActiveMappingByLayer,
-      tracing.tracingId,
-    );
+    yield* takeLatestMappingChange(oldActiveMappingByLayer, tracing.tracingId);
 
     // const selector = (state: OxalisState) => getNeedsLocalHdf5Mapping(state, layerName);
 
@@ -236,11 +230,11 @@ function createBucketDataChangedChannel(dataCube: DataCube) {
 function createNeedsLocalMappingChangedChannel(layerName: string) {
   return eventChannel((emit) => {
     const unbind = listenToStoreProperty(
-      (state) => getNeedsLocalHdf5Mapping(state, layerName),
-      (needsLocalHdf5Mapping) => emit(needsLocalHdf5Mapping),
+      (state) => getBucketRetrievalSource(state, layerName),
+      (retrievalSource) => emit(retrievalSource),
     );
     return unbind;
-  }, buffers.sliding<boolean>(1));
+  }, buffers.sliding<BucketRetrievalSource>(1));
 }
 
 function* watchChangedBucketsForLayer(layerName: string): Saga<void> {

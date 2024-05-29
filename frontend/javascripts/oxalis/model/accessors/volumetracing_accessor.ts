@@ -523,6 +523,7 @@ export const getRenderableResolutionForActiveSegmentationTracing = reuseInstance
 
 export function getMappingInfoForVolumeTracing(
   state: OxalisState,
+  // layerName instead of tracingId is also supported
   tracingId: string | null | undefined,
 ): ActiveMappingInfo {
   return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
@@ -790,6 +791,29 @@ export function needsLocalHdf5Mapping(state: OxalisState, layerName: string) {
     state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD
   );
 }
+
+export type BucketRetrievalSource =
+  | ["REQUESTED-WITHOUT-MAPPING", "NO-LOCAL-MAPPING-APPLIED"]
+  | ["REQUESTED-WITHOUT-MAPPING", "LOCAL-MAPPING-APPLIED", string]
+  | ["REQUESTED-WITH-MAPPING", string];
+
+function _getBucketRetrievalSource(state: OxalisState, layerName: string): BucketRetrievalSource {
+  const usesLocalHdf5Mapping = needsLocalHdf5Mapping(state, layerName);
+
+  const mappingInfo = getMappingInfoForVolumeTracing(state, layerName);
+
+  if (mappingInfo.mappingStatus === MappingStatusEnum.DISABLED || mappingInfo.mappingName == null) {
+    return ["REQUESTED-WITHOUT-MAPPING", "NO-LOCAL-MAPPING-APPLIED"];
+  }
+
+  if (usesLocalHdf5Mapping || mappingInfo.mappingType === "JSON") {
+    return ["REQUESTED-WITHOUT-MAPPING", "LOCAL-MAPPING-APPLIED", mappingInfo.mappingName];
+  }
+
+  return ["REQUESTED-WITH-MAPPING", mappingInfo.mappingName];
+}
+// todop: problem when called for multiple layers?
+export const getBucketRetrievalSource = reuseInstanceOnEquality(_getBucketRetrievalSource);
 
 // function _needsLocalHdf5MappingByVolumeTracingId(state: OxalisState) {
 //   const dict: Record<string, boolean> = {};

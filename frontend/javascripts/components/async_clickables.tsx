@@ -60,7 +60,11 @@ export function AsyncIconButton(
 }
 export function AsyncLink(props: AsyncButtonProps) {
   const [isLoading, onClick] = useLoadingClickHandler(props.onClick);
-  const icon = isLoading ? <LoadingOutlined key="loading-icon" /> : props.icon;
+  const icon = isLoading ? (
+    <LoadingOutlined key="loading-icon" className="icon-margin-right" />
+  ) : (
+    props.icon
+  );
   return (
     <a {...props} onClick={onClick} className={isLoading ? "link-in-progress" : undefined}>
       {icon}

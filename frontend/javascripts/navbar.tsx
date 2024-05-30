@@ -237,11 +237,18 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
       label: <Link to="/jobs">Processing Jobs</Link>,
     });
 
-  if (isAdmin)
+  if (isAdmin) {
     adminstrationSubMenuItems.push({
       key: "/organization",
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
+  }
+  if (activeUser.isSuperUser) {
+    adminstrationSubMenuItems.push({
+      key: "/aiModels",
+      label: <Link to={"/aiModels"}>AI Models</Link>,
+    });
+  }
 
   if (features().voxelyticsEnabled)
     adminstrationSubMenuItems.push({

@@ -912,12 +912,18 @@ export function castForArrayType(uncastNumber: number, data: TypedArray): number
   return data instanceof BigUint64Array ? BigInt(uncastNumber) : uncastNumber;
 }
 
-export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
+export function convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {
+  const [bigNumHigh, bigNumLow] = convertNumberTo64BitTuple(num);
+
+  const low = convertDecToBase256(bigNumLow);
+  const high = convertDecToBase256(bigNumHigh);
+
+  return [high, low];
+}
+
+export function convertNumberTo64BitTuple(num: number | bigint | null): [number, number] {
   if (num == null || Number.isNaN(num)) {
-    return [
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-    ];
+    return [0, 0];
   }
   // Cast to BigInt as bit-wise operations only work with 32 bits,
   // even though Number uses 53 bits.
@@ -926,10 +932,7 @@ export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
   const bigNumLow = Number((2n ** 32n - 1n) & bigNum);
   const bigNumHigh = Number(bigNum >> 32n);
 
-  const low = convertDecToBase256(bigNumLow);
-  const high = convertDecToBase256(bigNumHigh);
-
-  return [high, low];
+  return [bigNumHigh, bigNumLow];
 }
 
 export async function promiseAllWithErrors<T>(promises: Array<Promise<T>>): Promise<{

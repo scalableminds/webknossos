@@ -23,7 +23,7 @@ type Entry = [Key, Value];
    - x, y and z are constrained to be smaller than ~4.29 billion each
    - 32 different mags are supported per layer
    - 64 layers are supported
-   - ~2 million different bucket can be addressed on the GPU.
+   - ~2 million different buckets can be addressed on the GPU.
 */
 type CompressedEntry = Vector4;
 

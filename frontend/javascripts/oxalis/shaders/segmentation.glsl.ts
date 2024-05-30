@@ -23,16 +23,26 @@ export const convertCellIdToRGB: ShaderModule = {
     hashCombine,
   ],
   code: `
-    uint vec4ToUint(vec4 idLow) {
+    highp uint vec4ToUint(vec4 idLow) {
       uint integerValue = (uint(idLow.a) << 24) | (uint(idLow.b) << 16) | (uint(idLow.g) << 8) | uint(idLow.r);
       return integerValue;
     }
 
+    vec4 uintToVec4(uint integerValue) {
+      float r = float(integerValue & uint(0xFF));
+      float g = float((integerValue >> 8) & uint(0xFF));
+      float b = float((integerValue >> 16) & uint(0xFF));
+      float a = float((integerValue >> 24) & uint(0xFF));
+
+      vec4 id = vec4(r, g, b, a);
+      return id;
+    }
+
     vec3 attemptCustomColorLookUp(uint integerValue, uint seed) {
-      highp uint h0 = hashCombine(seed, integerValue) % CUCKOO_ENTRY_CAPACITY;
-      h0 = uint(h0 * CUCKOO_ELEMENTS_PER_ENTRY / CUCKOO_ELEMENTS_PER_TEXEL);
-      highp uint x = h0 % CUCKOO_TWIDTH;
-      highp uint y = h0 / CUCKOO_TWIDTH;
+      highp uint h0 = hashCombine(seed, integerValue) % COLOR_CUCKOO_ENTRY_CAPACITY;
+      h0 = uint(h0 * COLOR_CUCKOO_ELEMENTS_PER_ENTRY / COLOR_CUCKOO_ELEMENTS_PER_TEXEL);
+      highp uint x = h0 % COLOR_CUCKOO_TWIDTH;
+      highp uint y = h0 / COLOR_CUCKOO_TWIDTH;
 
       uvec4 customEntry = texelFetch(custom_color_texture, ivec2(x, y), 0);
       uvec3 customColor = customEntry.gba;
@@ -41,7 +51,23 @@ export const convertCellIdToRGB: ShaderModule = {
          return vec3(-1);
       }
 
-      return vec3(customEntry.gba) / 255.;
+      return vec3(customColor) / 255.;
+    }
+    ivec2 attemptMappingLookUp(uint high, uint low, uint seed) {
+      highp uint h0 = hashCombine(seed, high);
+      h0 = hashCombine(h0, low);
+      h0 = h0 % MAPPING_CUCKOO_ENTRY_CAPACITY; // todop: different capacity?
+      h0 = uint(h0 * MAPPING_CUCKOO_ELEMENTS_PER_ENTRY / MAPPING_CUCKOO_ELEMENTS_PER_TEXEL);
+      highp uint x = h0 % MAPPING_CUCKOO_TWIDTH;
+      highp uint y = h0 / MAPPING_CUCKOO_TWIDTH;
+
+      uvec4 customEntry = texelFetch(segmentation_mapping_texture, ivec2(x, y), 0);
+
+      if (customEntry.r != uint(high) || customEntry.g != uint(low)) {
+         return ivec2(-1.);
+      }
+
+      return ivec2(customEntry.ba);
     }
     vec3 convertCellIdToRGB(vec4 idHigh, vec4 idLow) {
       /*
@@ -71,9 +97,6 @@ export const convertCellIdToRGB: ShaderModule = {
       float colorHue = rgb2hsv(colormapJet(colorValueDecimal)).x;
       float colorSaturation = 1.;
       float colorValue = 1.;
-      // For historical reference: the old color generation was:
-      // float lastEightBits = id.r;
-      // float colorHue = mod(lastEightBits * (golden_ratio - 1.0), 1.0);
 
       uint integerValue = vec4ToUint(idLow);
       vec3 customColor = attemptCustomColorLookUp(integerValue, custom_color_seeds[0]);
@@ -269,7 +292,7 @@ export const getCrossHairOverlay: ShaderModule = {
 };
 
 export const getSegmentId: ShaderModule = {
-  requirements: [binarySearchIndex, getRgbaAtIndex],
+  requirements: [binarySearchIndex, getRgbaAtIndex, convertCellIdToRGB],
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
@@ -290,8 +313,8 @@ export const getSegmentId: ShaderModule = {
         );
 
       // Depending on the packing degree, the returned volume color contains extra values
-      // which should be ignored (in the binary search as well as when comparing
-      // a cell id with the hovered cell passed via uniforms, for example).
+      // which should be ignored (e.g., when comparing a cell id with the hovered cell
+      // passed via uniforms).
 
       <% if (textureLayerInfos[segmentationName].packingDegree === 4) { %>
         segment_id[1] = vec4(segment_id[1].r, 0.0, 0.0, 0.0);
@@ -299,35 +322,35 @@ export const getSegmentId: ShaderModule = {
         segment_id[1] = vec4(segment_id[1].r, segment_id[1].g, 0.0, 0.0);
       <% } %>
 
-      mapped_id[0] = segment_id[0];
-      mapped_id[1] = segment_id[1];
+      mapped_id[0] = segment_id[0]; // High
+      mapped_id[1] = segment_id[1]; // Low
+
+      uint high_integer = vec4ToUint(255. * mapped_id[0]);
+      uint low_integer = vec4ToUint(255. * mapped_id[1]);
 
       if (isMappingEnabled) {
-        // Note that currently only the lower 32 bits of the segmentation
-        // are used for applying the JSON mapping.
-
-        float index = binarySearchIndex(
-          segmentation_mapping_lookup_texture,
-          mappingSize,
-          segment_id[1]
-        );
-        if (index != -1.0) {
-          mapped_id[1] = getRgbaAtIndex(
-            segmentation_mapping_texture,
-            <%= mappingTextureWidth %>,
-            index
-          );
+        ivec2 mapped_entry = attemptMappingLookUp(high_integer, low_integer, mapping_seeds[0]);
+        if (mapped_entry.r == -1) {
+          mapped_entry = attemptMappingLookUp(high_integer, low_integer, mapping_seeds[1]);
+        }
+        if (mapped_entry.r == -1) {
+          mapped_entry = attemptMappingLookUp(high_integer, low_integer, mapping_seeds[2]);
+        }
+        if (mapped_entry.r != -1) {
+          mapped_id[0] = uintToVec4(uint(mapped_entry[0]));
+          mapped_id[1] = uintToVec4(uint(mapped_entry[1]));
         } else if (hideUnmappedIds ||
           isProofreading // todop: instead of isProofreading it should be, usesHdf5Mapping or something like that
         ) {
           mapped_id[1] = vec4(0.0);
         }
+      } else {
+        mapped_id[0] *= 255.0;
+        mapped_id[1] *= 255.0;
       }
 
       segment_id[0] *= 255.0;
       segment_id[1] *= 255.0;
-      mapped_id[0] *= 255.0;
-      mapped_id[1] *= 255.0;
       return;
     }
 <% }) %>

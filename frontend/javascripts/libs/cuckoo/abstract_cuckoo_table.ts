@@ -72,7 +72,8 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     return cachedNullTexture;
   }
 
-  private initializeTableArray() {
+  // todop: make private again
+  initializeTableArray() {
     this.table = new Uint32Array(AbstractCuckooTable.ELEMENTS_PER_ENTRY * this.entryCapacity).fill(
       EMPTY_KEY_VALUE,
     );

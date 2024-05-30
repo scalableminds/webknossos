@@ -83,10 +83,10 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   // Custom color cuckoo table
   uniform highp usampler2D custom_color_texture;
   uniform highp uint custom_color_seeds[3];
-  uniform highp uint CUCKOO_ENTRY_CAPACITY;
-  uniform highp uint CUCKOO_ELEMENTS_PER_ENTRY;
-  uniform highp uint CUCKOO_ELEMENTS_PER_TEXEL;
-  uniform highp uint CUCKOO_TWIDTH;
+  uniform highp uint COLOR_CUCKOO_ENTRY_CAPACITY;
+  uniform highp uint COLOR_CUCKOO_ELEMENTS_PER_ENTRY;
+  uniform highp uint COLOR_CUCKOO_ELEMENTS_PER_TEXEL;
+  uniform highp uint COLOR_CUCKOO_TWIDTH;
 
   uniform vec4 activeCellIdHigh;
   uniform vec4 activeCellIdLow;
@@ -99,8 +99,12 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform bool isMappingEnabled;
   uniform float mappingSize;
   uniform bool hideUnmappedIds;
-  uniform sampler2D segmentation_mapping_texture;
-  uniform sampler2D segmentation_mapping_lookup_texture;
+  uniform highp uint mapping_seeds[3];
+  uniform highp uint MAPPING_CUCKOO_ENTRY_CAPACITY;
+  uniform highp uint MAPPING_CUCKOO_ELEMENTS_PER_ENTRY;
+  uniform highp uint MAPPING_CUCKOO_ELEMENTS_PER_TEXEL;
+  uniform highp uint MAPPING_CUCKOO_TWIDTH;
+  uniform highp usampler2D segmentation_mapping_texture;
 <% } %>
 
 uniform float sphericalCapRadius;

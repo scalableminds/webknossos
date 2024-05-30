@@ -30,14 +30,14 @@ export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
   canDisplacedEntryBeIgnored(displacedKey: Key, newKey: Key): boolean {
     return (
       // Either, the slot is empty... (the value of EMPTY_KEY is not allowed as a key)
-      displacedKey === EMPTY_KEY ||
+      this._areKeysEqual(displacedKey, EMPTY_KEY) ||
       // or the slot already refers to the key
-      displacedKey === newKey
+      this._areKeysEqual(displacedKey, newKey)
     );
   }
 
   checkValidKey(key: Key) {
-    if (key === EMPTY_KEY) {
+    if (this._areKeysEqual(key, EMPTY_KEY)) {
       throw new Error(`The key ${EMPTY_KEY} is not allowed for the CuckooTable.`);
     }
   }
@@ -54,7 +54,7 @@ export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
     this.table[offset + 3] = value[2];
   }
 
-  _hashKeyToAddress(seed: number, key: number): number {
+  _hashKeyToAddress(seed: number, key: Key): number {
     const state = this._hashCombine(seed, key);
 
     return state % this.entryCapacity;

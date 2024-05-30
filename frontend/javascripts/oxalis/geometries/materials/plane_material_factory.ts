@@ -112,7 +112,8 @@ class PlaneMaterialFactory {
   leastRecentlyVisibleLayers: Array<{ name: string; isSegmentationLayer: boolean }>;
   oldFragmentShaderCode: string | null | undefined;
   oldVertexShaderCode: string | null | undefined;
-  unsubscribeSeedsFn: (() => void) | null = null;
+  unsubscribeColorSeedsFn: (() => void) | null = null;
+  unsubscribeMappingSeedsFn: (() => void) | null = null;
 
   scaledTpsInvPerLayer: Record<string, TPS3D> = {};
 
@@ -318,7 +319,7 @@ class PlaneMaterialFactory {
       value: sharedLookUpTexture,
     };
 
-    this.unsubscribeSeedsFn = sharedLookUpCuckooTable.subscribeToSeeds((seeds: number[]) => {
+    this.unsubscribeColorSeedsFn = sharedLookUpCuckooTable.subscribeToSeeds((seeds: number[]) => {
       this.uniforms.lookup_seeds = {
         value: seeds,
       };
@@ -340,18 +341,35 @@ class PlaneMaterialFactory {
 
   attachSegmentationMappingTextures(): void {
     const segmentationLayer = Model.getSegmentationLayerWithMappingSupport();
-    const [mappingTexture, mappingLookupTexture] =
+    const cuckoo =
       segmentationLayer?.mappings != null
-        ? segmentationLayer.mappings.getMappingTextures() // It's important to set up the uniforms (even when they are null), since later
+        ? segmentationLayer.mappings.getCuckooTable() // It's important to set up the uniforms (even when they are null), since later
         : // additions to `this.uniforms` won't be properly attached otherwise.
-          [null, null, null];
+          null;
 
     this.uniforms.segmentation_mapping_texture = {
-      value: mappingTexture,
+      value: cuckoo?.getTexture() || null,
     };
-    this.uniforms.segmentation_mapping_lookup_texture = {
-      value: mappingLookupTexture,
-    };
+    console.log("attached texture", this.uniforms.segmentation_mapping_texture.value);
+    this.uniforms.mapping_seeds = { value: [0, 0, 0] };
+
+    this.unsubscribeMappingSeedsFn?.();
+
+    if (cuckoo) {
+      this.unsubscribeMappingSeedsFn = cuckoo.subscribeToSeeds((seeds: number[]) => {
+        this.uniforms.mapping_seeds = { value: seeds };
+      });
+      const {
+        CUCKOO_ENTRY_CAPACITY,
+        CUCKOO_ELEMENTS_PER_ENTRY,
+        CUCKOO_ELEMENTS_PER_TEXEL,
+        CUCKOO_TWIDTH,
+      } = cuckoo.getUniformValues();
+      this.uniforms.MAPPING_CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
+      this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
+      this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
+      this.uniforms.MAPPING_CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
+    }
   }
 
   attachSegmentationColorTexture(): void {
@@ -359,20 +377,20 @@ class PlaneMaterialFactory {
     if (segmentationLayer == null) {
       this.uniforms.custom_color_seeds = { value: [0, 0, 0] };
 
-      this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: 0 };
-      this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: 0 };
-      this.uniforms.CUCKOO_ELEMENTS_PER_TEXEL = { value: 0 };
-      this.uniforms.CUCKOO_TWIDTH = { value: 0 };
+      this.uniforms.COLOR_CUCKOO_ENTRY_CAPACITY = { value: 0 };
+      this.uniforms.COLOR_CUCKOO_ELEMENTS_PER_ENTRY = { value: 0 };
+      this.uniforms.COLOR_CUCKOO_ELEMENTS_PER_TEXEL = { value: 0 };
+      this.uniforms.COLOR_CUCKOO_TWIDTH = { value: 0 };
       this.uniforms.custom_color_texture = { value: CuckooTable.getNullTexture() };
       return;
     }
     const cuckoo = segmentationLayer.layerRenderingManager.getCustomColorCuckooTable();
     const customColorTexture = cuckoo.getTexture();
 
-    if (this.unsubscribeSeedsFn != null) {
-      this.unsubscribeSeedsFn();
+    if (this.unsubscribeColorSeedsFn != null) {
+      this.unsubscribeColorSeedsFn();
     }
-    this.unsubscribeSeedsFn = cuckoo.subscribeToSeeds((seeds: number[]) => {
+    this.unsubscribeColorSeedsFn = cuckoo.subscribeToSeeds((seeds: number[]) => {
       this.uniforms.custom_color_seeds = { value: seeds };
     });
     const {
@@ -381,10 +399,10 @@ class PlaneMaterialFactory {
       CUCKOO_ELEMENTS_PER_TEXEL,
       CUCKOO_TWIDTH,
     } = cuckoo.getUniformValues();
-    this.uniforms.CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
-    this.uniforms.CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
-    this.uniforms.CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
-    this.uniforms.CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
+    this.uniforms.COLOR_CUCKOO_ENTRY_CAPACITY = { value: CUCKOO_ENTRY_CAPACITY };
+    this.uniforms.COLOR_CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
+    this.uniforms.COLOR_CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
+    this.uniforms.COLOR_CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
     this.uniforms.custom_color_texture = {
       value: customColorTexture,
     };

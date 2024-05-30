@@ -64,6 +64,7 @@ class DSMeshController @Inject()(
             editableMappingTracingId,
             request.body.segmentId,
             mappingNameForMeshFile,
+            omitMissing = false,
             urlOrHeaderToken(token, request)
           )
           chunkInfos <- meshFileService.listMeshChunksForSegments(organizationName,

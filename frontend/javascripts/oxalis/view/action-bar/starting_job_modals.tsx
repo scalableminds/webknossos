@@ -809,11 +809,7 @@ export function AlignSectionsForm() {
       title="Section Alignment"
       suggestedDatasetSuffix="aligned"
       isBoundingBoxConfigurable={false}
-      jobApiCall={async ({
-        newDatasetName,
-        selectedLayer: colorLayer,
-      }) => {
-
+      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) => {
         return startAlignSectionsJob(
           dataset.owningOrganization,
           dataset.name,
@@ -824,9 +820,7 @@ export function AlignSectionsForm() {
       description={
         <>
           <Space direction="vertical" size="middle">
-            <Row>
-              This job will automatically align all the sections of the dataset.
-            </Row>
+            <Row>This job will automatically align all the sections of the dataset.</Row>
             <Row style={{ display: "grid", marginBottom: 16 }}>
               <Alert
                 message="Please note that this feature is experimental."

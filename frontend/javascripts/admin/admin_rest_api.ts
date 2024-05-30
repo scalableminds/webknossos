@@ -1361,7 +1361,6 @@ export function startAlignSectionsJob(
   );
 }
 
-
 export function startRenderAnimationJob(
   organizationName: string,
   datasetName: string,

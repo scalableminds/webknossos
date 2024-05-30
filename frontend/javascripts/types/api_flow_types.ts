@@ -664,7 +664,7 @@ export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | 
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
 export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
 export enum APIJobType {
-  ALIGN_SECTIONS  = "align_sections",
+  ALIGN_SECTIONS = "align_sections",
   CONVERT_TO_WKW = "convert_to_wkw",
   EXPORT_TIFF = "export_tiff",
   RENDER_ANIMATION = "render_animation",

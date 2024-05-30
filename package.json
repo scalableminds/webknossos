@@ -119,7 +119,9 @@
     "ts-coverage": "typescript-coverage-report",
     "find-cyclic-dependencies": "yarn run dpdm -T --tree false --warning false --extensions .ts,.tsx frontend/javascripts/main.tsx",
     "check-cyclic-dependencies": "node ./tools/check-cyclic-dependencies.js",
-    "startf": "yarn rm-fossil-lock; yarn kill-listeners; yarn start"
+    "startf": "yarn rm-fossil-lock; yarn kill-listeners; yarn start",
+    "precommit-front": "yarn fix-frontend && yarn typecheck",
+    "precommit": "yarn format-backend && yarn precommit-front"
   },
   "dependencies": {
     "@airbrake/browser": "^2.1.7",

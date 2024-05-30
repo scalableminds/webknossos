@@ -67,7 +67,7 @@ export default function DatasetSettingsDataTab({
   onChange,
   additionalAlert,
   dataset,
-  defaultDatasetName
+  defaultDatasetName,
 }: {
   allowRenamingDataset: boolean;
   form: FormInstance;
@@ -75,7 +75,7 @@ export default function DatasetSettingsDataTab({
   onChange: (arg0: "simple" | "advanced") => void;
   additionalAlert?: React.ReactNode | null | undefined;
   dataset?: APIDataset | null | undefined;
-  defaultDatasetName?: string | undefined
+  defaultDatasetName?: string | undefined | null;
 }) {
   // Using the return value of useWatch for the `dataSource` var
   // yields outdated values. Therefore, the hook only exists for listening.
@@ -157,17 +157,27 @@ function SimpleDatasetForm({
   dataSource,
   form,
   dataset,
-  defaultDatasetName
+  defaultDatasetName,
 }: {
   allowRenamingDataset: boolean;
   dataSource: Record<string, any>;
   form: FormInstance;
   dataset: APIDataset | null | undefined;
-  defaultDatasetName: string | undefined;
+  defaultDatasetName: string | undefined | null;
 }) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
 
-  useEffect(() => { defaultDatasetName != null && form.setFieldValue(["dataSource", "id", "name"], defaultDatasetName) });
+  useEffect(() => {
+    console.log("default", defaultDatasetName)
+    if (defaultDatasetName != null)
+      form.setFieldsValue({
+        dataSource: {
+          id: {
+            name: defaultDatasetName
+          }
+        },
+      });
+  }, [defaultDatasetName, form.setFieldsValue]);
   const onRemoveLayer = (layer: DataLayer) => {
     const oldLayers = form.getFieldValue(["dataSource", "dataLayers"]);
     const newLayers = oldLayers.filter(
@@ -207,7 +217,6 @@ function SimpleDatasetForm({
                   info="The name of the dataset"
                   validateFirst
                   rules={getDatasetNameRules(activeUser, allowRenamingDataset)}
-                  initialValue={defaultDatasetName}
                 >
                   <Input
                     // Renaming an existing DS is not supported right now

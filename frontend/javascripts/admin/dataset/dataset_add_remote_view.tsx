@@ -52,7 +52,7 @@ type OwnProps = {
     needsConversion?: boolean | null | undefined,
   ) => Promise<void>;
   datastores: APIDataStore[];
-  defaultDatasetUrl?: string | null;
+  defaultDatasetUrl?: string | null | undefined;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -70,18 +70,19 @@ function ensureLargestSegmentIdsInPlace(datasource: DatasourceConfiguration) {
   }
 }
 
+
 function mergeNewLayers(
   existingDatasource: DatasourceConfiguration | null,
   newDatasource: DatasourceConfiguration,
 ): DatasourceConfiguration {
-  if (existingDatasource == null) {
+  if (existingDatasource?.dataLayers == null) {
     return newDatasource;
   }
   const allLayers = newDatasource.dataLayers.concat(existingDatasource.dataLayers);
-  const groupedLayers = _.groupBy(allLayers, (layer: DataLayer) => layer.name) as unknown as Record<
-    string,
-    DataLayer[]
-  >;
+  const groupedLayers: Record<string, DataLayer[]> = _.groupBy(
+    allLayers,
+    (layer: DataLayer) => layer.name,
+  );
   const uniqueLayers: DataLayer[] = [];
   for (const entry of _.entries(groupedLayers)) {
     const [name, layerGroup] = entry;
@@ -198,14 +199,6 @@ function DatasetAddRemoteView(props: Props) {
     syncDataSourceFields(form, "simple");
     form.validateFields();
   };
-
-  const getDefaultDatasetName = (url: string | null | undefined) => {
-    if (url == null) return null;
-    const indexOfLastSlash = url.lastIndexOf("/");
-    const subString = url.substring(indexOfLastSlash + 1);
-    if (subString.length > 2) return subString;
-    else return subString.padEnd(3, "0") // todo
-  }
   async function handleStoreDataset() {
     // Sync simple with advanced and get newest datasourceJson
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
@@ -318,7 +311,6 @@ function DatasetAddRemoteView(props: Props) {
                 form.validateFields();
                 setDataSourceEditMode(activeEditMode);
               }}
-              defaultDatasetName={getDefaultDatasetName(defaultDatasetUrl)}
             />
           </Hideable>
           {!hideDatasetUI && (
@@ -386,11 +378,10 @@ function AddRemoteLayer({
   setDatasourceConfigStr: (dataSourceJson: string) => void;
   onSuccess?: () => void;
   dataSourceEditMode: "simple" | "advanced";
-  defaultUri?: string | null | undefined
+  defaultUri?: string | null | undefined;
 }) {
   const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
   const datasourceUrl: string | null = Form.useWatch("url", form);
-  console.log("useWatch", datasourceUrl)
   const [exploreLog, setExploreLog] = useState<string | null>(null);
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
@@ -399,11 +390,26 @@ function AddRemoteLayer({
   const [fileList, setFileList] = useState<FileList>([]);
 
   useEffect(() => {
-    form.setFieldValue("url", defaultUri);
-    if (datasourceUrl != null) {
-      handleExplore();
+    if (defaultUri != null) {
+      form.setFieldValue("url", defaultUri);
+      const dataSourceJson = form.getFieldValue("dataSourceJson");
+      const defaultDatasetName = getDefaultDatasetName(defaultUri);
+      setDatasourceConfigStr(jsonStringify({ ...dataSourceJson, name: defaultDatasetName })); //fix this, then you should be ok. also delete passing though of default name.
+      if (datasourceUrl != null)
+        handleExplore();
     }
-  }, [defaultUri, form.setFieldValue, datasourceUrl != null])
+  }, [defaultUri, form.setFieldValue, datasourceUrl != null]);
+
+  const getDefaultDatasetName = (url: string | null | undefined) => {
+    let datasetname = "";
+    if (url != null) {
+      const indexOfLastSlash = url.lastIndexOf("/");
+      const subString = url.substring(indexOfLastSlash + 1);
+      if (subString.length > 2) datasetname = subString;
+      else datasetname = subString.padEnd(3, "0"); // todo
+    }
+    return datasetname;
+  };
 
   const handleChange = (info: UploadChangeParam<UploadFile<any>>) => {
     // Restrict the upload list to the latest file
@@ -507,7 +513,9 @@ function AddRemoteLayer({
       );
     }
     setDatasourceConfigStr(jsonStringify(mergeNewLayers(existingDatasource, newDataSource)));
+    // todo setDatasourceConfigStr() name
     if (onSuccess) {
+      console.log("success");
       onSuccess();
     }
   }

@@ -91,7 +91,7 @@ case class VolumeTracingLayer(
   override val adminViewConfiguration: Option[LayerViewConfiguration] = None
   override val mappings: Option[Set[String]] = None
   override val coordinateTransformations: Option[List[CoordinateTransformation]] = None
-  override val mags: List[MagLocator] = List.empty
+  override val mags: List[MagLocator] = List.empty // MagLocators do not apply for annotation layers
 
   private lazy val volumeResolutions: List[Vec3Int] = tracing.resolutions.map(vec3IntFromProto).toList
 

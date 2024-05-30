@@ -23,8 +23,8 @@ import scala.concurrent.ExecutionContext
 
 class DatasetArrayBucketProvider(dataLayer: DataLayer,
                                  dataSourceId: DataSourceId,
-                                 val remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                                 sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]])
+                                 remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
+                                 sharedChunkContentsCacheOpt: Option[AlfuCache[String, MultiArray]])
     extends BucketProvider
     with FoxImplicits
     with LazyLogging {
@@ -35,7 +35,7 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
   def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       datasetArray <- datasetArrayCache.getOrLoad(readInstruction.bucket.mag,
-                                                  _ => openDatasetArrayWithTimeout(readInstruction))
+                                                  _ => openDatasetArrayWithTimeLogging(readInstruction))
       bucket = readInstruction.bucket
       shape = Vec3Int.full(bucket.bucketLength)
       offset = Vec3Int(bucket.topLeft.voxelXInMag, bucket.topLeft.voxelYInMag, bucket.topLeft.voxelZInMag)
@@ -45,7 +45,7 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
                                                                     dataLayer.elementClass == ElementClass.uint24)
     } yield bucketData
 
-  private def openDatasetArrayWithTimeout(readInstruction: DataReadInstruction)(
+  private def openDatasetArrayWithTimeLogging(readInstruction: DataReadInstruction)(
       implicit ec: ExecutionContext): Fox[DatasetArray] = {
     val before = Instant.now
     for {
@@ -74,7 +74,7 @@ class DatasetArrayBucketProvider(dataLayer: DataLayer,
                                                                                readInstruction.dataSource.id,
                                                                                readInstruction.dataLayer.name,
                                                                                magLocator)
-              chunkContentsCache <- sharedChunkContentsCache.toFox
+              chunkContentsCache <- sharedChunkContentsCacheOpt.toFox
               datasetArray <- dataLayer.dataFormat match {
                 case DataFormat.zarr =>
                   ZarrArray.open(magPath,

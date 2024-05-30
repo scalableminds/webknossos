@@ -45,7 +45,7 @@ case class WKWDataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     additionalAxes: Option[Seq[AdditionalAxis]] = None
-) extends WKWLayer {}
+) extends WKWLayer
 
 object WKWDataLayer {
   implicit val jsonFormat: OFormat[WKWDataLayer] = Json.format[WKWDataLayer]

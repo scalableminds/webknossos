@@ -44,6 +44,7 @@ import { useEffectOnlyOnce } from "libs/react_hooks";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
 import { ColoredDotIconForSegment } from "../segments_tab/segment_list_item";
 import { useLifecycle } from "beautiful-react-hooks";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {
@@ -112,6 +113,11 @@ function CommentTabView(props: Props) {
 
   const allowUpdate = useSelector((state: OxalisState) => state.tracing.restrictions.allowUpdate);
   const keyboardDelay = useSelector((state: OxalisState) => state.userConfiguration.keyboardDelay);
+
+  const isAnnotationLockedByUser = useSelector(
+    (state: OxalisState) => state.tracing.isLockedByOwner,
+  );
+  const isOwner = useSelector((state: OxalisState) => isAnnotationOwner(state));
 
   const activeComment = useSelector((_state: OxalisState) => getActiveComment());
 
@@ -412,6 +418,11 @@ function CommentTabView(props: Props) {
   const activeNodeMaybe = getActiveNode(props.skeletonTracing);
   const isEditingDisabled = activeNodeMaybe.isNothing || !allowUpdate;
 
+  const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
+    isAnnotationLockedByUser,
+    isOwner,
+  );
+
   return (
     <div
       id={commentTabId}
@@ -446,7 +457,7 @@ function CommentTabView(props: Props) {
                 <InputComponent
                   value={activeCommentContent}
                   disabled={isEditingDisabled}
-                  title={allowUpdate ? undefined : messages["tracing.read_only_mode_notification"]}
+                  title={allowUpdate ? undefined : isEditingDisabledMessage}
                   onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
                     handleChangeInput(evt.target.value, true)
                   }
@@ -464,7 +475,7 @@ function CommentTabView(props: Props) {
                   title={
                     allowUpdate
                       ? "Open dialog to edit comment in multi-line mode"
-                      : messages["tracing.read_only_mode_notification"]
+                      : isEditingDisabledMessage
                   }
                   type={isMultilineComment ? "primary" : "default"}
                   icon={<EditOutlined />}

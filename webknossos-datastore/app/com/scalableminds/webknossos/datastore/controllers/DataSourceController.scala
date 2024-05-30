@@ -654,6 +654,7 @@ class DataSourceController @Inject()(
             request.body.editableMappingTracingId,
             segmentId.toLong,
             mappingNameForMeshFile = None,
+            omitMissing = false,
             urlOrHeaderToken(token, request)
           )
           fileMag <- segmentIndexFileService.readFileMag(organizationName, datasetName, dataLayerName)
@@ -694,6 +695,7 @@ class DataSourceController @Inject()(
                 request.body.editableMappingTracingId,
                 segmentOrAgglomerateId,
                 mappingNameForMeshFile = None,
+                omitMissing = true, // assume agglomerate ids not present in the mapping belong to user-brushed segments
                 urlOrHeaderToken(token, request)
               )
               fileMag <- segmentIndexFileService.readFileMag(organizationName, datasetName, dataLayerName)

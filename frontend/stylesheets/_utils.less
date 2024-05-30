@@ -69,13 +69,13 @@ td.nowrap * {
 .clearfix::before {
   // sometimes required by .pull-right
   display: table;
-  content: '';
+  content: "";
 }
 .clearfix::after {
   // sometimes required by .pull-right
   display: table;
   clear: both;
-  content: '';
+  content: "";
 }
 
 .circle {
@@ -95,6 +95,13 @@ td.nowrap * {
 .flex-container {
   justify-content: space-between;
   display: flex;
+}
+
+.flex-center-child {
+  display: flex;
+  justify-content: center;
+  align-content: center;
+  flex-wrap: wrap;
 }
 
 .flex-item {

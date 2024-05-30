@@ -9,4 +9,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/24.06.0...HEAD)
 
 ### Postgres Evolutions:
-- [114-annotation-locked-by-user.sql](conf/evolutions/114-annotation-locked-by-user.sql)
+
+- [114-ai-models.sql](conf/evolutions/114-ai-models.sql)
+- [115-annotation-locked-by-user.sql](conf/evolutions/115-annotation-locked-by-user.sql)

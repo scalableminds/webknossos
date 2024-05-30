@@ -30,6 +30,7 @@ For non-localhost deployments, check out the [installation guide in the document
 * [node.js 18](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
+* [cmake](https://cmake.org/download/)
 
 * For some development tasks like refreshing snapshots, Docker 19.03.0+ and Docker Compose 2.+ are required
 

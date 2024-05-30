@@ -23,6 +23,7 @@ import {
   VerticalLeftOutlined,
   VerticalRightOutlined,
   UnlockOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -68,6 +69,7 @@ import {
   screenshotMenuItem,
   renderAnimationMenuItem,
 } from "oxalis/view/action-bar/view_dataset_actions_view";
+import * as Utils from "libs/utils";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
 import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
@@ -452,15 +454,20 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     });
   };
 
-  handleUnlockAnnotation = async () => {
+  handleChangeLockedStateOfAnnotation = async (isLocked: boolean) => {
     try {
       const { annotationId, annotationType } = this.props;
-      await editLockedState(annotationId, annotationType, false);
-      Toast.info(messages["annotation.unlock.success"]);
+      await editLockedState(annotationId, annotationType, isLocked);
+      Toast.success(
+        isLocked ? messages["annotation.lock.success"] : messages["annotation.unlock.success"],
+      );
+      // Give some time to show the toast before reloading the page.
+      await Utils.sleep(250);
       location.reload();
     } catch (error: any) {
-      Toast.error("Could not unlock the annotation. " + error?.message);
-      console.error("Could not unlock the annotation. ", error);
+      const verb = isLocked ? "lock" : "unlock";
+      Toast.error(`Could not ${verb} the annotation. ` + error?.message);
+      console.error(`Could not ${verb} the annotation. `, error);
     }
   };
 
@@ -587,14 +594,6 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         label: archiveButtonText,
       });
     }
-    if (isAnnotationLockedByUser && isAnnotationOwner) {
-      menuItems.push({
-        key: "unlock-button",
-        onClick: this.handleUnlockAnnotation,
-        icon: <UnlockOutlined />,
-        label: "Unlock Annotation",
-      });
-    }
 
     if (restrictions.allowDownload) {
       menuItems.push({
@@ -710,6 +709,14 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         onClick: this.handleDisableSaving,
         icon: <StopOutlined />,
         label: "Disable saving",
+      });
+    }
+    if (isAnnotationOwner) {
+      menuItems.push({
+        key: "lock-unlock-button",
+        onClick: () => this.handleChangeLockedStateOfAnnotation(!isAnnotationLockedByUser),
+        icon: isAnnotationLockedByUser ? <UnlockOutlined /> : <LockOutlined />,
+        label: `${isAnnotationLockedByUser ? "Unlock" : "Lock"} Annotation`,
       });
     }
 

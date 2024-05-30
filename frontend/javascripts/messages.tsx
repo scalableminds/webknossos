@@ -300,6 +300,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This annotation is not being edited anymore and available for editing. Reload the page to see its newest version and to edit it.",
   "annotation.unlock.success":
     "The annotation was successfully unlocked. Reloading this annotation ...",
+  "annotation.lock.success":
+    "The annotation was successfully locked. Reloading this annotation ...",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",

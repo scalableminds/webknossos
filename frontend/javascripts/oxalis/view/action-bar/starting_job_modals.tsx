@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import type { APIJob, APIDataLayer } from "types/api_flow_types";
 import {
   Modal,
@@ -13,12 +13,17 @@ import {
   Card,
   Tooltip,
   Alert,
+  Tabs,
+  Switch,
+  FormInstance,
 } from "antd";
 import {
   startNucleiInferralJob,
   startMaterializingVolumeAnnotationJob,
   startNeuronInferralJob,
   startMitochondriaInferralJob,
+  runInferenceJob,
+  getAiModels,
 } from "admin/admin_rest_api";
 import { useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
@@ -28,12 +33,12 @@ import {
   getDataLayers,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getReadableNameByVolumeTracingId,
   getActiveSegmentationTracingLayer,
+  getReadableNameOfVolumeLayer,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import Toast from "libs/toast";
-import type { OxalisState, UserBoundingBox, HybridTracing } from "oxalis/store";
+import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
 import { Model, Store } from "oxalis/singletons";
 import {
@@ -49,6 +54,10 @@ import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import { InfoCircleOutlined } from "@ant-design/icons";
+import { TrainAiModelTab } from "../jobs/train_ai_model";
+import { LayerSelectionFormItem } from "components/layer_selection";
+import { useGuardedFetch } from "libs/react_helpers";
+import _ from "lodash";
 
 const { ThinSpace } = Unicode;
 
@@ -59,20 +68,20 @@ export type StartAIJobModalState =
   | "invisible";
 
 // "materialize_volume_annotation" is only used in this module
-const jobNameToImagePath: Record<
-  StartAIJobModalState | "materialize_volume_annotation",
-  string | null
-> = {
+const jobNameToImagePath = {
   neuron_inferral: "neuron_inferral_example.jpg",
   nuclei_inferral: "nuclei_inferral_example.jpg",
   mitochondria_inferral: "mito_inferral_example.jpg",
   materialize_volume_annotation: "materialize_volume_annotation_example.jpg",
   invisible: "",
-};
+  inference: "",
+} as const;
+
 const jobTypeWithConfigurableOutputSegmentationLayerName = [
   "materialize_volume_annotation",
   "neuron_inferral",
   "mitochondria_inferral",
+  "inference",
 ];
 type Props = {
   handleClose: () => void;
@@ -89,7 +98,7 @@ type JobApiCallArgsType = {
   selectedBoundingBox: UserBoundingBox | null | undefined;
 };
 type StartJobFormProps = Props & {
-  jobApiCall: (arg0: JobApiCallArgsType) => Promise<void | APIJob>;
+  jobApiCall: (arg0: JobApiCallArgsType, form: FormInstance<any>) => Promise<void | APIJob>;
   jobName: keyof typeof jobNameToImagePath;
   description: React.ReactNode;
   isBoundingBoxConfigurable?: boolean;
@@ -99,99 +108,6 @@ type StartJobFormProps = Props & {
   title: string;
   buttonLabel?: string | null;
 };
-
-type LayerSelectionProps = {
-  chooseSegmentationLayer: boolean;
-  layers: APIDataLayer[];
-  tracing: HybridTracing;
-  fixedLayerName?: string;
-};
-
-export function getReadableNameOfVolumeLayer(
-  layer: APIDataLayer,
-  tracing: HybridTracing,
-): string | null {
-  return "tracingId" in layer && layer.tracingId != null
-    ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
-    : null;
-}
-
-export function LayerSelection({
-  layers,
-  tracing,
-  fixedLayerName,
-  layerType,
-  onChange,
-  style,
-  value,
-}: {
-  layers: APIDataLayer[];
-  tracing: HybridTracing;
-  fixedLayerName?: string;
-  layerType?: string;
-  style?: React.CSSProperties;
-  // onChange and value should not be renamed, because these are the
-  // default property names for controlled antd FormItems.
-  onChange?: (a: string) => void;
-  value?: string | null;
-}): JSX.Element {
-  const onSelect = onChange ? (layerName: string) => onChange(layerName) : undefined;
-  const maybeLayerType = layerType || "";
-  const maybeSpace = layerType != null ? " " : "";
-  return (
-    <Select
-      showSearch
-      placeholder={`Select a ${maybeLayerType}${maybeSpace}layer`}
-      optionFilterProp="children"
-      filterOption={(input, option) =>
-        // @ts-expect-error ts-migrate(2532) FIXME: Object is possibly 'undefined'.
-        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-      }
-      disabled={fixedLayerName != null}
-      onSelect={onSelect}
-      style={style}
-      value={value}
-    >
-      {layers.map((layer) => {
-        const readableName = getReadableNameOfVolumeLayer(layer, tracing) || layer.name;
-        return (
-          <Select.Option key={layer.name} value={layer.name}>
-            {readableName}
-          </Select.Option>
-        );
-      })}
-    </Select>
-  );
-}
-
-function LayerSelectionFormItem({
-  chooseSegmentationLayer,
-  layers,
-  tracing,
-  fixedLayerName,
-}: LayerSelectionProps): JSX.Element {
-  const layerType = chooseSegmentationLayer ? "segmentation" : "color";
-  return (
-    <Form.Item
-      label="Layer"
-      name="layerName"
-      rules={[
-        {
-          required: true,
-          message: `Please select the ${layerType} layer that should be used for this job.`,
-        },
-      ]}
-      hidden={layers.length === 1 && fixedLayerName == null}
-    >
-      <LayerSelection
-        layers={layers}
-        fixedLayerName={fixedLayerName}
-        layerType={layerType}
-        tracing={tracing}
-      />
-    </Form.Item>
-  );
-}
 
 type BoundingBoxSelectionProps = {
   isBoundingBoxConfigurable?: boolean;
@@ -219,6 +135,16 @@ function renderUserBoundingBox(bbox: UserBoundingBox | null | undefined) {
       />
       {bbox.name} ({computeArrayFromBoundingBox(bbox.boundingBox).join(", ")})
     </>
+  );
+}
+
+function ExperimentalInferenceAlert() {
+  return (
+    <Alert
+      message="Please note that this feature is experimental and currently only works with electron microscopy data.  If the specified bounding box is too close to the border of the dataset's bounding box, its size might be reduced automatically."
+      type="warning"
+      showIcon
+    />
   );
 }
 
@@ -367,7 +293,7 @@ export function OutputSegmentationLayerNameFormItem({
 }: OutputSegmentationLayerNameProps) {
   return (
     <Form.Item
-      label="Name of output segmentation layer"
+      label="New segmentation layer name"
       name="outputSegmentationLayerName"
       rules={[
         { required: hasOutputSegmentationLayer },
@@ -397,10 +323,22 @@ export function OutputSegmentationLayerNameFormItem({
 }
 
 export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
-  const centerImageStyle = {
-    margin: "auto",
-    width: 150,
-  };
+  const onClose = () => Store.dispatch(setAIJobModalStateAction("invisible"));
+  const isSuperUser = Store.getState().activeUser?.isSuperUser || false;
+  const tabs = _.compact([
+    {
+      label: "Run a model",
+      key: "runModel",
+      children: <RunAiModelTab aIJobModalState={aIJobModalState} />,
+    },
+    isSuperUser
+      ? {
+          label: "Train a model",
+          key: "trainModel",
+          children: <TrainAiModelTab onClose={onClose} />,
+        }
+      : null,
+  ]);
   return aIJobModalState !== "invisible" ? (
     <Modal
       width={667}
@@ -411,79 +349,132 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
           AI Analysis
         </>
       }
-      onCancel={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
+      onCancel={onClose}
       footer={null}
     >
-      <Space direction="vertical" size="middle">
-        <Row>Choose a processing job for your dataset:</Row>
-        <Space align="center">
-          <Radio.Button
-            className="aIJobSelection"
-            checked={aIJobModalState === "neuron_inferral"}
-            onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
-          >
-            <Card bordered={false}>
-              <Space direction="vertical" size="small">
-                <Row className="ai-job-title">Neuron segmentation</Row>
-                <Row>
-                  <img
-                    src={`/assets/images/${jobNameToImagePath.neuron_inferral}`}
-                    alt={"Neuron segmentation example"}
-                    style={centerImageStyle}
-                  />
-                </Row>
-              </Space>
-            </Card>
-          </Radio.Button>
-          <Tooltip title="Coming soon">
-            <Radio.Button
-              className="aIJobSelection"
-              checked={aIJobModalState === "mitochondria_inferral"}
-              disabled={!Store.getState().activeUser?.isSuperUser}
-              onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
-            >
-              <Card bordered={false}>
-                <Space direction="vertical" size="small">
-                  <Row className="ai-job-title">Mitochondria detection</Row>
-                  <Row>
-                    <img
-                      src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
-                      alt={"Mitochondria detection example"}
-                      style={centerImageStyle}
-                    />
-                  </Row>
-                </Space>
-              </Card>
-            </Radio.Button>
-          </Tooltip>
-          <Tooltip title="Coming soon">
-            <Radio.Button
-              className="aIJobSelection"
-              disabled
-              checked={aIJobModalState === "nuclei_inferral"}
-              onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
-            >
-              <Card bordered={false}>
-                <Space direction="vertical" size="small">
-                  <Row className="ai-job-title">Nuclei detection</Row>
-                  <Row>
-                    <img
-                      src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
-                      alt={"Nuclei detection example"}
-                      style={centerImageStyle}
-                    />
-                  </Row>
-                </Space>
-              </Card>
-            </Radio.Button>
-          </Tooltip>
-        </Space>
-        {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
-        {aIJobModalState === "nuclei_inferral" ? <NucleiDetectionForm /> : null}
-        {aIJobModalState === "mitochondria_inferral" ? <MitochondriaSegmentationForm /> : null}
-      </Space>
+      <Tabs items={tabs} />
     </Modal>
   ) : null;
+}
+
+function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
+  const centerImageStyle = {
+    margin: "auto",
+    width: 150,
+  };
+  const isSuperUser = Store.getState().activeUser?.isSuperUser || false;
+  const [showCustomAiModels, setShowCustomAiModels] = useState(false);
+
+  return (
+    <Space direction="vertical" size="middle">
+      <Row>
+        <div
+          style={{
+            width: "100%",
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: "space-between",
+          }}
+        >
+          <div className="flex-item">
+            {showCustomAiModels
+              ? "Choose one of your trained models from the list below."
+              : "Choose a processing job for your dataset:"}
+          </div>
+          {isSuperUser && (
+            <div className="flex-item" style={{ flexGrow: 0 }}>
+              <Tooltip title="Switch between default and custom models">
+                <Switch
+                  checkedChildren="Custom"
+                  unCheckedChildren="Default"
+                  checked={showCustomAiModels}
+                  disabled={!isSuperUser}
+                  style={{
+                    marginBottom: 6,
+                  }}
+                  onChange={(bool) => {
+                    setShowCustomAiModels(bool);
+                  }}
+                />
+              </Tooltip>
+            </div>
+          )}
+        </div>
+      </Row>
+
+      {showCustomAiModels ? (
+        <CustomAiModelInferenceForm />
+      ) : (
+        <>
+          <Space align="center">
+            <Radio.Button
+              className="aIJobSelection"
+              checked={aIJobModalState === "neuron_inferral"}
+              onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
+            >
+              <Card bordered={false}>
+                <Space direction="vertical" size="small">
+                  <Row className="ai-job-title">Neuron segmentation</Row>
+                  <Row>
+                    <img
+                      src={`/assets/images/${jobNameToImagePath.neuron_inferral}`}
+                      alt={"Neuron segmentation example"}
+                      style={centerImageStyle}
+                    />
+                  </Row>
+                </Space>
+              </Card>
+            </Radio.Button>
+            <Tooltip title={!isSuperUser ? "Coming soon" : null}>
+              <Radio.Button
+                className="aIJobSelection"
+                disabled={!isSuperUser}
+                checked={aIJobModalState === "mitochondria_inferral"}
+                onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
+              >
+                <Card bordered={false}>
+                  <Space direction="vertical" size="small">
+                    <Row className="ai-job-title">Mitochondria detection</Row>
+                    <Row>
+                      <img
+                        src={`/assets/images/${jobNameToImagePath.mitochondria_inferral}`}
+                        alt={"Mitochondria detection example"}
+                        style={centerImageStyle}
+                      />
+                    </Row>
+                  </Space>
+                </Card>
+              </Radio.Button>
+            </Tooltip>
+            <Tooltip title="Coming soon">
+              <Radio.Button
+                className="aIJobSelection"
+                disabled
+                checked={aIJobModalState === "nuclei_inferral"}
+                onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
+              >
+                <Card bordered={false}>
+                  <Space direction="vertical" size="small">
+                    <Row className="ai-job-title">Nuclei detection</Row>
+                    <Row>
+                      <img
+                        src={`/assets/images/${jobNameToImagePath.nuclei_inferral}`}
+                        alt={"Nuclei detection example"}
+                        style={centerImageStyle}
+                      />
+                    </Row>
+                  </Space>
+                </Card>
+              </Radio.Button>
+            </Tooltip>
+          </Space>
+          {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
+          {aIJobModalState === "nuclei_inferral" ? <NucleiDetectionForm /> : null}
+          {aIJobModalState === "mitochondria_inferral" ? <MitochondriaSegmentationForm /> : null}
+        </>
+      )}
+    </Space>
+  );
 }
 
 function StartJobForm(props: StartJobFormProps) {
@@ -539,7 +530,7 @@ function StartJobForm(props: StartJobFormProps) {
         selectedLayer,
         selectedBoundingBox,
       };
-      const apiJob = await jobApiCall(jobArgs);
+      const apiJob = await jobApiCall(jobArgs, form);
 
       if (!apiJob) {
         return;
@@ -610,6 +601,7 @@ function StartJobForm(props: StartJobFormProps) {
       />
       <LayerSelectionFormItem
         chooseSegmentationLayer={chooseSegmentationLayer}
+        label={chooseSegmentationLayer ? "Segmentation Layer" : "Image data layer"}
         layers={layers}
         fixedLayerName={fixedSelectedLayer?.name}
         tracing={tracing}
@@ -708,12 +700,7 @@ export function NeuronSegmentationForm() {
               will create a copy of this dataset containing the new neuron segmentation.
             </Row>
             <Row style={{ display: "grid", marginBottom: 16 }}>
-              <Alert
-                message="Please note that this feature is experimental and currently only works with electron
-                microscopy data."
-                type="warning"
-                showIcon
-              />
+              <ExperimentalInferenceAlert />
             </Row>
           </Space>
         </>
@@ -760,14 +747,88 @@ export function MitochondriaSegmentationForm() {
               AI will create a copy of this dataset containing the new mitochondria segmentation.
             </Row>
             <Row style={{ display: "grid", marginBottom: 16 }}>
-              <Alert
-                message="Please note that this feature is experimental and currently only works with electron
-                microscopy data."
-                type="warning"
-                showIcon
-              />
+              <ExperimentalInferenceAlert />
             </Row>
           </Space>
+        </>
+      }
+    />
+  );
+}
+
+function CustomAiModelInferenceForm() {
+  const dataset = useSelector((state: OxalisState) => state.dataset);
+  const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
+  const isViewMode = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  );
+
+  const [aiModels, isLoading] = useGuardedFetch(
+    async function () {
+      const models = await getAiModels();
+      return models.filter(
+        (aiModel) => aiModel.trainingJob == null || aiModel.trainingJob.state === "SUCCESS",
+      );
+    },
+    [],
+    [],
+    "Could not load model list.",
+  );
+
+  return (
+    <StartJobForm
+      handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
+      jobName="inference"
+      buttonLabel="Start inference with custom AI model"
+      title="AI Inference"
+      suggestedDatasetSuffix="with_custom_model"
+      isBoundingBoxConfigurable
+      jobApiCall={async (
+        {
+          newDatasetName,
+          selectedLayer: colorLayer,
+          selectedBoundingBox,
+          outputSegmentationLayerName,
+        },
+        form,
+      ) => {
+        if (!selectedBoundingBox || !outputSegmentationLayerName) {
+          return;
+        }
+
+        const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
+
+        const maybeAnnotationId = isViewMode ? {} : { annotationId };
+        return runInferenceJob({
+          ...maybeAnnotationId,
+          aiModelId: form.getFieldValue("aiModel"),
+          datasetName: dataset.name,
+          colorLayerName: colorLayer.name,
+          boundingBox,
+          newSegmentationLayerName: outputSegmentationLayerName,
+          newDatasetName: newDatasetName,
+        });
+      }}
+      description={
+        <>
+          <Space direction="vertical" size="middle">
+            <Row style={{ display: "grid", marginBottom: 16 }}>
+              <ExperimentalInferenceAlert />
+            </Row>
+          </Space>
+          <Form.Item
+            name="aiModel"
+            label="Model"
+            hasFeedback
+            validateFirst
+            rules={[{ required: true }]}
+          >
+            <Select
+              style={{ width: 120 }}
+              loading={isLoading}
+              options={aiModels.map((aiModel) => ({ value: aiModel.id, label: aiModel.name }))}
+            />
+          </Form.Item>
         </>
       }
     />

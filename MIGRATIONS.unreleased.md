@@ -10,4 +10,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 
-- [114-drop-overtimemailinglist.sql](conf/evolutions/114-drop-overtimemailinglist.sql)
+- [114-ai-models.sql](conf/evolutions/114-ai-models.sql)
+- [116-drop-overtimemailinglist.sql](conf/evolutions/116-drop-overtimemailinglist.sql)

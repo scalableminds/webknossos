@@ -1,13 +1,11 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 113, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 116, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 DROP VIEW webknossos.userInfos;
 DROP VIEW webknossos.organizations_;
 
-ALTER TABLE webknossos.organizations DROP COLUMN overTimeMailingList;
-
-
+ALTER TABLE webknossos.organizations ADD COLUMN overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '';
 
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 
@@ -21,6 +19,6 @@ FROM webknossos.users_ u
 JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 114;
+UPDATE webknossos.releaseInformation SET schemaVersion = 115;
 
 COMMIT TRANSACTION;

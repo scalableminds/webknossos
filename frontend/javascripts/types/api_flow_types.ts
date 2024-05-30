@@ -463,6 +463,7 @@ export type APIAnnotationInfo = {
   // backend still serves this for backward-compatibility reasons.
   readonly stats?: SkeletonTracingStats | EmptyObject;
   readonly state: string;
+  readonly isLockedByOwner: boolean;
   readonly tags: Array<string>;
   readonly typ: APIAnnotationType;
   // The owner can be null (e.g., for a sandbox annotation
@@ -480,6 +481,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     id,
     name,
     state,
+    isLockedByOwner,
     tags,
     typ,
     owner,
@@ -496,6 +498,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     description,
     modified,
     id,
+    isLockedByOwner,
     name,
     state,
     tags,

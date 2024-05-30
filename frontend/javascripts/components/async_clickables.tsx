@@ -66,7 +66,11 @@ export function AsyncLink(props: AsyncButtonProps) {
     props.icon
   );
   return (
-    <a {...props} onClick={onClick} className={isLoading ? "link-in-progress" : undefined}>
+    <a
+      {...props}
+      onClick={props.disabled ? undefined : onClick}
+      className={isLoading ? "link-in-progress" : undefined}
+    >
       {icon}
       {props.children}
     </a>

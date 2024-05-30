@@ -791,8 +791,13 @@ function AnnotationLockedByUserTag({
 }
 
 function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwner: boolean }) {
+  const unlockHintForOwners = props.isOwner
+    ? " You can unlock the annotation in the navbar annotation menu."
+    : "";
+  const tooltipMessage =
+    messages["tracing.read_only_mode_notification"](true, props.isOwner) + unlockHintForOwners;
   return (
-    <Tooltip title={messages["tracing.read_only_mode_notification"](true, props.isOwner)}>
+    <Tooltip title={tooltipMessage}>
       <Tag color="warning" className="flex-center-child">
         Locked by {props.annotationOwnerName}
       </Tag>

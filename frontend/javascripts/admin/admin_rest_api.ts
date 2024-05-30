@@ -610,6 +610,19 @@ export function editAnnotation(
   });
 }
 
+export function editLockedState(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  isLockedByOwner: boolean,
+): Promise<APIAnnotation> {
+  return Request.receiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/editLockedState?isLockedByOwner=${isLockedByOwner}`,
+    {
+      method: "PATCH",
+    },
+  );
+}
+
 export function setOthersMayEditForAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,

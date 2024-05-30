@@ -99,6 +99,7 @@ import { api } from "oxalis/singletons";
 import messages from "messages";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 
 const { confirm } = Modal;
 const treeTabId = "tree-list";
@@ -830,6 +831,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
     const { groupToDelete } = this.state;
     const isEditingDisabled = !this.props.allowUpdate;
+    const { isAnnotationLockedByUser, isOwner } = this.props;
+    const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
+      isAnnotationLockedByUser,
+      isOwner,
+    );
 
     return (
       <div id={treeTabId} className="padded-tab-content">
@@ -863,22 +869,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   </AdvancedSearchPopover>
                   <ButtonComponent
                     onClick={this.props.onCreateTree}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : "Create new Tree (C)"
-                    }
+                    title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
                     disabled={isEditingDisabled}
                   >
                     <i className="fas fa-plus" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.handleDelete}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : "Delete Selected Trees"
-                    }
+                    title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
                     disabled={isEditingDisabled}
                   >
                     <i className="far fa-trash-alt" />
@@ -915,11 +913,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onChange={this.handleChangeName}
                     value={activeTreeName || activeGroupName}
                     disabled={noTreesAndGroups || isEditingDisabled}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : undefined
-                    }
+                    title={isEditingDisabled ? isEditingDisabledMessage : undefined}
                     style={{ width: "70%" }}
                   />
                   <ButtonComponent
@@ -992,6 +986,8 @@ const mapStateToProps = (state: OxalisState) => ({
   skeletonTracing: state.tracing.skeleton,
   userConfiguration: state.userConfiguration,
   isSkeletonLayerTransformed: isSkeletonLayerTransformed(state),
+  isAnnotationLockedByUser: state.tracing.isLockedByOwner,
+  isOwner: isAnnotationOwner(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

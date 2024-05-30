@@ -140,6 +140,7 @@ PATCH         /annotations/:typ/finish                                          
 PATCH         /annotations/:typ/:id/reopen                                                      controllers.AnnotationController.reopen(typ: String, id: String)
 PUT           /annotations/:typ/:id/reset                                                       controllers.AnnotationController.reset(typ: String, id: String)
 PATCH         /annotations/:typ/:id/transfer                                                    controllers.AnnotationController.transfer(typ: String, id: String)
+PATCH         /annotations/:typ/:id/editLockedState                                             controllers.AnnotationController.editLockedState(typ: String, id: String, isLockedByOwner: Boolean)
 
 GET           /annotations/:id/info                                                             controllers.AnnotationController.infoWithoutType(id: String, timestamp: Long)
 PATCH         /annotations/:id/makeHybrid                                                       controllers.AnnotationController.makeHybridWithoutType(id: String, fallbackLayerName: Option[String])
@@ -150,7 +151,6 @@ DELETE        /annotations/:id                                                  
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: String)
-PATCH         /annotations/:id/addSegmentIndex                                                  controllers.AnnotationController.addSegmentIndex(id: String, tracingId: String)
 PATCH         /annotations/addSegmentIndicesToAll                                               controllers.AnnotationController.addSegmentIndicesToAll(parallelBatchCount: Int, dryRun: Boolean, skipTracings: Option[String])
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)

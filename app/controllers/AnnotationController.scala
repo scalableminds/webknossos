@@ -180,10 +180,26 @@ class AnnotationController @Inject()(
     } yield JsonOk(json, Messages("annotation.reopened"))
   }
 
+  def editLockedState(typ: String, id: String, isLockedByOwner: Boolean): Action[AnyContent] = sil.SecuredAction.async {
+    implicit request =>
+      for {
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- bool2Fox(annotation._user == request.identity._id) ?~> "annotation.isLockedByOwner.notAllowed"
+        _ <- bool2Fox(annotation.typ == AnnotationType.Explorational) ?~> "annotation.isLockedByOwner.explorationalsOnly"
+        _ = logger.info(
+          s"Locking annotation $id, new locked state will be ${isLockedByOwner.toString}, access context: ${request.identity.toStringAnonymous}")
+        _ <- annotationDAO.updateLockedState(annotation._id, isLockedByOwner) ?~> "annotation.invalid"
+        updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
+        json <- annotationService.publicWrites(updatedAnnotation, Some(request.identity)) ?~> "annotation.write.failed"
+      } yield JsonOk(json, Messages("annotation.isLockedByOwner.success"))
+  }
+
   def addAnnotationLayer(typ: String, id: String): Action[AnnotationLayerParameters] =
     sil.SecuredAction.async(validateJson[AnnotationLayerParameters]) { implicit request =>
       for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
+        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         newLayerName = request.body.name.getOrElse(AnnotationLayer.defaultNameForType(request.body.typ))
         _ <- bool2Fox(!annotation.annotationLayers.exists(_.name == newLayerName)) ?~> "annotation.addLayer.nameInUse"
@@ -281,6 +297,8 @@ class AnnotationController @Inject()(
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.addLayer.explorationalsOnly"
+        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- annotationService.makeAnnotationHybrid(annotation, organization.name, fallbackLayerName) ?~> "annotation.makeHybrid.failed"
@@ -301,6 +319,8 @@ class AnnotationController @Inject()(
     implicit request =>
       for {
         _ <- bool2Fox(AnnotationType.Explorational.toString == typ) ?~> "annotation.downsample.explorationalsOnly"
+        restrictions <- provider.restrictionsFor(typ, id) ?~> "restrictions.notFound" ~> NOT_FOUND
+        _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
         annotation <- provider.provideAnnotation(typ, id, request.identity)
         annotationLayer <- annotation.annotationLayers
           .find(_.tracingId == tracingId)
@@ -317,19 +337,6 @@ class AnnotationController @Inject()(
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
         result <- downsample(annotation.typ.toString, id, tracingId)(request)
       } yield result
-  }
-
-  def addSegmentIndex(id: String, tracingId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      annotation <- provider.provideAnnotation(id, request.identity)
-      _ <- bool2Fox(AnnotationType.Explorational == annotation.typ) ?~> "annotation.addSegmentIndex.explorationalsOnly"
-      annotationLayer <- annotation.annotationLayers
-        .find(_.tracingId == tracingId)
-        .toFox ?~> "annotation.addSegmentIndex.layerNotFound"
-      _ <- annotationService.addSegmentIndex(annotation, annotationLayer) ?~> "annotation.addSegmentIndex.failed"
-      updated <- provider.provideAnnotation(id, request.identity)
-      json <- annotationService.publicWrites(updated, Some(request.identity)) ?~> "annotation.write.failed"
-    } yield JsonOk(json)
   }
 
   def addSegmentIndicesToAll(parallelBatchCount: Int,

@@ -1,8 +1,9 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.Fox.option2Fox
+import com.scalableminds.util.tools.Fox.{box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
+import net.liftweb.common.Full
 
 import scala.concurrent.ExecutionContext
 
@@ -20,6 +21,7 @@ trait MeshMappingHelper {
       editableMappingTracingId: Option[String],
       agglomerateId: Long,
       mappingNameForMeshFile: Option[String],
+      omitMissing: Boolean, // If true, failing lookups in the agglomerate file will just return empty list.
       token: Option[String])(implicit ec: ExecutionContext): Fox[List[Long]] =
     targetMappingName match {
       case None =>
@@ -59,10 +61,16 @@ trait MeshMappingHelper {
           case _ =>
             for {
               agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-              segmentIds <- agglomerateService.segmentIdsForAgglomerateId(
-                agglomerateFileKey,
-                agglomerateId
-              )
+              segmentIdsBox <- agglomerateService
+                .segmentIdsForAgglomerateId(
+                  agglomerateFileKey,
+                  agglomerateId
+                )
+                .futureBox
+              segmentIds <- segmentIdsBox match {
+                case Full(segmentIds) => Fox.successful(segmentIds)
+                case _                => if (omitMissing) Fox.successful(List.empty) else segmentIdsBox.toFox
+              }
             } yield segmentIds
         }
     }

@@ -64,6 +64,8 @@ import { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { getAntdTheme, getSystemColorTheme } from "theme";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import { isAnnotationOwner as isAnnotationOwnerAccessor } from "oxalis/model/accessors/annotation_accessor";
 
 const { Header } = Layout;
 
@@ -83,6 +85,9 @@ type StateProps = {
   hasOrganizations: boolean;
   othersMayEdit: boolean;
   allowUpdate: boolean;
+  isLockedByOwner: boolean;
+  isAnnotationOwner: boolean;
+  annotationOwnerName: string;
   blockedByUser: APIUserCompact | null | undefined;
   navbarHeight: number;
 };
@@ -237,11 +242,18 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
       label: <Link to="/jobs">Processing Jobs</Link>,
     });
 
-  if (isAdmin)
+  if (isAdmin) {
     adminstrationSubMenuItems.push({
       key: "/organization",
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
+  }
+  if (activeUser.isSuperUser) {
+    adminstrationSubMenuItems.push({
+      key: "/aiModels",
+      label: <Link to={"/aiModels"}>AI Models</Link>,
+    });
+  }
 
   if (features().voxelyticsEnabled)
     adminstrationSubMenuItems.push({
@@ -751,13 +763,17 @@ function AnnotationLockedByUserTag({
   if (blockedByUser == null) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
-        <Tag color="warning">Locked by unknown user.</Tag>
+        <Tag color="warning" className="flex-center-child">
+          Locked by unknown user.
+        </Tag>
       </Tooltip>
     );
   } else if (blockedByUser.id === activeUser.id) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
-        <Tag color="success">Locked by you. Reload to edit.</Tag>
+        <Tag color="success" className="flex-center-child">
+          Locked by you. Reload to edit.
+        </Tag>
       </Tooltip>
     );
   } else {
@@ -768,7 +784,9 @@ function AnnotationLockedByUserTag({
           userName: blockingUserName,
         })}
       >
-        <Tag color="warning">Locked by {blockingUserName}</Tag>
+        <Tag color="warning" className="flex-center-child">
+          Locked by {blockingUserName}
+        </Tag>
       </Tooltip>
     );
   }
@@ -776,6 +794,21 @@ function AnnotationLockedByUserTag({
     <span style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
       {content}
     </span>
+  );
+}
+
+function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwner: boolean }) {
+  const unlockHintForOwners = props.isOwner
+    ? " You can unlock the annotation in the navbar annotation menu."
+    : "";
+  const tooltipMessage =
+    messages["tracing.read_only_mode_notification"](true, props.isOwner) + unlockHintForOwners;
+  return (
+    <Tooltip title={tooltipMessage}>
+      <Tag color="warning" className="flex-center-child">
+        Locked by {props.annotationOwnerName}
+      </Tag>
+    </Tooltip>
   );
 }
 
@@ -787,7 +820,10 @@ function Navbar({
   othersMayEdit,
   blockedByUser,
   allowUpdate,
+  annotationOwnerName,
+  isLockedByOwner,
   navbarHeight,
+  isAnnotationOwner,
 }: Props) {
   const history = useHistory();
 
@@ -850,12 +886,21 @@ function Navbar({
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    if (othersMayEdit && !allowUpdate) {
+    if (othersMayEdit && !allowUpdate && !isLockedByOwner) {
       trailingNavItems.push(
         <AnnotationLockedByUserTag
           key="locked-by-user-tag"
           blockedByUser={blockedByUser}
           activeUser={activeUser}
+        />,
+      );
+    }
+    if (isLockedByOwner) {
+      trailingNavItems.push(
+        <AnnotationLockedByOwnerTag
+          key="locked-by-owner-tag"
+          annotationOwnerName={annotationOwnerName}
+          isOwner={isAnnotationOwner}
         />,
       );
     }
@@ -957,6 +1002,9 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   othersMayEdit: state.tracing.othersMayEdit,
   blockedByUser: state.tracing.blockedByUser,
   allowUpdate: state.tracing.restrictions.allowUpdate,
+  isLockedByOwner: state.tracing.isLockedByOwner,
+  annotationOwnerName: formatUserName(state.activeUser, state.tracing.owner),
+  isAnnotationOwner: isAnnotationOwnerAccessor(state),
   navbarHeight: state.uiInformation.navbarHeight,
 });
 

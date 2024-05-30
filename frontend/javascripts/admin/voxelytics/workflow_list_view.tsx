@@ -38,9 +38,9 @@ function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowListing): VoxelyticsW
     ...workflowInfo,
     runs: workflowInfo.runs.map(parseRunInfo).sort((a, b) => {
       if (a.beginTime != null && b.beginTime != null)
-        return b.beginTime.getTime() - a.beginTime.getTime();
-      else if (a.beginTime != null) return a.beginTime.getTime();
-      else if (b.beginTime != null) return b.beginTime.getTime();
+        return a.beginTime.getTime() - b.beginTime.getTime();
+      else if (a.beginTime != null) return -1;
+      else if (b.beginTime != null) return 1;
       else return 0;
     }),
   };

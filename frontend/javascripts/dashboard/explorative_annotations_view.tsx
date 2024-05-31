@@ -325,7 +325,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               </AsyncLink>
             </>
           ) : null}
-          {!isActiveUserOwner ? (
+          {isActiveUserOwner ? (
             <>
               <br />
               <AsyncLink

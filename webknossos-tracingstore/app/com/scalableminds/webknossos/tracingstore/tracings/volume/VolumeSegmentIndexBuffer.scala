@@ -148,7 +148,7 @@ class VolumeSegmentIndexBuffer(tracingId: String,
     (hits, misses)
   }
 
-  // Get a map from segment index to bucket position (e.g. an index) from all sources (buffer, fossilDB, file)
+  // Get a map from segment to bucket position (e.g. an index) from all sources (buffer, fossilDB, file)
   def getSegmentToBucketIndexMap(segmentIds: List[Long],
                                  mag: Vec3Int,
                                  mappingName: Option[String],

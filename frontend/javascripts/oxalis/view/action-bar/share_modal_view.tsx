@@ -436,7 +436,7 @@ function _ShareModalView(props: Props) {
           margin: "18px 0",
         }}
       >
-        <ShareAltOutlined className="icon-margin-right"/>
+        <ShareAltOutlined className="icon-margin-right" />
         Team Sharing
       </Divider>
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>

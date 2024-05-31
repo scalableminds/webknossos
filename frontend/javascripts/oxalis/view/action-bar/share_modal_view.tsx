@@ -375,7 +375,7 @@ function _ShareModalView(props: Props) {
           margin: "18px 0",
         }}
       >
-        <i className={`fas fa-${iconMap[visibility]}`} />
+        <i className={`fas fa-${iconMap[visibility]} icon-margin-right`} />
         Visibility
       </Divider>
       {maybeShowWarning()}
@@ -436,7 +436,7 @@ function _ShareModalView(props: Props) {
           margin: "18px 0",
         }}
       >
-        <ShareAltOutlined />
+        <ShareAltOutlined className="icon-margin-right"/>
         Team Sharing
       </Divider>
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>

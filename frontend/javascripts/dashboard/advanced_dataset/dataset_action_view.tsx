@@ -1,21 +1,25 @@
 import {
+  DeleteOutlined,
   EllipsisOutlined,
   EyeOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import window from "libs/window";
 import { Link, LinkProps } from "react-router-dom";
 import * as React from "react";
 import type { APIDatasetId, APIDataset, APIDatasetCompact } from "types/api_flow_types";
-import { clearCache, getDataset } from "admin/admin_rest_api";
+import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
-import { MenuProps } from "antd";
+import { MenuProps, Modal, Typography } from "antd";
 import { useState } from "react";
+import { confirmAsync } from "dashboard/dataset/helper_components";
+import { useQueryClient } from "@tanstack/react-query";
 
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
@@ -113,6 +117,7 @@ function LinkWithDisabled({
 }
 
 function DatasetActionView(props: Props) {
+  const queryClient = useQueryClient();
   const { dataset } = props;
 
   const [isReloading, setIsReloading] = useState(false);
@@ -131,6 +136,54 @@ function DatasetActionView(props: Props) {
     setIsReloading(false);
   };
 
+  const onDeleteDataset = async () => {
+    const dataset = await getDataset(props.dataset);
+
+    const deleteDataset = await confirmAsync({
+      title: "Danger Zone",
+      content: (
+        <>
+          <Typography.Title level={4} type="danger">
+            Deleting a dataset from disk cannot be undone. Are you certain to delete dataset{" "}
+            {dataset.name}?
+          </Typography.Title>
+          <Typography.Paragraph>
+            Note, WEBKNOSSOS cannot delete datasets that have annotations associated with them.
+          </Typography.Paragraph>
+        </>
+      ),
+      okText: "Yes, delete dataset from disk",
+      okType: "danger",
+    });
+
+    if (!deleteDataset) {
+      return;
+    }
+
+    await deleteDatasetOnDisk(dataset.dataStore.url, dataset);
+
+    Toast.success(
+      messages["dataset.delete_success"]({
+        datasetName: dataset.name,
+      }),
+    );
+
+    // Invalidate the dataset list cache to exclude the deleted dataset
+    queryClient.setQueryData(
+      ["datasetsByFolder", dataset.folderId],
+      (oldItems: APIDatasetCompact[] | undefined) => {
+        if (oldItems == null) {
+          return oldItems;
+        }
+        return oldItems.filter(
+          (item) =>
+            item.name !== dataset.name || item.owningOrganization !== dataset.owningOrganization,
+        );
+      },
+    );
+    queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+  };
+
   const disabledWhenReloadingStyle = getDisabledWhenReloadingStyle(isReloading);
   const reloadLink = (
     <a
@@ -139,46 +192,90 @@ function DatasetActionView(props: Props) {
       style={disabledWhenReloadingStyle}
       type="link"
     >
-      {isReloading ? <LoadingOutlined /> : <ReloadOutlined className="icon-margin-right" />}
+      {isReloading ? (
+        <LoadingOutlined className="icon-margin-right" />
+      ) : (
+        <ReloadOutlined className="icon-margin-right" />
+      )}
       Reload
     </a>
   );
+  const datasetSettingsLink = (
+    <>
+      <LinkWithDisabled
+        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
+        title="Open Dataset Settings"
+        disabled={isReloading}
+      >
+        <SettingOutlined className="icon-margin-right" />
+        Settings
+      </LinkWithDisabled>
+    </>
+  );
+  const brokenDatasetActions = (
+    <div className="dataset-table-actions">
+      <Link to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}>
+        <SettingOutlined className="icon-margin-right" />
+        Settings
+      </Link>
+      {reloadLink}
+      <a
+        onClick={() =>
+          Modal.error({
+            title: "Cannot load this dataset",
+            content: (
+              <div>
+                <p>{dataset.status}</p>
+                {dataset.status === "Deleted by user." ? (
+                  <p>
+                    Even though this dataset was deleted by a user, it is still shown here, because
+                    it was referenced by at least one annotation.
+                  </p>
+                ) : null}
+              </div>
+            ),
+          })
+        }
+      >
+        <WarningOutlined className="icon-margin-right" />
+        Show Error
+      </a>
+      {dataset.status !== "Deleted by user." ? (
+        <a onClick={() => onDeleteDataset()}>
+          <DeleteOutlined className="icon-margin-right" />
+          Delete Dataset
+        </a>
+      ) : null}
+    </div>
+  );
+
+  const activeDatasetActions = (
+    <>
+      {" "}
+      <NewAnnotationLink
+        dataset={dataset}
+        isReloading={isReloading}
+        isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
+        onShowCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(true)}
+        onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
+      />
+      <LinkWithDisabled
+        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
+        title="View Dataset"
+        disabled={isReloading}
+      >
+        <EyeOutlined className="icon-margin-right" />
+        View
+      </LinkWithDisabled>
+      {dataset.isEditable ? datasetSettingsLink : null}
+      {reloadLink}
+    </>
+  );
   return (
     <div>
+      {dataset.isEditable && !dataset.isActive ? brokenDatasetActions : null}
       <div className="dataset-table-actions nowrap">
-        {dataset.isActive ? (
-          <>
-            {" "}
-            <NewAnnotationLink
-              dataset={dataset}
-              isReloading={isReloading}
-              isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
-              onShowCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(true)}
-              onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
-            />
-            <LinkWithDisabled
-              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
-              title="View Dataset"
-              disabled={isReloading}
-            >
-              <EyeOutlined className="icon-margin-right" />
-              View
-            </LinkWithDisabled>
-          </>
-        ) : null}
-        {dataset.isEditable ? (
-          <>
-            <LinkWithDisabled
-              to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
-              title="Open Dataset Settings"
-              disabled={isReloading}
-            >
-              <SettingOutlined className="icon-margin-right" />
-              Settings
-            </LinkWithDisabled>
-          </>
-        ) : null}
-        {reloadLink}
+        {dataset.isActive ? activeDatasetActions : null}
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import React from "react";
 import debounceRender from "react-debounce-render";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
-import { MappingStatusEnum } from "oxalis/constants";
+import { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType, EditableMapping } from "oxalis/store";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -52,6 +52,7 @@ type StateProps = {
   isEditableMappingActive: boolean;
   isAnnotationLockedByUser: boolean;
   isOwner: boolean;
+  isInViewMode: boolean;
 } & typeof mapDispatchToProps;
 type Props = OwnProps & StateProps;
 type State = {
@@ -150,6 +151,7 @@ class MappingSettingsView extends React.Component<Props, State> {
       isEditableMappingActive,
       isAnnotationLockedByUser,
       isOwner,
+      isInViewMode,
     } = this.props;
 
     const availableMappings = segmentationLayer?.mappings != null ? segmentationLayer.mappings : [];
@@ -188,7 +190,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || isMappingEnabled;
     const renderHideUnmappedSegmentsSwitch =
       (shouldMappingBeEnabled || isMergerModeEnabled) && mapping && hideUnmappedIds != null;
-    const isDisabled = isMappingLocked || !allowUpdate;
+    const isDisabled = isMappingLocked || (!allowUpdate && !isInViewMode);
     const disabledMessage = !allowUpdate
       ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner)
       : isEditableMappingActive
@@ -290,6 +292,7 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     isMappingLocked: isMappingLocked(state, ownProps.layerName),
     isAnnotationLockedByUser: state.tracing.isLockedByOwner,
     isOwner: isAnnotationOwner(state),
+    isInViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   };
 }
 

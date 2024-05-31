@@ -101,6 +101,7 @@ import type {
   HistogramDataForAllLayers,
   Tracing,
   Task,
+  ActiveMappingInfo,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
@@ -1314,8 +1315,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <br />
           This will overwrite the current default view configuration.
           <br />
-          This includes all color and segmentation layer settings, as well as these additional
-          settings:
+          This includes all color and segmentation layer settings, currently active mapping, as well
+          as these additional settings:
           <br />
           <br />
           {dataSource.map((field, index) => {
@@ -1338,12 +1339,24 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       ),
       onOk: async () => {
         try {
-          const { flycam } = Store.getState();
+          const { flycam, temporaryConfiguration } = Store.getState();
           const position = V3.floor(getPosition(flycam));
           const zoom = flycam.zoomStep;
+          const activeMappingNamesAndTypesByLayer = {} as Record<
+            string,
+            { name: ActiveMappingInfo["mappingName"]; type: ActiveMappingInfo["mappingType"] }
+          >;
+          const { activeMappingByLayer } = temporaryConfiguration;
+          Object.keys(activeMappingByLayer).forEach((layerName) => {
+            activeMappingNamesAndTypesByLayer[layerName] = {
+              name: activeMappingByLayer[layerName].mappingName,
+              type: activeMappingByLayer[layerName].mappingType,
+            };
+          });
           const completeDatasetConfiguration = Object.assign({}, datasetConfiguration, {
             position,
             zoom,
+            activeMappingByLayer: activeMappingNamesAndTypesByLayer,
           });
           await updateDatasetDefaultConfiguration(dataset, completeDatasetConfiguration);
           Toast.success("Successfully saved the current view configuration as default.");

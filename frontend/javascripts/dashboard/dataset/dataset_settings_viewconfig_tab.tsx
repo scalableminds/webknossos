@@ -13,6 +13,7 @@ import {
   Select,
   Slider,
   Divider,
+  FormInstance,
 } from "antd";
 import * as React from "react";
 import { Vector3Input } from "libs/vector_input";
@@ -31,7 +32,16 @@ import ColorLayerOrderingTable from "./color_layer_ordering_component";
 
 const FormItem = Form.Item;
 
-export default function DatasetSettingsViewConfigTab() {
+export default function DatasetSettingsViewConfigTab(props: {
+  formRef: React.RefObject<FormInstance<any>>;
+}) {
+  const allSegmentationLayer =
+    props.formRef.current
+      ?.getFieldValue(["dataSource", "dataLayers"])
+      ?.filter((layer) => layer.category === "segmentation") || [];
+
+  //TODO: For each render a form item enabling the user to select a mapping for the layer
+
   const columns = [
     {
       title: "Name",
@@ -203,6 +213,7 @@ export default function DatasetSettingsViewConfigTab() {
           </FormItem>
         </Col>
       </Row>
+      <Row gutter={24}>{/*TODO: add mapping select for each layer */}</Row>
       <Divider />
       <Row gutter={32}>
         <Col span={12}>

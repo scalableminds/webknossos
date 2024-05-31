@@ -68,6 +68,7 @@ import VerifyEmailView from "admin/auth/verify_email_view";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
 import loadable from "libs/lazy_loader";
 import { EmptyObject } from "types/globals";
+import AiModelListView from "admin/voxelytics/ai_model_list_view";
 
 const { Content } = Layout;
 
@@ -709,6 +710,12 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/workflows"
                 component={AsyncWorkflowListView}
+                exact
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/aiModels"
+                component={AiModelListView}
                 exact
               />
               <SecuredRouteWithErrorBoundary

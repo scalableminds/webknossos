@@ -38,6 +38,7 @@ import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import type { MenuProps } from "rc-menu";
 import { Comparator } from "types/globals";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {
@@ -75,6 +76,8 @@ function getCommentSorter({ sortBy, isSortedAscending }: SortOptions): Comparato
 type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
   allowUpdate: boolean;
+  isAnnotationLockedByUser: boolean;
+  isOwner: boolean;
   setActiveNode: (nodeId: number) => void;
   deleteComment: () => void;
   createComment: (text: string) => void;
@@ -433,6 +436,11 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
               this.getData(),
               activeCommentMaybe.isJust ? findCommentIndexFn : findTreeIndexFn,
             );
+            const { isAnnotationLockedByUser, isOwner } = this.props;
+            const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
+              isAnnotationLockedByUser,
+              isOwner,
+            );
 
             return (
               <React.Fragment>
@@ -454,11 +462,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                   <InputComponent
                     value={activeCommentContent}
                     disabled={isEditingDisabled}
-                    title={
-                      this.props.allowUpdate
-                        ? undefined
-                        : messages["tracing.read_only_mode_notification"]
-                    }
+                    title={this.props.allowUpdate ? undefined : isEditingDisabledMessage}
                     onChange={(evt: React.ChangeEvent<HTMLInputElement>) =>
                       this.handleChangeInput(evt.target.value, true)
                     }
@@ -476,7 +480,7 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
                     title={
                       this.props.allowUpdate
                         ? "Open dialog to edit comment in multi-line mode"
-                        : messages["tracing.read_only_mode_notification"]
+                        : isEditingDisabledMessage
                     }
                     type={isMultilineComment ? "primary" : "default"}
                     icon={<EditOutlined />}
@@ -542,6 +546,8 @@ class CommentTabView extends React.Component<PropsWithSkeleton, CommentTabState>
 const mapStateToProps = (state: OxalisState) => ({
   skeletonTracing: state.tracing.skeleton,
   allowUpdate: state.tracing.restrictions.allowUpdate,
+  isAnnotationLockedByUser: state.tracing.isLockedByOwner,
+  isOwner: isAnnotationOwner(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

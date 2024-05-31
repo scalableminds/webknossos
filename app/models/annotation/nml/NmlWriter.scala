@@ -260,6 +260,14 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         case Right(volumeTracing) =>
           volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
           volumeTracing.largestSegmentId.foreach(id => writer.writeAttribute("largestSegmentId", id.toString))
+          if (!volumeTracing.mappingIsEditable.getOrElse(false)) {
+            volumeTracing.mappingName.foreach { mappingName =>
+              writer.writeAttribute("mappingName", mappingName)
+            }
+            if (volumeTracing.mappingIsLocked.getOrElse(false)) {
+              writer.writeAttribute("mappingIsLocked", true.toString)
+            }
+          }
           if (skipVolumeData) {
             writer.writeComment(f"Note that volume data was omitted when downloading this annotation.")
           }

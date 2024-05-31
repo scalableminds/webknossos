@@ -231,6 +231,11 @@ annotation.reopen.tooLate=The annotation cannot be reopened anymore, since it ha
 annotation.reopen.notAllowed=You are not allowed to reopen this annotation.
 annotation.reopen.notFinished=The requested annotation is not finished.
 annotation.reopen.failed=Failed to reopen the annotation.
+annotation.reopen.locked=This annotation is locked by the owner and therefore cannot be reopened.
+annotation.isLockedByOwner.notAllowed=Only the owner of this annotation is allowed to change the locked state of an annotation.
+annotation.isLockedByOwner.explorationalsOnly=Only explorational annotations can be locked.
+annotation.isLockedByOwner.failed=Changing the isLockedByOwner state of the annotation failed.
+annotation.isLockedByOwner.success=The locking state of the annotation was successfully updated.
 annotation.sandbox.skeletonOnly=Sandbox annotations are currently available as skeleton only.
 annotation.multiLayers.skeleton.notImplemented=This feature is not implemented for annotations with more than one skeleton layer
 annotation.multiLayers.volume.notImplemented=This feature is not implemented for annotations with more than one volume layer
@@ -318,7 +323,7 @@ job.meshFile.notAllowed.organization = Calculating mesh files is only allowed fo
 job.segmentIndexFile.notAllowed.organization = Calculating segment index files is only allowed for datasets of your own organization.
 job.globalizeFloodfill.notAllowed.organization = Globalizing floodfills is only allowed for datasets of your own organization.
 job.materializeVolumeAnnotation.notAllowed.organization = Materializing volume annotations is only allowed for datasets of your own organization.
-job.noWorkerForDatastore = Processing jobs are not available for the datastore this dataset belongs to.
+job.noWorkerForDatastoreAndJob = No webknossos-worker supporting the requested job is available for the selected datastore.
 job.emailNotifactionsDisabled = Email notifications are not enabled for this job type.
 job.renderAnimation.notAllowed.organization = "Rendering animations is only allowed for datasets of your own organization."
 
@@ -353,3 +358,9 @@ segmentAnything.getData.failed=Failed to get image data to send to SAM server.
 segmentAnything.getEmbedding.failed=Failed to get image embedding from SAM server.
 
 shortLink.notFound=No shortlink with this key could be found
+
+aiModel.delete.referencedByInferences=Cannot delete AI models that are referenced by existing inferences.
+aiModel.notFound=Could not find requested AI model.
+aiModel.training.zeroAnnotations=Need at least one training annotation for model training.
+
+aiInference.notFound=Could not find requested AI inference.

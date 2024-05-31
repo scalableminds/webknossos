@@ -309,41 +309,40 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           >
             Download
           </AsyncLink>
-          <br />
           {this.isTracingEditable(tracing) ? (
-            <AsyncLink
-              href="#"
-              onClick={() => this.finishOrReopenAnnotation("finish", tracing)}
-              icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
-              disabled={tracing.isLockedByOwner}
-              title={tracing.isLockedByOwner ? "Locked annotations cannot be archived." : undefined}
-            >
-              Archive
-            </AsyncLink>
+            <>
+              <br />
+              <AsyncLink
+                href="#"
+                onClick={() => this.finishOrReopenAnnotation("finish", tracing)}
+                icon={<InboxOutlined key="inbox" className="icon-margin-right" />}
+                disabled={tracing.isLockedByOwner}
+                title={
+                  tracing.isLockedByOwner ? "Locked annotations cannot be archived." : undefined
+                }
+              >
+                Archive
+              </AsyncLink>
+            </>
           ) : null}
-          <br />
-          <AsyncLink
-            href="#"
-            title={
-              !isActiveUserOwner
-                ? `Only the owner can ${
-                    tracing.isLockedByOwner ? "unlock" : "lock"
-                  } this annotation.`
-                : undefined
-            }
-            disabled={!isActiveUserOwner}
-            onClick={() => this.setLockedState(tracing, !tracing.isLockedByOwner)}
-            icon={
-              tracing.isLockedByOwner ? (
-                <LockOutlined key="lock" className="icon-margin-right" />
-              ) : (
-                <UnlockOutlined key="unlock" className="icon-margin-right" />
-              )
-            }
-          >
-            {tracing.isLockedByOwner ? "Unlock" : "Lock"}
-          </AsyncLink>
-          <br />
+          {isActiveUserOwner ? (
+            <>
+              <br />
+              <AsyncLink
+                href="#"
+                onClick={() => this.setLockedState(tracing, !tracing.isLockedByOwner)}
+                icon={
+                  tracing.isLockedByOwner ? (
+                    <LockOutlined key="lock" className="icon-margin-right" />
+                  ) : (
+                    <UnlockOutlined key="unlock" className="icon-margin-right" />
+                  )
+                }
+              >
+                {tracing.isLockedByOwner ? "Unlock" : "Lock"}
+              </AsyncLink>
+            </>
+          ) : null}
         </div>
       );
     } else {

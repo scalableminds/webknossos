@@ -1,31 +1,22 @@
-package com.scalableminds.webknossos.datastore.dataformats.zarr3
+package com.scalableminds.webknossos.datastore.dataformats.layers
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  AdditionalAxis,
-  Category,
-  CoordinateTransformation,
-  DataFormat,
-  DataLayerWithMagLocators,
-  DataSourceId,
-  ElementClass,
-  SegmentationLayer
-}
+import com.scalableminds.webknossos.datastore.dataformats.{DatasetArrayBucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
+import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{Json, OFormat}
 import ucar.ma2.{Array => MultiArray}
 
-trait Zarr3Layer extends DataLayerWithMagLocators {
+trait ZarrLayer extends DataLayerWithMagLocators {
 
-  val dataFormat: DataFormat.Value = DataFormat.zarr3
+  val dataFormat: DataFormat.Value = DataFormat.zarr
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
-    new Zarr3BucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
+    new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
@@ -35,7 +26,7 @@ trait Zarr3Layer extends DataLayerWithMagLocators {
 
 }
 
-case class Zarr3DataLayer(
+case class ZarrDataLayer(
     name: String,
     category: Category.Value,
     boundingBox: BoundingBox,
@@ -45,14 +36,14 @@ case class Zarr3DataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
-    additionalAxes: Option[Seq[AdditionalAxis]] = None
-) extends Zarr3Layer
+    override val additionalAxes: Option[Seq[AdditionalAxis]]
+) extends ZarrLayer
 
-object Zarr3DataLayer {
-  implicit val jsonFormat: OFormat[Zarr3DataLayer] = Json.format[Zarr3DataLayer]
+object ZarrDataLayer {
+  implicit val jsonFormat: OFormat[ZarrDataLayer] = Json.format[ZarrDataLayer]
 }
 
-case class Zarr3SegmentationLayer(
+case class ZarrSegmentationLayer(
     name: String,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
@@ -65,8 +56,8 @@ case class Zarr3SegmentationLayer(
     override val numChannels: Option[Int] = Some(1),
     additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends SegmentationLayer
-    with Zarr3Layer
+    with ZarrLayer
 
-object Zarr3SegmentationLayer {
-  implicit val jsonFormat: OFormat[Zarr3SegmentationLayer] = Json.format[Zarr3SegmentationLayer]
+object ZarrSegmentationLayer {
+  implicit val jsonFormat: OFormat[ZarrSegmentationLayer] = Json.format[ZarrSegmentationLayer]
 }

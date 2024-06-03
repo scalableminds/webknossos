@@ -7,6 +7,7 @@ import {
   ExpandAltOutlined,
   ArrowRightOutlined,
   DownOutlined,
+  FolderOutlined,
 } from "@ant-design/icons";
 import { useDispatch } from "react-redux";
 import { batchActions } from "redux-batched-actions";
@@ -28,6 +29,8 @@ import {
   deepFlatFilter,
   getNodeKey,
   getNodeKeyFromNode,
+  removeTreesAndTransform,
+  findGroup,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -239,25 +242,25 @@ function TreeHierarchyView(props: Props) {
     }
   }
 
-  // function onMoveNode(params) {
-  //   const { nextParentNode, node, treeData } = params;
-  //   if (node.type === GroupTypeEnum.TREE && nextParentNode) {
-  //     const allTreesToMove = [...props.selectedTrees, node.id];
-  //     // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
-  //     const moveActions = allTreesToMove.map((treeId) =>
-  //       setTreeGroupAction(
-  //         nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
-  //         treeId,
-  //       ),
-  //     );
-  //     onBatchActions(moveActions, "SET_TREE_GROUP");
-  //   } else {
-  //     // A group was dragged - update the groupTree
-  //     // Exclude root group and remove trees from groupTree object
-  //     const newTreeGroups = removeTreesAndTransform(treeData[0].children);
-  //     onUpdateTreeGroups(newTreeGroups);
-  //   }
-  // }
+  function onDrop(info: { node: TreeNode; dragNode: TreeNode }) {
+    const { dragNode, node: nextParentNode } = info;
+    if (dragNode.type === GroupTypeEnum.TREE && nextParentNode.type === GroupTypeEnum.GROUP) {
+      const allTreesToMove = [...props.selectedTrees, dragNode.id];
+      // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
+      const moveActions = allTreesToMove.map((treeId) =>
+        setTreeGroupAction(
+          nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
+          treeId,
+        ),
+      );
+      onBatchActions(moveActions, "SET_TREE_GROUP");
+    } else {
+      // A group was dragged - update the groupTree
+      // Exclude root group and remove trees from groupTree object
+      const newTreeGroups = removeTreesAndTransform(groupTree[0].children);
+      onUpdateTreeGroups(newTreeGroups);
+    }
+  }
 
   function createGroup(groupId: number) {
     const newTreeGroups = _.cloneDeep(props.treeGroups);
@@ -467,7 +470,10 @@ function TreeHierarchyView(props: Props) {
           }}
           trigger={["contextMenu"]}
         >
-          <span>{displayableName}</span>
+          <span>
+            <FolderOutlined className="icon-margin-right" />
+            {displayableName}
+          </span>
         </Dropdown>
       </div>
     );
@@ -615,9 +621,7 @@ function TreeHierarchyView(props: Props) {
   }
 
   const checkedKeys = deepFlatFilter(groupTree, (node) => node.isChecked).map((node) => node.key);
-  const selectedKeys = props.activeTreeId
-    ? [getNodeKey(GroupTypeEnum.TREE, props.activeTreeId)]
-    : [];
+  const selectedKeys = props.selectedTrees.map((treeId) => getNodeKey(GroupTypeEnum.TREE, treeId));
 
   return (
     <AutoSizer>
@@ -641,6 +645,7 @@ function TreeHierarchyView(props: Props) {
                 ? onSelectTreeNode(info.node, info.nativeEvent)
                 : onSelectGroupNode(info.node)
             }
+            onDrop={onDrop}
             onCheck={onCheck}
             onExpand={onExpand}
             draggable={canDrag}
@@ -651,6 +656,7 @@ function TreeHierarchyView(props: Props) {
             checkable
             blockNode
             showLine
+            multiple
             defaultExpandAll
           />
         </div>

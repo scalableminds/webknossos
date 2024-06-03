@@ -120,7 +120,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
       layersWithVoxelSizes <- explorer.explore(vaultPath, None)
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, None)
       relativeLayers = makeLayersRelative(layers)
-      dataSource = new DataSourceWithMagLocators(dataSourceId, relativeLayers, voxelSize) // Unit
+      dataSource = new DataSourceWithMagLocators(dataSourceId, relativeLayers, voxelSize)
     } yield dataSource
 
   def writeLocalDatasourceProperties(dataSource: DataSource, path: Path)(implicit ec: ExecutionContext): Fox[Path] =

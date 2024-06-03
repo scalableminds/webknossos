@@ -578,8 +578,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      inboxSourceHash = $inboxSourceHash,
                      defaultViewConfiguration = $defaultViewConfiguration,
                      isUsable = $isUsable,
-                     voxelSizeFactor = ${source.scaleOpt.map(_.factor)},
-                     voxelSizeUnit = ${source.scaleOpt.map(_.unit)},
+                     voxelSizeFactor = ${source.voxelSizeOpt.map(_.factor)},
+                     voxelSizeUnit = ${source.voxelSizeOpt.map(_.unit)},
                      status = ${source.statusOpt.getOrElse("").take(1024)}
                    WHERE _id = $id""".asUpdate)
       _ <- datasetLayerDAO.updateLayers(id, source)

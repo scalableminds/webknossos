@@ -31,7 +31,7 @@ package object datasource {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)
 
-    val scaleOpt: Option[VoxelSize] = Some(scale)
+    val voxelSizeOpt: Option[VoxelSize] = Some(scale)
 
     val statusOpt: Option[String] = None
 

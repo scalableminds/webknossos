@@ -260,7 +260,7 @@ class BinaryDataController @Inject()(
             segmentationLayer,
             request.body.cuboid(dataLayer),
             request.body.segmentId,
-            request.body.scale,
+            request.body.voxeSizeFactorInUnit,
             request.body.mapping,
             request.body.mappingType,
             request.body.additionalCoordinates,

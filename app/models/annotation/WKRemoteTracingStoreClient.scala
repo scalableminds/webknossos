@@ -212,7 +212,7 @@ class WKRemoteTracingStoreClient(
           .addQueryString("token" -> RpcTokenHolder.webknossosToken)
           .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
           .addQueryStringOptional("version", version.map(_.toString))
-          .addQueryStringOptional("voxelSize", voxelSize.map(_.factor.toUriLiteral))
+          .addQueryStringOptional("voxelSizeFactor", voxelSize.map(_.factor.toUriLiteral))
           .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
           .getWithBytesResponse
       }
@@ -230,7 +230,7 @@ class WKRemoteTracingStoreClient(
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
         .addQueryStringOptional("version", version.map(_.toString))
-        .addQueryStringOptional("voxelSize", voxelSize.map(_.factor.toUriLiteral))
+        .addQueryStringOptional("voxelSizeFactor", voxelSize.map(_.factor.toUriLiteral))
         .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
         .getWithBytesResponse
     } yield data

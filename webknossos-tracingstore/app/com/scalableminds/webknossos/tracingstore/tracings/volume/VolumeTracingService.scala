@@ -691,7 +691,7 @@ class VolumeTracingService @Inject()(
         segmentationLayer,
         request.cuboid(segmentationLayer),
         request.segmentId,
-        request.scale,
+        request.voxeSizeFactorInUnit,
         None,
         None,
         request.additionalCoordinates,

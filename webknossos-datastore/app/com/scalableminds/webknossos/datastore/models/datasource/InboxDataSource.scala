@@ -14,7 +14,7 @@ package object inbox {
 
     def isUsable: Boolean = toUsable.isDefined
 
-    def scaleOpt: Option[VoxelSize]
+    def voxelSizeOpt: Option[VoxelSize]
 
     def statusOpt: Option[String]
 
@@ -42,7 +42,7 @@ package object inbox {
       extends GenericInboxDataSource[T] {
     val toUsable: Option[GenericDataSource[T]] = None
 
-    val scaleOpt: Option[VoxelSize] = scale
+    val voxelSizeOpt: Option[VoxelSize] = scale
 
     val statusOpt: Option[String] = Some(status)
 

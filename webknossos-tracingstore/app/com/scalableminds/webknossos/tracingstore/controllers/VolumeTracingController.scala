@@ -149,7 +149,7 @@ class VolumeTracingController @Inject()(
                  tracingId: String,
                  volumeDataZipFormat: String,
                  version: Option[Long],
-                 voxelSize: Option[String],
+                 voxelSizeFactor: Option[String],
                  voxelSizeUnit: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
@@ -157,7 +157,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
             volumeDataZipFormatParsed <- VolumeDataZipFormat.fromString(volumeDataZipFormat).toFox
-            voxelSizeFactorParsedOpt <- Fox.runOptional(voxelSize)(Vec3Double.fromUriLiteral)
+            voxelSizeFactorParsedOpt <- Fox.runOptional(voxelSizeFactor)(Vec3Double.fromUriLiteral)
             voxelSizeUnitParsedOpt <- Fox.runOptional(voxelSizeUnit)(LengthUnit.fromString)
             voxelSize = voxelSizeFactorParsedOpt.map(voxelSizeParsed =>
               VoxelSize.fromFactorAndUnitWithDefault(voxelSizeParsed, voxelSizeUnitParsedOpt))

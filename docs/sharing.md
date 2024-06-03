@@ -234,5 +234,4 @@ WEBKNOSSOS does not yet resolve changes made by multiple people annotating simul
 Please coordinate accordingly with your collaborators. We aim to improve this aspect in the future.
 
 !!! info
-  In addition to the integrated Sharing features, you can also [download annotations](./export.md) and send them via email to collaborators.
-```
+    In addition to the integrated Sharing features, you can also [download annotations](./export.md) and send them via email to collaborators.

@@ -1,22 +1,22 @@
-package com.scalableminds.webknossos.datastore.dataformats.n5
+package com.scalableminds.webknossos.datastore.dataformats.layers
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.dataformats.{DatasetArrayBucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{Json, OFormat}
 import ucar.ma2.{Array => MultiArray}
 
-trait N5Layer extends DataLayerWithMagLocators {
+trait PrecomputedLayer extends DataLayerWithMagLocators {
 
-  val dataFormat: DataFormat.Value = DataFormat.n5
+  val dataFormat: DataFormat.Value = DataFormat.neuroglancerPrecomputed
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
-    new N5BucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
+    new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
   def resolutions: List[Vec3Int] = mags.map(_.mag)
 
@@ -25,10 +25,10 @@ trait N5Layer extends DataLayerWithMagLocators {
   def numChannels: Option[Int] = Some(if (elementClass == ElementClass.uint24) 3 else 1)
 }
 
-case class N5DataLayer(
+case class PrecomputedDataLayer(
     name: String,
-    category: Category.Value,
     boundingBox: BoundingBox,
+    category: Category.Value,
     elementClass: ElementClass.Value,
     mags: List[MagLocator],
     defaultViewConfiguration: Option[LayerViewConfiguration] = None,
@@ -36,13 +36,13 @@ case class N5DataLayer(
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
     additionalAxes: Option[Seq[AdditionalAxis]] = None
-) extends N5Layer
+) extends PrecomputedLayer
 
-object N5DataLayer {
-  implicit val jsonFormat: OFormat[N5DataLayer] = Json.format[N5DataLayer]
+object PrecomputedDataLayer {
+  implicit val jsonFormat: OFormat[PrecomputedDataLayer] = Json.format[PrecomputedDataLayer]
 }
 
-case class N5SegmentationLayer(
+case class PrecomputedSegmentationLayer(
     name: String,
     boundingBox: BoundingBox,
     elementClass: ElementClass.Value,
@@ -55,8 +55,8 @@ case class N5SegmentationLayer(
     override val numChannels: Option[Int] = Some(1),
     additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends SegmentationLayer
-    with N5Layer
+    with PrecomputedLayer
 
-object N5SegmentationLayer {
-  implicit val jsonFormat: OFormat[N5SegmentationLayer] = Json.format[N5SegmentationLayer]
+object PrecomputedSegmentationLayer {
+  implicit val jsonFormat: OFormat[PrecomputedSegmentationLayer] = Json.format[PrecomputedSegmentationLayer]
 }

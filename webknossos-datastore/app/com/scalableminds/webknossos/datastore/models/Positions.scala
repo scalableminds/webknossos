@@ -67,9 +67,6 @@ case class BucketPosition(
 
   def volume: Int = bucketLength * bucketLength * bucketLength
 
-  def toCube(cubeLength: Int): CubePosition =
-    new CubePosition(voxelMag1X, voxelMag1Y, voxelMag1Z, mag, cubeLength)
-
   def topLeft: VoxelPosition = {
     val tlx: Int = voxelMag1X - Math.floorMod(voxelMag1X, bucketLength * mag.x)
     val tly: Int = voxelMag1Y - Math.floorMod(voxelMag1Y, bucketLength * mag.y)
@@ -114,33 +111,4 @@ case class BucketPosition(
 
   override def toString: String =
     s"BucketPosition(voxelMag1 at ($voxelMag1X, $voxelMag1Y, $voxelMag1Z), bucket at ($bucketX,$bucketY,$bucketZ), mag$mag$additionalCoordinateString)"
-}
-
-class CubePosition(
-    protected val mag1X: Int,
-    protected val mag1Y: Int,
-    protected val mag1Z: Int,
-    val mag: Vec3Int,
-    val cubeLength: Int
-) {
-
-  val x: Int = mag1X / cubeLength / mag.x
-
-  val y: Int = mag1Y / cubeLength / mag.y
-
-  val z: Int = mag1Z / cubeLength / mag.z
-
-  def topLeft: VoxelPosition = {
-    val tlx: Int = mag1X - mag1X % (cubeLength * mag.x)
-    val tly: Int = mag1Y - mag1Y % (cubeLength * mag.y)
-    val tlz: Int = mag1Z - mag1Z % (cubeLength * mag.z)
-
-    VoxelPosition(tlx, tly, tlz, mag)
-  }
-
-  def toMag1BoundingBox: BoundingBox =
-    new BoundingBox(Vec3Int(mag1X, mag1Y, mag1Z), cubeLength * mag.x, cubeLength * mag.y, cubeLength * mag.z)
-
-  override def toString: String =
-    s"CubePos($x,$y,$z,mag=$mag)"
 }

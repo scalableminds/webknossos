@@ -481,7 +481,7 @@ class DataSourceController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
                                         urlOrHeaderToken(token, request)) {
-        val (closedAgglomerateFileHandleCount, closedDataCubeHandleCount, removedChunksCount) =
+        val (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount) =
           binaryDataServiceHolder.binaryDataService.clearCache(organizationName, datasetName, layerName)
         val reloadedDataSource = dataSourceService.dataSourceFromFolder(
           dataSourceService.dataBaseDir.resolve(organizationName).resolve(datasetName),
@@ -492,7 +492,7 @@ class DataSourceController @Inject()(
           _ = clearedVaultCacheEntriesBox match {
             case Full(clearedVaultCacheEntries) =>
               logger.info(
-                s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$datasetName: closed $closedDataCubeHandleCount data shard / array handles, $closedAgglomerateFileHandleCount agglomerate file handles, removed $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
+                s"Reloading ${layerName.map(l => s"layer '$l' of ").getOrElse("")}dataset $organizationName/$datasetName: closed $closedAgglomerateFileHandleCount agglomerate file handles, removed $clearedBucketProviderCount bucketProviders, $clearedVaultCacheEntries vault cache entries and $removedChunksCount image chunk cache entries.")
             case _ => ()
           }
           _ <- dataSourceRepository.updateDataSource(reloadedDataSource)
@@ -654,6 +654,7 @@ class DataSourceController @Inject()(
             request.body.editableMappingTracingId,
             segmentId.toLong,
             mappingNameForMeshFile = None,
+            omitMissing = false,
             urlOrHeaderToken(token, request)
           )
           fileMag <- segmentIndexFileService.readFileMag(organizationName, datasetName, dataLayerName)
@@ -694,6 +695,7 @@ class DataSourceController @Inject()(
                 request.body.editableMappingTracingId,
                 segmentOrAgglomerateId,
                 mappingNameForMeshFile = None,
+                omitMissing = true, // assume agglomerate ids not present in the mapping belong to user-brushed segments
                 urlOrHeaderToken(token, request)
               )
               fileMag <- segmentIndexFileService.readFileMag(organizationName, datasetName, dataLayerName)

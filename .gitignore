@@ -77,3 +77,6 @@ coverage-ts
 temp-webknossos-schema**
 conf/application.conf-e
 .env
+.bloop
+.metals
+metals.sbt

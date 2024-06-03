@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5Layer, N5SegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.layers.{N5DataLayer, N5Layer, N5SegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datavault.VaultPath

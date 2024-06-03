@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 113, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 116, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 DROP VIEW webknossos.datasets_;
 
@@ -11,6 +11,6 @@ ALTER TABLE webknossos.datasets ADD COLUMN voxelSizeUnit webknossos.LENGTH_UNIT;
 
 CREATE VIEW webknossos.datasets_ AS SELECT * FROM webknossos.datasets WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 114;
+UPDATE webknossos.releaseInformation SET schemaVersion = 117;
 
 COMMIT TRANSACTION;

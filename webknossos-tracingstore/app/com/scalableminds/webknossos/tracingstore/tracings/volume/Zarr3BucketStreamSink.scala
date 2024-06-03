@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
 import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.zarr3.Zarr3SegmentationLayer
+import com.scalableminds.webknossos.datastore.dataformats.layers.Zarr3SegmentationLayer
 import com.scalableminds.webknossos.datastore.datareaders.zarr3._
 import com.scalableminds.webknossos.datastore.datareaders.{
   AxisOrder,

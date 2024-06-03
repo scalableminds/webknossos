@@ -491,6 +491,28 @@ export function formatBytes(nbytes: number) {
   return `${nbytes} B`;
 }
 
+export function formatVoxels(voxelCount: number) {
+  if (voxelCount == null || !Number.isFinite(voxelCount)) {
+    return "";
+  }
+  if (voxelCount > 2 ** 50) {
+    return `${(voxelCount / 2 ** 50).toPrecision(4)} PVx`;
+  }
+  if (voxelCount > 2 ** 40) {
+    return `${(voxelCount / 2 ** 40).toPrecision(4)} TVx`;
+  }
+  if (voxelCount > 2 ** 30) {
+    return `${(voxelCount / 2 ** 30).toPrecision(4)} GVx`;
+  }
+  if (voxelCount > 2 ** 20) {
+    return `${(voxelCount / 2 ** 20).toPrecision(4)} MVx`;
+  }
+  if (voxelCount > 2 ** 10) {
+    return `${(voxelCount / 2 ** 10).toPrecision(4)} KVx`;
+  }
+  return `${voxelCount} B`;
+}
+
 export function formatNumber(num: number): string {
   return new Intl.NumberFormat("en-US").format(num);
 }

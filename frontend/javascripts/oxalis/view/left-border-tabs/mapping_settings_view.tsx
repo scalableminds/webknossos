@@ -50,7 +50,7 @@ type StateProps = {
   isMergerModeEnabled: boolean;
   allowUpdate: boolean;
   isEditableMappingActive: boolean;
-  isAnnotationLockedByUser: boolean;
+  isAnnotationLockedByOwner: boolean;
   isOwner: boolean;
 } & typeof mapDispatchToProps;
 type Props = OwnProps & StateProps;
@@ -148,7 +148,7 @@ class MappingSettingsView extends React.Component<Props, State> {
       isMappingLocked,
       allowUpdate,
       isEditableMappingActive,
-      isAnnotationLockedByUser,
+      isAnnotationLockedByOwner,
       isOwner,
     } = this.props;
 
@@ -188,9 +188,9 @@ class MappingSettingsView extends React.Component<Props, State> {
     const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || isMappingEnabled;
     const renderHideUnmappedSegmentsSwitch =
       (shouldMappingBeEnabled || isMergerModeEnabled) && mapping && hideUnmappedIds != null;
-    const isDisabled = isMappingLocked || !allowUpdate;
+    const isDisabled = isEditableMappingActive || isMappingLocked || isAnnotationLockedByOwner;
     const disabledMessage = !allowUpdate
-      ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner)
+      ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByOwner, isOwner)
       : isEditableMappingActive
         ? "The mapping has been edited through proofreading actions and can no longer be disabled or changed."
         : mapping
@@ -288,7 +288,7 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
     isMappingLocked: isMappingLocked(state, ownProps.layerName),
-    isAnnotationLockedByUser: state.tracing.isLockedByOwner,
+    isAnnotationLockedByOwner: state.tracing.isLockedByOwner,
     isOwner: isAnnotationOwner(state),
   };
 }

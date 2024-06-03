@@ -321,6 +321,8 @@ job.materializeVolumeAnnotation.notAllowed.organization = Materializing volume a
 job.noWorkerForDatastore = Processing jobs are not available for the datastore this dataset belongs to.
 job.emailNotifactionsDisabled = Email notifications are not enabled for this job type.
 job.renderAnimation.notAllowed.organization = "Rendering animations is only allowed for datasets of your own organization."
+job.alignSections.notAllowed.organization = "Aligning sections is only allowed for datasets of your own organization."
+job.alignSections.notAllowed.onlySuperUsers = "For now, aligning sections is only allowed for super users."
 
 voxelytics.disabled = Voxelytics workflow reporting and logging are not enabled for this WEBKNOSSOS instance.
 voxelytics.runNotFound = Workflow runs not found

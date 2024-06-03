@@ -21,7 +21,7 @@ import {
   startMitochondriaInferralJob,
   startAlignSectionsJob,
 } from "admin/admin_rest_api";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
 import {
   getColorLayers,
@@ -404,6 +404,8 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
     margin: "auto",
     width: 150,
   };
+  const isSuperUser = useSelector((state: OxalisState) => state.activeUser?.isSuperUser || false);
+  const dispatch = useDispatch();
   return aIJobModalState !== "invisible" ? (
     <Modal
       width={875}
@@ -414,7 +416,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
           AI Analysis
         </>
       }
-      onCancel={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
+      onCancel={() => dispatch(setAIJobModalStateAction("invisible"))}
       footer={null}
     >
       <Space direction="vertical" size="middle">
@@ -423,7 +425,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
           <Radio.Button
             className="aIJobSelection"
             checked={aIJobModalState === "neuron_inferral"}
-            onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
+            onClick={() => dispatch(setAIJobModalStateAction("neuron_inferral"))}
           >
             <Card bordered={false}>
               <Space direction="vertical" size="small">
@@ -442,8 +444,8 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
             <Radio.Button
               className="aIJobSelection"
               checked={aIJobModalState === "mitochondria_inferral"}
-              disabled={!Store.getState().activeUser?.isSuperUser}
-              onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
+              disabled={!isSuperUser}
+              onClick={() => dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
             >
               <Card bordered={false}>
                 <Space direction="vertical" size="small">
@@ -463,8 +465,8 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
             <Radio.Button
               className="aIJobSelection"
               checked={aIJobModalState === "align_sections"}
-              disabled={!Store.getState().activeUser?.isSuperUser}
-              onClick={() => Store.dispatch(setAIJobModalStateAction("align_sections"))}
+              disabled={!isSuperUser}
+              onClick={() => dispatch(setAIJobModalStateAction("align_sections"))}
             >
               <Card bordered={false}>
                 <Space direction="vertical" size="small">
@@ -485,7 +487,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
               className="aIJobSelection"
               disabled
               checked={aIJobModalState === "nuclei_inferral"}
-              onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
+              onClick={() => dispatch(setAIJobModalStateAction("nuclei_inferral"))}
             >
               <Card bordered={false}>
                 <Space direction="vertical" size="small">
@@ -660,9 +662,10 @@ function StartJobForm(props: StartJobFormProps) {
 
 export function NucleiDetectionForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dispatch = useDispatch();
   return (
     <StartJobForm
-      handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
+      handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
       buttonLabel="Start AI nuclei detection"
       jobName={"nuclei_inferral"}
       title="AI Nuclei Segmentation"
@@ -697,9 +700,10 @@ export function NucleiDetectionForm() {
 }
 export function NeuronSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dispatch = useDispatch();
   return (
     <StartJobForm
-      handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
+      handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
       jobName={"neuron_inferral"}
       buttonLabel="Start AI neuron segmentation"
       title="AI Neuron Segmentation"
@@ -749,9 +753,10 @@ export function NeuronSegmentationForm() {
 
 export function MitochondriaSegmentationForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dispatch = useDispatch();
   return (
     <StartJobForm
-      handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
+      handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
       jobName={"mitochondria_inferral"}
       buttonLabel="Start AI mitochondria segmentation"
       title="AI Mitochondria Segmentation"
@@ -801,22 +806,22 @@ export function MitochondriaSegmentationForm() {
 
 export function AlignSectionsForm() {
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const dispatch = useDispatch();
   return (
     <StartJobForm
-      handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
+      handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
       jobName={"align_sections"}
       buttonLabel="Start section alignment job"
       title="Section Alignment"
       suggestedDatasetSuffix="aligned"
       isBoundingBoxConfigurable={false}
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) => {
-        return startAlignSectionsJob(
+      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) => startAlignSectionsJob(
           dataset.owningOrganization,
           dataset.name,
           colorLayer.name,
           newDatasetName,
-        );
-      }}
+        )
+      }
       description={
         <>
           <Space direction="vertical" size="middle">

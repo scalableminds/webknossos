@@ -565,7 +565,7 @@ export default function TaskListView({
     workflow: { name: readableWorkflowName },
   } = report;
   const runBeginTimeString = report.runs.reduce(
-    (r, a) => Math.min(r, a.beginTime != null ? a.beginTime.getTime() : Infinity),
+    (r, a) => Math.min(r, a.beginTime.getTime()),
     Infinity,
   );
 

@@ -25,24 +25,20 @@ const persistence = new Persistence<Pick<{ searchQuery: string }, "searchQuery">
   "workflowList",
 );
 
-function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun) {
+function parseRunInfo(runInfo: VoxelyticsWorkflowListingRun): VoxelyticsWorkflowListingRun {
   return {
     ...runInfo,
-    beginTime: runInfo.beginTime != null ? new Date(runInfo.beginTime) : null,
+    beginTime: new Date(runInfo.beginTime),
     endTime: runInfo.endTime != null ? new Date(runInfo.endTime) : null,
-  };
+  } as any as VoxelyticsWorkflowListingRun;
 }
 
 function parseWorkflowInfo(workflowInfo: VoxelyticsWorkflowListing): VoxelyticsWorkflowListing {
   return {
     ...workflowInfo,
-    runs: workflowInfo.runs.map(parseRunInfo).sort((a, b) => {
-      if (a.beginTime != null && b.beginTime != null)
-        return a.beginTime.getTime() - b.beginTime.getTime();
-      else if (a.beginTime != null) return -1;
-      else if (b.beginTime != null) return 1;
-      else return 0;
-    }),
+    runs: workflowInfo.runs
+      .map(parseRunInfo)
+      .sort((a, b) => b.beginTime.getTime() - a.beginTime.getTime()),
   };
 }
 
@@ -50,10 +46,9 @@ function uniqueify<T>(array: Array<T>): Array<T> {
   return [...new Set(array)];
 }
 
-type RenderRunInfo = Omit<VoxelyticsWorkflowListingRun, "userFirstName" | "userLastName"> & {
+type RenderRunInfo = VoxelyticsWorkflowListingRun & {
   workflowName: string;
   workflowHash: string;
-  userDisplayName: string | undefined;
   children?: Array<VoxelyticsWorkflowListingRun>;
 };
 
@@ -91,13 +86,7 @@ export default function WorkflowListView() {
 
   usePolling(loadData, VX_POLLING_INTERVAL);
 
-  const getUserDisplayName = (run: VoxelyticsWorkflowListingRun) => {
-    return run.userFirstName != null || run.userLastName != null
-      ? [run.userFirstName, run.userLastName].join(" ").trim()
-      : run.hostUserName;
-  };
-
-  const renderRuns: Array<RenderRunInfo> = useMemo(
+  const renderRuns = useMemo(
     () =>
       workflows.map((workflow) => ({
         workflowName: workflow.name,
@@ -107,20 +96,18 @@ export default function WorkflowListView() {
         endTime: workflow.runs[0].endTime,
         name: "",
         id: "", // used to distinguish between workflows and runs when rendering
-        hostUserName: uniqueify(workflow.runs.map((run) => run.hostUserName)).join(", "),
-        hostName: uniqueify(workflow.runs.map((run) => run.hostName)).join(", "),
-        userDisplayName: uniqueify(workflow.runs.map((run) => getUserDisplayName(run))).join(", "),
+        username: uniqueify(workflow.runs.map((run) => run.username)).join(", "),
+        hostname: uniqueify(workflow.runs.map((run) => run.hostname)).join(", "),
         voxelyticsVersion: uniqueify(workflow.runs.map((run) => run.voxelyticsVersion)).join(", "),
         taskCounts: workflow.taskCounts,
         children: workflow.runs.map((run) => ({
           workflowName: workflow.name,
           workflowHash: workflow.hash,
-          userDisplayName: getUserDisplayName(run),
           ...run,
         })),
       })),
-    [workflows, getUserDisplayName],
-  );
+    [workflows],
+  ) as any as Array<RenderRunInfo>;
 
   function renderProgress(run: RenderRunInfo) {
     let label = "";
@@ -200,26 +187,26 @@ export default function WorkflowListView() {
           },
           {
             title: "User",
-            key: "userName",
-            dataIndex: "userDisplayName",
-            filters: uniqueify(renderRuns.map((run) => run.userDisplayName)).map((username) => ({
-              text: username || "",
-              value: username || "",
+            dataIndex: "username",
+            key: "user",
+            filters: uniqueify(renderRuns.map((run) => run.username)).map((username) => ({
+              text: username,
+              value: username,
             })),
             onFilter: (value: string | number | boolean, run: RenderRunInfo) =>
-              run.userDisplayName?.startsWith(String(value)) || false,
+              run.username.startsWith(String(value)),
             filterSearch: true,
           },
           {
-            title: "Host",
+            title: "Hostname",
             dataIndex: "hostname",
-            key: "host",
-            filters: uniqueify(renderRuns.map((run) => run.hostName)).map((hostname) => ({
+            key: "hostname",
+            filters: uniqueify(renderRuns.map((run) => run.hostname)).map((hostname) => ({
               text: hostname,
               value: hostname,
             })),
             onFilter: (value: string | number | boolean, run: RenderRunInfo) =>
-              run.hostName.startsWith(String(value)),
+              run.hostname.startsWith(String(value)),
             filterSearch: true,
           },
           {

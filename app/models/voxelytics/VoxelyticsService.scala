@@ -13,12 +13,12 @@ import scala.util.Try
 
 case class RunEntry(id: ObjectId,
                     name: String,
-                    hostUserName: String,
-                    hostName: String,
+                    username: String,
+                    hostname: String,
                     voxelyticsVersion: String,
-                    workflowHash: String,
-                    workflowYamlContent: String,
-                    workflowConfig: JsObject,
+                    workflow_hash: String,
+                    workflow_yamlContent: String,
+                    workflow_config: JsObject,
                     state: VoxelyticsRunState,
                     beginTime: Option[Instant],
                     endTime: Option[Instant])
@@ -77,16 +77,14 @@ object ChunkCounts {
 
 case class WorkflowListingRunEntry(id: ObjectId,
                                    name: String,
-                                   hostUserName: String,
-                                   hostName: String,
+                                   username: String,
+                                   hostname: String,
                                    voxelyticsVersion: String,
-                                   workflowHash: String,
+                                   workflow_hash: String,
                                    state: VoxelyticsRunState,
                                    beginTime: Option[Instant],
                                    endTime: Option[Instant],
-                                   taskCounts: TaskCounts,
-                                   userFirstName: Option[String],
-                                   userLastName: Option[String])
+                                   taskCounts: TaskCounts)
 
 object WorkflowListingRunEntry {
   implicit val jsonFormat: OFormat[WorkflowListingRunEntry] = Json.format[WorkflowListingRunEntry]

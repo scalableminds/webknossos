@@ -1,5 +1,14 @@
 import { AutoSizer } from "react-virtualized";
-import { Dropdown, MenuProps, Modal, Tooltip, notification, Tree as AndTree, GetRef } from "antd";
+import {
+  Dropdown,
+  MenuProps,
+  Modal,
+  Tooltip,
+  notification,
+  Tree as AndTree,
+  GetRef,
+  TreeProps,
+} from "antd";
 import {
   DeleteOutlined,
   PlusOutlined,
@@ -29,8 +38,7 @@ import {
   deepFlatFilter,
   getNodeKey,
   getNodeKeyFromNode,
-  removeTreesAndTransform,
-  findGroup,
+  moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -55,8 +63,6 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { api } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
-
-import type CheckInfo from "rc-tree/lib/interface";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { ColoredDotIcon } from "./segments_tab/segment_list_item";
 
@@ -158,7 +164,7 @@ function TreeHierarchyView(props: Props) {
     setExpandedNodeKeys(expandedKeys);
   }
 
-  function onCheck(_checkedKeysValue: React.Key[], info: typeof CheckInfo) {
+  const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
     const { id, type } = info.node;
 
     if (type === GroupTypeEnum.TREE) {
@@ -168,7 +174,7 @@ function TreeHierarchyView(props: Props) {
     } else {
       onToggleTreeGroup(id);
     }
-  }
+  };
 
   function onSelectTreeNode(node: TreeNode, evt: MouseEvent) {
     const treeId = node.id;
@@ -243,21 +249,22 @@ function TreeHierarchyView(props: Props) {
   }
 
   function onDrop(info: { node: TreeNode; dragNode: TreeNode }) {
-    const { dragNode, node: nextParentNode } = info;
-    if (dragNode.type === GroupTypeEnum.TREE && nextParentNode.type === GroupTypeEnum.GROUP) {
-      const allTreesToMove = [...props.selectedTrees, dragNode.id];
+    const { dragNode: draggedNode, node: dragTargetNode } = info;
+    const parentGroupId =
+      dragTargetNode.type === GroupTypeEnum.GROUP
+        ? dragTargetNode.id
+        : props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID;
+
+    if (draggedNode.type === GroupTypeEnum.TREE) {
+      const allTreesToMove = [...props.selectedTrees, draggedNode.id];
       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
       const moveActions = allTreesToMove.map((treeId) =>
-        setTreeGroupAction(
-          nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
-          treeId,
-        ),
+        setTreeGroupAction(parentGroupId === MISSING_GROUP_ID ? null : parentGroupId, treeId),
       );
       onBatchActions(moveActions, "SET_TREE_GROUP");
     } else {
       // A group was dragged - update the groupTree
-      // Exclude root group and remove trees from groupTree object
-      const newTreeGroups = removeTreesAndTransform(groupTree[0].children);
+      const newTreeGroups = moveGroupsHelper(props.treeGroups, draggedNode.id, parentGroupId);
       onUpdateTreeGroups(newTreeGroups);
     }
   }
@@ -599,11 +606,6 @@ function TreeHierarchyView(props: Props) {
     );
   }
 
-  // function canDrop(params) {
-  //   const { nextParent } = params;
-  //   return props.allowUpdate && nextParent != null && nextParent.type === GroupTypeEnum.GROUP;
-  // }
-
   function canDrag(node: TreeNode): boolean {
     return props.allowUpdate && node.id !== MISSING_GROUP_ID;
   }
@@ -648,6 +650,7 @@ function TreeHierarchyView(props: Props) {
             onDrop={onDrop}
             onCheck={onCheck}
             onExpand={onExpand}
+            // @ts-expect-error canDrag has argument of base type DataNode but we use it's extended parent type TreeNode
             draggable={canDrag}
             checkedKeys={checkedKeys}
             expandedKeys={expandedNodeKeys}

@@ -65,12 +65,6 @@ function makeTreeNodeFromGroup(group: TreeGroup, optionalProperties: Partial<Tre
   return makeTreeNode(group.groupId, group.name, GroupTypeEnum.GROUP, optionalProperties);
 }
 
-export function removeTreesAndTransform(groupTree: TreeNode[]): TreeGroup[] {
-  // Remove all trees from the group hierarchy and transform groups to their basic form
-  return _.filter(groupTree, (treeNode) => treeNode.type === GroupTypeEnum.GROUP).map((group) =>
-    makeBasicGroupObject(group.id, group.name, removeTreesAndTransform(group.children)),
-  );
-}
 export function insertTreesAndTransform(
   groups: TreeGroup[],
   groupToTreesMap: Record<number, Tree[]>,

@@ -126,7 +126,7 @@ export default function BoundingBoxTab() {
             onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
             onNameChange={_.partial(setBoundingBoxName, bb.id)}
             onColorChange={_.partial(setBoundingBoxColor, bb.id)}
-            disabled={allowUpdate}
+            disabled={!allowUpdate}
             isLockedByOwner={isLockedByOwner}
             isOwner={isOwner}
           />

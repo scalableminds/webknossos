@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
-import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.layers.{

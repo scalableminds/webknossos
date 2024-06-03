@@ -18,7 +18,6 @@ import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class BinaryDataService(val dataBaseDir: Path,
-                        maxCacheSize: Int,
                         val agglomerateServiceOpt: Option[AgglomerateService],
                         remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                         val applicationHealthService: Option[ApplicationHealthService],
@@ -32,7 +31,6 @@ class BinaryDataService(val dataBaseDir: Path,
     compare https://github.com/scalableminds/webknossos/issues/5223 */
   private val MaxMagForAgglomerateMapping = 16
 
-  private lazy val shardHandleCache = new DataCubeCache(maxCacheSize)
   private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
 
   def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
@@ -93,7 +91,7 @@ class BinaryDataService(val dataBaseDir: Path,
       val bucketProvider =
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
           request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
-      bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
+      bucketProvider.load(readInstruction).futureBox.flatMap {
         case Failure(msg, Full(e: InternalError), _) =>
           applicationHealthService.foreach(a => a.pushError(e))
           logger.warn(
@@ -179,10 +177,6 @@ class BinaryDataService(val dataBaseDir: Path,
   def clearCache(organizationName: String, datasetName: String, layerName: Option[String]): (Int, Int, Int) = {
     val dataSourceId = DataSourceId(datasetName, organizationName)
 
-    def dataCubeMatchPredicate(cubeKey: CachedCube) =
-      cubeKey.dataSourceName == datasetName && cubeKey.organization == organizationName && layerName.forall(
-        _ == cubeKey.dataLayerName)
-
     def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
       agglomerateKey.datasetName == datasetName && agglomerateKey.organizationName == organizationName && layerName
         .forall(_ == agglomerateKey.layerName)
@@ -193,9 +187,7 @@ class BinaryDataService(val dataBaseDir: Path,
     val closedAgglomerateFileHandleCount =
       agglomerateServiceOpt.map(_.agglomerateFileCache.clear(agglomerateFileMatchPredicate)).getOrElse(0)
 
-    val closedDataCubeHandleCount = shardHandleCache.clear(dataCubeMatchPredicate)
-
-    bucketProviderCache.clear(bucketProviderPredicate)
+    val clearedBucketProviderCount = bucketProviderCache.clear(bucketProviderPredicate)
 
     def chunkContentsPredicate(key: String): Boolean =
       key.startsWith(s"${dataSourceId.toString}") && layerName.forall(l =>
@@ -203,7 +195,7 @@ class BinaryDataService(val dataBaseDir: Path,
 
     val removedChunksCount = sharedChunkContentsCache.map(_.clear(chunkContentsPredicate)).getOrElse(0)
 
-    (closedAgglomerateFileHandleCount, closedDataCubeHandleCount, removedChunksCount)
+    (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount)
   }
 
 }

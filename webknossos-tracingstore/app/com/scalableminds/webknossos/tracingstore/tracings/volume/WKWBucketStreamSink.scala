@@ -32,7 +32,7 @@ class WKWBucketStreamSink(val layer: DataLayer, tracingHasFallbackLayer: Boolean
           // If the tracing has no fallback segmentation, all-zero buckets can be omitted entirely
           None
         } else {
-          val filePath = wkwFilePath(bucket.toCube(bucket.bucketLength))
+          val filePath = wkwFilePath(bucket)
           Some(
             NamedFunctionStream(
               filePath,

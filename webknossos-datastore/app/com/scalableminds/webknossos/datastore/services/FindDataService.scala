@@ -33,7 +33,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       DataLayer.bucketLength
     )
     binaryDataService.handleDataRequest(
-      DataServiceDataRequest(dataSource, dataLayer, None, request.cuboid(dataLayer), request.settings))
+      DataServiceDataRequest(dataSource, dataLayer, request.cuboid(dataLayer), request.settings))
   }
 
   private def concatenateBuckets(buckets: Seq[Array[Byte]]): Array[Byte] =

@@ -154,7 +154,7 @@ export default function WorkflowListView() {
           percent={Math.round(
             ((run.taskCounts.complete + run.taskCounts.cancelled + run.taskCounts.failed) /
               run.taskCounts.total) *
-            100,
+              100,
           )}
           status={runStateToStatus(run.state)}
           success={{ percent: Math.round((run.taskCounts.complete / run.taskCounts.total) * 100) }}

@@ -212,7 +212,7 @@ export default function WorkflowListView() {
           },
           {
             title: "Host",
-            dataIndex: "hostname",
+            dataIndex: "hostName",
             key: "host",
             filters: uniqueify(renderRuns.map((run) => run.hostName)).map((hostname) => ({
               text: hostname,

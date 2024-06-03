@@ -4,7 +4,7 @@ import React from "react";
 import debounceRender from "react-debounce-render";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
-import { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
+import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType, EditableMapping } from "oxalis/store";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -50,9 +50,8 @@ type StateProps = {
   isMergerModeEnabled: boolean;
   allowUpdate: boolean;
   isEditableMappingActive: boolean;
-  isAnnotationLockedByUser: boolean;
+  isAnnotationLockedByOwner: boolean;
   isOwner: boolean;
-  isInViewMode: boolean;
 } & typeof mapDispatchToProps;
 type Props = OwnProps & StateProps;
 type State = {
@@ -149,9 +148,8 @@ class MappingSettingsView extends React.Component<Props, State> {
       isMappingLocked,
       allowUpdate,
       isEditableMappingActive,
-      isAnnotationLockedByUser,
+      isAnnotationLockedByOwner,
       isOwner,
-      isInViewMode,
     } = this.props;
 
     const availableMappings = segmentationLayer?.mappings != null ? segmentationLayer.mappings : [];
@@ -190,9 +188,9 @@ class MappingSettingsView extends React.Component<Props, State> {
     const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || isMappingEnabled;
     const renderHideUnmappedSegmentsSwitch =
       (shouldMappingBeEnabled || isMergerModeEnabled) && mapping && hideUnmappedIds != null;
-    const isDisabled = isMappingLocked || (!allowUpdate && !isInViewMode);
+    const isDisabled = isEditableMappingActive || isMappingLocked || isAnnotationLockedByOwner;
     const disabledMessage = !allowUpdate
-      ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByUser, isOwner)
+      ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByOwner, isOwner)
       : isEditableMappingActive
         ? "The mapping has been edited through proofreading actions and can no longer be disabled or changed."
         : mapping
@@ -290,9 +288,8 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
     editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
     isMappingLocked: isMappingLocked(state, ownProps.layerName),
-    isAnnotationLockedByUser: state.tracing.isLockedByOwner,
+    isAnnotationLockedByOwner: state.tracing.isLockedByOwner,
     isOwner: isAnnotationOwner(state),
-    isInViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   };
 }
 

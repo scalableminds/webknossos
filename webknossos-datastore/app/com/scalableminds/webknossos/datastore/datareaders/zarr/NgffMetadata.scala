@@ -69,8 +69,16 @@ object NgffMetadata {
           path = mag.toMagLiteral(allowScalar = true),
           List(NgffCoordinateTransformation(
             scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList)))
-      )) // TODO unit of voxel size
-    NgffMetadata(multiscales = List(NgffMultiscalesItem(name = Some(dataLayerName), datasets = datasets)), None)
+      ))
+    val lengthUnitStr = LengthUnit.toNgffString(dataSourceVoxelSize.unit)
+    val axes = List(
+      NgffAxis(name = "c", `type` = "channel"),
+      NgffAxis(name = "x", `type` = "space", unit = Some(lengthUnitStr)),
+      NgffAxis(name = "y", `type` = "space", unit = Some(lengthUnitStr)),
+      NgffAxis(name = "z", `type` = "space", unit = Some(lengthUnitStr)),
+    )
+    NgffMetadata(multiscales = List(NgffMultiscalesItem(name = Some(dataLayerName), datasets = datasets, axes = axes)),
+                 None)
   }
 
   implicit val jsonFormat: OFormat[NgffMetadata] = Json.format[NgffMetadata]

@@ -78,4 +78,34 @@ object LengthUnit extends ExtendedEnumeration {
       case LengthUnit.mi => 1609344000000.0
       case LengthUnit.pc => 3.085677581e25
     }
+
+  def toNgffString(unit: Value): String =
+    unit match {
+      case LengthUnit.ym => "yoctometer"
+      case LengthUnit.zm => "zeptometer"
+      case LengthUnit.am => "attometer"
+      case LengthUnit.fm => "femtometer"
+      case LengthUnit.pm => "picometer"
+      case LengthUnit.nm => "nanometer"
+      case LengthUnit.µm => "micrometer"
+      case LengthUnit.mm => "millimeter"
+      case LengthUnit.cm => "centimeter"
+      case LengthUnit.dm => "decimeter"
+      case LengthUnit.m  => "meter"
+      case LengthUnit.hm => "hectometer"
+      case LengthUnit.km => "kilometer"
+      case LengthUnit.Mm => "megameter"
+      case LengthUnit.Gm => "gigameter"
+      case LengthUnit.Tm => "terameter"
+      case LengthUnit.Pm => "petameter"
+      case LengthUnit.Em => "exameter"
+      case LengthUnit.Zm => "zettameter"
+      case LengthUnit.Ym => "yottameter"
+      case LengthUnit.Å  => "angstrom"
+      case LengthUnit.in => "inch"
+      case LengthUnit.ft => "foot"
+      case LengthUnit.yd => "yard"
+      case LengthUnit.mi => "mile"
+      case LengthUnit.pc => "parsec"
+    }
 }

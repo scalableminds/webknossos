@@ -29,7 +29,7 @@ case class ComposeRequest(
     newDatasetName: String,
     targetFolderId: String,
     organizationName: String,
-    scale: Vec3Double,
+    voxelSize: VoxelSize,
     layers: Seq[ComposeRequestLayer]
 )
 
@@ -143,7 +143,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       dataSource = GenericDataSource(
         DataSourceId(composeRequest.newDatasetName, organizationName),
         layers,
-        VoxelSize.fromFactorWithDefaultUnit(composeRequest.scale),
+        composeRequest.voxelSize,
         None
       )
 

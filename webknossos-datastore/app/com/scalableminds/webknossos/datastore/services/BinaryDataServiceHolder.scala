@@ -44,7 +44,6 @@ class BinaryDataServiceHolder @Inject()(
 
   val binaryDataService: BinaryDataService = new BinaryDataService(
     Paths.get(config.Datastore.baseFolder),
-    config.Datastore.Cache.DataCube.maxEntries,
     Some(agglomerateService),
     Some(remoteSourceDescriptorService),
     Some(applicationHealthService),

@@ -451,10 +451,11 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
               </Radio.Button>
             </Tooltip>
             <Tooltip title="Coming soon">
-            <Radio.Button
-              className="aIJobSelection"
-              checked={aIJobModalState === "align_sections"}
-              disabled={!Store.getState().activeUser?.isSuperUser} onClick={() => Store.dispatch(setAIJobModalStateAction("align_sections"))}
+              <Radio.Button
+                className="aIJobSelection"
+                checked={aIJobModalState === "align_sections"}
+                disabled={!Store.getState().activeUser?.isSuperUser}
+                onClick={() => Store.dispatch(setAIJobModalStateAction("align_sections"))}
               >
                 <Card bordered={false}>
                   <Space direction="vertical" size="small">

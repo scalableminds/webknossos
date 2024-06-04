@@ -271,7 +271,8 @@ function JobListView() {
       );
     } else if (
       job.type === APIJobType.CONVERT_TO_WKW ||
-      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE || job.type === APIJobType.ALIGN_SECTIONS
+      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE ||
+      job.type === APIJobType.ALIGN_SECTIONS
     ) {
       return (
         <span>

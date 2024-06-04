@@ -307,7 +307,7 @@ class JobsController @Inject()(
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
           )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunInferMitochondria"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunAlignSections"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }

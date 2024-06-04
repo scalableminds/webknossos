@@ -36,7 +36,7 @@ import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_ac
 import Toast from "libs/toast";
 import type { OxalisState, UserBoundingBox, HybridTracing } from "oxalis/store";
 import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
-import { Model, Store } from "oxalis/singletons";
+import { Model } from "oxalis/singletons";
 import {
   clamp,
   computeArrayFromBoundingBox,
@@ -815,7 +815,8 @@ export function AlignSectionsForm() {
       title="Section Alignment"
       suggestedDatasetSuffix="aligned"
       isBoundingBoxConfigurable={false}
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) => startAlignSectionsJob(
+      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
+        startAlignSectionsJob(
           dataset.owningOrganization,
           dataset.name,
           colorLayer.name,

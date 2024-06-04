@@ -41,7 +41,7 @@ import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_ac
 import Toast from "libs/toast";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { ControlModeEnum, Unicode, type Vector3 } from "oxalis/constants";
-import { Model } from "oxalis/singletons";
+import { Model, Store } from "oxalis/singletons";
 import {
   clamp,
   computeArrayFromBoundingBox,
@@ -328,7 +328,6 @@ export function OutputSegmentationLayerNameFormItem({
 export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
   const onClose = () => Store.dispatch(setAIJobModalStateAction("invisible"));
   const isSuperUser = useSelector((state: OxalisState) => state.activeUser?.isSuperUser || false);
-  const dispatch = useDispatch();
   const tabs = _.compact([
     {
       label: "Run a model",
@@ -368,6 +367,7 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
   };
   const isSuperUser = Store.getState().activeUser?.isSuperUser || false;
   const [showCustomAiModels, setShowCustomAiModels] = useState(false);
+  const dispatch = useDispatch();
 
   return (
     <Space direction="vertical" size="middle">
@@ -414,7 +414,7 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
             <Radio.Button
               className="aIJobSelection"
               checked={aIJobModalState === "neuron_inferral"}
-              onClick={() => Store.dispatch(setAIJobModalStateAction("neuron_inferral"))}
+              onClick={() => dispatch(setAIJobModalStateAction("neuron_inferral"))}
             >
               <Card bordered={false}>
                 <Space direction="vertical" size="small">
@@ -434,7 +434,7 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
                 className="aIJobSelection"
                 disabled={!isSuperUser}
                 checked={aIJobModalState === "mitochondria_inferral"}
-                onClick={() => Store.dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
+                onClick={() => dispatch(setAIJobModalStateAction("mitochondria_inferral"))}
               >
                 <Card bordered={false}>
                   <Space direction="vertical" size="small">
@@ -455,7 +455,7 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
                 className="aIJobSelection"
                 disabled
                 checked={aIJobModalState === "nuclei_inferral"}
-                onClick={() => Store.dispatch(setAIJobModalStateAction("nuclei_inferral"))}
+                onClick={() => dispatch(setAIJobModalStateAction("nuclei_inferral"))}
               >
                 <Card bordered={false}>
                   <Space direction="vertical" size="small">
@@ -769,6 +769,7 @@ function CustomAiModelInferenceForm() {
   const isViewMode = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
+  const dispatch = useDispatch();
 
   const [aiModels, isLoading] = useGuardedFetch(
     async function () {
@@ -784,7 +785,7 @@ function CustomAiModelInferenceForm() {
 
   return (
     <StartJobForm
-      handleClose={() => Store.dispatch(setAIJobModalStateAction("invisible"))}
+      handleClose={() => dispatch(setAIJobModalStateAction("invisible"))}
       jobName="inference"
       buttonLabel="Start inference with custom AI model"
       title="AI Inference"
@@ -862,16 +863,16 @@ export function AlignSectionsForm() {
         )
       }
       description={
-          <Space direction="vertical" size="middle">
-            <Row>This job will automatically align all the sections of the dataset.</Row>
-            <Row style={{ display: "grid", marginBottom: 16 }}>
-              <Alert
-                message="Please note that this feature is experimental."
-                type="warning"
-                showIcon
-              />
-            </Row>
-          </Space>
+        <Space direction="vertical" size="middle">
+          <Row>This job will automatically align all the sections of the dataset.</Row>
+          <Row style={{ display: "grid", marginBottom: 16 }}>
+            <Alert
+              message="Please note that this feature is experimental."
+              type="warning"
+              showIcon
+            />
+          </Row>
+        </Space>
       }
     />
   );

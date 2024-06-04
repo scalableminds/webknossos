@@ -298,7 +298,8 @@ function JobListView() {
       job.type === APIJobType.INFER_NEURONS ||
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
       job.type === APIJobType.COMPUTE_MESH_FILE ||
-      job.type === APIJobType.INFER_WITH_MODEL
+      job.type === APIJobType.INFER_WITH_MODEL ||
+      job.type === APIJobType.ALIGN_SECTIONS
     ) {
       return (
         <span>

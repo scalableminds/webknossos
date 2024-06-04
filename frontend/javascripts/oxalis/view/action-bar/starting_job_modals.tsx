@@ -451,6 +451,26 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
               </Radio.Button>
             </Tooltip>
             <Tooltip title="Coming soon">
+            <Radio.Button
+              className="aIJobSelection"
+              checked={aIJobModalState === "align_sections"}
+              disabled={!Store.getState().activeUser?.isSuperUser} onClick={() => Store.dispatch(setAIJobModalStateAction("align_sections"))}
+              >
+                <Card bordered={false}>
+                  <Space direction="vertical" size="small">
+                    <Row className="ai-job-title">Align Sections</Row>
+                    <Row>
+                      <img
+                        src={`/assets/images/${jobNameToImagePath.align_sections}`}
+                        alt={"Mitochondria detection example"}
+                        style={centerImageStyle}
+                      />
+                    </Row>
+                  </Space>
+                </Card>
+              </Radio.Button>
+            </Tooltip>
+            <Tooltip title="Coming soon">
               <Radio.Button
                 className="aIJobSelection"
                 disabled
@@ -475,6 +495,7 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
           {aIJobModalState === "neuron_inferral" ? <NeuronSegmentationForm /> : null}
           {aIJobModalState === "nuclei_inferral" ? <NucleiDetectionForm /> : null}
           {aIJobModalState === "mitochondria_inferral" ? <MitochondriaSegmentationForm /> : null}
+          {aIJobModalState === "align_sections" ? <AlignSectionsForm /> : null}
         </>
       )}
     </Space>

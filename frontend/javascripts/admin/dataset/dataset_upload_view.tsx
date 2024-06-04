@@ -513,7 +513,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         }
         // We return here since not more than 1 zip archive is supported anyway. This is guarded
         // against via form validation.
-        return;
+        break;
       }
     }
 

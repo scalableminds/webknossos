@@ -2331,7 +2331,8 @@ export function getShortLink(key: string): Promise<ShortLink> {
 
 // ### Voxelytics
 export async function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowListing>> {
-  return Request.receiveJSON("/api/voxelytics/workflows");
+  return await require("../api-workflows-response-mock.json");
+  //return Request.receiveJSON("/api/voxelytics/workflows");
 }
 
 export function getVoxelyticsWorkflow(

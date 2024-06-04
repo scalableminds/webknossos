@@ -1,0 +1,298 @@
+[
+  {
+    "name": "test1",
+    "hash": "123456789",
+    "beginTime": 1711463764626,
+    "endTime": 1711464593727,
+    "state": "COMPLETE",
+    "taskCounts": {
+      "total": 5,
+      "failed": 0,
+      "skipped": 1,
+      "complete": 4,
+      "cancelled": 0,
+      "fileSize": 20000,
+      "inodeCount": 140
+    },
+    "runs": [
+      {
+        "id": "11",
+        "name": "s1",
+        "hostUserName": "mike",
+        "hostName": "mike",
+        "voxelyticsVersion": "1",
+        "workflowHash": "123456789",
+        "state": "FAILED",
+        "beginTime": 1711463764626,
+        "endTime": 1711464593727,
+        "taskCounts": {
+          "total": 5,
+          "failed": 1,
+          "skipped": 1,
+          "complete": 0,
+          "cancelled": 0,
+          "fileSize": 20000,
+          "inodeCount": 20
+        },
+        "userFirstName": "wkmike3",
+        "userLastName": "mikey"
+      },
+      {
+        "id": "10",
+        "name": "s2",
+        "hostUserName": "mike3",
+        "hostName": "mike",
+        "voxelyticsVersion": "1",
+        "workflowHash": "123456789",
+        "state": "CANCELLED",
+        "beginTime": 1711464122377,
+        "endTime": 1711464141328,
+        "taskCounts": {
+          "total": 5,
+          "failed": 0,
+          "skipped": 1,
+          "complete": 0,
+          "cancelled": 1,
+          "fileSize": 20000,
+          "inodeCount": 20
+        },
+        "userFirstName": "wkmike3",
+        "userLastName": "mikey"
+      },
+      {
+        "id": "9",
+        "name": "s3",
+        "hostUserName": "mike3",
+        "hostName": "mike",
+        "voxelyticsVersion": "1",
+        "workflowHash": "123456789",
+        "state": "FAILED",
+        "beginTime": 1711464148661,
+        "endTime": 1711464183457,
+        "taskCounts": {
+          "total": 5,
+          "failed": 1,
+          "skipped": 1,
+          "complete": 0,
+          "cancelled": 0,
+          "fileSize": 20000,
+          "inodeCount": 20
+        },
+        "userFirstName": "wkmike3",
+        "userLastName": "mikey"
+      },
+      {
+        "id": "8",
+        "name": "s4",
+        "hostUserName": "hostmike4",
+        "hostName": "mike",
+        "voxelyticsVersion": "1",
+        "workflowHash": "123456789",
+        "state": "COMPLETE",
+        "beginTime": 1711464312292,
+        "endTime": 1711464593727,
+        "taskCounts": {
+          "total": 5,
+          "failed": 0,
+          "skipped": 1,
+          "complete": 4,
+          "cancelled": 0,
+          "fileSize": 20000,
+          "inodeCount": 160
+        },
+        "userFirstName": "wkmike4",
+        "userLastName": "mikey4"
+      }
+    ]
+  },
+  {
+    "name": "t1",
+    "hash": "111111111",
+    "beginTime": 1703176700966,
+    "endTime": 1703176776046,
+    "state": "COMPLETE",
+    "taskCounts": {
+      "total": 2,
+      "failed": 0,
+      "skipped": 1,
+      "complete": 1,
+      "cancelled": 0,
+      "fileSize": 20000,
+      "inodeCount": 25
+    },
+    "runs": [
+      {
+        "id": "7",
+        "name": "t2",
+        "hostUserName": "hostmike2",
+        "hostName": "mike",
+        "voxelyticsVersion": "22.10.1",
+        "workflowHash": "111111111",
+        "state": "COMPLETE",
+        "beginTime": 1703176700966,
+        "endTime": 1703176776046,
+        "taskCounts": {
+          "total": 2,
+          "failed": 0,
+          "skipped": 1,
+          "complete": 1,
+          "cancelled": 0,
+          "fileSize": 20000,
+          "inodeCount": 25
+        },
+        "userFirstName": "wkmike2",
+        "userLastName": "mike"
+      }
+    ]
+  },
+  {
+    "name": "model-train",
+    "hash": "111111112",
+    "beginTime": 1716541252467,
+    "endTime": 1716993045197,
+    "state": "CANCELLED",
+    "taskCounts": {
+      "total": 2,
+      "failed": 0,
+      "skipped": 0,
+      "complete": 1,
+      "cancelled": 1,
+      "fileSize": 20000,
+      "inodeCount": 9
+    },
+    "runs": [
+      {
+        "id": "6",
+        "name": "t3",
+        "hostUserName": "hostmike",
+        "hostName": "mike",
+        "voxelyticsVersion": "4",
+        "workflowHash": "111111112",
+        "state": "FAILED",
+        "beginTime": 1716541252467,
+        "endTime": 1716541362743,
+        "taskCounts": {
+          "total": 2,
+          "failed": 1,
+          "skipped": 0,
+          "complete": 1,
+          "cancelled": 0,
+          "fileSize": 20000,
+          "inodeCount": 9
+        },
+        "userFirstName": "wkmike",
+        "userLastName": "mike"
+      },
+      {
+        "id": "5",
+        "name": "t4",
+        "hostUserName": "hostmike",
+        "hostName": "mike",
+        "voxelyticsVersion": "4",
+        "workflowHash": "111111112",
+        "state": "CANCELLED",
+        "beginTime": 1716986393510,
+        "endTime": 1716986401394,
+        "taskCounts": {
+          "total": 2,
+          "failed": 0,
+          "skipped": 1,
+          "complete": 0,
+          "cancelled": 1,
+          "fileSize": 20000,
+          "inodeCount": 9
+        },
+        "userFirstName": "wkmike",
+        "userLastName": "mike"
+      },
+      {
+        "id": "4",
+        "name": "t5",
+        "hostUserName": "mike",
+        "hostName": "mike",
+        "voxelyticsVersion": "4",
+        "workflowHash": "111111112",
+        "state": "CANCELLED",
+        "beginTime": 1716989852375,
+        "endTime": 1716989942096,
+        "taskCounts": {
+          "total": 2,
+          "failed": 0,
+          "skipped": 0,
+          "complete": 1,
+          "cancelled": 1,
+          "fileSize": 8201745,
+          "inodeCount": 9
+        },
+        "userFirstName": "wkmike",
+        "userLastName": "mike"
+      },
+      {
+        "id": "3",
+        "name": "t6",
+        "hostUserName": "hostmike",
+        "hostName": "mike",
+        "voxelyticsVersion": "4",
+        "workflowHash": "111111112",
+        "state": "CANCELLED",
+        "beginTime": 1716990248985,
+        "endTime": 1716990288815,
+        "taskCounts": {
+          "total": 2,
+          "failed": 0,
+          "skipped": 0,
+          "complete": 0,
+          "cancelled": 1,
+          "fileSize": 0,
+          "inodeCount": 0
+        },
+        "userFirstName": "wkmike",
+        "userLastName": "mike"
+      },
+      {
+        "id": "2",
+        "name": "t7",
+        "hostUserName": "hostmike",
+        "hostName": "mike",
+        "voxelyticsVersion": "4",
+        "workflowHash": "111111112",
+        "state": "CANCELLED",
+        "beginTime": 1716991125653,
+        "endTime": 1716991191286,
+        "taskCounts": {
+          "total": 2,
+          "failed": 0,
+          "skipped": 0,
+          "complete": 0,
+          "cancelled": 1,
+          "fileSize": 8201745,
+          "inodeCount": 9
+        },
+        "userFirstName": "wkmike",
+        "userLastName": "mike"
+      },
+      {
+        "id": "1",
+        "name": "t8",
+        "hostUserName": "hostmike5",
+        "hostName": "mike",
+        "voxelyticsVersion": "4",
+        "workflowHash": "111111112",
+        "state": "CANCELLED",
+        "beginTime": 1716992973003,
+        "endTime": 1716993045197,
+        "taskCounts": {
+          "total": 2,
+          "failed": 0,
+          "skipped": 0,
+          "complete": 1,
+          "cancelled": 1,
+          "fileSize": 8201745,
+          "inodeCount": 9
+        },
+        "userFirstName": "wkmike5",
+        "userLastName": "mike"
+      }
+    ]
+  }
+]

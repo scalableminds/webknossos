@@ -924,11 +924,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName,
     layerConfiguration,
     isColorLayer,
+    isLastLayer,
     hasLessThanTwoColorLayers = true,
   }: {
     layerName: string;
     layerConfiguration: DatasetLayerConfiguration | null | undefined;
     isColorLayer: boolean;
+    isLastLayer: boolean;
     hasLessThanTwoColorLayers?: boolean;
   }) => {
     // Ensure that every layer needs a layer configuration and that color layers have a color layer.
@@ -937,8 +939,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
     const elementClass = getElementClass(this.props.dataset, layerName);
     const { isDisabled, isInEditMode } = layerConfiguration;
+    const lastLayerMarginBottom = isLastLayer ? { marginBottom: 30 } : {};
+    const betweenLayersMarginBottom = isLastLayer ? {} : { marginBottom: 30 };
+    console.log(layerName, lastLayerMarginBottom, betweenLayersMarginBottom);
     return (
-      <div key={layerName}>
+      <div key={layerName} style={lastLayerMarginBottom}>
         {this.getLayerSettingsHeader(
           isDisabled,
           isColorLayer,
@@ -951,7 +956,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {isDisabled ? null : (
           <div
             style={{
-              marginBottom: 30,
+              ...betweenLayersMarginBottom,
               marginLeft: 10,
             }}
           >
@@ -1403,16 +1408,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           layerConfiguration={layers[layerName]}
           isColorLayer
           index={index}
+          isLastLayer={index === colorLayerOrder.length - 1}
           disabled={hasLessThanTwoColorLayers}
           hasLessThanTwoColorLayers={hasLessThanTwoColorLayers}
         />
       );
     });
-    const segmentationLayerSettings = segmentationLayerNames.map((layerName) => {
+    const segmentationLayerSettings = segmentationLayerNames.map((layerName, index) => {
       return (
         <LayerSettings
           key={layerName}
           layerName={layerName}
+          isLastLayer={index === segmentationLayerNames.length - 1}
           layerConfiguration={layers[layerName]}
           isColorLayer={false}
         />

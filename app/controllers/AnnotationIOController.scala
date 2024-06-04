@@ -1,5 +1,7 @@
 package controllers
 
+import collections.SequenceUtils
+
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.util.zip.Deflater
 import org.apache.pekko.actor.ActorSystem
@@ -101,9 +103,14 @@ class AnnotationIOController @Inject()(
           request.body.dataParts("createGroupForEachFile").headOption.contains("true")
         val overwritingDatasetName: Option[String] =
           request.body.dataParts.get("datasetName").flatMap(_.headOption)
+        val overwritingOrganizationName: Option[String] =
+          request.body.dataParts.get("organizationName").flatMap(_.headOption)
         val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         val parsedFiles =
-          annotationUploadService.extractFromFiles(attachedFiles, useZipName = true, overwritingDatasetName)
+          annotationUploadService.extractFromFiles(attachedFiles,
+                                                   useZipName = true,
+                                                   overwritingDatasetName,
+                                                   overwritingOrganizationName)
         val parsedFilesWrapped =
           annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults, shouldCreateGroupForEachFile)
         val parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)
@@ -266,11 +273,7 @@ class AnnotationIOController @Inject()(
     }
 
   private def assertAllOnSameDataset(skeletons: List[SkeletonTracing], volumes: List[VolumeTracing]): Fox[String] =
-    for {
-      datasetName <- volumes.headOption.map(_.datasetName).orElse(skeletons.headOption.map(_.datasetName)).toFox
-      _ <- bool2Fox(skeletons.forall(_.datasetName == datasetName))
-      _ <- bool2Fox(volumes.forall(_.datasetName == datasetName))
-    } yield datasetName
+    SequenceUtils.findUniqueElement(volumes.map(_.datasetName) ++ skeletons.map(_.datasetName)).toFox
 
   private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
                                           volumes: List[VolumeTracing]): Fox[Option[String]] = {

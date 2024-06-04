@@ -46,7 +46,7 @@ object AnimationJobOptions {
   implicit val jsonFormat: OFormat[AnimationJobOptions] = Json.format[AnimationJobOptions]
 }
 
-class JobsController @Inject()(
+class JobController @Inject()(
     jobDAO: JobDAO,
     sil: Silhouette[WkEnv],
     datasetDAO: DatasetDAO,

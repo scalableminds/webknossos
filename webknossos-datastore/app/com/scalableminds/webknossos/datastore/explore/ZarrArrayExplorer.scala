@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.explore
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.Category
 
 import scala.concurrent.ExecutionContext
 
-class ZarrArrayExplorer(mag: Vec3Int = Vec3Int.ones, implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
+class ZarrArrayExplorer(mag: Vec3Int = Vec3Int.ones)(implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
 
   override def name: String = "Zarr Array"
 

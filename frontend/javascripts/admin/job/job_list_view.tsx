@@ -70,6 +70,19 @@ const persistence = new Persistence<Pick<State, "searchQuery">>(
   "jobList",
 );
 
+export function JobState({ job }: { job: APIJob }) {
+  const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
+
+  const jobStateNormalized = _.capitalize(job.state.toLowerCase());
+
+  return (
+    <Tooltip title={tooltip}>
+      <span className="icon-margin-right">{icon}</span>
+      {jobStateNormalized}
+    </Tooltip>
+  );
+}
+
 function JobListView() {
   const [isLoading, setIsLoading] = useState(true);
   const [jobs, setJobs] = useState<APIJob[]>([]);
@@ -284,7 +297,8 @@ function JobListView() {
       job.type === APIJobType.INFER_NUCLEI ||
       job.type === APIJobType.INFER_NEURONS ||
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
-      job.type === APIJobType.COMPUTE_MESH_FILE
+      job.type === APIJobType.COMPUTE_MESH_FILE ||
+      job.type === APIJobType.INFER_WITH_MODEL
     ) {
       return (
         <span>
@@ -296,20 +310,21 @@ function JobListView() {
           )}
         </span>
       );
-    } else return null;
+    } else if (job.type === APIJobType.TRAIN_MODEL) {
+      return (
+        <span>
+          The model may now be selected from the &quot;AI Analysis&quot; button when viewing a
+          dataset.
+        </span>
+      );
+    } else {
+      // The above if-branches should be exhaustive over all job types
+      Utils.assertNever(job.type);
+    }
   }
 
   function renderState(__: any, job: APIJob) {
-    const { tooltip, icon } = TOOLTIP_MESSAGES_AND_ICONS[job.state];
-
-    const jobStateNormalized = _.capitalize(job.state.toLowerCase());
-
-    return (
-      <Tooltip title={tooltip}>
-        {icon}
-        {jobStateNormalized}
-      </Tooltip>
-    );
+    return <JobState job={job} />;
   }
 
   return (

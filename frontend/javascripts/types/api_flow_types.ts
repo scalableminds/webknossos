@@ -463,6 +463,7 @@ export type APIAnnotationInfo = {
   // backend still serves this for backward-compatibility reasons.
   readonly stats?: SkeletonTracingStats | EmptyObject;
   readonly state: string;
+  readonly isLockedByOwner: boolean;
   readonly tags: Array<string>;
   readonly typ: APIAnnotationType;
   // The owner can be null (e.g., for a sandbox annotation
@@ -480,6 +481,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     id,
     name,
     state,
+    isLockedByOwner,
     tags,
     typ,
     owner,
@@ -496,6 +498,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     description,
     modified,
     id,
+    isLockedByOwner,
     name,
     state,
     tags,
@@ -660,9 +663,9 @@ export type APIFeatureToggles = {
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
 };
-export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
+export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
-export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
+export type APIEffectiveJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
 export enum APIJobType {
   ALIGN_SECTIONS = "align_sections",
   CONVERT_TO_WKW = "convert_to_wkw",
@@ -675,6 +678,8 @@ export enum APIJobType {
   INFER_NEURONS = "infer_neurons",
   INFER_MITOCHONDRIA = "infer_mitochondria",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
+  TRAIN_MODEL = "train_model",
+  INFER_WITH_MODEL = "infer_with_model",
 }
 
 export type APIJob = {
@@ -690,12 +695,25 @@ export type APIJob = {
   readonly boundingBox: string | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
-  readonly state: APIJobState;
+  readonly state: APIEffectiveJobState;
   readonly manualState: APIJobManualState;
   readonly result: string | null | undefined;
   readonly resultLink: string | null | undefined;
   readonly createdAt: number;
+  readonly voxelyticsWorkflowHash: string | null;
+  readonly trainingAnnotations: Array<{ annotationId: string }>;
 };
+
+export type AiModel = {
+  id: string;
+  name: string;
+  dataStore: APIDataStore;
+  user: APIUser;
+  comment: string;
+  created: number;
+  trainingJob: APIJob | null;
+};
+
 // Tracing related datatypes
 export type APIUpdateActionBatch = {
   version: number;

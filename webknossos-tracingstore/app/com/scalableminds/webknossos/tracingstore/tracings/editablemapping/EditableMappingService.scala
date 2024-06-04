@@ -103,7 +103,7 @@ class EditableMappingService @Inject()(
 
   private def generateId: String = UUID.randomUUID.toString
 
-  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
+  val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, None, None)
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   private val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
 
@@ -646,19 +646,20 @@ class EditableMappingService @Inject()(
       edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
     } yield edgesWithPositions
 
-  private def minCut(agglomerateGraph: AgglomerateGraph,
-                     segmentId1: Long,
-                     segmentId2: Long): Box[List[(Long, Long)]] = {
-    val g = new SimpleWeightedGraph[Long, DefaultWeightedEdge](classOf[DefaultWeightedEdge])
-    agglomerateGraph.segments.foreach { segmentId =>
-      g.addVertex(segmentId)
-    }
-    agglomerateGraph.edges.zip(agglomerateGraph.affinities).foreach {
-      case (edge, affinity) =>
-        val e = g.addEdge(edge.source, edge.target)
-        g.setEdgeWeight(e, affinity)
-    }
+  private def minCut(agglomerateGraph: AgglomerateGraph, segmentId1: Long, segmentId2: Long): Box[List[(Long, Long)]] =
     tryo {
+      val g = new SimpleWeightedGraph[Long, DefaultWeightedEdge](classOf[DefaultWeightedEdge])
+      agglomerateGraph.segments.foreach { segmentId =>
+        g.addVertex(segmentId)
+      }
+      agglomerateGraph.edges.zip(agglomerateGraph.affinities).foreach {
+        case (edge, affinity) =>
+          val e = g.addEdge(edge.source, edge.target)
+          if (e == null) {
+            throw new Exception("Duplicate edge in agglomerate graph. Please check the mapping file.")
+          }
+          g.setEdgeWeight(e, affinity)
+      }
       val minCutImpl = new PushRelabelMFImpl(g)
       minCutImpl.calculateMinCut(segmentId1, segmentId2)
       val sourcePartition: util.Set[Long] = minCutImpl.getSourcePartition
@@ -666,7 +667,6 @@ class EditableMappingService @Inject()(
       minCutEdges.asScala.toList.map(e =>
         setDirectionForCutting(g.getEdgeSource(e), g.getEdgeTarget(e), sourcePartition))
     }
-  }
 
   // the returned edges must be directed so that when they are passed to the split action, the source segment keeps its agglomerate id
   private def setDirectionForCutting(node1: Long, node2: Long, sourcePartition: util.Set[Long]): (Long, Long) =

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.requests
 
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, CubePosition}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
 
 import java.nio.file.Path
@@ -29,7 +29,7 @@ case class DataReadInstruction(
     bucket: BucketPosition,
     version: Option[Long] = None
 ) {
-  val cube: CubePosition = bucket.toCube(dataLayer.lengthOfUnderlyingCubes(bucket.mag))
+  def layerSummary: String = f"${dataSource.id.team}/${dataSource.id.name}/${dataLayer.name}"
 }
 
 case class DataServiceMappingRequest(

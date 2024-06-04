@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileC
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import org.apache.commons.io.FilenameUtils
+import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
 import java.io.ByteArrayInputStream
@@ -242,12 +243,15 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
                                 datasetName: String,
                                 dataLayerName: String,
                                 meshFileName: String,
-                                segmentIds: Seq[Long]): Fox[WebknossosSegmentInfo] = {
+                                segmentIds: Seq[Long])(implicit m: MessagesProvider): Fox[WebknossosSegmentInfo] = {
     val meshChunksForUnmappedSegments = segmentIds.map(segmentId =>
       listMeshChunksForSegment(organizationName, datasetName, dataLayerName, meshFileName, segmentId).toOption)
     val meshChunksForUnmappedSegmentsFlat = meshChunksForUnmappedSegments.flatten
     for {
-      _ <- bool2Fox(meshChunksForUnmappedSegmentsFlat.nonEmpty) ?~> "zero chunks" ?~> "mesh.file.listChunks.failed"
+      _ <- bool2Fox(meshChunksForUnmappedSegmentsFlat.nonEmpty) ?~> "zero chunks" ?~> Messages(
+        "mesh.file.listChunks.failed",
+        segmentIds.mkString(","),
+        meshFileName)
       chunkInfos = meshChunksForUnmappedSegmentsFlat.reduce(_.merge(_))
     } yield chunkInfos
   }

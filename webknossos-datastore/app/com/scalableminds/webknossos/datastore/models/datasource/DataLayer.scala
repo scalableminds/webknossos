@@ -2,18 +2,22 @@ package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MagLocator, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
+import com.scalableminds.webknossos.datastore.dataformats.layers.{
+  N5DataLayer,
+  N5SegmentationLayer,
   PrecomputedDataLayer,
-  PrecomputedSegmentationLayer
+  PrecomputedSegmentationLayer,
+  WKWDataLayer,
+  WKWSegmentationLayer,
+  Zarr3DataLayer,
+  Zarr3SegmentationLayer,
+  ZarrDataLayer,
+  ZarrSegmentationLayer
 }
 import ucar.ma2.{Array => MultiArray}
-import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType
 import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
@@ -25,7 +29,7 @@ object DataFormat extends ExtendedEnumeration {
 }
 
 object Category extends ExtendedEnumeration {
-  val color, mask, segmentation = Value
+  val color, segmentation = Value
 
   def guessFromElementClass(elementClass: ElementClass.Value): Category.Value =
     elementClass match {
@@ -109,20 +113,6 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.int16  => (1, "<i2")
     case ElementClass.int32  => (1, "<i4")
     case ElementClass.int64  => (1, "<i8")
-  }
-
-  def guessFromZarrString(zarrDtype: String): Option[ElementClass.Value] = zarrDtype.drop(1) match {
-    case "u1" => Some(ElementClass.uint8)
-    case "u2" => Some(ElementClass.uint16)
-    case "u4" => Some(ElementClass.uint32)
-    case "u8" => Some(ElementClass.uint64)
-    case "f4" => Some(ElementClass.float)
-    case "f8" => Some(ElementClass.double)
-    case "i1" => Some(ElementClass.int8)
-    case "i2" => Some(ElementClass.int16)
-    case "i4" => Some(ElementClass.int32)
-    case "i8" => Some(ElementClass.int64)
-    case _    => None
   }
 
   def fromArrayDataType(arrayDataType: ArrayDataType): Option[ElementClass.Value] = arrayDataType match {
@@ -220,6 +210,8 @@ trait DataLayer extends DataLayerLike {
 
   lazy val bytesPerElement: Int =
     ElementClass.bytesPerElement(elementClass)
+
+  def mags: List[MagLocator]
 }
 
 object DataLayer {
@@ -273,8 +265,6 @@ object DataLayer {
 }
 
 trait DataLayerWithMagLocators extends DataLayer {
-
-  def mags: List[MagLocator]
 
   def mapped(boundingBoxMapping: BoundingBox => BoundingBox = b => b,
              defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,

@@ -941,7 +941,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { isDisabled, isInEditMode } = layerConfiguration;
     const lastLayerMarginBottom = isLastLayer ? { marginBottom: 30 } : {};
     const betweenLayersMarginBottom = isLastLayer ? {} : { marginBottom: 30 };
-    console.log(layerName, lastLayerMarginBottom, betweenLayersMarginBottom);
     return (
       <div key={layerName} style={lastLayerMarginBottom}>
         {this.getLayerSettingsHeader(

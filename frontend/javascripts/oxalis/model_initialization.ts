@@ -57,6 +57,7 @@ import {
   setViewModeAction,
   setMappingAction,
   updateLayerSettingAction,
+  setMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   initializeEditableMappingAction,
@@ -708,6 +709,8 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
 }
 
 async function applyLayerState(stateByLayer: UrlStateByLayer) {
+  console.log("applying", stateByLayer);
+  debugger;
   for (const layerName of Object.keys(stateByLayer)) {
     const layerState = stateByLayer[layerName];
     let effectiveLayerName;
@@ -754,6 +757,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
           showLoadingIndicator: true,
         }),
       );
+      Store.dispatch(setMappingEnabledAction(effectiveLayerName, true));
 
       if (agglomerateIdsToImport != null) {
         const { tracing } = Store.getState();

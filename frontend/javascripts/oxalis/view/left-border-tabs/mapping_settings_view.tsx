@@ -1,4 +1,4 @@
-import { Select, Tooltip } from "antd";
+import { Tooltip } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import debounceRender from "react-debounce-render";
@@ -20,8 +20,7 @@ import {
   setHideUnmappedIdsAction,
   setMappingAction,
 } from "oxalis/model/actions/settings_actions";
-import { SwitchSetting } from "oxalis/view/components/setting_input_views";
-import * as Utils from "libs/utils";
+import { MappingSelect, SwitchSetting } from "oxalis/view/components/setting_input_views";
 import {
   getEditableMappingForVolumeTracingId,
   hasEditableMapping,
@@ -29,8 +28,6 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import messages from "messages";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
-
-const { Option, OptGroup } = Select;
 
 type OwnProps = {
   layerName: string;
@@ -64,18 +61,6 @@ type State = {
   isRefreshingMappingList: boolean;
 };
 
-const needle = "##";
-
-const packMappingNameAndCategory = (mappingName: string, category: MappingType) =>
-  `${category}${needle}${mappingName}`;
-
-const unpackMappingNameAndCategory = (packedString: string) => {
-  const needlePos = packedString.indexOf(needle);
-  const categoryName = packedString.slice(0, needlePos);
-  const mappingName = packedString.slice(needlePos + needle.length);
-  return [mappingName, categoryName];
-};
-
 class MappingSettingsView extends React.Component<Props, State> {
   state = {
     shouldMappingBeEnabled: false,
@@ -98,9 +83,7 @@ class MappingSettingsView extends React.Component<Props, State> {
     this.props.setHideUnmappedIds(this.props.layerName, hideUnmappedIds);
   };
 
-  handleChangeMapping = (packedMappingNameWithCategory: string): void => {
-    const [mappingName, mappingType] = unpackMappingNameAndCategory(packedMappingNameWithCategory);
-
+  handleChangeMapping = (mappingName: string, mappingType: string): void => {
     if (mappingType !== "JSON" && mappingType !== "HDF5") {
       throw new Error("Invalid mapping type");
     }
@@ -166,23 +149,6 @@ class MappingSettingsView extends React.Component<Props, State> {
           }
         : {};
 
-    const renderCategoryOptions = (optionStrings: string[], category: MappingType) => {
-      const useGroups = availableMappings.length > 0 && availableAgglomerates.length > 0;
-      const elements = optionStrings
-        .slice()
-        .sort(Utils.localeCompareBy((optionString) => optionString))
-        .map((optionString) => (
-          <Option
-            key={packMappingNameAndCategory(optionString, category)}
-            value={packMappingNameAndCategory(optionString, category)}
-            title={optionString}
-          >
-            {optionString}
-          </Option>
-        ));
-      return useGroups ? <OptGroup label={category}>{elements}</OptGroup> : elements;
-    };
-
     // The mapping toggle should be active if either the user clicked on it (this.state.shouldMappingBeEnabled)
     // or a mapping was activated, e.g. from the API or by selecting one from the dropdown (this.props.isMappingEnabled).
     const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || isMappingEnabled;
@@ -225,21 +191,13 @@ class MappingSettingsView extends React.Component<Props, State> {
                 (i.e., mappingName != null)
                 */}
               {shouldMappingBeEnabled ? (
-                <Select
-                  placeholder="Select mapping"
-                  defaultActiveFirstOption={false}
-                  style={{
-                    width: "100%",
-                    marginBottom: 14,
-                  }}
-                  {...selectValueProp}
+                <MappingSelect
+                  value={selectValueProp.value}
                   onChange={this.handleChangeMapping}
-                  notFoundContent="No mappings found."
-                  disabled={isDisabled}
-                >
-                  {renderCategoryOptions(availableMappings, "JSON")}
-                  {renderCategoryOptions(availableAgglomerates, "HDF5")}
-                </Select>
+                  isDisabled={isDisabled}
+                  availableMappings={availableMappings}
+                  availableAgglomerates={availableAgglomerates}
+                />
               ) : null}
             </React.Fragment>
           ) : null

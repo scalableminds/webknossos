@@ -75,6 +75,7 @@ export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = 
   blendMode: BLEND_MODES.Additive,
   colorLayerOrder: [],
   nativelyRenderedLayerName: null,
+  activeMappingByLayer: {},
 };
 export const defaultDatasetViewConfiguration = {
   ...defaultDatasetViewConfigurationWithoutNull,
@@ -134,6 +135,26 @@ export const datasetViewConfiguration = {
     items: {
       type: "string",
     },
+  },
+  activeMappingByLayer: {
+    type: "object",
+    patternProperties: {
+      // This pattern matches any string key (layer name).
+      ".*": {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+          },
+          type: {
+            type: "string",
+          },
+        },
+        required: ["name", "type"],
+        additionalProperties: false,
+      },
+    },
+    additionalProperties: false,
   },
 };
 export default {

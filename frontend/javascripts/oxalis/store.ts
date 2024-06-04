@@ -326,6 +326,7 @@ export type DatasetConfiguration = {
   // property. So, to render the skeleton layer natively, nativelyRenderedLayerName
   // can be set to null.
   readonly nativelyRenderedLayerName: string | null;
+  readonly activeMappingByLayer: Record<string, { name: string; type: MappingType }>;
 };
 
 export type PartialDatasetConfiguration = Partial<Omit<DatasetConfiguration, "layers">> & {

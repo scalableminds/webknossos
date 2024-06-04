@@ -19,7 +19,7 @@ import * as React from "react";
 import { Vector3Input } from "libs/vector_input";
 import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
-import {
+import messages, {
   RecommendedConfiguration,
   layerViewConfigurations,
   settings,
@@ -29,18 +29,82 @@ import type { DatasetLayerConfiguration } from "oxalis/store";
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 import { BLEND_MODES } from "oxalis/constants";
 import ColorLayerOrderingTable from "./color_layer_ordering_component";
+import { APIDatasetId, APIDataSource } from "types/api_flow_types";
+import { useGuardedFetch } from "libs/react_helpers";
+import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
+import { MappingSelect } from "oxalis/view/components/setting_input_views";
 
 const FormItem = Form.Item;
 
-export default function DatasetSettingsViewConfigTab(props: {
-  formRef: React.RefObject<FormInstance<any>>;
+function DefaultMappingSelectForLayer({
+  layerName,
+  datasetId,
+  dataStoreURL,
+  currentMapping,
+  setMappingNameAndType,
+}: {
+  layerName: string;
+  datasetId: APIDatasetId;
+  dataStoreURL: string;
+  currentMapping: { name: string; type: string } | null | undefined;
+  setMappingNameAndType: (layerName: string, mappingName: string, mappingType: string) => void;
 }) {
-  const allSegmentationLayer =
-    props.formRef.current
-      ?.getFieldValue(["dataSource", "dataLayers"])
-      ?.filter((layer) => layer.category === "segmentation") || [];
+  const [[availableMappings, availableAgglomerates], _ignoredIsLoading] = useGuardedFetch(
+    async () =>
+      Promise.all([
+        getMappingsForDatasetLayer(dataStoreURL, datasetId, layerName),
+        getAgglomeratesForDatasetLayer(dataStoreURL, datasetId, layerName),
+      ]),
+    [[], []],
+    [layerName, dataStoreURL, datasetId],
+    messages["mapping.loading_failed"](layerName),
+  );
+  return (
+    <Col span={6}>
+      <FormItemWithInfo
+        name={["defaultConfiguration", "activeMappingByLayer", layerName, "name"]}
+        label={
+          <span>
+            Default Mapping for Layer <span className="italic">{layerName}</span>
+          </span>
+        }
+        info="The default mapping to activate when viewing this dataset."
+        initialValue={currentMapping?.name}
+      >
+        <MappingSelect
+          isDisabled={false}
+          availableMappings={availableMappings}
+          availableAgglomerates={availableAgglomerates}
+          onChange={(mappingName, mappingType) =>
+            setMappingNameAndType(layerName, mappingName, mappingType)
+          }
+        />
+      </FormItemWithInfo>
+      {/* Rendering a hidden item for the matching mapping type to include it in the set of values output by 
+       form.getFieldsValue https://ant.design/components/form#getfieldsvalue */}
+      <Form.Item hidden name={["defaultConfiguration", "activeMappingByLayer", layerName, "type"]}>
+        {/*Dummy input to avoid antd error*/}
+        <Input type="text" />
+      </Form.Item>
+    </Col>
+  );
+}
 
-  //TODO: For each render a form item enabling the user to select a mapping for the layer
+export default function DatasetSettingsViewConfigTab(props: {
+  formRef: React.RefObject<FormInstance<{ dataSource: APIDataSource }>>;
+  datasetId: APIDatasetId;
+  dataStoreURL: string | undefined;
+}) {
+  const { datasetId, dataStoreURL } = props;
+  const form = props.formRef.current;
+  const segmentationLayers =
+    form != null
+      ? (form.getFieldValue(["dataSource", "dataLayers"]) as APIDataSource["dataLayers"])?.filter(
+          (layer) => layer.category === "segmentation",
+        ) || []
+      : [];
+  const currentSelectedMappings =
+    form?.getFieldValue(["defaultConfiguration", "activeMappingByLayer"]) || {};
 
   const columns = [
     {
@@ -102,6 +166,17 @@ export default function DatasetSettingsViewConfigTab(props: {
       </FormItem>
     </Col>
   ));
+  const setDefaultMappingNameAndType = (
+    layerName: string,
+    mappingName: string,
+    mappingType: string,
+  ) => {
+    form?.setFieldValue(["defaultConfiguration", "activeMappingByLayer", layerName], {
+      name: mappingName,
+      type: mappingType,
+    });
+  };
+
   return (
     <div>
       <Alert
@@ -213,7 +288,20 @@ export default function DatasetSettingsViewConfigTab(props: {
           </FormItem>
         </Col>
       </Row>
-      <Row gutter={24}>{/*TODO: add mapping select for each layer */}</Row>
+      <Row gutter={24}>
+        {segmentationLayers.length > 0 && dataStoreURL != null
+          ? segmentationLayers.map((layer) => (
+              <DefaultMappingSelectForLayer
+                layerName={layer.name}
+                datasetId={datasetId}
+                dataStoreURL={dataStoreURL}
+                key={layer.name}
+                currentMapping={currentSelectedMappings[layer.name]}
+                setMappingNameAndType={setDefaultMappingNameAndType}
+              />
+            ))
+          : null}
+      </Row>
       <Divider />
       <Row gutter={32}>
         <Col span={12}>

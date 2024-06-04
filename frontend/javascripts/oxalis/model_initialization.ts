@@ -222,7 +222,12 @@ export async function initialize(
     Store.dispatch(setViewModeAction(mode));
   }
 
-  const defaultState = determineDefaultState(UrlManager.initialState, serverTracings);
+  const defaultActiveMappingsPerLayer = annotationSpecificDatasetSettings.activeMappingByLayer;
+  const defaultState = determineDefaultState(
+    UrlManager.initialState,
+    serverTracings,
+    defaultActiveMappingsPerLayer,
+  );
   // Don't override zoom when swapping the task
   applyState(defaultState, !initialFetch);
 
@@ -559,6 +564,7 @@ function validateVolumeLayers(
 function determineDefaultState(
   urlState: PartialUrlManagerState,
   tracings: Array<ServerTracing>,
+  defaultActiveMappingsPerLayer: DatasetConfiguration["activeMappingByLayer"],
 ): PartialUrlManagerState {
   const {
     position: urlStatePosition,
@@ -621,6 +627,24 @@ function determineDefaultState(
 
   const stateByLayer = urlStateByLayer ?? {};
 
+  // Add the default mapping to the state for each layer that does not have a mapping set in its URL settings
+  for (const layerName in defaultActiveMappingsPerLayer) {
+    if (!(layerName in stateByLayer)) {
+      stateByLayer[layerName] = {};
+    }
+
+    if (stateByLayer[layerName].mappingInfo == null) {
+      stateByLayer[layerName].mappingInfo = {
+        mappingName: defaultActiveMappingsPerLayer[layerName].name,
+        mappingType: defaultActiveMappingsPerLayer[layerName].type,
+      };
+    }
+  }
+
+  // Overwriting the mapping to load for each volume layer in case
+  // - the volume tracing has a not locked mapping set and the url does not.
+  // - the volume tracing has a locked mapping set.
+  // - the volume tracing has locked that no tracing should be loaded.
   const volumeTracings = tracings.filter(
     (tracing) => tracing.typ === "Volume",
   ) as ServerVolumeTracing[];

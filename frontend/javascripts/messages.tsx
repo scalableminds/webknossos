@@ -262,6 +262,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The active volume annotation layer has an active mapping. By mutating the layer, the mapping will be permanently locked and can no longer be changed or disabled. This can only be undone by restoring an older version of this annotation. Are you sure you want to continue?",
   "tracing.locked_mapping_confirmed": (mappingName: string) =>
     `The mapping ${mappingName} is now locked for this annotation and can no longer be changed or disabled.`,
+  "mapping.loading_failed": (layerName: string) =>
+    `Loading the available mappings for layer ${layerName} failed.`,
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",

@@ -73,7 +73,7 @@ type Props = {
   sortBy: string;
   trees: TreeMap;
   selectedTrees: number[];
-  onSelectTree: (arg0: number) => void;
+  onMultiSelectTree: (arg0: number) => void;
   deselectAllTrees: () => void;
   onDeleteGroup: (arg0: number) => void;
   allowUpdate: boolean;
@@ -168,11 +168,11 @@ function TreeHierarchyView(props: Props) {
     const { id, type } = info.node;
 
     if (type === GroupTypeEnum.TREE) {
-      onToggleTree(id);
+      toggleTree(id);
     } else if (id === MISSING_GROUP_ID) {
-      onToggleAllTrees();
+      setToggleAllTrees();
     } else {
-      onToggleTreeGroup(id);
+      toggleTreeGroup(id);
     }
   };
 
@@ -180,23 +180,23 @@ function TreeHierarchyView(props: Props) {
     const treeId = node.id;
 
     if (evt.ctrlKey || evt.metaKey) {
-      props.onSelectTree(treeId);
+      props.onMultiSelectTree(treeId);
     } else {
       props.deselectAllTrees();
-      onSetActiveTree(treeId);
+      setActiveTree(treeId);
     }
   }
 
   function selectGroupById(groupId: number) {
     props.deselectAllTrees();
-    onSetActiveTreeGroup(groupId);
+    setActiveTreeGroup(groupId);
   }
 
   function onSelectGroupNode(node: TreeNode) {
     const groupId = node.id;
     const numberOfSelectedTrees = props.selectedTrees.length;
 
-    if (numberOfSelectedTrees > 0) {
+    if (numberOfSelectedTrees > 1) {
       Modal.confirm({
         title: "Do you really want to select this group?",
         content: `You have ${numberOfSelectedTrees} selected Trees. Do you really want to select this group?
@@ -265,7 +265,7 @@ function TreeHierarchyView(props: Props) {
     } else {
       // A group was dragged - update the groupTree
       const newTreeGroups = moveGroupsHelper(props.treeGroups, draggedNode.id, parentGroupId);
-      onUpdateTreeGroups(newTreeGroups);
+      setUpdateTreeGroups(newTreeGroups);
     }
   }
 
@@ -283,7 +283,7 @@ function TreeHierarchyView(props: Props) {
       });
     }
 
-    onUpdateTreeGroups(newTreeGroups);
+    setUpdateTreeGroups(newTreeGroups);
     selectGroupById(newGroupId);
   }
 
@@ -424,8 +424,8 @@ function TreeHierarchyView(props: Props) {
         {
           key: "hideTree",
           onClick: () => {
-            onSetActiveTreeGroup(id);
-            onToggleHideInactiveTrees();
+            setActiveTreeGroup(id);
+            toggleHideInactiveTrees();
             handleGroupDropdownMenuVisibility(id, false);
           },
           icon: <i className="fas fa-eye" />,
@@ -434,7 +434,7 @@ function TreeHierarchyView(props: Props) {
         {
           key: "shuffleTreeGroupColors",
           onClick: () => {
-            if (id === MISSING_GROUP_ID) onShuffleAllTreeColors();
+            if (id === MISSING_GROUP_ID) shuffleAllTreeColors();
             else shuffleTreeGroupColors(id);
           },
           icon: <i className="fas fa-adjust" />,
@@ -504,7 +504,7 @@ function TreeHierarchyView(props: Props) {
                 title="Change Tree Color"
                 isDisabled={isEditingDisabled}
                 onSetColor={(color) => {
-                  onSetTreeColor(tree.treeId, color);
+                  setTreeColor(tree.treeId, color);
                 }}
                 rgb={tree.color}
               />
@@ -512,7 +512,7 @@ function TreeHierarchyView(props: Props) {
           },
           {
             key: "shuffleTreeColor",
-            onClick: () => onShuffleTreeColor(tree.treeId),
+            onClick: () => shuffleTreeColor(tree.treeId),
             title: "Shuffle Tree Color",
             disabled: isEditingDisabled,
             icon: <i className="fas fa-adjust" />,
@@ -520,7 +520,7 @@ function TreeHierarchyView(props: Props) {
           },
           {
             key: "deleteTree",
-            onClick: () => onDeleteTree(tree.treeId),
+            onClick: () => deleteTree(tree.treeId),
             title: "Delete Tree",
             disabled: isEditingDisabled,
             icon: <i className="fas fa-trash" />,
@@ -539,8 +539,8 @@ function TreeHierarchyView(props: Props) {
           {
             key: "hideTree",
             onClick: () => {
-              onSetActiveTree(tree.treeId);
-              onToggleHideInactiveTrees();
+              setActiveTree(tree.treeId);
+              toggleHideInactiveTrees();
               handleTreeDropdownMenuVisibility(tree.treeId, false);
             },
             title: "Hide/Show All Other Trees",
@@ -550,8 +550,8 @@ function TreeHierarchyView(props: Props) {
           {
             key: "hideTreeEdges",
             onClick: () => {
-              onSetActiveTree(tree.treeId);
-              onSetTreeEdgesVisibility(tree.treeId, !tree.edgesAreVisible);
+              setActiveTree(tree.treeId);
+              setTreeEdgesVisibility(tree.treeId, !tree.edgesAreVisible);
               handleTreeDropdownMenuVisibility(tree.treeId, false);
             },
             title: "Hide/Show Edges of This Tree",
@@ -562,7 +562,7 @@ function TreeHierarchyView(props: Props) {
             ? {
                 key: "convertToNormalSkeleton",
                 onClick: () => {
-                  onSetTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
+                  setTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
                   handleTreeDropdownMenuVisibility(tree.treeId, false);
                 },
                 title: "Convert to Normal Tree",
@@ -606,7 +606,7 @@ function TreeHierarchyView(props: Props) {
     );
   }
 
-  function canDrag(node: TreeNode): boolean {
+  function isNodeDraggable(node: TreeNode): boolean {
     return props.allowUpdate && node.id !== MISSING_GROUP_ID;
   }
 
@@ -624,6 +624,8 @@ function TreeHierarchyView(props: Props) {
 
   const checkedKeys = deepFlatFilter(groupTree, (node) => node.isChecked).map((node) => node.key);
   const selectedKeys = props.selectedTrees.map((treeId) => getNodeKey(GroupTypeEnum.TREE, treeId));
+
+  if (props.activeGroupId) selectedKeys.push(getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId));
 
   return (
     <AutoSizer>
@@ -650,8 +652,8 @@ function TreeHierarchyView(props: Props) {
             onDrop={onDrop}
             onCheck={onCheck}
             onExpand={onExpand}
-            // @ts-expect-error canDrag has argument of base type DataNode but we use it's extended parent type TreeNode
-            draggable={canDrag}
+            // @ts-expect-error isNodeDraggable has argument of base type DataNode but we use it's extended parent type TreeNode
+            draggable={isNodeDraggable}
             checkedKeys={checkedKeys}
             expandedKeys={expandedNodeKeys}
             selectedKeys={selectedKeys}
@@ -667,43 +669,43 @@ function TreeHierarchyView(props: Props) {
     </AutoSizer>
   );
 
-  function onSetActiveTree(treeId: number) {
+  function setActiveTree(treeId: number) {
     dispatch(setActiveTreeAction(treeId));
   }
 
-  function onSetActiveTreeGroup(groupId: number) {
+  function setActiveTreeGroup(groupId: number) {
     dispatch(setActiveTreeGroupAction(groupId));
   }
 
-  function onSetTreeColor(treeId: number, color: Vector3) {
+  function setTreeColor(treeId: number, color: Vector3) {
     dispatch(setTreeColorAction(treeId, color));
   }
 
-  function onShuffleTreeColor(treeId: number) {
+  function shuffleTreeColor(treeId: number) {
     dispatch(shuffleTreeColorAction(treeId));
   }
 
-  function onDeleteTree(treeId: number) {
+  function deleteTree(treeId: number) {
     dispatch(deleteTreeAction(treeId));
   }
 
-  function onToggleTree(treeId: number) {
+  function toggleTree(treeId: number) {
     dispatch(toggleTreeAction(treeId));
   }
 
-  function onSetTreeEdgesVisibility(treeId: number, edgesAreVisible: boolean) {
+  function setTreeEdgesVisibility(treeId: number, edgesAreVisible: boolean) {
     dispatch(setTreeEdgeVisibilityAction(treeId, edgesAreVisible));
   }
 
-  function onToggleTreeGroup(groupId: number) {
+  function toggleTreeGroup(groupId: number) {
     dispatch(toggleTreeGroupAction(groupId));
   }
 
-  function onToggleAllTrees() {
+  function setToggleAllTrees() {
     dispatch(toggleAllTreesAction());
   }
 
-  function onUpdateTreeGroups(treeGroups: TreeGroup[]) {
+  function setUpdateTreeGroups(treeGroups: TreeGroup[]) {
     dispatch(setTreeGroupsAction(treeGroups));
   }
 
@@ -711,15 +713,15 @@ function TreeHierarchyView(props: Props) {
     dispatch(batchActions(actions, actionName));
   }
 
-  function onToggleHideInactiveTrees() {
+  function toggleHideInactiveTrees() {
     dispatch(toggleInactiveTreesAction());
   }
 
-  function onShuffleAllTreeColors() {
+  function shuffleAllTreeColors() {
     dispatch(shuffleAllTreeColorsAction());
   }
 
-  function onSetTreeType(treeId: number, type: TreeType) {
+  function setTreeType(treeId: number, type: TreeType) {
     dispatch(setTreeTypeAction(treeId, type));
   }
 }

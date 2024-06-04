@@ -70,7 +70,6 @@ function ensureLargestSegmentIdsInPlace(datasource: DatasourceConfiguration) {
   }
 }
 
-
 function mergeNewLayers(
   existingDatasource: DatasourceConfiguration | null,
   newDatasource: DatasourceConfiguration,
@@ -269,7 +268,7 @@ function DatasetAddRemoteView(props: Props) {
               setDatasourceConfigStr={setDatasourceConfigStr}
               dataSourceEditMode={dataSourceEditMode}
               defaultUri={defaultDatasetUrl}
-            //maybe add onsuccess here? but thats on success of first form...
+              //maybe add onsuccess here? but thats on success of first form...
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -394,9 +393,10 @@ function AddRemoteLayer({
       form.setFieldValue("url", defaultUri);
       const dataSourceJson = form.getFieldValue("dataSourceJson");
       const defaultDatasetName = getDefaultDatasetName(defaultUri);
-      setDatasourceConfigStr(jsonStringify({ ...dataSourceJson, name: defaultDatasetName })); //fix this, then you should be ok. also delete passing though of default name.
-      if (datasourceUrl != null)
-        handleExplore();
+      setDatasourceConfigStr(
+        jsonStringify({ ...dataSourceJson, id: { name: defaultDatasetName } }),
+      );
+      if (datasourceUrl != null) handleExplore();
     }
   }, [defaultUri, form.setFieldValue, datasourceUrl != null]);
 

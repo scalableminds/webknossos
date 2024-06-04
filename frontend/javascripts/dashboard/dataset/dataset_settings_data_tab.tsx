@@ -67,7 +67,6 @@ export default function DatasetSettingsDataTab({
   onChange,
   additionalAlert,
   dataset,
-  defaultDatasetName,
 }: {
   allowRenamingDataset: boolean;
   form: FormInstance;
@@ -75,7 +74,6 @@ export default function DatasetSettingsDataTab({
   onChange: (arg0: "simple" | "advanced") => void;
   additionalAlert?: React.ReactNode | null | undefined;
   dataset?: APIDataset | null | undefined;
-  defaultDatasetName?: string | undefined | null;
 }) {
   // Using the return value of useWatch for the `dataSource` var
   // yields outdated values. Therefore, the hook only exists for listening.
@@ -125,7 +123,6 @@ export default function DatasetSettingsDataTab({
             allowRenamingDataset={allowRenamingDataset}
             form={form}
             dataSource={dataSource}
-            defaultDatasetName={defaultDatasetName}
           />
         </RetryingErrorBoundary>
       </Hideable>
@@ -157,27 +154,13 @@ function SimpleDatasetForm({
   dataSource,
   form,
   dataset,
-  defaultDatasetName,
 }: {
   allowRenamingDataset: boolean;
   dataSource: Record<string, any>;
   form: FormInstance;
   dataset: APIDataset | null | undefined;
-  defaultDatasetName: string | undefined | null;
 }) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-
-  useEffect(() => {
-    console.log("default", defaultDatasetName)
-    if (defaultDatasetName != null)
-      form.setFieldsValue({
-        dataSource: {
-          id: {
-            name: defaultDatasetName
-          }
-        },
-      });
-  }, [defaultDatasetName, form.setFieldsValue]);
   const onRemoveLayer = (layer: DataLayer) => {
     const oldLayers = form.getFieldValue(["dataSource", "dataLayers"]);
     const newLayers = oldLayers.filter(
@@ -345,16 +328,16 @@ function SimpleLayerForm({
   const startJobFn =
     dataset != null
       ? async () => {
-        const job = await startFindLargestSegmentIdJob(
-          dataset.name,
-          dataset.owningOrganization,
-          layer.name,
-        );
-        Toast.info(
-          "A job was scheduled to compute the largest segment ID. It will be automatically updated for the dataset. You may close this tab now.",
-        );
-        return [job.datasetName ?? "largest_segment_id", job.id] as [string, string];
-      }
+          const job = await startFindLargestSegmentIdJob(
+            dataset.name,
+            dataset.owningOrganization,
+            layer.name,
+          );
+          Toast.info(
+            "A job was scheduled to compute the largest segment ID. It will be automatically updated for the dataset. You may close this tab now.",
+          );
+          return [job.datasetName ?? "largest_segment_id", job.id] as [string, string];
+        }
       : null;
 
   return (
@@ -491,10 +474,10 @@ function SimpleLayerForm({
                 validator: (_rule, value) =>
                   value == null || value === ""
                     ? Promise.reject(
-                      new Error(
-                        "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
-                      ),
-                    )
+                        new Error(
+                          "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
+                        ),
+                      )
                     : Promise.resolve(),
               },
             ]}
@@ -540,20 +523,20 @@ function SimpleLayerForm({
                         value == null || value === "" || (value > 0 && value < 2 ** bitDepth)
                           ? Promise.resolve()
                           : Promise.reject(
-                            new Error(
-                              `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
+                              new Error(
+                                `The largest segmentation ID must be greater than 0 and smaller than 2^${bitDepth}. You can also leave this field empty, but annotating this layer later will only be possible with manually chosen segment IDs.`,
+                              ),
                             ),
-                          ),
                     },
                     {
                       warningOnly: true,
                       validator: (_rule, value) =>
                         value != null && value === 2 ** bitDepth - 1
                           ? Promise.reject(
-                            new Error(
-                              `The largest segmentation ID has already reached the maximum possible value of 2^${bitDepth}-1. Annotations of this dataset cannot create new segments.`,
-                            ),
-                          )
+                              new Error(
+                                `The largest segmentation ID has already reached the maximum possible value of 2^${bitDepth}-1. Annotations of this dataset cannot create new segments.`,
+                              ),
+                            )
                           : Promise.resolve(),
                     },
                     {
@@ -561,10 +544,10 @@ function SimpleLayerForm({
                       validator: (_rule, value) =>
                         value == null || value === ""
                           ? Promise.reject(
-                            new Error(
-                              "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
-                            ),
-                          )
+                              new Error(
+                                "When left empty, annotating this layer later will only be possible with manually chosen segment IDs.",
+                              ),
+                            )
                           : Promise.resolve(),
                     },
                   ]}
@@ -584,8 +567,9 @@ function SimpleLayerForm({
                     ) ? (
                       <Button
                         type={mostRecentSuccessfulJob == null ? "primary" : "default"}
-                        title={`${activeJob != null ? "Scanning" : "Scan"
-                          } the data to derive the value automatically`}
+                        title={`${
+                          activeJob != null ? "Scanning" : "Scan"
+                        } the data to derive the value automatically`}
                         style={{ marginLeft: 8 }}
                         loading={activeJob != null}
                         disabled={activeJob != null || startJob == null}

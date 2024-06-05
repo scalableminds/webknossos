@@ -65,11 +65,10 @@ class BinaryDataController @Inject()(
           duration = Instant.since(t)
           _ = if (duration > (10 seconds))
             logger.info(
-              s"Complete data request took $duration ms.\n"
-                + s"  dataSource: $organizationName/$datasetName\n"
-                + s"  dataLayer: $dataLayerName\n"
-                + s"  requestCount: ${request.body.size}"
-                + s"  requestHead: ${request.body.headOption}")
+              s"Complete data request for $organizationName/$datasetName/$dataLayerName took $duration."
+                + request.body.headOption
+                  .map(firstReq => s" First of ${request.body.size} requests was $firstReq")
+                  .getOrElse(""))
         } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
       }
     }

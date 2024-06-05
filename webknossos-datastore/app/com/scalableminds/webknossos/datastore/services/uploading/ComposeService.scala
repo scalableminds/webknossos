@@ -3,14 +3,18 @@ package com.scalableminds.webknossos.datastore.services.uploading
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
+import com.scalableminds.webknossos.datastore.dataformats.layers.{
+  N5DataLayer,
+  N5SegmentationLayer,
   PrecomputedDataLayer,
-  PrecomputedSegmentationLayer
+  PrecomputedSegmentationLayer,
+  WKWDataLayer,
+  WKWSegmentationLayer,
+  Zarr3DataLayer,
+  Zarr3SegmentationLayer,
+  ZarrDataLayer,
+  ZarrSegmentationLayer
 }
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceRepository}
 import play.api.libs.json.{Json, OFormat}

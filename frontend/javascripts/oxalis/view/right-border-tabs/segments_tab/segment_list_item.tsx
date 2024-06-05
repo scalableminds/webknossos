@@ -41,7 +41,7 @@ import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
-function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
+export function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
 
   return (

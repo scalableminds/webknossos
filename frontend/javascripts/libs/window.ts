@@ -65,6 +65,7 @@ type Olvy =
       init: (obj: ArbitraryObject) => void;
       getUnreadReleasesCount: (timestamp: string) => number;
       show: () => void;
+      config: { target: string };
     }
   | undefined;
 

@@ -679,6 +679,7 @@ export enum APIJobType {
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
   TRAIN_MODEL = "train_model",
   INFER_WITH_MODEL = "infer_with_model",
+  INFER_MITOCHONDRIA = "infer_mitochondria",
 }
 
 export type APIJob = {

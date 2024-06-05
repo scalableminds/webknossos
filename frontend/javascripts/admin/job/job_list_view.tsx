@@ -214,6 +214,20 @@ function JobListView() {
         </span>
       );
     } else if (
+      job.type === APIJobType.INFER_MITOCHONDRIA &&
+      job.organizationName &&
+      job.datasetName &&
+      job.layerName
+    ) {
+      return (
+        <span>
+          Mitochondria inferral for layer {job.layerName} of{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>{" "}
+        </span>
+      );
+    }  else if (
       job.type === APIJobType.ALIGN_SECTIONS &&
       job.organizationName &&
       job.datasetName &&
@@ -313,7 +327,8 @@ function JobListView() {
       job.type === APIJobType.INFER_NEURONS ||
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION ||
       job.type === APIJobType.COMPUTE_MESH_FILE ||
-      job.type === APIJobType.INFER_WITH_MODEL
+      job.type === APIJobType.INFER_WITH_MODEL ||
+      job.type === APIJobType.INFER_MITOCHONDRIA
     ) {
       return (
         <span>

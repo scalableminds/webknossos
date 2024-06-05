@@ -89,7 +89,10 @@ export default function WorkflowListView() {
     }
   }
 
-  usePolling(loadData, VX_POLLING_INTERVAL);
+  usePolling(async () => {
+    // initial data fetch is done above, thus only load data here if it is polled repeatedly
+    if (VX_POLLING_INTERVAL != null) loadData();
+  }, VX_POLLING_INTERVAL);
 
   const getUserDisplayName = (run: VoxelyticsWorkflowListingRun) => {
     return run.userFirstName != null || run.userLastName != null

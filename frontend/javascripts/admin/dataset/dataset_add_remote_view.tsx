@@ -191,6 +191,14 @@ function DatasetAddRemoteView(props: Props) {
     setTargetFolderId(targetFolderId);
   }, []);
 
+  useEffect(() => {
+    if (defaultDatasetUrl == null) return;
+    console.log("store me maybe")
+    if (!isDatasourceConfigStrFalsy && form.getFieldsError().filter(({ errors }) => errors.length).length === 0) {
+      handleStoreDataset();
+    }
+  }, [defaultDatasetUrl, isDatasourceConfigStrFalsy, form.getFieldsError]);
+
   const setDatasourceConfigStr = (dataSourceJson: string) => {
     form.setFieldsValue({ dataSourceJson });
     // Since this function sets the JSON string, we have to update the
@@ -268,7 +276,7 @@ function DatasetAddRemoteView(props: Props) {
               setDatasourceConfigStr={setDatasourceConfigStr}
               dataSourceEditMode={dataSourceEditMode}
               defaultUri={defaultDatasetUrl}
-              //maybe add onsuccess here? but thats on success of first form...
+            //maybe add onsuccess here? but thats on success of first form...
             />
           )}
           <Hideable hidden={hideDatasetUI}>

@@ -227,7 +227,7 @@ function JobListView() {
           </Link>{" "}
         </span>
       );
-    }  else if (
+    } else if (
       job.type === APIJobType.ALIGN_SECTIONS &&
       job.organizationName &&
       job.datasetName &&

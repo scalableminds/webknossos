@@ -3,6 +3,7 @@ module.exports = function (env = {}) {
   const webpack = require("webpack");
   const { EsbuildPlugin } = require("esbuild-loader");
   const path = require("path");
+  const { GitRevisionPlugin } = require("git-revision-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
   const browserslistToEsbuild = require("browserslist-to-esbuild");
   const CopyPlugin = require("copy-webpack-plugin");
@@ -32,8 +33,8 @@ module.exports = function (env = {}) {
       process: "process/browser",
     }),
     new MiniCssExtractPlugin({
-      filename: "[name].css",
-      chunkFilename: "[name].css",
+      filename: "[name].[git-revision-hash].css",
+      chunkFilename: "[name].[contenthash].css",
     }),
     new CopyPlugin({
       patterns: [
@@ -44,6 +45,7 @@ module.exports = function (env = {}) {
         { from: "node_modules/@zip.js/zip.js/dist/z-worker.js", to: "[name][ext]" },
       ],
     }),
+    new GitRevisionPlugin(), // used to access the commit hash of the HEAD.
   ];
 
   const cssLoaderUrlFilter = {
@@ -59,8 +61,9 @@ module.exports = function (env = {}) {
     mode: env.production ? "production" : "development",
     output: {
       path: `${__dirname}/public/bundle`,
-      filename: "[name].js",
-      sourceMapFilename: "[file].map",
+      filename: "[name].[git-revision-hash].js",
+      sourceMapFilename: "[file].[git-revision-hash].map",
+      chunkFilename: "[name].[contenthash].js",
       publicPath,
     },
     module: {

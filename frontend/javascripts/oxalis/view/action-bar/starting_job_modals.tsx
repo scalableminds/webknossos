@@ -454,8 +454,8 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
               <Radio.Button
                 className="aIJobSelection"
                 checked={aIJobModalState === "align_sections"}
-                disabled={!Store.getState().activeUser?.isSuperUser}
-                onClick={() => Store.dispatch(setAIJobModalStateAction("align_sections"))}
+                disabled={!isSuperUser}
+                onClick={() => dispatch(setAIJobModalStateAction("align_sections"))}
               >
                 <Card bordered={false}>
                   <Space direction="vertical" size="small">
@@ -463,7 +463,7 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
                     <Row>
                       <img
                         src={`/assets/images/${jobNameToImagePath.align_sections}`}
-                        alt={"Mitochondria detection example"}
+                        alt={"Example of improved alignment of slices"}
                         style={centerImageStyle}
                       />
                     </Row>

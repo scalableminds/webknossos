@@ -866,6 +866,7 @@ export enum VoxelyticsRunState {
   CANCELLED = "CANCELLED",
   STALE = "STALE",
 }
+
 type DistributionConfig = {
   strategy: string;
   resources?: Record<string, string>;
@@ -901,27 +902,15 @@ export type VoxelyticsArtifactConfig = {
   };
 };
 
-export type VoxelyticsRunInfo = (
-  | {
-      state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
-      endTime: null;
-    }
-  | {
-      state:
-        | VoxelyticsRunState.COMPLETE
-        | VoxelyticsRunState.FAILED
-        | VoxelyticsRunState.CANCELLED
-        | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
-    }
-) & {
+export type VoxelyticsRunInfo = {
   id: string;
   name: string;
-  username: string;
-  hostname: string;
+  userName: string;
+  hostName: string;
   voxelyticsVersion: string;
+  state: VoxelyticsRunState;
+  beginTime: Date | null;
+  endTime: Date | null;
 };
 
 export type VoxelyticsWorkflowDagEdge = { source: string; target: string; label: string };
@@ -996,28 +985,18 @@ export type VoxelyticsWorkflowReport = {
   };
 };
 
-export type VoxelyticsWorkflowListingRun = (
-  | {
-      state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
-      endTime: null;
-    }
-  | {
-      state:
-        | VoxelyticsRunState.COMPLETE
-        | VoxelyticsRunState.FAILED
-        | VoxelyticsRunState.CANCELLED
-        | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
-    }
-) & {
+export type VoxelyticsWorkflowListingRun = {
   id: string;
   name: string;
-  username: string;
-  hostname: string;
+  hostUserName: string;
+  hostName: string;
   voxelyticsVersion: string;
   taskCounts: TaskCounts;
+  userFirstName: string;
+  userLastName: string;
+  state: VoxelyticsRunState;
+  beginTime: Date | null;
+  endTime: Date | null;
 };
 
 export type VoxelyticsWorkflowListing = {

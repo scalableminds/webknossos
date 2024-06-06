@@ -8,7 +8,7 @@ import com.scalableminds.util.mvc.CspHeaders
 import com.scalableminds.util.tools.Fox
 import models.user.{MultiUserDAO, Theme}
 import opengraph.OpenGraphService
-import play.api.libs.ws.WSClient
+import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.{Action, AnyContent}
 import play.filters.csp.CSPConfig
 import security.WkEnv
@@ -28,7 +28,7 @@ class WkorgProxyController @Inject()(ws: WSClient,
 
   def proxyPageOrMainView: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     if (matchesProxyPage(request)) {
-      ws.url(conf.Proxy.prefix + request.uri).get().map(resp => Ok(resp.bodyAsBytes.utf8String).as("text/html"))
+      ws.url(conf.Proxy.prefix + request.uri).get().map(resp => Ok(resp.bodyAsBytes.utf8String).as(resp.contentType))
     } else {
       for {
         multiUserOpt <- Fox.runOptional(request.identity)(user =>

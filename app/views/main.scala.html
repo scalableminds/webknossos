@@ -33,21 +33,21 @@ Option[String], openGraphImage: Option[String] )
       rel="stylesheet"
       type="text/css"
       media="screen"
-      href="/assets/bundle/vendors~main.css?nocache=@(webknossos.BuildInfo.commitHash)"
+      href="/assets/bundle/vendors~main.@(webknossos.BuildInfo.commitHash).css"
     />
     <link
       rel="stylesheet"
       type="text/css"
       media="screen"
-      href="/assets/bundle/main.css?nocache=@(webknossos.BuildInfo.commitHash)"
+      href="/assets/bundle/main.@(webknossos.BuildInfo.commitHash).css"
     />
     <script
       data-airbrake-project-id="@(conf.Airbrake.projectID)"
       data-airbrake-project-key="@(conf.Airbrake.projectKey)"
       data-airbrake-environment-name="@(conf.Airbrake.environment)"
     ></script>
-    <script src="/assets/bundle/vendors~main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
-    <script src="/assets/bundle/main.js?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+    <script src="/assets/bundle/vendors~main.@(webknossos.BuildInfo.commitHash).js"></script>
+    <script src="/assets/bundle/main.@(webknossos.BuildInfo.commitHash).js"></script>
     <script type="text/javascript" src="https://app.olvy.co/script.js" defer="defer"></script>
   </head>
   <body>

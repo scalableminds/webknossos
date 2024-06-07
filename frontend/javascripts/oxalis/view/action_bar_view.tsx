@@ -254,6 +254,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const isAIAnalysisEnabled = () => {
       const jobsEnabled =
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_MITOCHONDRIA) ||
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NUCLEI);
       return jobsEnabled;
     };

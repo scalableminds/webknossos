@@ -109,8 +109,12 @@ class JobController @Inject()(
   }
 
   // Note that the dataset has to be registered by reserveUpload via the datastore first.
-  def runConvertToWkwJob(organizationName: String, datasetName: String, scale: String): Action[AnyContent] =
+  def runConvertToWkwJob(organizationName: String,
+                         datasetName: String,
+                         scale: String,
+                         unit: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
+      // TODO: Unit is ignored for now and support for this needs to be added.
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",

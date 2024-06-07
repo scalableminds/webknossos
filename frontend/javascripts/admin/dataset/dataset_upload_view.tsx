@@ -321,6 +321,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   formValues.name,
                   activeUser.organization,
                   formValues.scale,
+                  formValues.unit,
                 );
               } catch (error) {
                 maybeError = error;
@@ -730,64 +731,64 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               hidden={hasOnlyOneDatastoreOrNone}
             />
             {this.isDatasetConversionEnabled() && needsConversion ? (
-              <>
-                <FormItemWithInfo
-                  name="scale"
-                  label="Voxel Size"
-                  info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
-                  // @ts-ignore
-                  disabled={this.state.needsConversion}
-                  help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
-                  rules={[
-                    {
-                      required: this.state.needsConversion,
-                      message: "Please provide a scale for the dataset.",
-                    },
-                    {
-                      validator: syncValidator(
-                        (value: Vector3) => value?.every((el) => el > 0),
-                        "Each component of the scale must be larger than 0.",
-                      ),
-                    },
-                  ]}
-                >
-                  <Vector3Input
-                    style={{
-                      width: 400,
-                    }}
-                    allowDecimals
-                    onChange={(scale: Vector3) => {
-                      if (this.formRef.current == null) return;
-                      this.formRef.current.setFieldsValue({
-                        scale,
-                      });
-                    }}
-                  />
-                </FormItemWithInfo>
-                <FormItemWithInfo
-                  name={"unit"}
-                  label="Unit"
-                  info="The unit in which the voxel size is defined."
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please provide a unit for the voxel scale of the dataset.",
-                    },
-                  ]}
-                >
-                  <Select
-                    style={{ width: 120 }}
-                    options={AllUnits.map((unit) => ({
-                      value: unit,
-                      label: (
-                        <span>
-                          <Tooltip title={UnitLongNames[unit]}>{unit}</Tooltip>
-                        </span>
-                      ),
-                    }))}
-                  />
-                </FormItemWithInfo>
-              </>
+              <Row gutter={8}>
+                <Col span={12}>
+                  <FormItemWithInfo
+                    name="scale"
+                    label="Voxel Size"
+                    info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
+                    // @ts-ignore
+                    disabled={this.state.needsConversion}
+                    help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
+                    rules={[
+                      {
+                        required: this.state.needsConversion,
+                        message: "Please provide a scale for the dataset.",
+                      },
+                      {
+                        validator: syncValidator(
+                          (value: Vector3) => value?.every((el) => el > 0),
+                          "Each component of the scale must be larger than 0.",
+                        ),
+                      },
+                    ]}
+                  >
+                    <Vector3Input
+                      allowDecimals
+                      onChange={(scale: Vector3) => {
+                        if (this.formRef.current == null) return;
+                        this.formRef.current.setFieldsValue({
+                          scale,
+                        });
+                      }}
+                    />
+                  </FormItemWithInfo>
+                </Col>
+                <Col span={12}>
+                  <FormItemWithInfo
+                    name={"unit"}
+                    label="Unit"
+                    info="The unit in which the voxel size is defined."
+                    rules={[
+                      {
+                        required: true,
+                        message: "Please provide a unit for the voxel scale of the dataset.",
+                      },
+                    ]}
+                  >
+                    <Select
+                      options={AllUnits.map((unit) => ({
+                        value: unit,
+                        label: (
+                          <span>
+                            <Tooltip title={UnitLongNames[unit]}>{unit}</Tooltip>
+                          </span>
+                        ),
+                      }))}
+                    />
+                  </FormItemWithInfo>
+                </Col>
+              </Row>
             ) : null}
 
             <FormItem

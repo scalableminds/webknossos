@@ -125,11 +125,10 @@ function ensureValidScaleOnInferredDataSource(
 
   const inferredDataSourceClone = _.cloneDeep(inferredDataSource) as any as MutableAPIDataSource;
 
+  const dummyScale = { factor: [0, 0, 0], unit: Unit.nm } as DatasetScale;
   const savedScale =
-    "dataLayers" in savedDataSourceOnServer
-      ? savedDataSourceOnServer.scale
-      : ({ factor: [0, 0, 0], unit: Unit.nm } as DatasetScale);
-  if (_.isEqual(inferredDataSource.scale, [0, 0, 0]) && !_.isEqual(savedScale, [0, 0, 0])) {
+    "dataLayers" in savedDataSourceOnServer ? savedDataSourceOnServer.scale : dummyScale;
+  if (_.isEqual(inferredDataSource.scale, dummyScale) && !_.isEqual(savedScale, dummyScale)) {
     inferredDataSourceClone.scale = savedScale;
   }
 

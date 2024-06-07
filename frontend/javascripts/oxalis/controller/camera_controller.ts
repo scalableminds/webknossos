@@ -82,8 +82,6 @@ class CameraController extends React.PureComponent<Props> {
       cam.near = 0;
       cam.far = far;
     }
-    // This value is correct
-    this.props.cameras[OrthoViews.TDView].far = far;
 
     const tdId = `inputcatcher_${OrthoViews.TDView}`;
     this.bindToEvents();

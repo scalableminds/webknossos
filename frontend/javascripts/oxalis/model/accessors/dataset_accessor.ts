@@ -323,11 +323,13 @@ export function getDatasetExtentAsString(
 
   if (inVoxel) {
     const extentInVoxel = getDatasetExtentInVoxel(dataset);
-    return `${formatExtentInUnitWithLength(extentInVoxel, "vx", (x, _) => `${x}`)} voxel`;
+    return `${formatExtentInUnitWithLength(extentInVoxel, (x) => `${x}`)} voxel`;
   }
 
   const extent = getDatasetExtentInUnit(dataset);
-  return formatExtentInUnitWithLength(extent, dataset.dataSource.scale.unit, formatNumberToLength);
+  return formatExtentInUnitWithLength(extent, (length) =>
+    formatNumberToLength(length, dataset.dataSource.scale.unit),
+  );
 }
 export function determineAllowedModes(settings?: Settings): {
   preferredMode: APIAllowedMode | null | undefined;

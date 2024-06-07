@@ -213,6 +213,9 @@ export const nmFactorToUnit = new Map([
   [1e33, "Ym"],
 ]);
 
+// Accepts a length that is interpreted in the given unit and returns a string
+// that uses a readable unit to represent the length.
+// E.g. formatNumberToLength(0.003, Unit.m) == "3.0 mm"
 export function formatNumberToLength(
   length: number,
   unit: string,
@@ -250,6 +253,9 @@ export const nmFactorToUnit2D = new Map([
   [1e66, "Ym²"],
 ]);
 
+// Accepts an area that is interpreted in the given unit and returns a string
+// that uses a readable unit to represent the area.
+// E.g. formatNumberToArea(0.003, Unit.m) == "30.0 cm²"
 export function formatNumberToArea(
   lengthInUnit2: number,
   unit: string,
@@ -287,6 +293,9 @@ export const nmFactorToUnit3D = new Map([
   [1e99, "Ym³"],
 ]);
 
+// Accepts an volume that is interpreted in the given unit and returns a string
+// that uses a readable unit to represent the volume.
+// E.g. formatNumberToVolume(0.003, Unit.m) == "3000.0 cm³"
 export function formatNumberToVolume(
   lengthInUnit3: number,
   unit: string,
@@ -310,6 +319,9 @@ const byteFactorToUnit = new Map([
   [1e9, "GB"],
   [1e12, "TB"],
 ]);
+
+// Formats a byte count into a readable string.
+// E.g. formatCountToDataAmountUnit(40000000000) == "40.0 GB"
 export function formatCountToDataAmountUnit(
   count: number,
   preferShorterDecimals: boolean = false,
@@ -336,7 +348,7 @@ function adjustUnitToDimension(unit: string, dimension: number): string {
   return (unit = dimension === 1 ? unit : dimension === 2 ? `${unit}²` : `${unit}³`);
 }
 
-export function findBestUnitForFormatting(
+function findBestUnitForFormatting(
   number: number,
   { unit, dimension }: UnitDimension,
   unitMap: Map<number, string>,
@@ -346,7 +358,7 @@ export function findBestUnitForFormatting(
   const isLengthUnit = unit in UnitsMap;
   let factorToNextSmallestCommonUnit = 1;
   if (isLengthUnit) {
-    // In case of an length unit, ensure it is among the common length units that we support conversion for.
+    // In case of a length unit, ensure it is among the common length units that we support conversion for.
     [factorToNextSmallestCommonUnit, unit] = getFactorToNextSmallestCommonUnit(
       unit as Unit,
       dimension,
@@ -385,13 +397,13 @@ export function formatAreaAsVx(areaInVx: number, roundTo: number = 2): string {
 }
 export function formatExtentInUnitWithLength(
   extent: BoundingBoxObject,
-  unit: string,
-  formattingFunction: (length: number, unit: string) => string,
+  formattingFunction: (length: number) => string,
 ): string {
-  return `${formattingFunction(extent.width, unit)}${ThinSpace}×${ThinSpace}${formattingFunction(
-    extent.height,
-    unit,
-  )}${ThinSpace}×${ThinSpace}${formattingFunction(extent.depth, unit)}`;
+  return [
+    formattingFunction(extent.width),
+    formattingFunction(extent.height),
+    formattingFunction(extent.depth),
+  ].join(`${ThinSpace}×${ThinSpace}`);
 }
 export function formatMilliseconds(durationMilliSeconds: number): string {
   return formatSeconds(durationMilliSeconds / 1000);
@@ -430,10 +442,10 @@ export function formatHash(id: string): string {
 export function formatDateMedium(date: Date | number): string {
   return dayjs(date).format("lll");
 }
-export function formatDistance(start: Date | number, end: Date | number): string {
+export function formatTimeInterval(start: Date | number, end: Date | number): string {
   return dayjs.duration(dayjs(start).diff(dayjs(end))).humanize(true);
 }
-export function formatDistanceStrict(start: Date | number, end: Date | number): string {
+export function formatTimeIntervalStrict(start: Date | number, end: Date | number): string {
   const duration = dayjs.duration(dayjs(start).diff(dayjs(end)));
   return formatDurationStrict(duration);
 }

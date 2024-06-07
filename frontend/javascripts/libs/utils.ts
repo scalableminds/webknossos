@@ -653,7 +653,8 @@ export function filterNullValues<T>(arr: Array<T | null | undefined>): T[] {
 }
 
 // Filters an array given a search string. Supports searching for several words as AND query.
-// Supports nested properties
+// Supports nested properties.
+// Its pendant was removed int #7783 as it was unused.
 export function filterWithSearchQueryAND<
   T extends Readonly<Record<string, unknown>>,
   P extends keyof T,

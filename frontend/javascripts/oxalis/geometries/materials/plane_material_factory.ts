@@ -1028,7 +1028,7 @@ class PlaneMaterialFactory {
       segmentationLayerNames,
       textureLayerInfos,
       resolutionsCount: this.getTotalResolutionCount(),
-      datasetScale: datasetScaleFactor,
+      datasetScaleFactor,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
@@ -1063,7 +1063,7 @@ class PlaneMaterialFactory {
       segmentationLayerNames,
       textureLayerInfos,
       resolutionsCount: this.getTotalResolutionCount(),
-      datasetScale: datasetScaleFactor,
+      datasetScaleFactor,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });

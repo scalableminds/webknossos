@@ -1249,7 +1249,7 @@ type DatasetCompositionArgs = {
   newDatasetName: string;
   targetFolderId: string;
   organizationName: string;
-  scale: DatasetScale;
+  voxelSize: DatasetScale;
   layers: LayerLink[];
 };
 

@@ -278,7 +278,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     this.setState({
       owningOrganizationDisplayName: organization.displayName,
     });
-    console.log(this.state.owningOrganizationDisplayName);
   }
 
   getAnnotationStatistics() {

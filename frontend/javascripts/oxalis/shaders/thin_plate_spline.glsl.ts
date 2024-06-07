@@ -51,9 +51,9 @@ ${aLines.join("\n")}
 export function generateCalculateTpsOffsetFunction(name: string) {
   return `
     vec3 calculateTpsOffsetFor${name}(vec3 originalWorldCoord) {
-      float x = originalWorldCoord.x * datasetScale.x;
-      float y = originalWorldCoord.y * datasetScale.y;
-      float z = originalWorldCoord.z * datasetScale.z;
+      float x = originalWorldCoord.x * datasetScaleFactor.x;
+      float y = originalWorldCoord.y * datasetScaleFactor.y;
+      float z = originalWorldCoord.z * datasetScaleFactor.z;
 
       vec3 a[4] = TPS_a_${name};
       vec3 linear_part = a[0] + x * a[1] + y * a[2] + z * a[3];
@@ -75,7 +75,7 @@ export function generateCalculateTpsOffsetFunction(name: string) {
         bending_part += dist * TPS_W_${name}[cpIdx];
       }
 
-      vec3 offset = (linear_part + bending_part) /  datasetScale;
+      vec3 offset = (linear_part + bending_part) /  datasetScaleFactor;
       return offset;
     }
   `;

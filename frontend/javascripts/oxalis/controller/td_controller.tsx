@@ -100,12 +100,12 @@ function maybeGetActiveNodeFromProps(props: Props) {
 class TDController extends React.PureComponent<Props> {
   controls!: typeof TrackballControls;
   mouseController!: InputMouse;
-  oldNmPos!: Vector3;
+  oldUnitPos!: Vector3;
   isStarted: boolean = false;
 
   componentDidMount() {
     const { dataset, flycam } = Store.getState();
-    this.oldNmPos = voxelToUnit(dataset.dataSource.scale, getPosition(flycam));
+    this.oldUnitPos = voxelToUnit(dataset.dataSource.scale, getPosition(flycam));
     this.isStarted = true;
     this.initMouse();
   }
@@ -306,11 +306,11 @@ class TDController extends React.PureComponent<Props> {
     const invertedDiff = [];
 
     for (let i = 0; i <= 2; i++) {
-      invertedDiff.push(this.oldNmPos[i] - nmPosition[i]);
+      invertedDiff.push(this.oldUnitPos[i] - nmPosition[i]);
     }
 
     if (invertedDiff.every((el) => el === 0)) return;
-    this.oldNmPos = nmPosition;
+    this.oldUnitPos = nmPosition;
     const nmVector = new THREE.Vector3(...invertedDiff);
     // moves camera by the nm vector
     const camera = this.props.cameras[OrthoViews.TDView];

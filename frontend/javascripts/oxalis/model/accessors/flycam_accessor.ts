@@ -36,7 +36,7 @@ import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_st
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 import { SmallerOrHigherInfo } from "../helpers/resolution_info";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
-import { AdditionalCoordinate, DatasetScale } from "types/api_flow_types";
+import { AdditionalCoordinate, VoxelSize } from "types/api_flow_types";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -116,7 +116,7 @@ function calculateTotalBucketCountForZoomLevel(
 export function _getMaximumZoomForAllResolutions(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
-  datasetScaleFactor: Vector3,
+  voxelSizeFactor: Vector3,
   resolutions: Array<Vector3>,
   viewportRects: OrthoViewRects,
   maximumCapacity: number,
@@ -140,7 +140,7 @@ export function _getMaximumZoomForAllResolutions(
   // From that, we calculate the theoretical maximum zoom value. The dataset scale is taken into account,
   // because the entire scene is scaled with that.
   const maxSupportedZoomValue =
-    2 ** MAX_SUPPORTED_MAGNIFICATION_COUNT * Math.max(...datasetScaleFactor);
+    2 ** MAX_SUPPORTED_MAGNIFICATION_COUNT * Math.max(...voxelSizeFactor);
   // Since the viewports can be quite large, it can happen that even a zoom value of 1 is not feasible.
   // That's why we start the search with a smaller value than 1. We use the ZOOM_STEP_INTERVAL factor
   // to ensure that the calculated thresholds correspond to the normal zoom behavior.
@@ -515,7 +515,7 @@ function getArea(
   rects: OrthoViewRects,
   position: Vector3,
   zoomStep: number,
-  datasetScale: DatasetScale,
+  voxelSize: VoxelSize,
   planeId: OrthoView,
 ): Area {
   const [u, v] = Dimensions.getIndices(planeId);
@@ -524,7 +524,7 @@ function getArea(
     zoomStep,
     planeId,
   ).map((el) => el / 2);
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactorsInUnit(datasetScale);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactorsInUnit(voxelSize);
   const uHalf = viewportWidthHalf * baseVoxelFactors[u];
   const vHalf = viewportHeightHalf * baseVoxelFactors[v];
   const isVisible = uHalf > 0 && vHalf > 0;
@@ -545,13 +545,13 @@ function getAreas(
   rects: OrthoViewRects,
   position: Vector3,
   zoomStep: number,
-  datasetScale: DatasetScale,
+  voxelSize: VoxelSize,
 ): OrthoViewMap<Area> {
   // @ts-expect-error ts-migrate(2741) FIXME: Property 'TDView' is missing in type '{ PLANE_XY: ... Remove this comment to see the full error message
   return {
-    [OrthoViews.PLANE_XY]: getArea(rects, position, zoomStep, datasetScale, OrthoViews.PLANE_XY),
-    [OrthoViews.PLANE_XZ]: getArea(rects, position, zoomStep, datasetScale, OrthoViews.PLANE_XZ),
-    [OrthoViews.PLANE_YZ]: getArea(rects, position, zoomStep, datasetScale, OrthoViews.PLANE_YZ),
+    [OrthoViews.PLANE_XY]: getArea(rects, position, zoomStep, voxelSize, OrthoViews.PLANE_XY),
+    [OrthoViews.PLANE_XZ]: getArea(rects, position, zoomStep, voxelSize, OrthoViews.PLANE_XZ),
+    [OrthoViews.PLANE_YZ]: getArea(rects, position, zoomStep, voxelSize, OrthoViews.PLANE_YZ),
   };
 }
 
@@ -559,8 +559,8 @@ export function getAreasFromState(state: OxalisState): OrthoViewMap<Area> {
   const position = getPosition(state.flycam);
   const rects = getViewportRects(state);
   const { zoomStep } = state.flycam;
-  const datasetScale = state.dataset.dataSource.scale;
-  return getAreas(rects, position, zoomStep, datasetScale);
+  const voxelSize = state.dataset.dataSource.scale;
+  return getAreas(rects, position, zoomStep, voxelSize);
 }
 
 type UnrenderableLayersInfos = {

@@ -13,7 +13,7 @@ import {
   getVolumeRequestUrl,
 } from "./segments_view_helper";
 import { api } from "oxalis/singletons";
-import { APISegmentationLayer, DatasetScale } from "types/api_flow_types";
+import { APISegmentationLayer, VoxelSize } from "types/api_flow_types";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { useSelector } from "react-redux";
 import {
@@ -64,7 +64,7 @@ const exportStatisticsToCSV = (
   tracingIdOrDatasetName: string,
   groupIdToExport: number,
   hasAdditionalCoords: boolean,
-  datasetScale: DatasetScale,
+  voxelSize: VoxelSize,
 ) => {
   const segmentStatisticsAsString = segmentInformation
     .map((row) => {
@@ -84,8 +84,8 @@ const exportStatisticsToCSV = (
     .join("\n");
 
   const csv_header = hasAdditionalCoords
-    ? [ADDITIONAL_COORDS_COLUMN, getSegmentStatisticsCSVHeader(datasetScale.unit)].join(",")
-    : getSegmentStatisticsCSVHeader(datasetScale.unit);
+    ? [ADDITIONAL_COORDS_COLUMN, getSegmentStatisticsCSVHeader(voxelSize.unit)].join(",")
+    : getSegmentStatisticsCSVHeader(voxelSize.unit);
   const csv = [csv_header, segmentStatisticsAsString].join("\n");
   const filename =
     groupIdToExport === -1
@@ -108,7 +108,7 @@ export function SegmentStatisticsModal({
   const { dataset, tracing, temporaryConfiguration } = useSelector((state: OxalisState) => state);
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestResolution();
-  const datasetScale = dataset.dataSource.scale;
+  const voxelSize = dataset.dataSource.scale;
   // Omit checking that all prerequisites for segment stats (such as a segment index) are
   // met right here because that should happen before opening the modal.
   const requestUrl = getVolumeRequestUrl(
@@ -171,7 +171,7 @@ export function SegmentStatisticsModal({
             );
             const currentSegmentSizeInVx = segmentSizes[i];
             const volumeInUnit3 = voxelToVolumeInUnit(
-              datasetScale,
+              voxelSize,
               layersFinestResolution,
               currentSegmentSizeInVx,
             );
@@ -186,7 +186,7 @@ export function SegmentStatisticsModal({
               groupName: getGroupNameForId(currentGroupId),
               volumeInVoxel: currentSegmentSizeInVx,
               volumeInUnit3: volumeInUnit3,
-              formattedSize: formatNumberToVolume(volumeInUnit3, datasetScale.unit),
+              formattedSize: formatNumberToVolume(volumeInUnit3, voxelSize.unit),
               boundingBoxTopLeft: boundingBoxInMag1.topLeft,
               boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
               boundingBoxPosition: [
@@ -264,7 +264,7 @@ export function SegmentStatisticsModal({
           tracingId || dataset.name,
           parentGroup,
           hasAdditionalCoords,
-          datasetScale,
+          voxelSize,
         )
       }
       okText="Export to CSV"

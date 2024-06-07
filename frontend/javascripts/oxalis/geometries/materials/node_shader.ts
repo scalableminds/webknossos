@@ -53,10 +53,7 @@ class NodeShader {
         // will and should be square regardless of the plane's aspect ratio.
         value: getZoomValue(state.flycam),
       },
-      datasetScale: {
-        value: state.dataset.dataSource.scale,
-      },
-      datasetScaleMin: {
+      voxelSizeMin: {
         value: getBaseVoxelInUnit(state.dataset.dataSource.scale.factor),
       },
       overrideParticleSize: {
@@ -184,8 +181,7 @@ out vec3 color;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float planeZoomFactor;
-uniform vec3 datasetScale;
-uniform float datasetScaleMin;
+uniform float voxelSizeMin;
 uniform float viewportScale;
 uniform float activeNodeId;
 uniform float activeTreeId;
@@ -294,7 +290,7 @@ void main() {
       gl_PointSize = overrideParticleSize;
     } else {
       gl_PointSize = max(
-        radius / planeZoomFactor / datasetScaleMin,
+        radius / planeZoomFactor / voxelSizeMin,
         overrideParticleSize
       ) * viewportScale;
     }

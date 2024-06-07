@@ -8,7 +8,7 @@ import type {
   APIDataset,
   APIDataLayer,
   APIMeshFile,
-  DatasetScale,
+  VoxelSize,
 } from "types/api_flow_types";
 import type {
   ActiveMappingInfo,
@@ -147,7 +147,7 @@ type OwnProps = {
 
 type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
-  datasetScale: DatasetScale;
+  voxelSize: VoxelSize;
   visibleSegmentationLayer: APIDataLayer | null | undefined;
   dataset: APIDataset;
   currentMeshFile: APIMeshFile | null | undefined;
@@ -194,7 +194,7 @@ function copyIconWithTooltip(value: string | number, title: string) {
 function measureAndShowLengthBetweenNodes(
   sourceNodeId: number,
   targetNodeId: number,
-  datasetScaleUnit: string,
+  voxelSizeUnit: string,
 ) {
   const [lengthInUnit, lengthInVx] = api.tracing.measurePathLengthBetweenNodes(
     sourceNodeId,
@@ -203,7 +203,7 @@ function measureAndShowLengthBetweenNodes(
   notification.open({
     message: `The shortest path length between the nodes is ${formatNumberToLength(
       lengthInUnit,
-      datasetScaleUnit,
+      voxelSizeUnit,
     )} (${formatLengthAsVx(lengthInVx)}).`,
     icon: <i className="fas fa-ruler" />,
   });
@@ -222,12 +222,12 @@ function extractShortestPathAsNewTree(
   }
 }
 
-function measureAndShowFullTreeLength(treeId: number, treeName: string, datasetScaleUnit: string) {
+function measureAndShowFullTreeLength(treeId: number, treeName: string, voxelSizeUnit: string) {
   const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
   notification.open({
     message: messages["tracing.tree_length_notification"](
       treeName,
-      formatNumberToLength(lengthInUnit, datasetScaleUnit),
+      formatNumberToLength(lengthInUnit, voxelSizeUnit),
       formatLengthAsVx(lengthInVx),
     ),
     icon: <i className="fas fa-ruler" />,
@@ -374,7 +374,7 @@ function getMeshItems(
   meshIntersectionPosition: Vector3 | null | undefined,
   maybeUnmappedSegmentId: number | null | undefined,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
-  datasetScaleFactor: Vector3,
+  voxelSizeFactor: Vector3,
 ): MenuItemType[] {
   if (
     clickedMeshId == null ||
@@ -530,7 +530,7 @@ function getMeshItems(
     {
       key: "jump-to-mesh",
       onClick: () => {
-        const unscaledPosition = V3.divide3(meshIntersectionPosition, datasetScaleFactor);
+        const unscaledPosition = V3.divide3(meshIntersectionPosition, voxelSizeFactor);
         Actions.setPosition(Store.dispatch, unscaledPosition);
       },
       label: "Jump to Position",
@@ -552,7 +552,7 @@ function getNodeContextMenuOptions({
   maybeMeshIntersectionPosition,
   maybeUnmappedSegmentId,
   visibleSegmentationLayer,
-  datasetScale,
+  voxelSize,
   useLegacyBindings,
   volumeTracing,
   infoRows,
@@ -597,7 +597,7 @@ function getNodeContextMenuOptions({
     maybeMeshIntersectionPosition,
     maybeUnmappedSegmentId,
     visibleSegmentationLayer,
-    datasetScale.factor,
+    voxelSize.factor,
   );
 
   const menuItems: ItemType[] = [
@@ -729,14 +729,14 @@ function getNodeContextMenuOptions({
           disabled: activeNodeId == null || !areInSameTree || isTheSameNode,
           onClick: () =>
             activeNodeId != null
-              ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId, datasetScale.unit)
+              ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId, voxelSize.unit)
               : null,
           label: "Path Length to this Node",
         },
     {
       key: "measure-whole-tree-length",
       onClick: () =>
-        measureAndShowFullTreeLength(clickedTree.treeId, clickedTree.name, datasetScale.unit),
+        measureAndShowFullTreeLength(clickedTree.treeId, clickedTree.name, voxelSize.unit),
       label: "Path Length of this Tree",
     },
     allowUpdate
@@ -913,7 +913,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     visibleSegmentationLayer,
     segmentIdAtPosition,
     dataset,
-    datasetScale,
+    voxelSize,
     currentMeshFile,
     currentConnectomeFile,
     mappingInfo,
@@ -1230,7 +1230,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     maybeMeshIntersectionPosition,
     maybeUnmappedSegmentId,
     visibleSegmentationLayer,
-    datasetScale.factor,
+    voxelSize.factor,
   );
 
   if (isSkeletonToolActive) {
@@ -1341,7 +1341,7 @@ function WkContextMenu() {
     return {
       skeletonTracing: state.tracing.skeleton,
       volumeTracing: getActiveSegmentationTracing(state),
-      datasetScale: state.dataset.dataSource.scale,
+      voxelSize: state.dataset.dataSource.scale,
       activeTool: state.uiInformation.activeTool,
       dataset: state.dataset,
       allowUpdate: state.tracing.restrictions.allowUpdate,
@@ -1411,7 +1411,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     contextMenuPosition,
     segments,
     hideContextMenu,
-    datasetScale,
+    voxelSize,
     globalPosition,
     maybeViewport,
     visibleSegmentationLayer,
@@ -1455,7 +1455,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
       const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
       const layersFinestResolution = magInfo.getFinestResolution();
-      const datasetScale = dataset.dataSource.scale;
+      const voxelSize = dataset.dataSource.scale;
 
       try {
         const [segmentSize] = await getSegmentVolumes(
@@ -1478,13 +1478,9 @@ function ContextMenuInner(propsWithInputRef: Props) {
         );
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-        const volumeInUnit3 = voxelToVolumeInUnit(
-          datasetScale,
-          layersFinestResolution,
-          segmentSize,
-        );
+        const volumeInUnit3 = voxelToVolumeInUnit(voxelSize, layersFinestResolution, segmentSize);
         return [
-          formatNumberToVolume(volumeInUnit3, datasetScale.unit),
+          formatNumberToVolume(volumeInUnit3, voxelSize.unit),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
         ];
       } catch (_error) {
@@ -1539,12 +1535,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
     activeNode != null && positionToMeasureDistanceTo != null
       ? [
           formatNumberToLength(
-            V3.scaledDist(
-              getActiveNodePosition(),
-              positionToMeasureDistanceTo,
-              datasetScale.factor,
-            ),
-            datasetScale.unit,
+            V3.scaledDist(getActiveNodePosition(), positionToMeasureDistanceTo, voxelSize.factor),
+            voxelSize.unit,
           ),
           formatLengthAsVx(V3.length(V3.sub(getActiveNodePosition(), positionToMeasureDistanceTo))),
         ]

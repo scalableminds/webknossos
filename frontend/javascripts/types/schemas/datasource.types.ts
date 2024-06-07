@@ -2,7 +2,7 @@
 // Types which were used for creating the datasource.schema.js
 // The `flow2schema` node module has been used for conversion.
 
-import { DatasetScale } from "types/api_flow_types";
+import { VoxelSize } from "types/api_flow_types";
 
 // Please note that some manual changes to the schema are required.
 type Vector2 = [number, number];
@@ -88,5 +88,5 @@ export type DatasourceConfiguration = {
     team: string;
   };
   dataLayers: Array<DataLayer>;
-  scale: DatasetScale;
+  scale: VoxelSize;
 };

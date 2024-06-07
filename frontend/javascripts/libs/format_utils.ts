@@ -16,7 +16,7 @@ import localeData from "dayjs/plugin/localeData";
 
 import type { BoundingBoxObject } from "oxalis/store";
 import type { Duration } from "dayjs/plugin/duration";
-import { DatasetScale } from "types/api_flow_types";
+import { VoxelSize } from "types/api_flow_types";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);
@@ -139,7 +139,7 @@ export function formatTuple(tuple: (Array<number> | Vector3 | Vector6) | null | 
     return "";
   }
 }
-export function formatScale(scale: DatasetScale | null | undefined, roundTo: number = 2): string {
+export function formatScale(scale: VoxelSize | null | undefined, roundTo: number = 2): string {
   if (scale == null) {
     return "";
   }

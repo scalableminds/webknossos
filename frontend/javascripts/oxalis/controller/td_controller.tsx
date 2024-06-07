@@ -35,7 +35,7 @@ import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
-import { DatasetScale } from "types/api_flow_types";
+import { VoxelSize } from "types/api_flow_types";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 
@@ -86,7 +86,7 @@ type OwnProps = {
   tracing?: Tracing;
 };
 type StateProps = {
-  scale: DatasetScale;
+  voxelSize: VoxelSize;
   activeTool: AnnotationTool;
 };
 type Props = OwnProps & StateProps;
@@ -154,7 +154,7 @@ class TDController extends React.PureComponent<Props> {
   initTrackballControls(view: HTMLElement): void {
     const { flycam } = Store.getState();
 
-    const pos = voxelToUnit(this.props.scale, getPosition(flycam));
+    const pos = voxelToUnit(this.props.voxelSize, getPosition(flycam));
     const tdCamera = this.props.cameras[OrthoViews.TDView];
     this.controls = new TrackballControls(
       tdCamera,
@@ -233,7 +233,7 @@ class TDController extends React.PureComponent<Props> {
 
         const unscaledPosition = V3.divide3(
           hitPosition.toArray() as Vector3,
-          this.props.scale.factor,
+          this.props.voxelSize.factor,
         );
 
         if (event.shiftKey) {
@@ -291,7 +291,7 @@ class TDController extends React.PureComponent<Props> {
     const { flycam } = Store.getState();
     const { controls } = this;
     position = position || getPosition(flycam);
-    const nmPosition = voxelToUnit(this.props.scale, position);
+    const nmPosition = voxelToUnit(this.props.voxelSize, position);
 
     if (controls != null) {
       controls.target.set(...nmPosition);
@@ -363,7 +363,7 @@ class TDController extends React.PureComponent<Props> {
 
 export function mapStateToProps(state: OxalisState): StateProps {
   return {
-    scale: state.dataset.dataSource.scale,
+    voxelSize: state.dataset.dataSource.scale,
     activeTool: state.uiInformation.activeTool,
   };
 }

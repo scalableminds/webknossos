@@ -120,13 +120,13 @@ type MutableAPIDataSourceBase = {
 };
 type APIDataSourceBase = Readonly<MutableAPIDataSourceBase>;
 export type APIUnimportedDatasource = APIDataSourceBase;
-export type DatasetScale = {
+export type VoxelSize = {
   factor: Vector3;
   unit: Unit;
 };
 export type MutableAPIDataSource = MutableAPIDataSourceBase & {
   dataLayers: Array<APIDataLayer>;
-  scale: DatasetScale;
+  scale: VoxelSize;
 };
 export type APIDataSource = Readonly<MutableAPIDataSource>;
 export type APIDataStore = {

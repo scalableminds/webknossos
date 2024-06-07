@@ -52,7 +52,7 @@ const maxScaleBarWidthFactor = 0.45;
 const minWidthToFillScalebar = 130;
 
 function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInPixels }: Props) {
-  const datasetScaleUnit = dataset.dataSource.scale.unit;
+  const voxelSizeUnit = dataset.dataSource.scale.unit;
   const viewportWidthInUnit = convertPixelsToUnit(viewportWidthInPixels, zoomValue, dataset);
   const viewportHeightInUnit = convertPixelsToUnit(viewportHeightInPixels, zoomValue, dataset);
   const idealWidthInUnit = viewportWidthInUnit * idealScalebarWidthFactor;
@@ -62,11 +62,11 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
     maxScaleBarWidthFactor,
   );
   const tooltip = [
-    formatNumberToLength(viewportWidthInUnit, datasetScaleUnit, 1, true),
+    formatNumberToLength(viewportWidthInUnit, voxelSizeUnit, 1, true),
     ThinSpace,
     MultiplicationSymbol,
     ThinSpace,
-    formatNumberToLength(viewportHeightInUnit, datasetScaleUnit, 1, true),
+    formatNumberToLength(viewportHeightInUnit, voxelSizeUnit, 1, true),
   ].join("");
   const collapseScalebar = viewportWidthInPixels < minWidthToFillScalebar;
   const limitScalebar = scaleBarWidthFactor === maxScaleBarWidthFactor;
@@ -106,7 +106,7 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
         >
           {collapseScalebar
             ? "i"
-            : formatNumberToLength(scalebarWidthInUnit, datasetScaleUnit, 1, true)}
+            : formatNumberToLength(scalebarWidthInUnit, voxelSizeUnit, 1, true)}
         </div>
       </div>
     </Tooltip>

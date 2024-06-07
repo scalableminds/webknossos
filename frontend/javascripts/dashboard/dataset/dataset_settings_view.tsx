@@ -27,7 +27,7 @@ import type {
   APIDatasetId,
   APIMessage,
   APIUnimportedDatasource,
-  DatasetScale,
+  VoxelSize,
 } from "types/api_flow_types";
 import { Unit, Unicode } from "oxalis/constants";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
@@ -125,7 +125,7 @@ function ensureValidScaleOnInferredDataSource(
 
   const inferredDataSourceClone = _.cloneDeep(inferredDataSource) as any as MutableAPIDataSource;
 
-  const dummyScale = { factor: [0, 0, 0], unit: Unit.nm } as DatasetScale;
+  const dummyScale = { factor: [0, 0, 0], unit: Unit.nm } as VoxelSize;
   const savedScale =
     "dataLayers" in savedDataSourceOnServer ? savedDataSourceOnServer.scale : dummyScale;
   if (_.isEqual(inferredDataSource.scale, dummyScale) && !_.isEqual(savedScale, dummyScale)) {

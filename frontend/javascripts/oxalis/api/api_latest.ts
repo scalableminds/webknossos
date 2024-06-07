@@ -1065,7 +1065,7 @@ class TracingApi {
       throw new Error(`Tree with id ${treeId} not found.`);
     }
 
-    const datasetScaleFactor = state.dataset.dataSource.scale.factor;
+    const voxelSizeFactor = state.dataset.dataSource.scale.factor;
     // Pre-allocate vectors
     let lengthInUnitAcc = 0;
     let lengthInVxAcc = 0;
@@ -1075,7 +1075,7 @@ class TracingApi {
     for (const edge of tree.edges.all()) {
       const sourceNode = tree.nodes.getOrThrow(edge.source);
       const targetNode = tree.nodes.getOrThrow(edge.target);
-      lengthInUnitAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), datasetScaleFactor);
+      lengthInUnitAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), voxelSizeFactor);
       lengthInVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
     }
     return [lengthInUnitAcc, lengthInVxAcc];
@@ -1128,7 +1128,7 @@ class TracingApi {
       throw new Error("The nodes are not within the same tree.");
     }
 
-    const datasetScaleFactor = Store.getState().dataset.dataSource.scale.factor;
+    const voxelSizeFactor = Store.getState().dataset.dataSource.scale.factor;
     // We use the Dijkstra algorithm to get the shortest path between the nodes.
     const distanceMap: Record<number, number> = {};
     // The distance map is also maintained in voxel space. This information is only
@@ -1164,7 +1164,7 @@ class TracingApi {
         const neighbourNodeId = source === nextNodeId ? target : source;
         const neighbourPosition = getPos(sourceTree.nodes.getOrThrow(neighbourNodeId));
         const neighbourDistance =
-          distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScaleFactor);
+          distance + V3.scaledDist(nextNodePosition, neighbourPosition, voxelSizeFactor);
 
         if (neighbourDistance < getDistance(neighbourNodeId)) {
           distanceMap[neighbourNodeId] = neighbourDistance;

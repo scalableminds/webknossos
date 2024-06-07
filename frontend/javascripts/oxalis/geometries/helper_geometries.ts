@@ -111,7 +111,7 @@ export class ContourGeometry {
     this.connectingLine.geometry.computeBoundingSphere();
   }
 
-  getArea(datasetScaleFactor: Vector3): number {
+  getArea(voxelSizeFactor: Vector3): number {
     // This algorithm is based on the Trapezoid formula for calculating the polygon area.
     // Source: https://www.mathopenref.com/coordpolygonarea2.html.
     let accAreaInUnit = 0;
@@ -120,8 +120,8 @@ export class ContourGeometry {
     let previousPointIndex = pointCount - 1;
     const dimIndices = Dimensions.getIndices(this.viewport);
     const scaleVector = new THREE.Vector2(
-      datasetScaleFactor[dimIndices[0]],
-      datasetScaleFactor[dimIndices[1]],
+      voxelSizeFactor[dimIndices[0]],
+      voxelSizeFactor[dimIndices[1]],
     );
     for (let i = 0; i < pointCount; i++) {
       const start = new THREE.Vector2(
@@ -413,8 +413,8 @@ export class LineMeasurementGeometry {
     app.vent.emit("rerender");
   }
 
-  getDistance(datasetScaleFactor: Vector3): number {
-    const scaleVector = new THREE.Vector3(...datasetScaleFactor);
+  getDistance(voxelSizeFactor: Vector3): number {
+    const scaleVector = new THREE.Vector3(...voxelSizeFactor);
     const points = this.vertexBuffer.getBuffer();
     const pointCount = this.vertexBuffer.getLength();
     if (pointCount < 2) {

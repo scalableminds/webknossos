@@ -50,7 +50,7 @@ export default function DistanceMeasurementTooltip() {
   const flycam = useSelector((state: OxalisState) => state.flycam);
   const state = useSelector((state: OxalisState) => state);
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const datasetScale = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
+  const voxelSize = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
   const currentPosition = getPosition(flycam);
@@ -81,15 +81,15 @@ export default function DistanceMeasurementTooltip() {
     const { lineMeasurementGeometry } = getSceneController();
     valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(notScalingFactor), 1);
     valueInMetricUnit = formatNumberToLength(
-      lineMeasurementGeometry.getDistance(datasetScale.factor),
-      datasetScale.unit,
+      lineMeasurementGeometry.getDistance(voxelSize.factor),
+      voxelSize.unit,
     );
   } else if (activeTool === AnnotationToolEnum.AREA_MEASUREMENT) {
     const { areaMeasurementGeometry } = getSceneController();
     valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea(notScalingFactor), 1);
     valueInMetricUnit = formatNumberToArea(
-      areaMeasurementGeometry.getArea(datasetScale.factor),
-      datasetScale.unit,
+      areaMeasurementGeometry.getArea(voxelSize.factor),
+      voxelSize.unit,
     );
   }
   const {

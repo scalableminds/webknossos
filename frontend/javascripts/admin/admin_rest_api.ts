@@ -64,7 +64,7 @@ import type {
   MaintenanceInfo,
   AdditionalCoordinate,
   LayerLink,
-  DatasetScale,
+  VoxelSize,
   APITimeTrackingPerUser,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
@@ -1249,7 +1249,7 @@ type DatasetCompositionArgs = {
   newDatasetName: string;
   targetFolderId: string;
   organizationName: string;
-  voxelSize: DatasetScale;
+  voxelSize: VoxelSize;
   layers: LayerLink[];
 };
 

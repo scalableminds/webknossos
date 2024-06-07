@@ -2019,7 +2019,7 @@ export function computeAdHocMesh(
           cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
-          scale: scaleFactor,
+          voxelSizeFactorInUnit: scaleFactor,
           mag,
           ...rest,
         },

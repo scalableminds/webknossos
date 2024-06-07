@@ -213,7 +213,7 @@ function SimpleDatasetForm({
                 <FormItemWithInfo
                   name={["dataSource", "scale", "factor"]}
                   label="Voxel Size"
-                  info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
+                  info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
                   rules={[
                     {
                       required: true,

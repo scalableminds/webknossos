@@ -462,7 +462,6 @@ function TreeHierarchyView(props: Props) {
     // Make sure the displayed name is not empty
     const displayableName = name.trim() || "<Unnamed Group>";
     return (
-      <div className="group-type">
         <Dropdown
           menu={menu}
           placement="bottom"
@@ -482,7 +481,6 @@ function TreeHierarchyView(props: Props) {
             {displayableName}
           </span>
         </Dropdown>
-      </div>
     );
   }
 
@@ -490,7 +488,7 @@ function TreeHierarchyView(props: Props) {
     const tree = props.trees[node.id];
     const isEditingDisabled = !props.allowUpdate;
     const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
-    // Defining background color of current node
+    const isDropdownVisible = activeTreeDropdownId === tree.treeId;
 
     const createMenu = (): MenuProps => {
       return {
@@ -581,23 +579,24 @@ function TreeHierarchyView(props: Props) {
         </Tooltip>
       ) : null;
 
+
     return (
       <div>
         <Dropdown
-          menu={createMenu()} //
+          menu={isDropdownVisible ? createMenu(): {items: []}} //
           // AutoDestroy is used to remove the menu from DOM and keep up the performance.
           // destroyPopupOnHide should also be an option according to the docs, but
           // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
           // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
           autoDestroy
           placement="bottom"
-          open={activeTreeDropdownId === tree.treeId} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
+          open={isDropdownVisible} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
           onOpenChange={(isVisible, info) => {
             if (info.source === "trigger") handleTreeDropdownMenuVisibility(tree.treeId, isVisible);
           }}
           trigger={["contextMenu"]}
         >
-          <div>
+          <div className="nowrap">
             <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
             {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
           </div>
@@ -657,6 +656,7 @@ function TreeHierarchyView(props: Props) {
             checkedKeys={checkedKeys}
             expandedKeys={expandedNodeKeys}
             selectedKeys={selectedKeys}
+            style={{ marginLeft: -14}}
             autoExpandParent
             checkable
             blockNode

@@ -13,13 +13,12 @@ import {
   Select,
   Slider,
   Divider,
-  FormInstance,
 } from "antd";
 import * as React from "react";
 import { Vector3Input } from "libs/vector_input";
 import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
-import messages, {
+import {
   RecommendedConfiguration,
   layerViewConfigurations,
   settings,
@@ -29,25 +28,57 @@ import type { DatasetLayerConfiguration } from "oxalis/store";
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 import { BLEND_MODES } from "oxalis/constants";
 import ColorLayerOrderingTable from "./color_layer_ordering_component";
-import { APIDatasetId, APIDataSource } from "types/api_flow_types";
+import { APIDatasetId } from "types/api_flow_types";
+import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
 
 const FormItem = Form.Item;
 
+async function validateDefaultMappings(
+  configStr: string,
+  dataStoreURL: string,
+  datasetId: APIDatasetId,
+) {
+  let config = null;
+  try {
+    config = JSON.parse(configStr);
+  } catch (e) {
+    return Promise.reject(new Error("Invalid JSON format for : " + e.message));
+  }
+  const layerNamesWithDefaultMappings = Object.keys(config).filter(
+    (layerName) => config[layerName].defaultMapping != null,
+  );
+
+  const mappingRequests = layerNamesWithDefaultMappings.map(async (layerName) =>
+    Promise.all([
+      getMappingsForDatasetLayer(dataStoreURL, datasetId, layerName),
+      getAgglomeratesForDatasetLayer(dataStoreURL, datasetId, layerName),
+    ]),
+  );
+  const mappings = await Promise.all(mappingRequests);
+  const errors = layerNamesWithDefaultMappings
+    .map((layerName, index) => {
+      const [mappingsForLayer, agglomeratesForLayer] = mappings[index];
+      const mappingType = config[layerName]?.defaultMapping?.type;
+      const mappingName = config[layerName]?.defaultMapping?.name;
+      const doesMappingExist =
+        mappingType === "HDF5"
+          ? agglomeratesForLayer.some((agglomerate) => agglomerate === mappingName)
+          : mappingsForLayer.some((mapping) => mapping === mappingName);
+      return doesMappingExist
+        ? null
+        : `The default mapping "${mappingName}" of type "${mappingType}" does not exist for layer ${layerName}.`;
+    })
+    .filter((error) => error != null);
+  if (errors.length > 0) {
+    throw new Error("The following default mappings are invalid: " + errors.join("\n"));
+  }
+}
+
 export default function DatasetSettingsViewConfigTab(props: {
-  formRef: React.RefObject<FormInstance<{ dataSource: APIDataSource }>>;
   datasetId: APIDatasetId;
   dataStoreURL: string | undefined;
 }) {
   const { datasetId, dataStoreURL } = props;
-  const form = props.formRef.current;
-  const segmentationLayers =
-    form != null
-      ? (form.getFieldValue(["dataSource", "dataLayers"]) as APIDataSource["dataLayers"])?.filter(
-          (layer) => layer.category === "segmentation",
-        ) || []
-      : [];
-  const currentSelectedMappings =
-    form?.getFieldValue(["defaultConfiguration", "activeMappingByLayer"]) || {};
 
   const columns = [
     {
@@ -67,29 +98,45 @@ export default function DatasetSettingsViewConfigTab(props: {
       dataIndex: "comment",
     },
   ];
-  const comments: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
-    alpha: "20 for segmentation layer",
-    min: "Only for color layers",
-    max: "Only for color layers",
-    intensityRange: "Only for color layers",
+  const comments: Partial<Record<keyof DatasetLayerConfiguration, [string, string | null]>> = {
+    alpha: ["20 for segmentation layer", null],
+    min: [
+      "Only for color layers",
+      "The minimum possible color range value adjustable with the histogram slider.",
+    ],
+    max: [
+      "Only for color layers",
+      "The maximum possible color range value adjustable with the histogram slider.",
+    ],
+    intensityRange: [
+      "Only for color layers",
+      "The color value range between which color values are interpolated and shown.",
+    ],
+    defaultMapping: [
+      "Default active Mapping",
+      "The mapping whose type and name is active by default. This field is an object with the keys 'type' and 'name' like {name: 'agglomerate_65', type: 'HDF5'}.",
+    ],
   };
-  console.log({
-    ...getDefaultLayerViewConfiguration(),
-    min: 0,
-    max: 255,
-    intensityRange: [0, 255],
-  });
   const layerViewConfigurationEntries = _.map(
     { ...getDefaultLayerViewConfiguration(), min: 0, max: 255, intensityRange: [0, 255] },
     (defaultValue: any, key: string) => {
       // @ts-ignore Typescript doesn't infer that key will be of type keyof DatasetLayerConfiguration
       const layerViewConfigurationKey: keyof DatasetLayerConfiguration = key;
       const name = layerViewConfigurations[layerViewConfigurationKey];
+      const commentParts = comments[layerViewConfigurationKey];
+      const comment =
+        commentParts != null && commentParts[1] != null ? (
+          <Tooltip title={commentParts[1]}>
+            {commentParts[0]} <InfoCircleOutlined />
+          </Tooltip>
+        ) : (
+          commentParts?.[0] || ""
+        );
       return {
         name,
         key,
         value: defaultValue == null ? "not set" : defaultValue.toString(),
-        comment: comments[layerViewConfigurationKey] || "",
+        comment,
       };
     },
   );
@@ -236,7 +283,13 @@ export default function DatasetSettingsViewConfigTab(props: {
             info="Use the following JSON to define layer-specific properties, such as color, alpha and intensityRange."
             rules={[
               {
-                validator: validateLayerViewConfigurationObjectJSON,
+                validator: (_rule, config: string) =>
+                  Promise.all([
+                    validateLayerViewConfigurationObjectJSON(_rule, config),
+                    dataStoreURL
+                      ? validateDefaultMappings(config, dataStoreURL, datasetId)
+                      : Promise.resolve(),
+                  ]),
               },
             ]}
           >
@@ -244,7 +297,7 @@ export default function DatasetSettingsViewConfigTab(props: {
           </FormItemWithInfo>
         </Col>
         <Col span={12}>
-          Valid layer view configurations and their default values TODO:
+          Valid layer view configurations and their default values:
           <br />
           <br />
           <Table

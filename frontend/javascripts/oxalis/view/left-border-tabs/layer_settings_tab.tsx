@@ -88,7 +88,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3, ControlMode } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import Constants, { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import LinkButton from "components/link_button";
 import { Model } from "oxalis/singletons";
@@ -101,7 +101,6 @@ import type {
   HistogramDataForAllLayers,
   Tracing,
   Task,
-  ActiveMappingInfo,
 } from "oxalis/store";
 import Store from "oxalis/store";
 import Toast from "libs/toast";
@@ -1346,21 +1345,22 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           const { flycam, temporaryConfiguration } = Store.getState();
           const position = V3.floor(getPosition(flycam));
           const zoom = flycam.zoomStep;
-          const activeMappingNamesAndTypesByLayer = {} as Record<
-            string,
-            { name: ActiveMappingInfo["mappingName"]; type: ActiveMappingInfo["mappingType"] }
-          >;
           const { activeMappingByLayer } = temporaryConfiguration;
-          Object.keys(activeMappingByLayer).forEach((layerName) => {
-            activeMappingNamesAndTypesByLayer[layerName] = {
-              name: activeMappingByLayer[layerName].mappingName,
-              type: activeMappingByLayer[layerName].mappingType,
-            };
-          });
           const completeDatasetConfiguration = Object.assign({}, datasetConfiguration, {
             position,
             zoom,
-            activeMappingByLayer: activeMappingNamesAndTypesByLayer,
+          });
+          Object.keys(activeMappingByLayer).forEach((layerName) => {
+            Object.assign(
+              {},
+              completeDatasetConfiguration.layers[layerName],
+              activeMappingByLayer[layerName].mappingStatus === MappingStatusEnum.ENABLED
+                ? {
+                    name: activeMappingByLayer[layerName].mappingName,
+                    type: activeMappingByLayer[layerName].mappingType,
+                  }
+                : null,
+            );
           });
           await updateDatasetDefaultConfiguration(dataset, completeDatasetConfiguration);
           Toast.success("Successfully saved the current view configuration as default.");

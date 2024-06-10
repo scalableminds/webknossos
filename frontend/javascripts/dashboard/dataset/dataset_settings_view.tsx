@@ -891,7 +891,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         children: (
           <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
             <DatasetSettingsViewConfigTab
-              formRef={this.formRef}
               datasetId={this.props.datasetId}
               dataStoreURL={this.state.dataset?.dataStore.url}
             />

@@ -33,13 +33,13 @@ Option[String], openGraphImage: Option[String] )
       rel="stylesheet"
       type="text/css"
       media="screen"
-      href="/assets/bundle/vendors~main.@(webknossos.BuildInfo.commitHash).css"
+      href="/assets/bundle/vendors~main.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
     <link
       rel="stylesheet"
       type="text/css"
       media="screen"
-      href="/assets/bundle/main.@(webknossos.BuildInfo.commitHash).css"
+      href="/assets/bundle/main.css?nocache=@(webknossos.BuildInfo.commitHash)"
     />
     <script
       data-airbrake-project-id="@(conf.Airbrake.projectID)"

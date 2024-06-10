@@ -125,7 +125,7 @@ function shouldDisplaySegmentationData(): boolean {
 
   const segmentationLayerName = segmentationLayer.name;
   const isSegmentationLayerDisabled =
-    Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled;
+    state.datasetConfiguration.layers[segmentationLayerName].isDisabled;
   if (isSegmentationLayerDisabled) {
     return false;
   }

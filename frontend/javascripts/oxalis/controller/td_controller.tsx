@@ -233,6 +233,7 @@ class TDController extends React.PureComponent<Props> {
         const unscaledPosition = V3.divide3(hitPosition.toArray() as Vector3, this.props.scale);
 
         if (event.shiftKey) {
+          console.log("Setting position in td_controller", unscaledPosition);
           Store.dispatch(setPositionAction(unscaledPosition));
         } else if (ctrlOrMetaPressed && intersection.meshId != null) {
           const state = Store.getState();

@@ -745,6 +745,7 @@ class SegmentsView extends React.Component<Props, State> {
       );
       return;
     }
+    console.log("setting new position in segments view onSelectSegment", segment.somePosition);
     this.props.setPosition(segment.somePosition);
     const segmentAdditionalCoordinates = segment.someAdditionalCoordinates;
     if (segmentAdditionalCoordinates != null) {

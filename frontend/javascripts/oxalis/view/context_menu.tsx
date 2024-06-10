@@ -525,6 +525,7 @@ function getMeshItems(
       key: "jump-to-mesh",
       onClick: () => {
         const unscaledPosition = V3.divide3(meshIntersectionPosition, datasetScale);
+        console.log("setting position from within context menu", unscaledPosition);
         Actions.setPosition(Store.dispatch, unscaledPosition);
       },
       label: "Jump to Position",

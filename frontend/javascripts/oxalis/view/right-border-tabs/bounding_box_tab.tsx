@@ -80,6 +80,7 @@ export default function BoundingBoxTab() {
       min[1] + (max[1] - min[1]) / 2,
       min[2] + (max[2] - min[2]) / 2,
     ];
+    console.log("setting new position in boundingboxtab", center);
     setPosition(center);
   }
 

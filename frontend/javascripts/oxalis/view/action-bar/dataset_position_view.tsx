@@ -54,6 +54,7 @@ class DatasetPositionView extends PureComponent<Props> {
   };
 
   handleChangePosition = (position: Vector3) => {
+    console.log("setting new position in dataset_position_view", position);
     Store.dispatch(setPositionAction(position));
   };
 

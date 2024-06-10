@@ -111,6 +111,7 @@ function* centerActiveNode(action: Action): Saga<void> {
       getNodePosition(activeNode, state),
     );
     if ("suppressAnimation" in action && action.suppressAnimation) {
+      console.log("centering node in skeletontracing_saga", activeNodePosition);
       Store.dispatch(setPositionAction(activeNodePosition));
       Store.dispatch(setRotationAction(activeNode.rotation));
     } else {

@@ -295,6 +295,7 @@ export type DatasetLayerConfiguration = {
   readonly isInverted: boolean;
   readonly isInEditMode: boolean;
   readonly gammaCorrectionValue: number;
+  readonly defaultMapping?: { name: string; type: MappingType } | null | undefined;
 };
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
 
@@ -326,7 +327,6 @@ export type DatasetConfiguration = {
   // property. So, to render the skeleton layer natively, nativelyRenderedLayerName
   // can be set to null.
   readonly nativelyRenderedLayerName: string | null;
-  readonly activeMappingByLayer: Record<string, { name: string; type: MappingType }>;
 };
 
 export type PartialDatasetConfiguration = Partial<Omit<DatasetConfiguration, "layers">> & {

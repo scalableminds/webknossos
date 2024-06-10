@@ -16,7 +16,6 @@ import _ from "lodash";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import messages from "messages";
-import { MappingType } from "oxalis/store";
 
 const ROW_GUTTER = 1;
 
@@ -684,75 +683,4 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
       </Row>
     );
   }
-}
-
-const needle = "##";
-
-const packMappingNameAndCategory = (mappingName: string, category: MappingType) =>
-  `${category}${needle}${mappingName}`;
-
-const unpackMappingNameAndCategory = (packedString: string) => {
-  const needlePos = packedString.indexOf(needle);
-  const categoryName = packedString.slice(0, needlePos);
-  const mappingName = packedString.slice(needlePos + needle.length);
-  return [mappingName, categoryName];
-};
-
-function renderCategoryOptions(
-  optionStrings: string[],
-  category: MappingType,
-  hasMultipleGroups: boolean,
-) {
-  const elements = optionStrings
-    .slice()
-    .sort(Utils.localeCompareBy((optionString) => optionString))
-    .map((optionString) => (
-      <Select.Option
-        key={packMappingNameAndCategory(optionString, category)}
-        value={packMappingNameAndCategory(optionString, category)}
-        title={optionString}
-      >
-        {optionString}
-      </Select.Option>
-    ));
-  return hasMultipleGroups ? (
-    <Select.OptGroup label={category}>{elements}</Select.OptGroup>
-  ) : (
-    elements
-  );
-}
-
-export function MappingSelect(props: {
-  isDisabled: boolean;
-  availableMappings: string[];
-  availableAgglomerates: string[];
-  onChange?: (mappingName: string, mappingType: string) => void;
-  value?: string;
-}) {
-  const hasMultipleGroups =
-    props.availableMappings.length > 0 && props.availableAgglomerates.length > 0;
-  const onChangeUnpacked =
-    props.onChange != null
-      ? (value: string) => {
-          const [mappingName, category] = unpackMappingNameAndCategory(value);
-          props.onChange?.(mappingName, category);
-        }
-      : undefined;
-  return (
-    <Select
-      placeholder="Select mapping"
-      defaultActiveFirstOption={false}
-      style={{
-        width: "100%",
-        marginBottom: 14,
-      }}
-      onChange={onChangeUnpacked}
-      notFoundContent="No mappings found."
-      disabled={props.isDisabled}
-      value={props.value || undefined}
-    >
-      {renderCategoryOptions(props.availableMappings, "JSON", hasMultipleGroups)}
-      {renderCategoryOptions(props.availableAgglomerates, "HDF5", hasMultipleGroups)}
-    </Select>
-  );
 }

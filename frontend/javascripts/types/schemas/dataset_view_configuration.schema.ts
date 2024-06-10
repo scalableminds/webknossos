@@ -14,6 +14,7 @@ export function getDefaultLayerViewConfiguration(
     isDisabled: false,
     isInverted: false,
     isInEditMode: false,
+    defaultMapping: null,
   };
   return { ...defaultLayerViewConfiguration, ...dynamicDefault };
 }

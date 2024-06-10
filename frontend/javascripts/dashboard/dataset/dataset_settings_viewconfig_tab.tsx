@@ -30,65 +30,8 @@ import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 import { BLEND_MODES } from "oxalis/constants";
 import ColorLayerOrderingTable from "./color_layer_ordering_component";
 import { APIDatasetId, APIDataSource } from "types/api_flow_types";
-import { useGuardedFetch } from "libs/react_helpers";
-import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
-import { MappingSelect } from "oxalis/view/components/setting_input_views";
 
 const FormItem = Form.Item;
-
-function DefaultMappingSelectForLayer({
-  layerName,
-  datasetId,
-  dataStoreURL,
-  currentMapping,
-  setMappingNameAndType,
-}: {
-  layerName: string;
-  datasetId: APIDatasetId;
-  dataStoreURL: string;
-  currentMapping: { name: string; type: string } | null | undefined;
-  setMappingNameAndType: (layerName: string, mappingName: string, mappingType: string) => void;
-}) {
-  const [[availableMappings, availableAgglomerates], _ignoredIsLoading] = useGuardedFetch(
-    async () =>
-      Promise.all([
-        getMappingsForDatasetLayer(dataStoreURL, datasetId, layerName),
-        getAgglomeratesForDatasetLayer(dataStoreURL, datasetId, layerName),
-      ]),
-    [[], []],
-    [layerName, dataStoreURL, datasetId],
-    messages["mapping.loading_failed"](layerName),
-  );
-  return (
-    <Col span={6}>
-      <FormItemWithInfo
-        name={["defaultConfiguration", "activeMappingByLayer", layerName, "name"]}
-        label={
-          <span>
-            Default Mapping for Layer <span className="italic">{layerName}</span>
-          </span>
-        }
-        info="The default mapping to activate when viewing this dataset."
-        initialValue={currentMapping?.name}
-      >
-        <MappingSelect
-          isDisabled={false}
-          availableMappings={availableMappings}
-          availableAgglomerates={availableAgglomerates}
-          onChange={(mappingName, mappingType) =>
-            setMappingNameAndType(layerName, mappingName, mappingType)
-          }
-        />
-      </FormItemWithInfo>
-      {/* Rendering a hidden item for the matching mapping type to include it in the set of values output by 
-       form.getFieldsValue https://ant.design/components/form#getfieldsvalue */}
-      <Form.Item hidden name={["defaultConfiguration", "activeMappingByLayer", layerName, "type"]}>
-        {/*Dummy input to avoid antd error*/}
-        <Input type="text" />
-      </Form.Item>
-    </Col>
-  );
-}
 
 export default function DatasetSettingsViewConfigTab(props: {
   formRef: React.RefObject<FormInstance<{ dataSource: APIDataSource }>>;
@@ -130,6 +73,12 @@ export default function DatasetSettingsViewConfigTab(props: {
     max: "Only for color layers",
     intensityRange: "Only for color layers",
   };
+  console.log({
+    ...getDefaultLayerViewConfiguration(),
+    min: 0,
+    max: 255,
+    intensityRange: [0, 255],
+  });
   const layerViewConfigurationEntries = _.map(
     { ...getDefaultLayerViewConfiguration(), min: 0, max: 255, intensityRange: [0, 255] },
     (defaultValue: any, key: string) => {
@@ -166,16 +115,6 @@ export default function DatasetSettingsViewConfigTab(props: {
       </FormItem>
     </Col>
   ));
-  const setDefaultMappingNameAndType = (
-    layerName: string,
-    mappingName: string,
-    mappingType: string,
-  ) => {
-    form?.setFieldValue(["defaultConfiguration", "activeMappingByLayer", layerName], {
-      name: mappingName,
-      type: mappingType,
-    });
-  };
 
   return (
     <div>
@@ -288,20 +227,6 @@ export default function DatasetSettingsViewConfigTab(props: {
           </FormItem>
         </Col>
       </Row>
-      <Row gutter={24}>
-        {segmentationLayers.length > 0 && dataStoreURL != null
-          ? segmentationLayers.map((layer) => (
-              <DefaultMappingSelectForLayer
-                layerName={layer.name}
-                datasetId={datasetId}
-                dataStoreURL={dataStoreURL}
-                key={layer.name}
-                currentMapping={currentSelectedMappings[layer.name]}
-                setMappingNameAndType={setDefaultMappingNameAndType}
-              />
-            ))
-          : null}
-      </Row>
       <Divider />
       <Row gutter={32}>
         <Col span={12}>
@@ -319,7 +244,7 @@ export default function DatasetSettingsViewConfigTab(props: {
           </FormItemWithInfo>
         </Col>
         <Col span={12}>
-          Valid layer view configurations and their default values:
+          Valid layer view configurations and their default values TODO:
           <br />
           <br />
           <Table

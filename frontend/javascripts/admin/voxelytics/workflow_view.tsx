@@ -4,7 +4,6 @@ import { useParams } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
   APIOrganization,
-  VoxelyticsRunInfo,
   VoxelyticsRunState,
   VoxelyticsTaskConfig,
   VoxelyticsTaskConfigWithHierarchy,
@@ -139,14 +138,11 @@ function parseReport(report: VoxelyticsWorkflowReport): VoxelyticsWorkflowReport
       tasks: Object.fromEntries(dag.nodes.map((t) => [t.id, report.config.tasks[t.id]])),
     },
     dag,
-    runs: report.runs.map(
-      (run) =>
-        ({
-          ...run,
-          beginTime: run.beginTime != null ? new Date(run.beginTime) : null,
-          endTime: run.endTime != null ? new Date(run.endTime) : null,
-        }) as VoxelyticsRunInfo,
-    ),
+    runs: report.runs.map((run) => ({
+      ...run,
+      beginTime: run.beginTime == null ? null : new Date(run.beginTime),
+      endTime: run.endTime == null ? null : new Date(run.endTime),
+    })),
     tasks,
   };
 }

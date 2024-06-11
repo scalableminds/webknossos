@@ -43,7 +43,6 @@
     "enzyme-adapter-react-16": "^1.9.1",
     "esbuild": "^0.20",
     "espree": "^3.5.4",
-    "git-revision-webpack-plugin": "^5.0.0",
     "husky": "^0.14.3",
     "jsdoc": "^3.5.5",
     "jsdom": "^23.2.0",

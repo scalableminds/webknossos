@@ -241,7 +241,6 @@ class SegmentIndexFileService @Inject()(config: DataStoreConfig,
       DataServiceDataRequest(
         dataSource = dataSource,
         dataLayer = dataLayer,
-        dataLayerMapping = None,
         cuboid = Cuboid(
           VoxelPosition(position.x * DataLayer.bucketLength,
                         position.y * DataLayer.bucketLength,

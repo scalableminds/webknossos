@@ -210,7 +210,6 @@ class ZarrStreamingController @Inject()(
       request = DataServiceDataRequest(
         dataSource,
         dataLayer,
-        None,
         Cuboid(
           topLeft = VoxelPosition(x * cubeSize * magParsed.x,
                                   y * cubeSize * magParsed.y,

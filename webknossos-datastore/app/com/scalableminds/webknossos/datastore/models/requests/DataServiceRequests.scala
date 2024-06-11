@@ -17,7 +17,6 @@ object DataServiceRequestSettings {
 case class DataServiceDataRequest(
     dataSource: DataSource, // null in VolumeTracings
     dataLayer: DataLayer,
-    dataLayerMapping: Option[String], // No longer used. use appliedAgglomerate in settings instead
     cuboid: Cuboid,
     settings: DataServiceRequestSettings
 )

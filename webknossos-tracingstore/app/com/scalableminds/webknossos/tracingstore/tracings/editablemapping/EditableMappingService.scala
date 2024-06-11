@@ -373,7 +373,7 @@ class EditableMappingService @Inject()(
       editableMappingId <- tracing.mappingName.toFox
       dataLayer = editableMappingLayer(editableMappingId, tracing, tracingId, userToken)
       requests = dataRequests.map(r =>
-        DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
+        DataServiceDataRequest(null, dataLayer, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 

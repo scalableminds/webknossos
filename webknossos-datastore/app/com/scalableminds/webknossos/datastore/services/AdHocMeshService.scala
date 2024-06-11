@@ -113,7 +113,6 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
                 val dataRequest = DataServiceDataRequest(
                   request.dataSource.orNull,
                   request.dataLayer,
-                  request.mapping,
                   request.cuboid,
                   DataServiceRequestSettings(halfByte = false, request.mapping, None)
                 )
@@ -173,7 +172,6 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
     val dataRequest = DataServiceDataRequest(
       request.dataSource.orNull,
       request.dataLayer,
-      request.mapping,
       cuboid,
       DataServiceRequestSettings.default.copy(additionalCoordinates = request.additionalCoordinates)
     )

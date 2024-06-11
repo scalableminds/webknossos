@@ -237,10 +237,10 @@ export function getDefaultValueRangeOfLayer(
       return [0, 2 ** 63 - 1];
 
     case "float":
-      return [0, maxFloatValue];
+      return [-maxFloatValue, maxFloatValue];
 
     case "double":
-      return [0, maxDoubleValue];
+      return [-maxDoubleValue, maxDoubleValue];
 
     default:
       return [0, 255];

@@ -39,6 +39,7 @@ import {
   getNodeKey,
   getNodeKeyFromNode,
   moveGroupsHelper,
+  findParentGroupNode,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import type { TreeMap, TreeGroup } from "oxalis/store";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
@@ -72,7 +73,8 @@ type Props = {
   treeGroups: TreeGroup[];
   sortBy: string;
   trees: TreeMap;
-  selectedTrees: number[];
+  selectedTreeIds: number[];
+  onSingleSelectTree: (arg0: number) => void;
   onMultiSelectTree: (arg0: number) => void;
   deselectAllTrees: () => void;
   onDeleteGroup: (arg0: number) => void;
@@ -85,18 +87,9 @@ export type GenerateNodePropsType = {
   style?: React.CSSProperties;
 };
 
-function didTreeDataChange(prevProps: Props, nextProps: Props): boolean {
-  return (
-    prevProps.trees !== nextProps.trees ||
-    prevProps.treeGroups !== nextProps.treeGroups ||
-    prevProps.sortBy !== nextProps.sortBy
-  );
-}
-
 function TreeHierarchyView(props: Props) {
   const [expandedNodeKeys, setExpandedNodeKeys] = useState<React.Key[]>([]);
-  const [groupTree, setGroupTree] = useState<TreeNode[]>([]);
-  const [prevProps, setPrevProps] = useState<Props | null>(null);
+  const [UITreeData, setUITreeData] = useState<TreeNode[]>([]);
   const [activeTreeDropdownId, setActiveTreeDropdownId] = useState<number | null>(null);
   const [activeGroupDropdownId, setActiveGroupDropdownId] = useState<number | null>(null);
 
@@ -105,27 +98,19 @@ function TreeHierarchyView(props: Props) {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // getDerivedStateFromProps
-    if (prevProps == null || didTreeDataChange(prevProps, props)) {
-      // Insert the trees into the corresponding groups and create a
-      // groupTree object that can be rendered using a SortableTree component
-      const groupToTreesMap = createGroupToTreesMap(props.trees);
-      const rootGroup = {
-        name: "Root",
-        groupId: MISSING_GROUP_ID,
-        children: props.treeGroups,
-      };
+    // equivalent of LifeCycle hook "getDerivedStateFromProps"
+    // Insert the trees into the corresponding groups and create a
+    // groupTree object that can be rendered using a SortableTree component
+    const groupToTreesMap = createGroupToTreesMap(props.trees);
+    const rootGroup = {
+      name: "Root",
+      groupId: MISSING_GROUP_ID,
+      children: props.treeGroups,
+    };
 
-      const generatedGroupTree = insertTreesAndTransform(
-        [rootGroup],
-        groupToTreesMap,
-        props.sortBy,
-      );
-      setGroupTree(generatedGroupTree);
-    }
-
-    setPrevProps(props);
-  }, [props]);
+    const generatedGroupTree = insertTreesAndTransform([rootGroup], groupToTreesMap, props.sortBy);
+    setUITreeData(generatedGroupTree);
+  }, [props.trees, props.sortBy, props.treeGroups]);
 
   useEffectOnlyOnce(() => {
     // set default expanded keys
@@ -188,13 +173,43 @@ function TreeHierarchyView(props: Props) {
   };
 
   function onSelectTreeNode(node: TreeNode, evt: MouseEvent) {
-    const treeId = node.id;
+    const selectedTreeId = node.id;
 
     if (evt.ctrlKey || evt.metaKey) {
-      props.onMultiSelectTree(treeId);
+      // Select two or more individual nodes
+      props.onMultiSelectTree(selectedTreeId);
+    } else if (evt.shiftKey && props.selectedTreeIds.length === 1) {
+      // SHIFT click to select a whole range of nodes
+      // Selection will only work for nodes within the same group/hierarchy level
+      const sourceNode = props.trees[props.selectedTreeIds[0]];
+      const sourceNodeParent = findParentGroupNode(
+        UITreeData,
+        sourceNode.groupId ?? MISSING_GROUP_ID,
+      );
+
+      if (sourceNodeParent) {
+        const rangeIndex1 = sourceNodeParent.children.findIndex(
+          (node) => node.type === GroupTypeEnum.TREE && node.id === sourceNode.treeId,
+        );
+        const rangeIndex2 = sourceNodeParent.children.findIndex(
+          (node) => node.type === GroupTypeEnum.TREE && node.id === selectedTreeId,
+        );
+
+        if (rangeIndex1 > 0 && rangeIndex2 > 0) {
+          let selectedNodes: TreeNode[] = [];
+          if (rangeIndex1 < rangeIndex2) {
+            // careful to not include/re-select the source node
+            selectedNodes = sourceNodeParent.children.slice(rangeIndex1 + 1, rangeIndex2 + 1);
+          } else {
+            selectedNodes = sourceNodeParent.children.slice(rangeIndex2, rangeIndex1);
+          }
+          selectedNodes.forEach((node) => props.onMultiSelectTree(node.id));
+        }
+      }
     } else {
+      // regular click on a single node wihtout any multi-selection stuff
       props.deselectAllTrees();
-      setActiveTree(treeId);
+      props.onSingleSelectTree(selectedTreeId);
     }
   }
 
@@ -205,7 +220,7 @@ function TreeHierarchyView(props: Props) {
 
   function onSelectGroupNode(node: TreeNode) {
     const groupId = node.id;
-    const numberOfSelectedTrees = props.selectedTrees.length;
+    const numberOfSelectedTrees = props.selectedTreeIds.length;
 
     if (numberOfSelectedTrees > 1) {
       Modal.confirm({
@@ -243,7 +258,7 @@ function TreeHierarchyView(props: Props) {
     if (activeComponent === "tree") {
       allTreesToMove = [props.activeTreeId];
     } else if (activeComponent === "trees") {
-      allTreesToMove = props.selectedTrees;
+      allTreesToMove = props.selectedTreeIds;
     }
     if (allTreesToMove) {
       const moveActions = allTreesToMove.map((treeId) =>
@@ -267,7 +282,7 @@ function TreeHierarchyView(props: Props) {
         : props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID;
 
     if (draggedNode.type === GroupTypeEnum.TREE) {
-      const allTreesToMove = [...props.selectedTrees, draggedNode.id];
+      const allTreesToMove = [...props.selectedTreeIds, draggedNode.id];
       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
       const moveActions = allTreesToMove.map((treeId) =>
         setTreeGroupAction(parentGroupId === MISSING_GROUP_ID ? null : parentGroupId, treeId),
@@ -617,7 +632,7 @@ function TreeHierarchyView(props: Props) {
 
   function getLabelForActiveItems(): "trees" | "tree" | "group" | null {
     // Only one type of component can be selected. It is not possible to select multiple groups.
-    if (props.selectedTrees.length > 0) {
+    if (props.selectedTreeIds.length > 0) {
       return "trees";
     } else if (props.activeTreeId != null) {
       return "tree";
@@ -628,10 +643,12 @@ function TreeHierarchyView(props: Props) {
   }
 
   // checkedKeys includes all nodes with a "selected" checkbox
-  const checkedKeys = deepFlatFilter(groupTree, (node) => node.isChecked).map((node) => node.key);
+  const checkedKeys = deepFlatFilter(UITreeData, (node) => node.isChecked).map((node) => node.key);
 
   // selectedKeys is mainly used for highlighting, i.e. blueish background color
-  const selectedKeys = props.selectedTrees.map((treeId) => getNodeKey(GroupTypeEnum.TREE, treeId));
+  const selectedKeys = props.selectedTreeIds.map((treeId) =>
+    getNodeKey(GroupTypeEnum.TREE, treeId),
+  );
 
   if (props.activeGroupId) selectedKeys.push(getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId));
 
@@ -645,7 +662,7 @@ function TreeHierarchyView(props: Props) {
           }}
         >
           <AndTree
-            treeData={groupTree}
+            treeData={UITreeData}
             height={height}
             ref={treeRef}
             titleRender={(node) =>
@@ -735,4 +752,5 @@ function TreeHierarchyView(props: Props) {
   }
 }
 
-export default TreeHierarchyView;
+// React.memo is used to prevent the component from re-rendering without the props changing
+export default React.memo(TreeHierarchyView);

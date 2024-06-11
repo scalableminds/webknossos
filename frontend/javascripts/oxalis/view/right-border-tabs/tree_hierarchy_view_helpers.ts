@@ -271,3 +271,13 @@ export function getNodeKey(type: GroupTypeEnum, id: number): string {
 export function getNodeKeyFromNode(node: TreeNode): string {
   return getNodeKey(node.type, node.id);
 }
+
+export function findParentGroupNode(nodes: TreeNode[], parentGroupId: number): TreeNode | null {
+  let foundParentNode: TreeNode | null = null;
+  forEachTreeNode(nodes, (node) => {
+    if (node.type === GroupTypeEnum.GROUP && node.id === parentGroupId) {
+      foundParentNode = node;
+    }
+  });
+  return foundParentNode;
+}

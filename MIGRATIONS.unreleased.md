@@ -10,6 +10,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 - The datastore config field `datastore.cache.dataCube.maxEntries` is no longer used an can be removed.
 
+- If your setup contains webknossos-workers, you may want to add the newly available job `align_sections` to the `supportedJobCommands` of your workers. Make sure you deploy the latest webknossos-worker release. [#7820](https://github.com/scalableminds/webknossos/pull/7820)
+
 ### Postgres Evolutions:
 
 - [114-ai-models.sql](conf/evolutions/114-ai-models.sql)

@@ -68,7 +68,7 @@ trait ExploreLayerUtils extends FoxImplicits {
 
     val mag = (voxelSize / minVoxelSize).round.toVec3Int
     for {
-      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x) && isPowerOfTwo(mag.x)) ?~> s"invalid mag: $mag. Must all be powers of two"
+      _ <- bool2Fox(isPowerOfTwo(mag.x) && isPowerOfTwo(mag.y) && isPowerOfTwo(mag.z)) ?~> s"invalid mag: $mag. Must all be powers of two"
     } yield mag
   }
 

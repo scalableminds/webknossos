@@ -239,7 +239,7 @@ function TreeHierarchyView(props: Props) {
         setTreeGroupAction(
           targetGroupId,
           // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-          parseInt(treeId, 10),
+          treeId,
         ),
       );
       onBatchActions(moveActions, "SET_TREE_GROUP");
@@ -267,6 +267,9 @@ function TreeHierarchyView(props: Props) {
       const newTreeGroups = moveGroupsHelper(props.treeGroups, draggedNode.id, parentGroupId);
       setUpdateTreeGroups(newTreeGroups);
     }
+
+    // in either case expand the parent group
+    setExpandedNodeKeys([...expandedNodeKeys, getNodeKey(GroupTypeEnum.GROUP, parentGroupId)]);
   }
 
   function createGroup(groupId: number) {
@@ -353,15 +356,7 @@ function TreeHierarchyView(props: Props) {
   function renderGroupNode(node: TreeNode) {
     // The root group must not be removed or renamed
     const { id, name } = node;
-    // TODO remove?
-    // const hasExpandedSubgroup = anySatisfyDeep(
-    //   node.children,
-    //   (child) => child.expanded && child.type === GroupTypeEnum.GROUP,
-    // );
-    // const hasCollapsedSubgroup = anySatisfyDeep(
-    //   node.children,
-    //   (child) => !child.expanded && child.type === GroupTypeEnum.GROUP,
-    // );
+
     const isEditingDisabled = !props.allowUpdate;
     const hasSubgroup = anySatisfyDeep(
       node.children,
@@ -462,25 +457,25 @@ function TreeHierarchyView(props: Props) {
     // Make sure the displayed name is not empty
     const displayableName = name.trim() || "<Unnamed Group>";
     return (
-        <Dropdown
-          menu={menu}
-          placement="bottom"
-          // AutoDestroy is used to remove the menu from DOM and keep up the performance.
-          // destroyPopupOnHide should also be an option according to the docs, but
-          // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
-          autoDestroy
-          open={activeGroupDropdownId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-          onOpenChange={(isVisible, info) => {
-            if (info.source === "trigger") handleGroupDropdownMenuVisibility(id, isVisible);
-          }}
-          trigger={["contextMenu"]}
-        >
-          <span>
-            <FolderOutlined className="icon-margin-right" />
-            {displayableName}
-          </span>
-        </Dropdown>
+      <Dropdown
+        menu={menu}
+        placement="bottom"
+        // AutoDestroy is used to remove the menu from DOM and keep up the performance.
+        // destroyPopupOnHide should also be an option according to the docs, but
+        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
+        autoDestroy
+        open={activeGroupDropdownId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
+        onOpenChange={(isVisible, info) => {
+          if (info.source === "trigger") handleGroupDropdownMenuVisibility(id, isVisible);
+        }}
+        trigger={["contextMenu"]}
+      >
+        <span>
+          <FolderOutlined className="icon-margin-right" />
+          {displayableName}
+        </span>
+      </Dropdown>
     );
   }
 
@@ -579,11 +574,10 @@ function TreeHierarchyView(props: Props) {
         </Tooltip>
       ) : null;
 
-
     return (
       <div>
         <Dropdown
-          menu={isDropdownVisible ? createMenu(): {items: []}} //
+          menu={isDropdownVisible ? createMenu() : { items: [] }} //
           // AutoDestroy is used to remove the menu from DOM and keep up the performance.
           // destroyPopupOnHide should also be an option according to the docs, but
           // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
@@ -621,7 +615,10 @@ function TreeHierarchyView(props: Props) {
     return null;
   }
 
+  // checkedKeys includes all nodes with a "selected" checkbox
   const checkedKeys = deepFlatFilter(groupTree, (node) => node.isChecked).map((node) => node.key);
+
+  // selectedKeys is mainly used for highlighting, i.e. blueish background color
   const selectedKeys = props.selectedTrees.map((treeId) => getNodeKey(GroupTypeEnum.TREE, treeId));
 
   if (props.activeGroupId) selectedKeys.push(getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId));
@@ -656,7 +653,7 @@ function TreeHierarchyView(props: Props) {
             checkedKeys={checkedKeys}
             expandedKeys={expandedNodeKeys}
             selectedKeys={selectedKeys}
-            style={{ marginLeft: -14}}
+            style={{ marginLeft: -14 }}
             autoExpandParent
             checkable
             blockNode

@@ -88,6 +88,12 @@ mockRequire(
     },
   }),
 );
+mockRequire("libs/user_local_storage", {
+  getItem: _.noop,
+  setItem: _.noop,
+  removeItem: _.noop,
+  clear: _.noop,
+});
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);

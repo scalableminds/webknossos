@@ -1,5 +1,6 @@
 import { Model, Actions, TabSetNode } from "flexlayout-react";
 import type { BorderOpenStatus } from "oxalis/store";
+import { ModelConfig } from "./flex_layout_types";
 
 export function getMaximizedItemId(model: Model): string | null | undefined {
   const maximizedTabset = model.getMaximizedTabset();
@@ -67,4 +68,21 @@ export function getPositionStatusOf(tabSetNode: TabSetNode): NodePositionStatus 
     isLeftMost,
     isRightMost,
   };
+}
+
+// Checking whether the TDViewport is maximized in the layout config via
+// searching for the td viewport component in the json config.
+export function is3dViewportMaximized(modelConfig: ModelConfig) {
+  return modelConfig.layout.children.some((child) => {
+    return (
+      child.type === "row" &&
+      child.children.some((rowChild) => {
+        return (
+          rowChild.type === "tabset" &&
+          rowChild.maximized &&
+          rowChild.children?.[0]?.id === "TDView"
+        );
+      })
+    );
+  });
 }

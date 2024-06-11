@@ -1,7 +1,8 @@
 package backend
 
-import com.scalableminds.util.geometry.{Vec3Int, Vec3Double}
+import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.UserDefinedProperties.UserDefinedPropertyProto
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import org.scalatestplus.play._
@@ -167,7 +168,11 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
 
   "UpdateNodeSkeletonAction" should {
     "update the specified node" in {
-      val newNode = Dummies.createDummyNode(1)
+      val newNode = Dummies
+        .createDummyNode(1)
+        .copy(
+          userDefinedProperties = List(UserDefinedPropertyProto("myKey", numberValue = Some(5.0)),
+                                       UserDefinedPropertyProto("anotherKey", stringListValue = Seq("hello", "there"))))
       val updateNodeSkeletonAction = new UpdateNodeSkeletonAction(
         newNode.id,
         Vec3Int(newNode.position.x, newNode.position.y, newNode.position.z),
@@ -178,7 +183,11 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         Option(newNode.bitDepth),
         Option(newNode.interpolation),
         treeId = 1,
-        Dummies.timestamp
+        Dummies.timestamp,
+        None,
+        userDefinedProperties = Some(
+          List(UserDefinedProperty("myKey", numberValue = Some(5.0)),
+               UserDefinedProperty("anotherKey", stringListValue = Some(Seq("hello", "there")))))
       )
       val result = applyUpdateAction(updateNodeSkeletonAction)
       assert(result.trees.length == Dummies.skeletonTracing.trees.length)

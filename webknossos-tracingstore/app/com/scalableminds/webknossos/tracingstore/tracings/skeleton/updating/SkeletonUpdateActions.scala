@@ -217,7 +217,8 @@ case class CreateNodeSkeletonAction(id: Int,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
-                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                    userDefinedProperties: Option[Seq[UserDefinedProperty]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -233,7 +234,8 @@ case class CreateNodeSkeletonAction(id: Int,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
       createdTimestamp = timestamp,
-      additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
+      additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates),
+      userDefinedProperties = UserDefinedProperty.toProtoMultiple(userDefinedProperties)
     )
 
     def treeTransform(tree: Tree) = tree.withNodes(newNode +: tree.nodes)
@@ -261,7 +263,8 @@ case class UpdateNodeSkeletonAction(id: Int,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
-                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                    userDefinedProperties: Option[Seq[UserDefinedProperty]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -278,7 +281,8 @@ case class UpdateNodeSkeletonAction(id: Int,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
       createdTimestamp = timestamp,
-      additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
+      additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates),
+      userDefinedProperties = UserDefinedProperty.toProtoMultiple(userDefinedProperties)
     )
 
     def treeTransform(tree: Tree) =

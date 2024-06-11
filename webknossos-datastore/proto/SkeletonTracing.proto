@@ -3,6 +3,7 @@ syntax = "proto2";
 package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
+import "UserDefinedProperties.proto";
 
 message Node {
     required int32 id = 1;
@@ -15,6 +16,7 @@ message Node {
     required bool interpolation = 8;
     required int64 createdTimestamp = 9;
     repeated AdditionalCoordinateProto additionalCoordinates = 10;
+    repeated UserDefinedPropertyProto userDefinedProperties = 11;
 }
 
 message Edge {

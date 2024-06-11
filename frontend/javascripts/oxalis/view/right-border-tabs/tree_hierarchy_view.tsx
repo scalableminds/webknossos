@@ -160,9 +160,20 @@ function TreeHierarchyView(props: Props) {
     }
   }, [props.activeGroupId]);
 
-  function onExpand(expandedKeys: React.Key[]) {
+  const onExpand: TreeProps<TreeNode>["onExpand"] = (expandedKeys, info) => {
+    const clickedNode = info.node;
+
+    if (clickedNode.type === GroupTypeEnum.GROUP && info.expanded === false) {
+      // when collapsing a group, we need to collapse all its sub-gropus
+      const subGroupKeys = deepFlatFilter(
+        [clickedNode],
+        (node) => node.type === GroupTypeEnum.GROUP,
+      ).map((node) => node.key);
+      expandedKeys = _.without(expandedKeys, ...subGroupKeys);
+    }
+
     setExpandedNodeKeys(expandedKeys);
-  }
+  };
 
   const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
     const { id, type } = info.node;
@@ -577,6 +588,7 @@ function TreeHierarchyView(props: Props) {
     return (
       <div>
         <Dropdown
+          // only render the menu items when the dropdown menu is visible. Maybe this helps performance
           menu={isDropdownVisible ? createMenu() : { items: [] }} //
           // AutoDestroy is used to remove the menu from DOM and keep up the performance.
           // destroyPopupOnHide should also be an option according to the docs, but

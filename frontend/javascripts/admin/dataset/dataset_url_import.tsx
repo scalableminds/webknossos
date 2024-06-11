@@ -14,14 +14,12 @@ export function DatasetURLImport() {
     async () => {
       setDatastores(await getDatastores());
       setHasFetched(true);
-      console.log(datastores);
     },
     null,
     [],
   );
   const params = Utils.getUrlParamsObject();
   const datasetUri = _.has(params, "uri") ? params.uri : null;
-  console.log("datasetimport", datastores, hasFetched);
   const handleDatasetAdded = async (
     datasetAddType: DatasetAddType,
     datasetOrganization: string,

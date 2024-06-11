@@ -185,6 +185,9 @@ function DatasetAddRemoteView(props: Props) {
   const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
 
+  const isFormWithoutErrors =
+    form.getFieldsError().filter(({ errors }) => errors.length).length === 0;
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const targetFolderId = params.get("to");
@@ -193,11 +196,11 @@ function DatasetAddRemoteView(props: Props) {
 
   useEffect(() => {
     if (defaultDatasetUrl == null) return;
-    console.log("store me maybe")
-    if (!isDatasourceConfigStrFalsy && form.getFieldsError().filter(({ errors }) => errors.length).length === 0) {
+    if (!isDatasourceConfigStrFalsy && isFormWithoutErrors) {
+      console.log("no errors");
       handleStoreDataset();
     }
-  }, [defaultDatasetUrl, isDatasourceConfigStrFalsy, form.getFieldsError]);
+  }, [defaultDatasetUrl, isDatasourceConfigStrFalsy, isFormWithoutErrors]);
 
   const setDatasourceConfigStr = (dataSourceJson: string) => {
     form.setFieldsValue({ dataSourceJson });
@@ -208,9 +211,11 @@ function DatasetAddRemoteView(props: Props) {
   };
   async function handleStoreDataset() {
     // Sync simple with advanced and get newest datasourceJson
+    await Utils.sleep(500);
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
     await form.validateFields();
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
+    console.log("store me maybe", datasourceConfigStr);
 
     const datastoreToUse = uploadableDatastores.find(
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
@@ -276,7 +281,7 @@ function DatasetAddRemoteView(props: Props) {
               setDatasourceConfigStr={setDatasourceConfigStr}
               dataSourceEditMode={dataSourceEditMode}
               defaultUri={defaultDatasetUrl}
-            //maybe add onsuccess here? but thats on success of first form...
+              //maybe add onsuccess here? but thats on success of first form...
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -353,10 +358,7 @@ function DatasetAddRemoteView(props: Props) {
                         type="primary"
                         style={{ width: "100%" }}
                         onClick={handleStoreDataset}
-                        disabled={
-                          isDatasourceConfigStrFalsy ||
-                          !!form.getFieldsError().filter(({ errors }) => errors.length).length
-                        }
+                        disabled={isDatasourceConfigStrFalsy || !isFormWithoutErrors}
                       >
                         Import
                       </Button>

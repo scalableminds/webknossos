@@ -33,7 +33,6 @@ import { APIDataLayer, APIDataset, APIJobType } from "types/api_flow_types";
 import { useStartAndPollJob } from "admin/job/job_hooks";
 import { Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
-import { useEffect } from "react";
 
 const FormItem = Form.Item;
 

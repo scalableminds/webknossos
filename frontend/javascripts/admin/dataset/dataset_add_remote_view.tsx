@@ -281,7 +281,6 @@ function DatasetAddRemoteView(props: Props) {
               setDatasourceConfigStr={setDatasourceConfigStr}
               dataSourceEditMode={dataSourceEditMode}
               defaultUri={defaultDatasetUrl}
-              //maybe add onsuccess here? but thats on success of first form...
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -408,7 +407,7 @@ function AddRemoteLayer({
       );
       if (datasourceUrl != null) handleExplore();
     }
-  }, [defaultUri, form.setFieldValue, datasourceUrl != null]);
+  }, [defaultUri, datasourceUrl]);
 
   const getDefaultDatasetName = (url: string | null | undefined) => {
     let datasetname = "";

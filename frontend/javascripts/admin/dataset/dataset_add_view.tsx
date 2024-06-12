@@ -46,8 +46,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
     setOrganization(datasetOrganization);
     setDatasetName(uploadedDatasetName);
     setImportType(datasetAddType);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'boolean | null | undefined' is n... Remove this comment to see the full error message
-    setDatasetNeedsConversion(needsConversion);
+    if (needsConversion != null) setDatasetNeedsConversion(needsConversion);
   };
 
   const showAfterUploadContent = datasetName !== "";
@@ -268,7 +267,7 @@ export const getPostUploadModal = (
   organization: string,
   datasetName: string,
   setDatasetName: (arg0: string) => void,
-  history?,
+  history,
 ) => {
   return (
     <Modal

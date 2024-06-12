@@ -508,7 +508,7 @@ function NotificationIcon({
 }
 
 export const switchTo = async (org: APIOrganizationCompact) => {
-  Toast.info(`Switching to ${org.displayName || org.name}`);
+  Toast.info(`Switching to ${org.displayName || org.id}`);
 
   // If the user is currently at the datasets tab, the active folder is encoded
   // in the URI. Switching to another organization means that the folder id
@@ -519,7 +519,7 @@ export const switchTo = async (org: APIOrganizationCompact) => {
     window.history.replaceState({}, "", "/dashboard/datasets/");
   }
 
-  await switchToOrganization(org.name);
+  await switchToOrganization(org.id);
 };
 
 function OrganizationFilterInput({
@@ -570,18 +570,18 @@ function LoggedInAvatar({
 } & SubMenuProps) {
   const { firstName, lastName, organization: organizationId, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
-  const activeOrganization = usersOrganizations.find((org) => org.name === organizationId);
-  const switchableOrganizations = usersOrganizations.filter((org) => org.name !== organizationId);
+  const activeOrganization = usersOrganizations.find((org) => org.id === organizationId);
+  const switchableOrganizations = usersOrganizations.filter((org) => org.id !== organizationId);
   const orgDisplayName =
     activeOrganization != null
-      ? activeOrganization.displayName || activeOrganization.name
+      ? activeOrganization.displayName || activeOrganization.id
       : organizationId;
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
   const filteredOrganizations = Utils.filterWithSearchQueryAND(
     switchableOrganizations,
-    ["displayName", "name"],
+    ["displayName", "id"],
     organizationFilter,
   );
   const onEnterOrganization = () => {
@@ -651,9 +651,7 @@ function LoggedInAvatar({
               ? {
                   key: "manage-organization",
                   label: (
-                    <Link to={`/organizations/${activeOrganization.name}`}>
-                      Manage Organization
-                    </Link>
+                    <Link to={`/organizations/${activeOrganization.id}`}>Manage Organization</Link>
                   ),
                 }
               : null,
@@ -665,9 +663,9 @@ function LoggedInAvatar({
                   children: [
                     ...maybeOrganizationFilterInput,
                     ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
-                      key: org.name,
+                      key: org.id,
                       onClick: () => switchTo(org),
-                      label: org.displayName || org.name,
+                      label: org.displayName || org.id,
                     })),
                   ],
                 }

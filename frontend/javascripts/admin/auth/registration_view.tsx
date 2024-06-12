@@ -51,7 +51,7 @@ function RegistrationViewGeneric() {
         </Card>
         <RegistrationFormGeneric // The key is used to enforce a remount in case the organizationId changes.
           // That way, we ensure that the organization field is cleared.
-          key={organization.name}
+          key={organization.id}
           targetOrganization={organization}
           onRegistered={(isUserLoggedIn?: boolean) => {
             if (isUserLoggedIn) {

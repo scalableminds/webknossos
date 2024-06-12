@@ -1805,7 +1805,7 @@ export async function getUsersOrganizations(): Promise<Array<APIOrganizationComp
   const organizations: APIOrganizationCompact[] = await Request.receiveJSON(
     "/api/organizations?compact=true",
   );
-  const scmOrganization = organizations.find((org) => org.name === "scalable_minds");
+  const scmOrganization = organizations.find((org) => org.id === "scalable_minds");
   if (scmOrganization == null) {
     return organizations;
   }

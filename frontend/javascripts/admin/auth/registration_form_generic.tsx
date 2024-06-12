@@ -118,7 +118,7 @@ function RegistrationFormGeneric(props: Props) {
   // the user is about to join an existing organization
   const { inviteToken, targetOrganization, organizationIdToCreate, hidePrivacyStatement } = props;
   const targetOrganizationId =
-    organizationIdToCreate || (targetOrganization != null ? targetOrganization.name : null) || "";
+    organizationIdToCreate || (targetOrganization != null ? targetOrganization.id : null) || "";
   const defaultValues: Record<string, any> = {
     organization: targetOrganizationId,
     organizationDisplayName: targetOrganizationId,

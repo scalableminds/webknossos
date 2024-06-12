@@ -63,7 +63,7 @@ const OrganizationEditView = ({ organization }: Props) => {
 
   async function onFinish(formValues: FormValues) {
     await updateOrganization(
-      organization.name,
+      organization.id,
       formValues.displayName,
       formValues.newUserMailingList,
     );
@@ -97,14 +97,14 @@ const OrganizationEditView = ({ organization }: Props) => {
 
     if (isDeleteConfirmed) {
       setIsDeleting(true);
-      await deleteOrganization(organization.name);
+      await deleteOrganization(organization.id);
       setIsDeleting(false);
       window.location.replace(`${window.location.origin}/dashboard`);
     }
   }
 
   async function handleCopyNameButtonClicked(): Promise<void> {
-    await navigator.clipboard.writeText(organization.name);
+    await navigator.clipboard.writeText(organization.id);
     Toast.success("Copied organization name to the clipboard.");
   }
 
@@ -158,7 +158,7 @@ const OrganizationEditView = ({ organization }: Props) => {
             <Space.Compact>
               <Input
                 prefix={<IdcardOutlined />}
-                value={organization.name}
+                value={organization.id}
                 style={{
                   width: "calc(100% - 31px)",
                 }}

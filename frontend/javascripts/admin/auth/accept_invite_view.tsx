@@ -48,7 +48,7 @@ export default function AcceptInviteView({
 
   const targetOrganizationId =
     targetOrganization != null
-      ? targetOrganization.displayName || targetOrganization.name
+      ? targetOrganization.displayName || targetOrganization.id
       : "unknown";
 
   const onSuccessfulJoin = (userJustRegistered: boolean = false) => {
@@ -62,7 +62,7 @@ export default function AcceptInviteView({
       Toast.success(`You successfully joined ${targetOrganizationId}. Switching to it now...`);
 
       if (targetOrganization) {
-        switchToOrganization(targetOrganization.name);
+        switchToOrganization(targetOrganization.id);
       }
     }
   };

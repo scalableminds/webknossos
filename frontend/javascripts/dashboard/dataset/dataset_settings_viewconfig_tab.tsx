@@ -24,7 +24,7 @@ import {
   settings,
   settingsTooltips,
 } from "messages";
-import type { DatasetLayerConfiguration } from "oxalis/store";
+import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 import { BLEND_MODES } from "oxalis/constants";
 import ColorLayerOrderingTable from "./color_layer_ordering_component";
@@ -38,10 +38,10 @@ async function validateDefaultMappings(
   dataStoreURL: string,
   datasetId: APIDatasetId,
 ) {
-  let config = null;
+  let config = {} as DatasetConfiguration["layers"];
   try {
     config = JSON.parse(configStr);
-  } catch (e) {
+  } catch (e: any) {
     return Promise.reject(new Error("Invalid JSON format for : " + e.message));
   }
   const layerNamesWithDefaultMappings = Object.keys(config).filter(

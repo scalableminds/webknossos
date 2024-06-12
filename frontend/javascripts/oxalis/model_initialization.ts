@@ -223,12 +223,7 @@ export async function initialize(
     Store.dispatch(setViewModeAction(mode));
   }
 
-  const defaultActiveMappingsPerLayer = annotationSpecificDatasetSettings.activeMappingByLayer;
-  const defaultState = determineDefaultState(
-    UrlManager.initialState,
-    serverTracings,
-    defaultActiveMappingsPerLayer,
-  );
+  const defaultState = determineDefaultState(UrlManager.initialState, serverTracings);
   // Don't override zoom when swapping the task
   applyState(defaultState, !initialFetch);
 
@@ -565,7 +560,6 @@ function validateVolumeLayers(
 function determineDefaultState(
   urlState: PartialUrlManagerState,
   tracings: Array<ServerTracing>,
-  defaultActiveMappingsPerLayer: DatasetConfiguration["activeMappingByLayer"],
 ): PartialUrlManagerState {
   const {
     position: urlStatePosition,
@@ -627,17 +621,16 @@ function determineDefaultState(
   }
 
   const stateByLayer = urlStateByLayer ?? {};
-
-  // Add the default mapping to the state for each layer that does not have a mapping set in its URL settings
-  for (const layerName in defaultActiveMappingsPerLayer) {
+  // Add the default mapping to the state for each layer that does not have a mapping set in its URL settings.
+  for (const layerName in datasetConfiguration.layers) {
     if (!(layerName in stateByLayer)) {
       stateByLayer[layerName] = {};
     }
-
-    if (stateByLayer[layerName].mappingInfo == null) {
+    const { defaultMapping } = datasetConfiguration.layers[layerName];
+    if (stateByLayer[layerName].mappingInfo == null && defaultMapping != null) {
       stateByLayer[layerName].mappingInfo = {
-        mappingName: defaultActiveMappingsPerLayer[layerName].name,
-        mappingType: defaultActiveMappingsPerLayer[layerName].type,
+        mappingName: defaultMapping.name,
+        mappingType: defaultMapping.type,
       };
     }
   }
@@ -709,8 +702,6 @@ export function applyState(state: PartialUrlManagerState, ignoreZoom: boolean = 
 }
 
 async function applyLayerState(stateByLayer: UrlStateByLayer) {
-  console.log("applying", stateByLayer);
-  debugger;
   for (const layerName of Object.keys(stateByLayer)) {
     const layerState = stateByLayer[layerName];
     let effectiveLayerName;

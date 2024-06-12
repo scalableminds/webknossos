@@ -1350,19 +1350,34 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             position,
             zoom,
           });
+          const updatedLayers = {
+            ...completeDatasetConfiguration.layers,
+          } as DatasetConfiguration["layers"];
           Object.keys(activeMappingByLayer).forEach((layerName) => {
-            Object.assign(
-              {},
-              completeDatasetConfiguration.layers[layerName],
-              activeMappingByLayer[layerName].mappingStatus === MappingStatusEnum.ENABLED
-                ? {
-                    name: activeMappingByLayer[layerName].mappingName,
-                    type: activeMappingByLayer[layerName].mappingType,
-                  }
-                : null,
-            );
+            const mappingInfo = activeMappingByLayer[layerName];
+            if (
+              mappingInfo.mappingStatus === MappingStatusEnum.ENABLED &&
+              mappingInfo.mappingName != null
+            ) {
+              updatedLayers[layerName] = {
+                ...updatedLayers[layerName],
+                defaultMapping: {
+                  name: mappingInfo.mappingName,
+                  type: mappingInfo.mappingType,
+                },
+              };
+            } else {
+              updatedLayers[layerName] = {
+                ...updatedLayers[layerName],
+                defaultMapping: null,
+              };
+            }
           });
-          await updateDatasetDefaultConfiguration(dataset, completeDatasetConfiguration);
+          const updatedConfiguration = {
+            ...completeDatasetConfiguration,
+            layers: updatedLayers,
+          };
+          await updateDatasetDefaultConfiguration(dataset, updatedConfiguration);
           Toast.success("Successfully saved the current view configuration as default.");
         } catch (error) {
           Toast.error(

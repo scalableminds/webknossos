@@ -64,9 +64,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def assertNewDatasetName(name: String, organizationId: String): Fox[Unit] =
     datasetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
-  def createPreliminaryDataset(datasetName: String, organizationName: String, dataStore: DataStore): Fox[Dataset] = {
-    val unreportedDatasource = UnusableDataSource(DataSourceId(datasetName, organizationName), notYetUploadedStatus)
-    createDataset(dataStore, organizationName, unreportedDatasource)
+  def createPreliminaryDataset(datasetName: String, organizationId: String, dataStore: DataStore): Fox[Dataset] = {
+    val unreportedDatasource = UnusableDataSource(DataSourceId(datasetName, organizationId), notYetUploadedStatus)
+    createDataset(dataStore, organizationId, unreportedDatasource)
   }
 
   private def createDataset(
@@ -81,7 +81,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       Json.obj("species" -> "species name", "brainRegion" -> "brain region", "acquisition" -> "acquisition method")
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
-      organization <- organizationDAO.findOneByName(owningOrganization)
+      organization <- organizationDAO.findOne(owningOrganization)
       orbanizationRootFolder <- folderDAO.findOne(organization._rootFolder)
       dataset = Dataset(
         newId,
@@ -117,7 +117,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     Fox
       .serialCombined(groupedByOrga) { orgaTuple: (String, List[InboxDataSource]) =>
         organizationDAO
-          .findOneByName(orgaTuple._1)
+          .findOne(orgaTuple._1)
           .futureBox
           .flatMap {
             case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
@@ -164,11 +164,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     else
       for {
         _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-        _ <- datasetDAO.updateDataSourceByNameAndOrganizationName(foundDataset._id,
-                                                                  dataStore.name,
-                                                                  dataSource.hashCode,
-                                                                  dataSource,
-                                                                  dataSource.isUsable)
+        _ <- datasetDAO.updateDataSourceByNameAndOrganization(foundDataset._id,
+                                                              dataStore.name,
+                                                              dataSource.hashCode,
+                                                              dataSource,
+                                                              dataSource.isUsable)
       } yield foundDataset._id
 
   private def updateDataSourceDifferentDataStore(
@@ -185,11 +185,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         )
         for {
           _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-          _ <- datasetDAO.updateDataSourceByNameAndOrganizationName(foundDataset._id,
-                                                                    dataStore.name,
-                                                                    dataSource.hashCode,
-                                                                    dataSource,
-                                                                    dataSource.isUsable)(GlobalAccessContext)
+          _ <- datasetDAO.updateDataSourceByNameAndOrganization(foundDataset._id,
+                                                                dataStore.name,
+                                                                dataSource.hashCode,
+                                                                dataSource,
+                                                                dataSource.isUsable)(GlobalAccessContext)
         } yield Some(foundDataset._id)
       } else {
         logger.info(

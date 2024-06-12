@@ -93,13 +93,6 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseFirst(r, organizationId)
     } yield parsed
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Organization] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE name = $name AND $accessQuery".as[OrganizationsRow])
-      parsed <- parseFirst(r, name)
-    } yield parsed
-
   def insertOne(o: Organization): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.organizations
@@ -121,9 +114,9 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- ObjectId.fromString(r)
     } yield parsed
 
-  def findOrganizationNameForAnnotation(annotationId: ObjectId): Fox[String] =
+  def findOrganizationIdForAnnotation(annotationId: ObjectId): Fox[String] =
     for {
-      rList <- run(q"""SELECT o.name
+      rList <- run(q"""SELECT o._id
                        FROM webknossos.annotations_ a
                        JOIN webknossos.datasets_ d ON a._dataset = d._id
                        JOIN webknossos.organizations_ o ON d._organization = o._id

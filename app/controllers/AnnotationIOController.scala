@@ -103,14 +103,14 @@ class AnnotationIOController @Inject()(
           request.body.dataParts("createGroupForEachFile").headOption.contains("true")
         val overwritingDatasetName: Option[String] =
           request.body.dataParts.get("datasetName").flatMap(_.headOption)
-        val overwritingOrganizationName: Option[String] =
-          request.body.dataParts.get("organizationName").flatMap(_.headOption)
+        val overwritingOrganizationId: Option[String] =
+          request.body.dataParts.get("organizationId").flatMap(_.headOption)
         val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         val parsedFiles =
           annotationUploadService.extractFromFiles(attachedFiles,
                                                    useZipName = true,
                                                    overwritingDatasetName,
-                                                   overwritingOrganizationName)
+                                                   overwritingOrganizationId)
         val parsedFilesWrapped =
           annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults, shouldCreateGroupForEachFile)
         val parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)
@@ -225,12 +225,12 @@ class AnnotationIOController @Inject()(
       wkUrl: String)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Dataset] =
     for {
       datasetName <- assertAllOnSameDataset(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
-      organizationNameOpt <- assertAllOnSameOrganization(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
-      organizationIdOpt <- Fox.runOptional(organizationNameOpt) {
-        organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
+      organizationIdOpt <- assertAllOnSameOrganization(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
+      organizationIdOpt <- Fox.runOptional(organizationIdOpt) {
+        organizationDAO.findOne(_)(GlobalAccessContext).map(_._id)
       } ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
-               Messages("organization.notFound.wrongHost", organizationNameOpt.getOrElse(""), wkUrl, conf.Http.uri)
-             } else { Messages("organization.notFound", organizationNameOpt.getOrElse("")) }) ~>
+               Messages("organization.notFound.wrongHost", organizationIdOpt.getOrElse(""), wkUrl, conf.Http.uri)
+             } else { Messages("organization.notFound", organizationIdOpt.getOrElse("")) }) ~>
         NOT_FOUND
       organizationId <- Fox.fillOption(organizationIdOpt) {
         datasetDAO.getOrganizationIdForDataset(datasetName)(GlobalAccessContext)
@@ -277,11 +277,11 @@ class AnnotationIOController @Inject()(
 
   private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
                                           volumes: List[VolumeTracing]): Fox[Option[String]] = {
-    // Note that organizationNames are optional. Tracings with no organization attribute are ignored here
-    val organizationNames = skeletons.flatMap(_.organizationName) ::: volumes.flatMap(_.organizationName)
+    // Note that organizationIds are optional. Tracings with no organization attribute are ignored here
+    val organizationIds = skeletons.flatMap(_.organizationId) ::: volumes.flatMap(_.organizationId)
     for {
-      _ <- Fox.runOptional(organizationNames.headOption)(name => bool2Fox(organizationNames.forall(_ == name)))
-    } yield organizationNames.headOption
+      _ <- Fox.runOptional(organizationIds.headOption)(name => bool2Fox(organizationIds.forall(_ == name)))
+    } yield organizationIds.headOption
   }
 
   private def adaptVolumeTracingsToFallbackLayer(volumeLayersGrouped: List[List[UploadedVolumeLayer]],
@@ -411,9 +411,7 @@ class AnnotationIOController @Inject()(
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
-    def skeletonToTemporaryFile(dataset: Dataset,
-                                annotation: Annotation,
-                                organizationName: String): Fox[TemporaryFile] =
+    def skeletonToTemporaryFile(dataset: Dataset, annotation: Annotation, organizationId: String): Fox[TemporaryFile] =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
@@ -426,7 +424,7 @@ class AnnotationIOController @Inject()(
           Some(annotation),
           dataset.scale,
           None,
-          organizationName,
+          organizationId,
           conf.Http.uri,
           dataset.name,
           Some(user),
@@ -443,7 +441,7 @@ class AnnotationIOController @Inject()(
     def volumeOrHybridToTemporaryFile(dataset: Dataset,
                                       annotation: Annotation,
                                       name: String,
-                                      organizationName: String): Fox[TemporaryFile] =
+                                      organizationId: String): Fox[TemporaryFile] =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
@@ -466,7 +464,7 @@ class AnnotationIOController @Inject()(
           Some(annotation),
           dataset.scale,
           None,
-          organizationName,
+          organizationId,
           conf.Http.uri,
           dataset.name,
           Some(user),

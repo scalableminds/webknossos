@@ -235,7 +235,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             SELECT
               d._id,
               d.name,
-              o.name,
+              o._id,
               d._folder,
               d.isUsable,
               d.displayName,
@@ -549,13 +549,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     } yield ()
   }
 
-  def updateDataSourceByNameAndOrganizationName(id: ObjectId,
-                                                dataStoreName: String,
-                                                inboxSourceHash: Int,
-                                                source: InboxDataSource,
-                                                isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateDataSourceByNameAndOrganization(id: ObjectId,
+                                            dataStoreName: String,
+                                            inboxSourceHash: Int,
+                                            source: InboxDataSource,
+                                            isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOneByName(source.id.team)
+      organization <- organizationDAO.findOne(source.id.team)
       defaultViewConfiguration: Option[JsValue] = source.defaultViewConfiguration.map(Json.toJson(_))
       _ <- run(q"""UPDATE webknossos.datasets
                    SET

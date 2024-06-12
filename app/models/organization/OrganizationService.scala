@@ -101,13 +101,13 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
 
   def createOrganization(organizationIdOpt: Option[String], organizationDisplayName: String): Fox[Organization] =
     for {
-      normalizedDisplayName <- TextUtils.normalizeStrong(organizationDisplayName).toFox ?~> "organization.name.invalid"
+      normalizedDisplayName <- TextUtils.normalizeStrong(organizationDisplayName).toFox ?~> "organization.id.invalid"
       organizationId = organizationIdOpt
         .flatMap(TextUtils.normalizeStrong)
         .getOrElse(normalizedDisplayName)
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).futureBox
-      _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
+      _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName)

@@ -78,8 +78,7 @@ case class UserCompactInfo(
     experienceValuesAsArrayLiteral: String,
     experienceDomainsAsArrayLiteral: String,
     lastActivity: Instant,
-    organizationId: ObjectId,
-    organizationName: String,
+    organizationId: String,
     novelUserExperienceInfos: String,
     selectedTheme: String,
     created: Instant,
@@ -202,7 +201,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     import prs._
     // format: off
     UserCompactInfo(<<[ObjectId],<<[ObjectId],<<[String],<<[String],<<[String],<<[String],<<[Boolean],<<[Boolean],
-      <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],<<[ObjectId],
+      <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],
       <<[String],<<[String],<<[String],<<[Instant],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean]
     )
     // format: on
@@ -271,7 +270,6 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             aux.experience_domains,
             u.lastActivity,
             o._id,
-            o.name,
             m.novelUserExperienceinfos,
             m.selectedTheme,
             u.created,

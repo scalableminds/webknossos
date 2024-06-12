@@ -61,7 +61,7 @@ class WKRemoteDataStoreController @Inject()(
         val uploadInfo = request.body
         for {
           user <- bearerTokenService.userForToken(token)
-          organization <- organizationDAO.findOneByName(uploadInfo.organization)(GlobalAccessContext) ?~> Messages(
+          organization <- organizationDAO.findOne(uploadInfo.organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             uploadInfo.organization) ~> NOT_FOUND
           usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
@@ -85,9 +85,9 @@ class WKRemoteDataStoreController @Inject()(
   private def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier,
                                   requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOneByName(layerIdentifier.organizationName)(GlobalAccessContext) ?~> Messages(
+      organization <- organizationDAO.findOne(layerIdentifier.organizationId)(GlobalAccessContext) ?~> Messages(
         "organization.notFound",
-        layerIdentifier.organizationName) ~> NOT_FOUND
+        layerIdentifier.organizationId) ~> NOT_FOUND
       dataset <- datasetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
         AuthorizedAccessContext(requestingUser)) ?~> Messages("dataset.notFound", layerIdentifier.dataSetName)
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)

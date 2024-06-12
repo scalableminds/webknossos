@@ -48,10 +48,10 @@ class OrganizationController @Inject()(
     }
   }
 
-  def get(organizationName: String): Action[AnyContent] =
+  def get(organizationId: String): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        org <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
+        org <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
         js <- organizationService.publicWrites(org, request.identity)
       } yield {
         Ok(Json.toJson(js))
@@ -150,12 +150,12 @@ class OrganizationController @Inject()(
     } yield Ok
   }
 
-  def update(organizationName: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
+  def update(organizationId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(organizationUpdateReads) {
       case (displayName, newUserMailingList) =>
         for {
-          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                       organizationName) ~> NOT_FOUND
+          organization <- organizationDAO
+            .findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
           _ <- bool2Fox(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
           _ <- organizationDAO.updateFields(organization._id, displayName, newUserMailingList)
           updated <- organizationDAO.findOne(organization._id)
@@ -164,10 +164,10 @@ class OrganizationController @Inject()(
     }
   }
 
-  def delete(organizationName: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def delete(organizationId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                   organizationName) ~> NOT_FOUND
+      organization <- organizationDAO
+        .findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
       _ <- bool2Fox(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
       _ = logger.info(s"Deleting organization ${organization._id}")
       // _ <- organizationDAO.deleteOneById(organization._id) TODO
@@ -177,13 +177,12 @@ class OrganizationController @Inject()(
     } yield Ok
   }
 
-  def addUser(organizationName: String): Action[String] =
+  def addUser(organizationId: String): Action[String] =
     sil.SecuredAction.async(validateJson[String]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
         multiUser <- multiUserDAO.findOneByEmail(request.body)
-        organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
-                                                                                     organizationName) ~> NOT_FOUND
+        organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
         user <- userDAO.findFirstByMultiUser(multiUser._id)
         user <- userService.joinOrganization(user, organization._id, autoActivate = true, isAdmin = false)
       } yield Ok(user._id.toString)

@@ -71,7 +71,7 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               annotation: Annotation,
                               user: User,
                               taskOpt: Option[Task],
-                              organizationName: String,
+                              organizationId: String,
                               datasetName: String)
 
 // Used to pass duplicate properties when creating a new tracing to avoid masking them.
@@ -137,7 +137,7 @@ class AnnotationService @Inject()(
 
   private def createVolumeTracing(
       dataSource: DataSource,
-      datasetOrganizationName: String,
+      datasetOrganizationId: String,
       datasetDataStore: DataStore,
       fallbackLayer: Option[SegmentationLayer],
       boundingBox: Option[BoundingBox] = None,
@@ -155,7 +155,7 @@ class AnnotationService @Inject()(
       remoteDatastoreClient = new WKRemoteDataStoreClient(datasetDataStore, rpc)
       fallbackLayerHasSegmentIndex <- fallbackLayer match {
         case Some(layer) =>
-          remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationName, dataSource.id.name, layer.name)
+          remoteDatastoreClient.hasSegmentIndexFile(datasetOrganizationId, dataSource.id.name, layer.name)
         case None => Fox.successful(false)
       }
     } yield
@@ -172,7 +172,7 @@ class AnnotationService @Inject()(
         combineLargestSegmentIdsByPrecedence(fromNml = None, fromFallbackLayer = fallbackLayer.map(_.largestSegmentId)),
         0,
         VolumeTracingDefaults.zoomLevel,
-        organizationName = Some(datasetOrganizationName),
+        organizationId = Some(datasetOrganizationId),
         mappingName = mappingName,
         resolutions = resolutionsRestricted.map(vec3IntToProto),
         hasSegmentIndex = Some(fallbackLayer.isEmpty || fallbackLayerHasSegmentIndex),
@@ -257,7 +257,7 @@ class AnnotationService @Inject()(
             val skeleton = SkeletonTracingDefaults.createInstance.copy(
               datasetName = dataset.name,
               editPosition = dataSource.center,
-              organizationName = Some(datasetOrganizationId),
+              organizationId = Some(datasetOrganizationId),
               additionalAxes = AdditionalAxis.toProto(dataSource.additionalAxesUnion)
             )
             val skeletonAdapted = oldPrecedenceLayerProperties.map { p =>
@@ -662,7 +662,7 @@ class AnnotationService @Inject()(
                                 annotation,
                                 user,
                                 taskOpt,
-                                organizationName,
+                                organizationId,
                                 datasetName) =>
           for {
             fetchedAnnotationLayersForAnnotation <- FetchedAnnotationLayer.layersFromTracings(skeletonTracingIdOpt,
@@ -675,7 +675,7 @@ class AnnotationService @Inject()(
               Some(annotation),
               scaleOpt,
               Some(name + "_data.zip"),
-              organizationName,
+              organizationId,
               conf.Http.uri,
               datasetName,
               Some(user),
@@ -699,7 +699,7 @@ class AnnotationService @Inject()(
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"
         name <- savedTracingInformationHandler.nameForAnnotation(annotation)
         dataset <- datasetDAO.findOne(annotation._dataset)
-        organizationName <- organizationDAO.findOrganizationNameForAnnotation(annotation._id)
+        organizationId <- organizationDAO.findOrganizationIdForAnnotation(annotation._id)
         skeletonTracingIdOpt <- annotation.skeletonTracingId
         volumeTracingIdOpt <- annotation.volumeTracingId
       } yield
@@ -713,7 +713,7 @@ class AnnotationService @Inject()(
                            annotation,
                            user,
                            taskOpt,
-                           organizationName,
+                           organizationId,
                            dataset.name)
 
     def getSkeletonTracings(datasetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[SkeletonTracing]]] =

@@ -134,7 +134,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
             // if dataSourceId is empty, the request asks if the user may administrate in *any* (i.e. their own) organization
             relevantOrganization <- if (dataSourceId.team.isEmpty)
               Fox.successful(user._organization)
-            else organizationDAO.findOneByName(dataSourceId.team).map(_._id)
+            else organizationDAO.findOne(dataSourceId.team).map(_._id)
             isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, relevantOrganization)
           } yield UserAccessAnswer(isTeamManagerOrAdmin || user.isDatasetManager)
         case _ => Fox.successful(UserAccessAnswer(granted = false, Some("invalid access token")))

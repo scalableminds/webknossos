@@ -14,7 +14,7 @@ trait MeshMappingHelper {
   protected val binaryDataServiceHolder: BinaryDataServiceHolder
 
   protected def segmentIdsForAgglomerateIdIfNeeded(
-      organizationName: String,
+      organizationId: String,
       datasetName: String,
       dataLayerName: String,
       targetMappingName: Option[String],
@@ -34,7 +34,7 @@ trait MeshMappingHelper {
         // Mapping selected, but meshfile does not have matching mapping name in its metadata,
         // assume agglomerate id, fetch oversegmentation segment ids for it
         val agglomerateFileKey = AgglomerateFileKey(
-          organizationName,
+          organizationId,
           datasetName,
           dataLayerName,
           mappingName

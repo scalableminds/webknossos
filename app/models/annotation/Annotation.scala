@@ -344,7 +344,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val typ = AnnotationType.fromString(<<[String]).getOrElse(AnnotationType.Explorational)
     val visibility = AnnotationVisibility.fromString(<<[String]).getOrElse(AnnotationVisibility.Internal)
     val tracingTime = Option(<<[Long])
-    val organizationName = <<[String]
+    val organizationId = <<[String]
     val tracingIds = parseArrayLiteral(<<[String])
     val annotationLayerNames = parseArrayLiteral(<<[String])
     val annotationLayerTypes = parseArrayLiteral(<<[String])
@@ -354,7 +354,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     // format: off
     AnnotationCompactInfo(id, typ, name,description,ownerId,ownerFirstName,ownerLastName, othersMayEdit,teamIds,
       teamNames,teamOrganizationIds,modified,tags,state,isLockedByOwner,dataSetName,visibility,tracingTime,
-      organizationName,tracingIds,annotationLayerNames,annotationLayerTypes,annotationLayerStatistics
+      organizationId,tracingIds,annotationLayerNames,annotationLayerTypes,annotationLayerStatistics
     )
     // format: on
   }
@@ -408,7 +408,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                     a.typ,
                     a.visibility,
                     a.tracingtime,
-                    o.name,
+                    o._id,
                     ARRAY_REMOVE(ARRAY_AGG(al.tracingid), null) AS tracing_ids,
                     ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
                     ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
@@ -425,7 +425,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                     a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
                     u.firstname, u.lastname,
                     teams_agg.team_ids, teams_agg.team_names, teams_agg.team_organization_ids,
-                    d.name, o.name
+                    d.name, o._id
                   ORDER BY a._id DESC
                   LIMIT $limit
                   OFFSET ${pageNumber * limit}"""

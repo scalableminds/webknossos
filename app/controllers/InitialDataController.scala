@@ -212,7 +212,7 @@ Samplecountry
 
   private def insertOrganization(): Fox[Unit] =
     organizationDAO
-      .findOneByName(defaultOrganization._id)
+      .findOne(defaultOrganization._id)
       .futureBox
       .flatMap {
         case Full(_) => Fox.successful(())

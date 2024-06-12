@@ -294,6 +294,25 @@ export function startMitochondriaInferralJob(
     },
   );
 }
+
+export function startAlignSectionsJob(
+  organizationName: string,
+  datasetName: string,
+  layerName: string,
+  newDatasetName: string,
+): Promise<APIJob> {
+  const urlParams = new URLSearchParams({
+    layerName,
+    newDatasetName,
+  });
+  return Request.receiveJSON(
+    `/api/jobs/run/alignSections/${organizationName}/${datasetName}?${urlParams.toString()}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
 type AiModelCategory = "em_neurons" | "em_nuclei";
 
 type AiModelTrainingAnnotationSpecification = {

@@ -228,6 +228,20 @@ function JobListView() {
         </span>
       );
     } else if (
+      job.type === APIJobType.ALIGN_SECTIONS &&
+      job.organizationName &&
+      job.datasetName &&
+      job.layerName
+    ) {
+      return (
+        <span>
+          Aligned sections for layer {job.layerName} of{" "}
+          <Link to={`/datasets/${job.organizationName}/${job.datasetName}/view`}>
+            {job.datasetName}
+          </Link>{" "}
+        </span>
+      );
+    } else if (
       job.type === APIJobType.MATERIALIZE_VOLUME_ANNOTATION &&
       job.organizationName &&
       job.datasetName
@@ -271,7 +285,8 @@ function JobListView() {
       );
     } else if (
       job.type === APIJobType.CONVERT_TO_WKW ||
-      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE
+      job.type === APIJobType.COMPUTE_SEGMENT_INDEX_FILE ||
+      job.type === APIJobType.ALIGN_SECTIONS
     ) {
       return (
         <span>

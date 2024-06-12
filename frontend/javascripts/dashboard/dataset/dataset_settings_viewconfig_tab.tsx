@@ -41,7 +41,6 @@ export default function DatasetSettingsViewConfigTab(props: {
   const [availableMappingsPerLayer, setAvailableMappingsPerLayer] = useState(
     {} as Record<string, [string[], string[]]>,
   );
-  console.log("availableMappingsPerLayer", availableMappingsPerLayer);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   const validateDefaultMappings = useMemo(
@@ -58,7 +57,6 @@ export default function DatasetSettingsViewConfigTab(props: {
 
       const maybeMappingRequests = layerNamesWithDefaultMappings.map(async (layerName) => {
         if (layerName in availableMappingsPerLayer) {
-          console.log("using from cache", layerName);
           return availableMappingsPerLayer[layerName];
         }
         const jsonAndAgglomerateMappings = await Promise.all([

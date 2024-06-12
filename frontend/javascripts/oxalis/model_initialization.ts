@@ -626,11 +626,11 @@ function determineDefaultState(
     if (!(layerName in stateByLayer)) {
       stateByLayer[layerName] = {};
     }
-    const { defaultMapping } = datasetConfiguration.layers[layerName];
-    if (stateByLayer[layerName].mappingInfo == null && defaultMapping != null) {
+    const { mapping } = datasetConfiguration.layers[layerName];
+    if (stateByLayer[layerName].mappingInfo == null && mapping != null) {
       stateByLayer[layerName].mappingInfo = {
-        mappingName: defaultMapping.name,
-        mappingType: defaultMapping.type,
+        mappingName: mapping.name,
+        mappingType: mapping.type,
       };
     }
   }

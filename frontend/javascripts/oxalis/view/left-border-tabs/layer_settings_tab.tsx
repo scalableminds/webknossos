@@ -1361,7 +1361,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             ) {
               updatedLayers[layerName] = {
                 ...updatedLayers[layerName],
-                defaultMapping: {
+                mapping: {
                   name: mappingInfo.mappingName,
                   type: mappingInfo.mappingType,
                 },
@@ -1369,7 +1369,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             } else {
               updatedLayers[layerName] = {
                 ...updatedLayers[layerName],
-                defaultMapping: null,
+                mapping: null,
               };
             }
           });

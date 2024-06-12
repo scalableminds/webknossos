@@ -45,7 +45,7 @@ async function validateDefaultMappings(
     return Promise.reject(new Error("Invalid JSON format for : " + e.message));
   }
   const layerNamesWithDefaultMappings = Object.keys(config).filter(
-    (layerName) => config[layerName].defaultMapping != null,
+    (layerName) => config[layerName].mapping != null,
   );
 
   const mappingRequests = layerNamesWithDefaultMappings.map(async (layerName) =>
@@ -58,8 +58,8 @@ async function validateDefaultMappings(
   const errors = layerNamesWithDefaultMappings
     .map((layerName, index) => {
       const [mappingsForLayer, agglomeratesForLayer] = mappings[index];
-      const mappingType = config[layerName]?.defaultMapping?.type;
-      const mappingName = config[layerName]?.defaultMapping?.name;
+      const mappingType = config[layerName]?.mapping?.type;
+      const mappingName = config[layerName]?.mapping?.name;
       const doesMappingExist =
         mappingType === "HDF5"
           ? agglomeratesForLayer.some((agglomerate) => agglomerate === mappingName)
@@ -112,8 +112,8 @@ export default function DatasetSettingsViewConfigTab(props: {
       "Only for color layers",
       "The color value range between which color values are interpolated and shown.",
     ],
-    defaultMapping: [
-      "Default active Mapping",
+    mapping: [
+      "Active Mapping",
       "The mapping whose type and name is active by default. This field is an object with the keys 'type' and 'name' like {name: 'agglomerate_65', type: 'HDF5'}.",
     ],
   };

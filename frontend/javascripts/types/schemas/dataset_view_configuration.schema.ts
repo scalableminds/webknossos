@@ -14,7 +14,7 @@ export function getDefaultLayerViewConfiguration(
     isDisabled: false,
     isInverted: false,
     isInEditMode: false,
-    defaultMapping: null,
+    mapping: null,
   };
   return { ...defaultLayerViewConfiguration, ...dynamicDefault };
 }
@@ -65,7 +65,7 @@ export const layerViewConfiguration = {
   isInEditMode: {
     type: "boolean",
   },
-  defaultMapping: {
+  mapping: {
     type: ["object", "null"],
     properties: {
       name: {

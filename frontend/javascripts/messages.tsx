@@ -93,7 +93,7 @@ export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfigura
   isInverted: "Inverted Layer",
   isInEditMode: "Configuration Mode",
   gammaCorrectionValue: "Gamma Correction",
-  defaultMapping: "Default Mapping",
+  mapping: "Active Mapping",
 };
 export const layerViewConfigurationTooltips: Partial<
   Record<keyof DatasetLayerConfiguration, string>

@@ -295,7 +295,7 @@ export type DatasetLayerConfiguration = {
   readonly isInverted: boolean;
   readonly isInEditMode: boolean;
   readonly gammaCorrectionValue: number;
-  readonly defaultMapping?: { name: string; type: MappingType } | null | undefined;
+  readonly mapping?: { name: string; type: MappingType } | null | undefined;
 };
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
 

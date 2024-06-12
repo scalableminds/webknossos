@@ -148,7 +148,6 @@ function ensureValidScaleOnInferredDataSource(
     if (
       segmentationLayerSettings != null &&
       savedSegmentationLayerSettings != null &&
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'largestSegmentId' does not exist on type... Remove this comment to see the full error message
       segmentationLayerSettings.largestSegmentId === 0 && // Flow needs this additional check to understand that segmentationLayerSettings is for the segmentation layer.
       savedSegmentationLayerSettings.category === "segmentation" &&
       segmentationLayerSettings.category === "segmentation"

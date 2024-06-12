@@ -16,7 +16,7 @@ import {
   MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 type GroupNode = {
-  children: Array<GroupNode>;
+  children: GroupNode[];
   groupId: number | null | undefined;
   parent: GroupNode | null | undefined;
 };
@@ -29,7 +29,7 @@ function buildTreeGroupHashMap(skeletonTracing: SkeletonTracing): Record<number,
     parent: null,
   };
 
-  function createSubTree(subTreeRoot: GroupNode, children: Array<TreeGroup>) {
+  function createSubTree(subTreeRoot: GroupNode, children: TreeGroup[]) {
     for (const child of children) {
       const childNode = {
         children: [],
@@ -62,9 +62,9 @@ function buildTreeGroupHashMap(skeletonTracing: SkeletonTracing): Record<number,
 function findCommonAncestor(
   treeIdMap: TreeMap,
   groupIdMap: Record<number, GroupNode>,
-  toggleActions: Array<UpdateTreeVisibilityUpdateAction>,
+  toggleActions: UpdateTreeVisibilityUpdateAction[],
 ): number | undefined {
-  function getAncestorPath(groupId: number | null | undefined): Array<number> {
+  function getAncestorPath(groupId: number | null | undefined): number[] {
     const path = [];
     let currentGroupNode: GroupNode | null | undefined =
       groupIdMap[groupId == null ? MISSING_GROUP_ID : groupId];
@@ -114,13 +114,10 @@ function isCommonAncestorToggler(
 ): [boolean, Tree[], number] {
   const groupToTreesMap = createGroupToTreesMap(skeletonTracing.trees);
   const groupWithSubgroups = getGroupByIdWithSubgroups(skeletonTracing.treeGroups, commonAncestor);
-  const allTreesOfAncestor: Array<Tree> =
+  const allTreesOfAncestor: Tree[] =
     groupWithSubgroups.length === 0
       ? _.values(skeletonTracing.trees)
-      : _.flatMap(
-          groupWithSubgroups,
-          (groupId: number): Array<Tree> => groupToTreesMap[groupId] || [],
-        );
+      : _.flatMap(groupWithSubgroups, (groupId: number): Tree[] => groupToTreesMap[groupId] || []);
 
   const [visibleTrees, invisibleTrees] = _.partition(allTreesOfAncestor, (tree) => tree.isVisible);
 
@@ -140,9 +137,9 @@ function isCommonAncestorToggler(
 }
 
 export default function compactToggleActions(
-  updateActions: Array<UpdateAction>,
+  updateActions: UpdateAction[],
   tracing: SkeletonTracing | VolumeTracing,
-): Array<UpdateAction> {
+): UpdateAction[] {
   if (tracing.type !== "skeleton") {
     // Don't do anything if this is not a skeleton tracing
     return updateActions;
@@ -156,7 +153,7 @@ export default function compactToggleActions(
     (ua) => ua.name === "updateTreeVisibility",
   );
 
-  const toggleActions = _toggleActions as any as Array<UpdateTreeVisibilityUpdateAction>;
+  const toggleActions = _toggleActions as any as UpdateTreeVisibilityUpdateAction[];
 
   if (toggleActions.length <= 1) {
     // Don't try to compact actons if there are no or only one toggleAction(s)
@@ -181,5 +178,5 @@ export default function compactToggleActions(
     ...exceptions.map((tree) => updateTreeVisibility(tree)),
   ];
   const finalToggleActions = shouldUseToggleGroup ? compactedToggleActions : toggleActions;
-  return remainingActions.concat(finalToggleActions);
+  return [...remainingActions, ...finalToggleActions];
 }

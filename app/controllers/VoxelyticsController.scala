@@ -78,15 +78,15 @@ class VoxelyticsController @Inject()(
     for {
       _ <- bool2Fox(runs.nonEmpty) // just asserting once more
       workflowTaskCounts <- voxelyticsDAO.findWorkflowTaskCounts(request.identity,
-                                                                 runs.map(_.workflow_hash).toSet,
+                                                                 runs.map(_.workflowHash).toSet,
                                                                  conf.staleTimeout)
       _ <- bool2Fox(workflowTaskCounts.nonEmpty) ?~> "voxelytics.noTaskFound" ~> NOT_FOUND
       workflows <- voxelyticsDAO.findWorkflowsByHashAndOrganization(request.identity._organization,
-                                                                    runs.map(_.workflow_hash).toSet)
+                                                                    runs.map(_.workflowHash).toSet)
       _ <- bool2Fox(workflows.nonEmpty) ?~> "voxelytics.noWorkflowFound" ~> NOT_FOUND
 
       workflowsAsJson = JsArray(workflows.flatMap(workflow => {
-        val workflowRuns = runs.filter(run => run.workflow_hash == workflow.hash)
+        val workflowRuns = runs.filter(run => run.workflowHash == workflow.hash)
         if (workflowRuns.nonEmpty) {
           val state = workflowRuns.maxBy(_.beginTime).state
           val beginTime = workflowRuns.map(_.beginTime).min
@@ -145,14 +145,14 @@ class VoxelyticsController @Inject()(
 
         // Assemble workflow report JSON
         result = Json.obj(
-          "config" -> voxelyticsService.workflowConfigPublicWrites(mostRecentRun.workflow_config, tasks),
+          "config" -> voxelyticsService.workflowConfigPublicWrites(mostRecentRun.workflowConfig, tasks),
           "artifacts" -> voxelyticsService.artifactsPublicWrites(artifacts),
           "runs" -> sortedRuns,
           "tasks" -> voxelyticsService.taskRunsPublicWrites(combinedTaskRuns, allTaskRuns),
           "workflow" -> Json.obj(
             "name" -> workflow.name,
             "hash" -> workflowHash,
-            "yamlContent" -> mostRecentRun.workflow_yamlContent
+            "yamlContent" -> mostRecentRun.workflowYamlContent
           )
         )
       } yield JsonOk(result)

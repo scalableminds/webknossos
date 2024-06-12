@@ -172,6 +172,7 @@ class JobService @Inject()(wkConf: WkConf,
         "latestRunId" -> job.latestRunId,
         "returnValue" -> job.returnValue,
         "resultLink" -> resultLink,
+        "voxelyticsWorkflowHash" -> job._voxelyticsWorkflowHash,
         "created" -> job.created,
         "started" -> job.started,
         "ended" -> job.ended,
@@ -194,7 +195,7 @@ class JobService @Inject()(wkConf: WkConf,
   def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
     for {
       _ <- bool2Fox(wkConf.Features.jobsEnabled) ?~> "job.disabled"
-      _ <- Fox.assertTrue(jobIsSupportedByAvailableWorkers(command, dataStoreName)) ?~> "job.noWorkerForDatastore"
+      _ <- Fox.assertTrue(jobIsSupportedByAvailableWorkers(command, dataStoreName)) ?~> "job.noWorkerForDatastoreAndJob"
       job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))

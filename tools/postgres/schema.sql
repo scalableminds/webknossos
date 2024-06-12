@@ -104,7 +104,7 @@ CREATE TABLE webknossos.publications(
 CREATE TABLE webknossos.datasets(
   _id CHAR(24) PRIMARY KEY,
   _dataStore VARCHAR(256) NOT NULL,
-  _organization CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   _publication CHAR(24),
   _uploader CHAR(24),
   _folder CHAR(24) NOT NULL,
@@ -222,7 +222,7 @@ CREATE TABLE webknossos.tracingStores(
 
 CREATE TABLE webknossos.projects(
   _id CHAR(24) PRIMARY KEY,
-  _organization CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   _team CHAR(24) NOT NULL,
   _owner CHAR(24) NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^.{3,}$'), -- Unique among non-deleted, enforced in scala
@@ -248,7 +248,7 @@ CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique'
 CREATE TYPE webknossos.TASKTYPE_TRACINGTYPES AS ENUM ('skeleton', 'volume', 'hybrid');
 CREATE TABLE webknossos.taskTypes(
   _id CHAR(24) PRIMARY KEY,
-  _organization CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   _team CHAR(24) NOT NULL,
   summary VARCHAR(256) NOT NULL,
   description TEXT NOT NULL,
@@ -289,13 +289,13 @@ CREATE TABLE webknossos.tasks(
 
 CREATE TABLE webknossos.experienceDomains(
   domain VARCHAR(256) NOT NULL,
-  _organization CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   CONSTRAINT primarykey__domain_orga PRIMARY KEY (domain,_organization)
 );
 
 CREATE TABLE webknossos.teams(
   _id CHAR(24) PRIMARY KEY,
-  _organization CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isOrganizationTeam BOOLEAN NOT NULL DEFAULT false,
@@ -335,7 +335,7 @@ CREATE TABLE webknossos.organizations(
 );
 
 CREATE TABLE webknossos.organization_usedStorage(
-  _organization CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   _dataStore VARCHAR(256) NOT NULL,
   _dataset CHAR(24) NOT NULL,
   layerName VARCHAR(256) NOT NULL,
@@ -349,7 +349,7 @@ CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt', 'Empty');
 CREATE TABLE webknossos.users(
   _id CHAR(24) PRIMARY KEY,
   _multiUser CHAR(24) NOT NULL,
-  _organization CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   firstName VARCHAR(256) NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastActivity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -477,7 +477,7 @@ CREATE TABLE webknossos.jobs(
 CREATE TABLE webknossos.invites(
   _id CHAR(24) PRIMARY KEY,
   tokenValue Text NOT NULL,
-  _organization CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   autoActivate BOOLEAN NOT NULL,
   expirationDateTime TIMESTAMPTZ NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -506,7 +506,7 @@ CREATE TABLE webknossos.credentials(
   identifier Text,
   secret Text,
   _user CHAR(24) NOT NULL,
-  _organization CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -544,7 +544,7 @@ CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei');
 CREATE TABLE webknossos.aiModels(
    -- todo foreign keys
   _id CHAR(24) PRIMARY KEY,
-  _organization CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   _dataStore VARCHAR(256) NOT NULL, -- redundant to job, but must be available for jobless models
   _user CHAR(24) NOT NULL,
   _trainingJob CHAR(24),
@@ -565,7 +565,7 @@ CREATE TABLE webknossos.aiModel_trainingAnnotations(
 
 CREATE TABLE webknossos.aiInferences(
   _id CHAR(24) PRIMARY KEY,
-  _organization CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   _aiModel CHAR(24) NOT NULL,
   _newDataset CHAR(24),
   _annotation CHAR(24),
@@ -596,7 +596,7 @@ CREATE TABLE webknossos.voxelytics_artifacts(
 
 CREATE TABLE webknossos.voxelytics_runs(
     _id CHAR(24) NOT NULL,
-    _organization CHAR(24) NOT NULL,
+    _organization VARCHAR(256) NOT NULL,
     _user CHAR(24) NOT NULL,
     name VARCHAR(2048) NOT NULL,
     username TEXT NOT NULL,
@@ -640,7 +640,7 @@ CREATE TABLE webknossos.voxelytics_chunks(
 );
 
 CREATE TABLE webknossos.voxelytics_workflows(
-    _organization CHAR(24) NOT NULL,
+    _organization VARCHAR(256) NOT NULL,
     hash VARCHAR(512) NOT NULL,
     name TEXT NOT NULL,
     PRIMARY KEY (_organization, hash)
@@ -682,7 +682,7 @@ CREATE TABLE webknossos.analyticsEvents(
   eventType VARCHAR(512) NOT NULL,
   eventProperties JSONB NOT NULL, -- TODO migrate user json from old to new organization id
   _user CHAR(24) NOT NULL,
-  _organization CHAR(24) NOT NULL,
+  _organization VARCHAR(256) NOT NULL,
   isOrganizationAdmin BOOLEAN NOT NULL,
   isSuperUser BOOLEAN NOT NULL,
   webknossosUri VARCHAR(512) NOT NULL,

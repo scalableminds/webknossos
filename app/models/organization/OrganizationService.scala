@@ -131,7 +131,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
 
   def createOrganizationDirectory(organizationId: String, dataStoreToken: String): Fox[Unit] = {
     def sendRPCToDataStore(dataStore: DataStore) =
-      rpc(s"${dataStore.url}/data/triggers/newOrganizationDirectory")
+      rpc(s"${dataStore.url}/data/triggers/createOrganizationDirectory")
         .addQueryString("token" -> dataStoreToken, "organizationId" -> organizationId)
         .post()
         .futureBox

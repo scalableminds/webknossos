@@ -96,7 +96,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   def insertOne(o: Organization): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.organizations
-                   (_id, name, additionalInformation, logoUrl, displayName, _rootFolder,
+                   (_id, additionalInformation, logoUrl, displayName, _rootFolder,
                    newUserMailingList, enableAutoVerify,
                    pricingplan, paidUntil, includedusers, includedstorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion, created, isDeleted)
                    VALUES

@@ -180,7 +180,7 @@ export function __setupOxalis(
   };
   t.context.setSlowCompression = setSlowCompression;
   const webknossos = new OxalisApi(Model);
-  const organizationName = "Connectomics Department";
+  const organizationId = "Connectomics Department";
   const ANNOTATION = modelData[mode].annotation;
   Request.receiveJSON
     .withArgs(
@@ -203,7 +203,7 @@ export function __setupOxalis(
     )
     .returns(Promise.resolve({}));
   Request.receiveJSON
-    .withArgs(`/api/datasets/${organizationName}/${ANNOTATION.dataSetName}`) // Right now, initializeDataset() in model_initialization mutates the dataset to add a new
+    .withArgs(`/api/datasets/${organizationId}/${ANNOTATION.dataSetName}`) // Right now, initializeDataset() in model_initialization mutates the dataset to add a new
     // volume layer. Since this mutation should be isolated between different tests, we have to make
     // sure that each receiveJSON call returns its own clone. Without the following "onCall" line,
     // each __setupOxalis call would overwrite the current stub to receiveJSON.

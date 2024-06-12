@@ -105,7 +105,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
       <table>
         <tbody>
           <OwningOrganizationRow
-            organizationName={
+            organizationId={
               owningOrganizationDisplayName != null ? owningOrganizationDisplayName : ""
             }
           />

@@ -568,14 +568,14 @@ function LoggedInAvatar({
   handleLogout: (event: React.SyntheticEvent) => void;
   navbarHeight: number;
 } & SubMenuProps) {
-  const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
+  const { firstName, lastName, organization: organizationId, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
-  const activeOrganization = usersOrganizations.find((org) => org.name === organizationName);
-  const switchableOrganizations = usersOrganizations.filter((org) => org.name !== organizationName);
+  const activeOrganization = usersOrganizations.find((org) => org.name === organizationId);
+  const switchableOrganizations = usersOrganizations.filter((org) => org.name !== organizationId);
   const orgDisplayName =
     activeOrganization != null
       ? activeOrganization.displayName || activeOrganization.name
-      : organizationName;
+      : organizationId;
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 

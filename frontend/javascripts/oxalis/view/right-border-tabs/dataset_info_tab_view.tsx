@@ -187,13 +187,13 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
   );
 }
 
-export function OwningOrganizationRow({ organizationName }: { organizationName: string | null }) {
+export function OwningOrganizationRow({ organizationId }: { organizationId: string | null }) {
   return (
     <Tooltip title="Organization" placement="left">
       <div className="info-tab-block">
         <p className="sidebar-label">Organization</p>
         <p>
-          <Tag color="blue">{organizationName === null ? <i>loading...</i> : organizationName}</Tag>
+          <Tag color="blue">{organizationId === null ? <i>loading...</i> : organizationId}</Tag>
         </p>
       </div>
     </Tooltip>
@@ -507,7 +507,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const { activeUser, dataset } = this.props;
     const owningOrganization = dataset.owningOrganization;
     if (activeUser?.organization === owningOrganization) return;
-    return <OwningOrganizationRow organizationName={this.state.owningOrganizationDisplayName} />;
+    return <OwningOrganizationRow organizationId={this.state.owningOrganizationDisplayName} />;
   };
 
   maybePrintOwnerAndContributors() {

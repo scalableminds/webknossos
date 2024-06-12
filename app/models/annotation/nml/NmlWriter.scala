@@ -316,7 +316,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       }
       p.stringListValue.zipWithIndex.foreach {
         case (v, index) =>
-          writer.writeAttribute(s"stringListValue_$index", v)
+          writer.writeAttribute(s"stringListValue-$index", v)
       }
     }
 

@@ -457,6 +457,8 @@ class TracingActionsView extends React.PureComponent<Props, State> {
   handleChangeLockedStateOfAnnotation = async (isLocked: boolean) => {
     try {
       const { annotationId, annotationType } = this.props;
+      // Ensure saved state, before (un)locking the annotation and then reloading.
+      await Model.ensureSavedState();
       await editLockedState(annotationId, annotationType, isLocked);
       Toast.success(
         isLocked ? messages["annotation.lock.success"] : messages["annotation.unlock.success"],

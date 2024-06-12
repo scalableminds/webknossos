@@ -1,11 +1,11 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import java.nio.file.Path
-
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, SegmentationLayer}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ExtendedTypes._
+import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWResolution, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.services.{DataSourceImportReport, DataSourceImporter}
 import net.liftweb.common.{Box, Failure, Full}
 

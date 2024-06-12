@@ -64,7 +64,7 @@ case class Job(
         case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this._id}/export")
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
-            JobCommand.infer_with_model =>
+            JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections =>
           returnValue.map { resultDatasetName =>
             s"/datasets/$organizationName/$resultDatasetName/view"
           }

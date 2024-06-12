@@ -103,7 +103,7 @@ class EditableMappingService @Inject()(
 
   private def generateId: String = UUID.randomUUID.toString
 
-  val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
+  val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, None, None)
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   private val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
 
@@ -373,7 +373,7 @@ class EditableMappingService @Inject()(
       editableMappingId <- tracing.mappingName.toFox
       dataLayer = editableMappingLayer(editableMappingId, tracing, tracingId, userToken)
       requests = dataRequests.map(r =>
-        DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
+        DataServiceDataRequest(null, dataLayer, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 

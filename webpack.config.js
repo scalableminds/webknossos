@@ -33,7 +33,7 @@ module.exports = function (env = {}) {
     }),
     new MiniCssExtractPlugin({
       filename: "[name].css",
-      chunkFilename: "[name].css",
+      chunkFilename: "[name].[contenthash].css",
     }),
     new CopyPlugin({
       patterns: [
@@ -60,7 +60,8 @@ module.exports = function (env = {}) {
     output: {
       path: `${__dirname}/public/bundle`,
       filename: "[name].js",
-      sourceMapFilename: "[file].map",
+      sourceMapFilename: "[file].[contenthash].map",
+      chunkFilename: "[name].[contenthash].js",
       publicPath,
     },
     module: {

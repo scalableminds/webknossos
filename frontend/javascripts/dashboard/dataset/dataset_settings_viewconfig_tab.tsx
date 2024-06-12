@@ -18,7 +18,7 @@ import React, { useMemo, useState } from "react";
 import { Vector3Input } from "libs/vector_input";
 import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
-import {
+import messages, {
   RecommendedConfiguration,
   layerViewConfigurations,
   settings,
@@ -38,11 +38,11 @@ export default function DatasetSettingsViewConfigTab(props: {
   dataStoreURL: string | undefined;
 }) {
   const { datasetId, dataStoreURL } = props;
-  const [availableMappingsPerLayer, setAvailableMappingsPerLayer] = useState(
+  const [availableMappingsPerLayerCache, setAvailableMappingsPerLayer] = useState(
     {} as Record<string, [string[], string[]]>,
   );
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Update is not necessary when availableMappingsPerLayer[layerName] changes.
   const validateDefaultMappings = useMemo(
     () => async (configStr: string, dataStoreURL: string, datasetId: APIDatasetId) => {
       let config = {} as DatasetConfiguration["layers"];
@@ -56,13 +56,19 @@ export default function DatasetSettingsViewConfigTab(props: {
       );
 
       const maybeMappingRequests = layerNamesWithDefaultMappings.map(async (layerName) => {
-        if (layerName in availableMappingsPerLayer) {
-          return availableMappingsPerLayer[layerName];
+        if (layerName in availableMappingsPerLayerCache) {
+          return availableMappingsPerLayerCache[layerName];
         }
-        const jsonAndAgglomerateMappings = await Promise.all([
-          getMappingsForDatasetLayer(dataStoreURL, datasetId, layerName),
-          getAgglomeratesForDatasetLayer(dataStoreURL, datasetId, layerName),
-        ]);
+        let jsonAndAgglomerateMappings = [[], []] as [string[], string[]];
+        try {
+          jsonAndAgglomerateMappings = await Promise.all([
+            getMappingsForDatasetLayer(dataStoreURL, datasetId, layerName),
+            getAgglomeratesForDatasetLayer(dataStoreURL, datasetId, layerName),
+          ]);
+        } catch (e: any) {
+          console.error(e);
+          throw new Error(messages["mapping.loading_failed"](layerName));
+        }
         setAvailableMappingsPerLayer((prev) => ({
           ...prev,
           [layerName]: jsonAndAgglomerateMappings,
@@ -88,7 +94,7 @@ export default function DatasetSettingsViewConfigTab(props: {
         throw new Error("The following default mappings are invalid: " + errors.join("\n"));
       }
     },
-    [availableMappingsPerLayer],
+    [availableMappingsPerLayerCache],
   );
 
   const columns = [
@@ -214,7 +220,6 @@ export default function DatasetSettingsViewConfigTab(props: {
           </FormItemWithInfo>
         </Col>
         <Col span={6}>
-          map
           <FormItemWithInfo
             name={["defaultConfiguration", "rotation"]}
             label="Rotation"

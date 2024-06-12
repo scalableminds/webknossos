@@ -1318,8 +1318,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <br />
           This will overwrite the current default view configuration.
           <br />
-          This includes all color and segmentation layer settings, currently active mapping, as well
-          as these additional settings:
+          This includes all color and segmentation layer settings, currently active mappings (even
+          those of disabled layers), as well as these additional settings:
           <br />
           <br />
           {dataSource.map((field, index) => {

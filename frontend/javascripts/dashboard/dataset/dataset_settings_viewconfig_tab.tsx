@@ -14,7 +14,7 @@ import {
   Slider,
   Divider,
 } from "antd";
-import * as React from "react";
+import React, { useMemo, useState } from "react";
 import { Vector3Input } from "libs/vector_input";
 import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
@@ -33,52 +33,65 @@ import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admi
 
 const FormItem = Form.Item;
 
-async function validateDefaultMappings(
-  configStr: string,
-  dataStoreURL: string,
-  datasetId: APIDatasetId,
-) {
-  let config = {} as DatasetConfiguration["layers"];
-  try {
-    config = JSON.parse(configStr);
-  } catch (e: any) {
-    return Promise.reject(new Error("Invalid JSON format for : " + e.message));
-  }
-  const layerNamesWithDefaultMappings = Object.keys(config).filter(
-    (layerName) => config[layerName].mapping != null,
-  );
-
-  const mappingRequests = layerNamesWithDefaultMappings.map(async (layerName) =>
-    Promise.all([
-      getMappingsForDatasetLayer(dataStoreURL, datasetId, layerName),
-      getAgglomeratesForDatasetLayer(dataStoreURL, datasetId, layerName),
-    ]),
-  );
-  const mappings = await Promise.all(mappingRequests);
-  const errors = layerNamesWithDefaultMappings
-    .map((layerName, index) => {
-      const [mappingsForLayer, agglomeratesForLayer] = mappings[index];
-      const mappingType = config[layerName]?.mapping?.type;
-      const mappingName = config[layerName]?.mapping?.name;
-      const doesMappingExist =
-        mappingType === "HDF5"
-          ? agglomeratesForLayer.some((agglomerate) => agglomerate === mappingName)
-          : mappingsForLayer.some((mapping) => mapping === mappingName);
-      return doesMappingExist
-        ? null
-        : `The default mapping "${mappingName}" of type "${mappingType}" does not exist for layer ${layerName}.`;
-    })
-    .filter((error) => error != null);
-  if (errors.length > 0) {
-    throw new Error("The following default mappings are invalid: " + errors.join("\n"));
-  }
-}
-
 export default function DatasetSettingsViewConfigTab(props: {
   datasetId: APIDatasetId;
   dataStoreURL: string | undefined;
 }) {
   const { datasetId, dataStoreURL } = props;
+  const [availableMappingsPerLayer, setAvailableMappingsPerLayer] = useState(
+    {} as Record<string, [string[], string[]]>,
+  );
+  console.log("availableMappingsPerLayer", availableMappingsPerLayer);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  const validateDefaultMappings = useMemo(
+    () => async (configStr: string, dataStoreURL: string, datasetId: APIDatasetId) => {
+      let config = {} as DatasetConfiguration["layers"];
+      try {
+        config = JSON.parse(configStr);
+      } catch (e: any) {
+        return Promise.reject(new Error("Invalid JSON format for : " + e.message));
+      }
+      const layerNamesWithDefaultMappings = Object.keys(config).filter(
+        (layerName) => config[layerName].mapping != null,
+      );
+
+      const maybeMappingRequests = layerNamesWithDefaultMappings.map(async (layerName) => {
+        if (layerName in availableMappingsPerLayer) {
+          console.log("using from cache", layerName);
+          return availableMappingsPerLayer[layerName];
+        }
+        const jsonAndAgglomerateMappings = await Promise.all([
+          getMappingsForDatasetLayer(dataStoreURL, datasetId, layerName),
+          getAgglomeratesForDatasetLayer(dataStoreURL, datasetId, layerName),
+        ]);
+        setAvailableMappingsPerLayer((prev) => ({
+          ...prev,
+          [layerName]: jsonAndAgglomerateMappings,
+        }));
+        return jsonAndAgglomerateMappings;
+      });
+      const mappings = await Promise.all(maybeMappingRequests);
+      const errors = layerNamesWithDefaultMappings
+        .map((layerName, index) => {
+          const [mappingsForLayer, agglomeratesForLayer] = mappings[index];
+          const mappingType = config[layerName]?.mapping?.type;
+          const mappingName = config[layerName]?.mapping?.name;
+          const doesMappingExist =
+            mappingType === "HDF5"
+              ? agglomeratesForLayer.some((agglomerate) => agglomerate === mappingName)
+              : mappingsForLayer.some((mapping) => mapping === mappingName);
+          return doesMappingExist
+            ? null
+            : `The default mapping "${mappingName}" of type "${mappingType}" does not exist for layer ${layerName}.`;
+        })
+        .filter((error) => error != null);
+      if (errors.length > 0) {
+        throw new Error("The following default mappings are invalid: " + errors.join("\n"));
+      }
+    },
+    [availableMappingsPerLayer],
+  );
 
   const columns = [
     {
@@ -203,6 +216,7 @@ export default function DatasetSettingsViewConfigTab(props: {
           </FormItemWithInfo>
         </Col>
         <Col span={6}>
+          map
           <FormItemWithInfo
             name={["defaultConfiguration", "rotation"]}
             label="Rotation"

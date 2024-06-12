@@ -1,4 +1,4 @@
-import { Tooltip } from "antd";
+import { Tooltip, Typography } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useState } from "react";
@@ -11,16 +11,20 @@ import {
   deleteUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import * as Utils from "libs/utils";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
+import { APIJobType } from "types/api_flow_types";
 
 export default function BoundingBoxTab() {
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const allowUpdate = tracing.restrictions.allowUpdate;
+  const isLockedByOwner = tracing.isLockedByOwner;
+  const isOwner = useSelector((state: OxalisState) => isAnnotationOwner(state));
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const { userBoundingBoxes } = getSomeTracing(tracing);
   const dispatch = useDispatch();
@@ -91,6 +95,10 @@ export default function BoundingBoxTab() {
       "Copy this annotation to your account to adapt the bounding boxes.";
   }
 
+  const isExportEnabled = dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+    APIJobType.EXPORT_TIFF,
+  );
+
   return (
     <div
       className="padded-tab-content"
@@ -109,24 +117,24 @@ export default function BoundingBoxTab() {
             value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
             color={bb.color}
             name={bb.name}
-            isExportEnabled={dataset.jobsEnabled}
+            isExportEnabled={isExportEnabled}
             isVisible={bb.isVisible}
             onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
             onDelete={_.partial(deleteBoundingBox, bb.id)}
-            onExport={
-              dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
-            }
+            onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
             onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
             onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
             onNameChange={_.partial(setBoundingBoxName, bb.id)}
             onColorChange={_.partial(setBoundingBoxColor, bb.id)}
-            allowUpdate={allowUpdate}
+            disabled={!allowUpdate}
+            isLockedByOwner={isLockedByOwner}
+            isOwner={isOwner}
           />
         ))
       ) : (
         <div>No Bounding Boxes created yet.</div>
       )}
-      <div style={{ color: "rgba(0,0,0,0.25)" }}>{maybeUneditableExplanation}</div>
+      <Typography.Text type="secondary">{maybeUneditableExplanation}</Typography.Text>
       {allowUpdate ? (
         <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
           <Tooltip title="Click to add another bounding box.">

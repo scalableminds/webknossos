@@ -22,14 +22,12 @@ import ScriptCreateView from "admin/scripts/script_create_view";
 import ScriptListView from "admin/scripts/script_list_view";
 import AvailableTasksReportView from "admin/statistic/available_tasks_report_view";
 import ProjectProgressReportView from "admin/statistic/project_progress_report_view";
-import StatisticView from "admin/statistic/statistic_view";
 import TaskCreateFormView from "admin/task/task_create_form_view";
 import TaskCreateView from "admin/task/task_create_view";
 import TaskListView from "admin/task/task_list_view";
 import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import TaskTypeListView from "admin/tasktype/task_type_list_view";
 import TeamListView from "admin/team/team_list_view";
-import TimeLineView from "admin/time/time_line_view";
 import UserListView from "admin/user/user_list_view";
 import { Button, Col, Layout, Result, Row } from "antd";
 import DisableGenericDnd from "components/disable_generic_dnd";
@@ -52,7 +50,7 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 import type { OxalisState } from "oxalis/store";
 import HelpButton from "oxalis/view/help_modal";
 import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
-import React, { lazy, Suspense } from "react";
+import React from "react";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
 import { ContextRouter, Link, RouteProps } from "react-router-dom";
@@ -67,23 +65,17 @@ import {
 import ErrorBoundary from "components/error_boundary";
 import { Store } from "oxalis/singletons";
 import VerifyEmailView from "admin/auth/verify_email_view";
-import { MaintenanceBanner } from "maintenance_banner";
+import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
+import loadable from "libs/lazy_loader";
+import { EmptyObject } from "types/globals";
+import AiModelListView from "admin/voxelytics/ai_model_list_view";
 
 const { Content } = Layout;
 
-function loadable(loader: () => Promise<{ default: React.ComponentType<{}> }>) {
-  const InternalComponent = lazy(loader);
-  return function AsyncComponent() {
-    return (
-      <Suspense fallback={<div style={{ textAlign: "center" }}>Loading...</div>}>
-        <InternalComponent />
-      </Suspense>
-    );
-  };
-}
-
-const AsyncWorkflowView = loadable(() => import("admin/voxelytics/workflow_view"));
-const AsyncWorkflowListView = loadable(() => import("admin/voxelytics/workflow_list_view"));
+const AsyncWorkflowView = loadable<EmptyObject>(() => import("admin/voxelytics/workflow_view"));
+const AsyncWorkflowListView = loadable<EmptyObject>(
+  () => import("admin/voxelytics/workflow_list_view"),
+);
 
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -223,7 +215,6 @@ class ReactRouter extends React.Component<Props> {
           <CheckTermsOfServices />
           <Navbar isAuthenticated={isAuthenticated} />
           <HelpButton />
-          <MaintenanceBanner />
           <Content>
             <Switch>
               <RouteWithErrorBoundary
@@ -293,6 +284,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/users/:userId/details"
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <DashboardView
                     userId={match.params.userId}
@@ -305,22 +297,25 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/users"
                 component={UserListView}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/teams"
                 component={TeamListView}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/statistics"
-                component={StatisticView}
+                path="/timetracking"
+                component={TimeTrackingOverview}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 requiredPricingPlan={PricingPlanEnum.Team}
                 path="/reports/projectProgress"
                 component={ProjectProgressReportView}
+                requiresAdminOrManagerRole
                 exact
               />
               <RouteWithErrorBoundary
@@ -332,6 +327,7 @@ class ReactRouter extends React.Component<Props> {
                 requiredPricingPlan={PricingPlanEnum.Team}
                 path="/reports/availableTasks"
                 component={AvailableTasksReportView}
+                requiresAdminOrManagerRole
                 exact
               />
               <SecuredRouteWithErrorBoundary
@@ -339,6 +335,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/tasks"
                 requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskListView}
+                requiresAdminOrManagerRole
                 exact
               />
               <SecuredRouteWithErrorBoundary
@@ -346,11 +343,13 @@ class ReactRouter extends React.Component<Props> {
                 path="/tasks/create"
                 requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskCreateView}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId/edit"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <TaskCreateFormView taskId={match.params.taskId} />
                 )}
@@ -359,6 +358,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <TaskListView
                     initialFieldValues={{
@@ -371,6 +371,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/projects"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={(
                   { location }: ContextRouter, // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
                 ) => <ProjectListView initialSearchValue={location.hash.slice(1)} />}
@@ -380,12 +381,14 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/projects/create"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={() => <ProjectCreateView />}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/tasks"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <TaskListView
                     initialFieldValues={{
@@ -398,6 +401,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectId/edit"
                 requiredPricingPlan={PricingPlanEnum.Team}
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <ProjectCreateView projectId={match.params.projectId} />
                 )}
@@ -429,11 +433,13 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
+                requiresAdminOrManagerRole
                 render={() => <DatasetAddView />}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/import"
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <DatasetSettingsView
                     isEditingMode={false}
@@ -451,6 +457,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/edit"
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <DatasetSettingsView
                     isEditingMode
@@ -466,6 +473,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes"
+                requiresAdminOrManagerRole
                 render={(
                   { location }: ContextRouter, // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
                 ) => <TaskTypeListView initialSearchValue={location.hash.slice(1)} />}
@@ -476,6 +484,7 @@ class ReactRouter extends React.Component<Props> {
                 path="/taskTypes/create"
                 requiredPricingPlan={PricingPlanEnum.Team}
                 component={TaskTypeCreateView}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -484,6 +493,7 @@ class ReactRouter extends React.Component<Props> {
                 render={({ match }: ContextRouter) => (
                   <TaskTypeCreateView taskTypeId={match.params.taskTypeId} />
                 )}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -496,6 +506,7 @@ class ReactRouter extends React.Component<Props> {
                     }}
                   />
                 )}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -504,15 +515,18 @@ class ReactRouter extends React.Component<Props> {
                 render={({ match }: ContextRouter) => (
                   <ProjectListView taskTypeId={match.params.taskTypeId || ""} />
                 )}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/scripts/create"
                 render={() => <ScriptCreateView />}
+                requiresAdminOrManagerRole
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
                 path="/scripts/:scriptId/edit"
+                requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <ScriptCreateView scriptId={match.params.scriptId} />
                 )}
@@ -521,6 +535,7 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/scripts"
                 component={ScriptListView}
+                requiresAdminOrManagerRole
                 exact
               />
               <SecuredRouteWithErrorBoundary
@@ -538,12 +553,6 @@ class ReactRouter extends React.Component<Props> {
                 render={() => (
                   <Redirect to="https://docs.webknossos.org/webknossos/keyboard_shortcuts.html" />
                 )}
-              />
-              <SecuredRouteWithErrorBoundary
-                isAuthenticated={isAuthenticated}
-                path="/reports/timetracking"
-                requiredPricingPlan={PricingPlanEnum.Power}
-                render={() => <TimeLineView />}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -628,14 +637,14 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationName/:dataSetName/createExplorative/:type"
+                path="/datasets/:organizationName/:datasetName/createExplorative/:type"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
                     pushToHistory={false}
                     redirectTo={async () => {
                       if (
                         !match.params.organizationName ||
-                        !match.params.dataSetName ||
+                        !match.params.datasetName ||
                         !match.params.type
                       ) {
                         // Typehint for TS
@@ -644,7 +653,7 @@ class ReactRouter extends React.Component<Props> {
 
                       const dataset = {
                         owningOrganization: match.params.organizationName,
-                        name: match.params.dataSetName,
+                        name: match.params.datasetName,
                       };
                       const type =
                         coalesce(TracingTypeEnum, match.params.type) || TracingTypeEnum.skeleton;
@@ -701,6 +710,12 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/workflows"
                 component={AsyncWorkflowListView}
+                exact
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/aiModels"
+                component={AiModelListView}
                 exact
               />
               <SecuredRouteWithErrorBoundary

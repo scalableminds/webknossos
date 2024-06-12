@@ -50,7 +50,12 @@ export function updateEditableMapping(
     mappings: newMappings,
   });
 }
-export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTracing, id: number) {
+export function setActiveCellReducer(
+  state: OxalisState,
+  volumeTracing: VolumeTracing,
+  id: number,
+  activeUnmappedSegmentId: number | null | undefined,
+) {
   const segmentationLayer = getSegmentationLayerForTracing(state, volumeTracing);
   if (id > getMaximumSegmentIdForLayer(state.dataset, segmentationLayer.name)) {
     // Ignore the action if the segment id is larger than the maximum segment id for the layer.
@@ -58,6 +63,7 @@ export function setActiveCellReducer(state: OxalisState, volumeTracing: VolumeTr
   }
   return updateVolumeTracing(state, volumeTracing.tracingId, {
     activeCellId: id,
+    activeUnmappedSegmentId,
   });
 }
 export function createCellReducer(
@@ -65,7 +71,7 @@ export function createCellReducer(
   volumeTracing: VolumeTracing,
   newSegmentId: number,
 ) {
-  return setActiveCellReducer(state, volumeTracing, newSegmentId);
+  return setActiveCellReducer(state, volumeTracing, newSegmentId, null);
 }
 
 const MAXIMUM_LABEL_ACTIONS_COUNT = 50;
@@ -103,8 +109,7 @@ export function addToLayerReducer(
   volumeTracing: VolumeTracing,
   position: Vector3,
 ) {
-  const { restrictions } = state.tracing;
-  const { allowUpdate } = restrictions;
+  const { allowUpdate } = state.tracing.restrictions;
 
   if (!allowUpdate || isVolumeAnnotationDisallowedForZoom(state.uiInformation.activeTool, state)) {
     return state;
@@ -153,8 +158,10 @@ export function setMappingNameReducer(
   mappingType: MappingType,
   isMappingEnabled: boolean = true,
 ) {
-  // Editable mappings cannot be disabled or switched for now
-  if (volumeTracing.mappingIsEditable) return state;
+  // Editable mappings or locked mappings cannot be disabled or switched for now
+  if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) {
+    return state;
+  }
   // Only HDF5 mappings are persisted in volume annotations for now
   if (mappingType !== "HDF5" || !isMappingEnabled) {
     mappingName = null;

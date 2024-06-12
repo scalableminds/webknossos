@@ -1,12 +1,12 @@
 package controllers
 
-import akka.actor.ActorSystem
-import com.mohiva.play.silhouette.api.actions.SecuredRequest
-import com.mohiva.play.silhouette.api.exceptions.ProviderException
-import com.mohiva.play.silhouette.api.services.AuthenticatorResult
-import com.mohiva.play.silhouette.api.util.{Credentials, PasswordInfo}
-import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
-import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
+import org.apache.pekko.actor.ActorSystem
+import play.silhouette.api.actions.SecuredRequest
+import play.silhouette.api.exceptions.ProviderException
+import play.silhouette.api.services.AuthenticatorResult
+import play.silhouette.api.util.{Credentials, PasswordInfo}
+import play.silhouette.api.{LoginInfo, Silhouette}
+import play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
@@ -23,7 +23,7 @@ import org.apache.commons.codec.digest.{HmacAlgorithms, HmacUtils}
 import play.api.data.Form
 import play.api.data.Forms.{email, _}
 import play.api.data.validation.Constraints._
-import play.api.i18n.{Messages, MessagesProvider}
+import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Cookie, PlayBodyParsers, Request, Result}
 import security.{
@@ -35,7 +35,6 @@ import security.{
   WkEnv,
   WkSilhouetteEnvironment
 }
-import thirdparty.BrainTracing
 import utils.{ObjectId, WkConf}
 
 import java.net.URLEncoder
@@ -53,7 +52,6 @@ class AuthenticationController @Inject()(
     organizationService: OrganizationService,
     inviteService: InviteService,
     inviteDAO: InviteDAO,
-    brainTracing: BrainTracing,
     mailchimpClient: MailchimpClient,
     organizationDAO: OrganizationDAO,
     analyticsService: AnalyticsService,
@@ -66,6 +64,7 @@ class AuthenticationController @Inject()(
     voxelyticsDAO: VoxelyticsDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     openIdConnectClient: OpenIdConnectClient,
+    initialDataService: InitialDataService,
     emailVerificationService: EmailVerificationService,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -109,8 +108,7 @@ class AuthenticationController @Inject()(
                                 lastName,
                                 autoActivate,
                                 Option(signUpData.password),
-                                inviteBox,
-                                registerBrainDB = true)
+                                inviteBox)
               } yield Ok
             }
           } yield {
@@ -128,8 +126,7 @@ class AuthenticationController @Inject()(
                          autoActivate: Boolean,
                          password: Option[String],
                          inviteBox: Box[Invite] = Empty,
-                         registerBrainDB: Boolean = false,
-                         isEmailVerified: Boolean = false)(implicit mp: MessagesProvider): Fox[User] = {
+                         isEmailVerified: Boolean = false): Fox[User] = {
     val passwordInfo: PasswordInfo = userService.getPasswordInfo(password)
     for {
       user <- userService.insert(organization._id,
@@ -145,14 +142,14 @@ class AuthenticationController @Inject()(
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
         inviteService.deactivateUsedInvite(i)(GlobalAccessContext)))
-      brainDBResult <- Fox.runIf(registerBrainDB)(brainTracing.registerIfNeeded(user, password.getOrElse("")))
+      newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)(GlobalAccessContext)
       _ = if (conf.Features.isWkorgInstance) {
         mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
       } else {
-        Mailer ! Send(defaultMails.newUserMail(user.name, email, brainDBResult.flatten, autoActivate))
+        Mailer ! Send(defaultMails.newUserMail(user.name, email, autoActivate))
       }
       _ = Mailer ! Send(
-        defaultMails.registerAdminNotifyerMail(user.name, email, brainDBResult.flatten, organization, autoActivate))
+        defaultMails.registerAdminNotifierMail(user.name, email, organization, autoActivate, newUserEmailRecipient))
     } yield {
       user
     }
@@ -236,18 +233,18 @@ class AuthenticationController @Inject()(
    */
 
   def accessibleBySwitching(organizationName: Option[String],
-                            dataSetName: Option[String],
+                            datasetName: Option[String],
                             annotationId: Option[String],
                             workflowHash: Option[String]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         isSuperUser <- multiUserDAO.findOne(request.identity._multiUser).map(_.isSuperUser)
         selectedOrganization <- if (isSuperUser)
-          accessibleBySwitchingForSuperUser(organizationName, dataSetName, annotationId, workflowHash)
+          accessibleBySwitchingForSuperUser(organizationName, datasetName, annotationId, workflowHash)
         else
           accessibleBySwitchingForMultiUser(request.identity._multiUser,
                                             organizationName,
-                                            dataSetName,
+                                            datasetName,
                                             annotationId,
                                             workflowHash)
         _ <- bool2Fox(selectedOrganization._id != request.identity._organization) // User is already in correct orga, but still could not see dataset. Assume this had a reason.
@@ -256,15 +253,15 @@ class AuthenticationController @Inject()(
   }
 
   private def accessibleBySwitchingForSuperUser(organizationNameOpt: Option[String],
-                                                dataSetNameOpt: Option[String],
+                                                datasetNameOpt: Option[String],
                                                 annotationIdOpt: Option[String],
                                                 workflowHashOpt: Option[String]): Fox[Organization] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
-    (organizationNameOpt, dataSetNameOpt, annotationIdOpt, workflowHashOpt) match {
-      case (Some(organizationName), Some(dataSetName), None, None) =>
+    (organizationNameOpt, datasetNameOpt, annotationIdOpt, workflowHashOpt) match {
+      case (Some(organizationName), Some(datasetName), None, None) =>
         for {
           organization <- organizationDAO.findOneByName(organizationName)
-          _ <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)
+          _ <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id)
         } yield organization
       case (None, None, Some(annotationId), None) =>
         for {
@@ -284,7 +281,7 @@ class AuthenticationController @Inject()(
 
   private def accessibleBySwitchingForMultiUser(multiUserId: ObjectId,
                                                 organizationNameOpt: Option[String],
-                                                dataSetNameOpt: Option[String],
+                                                datasetNameOpt: Option[String],
                                                 annotationIdOpt: Option[String],
                                                 workflowHashOpt: Option[String]): Fox[Organization] =
     for {
@@ -293,7 +290,7 @@ class AuthenticationController @Inject()(
         identity =>
           canAccessDatasetOrAnnotationOrWorkflow(identity,
                                                  organizationNameOpt,
-                                                 dataSetNameOpt,
+                                                 datasetNameOpt,
                                                  annotationIdOpt,
                                                  workflowHashOpt))
       selectedOrganization <- organizationDAO.findOne(selectedIdentity._organization)(GlobalAccessContext)
@@ -301,13 +298,13 @@ class AuthenticationController @Inject()(
 
   private def canAccessDatasetOrAnnotationOrWorkflow(user: User,
                                                      organizationNameOpt: Option[String],
-                                                     dataSetNameOpt: Option[String],
+                                                     datasetNameOpt: Option[String],
                                                      annotationIdOpt: Option[String],
                                                      workflowHashOpt: Option[String]): Fox[Boolean] = {
     val ctx = AuthorizedAccessContext(user)
-    (organizationNameOpt, dataSetNameOpt, annotationIdOpt, workflowHashOpt) match {
-      case (Some(organizationName), Some(dataSetName), None, None) =>
-        canAccessDataset(ctx, organizationName, dataSetName)
+    (organizationNameOpt, datasetNameOpt, annotationIdOpt, workflowHashOpt) match {
+      case (Some(organizationName), Some(datasetName), None, None) =>
+        canAccessDataset(ctx, organizationName, datasetName)
       case (None, None, Some(annotationId), None) =>
         canAccessAnnotation(user, ctx, annotationId)
       case (None, None, None, Some(workflowHash)) =>
@@ -316,10 +313,10 @@ class AuthenticationController @Inject()(
     }
   }
 
-  private def canAccessDataset(ctx: DBAccessContext, organizationName: String, dataSetName: String): Fox[Boolean] = {
+  private def canAccessDataset(ctx: DBAccessContext, organizationName: String, datasetName: String): Fox[Boolean] = {
     val foundFox = for {
       organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext)
-      _ <- datasetDAO.findOneByNameAndOrganization(dataSetName, organization._id)(ctx)
+      _ <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id)(ctx)
     } yield ()
     foundFox.futureBox.map(_.isDefined)
   }
@@ -351,12 +348,19 @@ class AuthenticationController @Inject()(
       _ <- Fox.runIf(!requestingMultiUser.isSuperUser)(
         organizationService
           .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
-      _ <- userService.joinOrganization(request.identity, organization._id, autoActivate = invite.autoActivate)
+      _ <- userService.joinOrganization(request.identity,
+                                        organization._id,
+                                        autoActivate = invite.autoActivate,
+                                        isAdmin = false)
       _ = analyticsService.track(JoinOrganizationEvent(request.identity, organization))
       userEmail <- userService.emailFor(request.identity)
+      newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)
       _ = Mailer ! Send(
-        defaultMails
-          .registerAdminNotifyerMail(request.identity.name, userEmail, None, organization, invite.autoActivate))
+        defaultMails.registerAdminNotifierMail(request.identity.name,
+                                               userEmail,
+                                               organization,
+                                               invite.autoActivate,
+                                               newUserEmailRecipient))
       _ <- inviteService.deactivateUsedInvite(invite)(GlobalAccessContext)
     } yield Ok
   }
@@ -600,6 +604,7 @@ class AuthenticationController @Inject()(
                     BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
                 } else {
                   for {
+                    _ <- initialDataService.insertLocalDataStoreIfEnabled()
                     organization <- organizationService.createOrganization(
                       Option(signUpData.organization).filter(_.trim.nonEmpty),
                       signUpData.organizationDisplayName) ?~> "organization.create.failed"
@@ -618,7 +623,7 @@ class AuthenticationController @Inject()(
                     multiUser <- multiUserDAO.findOne(user._multiUser)
                     dataStoreToken <- bearerTokenAuthenticatorService.createAndInitDataStoreTokenForUser(user)
                     _ <- organizationService
-                      .createOrganizationFolder(organization._id, dataStoreToken) ?~> "organization.folderCreation.failed"
+                      .createOrganizationDirectory(organization._id, dataStoreToken) ?~> "organization.folderCreation.failed"
                   } yield {
                     Mailer ! Send(defaultMails
                       .newOrganizationMail(organization.displayName, email, request.headers.get("Host").getOrElse("")))
@@ -661,8 +666,7 @@ class AuthenticationController @Inject()(
                      lastName,
                      request.body.autoActivate.getOrElse(false),
                      request.body.password,
-                     Empty,
-                     registerBrainDB = true).map(u => Ok(u._id.toString))
+                     Empty).map(u => Ok(u._id.toString))
         } else {
           Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
         }

@@ -15,6 +15,7 @@ import {
 } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import { TreeTypeEnum } from "oxalis/constants";
 import {
   createEdge,
   createNode,
@@ -47,6 +48,8 @@ import {
   enforceSkeletonTracing,
   findTreeByName,
   getTreeNameForAgglomerateSkeleton,
+  getTreesWithType,
+  getNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -99,19 +102,24 @@ function* centerActiveNode(action: Action): Saga<void> {
     }
   }
 
-  getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
-    (activeNode) => {
-      if ("suppressAnimation" in action && action.suppressAnimation) {
-        Store.dispatch(setPositionAction(activeNode.position));
-        Store.dispatch(setRotationAction(activeNode.rotation));
-      } else {
-        api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
-      }
-      if (activeNode.additionalCoordinates) {
-        Store.dispatch(setAdditionalCoordinatesAction(activeNode.additionalCoordinates));
-      }
-    },
+  const activeNode = Utils.toNullable(
+    getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))),
   );
+
+  if (activeNode != null) {
+    const activeNodePosition = yield* select((state: OxalisState) =>
+      getNodePosition(activeNode, state),
+    );
+    if ("suppressAnimation" in action && action.suppressAnimation) {
+      Store.dispatch(setPositionAction(activeNodePosition));
+      Store.dispatch(setRotationAction(activeNode.rotation));
+    } else {
+      api.tracing.centerPositionAnimated(activeNodePosition, false, activeNode.rotation);
+    }
+    if (activeNode.additionalCoordinates) {
+      Store.dispatch(setAdditionalCoordinatesAction(activeNode.additionalCoordinates));
+    }
+  }
 }
 
 function* watchBranchPointDeletion(): Saga<void> {
@@ -349,7 +357,9 @@ export function* loadAgglomerateSkeletonWithId(
   }
 
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-  const trees = yield* select((state) => enforceSkeletonTracing(state.tracing).trees);
+  const trees = yield* select((state) =>
+    getTreesWithType(enforceSkeletonTracing(state.tracing), TreeTypeEnum.AGGLOMERATE),
+  );
   const maybeTree = findTreeByName(trees, treeName);
 
   if (maybeTree != null) {
@@ -486,13 +496,13 @@ function* diffNodes(
   }
 
   for (const nodeId of addedNodeIds) {
-    const node = nodes.get(nodeId);
+    const node = nodes.getOrThrow(nodeId);
     yield createNode(treeId, node);
   }
 
   for (const nodeId of changedNodeIds) {
-    const node = nodes.get(nodeId);
-    const prevNode = prevNodes.get(nodeId);
+    const node = nodes.getOrThrow(nodeId);
+    const prevNode = prevNodes.getOrThrow(nodeId);
 
     if (updateNodePredicate(prevNode, node)) {
       yield updateNode(treeId, node);
@@ -537,7 +547,8 @@ function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
     prevTree.name !== tree.name ||
     !_.isEqual(prevTree.comments, tree.comments) ||
     prevTree.timestamp !== tree.timestamp ||
-    prevTree.groupId !== tree.groupId
+    prevTree.groupId !== tree.groupId ||
+    prevTree.type !== tree.type
   );
 }
 

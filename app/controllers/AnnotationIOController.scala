@@ -1,10 +1,12 @@
 package controllers
 
+import collections.SequenceUtils
+
 import java.io.{BufferedOutputStream, File, FileOutputStream}
 import java.util.zip.Deflater
-import akka.actor.ActorSystem
-import akka.stream.Materializer
-import com.mohiva.play.silhouette.api.Silhouette
+import org.apache.pekko.actor.ActorSystem
+import org.apache.pekko.stream.Materializer
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
@@ -13,15 +15,18 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, Volu
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
+  AnnotationLayerStatistics,
   AnnotationLayerType,
   FetchedAnnotationLayer
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AbstractSegmentationLayer,
   DataLayerLike,
+  DataSourceLike,
   GenericDataSource,
   SegmentationLayer
 }
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat.VolumeDataZipFormat
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
@@ -30,7 +35,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeTracingDownsampling
 }
 import com.typesafe.scalalogging.LazyLogging
-import io.swagger.annotations._
 
 import javax.inject.Inject
 import models.analytics.{AnalyticsService, DownloadAnnotationEvent, UploadAnnotationEvent}
@@ -38,7 +42,7 @@ import models.annotation.AnnotationState._
 import models.annotation._
 import models.annotation.nml.NmlResults.{NmlParseResult, NmlParseSuccess}
 import models.annotation.nml.{NmlResults, NmlWriter}
-import models.dataset.{Dataset, DatasetDAO, DatasetService}
+import models.dataset.{DataStoreDAO, Dataset, DatasetDAO, DatasetService, WKRemoteDataStoreClient}
 import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task._
@@ -52,7 +56,6 @@ import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-@Api
 class AnnotationIOController @Inject()(
     nmlWriter: NmlWriter,
     annotationDAO: AnnotationDAO,
@@ -68,7 +71,9 @@ class AnnotationIOController @Inject()(
     annotationService: AnnotationService,
     analyticsService: AnalyticsService,
     conf: WkConf,
+    rpc: RPC,
     sil: Silhouette[WkEnv],
+    dataStoreDAO: DataStoreDAO,
     provider: AnnotationInformationProvider,
     annotationUploadService: AnnotationUploadService)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
@@ -79,37 +84,33 @@ class AnnotationIOController @Inject()(
 
   private val volumeDataZipFormatForCompoundAnnotations = VolumeDataZipFormat.wkw
 
-  @ApiOperation(
-    value =
-      """Upload NML(s) or ZIP(s) of NML(s) to create a new explorative annotation.
-Expects:
- - As file attachment:
-    - Any number of NML files or ZIP files containing NMLs, optionally with volume data ZIPs referenced from an NML in a ZIP
-    - If multiple annotations are uploaded, they are merged into one.
-       - This is not supported if any of the annotations has multiple volume layers.
- - As form parameter: createGroupForEachFile [String] should be one of "true" or "false"
-   - If "true": in merged annotation, create tree group wrapping the trees of each file
-   - If "false": in merged annotation, rename trees with the respective file name as prefix""",
-    nickname = "annotationUpload"
-  )
-  @ApiResponses(
-    Array(
-      new ApiResponse(
-        code = 200,
-        message =
-          "JSON object containing annotation information about the newly created annotation, including the assigned id"),
-      new ApiResponse(code = 400, message = badRequestLabel)
-    ))
+  /* Upload NML(s) or ZIP(s) of NML(s) to create a new explorative annotation.
+     Expects:
+      - As file attachment:
+         - Any number of NML files or ZIP files containing NMLs, optionally with volume data ZIPs referenced from an NML in a ZIP
+         - If multiple annotations are uploaded, they are merged into one.
+            - This is not supported if any of the annotations has multiple volume layers.
+      - As form parameter: createGroupForEachFile [String] should be one of "true" or "false"
+        - If "true": in merged annotation, create tree group wrapping the trees of each file
+        - If "false": in merged annotation, rename trees with the respective file name as prefix
+     Returns:
+        JSON object containing annotation information about the newly created annotation, including the assigned id
+   */
   def upload: Action[MultipartFormData[TemporaryFile]] = sil.SecuredAction.async(parse.multipartFormData) {
     implicit request =>
       log() {
         val shouldCreateGroupForEachFile: Boolean =
           request.body.dataParts("createGroupForEachFile").headOption.contains("true")
-        val overwritingDataSetName: Option[String] =
+        val overwritingDatasetName: Option[String] =
           request.body.dataParts.get("datasetName").flatMap(_.headOption)
+        val overwritingOrganizationName: Option[String] =
+          request.body.dataParts.get("organizationName").flatMap(_.headOption)
         val attachedFiles = request.body.files.map(f => (f.ref.path.toFile, f.filename))
         val parsedFiles =
-          annotationUploadService.extractFromFiles(attachedFiles, useZipName = true, overwritingDataSetName)
+          annotationUploadService.extractFromFiles(attachedFiles,
+                                                   useZipName = true,
+                                                   overwritingDatasetName,
+                                                   overwritingOrganizationName)
         val parsedFilesWrapped =
           annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults, shouldCreateGroupForEachFile)
         val parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)
@@ -127,14 +128,17 @@ Expects:
             // Create a list of volume layers for each uploaded (non-skeleton-only) annotation.
             // This is what determines the merging strategy for volume layers
             volumeLayersGroupedRaw = parseSuccesses.map(_.volumeLayers).filter(_.nonEmpty)
-            dataset <- findDataSetForUploadedAnnotations(skeletonTracings,
+            dataset <- findDatasetForUploadedAnnotations(skeletonTracings,
                                                          volumeLayersGroupedRaw.flatten.map(_.tracing),
                                                          wkUrl)
             volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset)
             tracingStoreClient <- tracingStoreService.clientFor(dataset)
+            dataSource <- datasetService.dataSourceFor(dataset)
+            usableDataSource <- dataSource.toUsable.toFox
             mergedVolumeLayers <- mergeAndSaveVolumeLayers(volumeLayersGrouped,
                                                            tracingStoreClient,
-                                                           parsedFiles.otherFiles)
+                                                           parsedFiles.otherFiles,
+                                                           usableDataSource)
             mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient)
             annotation <- annotationService.createFrom(request.identity,
                                                        dataset,
@@ -154,7 +158,8 @@ Expects:
 
   private def mergeAndSaveVolumeLayers(volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
                                        client: WKRemoteTracingStoreClient,
-                                       otherFiles: Map[String, File]): Fox[List[AnnotationLayer]] =
+                                       otherFiles: Map[String, File],
+                                       dataSource: DataSourceLike): Fox[List[AnnotationLayer]] =
     if (volumeLayersGrouped.isEmpty)
       Fox.successful(List())
     else if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
@@ -165,12 +170,14 @@ Expects:
         val idx = volumeLayerWithIndex._2
         for {
           savedTracingId <- client.saveVolumeTracing(uploadedVolumeLayer.tracing,
-                                                     uploadedVolumeLayer.getDataZipFrom(otherFiles))
+                                                     uploadedVolumeLayer.getDataZipFrom(otherFiles),
+                                                     dataSource = Some(dataSource))
         } yield
           AnnotationLayer(
             savedTracingId,
             AnnotationLayerType.Volume,
-            uploadedVolumeLayer.name.getOrElse(AnnotationLayer.defaultVolumeLayerName + idx.toString)
+            uploadedVolumeLayer.name.getOrElse(AnnotationLayer.defaultVolumeLayerName + idx.toString),
+            AnnotationLayerStatistics.unknown
           )
       }
     } else { // Multiple annotations with volume layers (but at most one each) was uploaded merge those volume layers into one
@@ -178,6 +185,7 @@ Expects:
       for {
         mergedTracingId <- client.mergeVolumeTracingsByContents(
           VolumeTracings(uploadedVolumeLayersFlat.map(v => VolumeTracingOpt(Some(v.tracing)))),
+          dataSource,
           uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles)),
           persistTracing = true
         )
@@ -186,7 +194,8 @@ Expects:
           AnnotationLayer(
             mergedTracingId,
             AnnotationLayerType.Volume,
-            AnnotationLayer.defaultVolumeLayerName
+            AnnotationLayer.defaultVolumeLayerName,
+            AnnotationLayerStatistics.unknown
           ))
     }
 
@@ -200,13 +209,17 @@ Expects:
           SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))),
           persistTracing = true)
       } yield
-        List(AnnotationLayer(mergedTracingId, AnnotationLayerType.Skeleton, AnnotationLayer.defaultSkeletonLayerName))
+        List(
+          AnnotationLayer(mergedTracingId,
+                          AnnotationLayerType.Skeleton,
+                          AnnotationLayer.defaultSkeletonLayerName,
+                          AnnotationLayerStatistics.unknown))
     }
 
   private def assertNonEmpty(parseSuccesses: List[NmlParseSuccess]) =
     bool2Fox(parseSuccesses.exists(p => p.skeletonTracing.nonEmpty || p.volumeLayers.nonEmpty)) ?~> "nml.file.noFile"
 
-  private def findDataSetForUploadedAnnotations(
+  private def findDatasetForUploadedAnnotations(
       skeletonTracings: List[SkeletonTracing],
       volumeTracings: List[VolumeTracing],
       wkUrl: String)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Dataset] =
@@ -260,11 +273,7 @@ Expects:
     }
 
   private def assertAllOnSameDataset(skeletons: List[SkeletonTracing], volumes: List[VolumeTracing]): Fox[String] =
-    for {
-      datasetName <- volumes.headOption.map(_.dataSetName).orElse(skeletons.headOption.map(_.dataSetName)).toFox
-      _ <- bool2Fox(skeletons.forall(_.dataSetName == datasetName))
-      _ <- bool2Fox(volumes.forall(_.dataSetName == datasetName))
-    } yield datasetName
+    SequenceUtils.findUniqueElement(volumes.map(_.datasetName) ++ skeletons.map(_.datasetName)).toFox
 
   private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
                                           volumes: List[VolumeTracing]): Fox[Option[String]] = {
@@ -279,15 +288,29 @@ Expects:
                                                  dataset: Dataset): Fox[List[List[UploadedVolumeLayer]]] =
     for {
       dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
-      allAdapted = volumeLayersGrouped.map { volumeLayers =>
-        volumeLayers.map { volumeLayer =>
-          volumeLayer.copy(tracing = adaptPropertiesToFallbackLayer(volumeLayer.tracing, dataSource))
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(GlobalAccessContext) ?~> "dataStore.notFoundForDataset"
+      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext)
+      remoteDataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+      allAdapted <- Fox.serialCombined(volumeLayersGrouped) { volumeLayers =>
+        Fox.serialCombined(volumeLayers) { volumeLayer =>
+          for {
+            adaptedTracing <- adaptPropertiesToFallbackLayer(volumeLayer.tracing,
+                                                             dataSource,
+                                                             dataset,
+                                                             organization.name,
+                                                             remoteDataStoreClient)
+            adaptedAnnotationLayer = volumeLayer.copy(tracing = adaptedTracing)
+          } yield adaptedAnnotationLayer
         }
       }
     } yield allAdapted
 
-  private def adaptPropertiesToFallbackLayer[T <: DataLayerLike](volumeTracing: VolumeTracing,
-                                                                 dataSource: GenericDataSource[T]): VolumeTracing = {
+  private def adaptPropertiesToFallbackLayer[T <: DataLayerLike](
+      volumeTracing: VolumeTracing,
+      dataSource: GenericDataSource[T],
+      dataset: Dataset,
+      organizationName: String,
+      remoteDataStoreClient: WKRemoteDataStoreClient): Fox[VolumeTracing] = {
     val fallbackLayerOpt = dataSource.dataLayers.flatMap {
       case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name         => Some(layer)
       case layer: AbstractSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
@@ -299,39 +322,43 @@ Expects:
     val elementClass = fallbackLayerOpt
       .map(layer => elementClassToProto(layer.elementClass))
       .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass))
-    volumeTracing.copy(
-      boundingBox = bbox,
-      elementClass = elementClass,
-      fallbackLayer = fallbackLayerOpt.map(_.name),
-      largestSegmentId =
-        annotationService.combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
-                                                               fallbackLayerOpt.map(_.largestSegmentId)),
-      resolutions = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto)
-    )
+    for {
+      tracingCanHaveSegmentIndex <- canHaveSegmentIndex(organizationName,
+                                                        dataset.name,
+                                                        fallbackLayerOpt.map(_.name),
+                                                        remoteDataStoreClient)
+    } yield
+      volumeTracing.copy(
+        boundingBox = bbox,
+        elementClass = elementClass,
+        fallbackLayer = fallbackLayerOpt.map(_.name),
+        largestSegmentId =
+          annotationService.combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
+                                                                 fallbackLayerOpt.map(_.largestSegmentId)),
+        resolutions = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto),
+        hasSegmentIndex = Some(tracingCanHaveSegmentIndex)
+      )
   }
 
-  @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownloadByType")
-  @ApiResponses(
-    Array(
-      new ApiResponse(
-        code = 200,
-        message =
-          "NML or Zip file containing skeleton and/or volume data of this annotation. In case of Compound annotations, multiple such annotations wrapped in another zip"
-      ),
-      new ApiResponse(code = 400, message = badRequestLabel)
-    ))
-  def download(
-      @ApiParam(value =
-                  "Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType",
-                example = "Explorational") typ: String,
-      @ApiParam(
-        value =
-          "For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id")
-      id: String,
-      skeletonVersion: Option[Long],
-      volumeVersion: Option[Long],
-      skipVolumeData: Option[Boolean],
-      volumeDataZipFormat: Option[String]): Action[AnyContent] =
+  private def canHaveSegmentIndex(
+      organizationName: String,
+      datasetName: String,
+      fallbackLayerName: Option[String],
+      remoteDataStoreClient: WKRemoteDataStoreClient)(implicit ec: ExecutionContext): Fox[Boolean] =
+    fallbackLayerName match {
+      case Some(layerName) =>
+        remoteDataStoreClient.hasSegmentIndexFile(organizationName, datasetName, layerName)
+      case None =>
+        Fox.successful(true)
+    }
+
+  // NML or Zip file containing skeleton and/or volume data of this annotation. In case of Compound annotations, multiple such annotations wrapped in another zip
+  def download(typ: String,
+               id: String,
+               skeletonVersion: Option[Long],
+               volumeVersion: Option[Long],
+               skipVolumeData: Option[Boolean],
+               volumeDataZipFormat: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
@@ -357,15 +384,7 @@ Expects:
       } yield result
     }
 
-  @ApiOperation(value = "Download an annotation as NML/ZIP", nickname = "annotationDownload")
-  @ApiResponses(
-    Array(
-      new ApiResponse(code = 200,
-                      message = "NML or Zip file containing skeleton and/or volume data of this annotation."),
-      new ApiResponse(code = 400, message = badRequestLabel)
-    ))
-  def downloadWithoutType(@ApiParam(value = "Id of the stored annotation")
-                          id: String,
+  def downloadWithoutType(id: String,
                           skeletonVersion: Option[Long],
                           volumeVersion: Option[Long],
                           skipVolumeData: Option[Boolean],
@@ -498,7 +517,7 @@ Expects:
       fileName = name + fileExtension
       mimeType = exportMimeTypeForAnnotation(annotation)
       _ <- restrictions.allowDownload(issuingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
-      dataset <- datasetDAO.findOne(annotation._dataSet)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
+      dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
       temporaryFile <- annotationToTemporaryFile(dataset, annotation, name, organization._id) ?~> "annotation.writeTemporaryFile.failed"
     } yield {

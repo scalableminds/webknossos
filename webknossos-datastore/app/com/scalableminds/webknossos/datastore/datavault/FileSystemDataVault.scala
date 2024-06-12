@@ -1,9 +1,9 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.tools.Fox
+import net.liftweb.common.Box.tryo
 import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import net.liftweb.util.Helpers.tryo
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.nio.ByteBuffer

@@ -1,10 +1,5 @@
 package models.user
 
-import akka.actor.ActorSystem
-import com.mohiva.play.silhouette.api.LoginInfo
-import com.mohiva.play.silhouette.api.services.IdentityService
-import com.mohiva.play.silhouette.api.util.PasswordInfo
-import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.security.SCrypt
@@ -15,24 +10,30 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfigu
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, Send}
 import models.dataset.DatasetDAO
+import models.organization.OrganizationDAO
 import models.team._
+import net.liftweb.common.Box.tryo
+import net.liftweb.common.{Box, Full}
+import org.apache.pekko.actor.ActorSystem
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
+import play.silhouette.api.LoginInfo
+import play.silhouette.api.services.IdentityService
+import play.silhouette.api.util.PasswordInfo
+import play.silhouette.impl.providers.CredentialsProvider
+import security.{PasswordHasher, TokenDAO}
+import utils.sql.SqlEscaping
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
-import models.organization.OrganizationDAO
-import net.liftweb.common.{Box, Full}
-import security.{PasswordHasher, TokenDAO}
-
 import scala.concurrent.{ExecutionContext, Future}
 
 class UserService @Inject()(conf: WkConf,
                             userDAO: UserDAO,
                             multiUserDAO: MultiUserDAO,
                             userExperiencesDAO: UserExperiencesDAO,
-                            userDataSetConfigurationDAO: UserDatasetConfigurationDAO,
-                            userDataSetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
+                            userDatasetConfigurationDAO: UserDatasetConfigurationDAO,
+                            userDatasetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
                             teamMembershipService: TeamMembershipService,
@@ -44,6 +45,7 @@ class UserService @Inject()(conf: WkConf,
                             actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
+    with SqlEscaping
     with IdentityService[User] {
 
   private lazy val Mailer =
@@ -70,12 +72,6 @@ class UserService @Inject()(conf: WkConf,
         } yield identity
       case None => userDAO.findFirstByMultiUser(multiUser._id)
     }
-
-  def findOneByEmailAndOrganization(email: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[User] =
-    for {
-      multiUser <- multiUserDAO.findOneByEmail(email)
-      user <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUser._id)
-    } yield user
 
   def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: String): Fox[Unit] =
     for {
@@ -152,7 +148,7 @@ class UserService @Inject()(conf: WkConf,
   def joinOrganization(originalUser: User,
                        organizationId: String,
                        autoActivate: Boolean,
-                       isAdmin: Boolean = false,
+                       isAdmin: Boolean,
                        isUnlisted: Boolean = false,
                        isOrganizationOwner: Boolean = false): Fox[User] =
     for {
@@ -230,7 +226,7 @@ class UserService @Inject()(conf: WkConf,
       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordInfo)(GlobalAccessContext)
     } yield passwordInfo
 
-  def getOpenIdConnectPasswordInfo: PasswordInfo =
+  private def getOpenIdConnectPasswordInfo: PasswordInfo =
     PasswordInfo("Empty", "")
 
   def updateUserConfiguration(user: User, configuration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -239,14 +235,14 @@ class UserService @Inject()(conf: WkConf,
       result
     }
 
-  def updateDataSetViewConfiguration(
+  def updateDatasetViewConfiguration(
       user: User,
       datasetName: String,
-      organizationName: String,
+      organizationId: String,
       datasetConfiguration: DatasetViewConfiguration,
       layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)(GlobalAccessContext) ?~> Messages(
+      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext) ?~> Messages(
         "dataset.notFound",
         datasetName)
       layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
@@ -254,14 +250,14 @@ class UserService @Inject()(conf: WkConf,
         case (name, config) =>
           config.asOpt[LayerViewConfiguration] match {
             case Some(viewConfiguration) =>
-              userDataSetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(user._id,
+              userDatasetLayerConfigurationDAO.updateDatasetConfigurationForUserAndDatasetAndLayer(user._id,
                                                                                                    dataset._id,
                                                                                                    name,
                                                                                                    viewConfiguration)
             case None => Fox.successful(())
           }
       }
-      _ <- userDataSetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
+      _ <- userDatasetConfigurationDAO.updateDatasetConfigurationForUserAndDataset(user._id,
                                                                                    dataset._id,
                                                                                    datasetConfiguration)
     } yield ()
@@ -327,6 +323,7 @@ class UserService @Inject()(conf: WkConf,
     } yield isTeamManager || user.isAdminOf(organizationId)
 
   def isEditableBy(possibleEditee: User, possibleEditor: User): Fox[Boolean] =
+    // Note that the same logic is implemented in User/findAllCompactWithFilters in SQL
     for {
       otherIsTeamManagerOrAdmin <- isTeamManagerOrAdminOf(possibleEditor, possibleEditee)
       teamMemberships <- teamMembershipsFor(possibleEditee._id)
@@ -363,10 +360,52 @@ class UserService @Inject()(conf: WkConf,
         "created" -> user.created,
         "lastTaskTypeId" -> user.lastTaskTypeId.map(_.toString),
         "isSuperUser" -> multiUser.isSuperUser,
-        "isEmailVerified" -> multiUser.isEmailVerified,
+        "isEmailVerified" -> (multiUser.isEmailVerified || !conf.WebKnossos.User.EmailVerification.activated),
       )
     }
   }
+
+  def publicWritesCompact(userCompactInfo: UserCompactInfo): Fox[JsObject] =
+    for {
+      _ <- Fox.successful(())
+      teamsJson = parseArrayLiteral(userCompactInfo.teamIdsAsArrayLiteral).indices.map(
+        idx =>
+          Json.obj(
+            "id" -> parseArrayLiteral(userCompactInfo.teamIdsAsArrayLiteral)(idx),
+            "name" -> parseArrayLiteral(userCompactInfo.teamNamesAsArrayLiteral)(idx),
+            "isTeamManager" -> parseArrayLiteral(userCompactInfo.teamManagersAsArrayLiteral)(idx).toBoolean
+        ))
+      experienceJson = Json.obj(
+        parseArrayLiteral(userCompactInfo.experienceValuesAsArrayLiteral).zipWithIndex
+          .filter(valueAndIndex => tryo(valueAndIndex._1.toInt).isDefined)
+          .map(valueAndIndex =>
+            (parseArrayLiteral(userCompactInfo.experienceDomainsAsArrayLiteral)(valueAndIndex._2),
+             Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt))): _*)
+      novelUserExperienceInfos <- Json.parse(userCompactInfo.novelUserExperienceInfos).validate[JsObject]
+    } yield {
+      Json.obj(
+        "id" -> userCompactInfo._id,
+        "email" -> userCompactInfo.email,
+        "firstName" -> userCompactInfo.firstName,
+        "lastName" -> userCompactInfo.lastName,
+        "isAdmin" -> userCompactInfo.isAdmin,
+        "isOrganizationOwner" -> userCompactInfo.isOrganizationOwner,
+        "isDatasetManager" -> userCompactInfo.isDatasetManager,
+        "isActive" -> !userCompactInfo.isDeactivated,
+        "teams" -> teamsJson,
+        "experiences" -> experienceJson,
+        "lastActivity" -> userCompactInfo.lastActivity,
+        "isAnonymous" -> false,
+        "isEditable" -> userCompactInfo.isEditable,
+        "organization" -> userCompactInfo.organizationName,
+        "novelUserExperienceInfos" -> novelUserExperienceInfos,
+        "selectedTheme" -> userCompactInfo.selectedTheme,
+        "created" -> userCompactInfo.created,
+        "lastTaskTypeId" -> userCompactInfo.lastTaskTypeId,
+        "isSuperUser" -> userCompactInfo.isSuperUser,
+        "isEmailVerified" -> userCompactInfo.isEmailVerified,
+      )
+    }
 
   def compactWrites(user: User): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext

@@ -1,7 +1,7 @@
 package controllers
 
-import akka.actor.ActorSystem
-import com.mohiva.play.silhouette.api.Silhouette
+import org.apache.pekko.actor.ActorSystem
+import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -58,10 +58,11 @@ class OrganizationController @Inject()(
       }
     }
 
-  def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def list(compact: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       organizations <- organizationDAO.findAll ?~> "organization.list.failed"
-      js <- Fox.serialCombined(organizations)(o => organizationService.publicWrites(o))
+      js <- if (compact.getOrElse(false)) Fox.successful(organizations.map(organizationService.compactWrites))
+      else Fox.serialCombined(organizations)(o => organizationService.publicWrites(o))
     } yield Ok(Json.toJson(js))
   }
 
@@ -201,7 +202,6 @@ class OrganizationController @Inject()(
       _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail))
       _ = Mailer ! Send(
         defaultMails.upgradePricingPlanRequestMail(request.identity,
-                                                   userEmail,
                                                    organization.displayName,
                                                    "Extend WEBKNOSSOS plan by a year"))
     } yield Ok
@@ -223,7 +223,6 @@ class OrganizationController @Inject()(
         _ = Mailer ! Send(mail(request.identity, userEmail))
         _ = Mailer ! Send(
           defaultMails.upgradePricingPlanRequestMail(request.identity,
-                                                     userEmail,
                                                      organization.displayName,
                                                      s"Upgrade WEBKNOSSOS Plan to $requestedPlan"))
       } yield Ok
@@ -238,7 +237,6 @@ class OrganizationController @Inject()(
         _ = Mailer ! Send(defaultMails.upgradePricingPlanUsersMail(request.identity, userEmail, requestedUsers))
         _ = Mailer ! Send(
           defaultMails.upgradePricingPlanRequestMail(request.identity,
-                                                     userEmail,
                                                      organization.displayName,
                                                      s"Purchase $requestedUsers additional users"))
       } yield Ok
@@ -253,7 +251,6 @@ class OrganizationController @Inject()(
         _ = Mailer ! Send(defaultMails.upgradePricingPlanStorageMail(request.identity, userEmail, requestedStorage))
         _ = Mailer ! Send(
           defaultMails.upgradePricingPlanRequestMail(request.identity,
-                                                     userEmail,
                                                      organization.displayName,
                                                      s"Purchase $requestedStorage TB additional storage"))
       } yield Ok

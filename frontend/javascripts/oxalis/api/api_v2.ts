@@ -21,6 +21,7 @@ import {
   getActiveNode,
   getActiveTree,
   getTree,
+  getNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
@@ -184,7 +185,10 @@ class TracingApi {
     if (treeId != null) {
       tree = skeletonTracing.trees[treeId];
       assertExists(tree, `Couldn't find tree ${treeId}.`);
-      assertExists(tree.nodes.get(nodeId), `Couldn't find node ${nodeId} in tree ${treeId}.`);
+      assertExists(
+        tree.nodes.getNullable(nodeId),
+        `Couldn't find node ${nodeId} in tree ${treeId}.`,
+      );
     } else {
       tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nodeId));
       assertExists(tree, `Couldn't find node ${nodeId}.`);
@@ -346,9 +350,10 @@ class TracingApi {
    * api.tracing.centerNode()
    */
   centerNode = (nodeId?: number): void => {
-    const skeletonTracing = assertSkeleton(Store.getState().tracing);
+    const state = Store.getState();
+    const skeletonTracing = assertSkeleton(state.tracing);
     getNodeAndTree(skeletonTracing, nodeId).map(([, node]) =>
-      Store.dispatch(setPositionAction(node.position)),
+      Store.dispatch(setPositionAction(getNodePosition(node, state))),
     );
   };
 
@@ -553,7 +558,7 @@ class DataApi {
    *
    * api.setMapping("segmentation", mapping);
    */
-  setMapping(layerName: string, mapping: Mapping) {
+  setMapping(layerName: string, mapping: Mapping | Record<number, number>) {
     const segmentationLayer = this.model.getLayerByName(layerName);
     const segmentationLayerName = segmentationLayer != null ? segmentationLayer.name : null;
 
@@ -562,8 +567,10 @@ class DataApi {
     }
 
     const mappingProperties = {
-      mapping: _.clone(mapping),
-      mappingKeys: Object.keys(mapping).map((x) => parseInt(x, 10)),
+      mapping:
+        mapping instanceof Map
+          ? new Map(mapping)
+          : new Map(Object.entries(mapping).map(([key, value]) => [parseInt(key, 10), value])),
     };
     Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
   }
@@ -841,7 +848,7 @@ class UtilsApi {
    */
   registerOverwrite<S, A>(
     actionName: string,
-    overwriteFunction: (store: S, next: (action: A) => void, originalAction: A) => void,
+    overwriteFunction: (store: S, next: (action: A) => void, originalAction: A) => A | Promise<A>,
   ) {
     overwriteAction(actionName, overwriteFunction);
   }

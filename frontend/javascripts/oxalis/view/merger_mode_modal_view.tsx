@@ -17,7 +17,7 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
   );
   return (
     <Modal
-      visible
+      open
       title="Merger mode enabled"
       closable={false}
       width={600}
@@ -46,7 +46,7 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
       )}
       You just enabled the merger mode. This mode allows to merge segmentation cells by creating
       trees and nodes. Each tree maps the marked segments (the ones where nodes were created in) to
-      one new segment. Create separate trees for different segements.
+      one new segment. Create separate trees for different segments.
       <br />
       <br />
       Additionally available keyboard shortcuts:
@@ -57,18 +57,6 @@ export default function MergerModeModalView({ isCloseable, onClose, progress }: 
         }}
       >
         <tbody>
-          <tr>
-            <td
-              style={{
-                paddingRight: 24,
-              }}
-            >
-              8
-            </td>
-            <td>
-              Replace the color of the current active tree and its mapped segments with a new one.
-            </td>
-          </tr>
           <tr>
             <td
               style={{

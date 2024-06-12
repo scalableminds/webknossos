@@ -1,10 +1,20 @@
-import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select, Popover } from "antd";
+import {
+  Row,
+  Col,
+  Slider,
+  InputNumber,
+  Switch,
+  Tooltip,
+  Input,
+  Select,
+  Popover,
+  PopoverProps,
+} from "antd";
 import { DeleteOutlined, DownloadOutlined, EditOutlined, ScanOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
 import type { Vector3, Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
-import features from "features";
 import messages from "messages";
 
 const ROW_GUTTER = 1;
@@ -72,7 +82,6 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
         <Col span={this.props.spans[2]}>
           <InputNumber
             controls={false}
-            bordered={false}
             min={min}
             max={max}
             style={{
@@ -82,6 +91,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             onChange={this._onChange}
             size="small"
             disabled={disabled}
+            variant="borderless"
           />
         </Col>
       </Row>
@@ -174,7 +184,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
         <Col span={this.props.spans[2]}>
           <InputNumber
             controls={false}
-            bordered={false}
+            variant={"borderless"}
             min={min}
             max={max}
             style={{
@@ -283,6 +293,7 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
             value={value}
             step={step}
             size="small"
+            variant="borderless"
           />
         </Col>
       </Row>
@@ -294,14 +305,14 @@ type NumberInputPopoverSettingProps = {
   value: number | null | undefined;
   label: string | React.ReactNode;
   detailedLabel: string | React.ReactNode;
-  placement?: string;
+  placement?: PopoverProps["placement"];
   max?: number;
   min?: number;
   step?: number;
 };
 export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps) {
   const { min, max, onChange, step, value, label, detailedLabel } = props;
-  const placement = props.placement || "top";
+  const placement: PopoverProps["placement"] = props.placement || "top";
   const onChangeGuarded = (val: number | null) => {
     if (val != null) {
       onChange(val);
@@ -318,7 +329,6 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
       </div>
       <InputNumber
         controls={false}
-        bordered={false}
         style={{
           width: 140,
         }}
@@ -328,11 +338,11 @@ export function NumberInputPopoverSetting(props: NumberInputPopoverSettingProps)
         value={value}
         step={step}
         size="small"
+        variant="borderless"
       />
     </div>
   );
   return (
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'TooltipPl... Remove this comment to see the full error message
     <Popover content={numberInput} trigger="click" placement={placement}>
       <span
         style={{
@@ -365,7 +375,9 @@ type UserBoundingBoxInputProps = {
   onVisibilityChange: (arg0: boolean) => void;
   onNameChange: (arg0: string) => void;
   onColorChange: (arg0: Vector3) => void;
-  allowUpdate: boolean;
+  disabled: boolean;
+  isLockedByOwner: boolean;
+  isOwner: boolean;
 };
 type State = {
   isEditing: boolean;
@@ -373,6 +385,7 @@ type State = {
   text: string;
   name: string;
 };
+
 export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
   constructor(props: UserBoundingBoxInputProps) {
     super(props);
@@ -466,7 +479,9 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       onExport,
       isExportEnabled,
       onGoToBoundingBox,
-      allowUpdate,
+      disabled,
+      isLockedByOwner,
+      isOwner,
     } = this.props;
     const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
     const iconStyle = {
@@ -478,13 +493,17 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const exportButtonTooltip = isExportEnabled
       ? "Export data from this bounding box."
       : messages["data.bounding_box_export_not_supported"];
-    const exportColumn = features().jobsEnabled ? (
+    const exportColumn = isExportEnabled ? (
       <Col span={2}>
         <Tooltip title={exportButtonTooltip} placement="topRight">
           <DownloadOutlined onClick={onExport} style={exportIconStyle} />
         </Tooltip>
       </Col>
     ) : null;
+    const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
+      isLockedByOwner,
+      isOwner,
+    );
     return (
       <React.Fragment>
         <Row
@@ -504,7 +523,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           </Col>
 
           <Col span={SETTING_RIGHT_SPAN}>
-            <Tooltip title={allowUpdate ? null : messages["tracing.read_only_mode_notification"]}>
+            <Tooltip title={disabled ? editingDisallowedExplanation : null}>
               <span>
                 <Input
                   defaultValue={name}
@@ -516,23 +535,17 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                   }}
                   onPressEnter={this.handleNameChanged}
                   onBlur={this.handleNameChanged}
-                  disabled={!allowUpdate}
+                  disabled={disabled}
                 />
               </span>
             </Tooltip>
           </Col>
           {exportColumn}
           <Col span={2}>
-            <Tooltip
-              title={
-                allowUpdate
-                  ? "Delete this bounding box."
-                  : messages["tracing.read_only_mode_notification"]
-              }
-            >
+            <Tooltip title={disabled ? editingDisallowedExplanation : "Delete this bounding box."}>
               <DeleteOutlined
-                onClick={allowUpdate ? onDelete : () => {}}
-                style={allowUpdate ? iconStyle : disabledIconStyle}
+                onClick={disabled ? () => {} : onDelete}
+                style={disabled ? disabledIconStyle : iconStyle}
               />
             </Tooltip>
           </Col>
@@ -550,8 +563,8 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           </Col>
           <Col span={SETTING_RIGHT_SPAN}>
             <Tooltip
-              trigger={allowUpdate ? ["focus"] : ["hover"]}
-              title={allowUpdate ? tooltipTitle : messages["tracing.read_only_mode_notification"]}
+              trigger={disabled ? ["hover"] : ["focus"]}
+              title={disabled ? editingDisallowedExplanation : tooltipTitle}
               placement="topLeft"
               // @ts-expect-error ts-migrate(2322) FIXME: Type '{ backgroundColor: string; } | null' is not ... Remove this comment to see the full error message
               overlayStyle={tooltipStyle}
@@ -564,19 +577,19 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                   value={this.state.text}
                   placeholder="0, 0, 0, 512, 512, 512"
                   size="small"
-                  disabled={!allowUpdate}
+                  disabled={disabled}
                 />
               </span>
             </Tooltip>
           </Col>
           <Col span={2}>
-            <Tooltip title={allowUpdate ? null : messages["tracing.read_only_mode_notification"]}>
+            <Tooltip title={disabled ? messages["tracing.read_only_mode_notification"] : null}>
               <span>
                 <ColorSetting
                   value={Utils.rgbToHex(upscaledColor)}
                   onChange={this.handleColorChange}
                   style={iconStyle}
-                  disabled={!allowUpdate}
+                  disabled={disabled}
                 />
               </span>
             </Tooltip>
@@ -661,7 +674,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
               // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
               defaultValue={value.toString()}
               size="small"
-              dropdownMatchSelectWidth={false}
+              popupMatchSelectWidth={false}
               options={this.props.options}
               disabled={this.props.disabled}
             />

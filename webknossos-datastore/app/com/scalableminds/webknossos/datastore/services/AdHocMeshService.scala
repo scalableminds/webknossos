@@ -1,12 +1,13 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.nio._
-import akka.actor.{Actor, ActorRef, ActorSystem, Props}
-import akka.pattern.ask
-import akka.routing.RoundRobinPool
-import akka.util.Timeout
+import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
+import org.apache.pekko.pattern.ask
+import org.apache.pekko.routing.RoundRobinPool
+import org.apache.pekko.util.Timeout
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.requests.{
   Cuboid,
@@ -27,10 +28,10 @@ case class AdHocMeshRequest(dataSource: Option[DataSource],
                             dataLayer: SegmentationLayer,
                             cuboid: Cuboid,
                             segmentId: Long,
-                            subsamplingStrides: Vec3Int,
                             scale: Vec3Double,
                             mapping: Option[String] = None,
                             mappingType: Option[String] = None,
+                            additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
                             findNeighbors: Boolean = true)
 
 case class DataTypeFunctors[T, B](
@@ -45,7 +46,7 @@ class AdHocMeshActor(val service: AdHocMeshService, val timeout: FiniteDuration)
     case request: AdHocMeshRequest =>
       sender() ! Await.result(service.requestAdHocMesh(request).futureBox, timeout)
     case _ =>
-      sender() ! Failure("Unexpected message sent to AdHocMeshingActor.")
+      sender() ! Failure("Unexpected message sent to AdHocMeshActor.")
   }
 }
 
@@ -112,10 +113,8 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
                 val dataRequest = DataServiceDataRequest(
                   request.dataSource.orNull,
                   request.dataLayer,
-                  request.mapping,
                   request.cuboid,
-                  DataServiceRequestSettings(halfByte = false, request.mapping, None),
-                  request.subsamplingStrides
+                  DataServiceRequestSettings(halfByte = false, request.mapping, None)
                 )
                 agglomerateService.applyAgglomerate(dataRequest)(data)
               }.getOrElse(Full(data))
@@ -169,21 +168,15 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
     }
 
     val cuboid = request.cuboid
-    val subsamplingStrides =
-      Vec3Double(request.subsamplingStrides.x, request.subsamplingStrides.y, request.subsamplingStrides.z)
 
-    val dataRequest = DataServiceDataRequest(request.dataSource.orNull,
-                                             request.dataLayer,
-                                             request.mapping,
-                                             cuboid,
-                                             DataServiceRequestSettings.default,
-                                             request.subsamplingStrides)
-
-    val dataDimensions = Vec3Int(
-      math.ceil(cuboid.width / subsamplingStrides.x).toInt,
-      math.ceil(cuboid.height / subsamplingStrides.y).toInt,
-      math.ceil(cuboid.depth / subsamplingStrides.z).toInt
+    val dataRequest = DataServiceDataRequest(
+      request.dataSource.orNull,
+      request.dataLayer,
+      cuboid,
+      DataServiceRequestSettings.default.copy(additionalCoordinates = request.additionalCoordinates)
     )
+
+    val dataDimensions = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)
 
     val offset = Vec3Double(cuboid.topLeft.voxelXInMag, cuboid.topLeft.voxelYInMag, cuboid.topLeft.voxelZInMag)
     val scale = Vec3Double(cuboid.topLeft.mag) * request.scale
@@ -193,7 +186,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
-      agglomerateMappedData <- applyAgglomerate(data).toFox
+      agglomerateMappedData <- applyAgglomerate(data) ?~> "failed to apply agglomerate for ad-hoc meshing"
       typedData = convertData(agglomerateMappedData)
       mappedData <- applyMapping(typedData)
       mappedSegmentId <- applyMapping(Array(typedSegmentId)).map(_.head)
@@ -212,14 +205,8 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
                                       math.min(dataDimensions.y - y, 33),
                                       math.min(dataDimensions.z - z, 33))
         if (subVolumeContainsSegmentId(mappedData, dataDimensions, boundingBox, mappedSegmentId)) {
-          MarchingCubes.marchingCubes[T](mappedData,
-                                         dataDimensions,
-                                         boundingBox,
-                                         mappedSegmentId,
-                                         subsamplingStrides,
-                                         offset,
-                                         scale,
-                                         vertexBuffer)
+          MarchingCubes
+            .marchingCubes[T](mappedData, dataDimensions, boundingBox, mappedSegmentId, offset, scale, vertexBuffer)
         }
       }
       (vertexBuffer.flatMap(_.toList.map(_.toFloat)).toArray, neighbors)

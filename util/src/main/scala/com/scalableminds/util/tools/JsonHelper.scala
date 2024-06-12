@@ -38,18 +38,14 @@ object JsonHelper extends BoxImplicits with LazyLogging {
       Full(Json.parse(buffer.getLines().mkString))
     } catch {
       case _: java.io.EOFException =>
-        logger.warn(
-          s"EOFException in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
+        logger.warn(s"EOFException in JsonHelper while trying to extract json from file. File: ${rootPath.toString}")
         Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString}")
       case _: AccessDeniedException | _: FileNotFoundException =>
         logger.warn(
-          s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.relativize(path).toString}")
+          s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.toString}")
         Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Access denied.")
-      case e: com.fasterxml.jackson.databind.JsonMappingException =>
-        logger.warn(s"Json mapping issue in '${rootPath.relativize(path).toString}': $e")
-        Failure(s"Json mapping issue in '${rootPath.relativize(path).toString}': $e")
       case e: Exception =>
-        logger.warn(s"Json mapping issue in '${rootPath.relativize(path).toString}': $e")
+        logger.warn(s"Json mapping issue in '${rootPath.toString}': $e")
         Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}': $e")
     } finally {
       if (buffer != null) buffer.close()

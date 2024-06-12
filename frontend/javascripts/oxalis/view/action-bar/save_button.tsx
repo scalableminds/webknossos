@@ -131,7 +131,7 @@ class SaveButton extends React.PureComponent<Props, State> {
         icon={this.getSaveButtonIcon()}
         className={this.props.className}
         style={{
-          background: showUnsavedWarning ? "var(--ant-error)" : undefined,
+          background: showUnsavedWarning ? "var(--ant-color-error)" : undefined,
         }}
       >
         <Tooltip
@@ -144,8 +144,8 @@ class SaveButton extends React.PureComponent<Props, State> {
             outstandingBucketDownloadCount > 0
               ? `${outstandingBucketDownloadCount} items remaining to download...`
               : totalBucketsToCompress > 0
-              ? `${totalBucketsToCompress} items remaining to compress...`
-              : null
+                ? `${totalBucketsToCompress} items remaining to compress...`
+                : null
           }
         >
           {this.shouldShowProgress() ? (

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import ch.systemsx.cisd.hdf5._
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -12,12 +13,13 @@ import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataReq
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import org.apache.commons.io.FilenameUtils
 
 import java.nio._
 import java.nio.file.{Files, Paths}
 import javax.inject.Inject
+import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
 
 class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with LazyLogging {
@@ -29,8 +31,8 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
 
   lazy val agglomerateFileCache = new AgglomerateFileCache(config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
 
-  def exploreAgglomerates(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] = {
-    val layerDir = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName)
+  def exploreAgglomerates(organizationName: String, datasetName: String, dataLayerName: String): Set[String] = {
+    val layerDir = dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName)
     PathUtils
       .listFiles(layerDir.resolve(agglomerateDir),
                  silent = true,
@@ -94,9 +96,9 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   }
 
   // This uses a HDF5DataSet, which improves performance per call but doesn't permit parallel calls with the same dataset.
-  private def readHDF(reader: IHDF5Reader, dataSet: HDF5DataSet, segmentId: Long, blockSize: Long): Array[Long] =
+  private def readHDF(reader: IHDF5Reader, hdf5Dataset: HDF5DataSet, segmentId: Long, blockSize: Long): Array[Long] =
     // We don't need to differentiate between the data types because the underlying library does the conversion for us
-    reader.uint64().readArrayBlockWithOffset(dataSet, blockSize.toInt, segmentId)
+    reader.uint64().readArrayBlockWithOffset(hdf5Dataset, blockSize.toInt, segmentId)
 
   // This uses the datasetName, which allows us to call it on the same hdf file in parallel.
   private def readHDF(reader: IHDF5Reader, segmentId: Long, blockSize: Long) =
@@ -113,7 +115,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     val cumsumPath =
       dataBaseDir
         .resolve(agglomerateFileKey.organizationName)
-        .resolve(agglomerateFileKey.dataSetName)
+        .resolve(agglomerateFileKey.datasetName)
         .resolve(agglomerateFileKey.layerName)
         .resolve(agglomerateDir)
         .resolve(cumsumFileName)
@@ -134,7 +136,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
   }
 
   def generateSkeleton(organizationName: String,
-                       dataSetName: String,
+                       datasetName: String,
                        dataLayerName: String,
                        mappingName: String,
                        agglomerateId: Long): Box[SkeletonTracing] =
@@ -143,7 +145,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
       val hdfFile =
         dataBaseDir
           .resolve(organizationName)
-          .resolve(dataSetName)
+          .resolve(datasetName)
           .resolve(dataLayerName)
           .resolve(agglomerateDir)
           .resolve(s"$mappingName.$agglomerateFileExtension")
@@ -206,7 +208,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
         ))
 
       val skeleton = SkeletonTracingDefaults.createInstance.copy(
-        dataSetName = dataSetName,
+        datasetName = datasetName,
         trees = trees
       )
       val duration = System.nanoTime() - startTime
@@ -233,7 +235,7 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     val hdfFile =
       dataBaseDir
         .resolve(agglomerateFileKey.organizationName)
-        .resolve(agglomerateFileKey.dataSetName)
+        .resolve(agglomerateFileKey.datasetName)
         .resolve(agglomerateFileKey.layerName)
         .resolve(agglomerateDir)
         .resolve(s"${agglomerateFileKey.mappingName}.$agglomerateFileExtension")
@@ -268,6 +270,34 @@ class AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverte
     }
 
   }
+
+  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] = {
+    val hdfFile = agglomerateFileKey.path(dataBaseDir, agglomerateDir, agglomerateFileExtension).toFile
+    val reader: IHDF5Reader = HDF5FactoryProvider.get.openForReading(hdfFile)
+    for {
+      agglomerateIdArr: Array[Long] <- tryo(
+        reader.uint64().readArrayBlockWithOffset("/segment_to_agglomerate", 1, segmentId))
+      agglomerateId = agglomerateIdArr(0)
+      segmentsRange: Array[Long] <- tryo(
+        reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments_offsets", 2, agglomerateId))
+      segmentIndex <- binarySearchForSegment(segmentsRange(0), segmentsRange(1), segmentId, reader)
+      position <- tryo(reader.uint64().readMatrixBlockWithOffset("/agglomerate_to_positions", 1, 3, segmentIndex, 0)(0))
+    } yield Vec3Int(position(0).toInt, position(1).toInt, position(2).toInt)
+  }
+
+  @tailrec
+  private def binarySearchForSegment(rangeStart: Long,
+                                     rangeEnd: Long,
+                                     segmentId: Long,
+                                     reader: IHDF5Reader): Box[Long] =
+    if (rangeStart > rangeEnd) Failure("Could not find segmentId in agglomerate file")
+    else {
+      val middle = rangeStart + (rangeEnd - rangeStart) / 2
+      val segmentIdAtMiddle: Long = reader.uint64().readArrayBlockWithOffset("/agglomerate_to_segments", 1, middle)(0)
+      if (segmentIdAtMiddle == segmentId) Full(middle)
+      else if (segmentIdAtMiddle < segmentId) binarySearchForSegment(middle + 1L, rangeEnd, segmentId, reader)
+      else binarySearchForSegment(rangeStart, middle - 1L, segmentId, reader)
+    }
 
   def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[AgglomerateGraph] =
     tryo {

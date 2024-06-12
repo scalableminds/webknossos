@@ -29,7 +29,10 @@ object TracingStore {
     TracingStore(name, url, publicUrl, "")
 }
 
-class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(implicit ec: ExecutionContext)
+class TracingStoreService @Inject()(
+    tracingStoreDAO: TracingStoreDAO,
+    rpc: RPC,
+    tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Results {
@@ -41,7 +44,7 @@ class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(
         "url" -> tracingStore.publicUrl
       ))
 
-  def validateAccess[A](name: String, key: String)(block: TracingStore => Future[Result])(
+  def validateAccess(name: String, key: String)(block: TracingStore => Future[Result])(
       implicit m: MessagesProvider): Fox[Result] =
     tracingStoreDAO
       .findOneByKey(key) // Check if key is valid
@@ -51,10 +54,10 @@ class TracingStoreService @Inject()(tracingStoreDAO: TracingStoreDAO, rpc: RPC)(
         Forbidden(Messages("tracingStore.notFound"))
       } // Default error
 
-  def clientFor(dataSet: Dataset)(implicit ctx: DBAccessContext): Fox[WKRemoteTracingStoreClient] =
+  def clientFor(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[WKRemoteTracingStoreClient] =
     for {
       tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
-    } yield new WKRemoteTracingStoreClient(tracingStore, dataSet, rpc)
+    } yield new WKRemoteTracingStoreClient(tracingStore, dataset, rpc, tracingDataSourceTemporaryStore)
 }
 
 class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -91,7 +94,7 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[TracingStore] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from webknossos.tracingstores_ where url = $url and $accessQuery".as[TracingstoresRow])
+      r <- run(q"SELECT $columns FROM webknossos.tracingstores_ WHERE url = $url AND $accessQuery".as[TracingstoresRow])
       parsed <- parseFirst(r, url)
     } yield parsed
 
@@ -103,18 +106,21 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def insertOne(t: TracingStore): Fox[Unit] =
     for {
-      _ <- run(q"""insert into webknossos.tracingStores(name, url, publicUrl, key, isDeleted)
-                         values(${t.name}, ${t.url}, ${t.publicUrl}, ${t.key}, ${t.isDeleted})""".asUpdate)
+      _ <- run(q"""INSERT INTO webknossos.tracingStores(name, url, publicUrl, key, isDeleted)
+                   VALUES(${t.name}, ${t.url}, ${t.publicUrl}, ${t.key}, ${t.isDeleted})""".asUpdate)
     } yield ()
 
   def deleteOneByName(name: String): Fox[Unit] =
     for {
-      _ <- run(q"update webknossos.tracingStores set isDeleted = true where name = $name".asUpdate)
+      _ <- run(q"UPDATE webknossos.tracingStores SET isDeleted = TRUE WHERE name = $name".asUpdate)
     } yield ()
 
   def updateOne(t: TracingStore): Fox[Unit] =
     for {
-      _ <- run(
-        q" update webknossos.tracingStores set url = ${t.url}, publicUrl = ${t.publicUrl} where name = ${t.name}".asUpdate)
+      _ <- run(q"""UPDATE webknossos.tracingStores
+                   SET
+                     url = ${t.url},
+                     publicUrl = ${t.publicUrl}
+                   WHERE name = ${t.name}""".asUpdate)
     } yield ()
 }

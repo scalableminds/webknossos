@@ -14,8 +14,8 @@ import type {
   TypedArray,
 } from "oxalis/constants";
 import window, { document, location } from "libs/window";
-
-export type Comparator<T> = (arg0: T, arg1: T) => -1 | 0 | 1;
+import { ArbitraryObject, Comparator } from "types/globals";
+import dayjs from "dayjs";
 
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
@@ -82,7 +82,7 @@ export function iterateThroughBounds(
 }
 
 function swap<T>(arr: Array<T>, a: number, b: number) {
-  let tmp;
+  let tmp: T;
 
   if (arr[a] > arr[b]) {
     tmp = arr[b];
@@ -93,11 +93,11 @@ function swap<T>(arr: Array<T>, a: number, b: number) {
 
 naturalSort.insensitive = true;
 
-function getRecursiveValues(obj: {} | Array<any> | string): Array<any> {
+function getRecursiveValues(obj: ArbitraryObject | Array<any> | string): Array<any> {
   return _.flattenDeep(getRecursiveValuesUnflat(obj));
 }
 
-function getRecursiveValuesUnflat(obj: {} | Array<any> | string): Array<any> {
+function getRecursiveValuesUnflat(obj: ArbitraryObject | Array<any> | string): Array<any> {
   if (Array.isArray(obj)) {
     return obj.map(getRecursiveValuesUnflat);
   } else if (obj instanceof Object) {
@@ -159,7 +159,6 @@ export function asAbortable<T>(
   signal: AbortSignal,
   abortError: Error,
 ): Promise<T> {
-  // eslint-disable-next-line no-async-promise-executor
   return new Promise(async (resolve, reject) => {
     const abort = () => reject(abortError);
 
@@ -233,12 +232,11 @@ export function hexToRgb(hex: string): Vector3 {
  */
 export function hslaToRgba(hsla: Vector4): Vector4 {
   const [h, s, l, a] = hsla;
-  let r;
-  let g;
-  let b;
+  let r: number;
+  let g: number;
+  let b: number;
 
   if (s === 0) {
-    // eslint-disable-next-line no-multi-assign
     r = g = b = l; // achromatic
   } else {
     const hue2rgb = function hue2rgb(p: number, q: number, t: number) {
@@ -351,7 +349,6 @@ export function areBoundingBoxesOverlappingOrTouching(
 }
 
 export function compareBy<T>(
-  _collectionForTypeInference: Array<T>, // this parameter is only used let TS infer the used type
   selector: (arg0: T) => number,
   isSortedAscending: boolean = true,
 ): Comparator<T> {
@@ -376,7 +373,6 @@ export function compareBy<T>(
 }
 
 export function localeCompareBy<T>(
-  _collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
   selector: (arg0: T) => string,
   isSortedAscending: boolean = true,
   sortNatural: boolean = true,
@@ -405,7 +401,7 @@ export function localeCompareBy<T>(
 export function stringToNumberArray(s: string): Array<number> {
   // remove leading/trailing whitespaces
   s = s.trim();
-  // replace remaining whitespaces with commata
+  // replace remaining whitespaces with commas
   s = s.replace(/,?\s+,?/g, ",");
   const stringArray = s.split(",");
   const result = [];
@@ -455,6 +451,14 @@ export function vector3ToPoint3([x, y, z]: Vector3): Point3 {
     y,
     z,
   };
+}
+
+export function transformToCSVRow(dataRow: any[]) {
+  return dataRow
+    .map(String) // convert every value to String
+    .map((v) => v.replaceAll('"', '""')) // escape double quotes
+    .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)) // quote it if necessary
+    .join(","); // comma-separated
 }
 
 export function isUserTeamManager(user: APIUser): boolean {
@@ -528,7 +532,7 @@ export function hasUrlParam(paramName: string): boolean {
 export function __range__(left: number, right: number, inclusive: boolean): Array<number> {
   const range = [];
   const ascending = left < right;
-  // eslint-disable-next-line no-nested-ternary
+
   const end = !inclusive ? right : ascending ? right + 1 : right - 1;
 
   for (let i = left; ascending ? i < end : i > end; ascending ? i++ : i--) {
@@ -560,14 +564,22 @@ export function isFileExtensionEqualTo(
   return passedExtension === extensionOrExtensions;
 }
 
+// Parses dates in format "Thu Jan 1 00:00:00 1970 +0000".
+export function parseCTimeDefaultDate(dateString: string) {
+  const commitDateWithoutWeekday = dateString.replace(
+    /(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/,
+    "",
+  );
+  return dayjs(commitDateWithoutWeekday, "MMM D HH:mm:ss YYYY ZZ");
+}
+
 // Only use this function if you really need a busy wait (useful
 // for testing performance-related edge cases). Prefer `sleep`
 // otherwise.
 export function busyWaitDevHelper(time: number) {
   const start = new Date();
-  let now;
+  let now: Date;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     now = new Date();
 
@@ -578,7 +590,7 @@ export function busyWaitDevHelper(time: number) {
   }
 }
 
-export function animationFrame(maxTimeout?: number): Promise<number | void> {
+export function animationFrame(maxTimeout?: number): Promise<number | undefined> {
   const rafPromise: Promise<ReturnType<typeof window.requestAnimationFrame>> = new Promise(
     (resolve) => {
       window.requestAnimationFrame(resolve);
@@ -589,7 +601,7 @@ export function animationFrame(maxTimeout?: number): Promise<number | void> {
     return rafPromise;
   }
 
-  const timeoutPromise = sleep(maxTimeout);
+  const timeoutPromise = sleep(maxTimeout) as Promise<undefined>;
   return Promise.race([rafPromise, timeoutPromise]);
 }
 
@@ -648,7 +660,7 @@ export function filterWithSearchQueryOR<
   P extends keyof T,
 >(
   collection: Array<T>,
-  properties: Array<P | ((arg0: T) => {} | Array<any> | string)>,
+  properties: Array<P | ((arg0: T) => P | Array<any> | string)>,
   searchQuery: string,
 ): Array<T> {
   if (searchQuery === "") {
@@ -684,7 +696,7 @@ export function filterWithSearchQueryAND<
   P extends keyof T,
 >(
   collection: Array<T>,
-  properties: Array<P | ((arg0: T) => {} | Array<any> | string)>,
+  properties: Array<P | ((arg0: T) => P | Array<any> | string)>,
   searchQuery: string,
 ): Array<T> {
   if (searchQuery === "") {
@@ -765,10 +777,12 @@ export function addEventListenerWithDelegation(
   handlerFunc: (...args: Array<any>) => any,
   options: Record<string, any> = {},
 ) {
-  const wrapperFunc = function (event: Event) {
-    // @ts-ignore
-    for (let { target } = event; target && target !== this; target = target.parentNode) {
-      // @ts-ignore
+  const wrapperFunc = function (this: HTMLElement | Document, event: Event) {
+    for (
+      let { target } = event;
+      target && target !== this && target instanceof Element;
+      target = target.parentNode
+    ) {
       if (target.matches(delegateSelector)) {
         handlerFunc.call(target, event);
         break;
@@ -878,15 +892,15 @@ export function convertDecToBase256(num: number): Vector4 {
   const divMod = (n: number) => [Math.floor(n / 256), n % 256];
 
   let tmp = num;
-  // eslint-disable-next-line one-var
-  let r, g, b, a;
-  [tmp, r] = divMod(tmp); // eslint-disable-line prefer-const
 
-  [tmp, g] = divMod(tmp); // eslint-disable-line prefer-const
+  let r: number, g: number, b: number, a: number;
+  [tmp, r] = divMod(tmp);
 
-  [tmp, b] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, g] = divMod(tmp);
 
-  [tmp, a] = divMod(tmp); // eslint-disable-line prefer-const
+  [tmp, b] = divMod(tmp);
+
+  [tmp, a] = divMod(tmp);
 
   // Little endian
   return [r, g, b, a];
@@ -897,7 +911,7 @@ export function castForArrayType(uncastNumber: number, data: TypedArray): number
 }
 
 export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
-  if (num == null || isNaN(num)) {
+  if (num == null || Number.isNaN(num)) {
     return [
       [0, 0, 0, 0],
       [0, 0, 0, 0],
@@ -1003,9 +1017,9 @@ export function convertBufferToImage(
   buffer: Uint8Array,
   width: number,
   height: number,
-  flipHorizontally: boolean = false,
   canvasToMerge: HTMLCanvasElement | null | undefined,
   drawImageIntoCanvasCallback: ((ctx: CanvasRenderingContext2D) => void) | null | undefined,
+  flipHorizontally: boolean = false,
 ): Promise<Blob | null> {
   return new Promise((resolve) => {
     width = Math.round(width);
@@ -1170,3 +1184,22 @@ export const deepIterate = (obj: Obj | Obj[] | null, callback: (val: unknown) =>
     }
   });
 };
+
+export function getFileExtension(fileName: string): string {
+  const filenameParts = fileName.split(".");
+  const fileExtension = filenameParts[filenameParts.length - 1].toLowerCase();
+  return fileExtension;
+}
+
+export class SoftError extends Error {}
+
+export function notEmpty<TValue>(value: TValue | null | undefined): value is TValue {
+  // Strongly typed helper to filter any non empty values from an array
+  // e.g. [1, 2, undefined].filter(notEmpty) => type should be number[]
+  // Source https://github.com/microsoft/TypeScript/issues/45097#issuecomment-882526325
+  return value !== null && value !== undefined;
+}
+
+export function assertNever(value: never): never {
+  throw new Error(`Unexpected value that is not 'never': ${JSON.stringify(value)}`);
+}

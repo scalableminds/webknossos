@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.io.PathUtils
@@ -9,11 +9,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
-import com.scalableminds.webknossos.datastore.dataformats.n5.N5Layer
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.PrecomputedLayer
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat
-import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrLayer
-import com.scalableminds.webknossos.datastore.dataformats.zarr3.Zarr3Layer
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSource, UnusableDataSource}
@@ -116,13 +112,15 @@ class DataSourceService @Inject()(
     val path = dataBaseDir.resolve(id.team).resolve(id.name)
     val report = DataSourceImportReport[Path](dataBaseDir.relativize(path))
     for {
-      dataSource <- WKWDataFormat.exploreDataSource(id, path, previous, report)
+      looksLikeWKWDataSource <- WKWDataFormat.looksLikeWKWDataSource(path)
+      dataSource <- if (looksLikeWKWDataSource) WKWDataFormat.exploreDataSource(id, path, previous, report)
+      else WKWDataFormat.dummyDataSource(id, previous, report)
     } yield (dataSource, report.messages.toList)
   }
 
-  def exploreMappings(organizationName: String, dataSetName: String, dataLayerName: String): Set[String] =
+  def exploreMappings(organizationName: String, datasetName: String, dataLayerName: String): Set[String] =
     MappingProvider
-      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(dataLayerName))
+      .exploreMappings(dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName))
       .getOrElse(Set())
 
   private def validateDataSource(dataSource: DataSource): Box[Unit] = {
@@ -244,21 +242,9 @@ class DataSourceService @Inject()(
       removedEntriesList = for {
         dataLayerOpt <- dataLayers
         dataLayer <- dataLayerOpt
-        magsOpt = dataLayer match {
-          case layer: N5Layer          => Some(layer.mags)
-          case layer: PrecomputedLayer => Some(layer.mags)
-          case layer: ZarrLayer        => Some(layer.mags)
-          case layer: Zarr3Layer       => Some(layer.mags)
-          case _                       => None
-        }
-        removedEntriesCount = magsOpt match {
-          case Some(mags) =>
-            mags.map(mag =>
-              remoteSourceDescriptorService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag))
-            mags.length
-          case None => 0
-        }
-      } yield removedEntriesCount
+        _ = dataLayer.mags.foreach(mag =>
+          remoteSourceDescriptorService.removeVaultFromCache(dataBaseDir, dataSource.id, dataLayer.name, mag))
+      } yield dataLayer.mags.length
     } yield removedEntriesList.sum
 
 }

@@ -2,17 +2,15 @@ import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
-import { Matrix4x4, V3 } from "libs/mjs";
+import { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
   getColorLayers,
   getDataLayers,
-  getDenseResolutionsForLayerName,
   getEnabledLayers,
   getLayerByName,
   getMaxZoomStep,
-  getResolutionByMax,
   getResolutionInfo,
   getTransformsForLayer,
   invertAndTranspose,
@@ -38,6 +36,7 @@ import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_st
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
 import { SmallerOrHigherInfo } from "../helpers/resolution_info";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { AdditionalCoordinate } from "types/api_flow_types";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -274,6 +273,24 @@ function _getPosition(flycam: Flycam): Vector3 {
   return [matrix[12], matrix[13], matrix[14]];
 }
 
+export function hasAdditionalCoordinates(
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+): boolean {
+  return (additionalCoordinates?.length || 0) > 0;
+}
+
+export function getAdditionalCoordinatesAsString(
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+  separator: string = ";",
+): string {
+  if (additionalCoordinates != null && additionalCoordinates.length > 0) {
+    return additionalCoordinates
+      ?.map((coordinate) => `${coordinate.name}=${coordinate.value}`)
+      .join(separator);
+  }
+  return "";
+}
+
 function _getFlooredPosition(flycam: Flycam): Vector3 {
   return map3((x) => Math.floor(x), _getPosition(flycam));
 }
@@ -373,21 +390,29 @@ export function getMaxZoomValueForResolution(
   layerName: string,
   targetResolution: Vector3,
 ): number {
+  const targetResolutionIdentifier = Math.max(...targetResolution);
   // Extract the max value from the range
-  return getValidZoomRangeForResolution(state, layerName, targetResolution)[1];
+  const maxZoom = getValidZoomRangeForResolution(state, layerName, targetResolutionIdentifier)[1];
+  if (maxZoom == null) {
+    // This should never happen as long as a valid target resolution is passed to this function.
+    throw new Error("Zoom range could not be determined for target resolution.");
+  }
+  return maxZoom;
 }
 
 function getValidZoomRangeForResolution(
   state: OxalisState,
   layerName: string,
-  targetResolution: Vector3,
-): Vector2 {
+  resolutionIdentifier: number,
+): Vector2 | [null, null] {
   const maximumZoomSteps = getMaximumZoomForAllResolutionsFromStore(state, layerName);
-  const resolutions = getDenseResolutionsForLayerName(state.dataset, layerName);
+  // maximumZoomSteps is densely defined for all resolutions starting from resolution 1,1,1.
+  // Therefore, we can use log2 as an index.
+  const targetResolutionIndex = Math.log2(resolutionIdentifier);
 
-  const targetResolutionIndex = _.findIndex(resolutions, (resolution) =>
-    V3.isEqual(resolution, targetResolution),
-  );
+  if (targetResolutionIndex > maximumZoomSteps.length) {
+    return [null, null];
+  }
 
   const max = maximumZoomSteps[targetResolutionIndex];
   const min = targetResolutionIndex > 0 ? maximumZoomSteps[targetResolutionIndex - 1] : 0;
@@ -417,17 +442,14 @@ export function getValidTaskZoomRange(
 
   const firstColorLayerName = firstColorLayerNameMaybe;
 
-  function getMinMax(value: number | undefined, isMin: boolean) {
+  function getMinMax(magIdentifier: number | undefined, isMin: boolean) {
     const idx = isMin ? 0 : 1;
     return (
-      (value == null
+      (magIdentifier == null
         ? defaultRange[idx]
-        : // If the value is defined, but doesn't match any resolution, we default to the defaultRange values
-          getValidZoomRangeForResolution(
-            state,
-            firstColorLayerName,
-            getResolutionByMax(state.dataset, firstColorLayerName, value),
-          )[idx]) || defaultRange[idx]
+        : // If the magIdentifier is defined, but doesn't match any resolution, we default to the defaultRange values
+          getValidZoomRangeForResolution(state, firstColorLayerName, magIdentifier)[idx]) ||
+      defaultRange[idx]
     );
   }
 

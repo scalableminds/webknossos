@@ -1,9 +1,9 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import { Tabs, Modal, Button, Layout } from "antd";
-import { DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
+import { Tabs, Modal, Button, Layout, TabsProps } from "antd";
+import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import type { APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -12,31 +12,40 @@ import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
+import DatasetAddComposeView from "./dataset_add_compose_view";
 
-const { TabPane } = Tabs;
 const { Content, Sider } = Layout;
 
-enum DatasetAddViewTabs {
+// Used for the tab keys as well as for
+// distinguishing between the add type after
+// successful import.
+enum DatasetAddType {
   UPLOAD = "upload",
   REMOTE = "remote",
+  COMPOSE = "compose",
 }
+const addTypeToVerb: Record<DatasetAddType, string> = {
+  upload: "uploaded",
+  remote: "added",
+  compose: "created",
+};
 
 function DatasetAddView({ history }: RouteComponentProps) {
   const datastores = useFetch<APIDataStore[]>(getDatastores, [], []);
   const [datasetName, setDatasetName] = useState("");
   const [organization, setOrganization] = useState("");
   const [datasetNeedsConversion, setDatasetNeedsConversion] = useState(false);
-  const [isRemoteDataset, setIsRemoteDataset] = useState(false);
+  const [datasetAddType, setImportType] = useState<DatasetAddType>(DatasetAddType.UPLOAD);
 
   const handleDatasetAdded = async (
+    datasetAddType: DatasetAddType,
     datasetOrganization: string,
     uploadedDatasetName: string,
-    isRemoteDataset: boolean,
     needsConversion: boolean | null | undefined,
   ): Promise<void> => {
     setOrganization(datasetOrganization);
     setDatasetName(uploadedDatasetName);
-    setIsRemoteDataset(isRemoteDataset);
+    setImportType(datasetAddType);
     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'boolean | null | undefined' is n... Remove this comment to see the full error message
     setDatasetNeedsConversion(needsConversion);
   };
@@ -56,7 +65,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
           textAlign: "center",
         }}
       >
-        The dataset was {isRemoteDataset ? "imported" : "uploaded"} successfully
+        The dataset was {addTypeToVerb[datasetAddType]} successfully
         {datasetNeedsConversion ? " and a conversion job was started." : null}.
         <br />
         <div
@@ -101,40 +110,53 @@ function DatasetAddView({ history }: RouteComponentProps) {
   };
 
   const defaultActiveTabFromHash = location.hash.substring(1);
-  const defaultActiveKey = Object.values(DatasetAddViewTabs).includes(
-    defaultActiveTabFromHash as DatasetAddViewTabs,
+  const defaultActiveKey = Object.values(DatasetAddType).includes(
+    defaultActiveTabFromHash as DatasetAddType,
   )
-    ? (defaultActiveTabFromHash as DatasetAddViewTabs)
-    : DatasetAddViewTabs.UPLOAD;
+    ? (defaultActiveTabFromHash as DatasetAddType)
+    : DatasetAddType.UPLOAD;
+
+  const tabs: TabsProps["items"] = [
+    {
+      label: "Upload Dataset",
+      icon: <UploadOutlined />,
+      key: DatasetAddType.UPLOAD,
+      children: (
+        <DatasetUploadView
+          datastores={datastores}
+          onUploaded={handleDatasetAdded.bind(null, DatasetAddType.UPLOAD)}
+        />
+      ),
+    },
+    {
+      icon: <DatabaseOutlined />,
+      label: "Add Remote Dataset",
+      key: DatasetAddType.REMOTE,
+      children: (
+        <DatasetAddRemoteView
+          datastores={datastores}
+          onAdded={handleDatasetAdded.bind(null, DatasetAddType.REMOTE)}
+        />
+      ),
+    },
+    {
+      icon: <CopyOutlined />,
+      label: "Compose From Existing Datasets",
+      key: DatasetAddType.COMPOSE,
+      children: (
+        <DatasetAddComposeView
+          datastores={datastores}
+          onAdded={handleDatasetAdded.bind(null, DatasetAddType.COMPOSE)}
+        />
+      ),
+    },
+  ];
 
   return (
     <React.Fragment>
       <Layout>
         <Content>
-          <Tabs defaultActiveKey={defaultActiveKey} className="container">
-            <TabPane
-              tab={
-                <span>
-                  <UploadOutlined />
-                  Upload Dataset
-                </span>
-              }
-              key={DatasetAddViewTabs.UPLOAD}
-            >
-              <DatasetUploadView datastores={datastores} onUploaded={handleDatasetAdded} />
-            </TabPane>
-            <TabPane
-              tab={
-                <span>
-                  <DatabaseOutlined />
-                  Add Remote Dataset
-                </span>
-              }
-              key={DatasetAddViewTabs.REMOTE}
-            >
-              <DatasetAddRemoteView datastores={datastores} onAdded={handleDatasetAdded} />
-            </TabPane>
-          </Tabs>
+          <Tabs defaultActiveKey={defaultActiveKey} className="container" items={tabs} />
         </Content>
         <VoxelyticsBanner />
       </Layout>
@@ -283,13 +305,14 @@ const banners = [segmentationBanner, alignBanner, manualAnnotationBanner];
 
 function VoxelyticsBanner() {
   const [bannerIndex] = useState(Math.floor(Math.random() * banners.length));
+  const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
 
   if (!features().isWkorgInstance) {
     return null;
   }
 
   return (
-    <Sider className="hide-on-small-screen" width={300}>
+    <Sider className="hide-on-small-screen" width={300} theme={theme}>
       {banners[bannerIndex]}
     </Sider>
   );

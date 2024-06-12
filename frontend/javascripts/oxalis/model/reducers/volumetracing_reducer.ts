@@ -40,7 +40,7 @@ import {
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
-import type { ServerVolumeTracing } from "types/api_flow_types";
+import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
 import {
   SetMappingAction,
   SetMappingEnabledAction,
@@ -161,10 +161,13 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
     const oldSegment = segments.getNullable(segmentId);
 
     let somePosition;
+    let someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null;
     if (segment.somePosition) {
       somePosition = Utils.floor3(segment.somePosition);
+      someAdditionalCoordinates = segment.someAdditionalCoordinates;
     } else if (oldSegment != null) {
       somePosition = oldSegment.somePosition;
+      someAdditionalCoordinates = oldSegment.someAdditionalCoordinates;
     } else {
       // UPDATE_SEGMENT was called for a non-existing segment without providing
       // a position. This is necessary to define custom colors for segments
@@ -179,7 +182,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       name: null,
       color: null,
       groupId: null,
-      someAdditionalCoordinates: [],
+      someAdditionalCoordinates: someAdditionalCoordinates,
       ...oldSegment,
       ...segment,
       somePosition,
@@ -198,7 +201,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
   const userBoundingBoxes = convertUserBoundingBoxesFromServerToFrontend(tracing.userBoundingBoxes);
   const volumeTracing = {
     createdTimestamp: tracing.createdTimestamp,
-    type: "volume" as "volume",
+    type: "volume" as const,
     segments: new DiffableMap(
       tracing.segments.map((segment) => [
         segment.segmentId,
@@ -226,6 +229,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     userBoundingBoxes,
     mappingName: tracing.mappingName,
     mappingIsEditable: tracing.mappingIsEditable,
+    mappingIsLocked: tracing.mappingIsLocked,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
   };
@@ -259,7 +263,12 @@ function VolumeTracingReducer(
         const newSegmentId = volumeTracing.largestSegmentId + 1;
         if (newSegmentId > getMaximumSegmentIdForLayer(newState.dataset, segmentationLayer.name)) {
           // If the new segment ID would overflow the maximum segment ID, simply set the active cell to largestSegmentId.
-          return setActiveCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId);
+          return setActiveCellReducer(
+            newState,
+            volumeTracing,
+            volumeTracing.largestSegmentId,
+            null,
+          );
         } else {
           return createCellReducer(newState, volumeTracing, volumeTracing.largestSegmentId + 1);
         }
@@ -322,7 +331,12 @@ function VolumeTracingReducer(
 
   switch (action.type) {
     case "SET_ACTIVE_CELL": {
-      return setActiveCellReducer(state, volumeTracing, action.segmentId);
+      return setActiveCellReducer(
+        state,
+        volumeTracing,
+        action.segmentId,
+        action.activeUnmappedSegmentId,
+      );
     }
 
     case "CREATE_CELL": {
@@ -388,18 +402,27 @@ function VolumeTracingReducer(
 
     case "SET_MAPPING_NAME": {
       // Editable mappings cannot be disabled or switched for now
-      if (volumeTracing.mappingIsEditable) return state;
+      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) return state;
 
       const { mappingName, mappingType } = action;
       return setMappingNameReducer(state, volumeTracing, mappingName, mappingType);
     }
 
     case "SET_MAPPING_IS_EDITABLE": {
-      // Editable mappings cannot be disabled or switched for now
-      if (volumeTracing.mappingIsEditable) return state;
+      // Editable mappings cannot be disabled or switched for now.
+      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) return state;
 
+      // An editable mapping is always locked.
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingIsEditable: true,
+        mappingIsLocked: true,
+      });
+    }
+    case "SET_MAPPING_IS_LOCKED": {
+      if (volumeTracing.mappingIsLocked) return state;
+
+      return updateVolumeTracing(state, volumeTracing.tracingId, {
+        mappingIsLocked: true,
       });
     }
 

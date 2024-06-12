@@ -76,19 +76,18 @@ export const annotation: APIAnnotation = {
   typ: "Explorational",
   teams: [],
   task: null,
-  stats: {},
   restrictions: {
     allowAccess: true,
     allowUpdate: true,
     allowFinish: true,
     allowDownload: true,
   },
-  formattedHash: "f043e7",
   annotationLayers: [
     {
       name: "volume",
       tracingId: "tracingId-1234",
       typ: "Volume",
+      stats: {},
     },
   ],
   dataSetName: "ROI2017_wkw",
@@ -98,6 +97,8 @@ export const annotation: APIAnnotation = {
     url: "http://localhost:9000",
     isScratch: false,
     allowsUpload: true,
+    jobsEnabled: false,
+    jobsSupportedByAvailableWorkers: [],
   },
   tracingStore: {
     name: "localhost",
@@ -115,4 +116,5 @@ export const annotation: APIAnnotation = {
   tracingTime: 0,
   contributors: [],
   othersMayEdit: false,
+  isLockedByOwner: false,
 };

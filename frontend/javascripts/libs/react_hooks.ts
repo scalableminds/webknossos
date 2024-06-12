@@ -13,7 +13,7 @@ export function usePrevious<T>(value: T, ignoreNullAndUndefined: boolean = false
     if (!ignoreNullAndUndefined || value != null) {
       ref.current = value;
     }
-  }, [value]);
+  }, [value, ignoreNullAndUndefined]);
   // Only re-run if value changes
   // Return previous value (happens before update in useEffect above)
   return ref.current;
@@ -23,13 +23,13 @@ const extractModifierState = <K extends keyof WindowEventMap>(event: WindowEvent
   // @ts-ignore
   Shift: event.shiftKey,
   // @ts-ignore
-  Alt: event.altKey,
+  Alt: event.altKey, // This is the option key ⌥ on MacOS
   // @ts-ignore
-  Control: event.ctrlKey,
+  ControlOrMeta: event.ctrlKey || event.metaKey,
 });
 
 // Adapted from: https://gist.github.com/gragland/b61b8f46114edbcf2a9e4bd5eb9f47f5
-export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
+export function useKeyPress(targetKey: "Shift" | "Alt" | "ControlOrMeta") {
   // State for keeping track of whether key is pressed
   const [keyPressed, setKeyPressed] = useState(false);
 
@@ -79,7 +79,7 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
   };
 
   // Add event listeners
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     window.addEventListener("keydown", downHandler);
     window.addEventListener("keyup", upHandler);
     // Remove event listeners on cleanup
@@ -87,7 +87,7 @@ export function useKeyPress(targetKey: "Shift" | "Alt" | "Control") {
       window.removeEventListener("keydown", downHandler);
       window.removeEventListener("keyup", upHandler);
     };
-  }, []);
+  });
   // Empty array ensures that effect is only run on mount and unmount
   return keyPressed;
 }
@@ -124,7 +124,7 @@ export function useRepeatedButtonTrigger(
       lastTrigger.current = null;
       clearTimeout(timerId);
     };
-  }, [isPressed, triggerCallback]);
+  }, [isPressed, triggerCallback, repeatDelay]);
 
   const onTouchStart = () => setIsPressed(true);
   const onTouchEnd = () => setIsPressed(false);
@@ -192,4 +192,11 @@ export function usePolling(
       if (timeoutId != null) clearTimeout(timeoutId);
     };
   }, [delay, ...dependencies]);
+}
+
+export function useEffectOnlyOnce(callback: () => void | (() => void)) {
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Explicitly run only once.
+  useEffect(() => {
+    return callback();
+  }, []);
 }

@@ -4,7 +4,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import scala.collection.immutable.NumericRange

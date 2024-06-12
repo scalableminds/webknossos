@@ -96,15 +96,15 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
-    case "SET_AI_NUCLEI_SEGMENTATION_MODAL_VISIBILITY": {
+    case "SET_AI_JOB_MODAL_STATE": {
       return updateKey(state, "uiInformation", {
-        showAINucleiSegmentationModal: action.visible,
+        aIJobModalState: action.state,
       });
     }
 
-    case "SET_AI_NEURON_SEGMENTATION_MODAL_VISIBILITY": {
+    case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
-        showAINeuronSegmentationModal: action.visible,
+        showRenderAnimationModal: action.visible,
       });
     }
 
@@ -146,6 +146,37 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
     case "SET_IS_MEASURING": {
       return updateKey2(state, "uiInformation", "measurementToolInfo", {
         isMeasuring: action.isMeasuring,
+      });
+    }
+    case "SET_NAVBAR_HEIGHT": {
+      return updateKey(state, "uiInformation", {
+        navbarHeight: action.navbarHeight,
+      });
+    }
+
+    case "SHOW_CONTEXT_MENU": {
+      return updateKey2(state, "uiInformation", "contextInfo", {
+        contextMenuPosition: action.contextMenuPosition,
+        clickedNodeId: action.clickedNodeId,
+        clickedBoundingBoxId: action.clickedBoundingBoxId,
+        globalPosition: action.globalPosition,
+        viewport: action.viewport,
+        meshId: action.meshId,
+        meshIntersectionPosition: action.meshIntersectionPosition,
+        unmappedSegmentId: action.unmappedSegmentId,
+      });
+    }
+
+    case "HIDE_CONTEXT_MENU": {
+      return updateKey2(state, "uiInformation", "contextInfo", {
+        contextMenuPosition: null,
+        clickedNodeId: null,
+        clickedBoundingBoxId: null,
+        globalPosition: null,
+        viewport: null,
+        meshId: null,
+        meshIntersectionPosition: null,
+        unmappedSegmentId: null,
       });
     }
 

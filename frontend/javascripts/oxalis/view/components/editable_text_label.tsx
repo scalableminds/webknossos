@@ -1,11 +1,11 @@
 import { Input, InputProps, Tooltip } from "antd";
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
-import Markdown from "react-remarkable";
 import * as React from "react";
+import Markdown from "libs/markdown_adapter";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import Toast from "libs/toast";
 import { ValidationResult } from "../left-border-tabs/modals/add_volume_layer_modal";
+
 type Rule = {
   message?: string;
   type?: string;
@@ -60,9 +60,17 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     }
   }
 
-  handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>) => {
+  handleInputChangeFromEvent = (
+    event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>,
+  ) => {
     this.setState({
       value: event.target.value,
+    });
+  };
+
+  handleInputChange = (newValue: string) => {
+    this.setState({
+      value: newValue,
     });
   };
 
@@ -121,7 +129,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
     const margin = this.props.margin != null ? this.props.margin : "0 10px";
     const inputComponentProps: InputProps = {
       value: this.state.value,
-      onChange: this.handleInputChange,
+      onChange: this.handleInputChangeFromEvent,
       onPressEnter: this.handleOnChange,
       style: {
         width: this.props.width != null ? this.props.width : "60%",
@@ -130,7 +138,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
       size: "small",
       autoFocus: true,
     };
-    const isInvalidStyleMaybe = this.props.isInvalid ? { color: "var(--ant-error)" } : {};
+    const isInvalidStyleMaybe = this.props.isInvalid ? { color: "var(--ant-color-error)" } : {};
 
     if (this.state.isEditing) {
       return (
@@ -172,17 +180,9 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           onContextMenu={this.props.onContextMenu}
         >
           {this.props.markdown ? (
-            <Markdown
-              className="flex-item"
-              source={this.props.value}
-              options={{
-                html: false,
-                breaks: true,
-                linkify: true,
-              }}
-              container="span"
-              style={isInvalidStyleMaybe}
-            />
+            <span style={isInvalidStyleMaybe}>
+              <Markdown className="flex-item">{this.props.value}</Markdown>
+            </span>
           ) : (
             <span style={isInvalidStyleMaybe}>{this.props.value}</span>
           )}

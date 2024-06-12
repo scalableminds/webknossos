@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 
 import java.nio.ByteOrder
 import java.nio.ByteBuffer
@@ -25,6 +25,7 @@ object PrecomputedArray extends LazyLogging {
       layerName: String,
       axisOrderOpt: Option[AxisOrder],
       channelIndex: Option[Int],
+      additionalAxes: Option[Seq[AdditionalAxis]],
       sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
     for {
       headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
@@ -33,17 +34,18 @@ object PrecomputedArray extends LazyLogging {
       scale <- rootHeader.getScale(magPath.basename) ?~> s"Header does not contain scale ${magPath.basename}"
       scaleHeader = PrecomputedScaleHeader(scale, rootHeader)
       _ <- DatasetArray.assertChunkSizeLimit(scaleHeader.bytesPerChunk)
-    } yield
-      new PrecomputedArray(
-        magPath,
-        dataSourceId,
-        layerName,
-        scaleHeader,
-        axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
-        channelIndex,
-        None,
-        sharedChunkContentsCache
-      )
+      array <- tryo(
+        new PrecomputedArray(
+          magPath,
+          dataSourceId,
+          layerName,
+          scaleHeader,
+          axisOrderOpt.getOrElse(AxisOrder.asZyxFromRank(scaleHeader.rank)),
+          channelIndex,
+          additionalAxes,
+          sharedChunkContentsCache
+        )) ?~> "Could not open neuroglancerPrecomputed array"
+    } yield array
 }
 
 class PrecomputedArray(vaultPath: VaultPath,

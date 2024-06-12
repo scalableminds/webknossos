@@ -9,6 +9,7 @@ import {
   Col,
   RadioChangeEvent,
   Tooltip,
+  Space,
 } from "antd";
 import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
@@ -47,6 +48,7 @@ import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
 
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
@@ -65,7 +67,7 @@ function Hint({ children, style }: { children: React.ReactNode; style: React.CSS
         marginTop: 4,
         marginBottom: 12,
         fontSize: 12,
-        color: "var(--ant-text-secondary)",
+        color: "var(--ant-color-text-secondary)",
       }}
     >
       {children}
@@ -101,6 +103,7 @@ export function useDatasetSharingToken(dataset: APIDataset) {
     }
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Update token once dataset or user changes.
   useEffect(() => {
     getAndSetToken();
   }, [dataset, activeUser]);
@@ -175,6 +178,7 @@ function _ShareModalView(props: Props) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const isAnnotationLockedByUser = tracing.isLockedByOwner;
 
   const annotationVisibility = tracing.visibility;
   const [visibility, setVisibility] = useState(annotationVisibility);
@@ -196,6 +200,7 @@ function _ShareModalView(props: Props) {
     setSharedTeams(fetchedSharedTeams);
   };
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Refetch once annotation or user changes.
   useEffect(() => {
     fetchAndSetSharedTeams();
   }, [annotationType, annotationId, activeUser]);
@@ -296,8 +301,12 @@ function _ShareModalView(props: Props) {
 
   const maybeShowWarning = () => {
     let message;
-
-    if (!hasUpdatePermissions) {
+    if (isAnnotationLockedByUser) {
+      message = `You can't change the visibility of this annotation because it is locked by ${formatUserName(
+        activeUser,
+        tracing.owner,
+      )}.`;
+    } else if (!hasUpdatePermissions) {
       message = "You don't have the permission to edit the visibility of this annotation.";
     } else if (!dataset.isPublic && visibility === "Public") {
       message =
@@ -366,7 +375,7 @@ function _ShareModalView(props: Props) {
           margin: "18px 0",
         }}
       >
-        <i className={`fas fa-${iconMap[visibility]}`} />
+        <i className={`fas fa-${iconMap[visibility]} icon-margin-right`} />
         Visibility
       </Divider>
       {maybeShowWarning()}
@@ -427,7 +436,7 @@ function _ShareModalView(props: Props) {
           margin: "18px 0",
         }}
       >
-        <ShareAltOutlined />
+        <ShareAltOutlined className="icon-margin-right" />
         Team Sharing
       </Divider>
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
@@ -530,14 +539,14 @@ export function CopyableSharingLink({
   const linkToCopy = showShortLink ? shortUrl || longUrl : longUrl;
 
   return (
-    <Input.Group compact>
+    <Space.Compact>
       <Tooltip title="When enabled, the link is shortened automatically.">
         <Button
           type={showShortLink ? "primary" : "default"}
           onClick={() => setShowShortLink(!showShortLink)}
           style={{ padding: "0px 8px" }}
         >
-          <CompressOutlined className="without-icon-margin" />
+          <CompressOutlined />
         </Button>
       </Tooltip>
       <Input
@@ -547,16 +556,10 @@ export function CopyableSharingLink({
         value={linkToCopy}
         readOnly
       />
-      <Button
-        style={{
-          width: "15%",
-        }}
-        onClick={() => copyUrlToClipboard(linkToCopy)}
-        icon={<CopyOutlined />}
-      >
+      <Button onClick={() => copyUrlToClipboard(linkToCopy)} icon={<CopyOutlined />}>
         Copy
       </Button>
-    </Input.Group>
+    </Space.Compact>
   );
 }
 

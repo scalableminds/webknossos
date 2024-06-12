@@ -205,8 +205,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
     ctx.fill(activeRegion);
   };
 
-  onThresholdChange = ([firstVal, secVal]: [number, number]) => {
+  onThresholdChange = (values: number[]) => {
     const { layerName } = this.props;
+    const [firstVal, secVal] = values;
 
     if (firstVal < secVal) {
       this.props.onChangeLayer(layerName, "intensityRange", [firstVal, secVal]);
@@ -245,7 +246,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           style={{ margin: 10 }}
           message={
             <>
-              Histogram couldn&apos;t be fetched.{" "}
+              Histogram couldn’t be fetched.{" "}
               <a href="#" onClick={this.props.reloadHistogram}>
                 Retry
               </a>
@@ -275,7 +276,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
           max={maxRange}
           defaultValue={[minRange, maxRange]}
           onChange={this.onThresholdChange}
-          onAfterChange={this.onThresholdChange}
+          onChangeComplete={this.onThresholdChange}
           step={(maxRange - minRange) / 255}
           tooltip={{ formatter: this.tipFormatter }}
           style={{
@@ -302,6 +303,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   max={maxRange}
                   defaultValue={currentMin}
                   value={currentMin}
+                  variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
                     value = parseFloat(value);
@@ -336,6 +338,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   max={defaultMinMax[1]}
                   defaultValue={currentMax}
                   value={currentMax}
+                  variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
                     value = parseFloat(value);

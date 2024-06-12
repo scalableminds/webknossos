@@ -1,6 +1,6 @@
 package models.annotation
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox

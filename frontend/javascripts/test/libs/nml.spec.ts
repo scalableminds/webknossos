@@ -31,7 +31,7 @@ const SkeletonTracingActions: typeof OriginalSkeletonTracingActions = mock.reReq
 const createDummyNode = (id: number): Node => ({
   bitDepth: 8,
   id,
-  position: [id, id, id],
+  untransformedPosition: [id, id, id],
   additionalCoordinates: [],
   radius: id,
   resolution: 10,
@@ -199,6 +199,7 @@ async function testThatParserThrowsWithState(
     invalidState.tracing,
     enforceSkeletonTracing(invalidState.tracing),
     BUILD_INFO,
+    false,
   );
   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidContent), key);
 }
@@ -230,6 +231,7 @@ test("NML serializing and parsing should yield the same state", async (t) => {
     initialState.tracing,
     enforceSkeletonTracing(initialState.tracing),
     BUILD_INFO,
+    false,
   );
   const { trees, treeGroups } = await parseNml(serializedNml);
   t.deepEqual(initialSkeletonTracing.trees, trees);
@@ -259,6 +261,7 @@ test("NML serializing and parsing should yield the same state even when using sp
     state.tracing,
     enforceSkeletonTracing(state.tracing),
     BUILD_INFO,
+    false,
   );
   const { trees, treeGroups } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
@@ -289,6 +292,7 @@ test("NML serializing and parsing should yield the same state even when using mu
     state.tracing,
     enforceSkeletonTracing(state.tracing),
     BUILD_INFO,
+    false,
   );
   const { trees, treeGroups } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
@@ -300,7 +304,7 @@ test("NML serializing and parsing should yield the same state even when addition
   if (existingNodeMap == null) {
     throw new Error("Unexpected null value.");
   }
-  const existingNode = existingNodeMap.get(1);
+  const existingNode = existingNodeMap.getOrThrow(1);
   const newNodeMap = existingNodeMap.set(1, {
     ...existingNode,
     additionalCoordinates: [{ name: "t", value: 123 }],
@@ -323,6 +327,7 @@ test("NML serializing and parsing should yield the same state even when addition
     state.tracing,
     enforceSkeletonTracing(state.tracing),
     BUILD_INFO,
+    false,
   );
   const { trees, treeGroups } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
@@ -348,6 +353,7 @@ test("NML Serializer should only serialize visible trees", async (t) => {
     state.tracing,
     enforceSkeletonTracing(state.tracing),
     BUILD_INFO,
+    false,
   );
   const { trees } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
@@ -375,6 +381,7 @@ test("NML Serializer should only serialize groups with visible trees", async (t)
     state.tracing,
     enforceSkeletonTracing(state.tracing),
     BUILD_INFO,
+    false,
   );
   const { treeGroups } = await parseNml(serializedNml);
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
@@ -388,6 +395,7 @@ test("NML serializer should produce correct NMLs", (t) => {
     initialState.tracing,
     enforceSkeletonTracing(initialState.tracing),
     BUILD_INFO,
+    false,
   );
   t.snapshot(serializedNml, {
     id: "nml",
@@ -408,7 +416,7 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
   if (existingNodeMap == null) {
     throw new Error("Unexpected null value.");
   }
-  const existingNode = existingNodeMap.get(1);
+  const existingNode = existingNodeMap.getOrThrow(1);
   const newNodeMap = existingNodeMap.set(1, {
     ...existingNode,
     additionalCoordinates: [{ name: "t", value: 123 }],
@@ -432,6 +440,7 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
     adaptedState.tracing,
     enforceSkeletonTracing(adaptedState.tracing),
     BUILD_INFO,
+    false,
   );
   t.snapshot(serializedNml, {
     id: "nml-with-additional-coordinates",
@@ -464,6 +473,7 @@ test("NML serializer should escape special characters and multilines", (t) => {
     state.tracing,
     enforceSkeletonTracing(state.tracing),
     BUILD_INFO,
+    false,
   );
   // Explicitly check for the encoded characters
   t.true(
@@ -684,10 +694,10 @@ test("addTreesAndGroups reducer should assign new node and tree ids", (t) => {
   t.is(newSkeletonTracing.trees[3].treeId, 3);
   t.is(newSkeletonTracing.trees[4].treeId, 4);
   t.is(newSkeletonTracing.trees[3].nodes.size(), 4);
-  t.is(newSkeletonTracing.trees[3].nodes.get(8).id, 8);
-  t.is(newSkeletonTracing.trees[3].nodes.get(9).id, 9);
+  t.is(newSkeletonTracing.trees[3].nodes.getOrThrow(8).id, 8);
+  t.is(newSkeletonTracing.trees[3].nodes.getOrThrow(9).id, 9);
   t.is(newSkeletonTracing.trees[4].nodes.size(), 3);
-  t.is(newSkeletonTracing.trees[4].nodes.get(12).id, 12);
+  t.is(newSkeletonTracing.trees[4].nodes.getOrThrow(12).id, 12);
 
   const getSortedEdges = (edges: EdgeCollection) => _.sortBy(edges.asArray(), "source");
 
@@ -803,10 +813,10 @@ test("NML Parser should split up disconnected trees", async (t) => {
     disconnectedTreeState.tracing,
     enforceSkeletonTracing(disconnectedTreeState.tracing),
     BUILD_INFO,
+    false,
   );
-  const { trees: parsedTrees, treeGroups: parsedTreeGroups } = await parseNml(
-    nmlWithDisconnectedTree,
-  );
+  const { trees: parsedTrees, treeGroups: parsedTreeGroups } =
+    await parseNml(nmlWithDisconnectedTree);
   // Check that the tree was split up into its three components
   t.is(_.size(parsedTrees), 4);
   t.true(parsedTrees[3].nodes.has(0));

@@ -1,6 +1,6 @@
 package mail
 
-import akka.actor._
+import org.apache.pekko.actor._
 import com.typesafe.scalalogging.LazyLogging
 import javax.mail.internet.InternetAddress
 import org.apache.commons.mail._
@@ -65,7 +65,7 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
         multiPartMail.send
         ()
       } else {
-        logger.info("Mail was not sent as no smpt host is configured.")
+        logger.info("Mail was not sent as no smtp host is configured.")
       }
     }
 

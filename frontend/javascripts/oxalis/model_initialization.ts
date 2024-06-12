@@ -625,18 +625,21 @@ function determineDefaultState(
     (tracing) => tracing.typ === "Volume",
   ) as ServerVolumeTracing[];
   for (const volumeTracing of volumeTracings) {
-    const { id: layerName, mappingName } = volumeTracing;
-
-    if (mappingName == null) continue;
+    const { id: layerName, mappingName, mappingIsLocked } = volumeTracing;
 
     if (!(layerName in stateByLayer)) {
       stateByLayer[layerName] = {};
     }
-    if (stateByLayer[layerName].mappingInfo == null) {
-      stateByLayer[layerName].mappingInfo = {
-        mappingName,
-        mappingType: "HDF5",
-      };
+    if (stateByLayer[layerName].mappingInfo == null || mappingIsLocked) {
+      // A locked mapping always takes precedence over the URL configuration.
+      if (mappingName == null) {
+        delete stateByLayer[layerName].mappingInfo;
+      } else {
+        stateByLayer[layerName].mappingInfo = {
+          mappingName,
+          mappingType: "HDF5",
+        };
+      }
     }
   }
 
@@ -697,11 +700,11 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       // The name of the layer could have changed if a volume tracing was created from a viewed annotation
       effectiveLayerName = getLayerByName(dataset, layerName, true).name;
     } catch (e) {
-      console.error(e);
       Toast.error(
         // @ts-ignore
         `URL configuration values for the layer "${layerName}" are ignored, because: ${e.message}`,
       );
+      console.error(e);
       // @ts-ignore
       ErrorHandling.notify(e, {
         urlLayerState: stateByLayer,
@@ -757,7 +760,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
         // Ensure mesh files are loaded, so that the given mesh file name can be activated.
         // Doing this in a loop is fine, since it can only happen once (maximum) and there
         // are not many other iterations (== layers) which are blocked by this.
-        // eslint-disable-next-line no-await-in-loop
+
         await dispatchMaybeFetchMeshFilesAsync(Store.dispatch, segmentationLayer, dataset, false);
         Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, currentMeshFileName));
       }

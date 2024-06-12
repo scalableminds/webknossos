@@ -3,13 +3,13 @@ package models.organization
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import controllers.InitialDataService
+import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
-import models.user.{Invite, MultiUserDAO, User, UserDAO}
+import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, WkConf}
 
@@ -22,11 +22,18 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
                                     dataStoreDAO: DataStoreDAO,
                                     folderDAO: FolderDAO,
                                     folderService: FolderService,
+                                    userService: UserService,
                                     rpc: RPC,
-                                    initialDataService: InitialDataService,
                                     conf: WkConf,
 )(implicit ec: ExecutionContext)
-    extends FoxImplicits {
+    extends FoxImplicits
+    with LazyLogging {
+
+  def compactWrites(organization: Organization): JsObject =
+    Json.obj(
+      "id" -> organization._id,
+      "displayName" -> organization.displayName
+    )
 
   def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
 
@@ -75,13 +82,22 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     }
 
   def assertMayCreateOrganization(requestingUser: Option[User]): Fox[Unit] = {
-    val noOrganizationPresent = initialDataService.assertNoOrganizationsPresent
     val activatedInConfig = bool2Fox(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
     val userIsSuperUser = requestingUser.toFox.flatMap(user =>
       multiUserDAO.findOne(user._multiUser)(GlobalAccessContext).flatMap(multiUser => bool2Fox(multiUser.isSuperUser)))
 
-    Fox.sequenceOfFulls[Unit](List(noOrganizationPresent, activatedInConfig, userIsSuperUser)).map(_.headOption).toFox
+    // If at least one of the conditions is fulfilled, success is returned.
+    Fox
+      .sequenceOfFulls[Unit](List(assertNoOrganizationsPresent, activatedInConfig, userIsSuperUser))
+      .map(_.headOption)
+      .toFox
   }
+
+  def assertNoOrganizationsPresent: Fox[Unit] =
+    for {
+      organizations <- organizationDAO.findAll(GlobalAccessContext)
+      _ <- bool2Fox(organizations.isEmpty) ?~> "organizationsNotEmpty"
+    } yield ()
 
   def createOrganization(organizationIdOpt: Option[String], organizationDisplayName: String): Fox[Organization] =
     for {
@@ -111,12 +127,11 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- folderDAO.insertAsRoot(organizationRootFolder)
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)
-      _ <- initialDataService.insertLocalDataStoreIfEnabled()
     } yield organization
 
-  def createOrganizationFolder(organizationId: String, dataStoreToken: String): Fox[Unit] = {
+  def createOrganizationDirectory(organizationId: String, dataStoreToken: String): Fox[Unit] = {
     def sendRPCToDataStore(dataStore: DataStore) =
-      rpc(s"${dataStore.url}/data/triggers/newOrganizationFolder")
+      rpc(s"${dataStore.url}/data/triggers/newOrganizationDirectory")
         .addQueryString("token" -> dataStoreToken, "organizationId" -> organizationId)
         .post()
         .futureBox
@@ -135,4 +150,19 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.runOptional(organization.includedUsers)(includedUsers =>
         bool2Fox(userCount + usersToAddCount <= includedUsers))
     } yield ()
+
+  private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization)(
+      implicit ctx: DBAccessContext): Fox[String] =
+    if (possiblyEmptyEmail.nonEmpty) {
+      Fox.successful(possiblyEmptyEmail)
+    } else {
+      for {
+        owner <- userDAO.findOwnerByOrg(organization._id)
+        ownerEmail <- userService.emailFor(owner)
+      } yield ownerEmail
+    }
+
+  def newUserMailRecipient(organization: Organization)(implicit ctx: DBAccessContext): Fox[String] =
+    fallbackOnOwnerEmail(organization.newUserMailingList, organization)
+
 }

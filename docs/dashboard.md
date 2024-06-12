@@ -1,18 +1,18 @@
 # Dashboard
 
-The Dashboard is your entry point to WEBKNOSSOS.
-You can manage your datasets, create annotations, resume existing annotations and retrieve tasks distributed to you.
+Welcome to WEBKNOSSOS! 
+The Dashboard lets you do the following things: manage your datasets, create new annotations, continue working on existing annotations, and get tasks assigned to you.
 
 ## Datasets
 
-This screen shows all the available and accessible datasets for a user.
-You can _view_ a dataset (read-only) or start new annotations from this screen.
+On this screen, you can see all the datasets that you can access. 
+You can either _view_ a dataset without making any changes, or start a new annotation on it.
 Search for your dataset by using the search bar or sorting any of the table columns.
 Learn more about managing datasets in the [Datasets guide](./datasets.md).
 
-The presentation differs depending on your user role.
-Regular users can only start or continue annotations and work on tasks.
-[Admins and Team Managers](./users.md#access-rights-roles) also have access to additional administration actions, access-rights management, and advanced dataset properties for each dataset.
+What you can do on this screen depends on your user role. 
+If you are a regular user, you can only create or resume annotations and work on tasks. 
+If you are [an Admin, a Dataset Manager or a Team Manager](./users.md#access-rights-roles), you can also perform administrative actions, manage access rights, and change dataset settings.
 
 Read more about the organization of datasets [here](./datasets.md#dataset-organization).
 

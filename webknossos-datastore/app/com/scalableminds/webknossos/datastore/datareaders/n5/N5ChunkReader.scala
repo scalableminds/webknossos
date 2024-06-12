@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, DatasetH
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
-import net.liftweb.util.Helpers.tryo
+import net.liftweb.common.Box.tryo
 
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext

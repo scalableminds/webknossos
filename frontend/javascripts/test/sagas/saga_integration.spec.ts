@@ -4,11 +4,11 @@ import test from "ava";
 import "test/sagas/saga_integration.mock.js";
 import { __setupOxalis, TIMESTAMP } from "test/helpers/apiHelpers";
 import { createSaveQueueFromUpdateActions } from "test/helpers/saveHelpers";
-import { enforceSkeletonTracing, getStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getStats } from "oxalis/model/accessors/annotation_accessor";
 import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
 import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import Store from "oxalis/store";
-import * as Utils from "libs/utils";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import dummyUser from "test/fixtures/dummy_user";
@@ -63,12 +63,11 @@ test.serial(
         ],
       ],
       TIMESTAMP,
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'SkeletonTracingStats | null | un... Remove this comment to see the full error message
-      Utils.toNullable(getStats(state.tracing)),
+      getStats(state.tracing, "skeleton", "irrelevant_in_skeleton_case") || undefined,
     );
     // Reset the info field which is just for debugging purposes
     const actualSaveQueue = state.save.queue.skeleton.map((entry) => {
-      // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
+      // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
       const { info, ...rest } = entry;
       return { ...rest, info: "[]" };
     });

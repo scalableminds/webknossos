@@ -4,6 +4,7 @@ import { Dropdown, MenuProps } from "antd";
 import {
   ShareAltOutlined,
   DownOutlined,
+  VideoCameraOutlined,
   CameraOutlined,
   DownloadOutlined,
 } from "@ant-design/icons";
@@ -13,12 +14,12 @@ import { downloadScreenshot } from "oxalis/view/rendering_utils";
 import {
   setPythonClientModalVisibilityAction,
   setShareModalVisibilityAction,
+  setRenderAnimationModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import Store, { OxalisState } from "oxalis/store";
 import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import DownloadModalView from "./download_modal_view";
-import features from "features";
-import { getAISegmentationMenu } from "./tracing_actions_view";
+import CreateAnimationModal from "./create_animation_modal";
 
 type Props = {
   layoutMenu: SubMenuType;
@@ -30,25 +31,24 @@ export const screenshotMenuItem: MenuItemType = {
   label: "Screenshot (Q)",
 };
 
+export const renderAnimationMenuItem: MenuItemType = {
+  key: "create-animation-button",
+  label: "Create Animation",
+  icon: <VideoCameraOutlined />,
+  onClick: () => {
+    Store.dispatch(setRenderAnimationModalVisibilityAction(true));
+  },
+};
+
 export default function ViewDatasetActionsView(props: Props) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const isShareModalOpen = useSelector((state: OxalisState) => state.uiInformation.showShareModal);
-  const isAINucleiSegmentationModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showAINucleiSegmentationModal,
-  );
-  const isAINeuronSegmentationModalOpen = useSelector(
-    (state: OxalisState) => state.uiInformation.showAINeuronSegmentationModal,
-  );
   const isPythonClientModalOpen = useSelector(
     (state: OxalisState) => state.uiInformation.showPythonClientModal,
   );
-
-  const [AISegmentationMenu, AISegmentationModals] = getAISegmentationMenu(
-    isAINucleiSegmentationModalOpen,
-    isAINeuronSegmentationModalOpen,
+  const isRenderAnimationModalOpen = useSelector(
+    (state: OxalisState) => state.uiInformation.showRenderAnimationModal,
   );
-  const isAISegmentationEnabled =
-    features().jobsEnabled && activeUser != null && activeUser.isSuperUser;
 
   const shareDatasetModal = (
     <ShareViewDatasetModalView
@@ -73,16 +73,23 @@ export default function ViewDatasetActionsView(props: Props) {
         label: "Share",
       },
       screenshotMenuItem,
+      renderAnimationMenuItem,
       {
         key: "python-client-button",
         onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
         icon: <DownloadOutlined />,
         label: "Download",
       },
-      isAISegmentationEnabled ? AISegmentationMenu : null,
       props.layoutMenu,
     ],
   };
+
+  const renderAnimationModal = (
+    <CreateAnimationModal
+      isOpen={isRenderAnimationModalOpen}
+      onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
+    />
+  );
 
   return (
     <div
@@ -92,7 +99,7 @@ export default function ViewDatasetActionsView(props: Props) {
     >
       {shareDatasetModal}
       {pythonClientModal}
-      {isAISegmentationEnabled ? AISegmentationModals : null}
+      {activeUser?.isSuperUser ? renderAnimationModal : null}
       <Dropdown menu={overlayMenu} trigger={["click"]}>
         <ButtonComponent
           style={{

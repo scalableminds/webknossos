@@ -22,7 +22,10 @@ ThisBuild / javacOptions ++= Seq(
 )
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
-PlayKeys.devSettings := Seq("play.server.akka.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
+PlayKeys.devSettings := Seq("play.server.pekko.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
+
+// Disable unused import warnings, only in sbt console REPL
+Compile / console / scalacOptions -= "-Xlint:unused"
 
 scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
 scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
@@ -50,20 +53,28 @@ lazy val copyMessagesFilesSetting = {
 
 lazy val util = (project in file("util")).settings(
   commonSettings,
-  libraryDependencies ++= Dependencies.utilDependencies
+  libraryDependencies ++= Dependencies.utilDependencies,
+  dependencyOverrides ++= Dependencies.dependencyOverrides
 )
+
+lazy val webknossosJni = (project in file("webknossos-jni"))
+  .settings(nativeCompile / sourceDirectory := sourceDirectory.value)
+  .enablePlugins(JniNative)
 
 lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .dependsOn(util)
+  .dependsOn(webknossosJni)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
+  .settings(javah / target := (webknossosJni / nativeCompile / sourceDirectory).value / "include")
   .settings(
     name := "webknossos-datastore",
     commonSettings,
     generateReverseRouter := false,
     BuildInfoSettings.webknossosDatastoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
+    dependencyOverrides ++= Dependencies.dependencyOverrides,
     protocolBufferSettings,
     Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"
@@ -86,6 +97,7 @@ lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
     generateReverseRouter := false,
     BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
+    dependencyOverrides ++= Dependencies.dependencyOverrides,
     copyMessagesFilesSetting
   )
 
@@ -100,6 +112,7 @@ lazy val webknossos = (project in file("."))
     AssetCompilation.settings,
     BuildInfoSettings.webknossosBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosDependencies,
+    dependencyOverrides ++= Dependencies.dependencyOverrides,
     Assets / sourceDirectory := file("none"),
     updateOptions := updateOptions.value.withLatestSnapshots(true),
     Compile / unmanagedJars ++= {

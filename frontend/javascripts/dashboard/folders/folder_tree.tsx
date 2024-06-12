@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { Key, useCallback, useEffect, useRef, useState } from "react";
 import { ConnectDropTarget, DropTargetMonitor, useDrop } from "react-dnd";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
 import {
@@ -7,11 +7,10 @@ import {
 } from "../dataset/dataset_collection_context";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Dropdown, Modal, MenuProps } from "antd";
+import { Dropdown, Modal, MenuProps, Tree } from "antd";
 import Toast from "libs/toast";
 import { DragObjectWithType } from "react-dnd";
-import Tree, { DataNode, DirectoryTreeProps } from "antd/lib/tree";
-import { Key } from "antd/lib/table/interface";
+import { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 import { FolderItem } from "types/api_flow_types";
@@ -35,6 +34,7 @@ export function FolderTreeSidebar({
 
   const { data: folderHierarchy, isLoading } = context.queries.folderHierarchyQuery;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether further dependencies are necessary.
   useEffect(() => {
     const newTreeData = folderHierarchy?.tree || [];
     const itemById = folderHierarchy?.itemById || {};
@@ -57,6 +57,7 @@ export function FolderTreeSidebar({
     setExpandedKeys(newExpandedKeys);
   }, [folderHierarchy]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation on what dependencies are needed.
   useEffect(() => {
     if (context.activeFolderId == null && !context.globalSearchQuery) {
       // No search is active and no folder is selected. For example, this can happen
@@ -223,9 +224,9 @@ export function generateSettingsForFolder(
         key: "create",
         disabled: !isEditable,
         onClick: createFolder,
+        icon: <PlusOutlined className="icon-margin-right" />,
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <PlusOutlined />
             {newFolderText}
           </PricingEnforcedSpan>
         ),
@@ -234,9 +235,9 @@ export function generateSettingsForFolder(
         key: "edit",
         disabled: !isEditable,
         onClick: editFolder,
+        icon: <EditOutlined className="icon-margin-right" />,
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <EditOutlined />
             Edit Folder
           </PricingEnforcedSpan>
         ),
@@ -245,7 +246,7 @@ export function generateSettingsForFolder(
         key: "delete",
         onClick: deleteFolder,
         disabled: !isEditable,
-        icon: <DeleteOutlined />,
+        icon: <DeleteOutlined className="icon-margin-right" />,
         label: <span>Delete Folder</span>,
       },
     ],

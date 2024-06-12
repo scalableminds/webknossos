@@ -15,10 +15,10 @@ object PathUtils extends PathUtils
 
 trait PathUtils extends LazyLogging {
 
-  def directoryFilter(path: Path): Boolean =
+  private def directoryFilter(path: Path): Boolean =
     Files.isDirectory(path) && !Files.isHidden(path)
 
-  def fileFilter(path: Path): Boolean =
+  private def fileFilter(path: Path): Boolean =
     !Files.isDirectory(path)
 
   def fileExtensionFilter(ext: String)(path: Path): Boolean =
@@ -50,11 +50,11 @@ trait PathUtils extends LazyLogging {
     else
       None
 
-  def listDirectoryEntries[A](directory: Path,
-                              maxDepth: Int,
-                              dropCount: Int,
-                              silent: Boolean,
-                              filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
+  private def listDirectoryEntries[A](directory: Path,
+                                      maxDepth: Int,
+                                      dropCount: Int,
+                                      silent: Boolean,
+                                      filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
     try {
       val directoryStream = Files.walk(directory, maxDepth, FileVisitOption.FOLLOW_LINKS)
       val r = f(directoryStream.iterator().asScala.drop(dropCount).filter(d => filters.forall(_(d))))
@@ -81,6 +81,9 @@ trait PathUtils extends LazyLogging {
         }
         Failure(errorMsg)
     }
+
+  def containsFile(directory: Path, maxDepth: Int, silent: Boolean, filters: (Path => Boolean)*): Box[Boolean] =
+    listDirectoryEntries(directory, maxDepth, dropCount = 0, silent, filters :+ fileFilter _: _*)(r => Full(r.nonEmpty))
 
   def listDirectories(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
     listDirectoryEntries(directory, 1, 1, silent, filters :+ directoryFilter _: _*)(r => Full(r.toList))
@@ -137,7 +140,7 @@ trait PathUtils extends LazyLogging {
     }
 
   /*
-   * removes the end of a path, after the last occurence of any of excludeFromPrefix
+   * removes the end of a path, after the last occurrence of any of excludeFromPrefix
    * example:  /path/to/color/layer/that/is/named/color/and/has/files
    *    becomes  /path/to/color/layer/that/is/named/color
    *    if "color" is in excludeFromPrefix
@@ -191,6 +194,26 @@ trait PathUtils extends LazyLogging {
     val tmpPath = source.getParent.resolve(s".${tmpId}")
     FileUtils.moveDirectory(source.toFile, tmpPath.toFile)
     FileUtils.moveDirectory(tmpPath.toFile, dst.toFile)
+  }
+
+  def recurseSubdirsUntil(path: Path, condition: Path => Boolean, maxDepth: Int = 10): Box[Path] = {
+    def recurse(p: Path, depth: Int): Box[Path] =
+      if (depth > maxDepth) {
+        Failure("Max depth reached")
+      } else if (condition(p)) {
+        Full(p)
+      } else {
+        val subdirs = listDirectories(p, silent = true)
+        subdirs.flatMap { dirs =>
+          dirs.foldLeft(Failure("No matching subdir found"): Box[Path]) { (acc, dir) =>
+            acc match {
+              case Full(_) => acc
+              case _       => recurse(dir, depth + 1)
+            }
+          }
+        }
+      }
+    recurse(path, 0)
   }
 
 }

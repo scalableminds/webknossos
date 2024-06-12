@@ -63,4 +63,5 @@ package object datasource {
 
   type DataSource = GenericDataSource[DataLayer]
   type DataSourceLike = GenericDataSource[DataLayerLike]
+  type DataSourceWithMagLocators = GenericDataSource[DataLayerWithMagLocators]
 }

@@ -1,5 +1,5 @@
-FROM scalableminds/sbt:master__3437035799
-ARG VERSION_NODE="16.x"
+FROM scalableminds/sbt:master__7830403826
+ARG VERSION_NODE="18.x"
 
 ENV DEBIAN_FRONTEND noninteractive
 ENV SBT_OPTS "${SBT_OPTS} -XX:MaxMetaspaceSize=512m -Xms1024m -Xmx1024m"
@@ -23,7 +23,10 @@ RUN apt-get update \
   nodejs \
   postgresql-client \
   yarn \
+  cmake \
   git \
+  libdraco-dev \
+  libblosc1 \
   # The following packages are necessary to run headless-gl
   && apt-get install -y \
   mesa-utils xvfb libgl1-mesa-dri libglapi-mesa libosmesa6 pkg-config x11proto-xext-dev xserver-xorg-dev libxext-dev libxi-dev \

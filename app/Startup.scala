@@ -1,4 +1,4 @@
-import akka.actor.{ActorSystem, Props}
+import org.apache.pekko.actor.{ActorSystem, Props}
 import cleanup.CleanUpService
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
@@ -89,10 +89,10 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   initialDataService.insert.futureBox.map {
-    case Full(_) => logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms. ")
+    case Full(_) => logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms.")
     case Failure(msg, _, _) =>
       logger.info("No initial data inserted: " + msg)
-      logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms. ")
+      logger.info(s"Webknossos startup took ${System.currentTimeMillis() - beforeStartup} ms.")
     case _ => ()
   }
 

@@ -26,6 +26,7 @@ import VersionEntryGroup from "oxalis/view/version_entry_group";
 import { api } from "oxalis/singletons";
 import Toast from "libs/toast";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 
 const ENTRIES_PER_PAGE = 5000;
 
@@ -213,14 +214,14 @@ function VersionList(props: Props) {
 
   const queryKey = ["versions", props.tracing.tracingId];
 
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     // Remove all previous existent queries so that the content of this view
     // is loaded from scratch. This is important since the loaded page numbers
     // are relative to the base version. If the version of the tracing changed,
     // old pages are not valid anymore.
     queryClient.removeQueries(queryKey);
     Store.dispatch(setAnnotationAllowUpdateAction(false));
-  }, []);
+  });
 
   const {
     data: versions,
@@ -236,11 +237,12 @@ function VersionList(props: Props) {
   });
   const flattenedVersions = _.flatten(versions?.pages.map((page) => page.data) || []);
   const groupedAndChunkedVersions = getGroupedAndChunkedVersions(flattenedVersions);
-  const batchesAndDateStrings = _.flattenDepth(
-    Object.entries(groupedAndChunkedVersions),
+  const batchesAndDateStrings: Array<string | APIUpdateActionBatch[]> = _.flattenDepth(
+    Object.entries(groupedAndChunkedVersions) as any,
     2,
-  ) as Array<string | APIUpdateActionBatch[]>;
+  );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether fetchNextPage should be added to the dependencies.
   useEffect(() => {
     // The initially loaded page could be quite short (e.g., if
     // ENTRIES_PER_PAGE is 100 and the current version is 105, the first
@@ -257,7 +259,7 @@ function VersionList(props: Props) {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
-  }, [flattenedVersions, hasNextPage, isFetchingNextPage]);
+  }, [flattenedVersions, hasNextPage, isFetchingNextPage, baseVersion]);
 
   useEffect(() => {
     if (error) {

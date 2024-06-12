@@ -35,6 +35,7 @@ import {
   getTree,
   getTreesWithType,
   getNodeAndTree,
+  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
 import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
@@ -389,6 +390,27 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
+        case "SET_TREE_TYPE": {
+          const { treeType, treeId } = action;
+          return getTree(skeletonTracing, treeId)
+            .map((tree) =>
+              update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: {
+                        type: {
+                          $set: treeType,
+                        },
+                      },
+                    },
+                  },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
         case "SHUFFLE_ALL_TREE_COLORS": {
           const newColors = ColorGenerator.getNRandomColors(_.size(skeletonTracing.trees));
           return update(state, {
@@ -554,6 +576,10 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 
       switch (action.type) {
         case "CREATE_NODE": {
+          if (isSkeletonLayerTransformed(state)) {
+            // Don't create nodes if the skeleton layer is rendered with transforms.
+            return state;
+          }
           const {
             position,
             rotation,
@@ -683,6 +709,10 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         }
 
         case "SET_NODE_POSITION": {
+          if (isSkeletonLayerTransformed(state)) {
+            // Don't move node if the skeleton layer is rendered with transforms.
+            return state;
+          }
           const { position, nodeId, treeId } = action;
           return getNodeAndTree(skeletonTracing, nodeId, treeId, TreeTypeEnum.DEFAULT)
             .map(([tree, node]) => {
@@ -690,7 +720,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               const newDiffableMap = diffableMap.set(
                 node.id,
                 update(node, {
-                  position: {
+                  untransformedPosition: {
                     // Don't round here, since this would make the continuous
                     // movement of a node weird.
                     $set: position,
@@ -909,29 +939,30 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           const isProofreadingActive =
             state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
           const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
-          const trees = getTreesWithType(skeletonTracing, treeType);
-          return mergeTrees(trees, sourceNodeId, targetNodeId)
-            .map(([trees, newActiveTreeId, newActiveNodeId]) =>
-              update(state, {
-                tracing: {
-                  skeleton: {
-                    trees: {
-                      $set: trees,
-                    },
-                    activeNodeId: {
-                      $set: newActiveNodeId,
-                    },
-                    activeTreeId: {
-                      $set: newActiveTreeId,
-                    },
-                    activeGroupId: {
-                      $set: null,
-                    },
-                  },
+          const oldTrees = getTreesWithType(skeletonTracing, treeType);
+          const mergeResult = mergeTrees(oldTrees, sourceNodeId, targetNodeId);
+          if (mergeResult == null) {
+            return state;
+          }
+          const [trees, newActiveTreeId, newActiveNodeId] = mergeResult;
+          return update(state, {
+            tracing: {
+              skeleton: {
+                trees: {
+                  $set: trees,
                 },
-              }),
-            )
-            .getOrElse(state);
+                activeNodeId: {
+                  $set: newActiveNodeId,
+                },
+                activeTreeId: {
+                  $set: newActiveTreeId,
+                },
+                activeGroupId: {
+                  $set: null,
+                },
+              },
+            },
+          });
         }
 
         case "SET_TREE_NAME": {

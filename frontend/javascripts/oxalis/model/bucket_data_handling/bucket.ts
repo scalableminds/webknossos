@@ -17,7 +17,7 @@ import window from "libs/window";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 
-export const enum BucketStateEnum {
+export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
   REQUESTED = "REQUESTED",
   MISSING = "MISSING", // Missing means that the bucket couldn't be found on the data store
@@ -58,7 +58,7 @@ export function assertNonNullBucket(bucket: Bucket): asserts bucket is DataBucke
 }
 
 export class NullBucket {
-  type: "null" = "null";
+  type = "null" as const;
 
   hasData(): boolean {
     return false;
@@ -127,7 +127,7 @@ export function markVolumeTransactionEnd() {
 }
 
 export class DataBucket {
-  type: "data" = "data";
+  type = "data" as const;
   elementClass: ElementClass;
   visualizedMesh: Record<string, any> | null | undefined;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'visualizationColor' has no initializer a... Remove this comment to see the full error message
@@ -156,7 +156,7 @@ export class DataBucket {
   // know whether a certain ID is contained in this bucket. To
   // speed up such requests a cached set of the contained values
   // can be stored in cachedValueSet.
-  cachedValueSet: Set<number | BigInt> | null = null;
+  cachedValueSet: Set<number | bigint> | null = null;
 
   constructor(
     elementClass: ElementClass,
@@ -477,7 +477,7 @@ export class DataBucket {
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,
-  ) {
+  ): boolean {
     const data = this.getOrCreateData();
 
     if (this.needsBackendData()) {
@@ -499,7 +499,7 @@ export class DataBucket {
       );
     }
 
-    this._applyVoxelMapInPlace(
+    return this._applyVoxelMapInPlace(
       data,
       voxelMap,
       segmentId,
@@ -521,8 +521,9 @@ export class DataBucket {
     // its old value is equal to overwritableValue.
     shouldOverwrite: boolean = true,
     overwritableValue: number = 0,
-  ) {
+  ): boolean {
     const out = new Float32Array(3);
+    let wroteVoxels = false;
 
     const segmentId = castForArrayType(uncastSegmentId, data);
 
@@ -539,10 +540,15 @@ export class DataBucket {
 
           if (shouldOverwrite || (!shouldOverwrite && currentSegmentId === overwritableValue)) {
             data[voxelAddress] = segmentId;
+            wroteVoxels = true;
           }
         }
       }
     }
+
+    this.invalidateValueSet();
+
+    return wroteVoxels;
   }
 
   markAsPulled(): void {
@@ -627,7 +633,7 @@ export class DataBucket {
     this.cachedValueSet = new Set(this.data);
   }
 
-  containsValue(value: number | BigInt): boolean {
+  containsValue(value: number | bigint): boolean {
     if (this.cachedValueSet == null) {
       this.recomputeValueSet();
     }
@@ -673,7 +679,7 @@ export class DataBucket {
 
     if (this.pendingOperations.length === 0) {
       // This can happen when mutating an unloaded bucket and then
-      // undoing it. The bucket is still marked as dirty, even though,
+      // undoing it. The bucket is still marked as dirty, even though
       // no pending operations are necessary (since the bucket was restored
       // to an untouched version).
       // See this refactoring issue: https://github.com/scalableminds/webknossos/issues/5973

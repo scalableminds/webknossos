@@ -32,6 +32,7 @@ type UpdateVolumeTracingUpdateAction = ReturnType<typeof updateVolumeTracing>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
 export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
+export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
 type UpdateUserBoundingBoxesUpdateAction = ReturnType<typeof updateUserBoundingBoxes>;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
 type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
@@ -63,6 +64,7 @@ export type UpdateAction =
   | CreateSegmentUpdateAction
   | UpdateSegmentUpdateAction
   | DeleteSegmentUpdateAction
+  | DeleteSegmentDataUpdateAction
   | UpdateBucketUpdateAction
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeEdgesVisibilityUpdateAction
@@ -78,13 +80,21 @@ export type UpdateAction =
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {
   name: "createTracing";
-  value: {};
+  value: {
+    actionTimestamp: number;
+  };
 };
 // This update action is only created by the backend
 type ImportVolumeTracingUpdateAction = {
   name: "importVolumeTracing";
   value: {
     largestSegmentId: number;
+  };
+}; // This update action is only created by the backend
+type AddSegmentIndexUpdateAction = {
+  name: "addSegmentIndex";
+  value: {
+    actionTimestamp: number;
   };
 };
 type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
@@ -100,6 +110,7 @@ export type ServerUpdateAction = AsServerAction<
   | UpdateAction
   // These two actions are never sent by the frontend and, therefore, don't exist in the UpdateAction type
   | ImportVolumeTracingUpdateAction
+  | AddSegmentIndexUpdateAction
   | CreateTracingUpdateAction
 >;
 
@@ -205,20 +216,28 @@ export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: n
     },
   } as const;
 }
+
+export type UpdateActionNode = Omit<Node, "untransformedPosition"> & {
+  position: Node["untransformedPosition"];
+  treeId: number;
+};
+
 export function createNode(treeId: number, node: Node) {
+  const { untransformedPosition, ...restNode } = node;
   return {
     name: "createNode",
-    value: Object.assign({}, node, {
-      treeId,
-    }),
+    value: { ...restNode, position: untransformedPosition, treeId } as UpdateActionNode,
   } as const;
 }
 export function updateNode(treeId: number, node: Node) {
+  const { untransformedPosition, ...restNode } = node;
   return {
     name: "updateNode",
-    value: Object.assign({}, node, {
+    value: {
+      ...restNode,
+      position: untransformedPosition,
       treeId,
-    }),
+    } as UpdateActionNode,
   } as const;
 }
 export function deleteNode(treeId: number, nodeId: number) {
@@ -314,7 +333,7 @@ export function createSegmentVolumeAction(
 export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
-  additionalCoordinates: AdditionalCoordinate[] | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
@@ -336,6 +355,14 @@ export function updateSegmentVolumeAction(
 export function deleteSegmentVolumeAction(id: number) {
   return {
     name: "deleteSegment",
+    value: {
+      id,
+    },
+  } as const;
+}
+export function deleteSegmentDataVolumeAction(id: number) {
+  return {
+    name: "deleteSegmentData",
     value: {
       id,
     },
@@ -397,25 +424,39 @@ export function serverCreateTracing(timestamp: number) {
 }
 export function updateMappingName(
   mappingName: string | null | undefined,
-  isEditable: boolean | undefined,
+  isEditable: boolean | null | undefined,
+  isLocked: boolean | undefined,
 ) {
   return {
     name: "updateMappingName",
-    value: { mappingName, isEditable },
+    value: { mappingName, isEditable, isLocked },
   } as const;
 }
 export function splitAgglomerate(
   agglomerateId: number,
-  segmentPosition1: Vector3,
-  segmentPosition2: Vector3,
+  segmentId1: number,
+  segmentId2: number,
   mag: Vector3,
-) {
+): {
+  name: "splitAgglomerate";
+  value: {
+    agglomerateId: number;
+    mag: Vector3;
+    // For backwards compatibility reasons,
+    // older segments are defined using their positions
+    // instead of their unmapped ids.
+    segmentId1: number | undefined;
+    segmentId2: number | undefined;
+    segmentPosition1?: Vector3 | undefined;
+    segmentPosition2?: Vector3 | undefined;
+  };
+} {
   return {
     name: "splitAgglomerate",
     value: {
       agglomerateId,
-      segmentPosition1,
-      segmentPosition2,
+      segmentId1,
+      segmentId2,
       mag,
     },
   } as const;
@@ -423,17 +464,31 @@ export function splitAgglomerate(
 export function mergeAgglomerate(
   agglomerateId1: number,
   agglomerateId2: number,
-  segmentPosition1: Vector3,
-  segmentPosition2: Vector3,
+  segmentId1: number,
+  segmentId2: number,
   mag: Vector3,
-) {
+): {
+  name: "mergeAgglomerate";
+  value: {
+    agglomerateId1: number;
+    agglomerateId2: number;
+    mag: Vector3;
+    // For backwards compatibility reasons,
+    // older segments are defined using their positions
+    // instead of their unmapped ids.
+    segmentId1: number | undefined;
+    segmentId2: number | undefined;
+    segmentPosition1?: Vector3 | undefined;
+    segmentPosition2?: Vector3 | undefined;
+  };
+} {
   return {
     name: "mergeAgglomerate",
     value: {
       agglomerateId1,
       agglomerateId2,
-      segmentPosition1,
-      segmentPosition2,
+      segmentId1,
+      segmentId2,
       mag,
     },
   } as const;

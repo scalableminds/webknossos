@@ -1,7 +1,7 @@
 package security
 
-import com.mohiva.play.silhouette.api.LoginInfo
-import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
+import play.silhouette.api.LoginInfo
+import play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.time.Instant
@@ -32,8 +32,8 @@ case class Token(_id: ObjectId,
       BearerTokenAuthenticator(
         value,
         loginInfo,
-        lastUsedDateTime.toJodaDateTime,
-        expirationDateTime.toJodaDateTime,
+        lastUsedDateTime.toZonedDateTime,
+        expirationDateTime.toZonedDateTime,
         idleTimeout
       ))
 }
@@ -52,8 +52,8 @@ object Token {
         ObjectId.generate,
         b.id,
         b.loginInfo,
-        Instant.fromJoda(b.lastUsedDateTime),
-        Instant.fromJoda(b.expirationDateTime),
+        Instant.fromZonedDateTime(b.lastUsedDateTime),
+        Instant.fromZonedDateTime(b.expirationDateTime),
         b.idleTimeout,
         tokenType,
         Instant.now
@@ -105,9 +105,12 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def insertOne(t: Token): Fox[Unit] =
     for {
       loginInfoProvider <- LoginInfoProvider.fromString(t.loginInfo.providerID).toFox
-      _ <- run(
-        q"""insert into webknossos.tokens(_id, value, loginInfo_providerID, loginInfo_providerKey, lastUsedDateTime, expirationDateTime, idleTimeout, tokenType, created, isDeleted)
-                    values(${t._id}, ${t.value}, $loginInfoProvider,
+      _ <- run(q"""INSERT INTO webknossos.tokens(
+                         _id, value, loginInfo_providerID,
+                         loginInfo_providerKey, lastUsedDateTime,
+                         expirationDateTime, idleTimeout,
+                         tokenType, created, isDeleted)
+                   VALUES(${t._id}, ${t.value}, $loginInfoProvider,
                           ${t.loginInfo.providerKey}, ${t.lastUsedDateTime},
                           ${t.expirationDateTime}, ${t.idleTimeout.map(_.toMillis)},
                           ${t.tokenType}, ${t.created}, ${t.isDeleted})""".asUpdate)
@@ -120,13 +123,13 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    idleTimeout: Option[FiniteDuration])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q"""update webknossos.tokens
-                      set
-                        value = $value,
-                        lastUsedDateTime = $lastUsedDateTime,
-                        expirationDateTime = $expirationDateTime,
-                        idleTimeout = ${idleTimeout.map(_.toMillis)}
-                      where _id = $id""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.tokens
+                   SET
+                     value = $value,
+                     lastUsedDateTime = $lastUsedDateTime,
+                     expirationDateTime = $expirationDateTime,
+                     idleTimeout = ${idleTimeout.map(_.toMillis)}
+                   WHERE _id = $id""".asUpdate)
     } yield ()
 
   def deleteOneByValue(value: String): Fox[Unit] = {
@@ -143,8 +146,8 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def updateEmail(oldEmail: String, newEmail: String): Fox[Unit] =
     for {
-      _ <- run(q"""update webknossos.tokens set
-        logininfo_providerkey = $newEmail
-        where logininfo_providerkey = $oldEmail""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.tokens
+                   SET logininfo_providerkey = $newEmail
+                   WHERE logininfo_providerkey = $oldEmail""".asUpdate)
     } yield ()
 }

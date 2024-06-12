@@ -255,9 +255,8 @@ function downsampleVoxelMap(
               const secondDimInGoalBucket =
                 Math.floor(secondDim * scaleToGoal[dimensionIndices[1]]) +
                 voxelOffset[dimensionIndices[1]];
-              goalVoxelMap[
-                firstDimInGoalBucket * constants.BUCKET_WIDTH + secondDimInGoalBucket
-              ] = 1;
+              goalVoxelMap[firstDimInGoalBucket * constants.BUCKET_WIDTH + secondDimInGoalBucket] =
+                1;
               foundVoxel = true;
             }
           }
@@ -316,7 +315,7 @@ export function applyVoxelMap(
   // its old value is equal to overwritableValue.
   shouldOverwrite: boolean = true,
   overwritableValue: number = 0,
-) {
+): boolean {
   function preprocessBucket(bucket: Bucket) {
     if (bucket.type === "null") {
       return;
@@ -333,6 +332,7 @@ export function applyVoxelMap(
     bucket.endDataMutation();
   }
 
+  let wroteVoxels = false;
   for (const [labeledBucketZoomedAddress, voxelMap] of labeledVoxelMap) {
     let bucket: Bucket = dataCube.getOrCreateBucket(labeledBucketZoomedAddress);
 
@@ -361,18 +361,20 @@ export function applyVoxelMap(
         continue;
       }
 
-      bucket.applyVoxelMap(
-        voxelMap,
-        segmentId,
-        get3DAddress,
-        sliceCount,
-        thirdDimensionIndex,
-        shouldOverwrite,
-        overwritableValue,
-      );
+      wroteVoxels =
+        bucket.applyVoxelMap(
+          voxelMap,
+          segmentId,
+          get3DAddress,
+          sliceCount,
+          thirdDimensionIndex,
+          shouldOverwrite,
+          overwritableValue,
+        ) || wroteVoxels;
     }
 
     // Post-processing: add to pushQueue and notify about labeling
     postprocessBucket(bucket);
   }
+  return wroteVoxels;
 }

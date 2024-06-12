@@ -39,7 +39,7 @@ The Python libraries offer both "normal" download of datasets and streaming acce
 ## Interoperability with Other Software Tools
 
 WEBKNOSSOS integrates seamlessly with other analysis software tools, enabling you to work with datasets from tools like Neuroglancer and Fiji. 
-Let’s see an example of [importing a Neuroglancer dataset](./datasets.md#working-with-zarr-neuroglancer-precomputed-and-n5-datasets) into WEBKNOSSOS.
+Let’s see an example of [importing a Neuroglancer dataset](./datasets.md#streaming-from-remote-servers-and-the-cloud) into WEBKNOSSOS.
 
 First, find a released dataset in OME-Zarr, N5 or Neuroglancer-Precomputed format that you would like to import and that is hosted in the cloud (S3, Google Cloud) or on any HTTPS server.
 Copy the URL pointing to the data.

@@ -8,7 +8,7 @@ import ThreeDMap from "libs/ThreeDMap";
 import { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
-import { LoadingStrategy, PlaneRects } from "oxalis/store";
+import type { LoadingStrategy, PlaneRects } from "oxalis/store";
 import { MAX_ZOOM_STEP_DIFF, getPriorityWeightForZoomStepDiff } from "../loading_strategy_logic";
 
 // Note that the fourth component of Vector4 (if passed) is ignored, as it's not needed
@@ -18,14 +18,14 @@ const hashPosition = ([x, y, z]: Vector3 | Vector4): number => 2 ** 32 * x + 2 *
 const makeBucketsUnique = (buckets: Vector3[]) => _.uniqBy(buckets, hashPosition);
 
 const ALPHA = Math.PI / 2;
-// prettier-ignore
+// biome-ignore format: don't format array
 const YZ_ROTATION = [
     Math.cos(ALPHA), 0, Math.sin(ALPHA), 0,
     0, 1, 0, 0,
     -Math.sin(ALPHA), 0, Math.cos(ALPHA), 0,
     0, 0, 0, 1,
 ] as Matrix4x4;
-// prettier-ignore
+// biome-ignore format: don't format array
 const XZ_ROTATION = [
   1, 0, 0, 0,
   0, Math.cos(ALPHA), -Math.sin(ALPHA), 0,
@@ -86,7 +86,7 @@ function addNecessaryBucketsToPriorityQueueOblique(
     let extent: Vector2;
     let enlargedExtent: Vector2;
     let enlargedHalfExtent: Vector2;
-    let queryMatrix = [...matrix] as Matrix4x4;
+    const queryMatrix = [...matrix] as Matrix4x4;
 
     if (viewMode === "orthogonal") {
       extent = [rects[planeId].width, rects[planeId].height];

@@ -1,4 +1,4 @@
-import { Alert, Empty, Input, Tooltip, TreeProps } from "antd";
+import { Alert, Empty, Space, Tooltip, TreeProps } from "antd";
 import { connect } from "react-redux";
 import Maybe from "data.maybe";
 import React from "react";
@@ -158,7 +158,7 @@ const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree
 });
 
 const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): MutableNode => ({
-  position: synapsePosition,
+  untransformedPosition: synapsePosition,
   radius: Constants.DEFAULT_NODE_RADIUS,
   rotation: [0, 0, 0],
   viewport: 0,
@@ -420,7 +420,7 @@ class ConnectomeView extends React.Component<Props, State> {
         (node) => node.data.type !== "synapse",
       ),
     );
-    // Auto-load the skeletons of the active agglomerates and check all occurences of the same agglomerate
+    // Auto-load the skeletons of the active agglomerates and check all occurrences of the same agglomerate
     const topLevelCheckedKeys = treeData.map((topLevelTreeNode) => topLevelTreeNode.key);
     const checkedKeys = Array.from(
       mapAndFilterTreeData(
@@ -745,8 +745,7 @@ class ConnectomeView extends React.Component<Props, State> {
     const disabled = currentConnectomeFile == null;
     return (
       <>
-        <Input.Group
-          compact
+        <Space.Compact
           className="compact-icons"
           style={{
             marginBottom: 10,
@@ -773,7 +772,7 @@ class ConnectomeView extends React.Component<Props, State> {
             disabled={disabled}
           />
           <ConnectomeSettings segmentationLayer={segmentationLayer} />
-        </Input.Group>
+        </Space.Compact>
         {this.getConnectomeMappingActivationAlert()}
       </>
     );

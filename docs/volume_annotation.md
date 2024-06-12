@@ -1,21 +1,23 @@
 ## Volume Annotations & Proof-Reading
 
 In addition to [skeleton annotations](./skeleton_annotation.md), WEBKNOSSOS also supports volume/segmentation annotations.
-With this type of annotation, you can label groups of voxels with efficient drawing tools.
+This annotation type lets you label voxel groups using efficient drawing tools.
 
 ![youtube-video](https://www.youtube.com/embed/iw2C7XB6wP4?start=120)
 
 ### Tools
 
-Select one of the drawing tools from the toolbar or toggle through with the keyboard shortcut _W_.
+Choose a drawing tool from the toolbar or press _W_ to switch between them.
 
 - `Move`: Navigate around the dataset.
-- `Trace`: Draw outlines around the voxel you would like to label.
-- `Brush`: Draw over the voxels you would like to label. Adjust the brush size with _SHIFT + Mousewheel_.
-- `Erase (Trace/Brush)`: Draw over the voxels you would like to erase. Adjust the brush size with _SHIFT + Mousewheel_.
-- `Fill Tool`: Flood-fills the clicked region with a volume annotation until it hits the next segment boundary (or the outer edge of your viewport). All adjacent voxels with the same voxel id as the clicked voxel will be changed to the active segment ID. Useful to either fill a hole in a segment or to relabel a segment with a different ID/color.
-- `Segment Picker`: Click on any segment to select its label ID as the active segment ID and continue any volume annotation operation with that ID.
-- `Quick Select`: Draw a rectangle over a segment to annotate it automatically. The tool can operate in two different modes. If the "AI" button in the toolbar is activated, a machine-learning model is used to infer the selection. If the AI button is disabled, the tool operates on the intensity data of the visible color layer and automatically fills out the segment starting from the center of the rectangle. Next to the tool, there is a settings button which allows to enable a preview mode and to tweak some other parameters. If the preview is enabled, the parameters can be fine-tuned while the preview updates instantly.
+- `Trace`: Draw an outline around the voxel you want to label.
+- `Brush`: Paint over the voxels you would like to label. Use _SHIFT + Mousewheel_ to change the brush size.
+- `Erase (Trace/Brush)`: Erase voxels by drawing over them. Use _SHIFT + Mousewheel_ to change the brush size.
+- `Fill Tool`: Fill the clicked region with a volume annotation up to the next segment boundary (or the edge of your viewport). All neighboring voxels with the same voxel id as the clicked voxel will be labelled with the active segment ID. This is useful for filling a hole in a segment or relabeling a segment with a different ID/color.
+- `Segment Picker`: Click a segment to use its label ID as the active segment ID and keep annotating with that ID.
+- `Quick Select`: Annotate a segment automatically by drawing a rectangular selection over it. The tool operates in two different modes. 
+When the "AI" button in the toolbar is activated, a machine-learning model is used to infer the selection. When the AI button is disabled, the tool operates on the intensity data of the visible color layer and automatically fills out the segment starting from the center of the rectangle. Next to the tool, there is a settings button which allows to enable a preview mode and to tweak some other parameters. When the preview is enabled, you can fine-tuned the parameters and see the preview update instantly.
+- `Proof Reading`: Fix merge and split errors in automated segmentation. Read more about [proofreading](./proof_reading.md#proofreading-tool).
 
 When using the trace or brush tool, a label can be added with _Left Mouse Drag_.
 Erasing is possible with the dedicated erase tools or with _CTRL + Shift + Left Mouse Drag_.
@@ -66,7 +68,7 @@ This button opens up a modal that starts a long-running job which will materiali
 See the section on [proofreading](./proof_reading.md).
 
 ### AI Quick Select
-The built-in quick select tools allows you draw a a selection around a cell or object and WEBKNOSSOS will use machine-learning to automatically do the segmentation for you.
+The built-in quick select tools allows you draw a selection around a cell or object and WEBKNOSSOS will use machine-learning to automatically do the segmentation for you.
 
 The feature is based on the [Segment Anything Model](https://arxiv.org/abs/2304.02643) and works across a wide range of imaging modalities.
 
@@ -74,7 +76,7 @@ The AI quick select tool in combination with the volume interpolation feature sp
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/04_new_AI_quick_select.mp4)
 
-To use the AI quick selection tool, select it from the tool bar at the top of the screen. Make sure the AI option is toggled (default setting) otherwise the quick select tool will default to using flood-fills which depending on your situation is also very handy.
+To use the AI quick selection tool, select it from the toolbar at the top of the screen. Make sure the AI option is toggled (default setting) otherwise the quick select tool will default to using flood-fills which depending on your situation is also very handy.
 
 ![type:video](https://static.webknossos.org/assets/docs/tutorial-volume-annotation/05_interpolating.mp4)
 
@@ -91,18 +93,31 @@ Note that it is recommended to proofread the interpolated slices afterward since
 ### Volume Extrusion
 
 Similar to the above interpolation feature, you can also extrude the currently active segment.
-This means, that you can label a segment on one slice (e.g., z=10), move a few slices forward (e.g., z=12) and copy the segment to the relevant slices (e.g., z=11, z=12).
+This means, that you can label a segment on one slice (e.g., z=10), move a few slices forward (e.g., z=12) and copy the segment to the relevant slices (e.g., z=11, z=12). In contrast to interpolation mode, WEBKNOSSOS will not adapt the shape/boundary of the extruded segments to fit between the source and target segment. Instead, the extruded volume will retain the shape of the source segment and extend that along the z-axis.
 The extrusion can be triggered by using the extrude button in the toolbar (also available as a dropdown next to the interpolation/extrusion button).
+
+![youtube-video](https://www.youtube.com/embed/GucpEA6Wev8)
 
 ### Volume Flood Fills
 
-WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having the relabel segment slice-by-slice, WEBKNOSSOS can do this for you. This operation allows you to fix both split and merge errors:
+WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having to relabel segment slice-by-slice, WEBKNOSSOS can do this for you. This operation allows you to fix both split and merge errors:
 
 - For split errors: Combine two segments by relabeling one segment with the ID of the other. Since this operation is fairly compute-intensive you might be better of with the `Merger Mode`, explained above.
 - For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply it to one of the partial segments that you just divided.
 
 Note that due to performance reasons, 3D flood-fills only work in a small, local bounding box.
 For larger areas we recommend working with the [proofreading tool](./proof_reading.md) instead.
+
+### Segment Statistics
+WEBKNOSSOS provides handy statistics about your labelled segments, such as the volume and bounding box of a segment.
+
+There is several ways to access this information: 
+1. Right-click any segment to bring up the context menu. The segment statistics are listed at the end of the context menu.
+2. In the `Segments` tab in the right-hand panel, right-click on any group of segments (or the "Root" group) to bring up a context menu. Select `Show Segment Statistics` to access a summary table with statistics for a whole group of labelled segments. These can be exported as CSV files for further analysis outside of WEBKNOSSOS.
+
+In cases, where you only wish to measure a simple distance or surface area, use the [`Measurement Tool`](./tracing_ui.md#the-toolbar) instead.
+
+![youtube-video](https://www.youtube.com/embed/PsvC4vNyxJM)
 
 ### Mappings / On-Demand Agglomeration
 

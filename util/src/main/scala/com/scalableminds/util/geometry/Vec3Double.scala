@@ -103,6 +103,8 @@ object Vec3Double {
 
   def ones: Vec3Double = Vec3Double(1.0, 1.0, 1.0)
 
+  def zeros: Vec3Double = Vec3Double(0.0, 0.0, 0.0)
+
   implicit object Vector3DReads extends Format[Vec3Double] {
     def reads(json: JsValue): JsResult[Vec3Double] = json match {
       case JsArray(ts) if ts.size == 3 =>

@@ -6,7 +6,7 @@ import {
   LoadingOutlined,
 } from "@ant-design/icons";
 import { Result, Spin, Tag, Tooltip } from "antd";
-import { stringToColor } from "libs/format_utils";
+import { stringToColor, formatCountToDataAmountUnit } from "libs/format_utils";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
 import {
@@ -45,6 +45,7 @@ export function DetailsSidebar({
 }) {
   const context = useDatasetCollectionContext();
   const { data: folder, error } = useFolderQuery(folderId);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether context.globalSearchQuery should be added as a dependency.
   useEffect(() => {
     if (
       selectedDatasets.some((ds) => ds.folderId !== context.activeFolderId) &&
@@ -172,10 +173,20 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           )}
         </div>
       </Spin>
+
       {selectedDataset.isActive ? (
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Tags</div>
           <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
+        </div>
+      ) : null}
+
+      {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
+        <div style={{ marginBottom: 4 }}>
+          <div className="sidebar-label">Used Storage</div>
+          <Tooltip title="Note that linked and remote layers aren’t measured." placement="left">
+            <div>{formatCountToDataAmountUnit(fullDataset.usedStorageBytes, true)}</div>
+          </Tooltip>
         </div>
       ) : null}
     </>
@@ -253,7 +264,7 @@ function FolderDetails({
                 fontSize: 16,
                 marginTop: 2,
                 marginLeft: 2,
-                color: "var(--ant-text-secondary)",
+                color: "var(--ant-color-text-secondary)",
               }}
             >
               <EditOutlined onClick={() => setFolderIdForEditModal(folder.id)} />

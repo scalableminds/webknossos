@@ -1,4 +1,4 @@
-import { Form, Input, Button, Card, Upload, Spin, Progress, Divider } from "antd";
+import { Form, Input, Button, Card, Upload, Spin, Progress, Divider, App } from "antd";
 import React, { useState } from "react";
 import { InboxOutlined } from "@ant-design/icons";
 import _ from "lodash";
@@ -9,8 +9,10 @@ import { createTasks } from "admin/admin_rest_api";
 import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
 import Messages from "messages";
 import Toast from "libs/toast";
+
 const FormItem = Form.Item;
 const { TextArea } = Input;
+
 export const NUM_TASKS_PER_BATCH = 100;
 export type NewTask = {
   readonly boundingBox: BoundingBoxObject | null | undefined;
@@ -26,7 +28,7 @@ export type NewTask = {
   readonly pendingInstances: number;
   readonly taskTypeId: string;
   readonly csvFile?: File;
-  readonly nmlFiles?: File;
+  readonly nmlFiles?: File[];
   readonly baseAnnotation?:
     | {
         baseId: string;
@@ -34,30 +36,35 @@ export type NewTask = {
     | null
     | undefined;
 };
+
 export type TaskCreationResponse = {
   status: number;
   success?: APITask;
   error?: string;
 };
+
 export type TaskCreationResponseContainer = {
-  tasks: Array<TaskCreationResponse>;
-  warnings: Array<string>;
+  tasks: TaskCreationResponse[];
+  warnings: string[];
 };
-export const normFile = (
-  e:
-    | Array<File>
+
+export function normalizeFileEvent(
+  event:
+    | File[]
     | {
-        fileList: Array<File>;
+        fileList: File[];
       },
-) => {
-  if (Array.isArray(e)) {
-    return e;
+) {
+  if (Array.isArray(event)) {
+    return event;
   }
 
-  return e?.fileList;
-};
+  return event?.fileList;
+}
 
 function TaskCreateBulkView() {
+  const { modal } = App.useApp();
+
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [tasksCount, setTasksCount] = useState<number>(0);
   const [tasksProcessed, setTasksProcessed] = useState<number>(0);
@@ -165,7 +172,7 @@ function TaskCreateBulkView() {
     };
   }
 
-  async function readCSVFile(csvFile: File): Promise<Array<NewTask>> {
+  async function readCSVFile(csvFile: File): Promise<NewTask[]> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
 
@@ -202,11 +209,11 @@ function TaskCreateBulkView() {
     }
   };
 
-  function getInvalidTaskIndices(tasks: Array<NewTask>): Array<number> {
+  function getInvalidTaskIndices(tasks: NewTask[]): number[] {
     // returns the index / line number of an invalidly parsed task
-    // returned indicies start at 1 for easier matching by non-CS people
+    // returned indices start at 1 for easier matching by non-CS people
     const isValidTasks = tasks.map(isValidTask);
-    const invalidTasks: Array<number> = [];
+    const invalidTasks: number[] = [];
     return isValidTasks.reduce((result, isValid: boolean, i: number) => {
       if (!isValid) {
         result.push(i + 1);
@@ -216,7 +223,7 @@ function TaskCreateBulkView() {
     }, invalidTasks);
   }
 
-  async function batchUpload(tasks: Array<NewTask>) {
+  async function batchUpload(tasks: NewTask[]) {
     // upload the tasks in batches to save the server from dying
     setIsUploading(true);
     setTasksCount(tasks.length);
@@ -228,14 +235,14 @@ function TaskCreateBulkView() {
 
       for (let i = 0; i < tasks.length; i += NUM_TASKS_PER_BATCH) {
         const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
-        // eslint-disable-next-line no-await-in-loop
+
         const response = await createTasks(subArray);
         taskResponses = taskResponses.concat(response.tasks);
         warnings = warnings.concat(response.warnings);
         setTasksProcessed(i + NUM_TASKS_PER_BATCH);
       }
 
-      handleTaskCreationResponse({
+      handleTaskCreationResponse(modal, {
         tasks: taskResponses,
         warnings: _.uniq(warnings),
       });
@@ -254,13 +261,13 @@ function TaskCreateBulkView() {
       <Spin spinning={isUploading}>
         <Card title={<h3>Bulk Create Tasks</h3>}>
           <p>
-            Specify each new task on a separate line as comma seperated values (CSV) in the
+            Specify each new task on a separate line as comma separated values (CSV) in the
             following format:
             <br />
-            <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
+            <a href="/dashboard">dataset</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
             minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height,
-            depth, <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>
-            , baseAnnotationId]
+            depth, <a href="/projects">project</a>, <a href="/scripts">scriptId</a> (optional),
+            baseAnnotationId (optional)
             <br />
             If you want to define some (but not all) of the optional values, please list all
             optional values and use an empty value for the ones you do not want to set (e.g.,
@@ -313,7 +320,7 @@ function TaskCreateBulkView() {
               hasFeedback
               name="csvFile"
               valuePropName="fileList"
-              getValueFromEvent={normFile}
+              getValueFromEvent={normalizeFileEvent}
             >
               <Upload.Dragger
                 accept=".csv,.txt"

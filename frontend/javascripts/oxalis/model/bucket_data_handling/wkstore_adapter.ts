@@ -228,7 +228,7 @@ export async function requestFromStore(
       detailedError,
       isOnline: window.navigator.onLine,
     });
-    return batch.map((_val) => null);
+    throw errorResponse;
   }
 }
 

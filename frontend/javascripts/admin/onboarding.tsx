@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Form, Modal, Input, Button, Row, Col, Steps, Card, AutoComplete, Alert } from "antd";
 import {
   CloudUploadOutlined,
@@ -161,23 +161,24 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
     >
       <Card
         bordered={false}
-        bodyStyle={{
-          textAlign: "center",
-          height,
-          width: 350,
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "space-around",
-          boxShadow: "var(--ant-box-shadow-base)",
-          borderRadius: 3,
-          border: 0,
+        styles={{
+          body: {
+            textAlign: "center",
+            height,
+            width: 350,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-around",
+            boxShadow: "var(--ant-box-shadow)",
+            borderRadius: 3,
+            border: 0,
+          },
         }}
       >
         <div
-          className="without-icon-margin"
           style={{
             fontSize: 32,
-            background: "var(--ant-primary)",
+            background: "var(--ant-color-primary)",
             borderRadius: "30px",
             padding: "6px 14px",
             color: "white",
@@ -202,7 +203,7 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
           style={{
             fontSize: 14,
             lineHeight: "18px",
-            color: "var(--ant-text-secondary)",
+            color: "var(--ant-color-text-secondary)",
             margin: 0,
           }}
         >
@@ -214,50 +215,42 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
   );
 }
 
-type InviteUsersModalState = {
-  inviteesString: string;
-};
+export function InviteUsersModal({
+  organizationName,
+  isOpen,
+  handleVisibleChange,
+  destroy,
+  currentUserCount = 1,
+  maxUserCountPerOrganization = maxInludedUsersInBasicPlan, // default for Basic Plan,
+}: {
+  organizationName: string;
+  isOpen?: boolean;
+  handleVisibleChange?: (...args: Array<any>) => any;
+  destroy?: (...args: Array<any>) => any;
+  currentUserCount?: number;
+  maxUserCountPerOrganization?: number;
+}) {
+  const [inviteesString, setInviteesString] = useState("");
 
-export class InviteUsersModal extends React.Component<
-  {
-    isOpen?: boolean;
-    handleVisibleChange?: (...args: Array<any>) => any;
-    destroy?: (...args: Array<any>) => any;
-    organizationName: string;
-    currentUserCount: number;
-    maxUserCountPerOrganization: number;
-  },
-  InviteUsersModalState
-> {
-  state: InviteUsersModalState = {
-    inviteesString: "",
-  };
-
-  static defaultProps = {
-    currentUserCount: 1,
-    maxUserCountPerOrganization: maxInludedUsersInBasicPlan, // default for Basic Plan
-  };
-
-  extractEmailAddresses(): string[] {
-    return this.state.inviteesString
+  function extractEmailAddresses(): string[] {
+    return inviteesString
       .split(/[,\s]+/)
       .map((a) => a.trim())
       .filter((lines) => lines.includes("@"));
   }
 
-  sendInvite = async () => {
-    const addresses = this.extractEmailAddresses();
+  async function sendInvite() {
+    const addresses = extractEmailAddresses();
 
     await sendInvitesForOrganization(addresses, true);
     Toast.success("An invitation was sent to the provided email addresses.");
-    this.setState({
-      inviteesString: "",
-    });
-    if (this.props.handleVisibleChange != null) this.props.handleVisibleChange(false);
-    if (this.props.destroy != null) this.props.destroy();
-  };
 
-  getContent(isInvitesDisabled: boolean) {
+    setInviteesString("");
+    if (handleVisibleChange != null) handleVisibleChange(false);
+    if (destroy != null) destroy();
+  }
+
+  function getContent(isInvitesDisabled: boolean) {
     const exceedingUserLimitAlert = isInvitesDisabled ? (
       <Alert
         showIcon
@@ -265,7 +258,7 @@ export class InviteUsersModal extends React.Component<
         description="Inviting more users will exceed your organization's user limit. Consider upgrading your WEBKNOSSOS plan."
         style={{ marginBottom: 10 }}
         action={
-          <Link to={`/organizations/${this.props.organizationName}`}>
+          <Link to={`/organizations/${organizationName}`}>
             <Button size="small" type="primary">
               Upgrade Now
             </Button>
@@ -293,46 +286,41 @@ export class InviteUsersModal extends React.Component<
             minRows: 6,
           }}
           onChange={(evt) => {
-            this.setState({
-              inviteesString: evt.target.value,
-            });
+            setInviteesString(evt.target.value);
           }}
           placeholder={"jane@example.com\njoe@example.com"}
-          value={this.state.inviteesString}
+          defaultValue={inviteesString}
         />
       </React.Fragment>
     );
   }
 
-  render() {
-    const isInvitesDisabled =
-      this.props.currentUserCount + this.extractEmailAddresses().length >
-      this.props.maxUserCountPerOrganization;
+  const isInvitesDisabled =
+    currentUserCount + extractEmailAddresses().length > maxUserCountPerOrganization;
 
-    return (
-      <Modal
-        open={this.props.isOpen == null ? true : this.props.isOpen}
-        title={
-          <>
-            <UserAddOutlined /> Invite Users
-          </>
-        }
-        width={600}
-        footer={
-          <Button onClick={this.sendInvite} type="primary" disabled={isInvitesDisabled}>
-            Send Invite Emails
-          </Button>
-        }
-        onCancel={() => {
-          if (this.props.handleVisibleChange != null) this.props.handleVisibleChange(false);
-          if (this.props.destroy != null) this.props.destroy();
-        }}
-        closable
-      >
-        {this.getContent(isInvitesDisabled)}
-      </Modal>
-    );
-  }
+  return (
+    <Modal
+      open={isOpen == null ? true : isOpen}
+      title={
+        <>
+          <UserAddOutlined /> Invite Users
+        </>
+      }
+      width={600}
+      footer={
+        <Button onClick={sendInvite} type="primary" disabled={isInvitesDisabled}>
+          Send Invite Emails
+        </Button>
+      }
+      onCancel={() => {
+        if (handleVisibleChange != null) handleVisibleChange(false);
+        if (destroy != null) destroy();
+      }}
+      closable
+    >
+      {getContent(isInvitesDisabled)}
+    </Modal>
+  );
 }
 
 const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) => {
@@ -493,7 +481,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   renderUploadDatasets = () => (
     <StepHeader
       header="Add the first dataset to your organization."
-      subheader={<React.Fragment>Upload your dataset via drag and drop.</React.Fragment>}
+      subheader="Upload your dataset via drag and drop"
       icon={<FileAddOutlined className="icon-big" />}
     >
       {this.state.isDatasetUploadModalVisible && (
@@ -591,7 +579,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <Row gutter={50}>
         <FeatureCard header="Data Annotation" icon={<PlayCircleOutlined />}>
           <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
-          <a href="https://www.youtube.com/watch?v=jsz0tc3tuKI&t=30s">watch this video</a>.
+          <a href="https://www.youtube.com/watch?v=iw2C7XB6wP4">watch this video</a>.
         </FeatureCard>
         <FeatureCard header="More Datasets" icon={<CloudUploadOutlined />}>
           <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
@@ -623,12 +611,14 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <FeatureCard header="Project Management" icon={<PaperClipOutlined />}>
           Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
           accomplish your research goals.{" "}
-          <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn more.
+          <a href="https://www.youtube.com/watch?v=G6AumzpIzR0">Watch this short video</a> to learn
+          more.
         </FeatureCard>
         <FeatureCard header="Scripting" icon={<CodeOutlined />}>
-          Use the <a href="/assets/docs/frontend-api/index.html">WEBKNOSSOS API</a> to create{" "}
-          <a href="/scripts">scriptable workflows</a>.{" "}
-          <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn more.
+          Use the <a href="https://docs.webknossos.org/webknossos-py">WEBKNOSSOS Python library</a>{" "}
+          to create automated workflows.
+          <a href="https://www.youtube.com/watch?v=JABaGvqg2-g">Watch this short video</a> to learn
+          more.
         </FeatureCard>
         <FeatureCard header="Contact Us" icon={<CustomerServiceOutlined />}>
           <a href="mailto:hello@webknossos.org">Get in touch</a> or{" "}

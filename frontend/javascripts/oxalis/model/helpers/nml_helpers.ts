@@ -25,11 +25,19 @@ import type {
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import messages from "messages";
 import * as Utils from "libs/utils";
-import { BoundingBoxType, TreeType, TreeTypeEnum, Vector3 } from "oxalis/constants";
+import {
+  BoundingBoxType,
+  IdentityTransform,
+  TreeType,
+  TreeTypeEnum,
+  Vector3,
+} from "oxalis/constants";
 import Constants from "oxalis/constants";
 import { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { getNodePosition } from "../accessors/skeletontracing_accessor";
+import { getTransformsForSkeletonLayer } from "../accessors/dataset_accessor";
 
 // NML Defaults
 const DEFAULT_COLOR: Vector3 = [1, 0, 0];
@@ -103,6 +111,10 @@ function serializeTag(
     .join(" ")}${closed ? " /" : ""}>`;
 }
 
+function serializeXmlComment(comment: string) {
+  return `<!-- ${comment} -->`;
+}
+
 export function getNmlName(state: OxalisState): string {
   // Use the same naming convention as the backend
   const { activeUser, dataset, task, tracing } = state;
@@ -122,6 +134,7 @@ export function serializeToNml(
   annotation: Tracing,
   tracing: SkeletonTracing,
   buildInfo: APIBuildInfo,
+  applyTransform: boolean,
 ): string {
   // Only visible trees will be serialized!
   const visibleTrees = Utils.values(tracing.trees).filter((tree) => tree.isVisible);
@@ -130,8 +143,8 @@ export function serializeToNml(
     ...indent(
       _.concat(
         serializeMetaInformation(state, annotation, buildInfo),
-        serializeParameters(state, annotation, tracing),
-        serializeTrees(visibleTrees),
+        serializeParameters(state, annotation, tracing, applyTransform),
+        serializeTrees(state, visibleTrees, applyTransform),
         serializeBranchPoints(visibleTrees),
         serializeComments(visibleTrees),
         "<groups>",
@@ -223,6 +236,7 @@ function serializeParameters(
   state: OxalisState,
   annotation: Tracing,
   skeletonTracing: SkeletonTracing,
+  applyTransform: boolean,
 ): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editPositionAdditionalCoordinates = state.flycam.additionalCoordinates;
@@ -273,25 +287,78 @@ function serializeParameters(
 
         ...(additionalAxes.length > 0
           ? serializeTagWithChildren(
-              "additionalCoordinates",
+              "additionalAxes",
               {},
               additionalAxes.map((coord) =>
-                serializeTag("additionalCoordinate", {
+                serializeTag("additionalAxis", {
                   name: coord.name,
                   index: coord.index,
-                  min: coord.bounds[0],
-                  max: coord.bounds[1],
+                  start: coord.bounds[0],
+                  end: coord.bounds[1],
                 }),
               ),
             )
           : []),
+
+        ...(applyTransform ? serializeTransform(state) : []),
       ]),
     ),
     "</parameters>",
   ];
 }
 
-function serializeTrees(trees: Array<Tree>): Array<string> {
+function serializeTransform(state: OxalisState): string[] {
+  const transform = getTransformsForSkeletonLayer(
+    state.dataset,
+    state.datasetConfiguration.nativelyRenderedLayerName,
+  );
+
+  if (transform === IdentityTransform) {
+    return [];
+  }
+
+  if (transform.type === "affine") {
+    return [
+      serializeXmlComment(
+        "The node positions in this file were transformed using the following affine transform:",
+      ),
+      serializeTag("transform", {
+        type: "affine",
+        matrix: `[${transform.affineMatrix.join(",")}]`,
+        positionsAreTransformed: true,
+      }),
+    ];
+  } else {
+    const correspondences = _.zip(
+      transform.scaledTps.unscaledSourcePoints,
+      transform.scaledTps.unscaledTargetPoints,
+    ) as Array<[Vector3, Vector3]>;
+    return [
+      serializeXmlComment(
+        "The node positions in this file were transformed using a thin plate spline that was derived from the following correspondences:",
+      ),
+      ...serializeTagWithChildren(
+        "transform",
+        {
+          type: "thin_plate_spline",
+          positionsAreTransformed: true,
+        },
+        correspondences.map((pair) =>
+          serializeTag("correspondence", {
+            source: `[${pair[0].join(",")}]`,
+            target: `[${pair[1].join(",")}]`,
+          }),
+        ),
+      ),
+    ];
+  }
+}
+
+function serializeTrees(
+  state: OxalisState,
+  trees: Array<Tree>,
+  applyTransform: boolean,
+): Array<string> {
   return _.flatten(
     trees.map((tree) =>
       serializeTagWithChildren(
@@ -305,7 +372,7 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
         },
         [
           "<nodes>",
-          ...indent(serializeNodes(tree.nodes)),
+          ...indent(serializeNodes(state, tree.nodes, applyTransform)),
           "</nodes>",
           "<edges>",
           ...indent(serializeEdges(tree.edges)),
@@ -316,9 +383,15 @@ function serializeTrees(trees: Array<Tree>): Array<string> {
   );
 }
 
-function serializeNodes(nodes: NodeMap): Array<string> {
+function serializeNodes(
+  state: OxalisState,
+  nodes: NodeMap,
+  applyTransform: boolean,
+): Array<string> {
   return nodes.map((node) => {
-    const position = node.position.map(Math.floor);
+    const position = (
+      applyTransform ? getNodePosition(node, state) : node.untransformedPosition
+    ).map(Math.floor);
     const maybeProperties = additionalCoordinatesToObject(node.additionalCoordinates || []);
 
     return serializeTag("node", {
@@ -606,7 +679,7 @@ function splitTreeIntoComponents(
       color: tree.color,
       name: `${tree.name}_${i}`,
       comments: tree.comments.filter((comment) => nodeIdsSet.has(comment.nodeId)),
-      nodes: new DiffableMap(nodeIds.map((nodeId) => [nodeId, tree.nodes.get(nodeId)])),
+      nodes: new DiffableMap(nodeIds.map((nodeId) => [nodeId, tree.nodes.getOrThrow(nodeId)])),
       branchPoints: tree.branchPoints.filter((bp) => nodeIdsSet.has(bp.nodeId)),
       timestamp: tree.timestamp,
       edges: EdgeCollection.loadFromArray(edges),
@@ -755,7 +828,7 @@ export function parseNml(nmlString: string): Promise<{
 
             const currentNode = {
               id: nodeId,
-              position: [
+              untransformedPosition: [
                 Math.trunc(_parseFloat(attr, "x")),
                 Math.trunc(_parseFloat(attr, "y")),
                 Math.trunc(_parseFloat(attr, "z")),

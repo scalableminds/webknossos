@@ -3,7 +3,7 @@ import * as React from "react";
 import _ from "lodash";
 
 type InputComponentState = {
-  currentValue: React.InputHTMLAttributes<HTMLInputElement>["value"];
+  currentValue: React.InputHTMLAttributes<HTMLInputElement>["value"] | bigint;
 };
 
 /*
@@ -30,7 +30,10 @@ class InputComponent extends React.PureComponent<InputProps, InputComponentState
     currentValue: this.props.value,
   };
 
-  getSnapshotBeforeUpdate(_prevProps: InputProps, _prevState: {}): [number | null, number | null] {
+  getSnapshotBeforeUpdate(
+    _prevProps: InputProps,
+    _prevState: InputComponentState,
+  ): [number | null, number | null] {
     // Remember the selection within the input before updating it.
     try {
       return [
@@ -46,13 +49,19 @@ class InputComponent extends React.PureComponent<InputProps, InputComponentState
 
   componentDidUpdate(
     prevProps: InputProps,
-    _prevState: {},
+    _prevState: InputComponentState,
     snapshot: [number | null, number | null],
   ) {
     if (prevProps.value !== this.props.value) {
       this.setState({
         currentValue: this.props.value,
       });
+    }
+
+    if (this.inputRef.current && document.activeElement !== this.inputRef.current.input) {
+      // Don't mutate the selection if the element is not active. Otherwise,
+      // the on-screen keyboard opens on iOS when moving through the dataset.
+      return;
     }
 
     // Restore the remembered selection when necessary

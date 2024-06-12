@@ -45,7 +45,12 @@ class NMLUnitTestSuite extends PlaySpec {
     val os = new ByteArrayOutputStream()
     Await.result(nmlFunctionStream.writeTo(os)(scala.concurrent.ExecutionContext.global), Duration.Inf)
     val array = os.toByteArray
-    NmlParser.parse("", new ByteArrayInputStream(array), None, isTaskUpload = true)
+    NmlParser.parse("",
+                    new ByteArrayInputStream(array),
+                    overwritingDatasetName = None,
+                    overwritingOrganizationName = None,
+                    isTaskUpload = true,
+                    basePath = None)
   }
 
   def isParseSuccessful(

@@ -199,8 +199,12 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.compound_project_not_found":
     "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",
   "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
-  "tracing.read_only_mode_notification":
-    "This annotation is in read-only mode and cannot be updated.",
+  "tracing.read_only_mode_notification": (isAnnotationLockedByUser: boolean, isOwner: boolean) =>
+    isAnnotationLockedByUser
+      ? `This annotation is in read-only mode and cannot be updated. It is currently locked by ${
+          isOwner ? "you" : "the owner"
+        }.`
+      : "This annotation is in read-only mode and cannot be updated.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.volume_layer_name_duplication":
     "This layer name already exists! Please change it to resolve duplicates.",
@@ -234,8 +238,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You cannot place nodes outside of a segment in merger mode.",
   "tracing.not_mesh_available_to_download":
     "There is no mesh for the active segment id available to download.",
-  "tracing.mesh_listing_failed":
-    "A precomputed mesh could not be loaded for this segment. More information was printed to the browser's console.",
+  "tracing.mesh_listing_failed": (segmentId: number) =>
+    `A precomputed mesh could not be loaded for segment ${segmentId}. You may want to use ad-hoc meshing instead. More information was printed to the browser's console.`,
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",
   "tracing.agglomerate_skeleton.no_cell":
@@ -254,6 +258,10 @@ instead. Only enable this option if you understand its effect. All layers will n
     'All trees are currently hidden. You can disable this by toggling the "Skeleton" layer in the layer settings in the left sidebar.',
   "tracing.invalid_json_url_hash":
     "Cannot parse JSON URL hash. More information was printed to the browser's console.",
+  "tracing.locked_mapping_info":
+    "The active volume annotation layer has an active mapping. By mutating the layer, the mapping will be permanently locked and can no longer be changed or disabled. This can only be undone by restoring an older version of this annotation. Are you sure you want to continue?",
+  "tracing.locked_mapping_confirmed": (mappingName: string) =>
+    `The mapping ${mappingName} is now locked for this annotation and can no longer be changed or disabled.`,
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",
@@ -290,6 +298,10 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This annotation is currently being edited by someone else. To avoid conflicts, you can only view it at the moment.",
   "annotation.acquiringMutexSucceeded":
     "This annotation is not being edited anymore and available for editing. Reload the page to see its newest version and to edit it.",
+  "annotation.unlock.success":
+    "The annotation was successfully unlocked. Reloading this annotation ...",
+  "annotation.lock.success":
+    "The annotation was successfully locked. Reloading this annotation ...",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
@@ -408,12 +420,12 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Your account has been created. An administrator is going to unlock you soon.",
   "auth.automatic_user_activation": "User was activated automatically",
   "auth.error_no_user": "No active user is logged in.",
-  "auth.error_no_organization": "No active organziation can be loaded.",
+  "auth.error_no_organization": "No active organization can be loaded.",
   "auth.invalid_organization_name":
     "The link is not valid, since the specified organization does not exist. You are being redirected to the general registration form.",
   "request.max_item_count_alert":
     "Your request returned more than 1000 results. More results might be available on the server but were omitted for technical reasons.",
-  "timetracking.date_range_too_long": "Please specify a date range of 31 days or less.",
+  "timetracking.date_range_too_long": "Please specify a date range of three months or less.",
   "nml.node_outside_tree":
     "NML contains <node ...> tag that is not enclosed by a <thing ...> tag: Node with id",
   "nml.edge_outside_tree":

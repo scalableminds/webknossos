@@ -20,7 +20,7 @@ import * as api from "admin/admin_rest_api";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import test from "ava";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-const dataSetId = {
+const datasetId = {
   name: "confocal-multi_knossos",
   owningOrganization: "Organization_X",
 };
@@ -49,6 +49,12 @@ test("getAnnotationInformation() for public annotation while logged out", async 
     id: "annotations-getAnnotationInformation-public",
   });
   setCurrToken(tokenUserA);
+});
+test.serial("getReadableAnnotations()", async (t) => {
+  const annotations = await api.getReadableAnnotations(false, 0);
+  t.snapshot(replaceVolatileValues(annotations), {
+    id: "annotations-listReadable",
+  });
 });
 test.serial("finishAnnotation() and reOpenAnnotation() for task", async (t) => {
   const annotationId = "78135c192faeb34c0081c05d";
@@ -125,7 +131,7 @@ test.serial("finishAllAnnotations()", async (t) => {
   );
 });
 test.serial("createExplorational() and finishAnnotation()", async (t) => {
-  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false, null);
+  const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
   t.snapshot(replaceVolatileValues(createdExplorational), {
     id: "annotations-createExplorational",
   });
@@ -134,7 +140,7 @@ test.serial("createExplorational() and finishAnnotation()", async (t) => {
   t.is(finishedAnnotation.state, "Finished");
 });
 test.serial("getTracingsForAnnotation()", async (t) => {
-  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false, null);
+  const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   writeTypeCheckingFile(tracings[0], "tracing", "ServerSkeletonTracing");
   t.snapshot(replaceVolatileValues(tracings[0]), {
@@ -142,7 +148,7 @@ test.serial("getTracingsForAnnotation()", async (t) => {
   });
 });
 test.serial("getTracingsForAnnotation() for volume", async (t) => {
-  const createdExplorational = await api.createExplorational(dataSetId, "volume", false, null);
+  const createdExplorational = await api.createExplorational(datasetId, "volume", false, null);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   writeTypeCheckingFile(tracings[0], "tracing-volume", "ServerVolumeTracing");
   t.snapshot(replaceVolatileValues(tracings[0]), {
@@ -150,7 +156,7 @@ test.serial("getTracingsForAnnotation() for volume", async (t) => {
   });
 });
 test.serial("getTracingsForAnnotation() for hybrid", async (t) => {
-  const createdExplorational = await api.createExplorational(dataSetId, "hybrid", false, null);
+  const createdExplorational = await api.createExplorational(datasetId, "hybrid", false, null);
   const tracings = await api.getTracingsForAnnotation(createdExplorational);
   writeTypeCheckingFile(tracings, "tracing-hybrid", "ServerTracing", {
     isArray: true,
@@ -182,7 +188,7 @@ async function sendUpdateActionsForSkeleton(explorational: APIAnnotation, queue)
 }
 
 test.serial("Send update actions and compare resulting tracing", async (t) => {
-  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false, null);
+  const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
   const initialSkeleton = {
     activeNodeId: undefined,
     userBoundingBoxes: [],
@@ -204,7 +210,7 @@ test.serial("Send update actions and compare resulting tracing", async (t) => {
   });
 });
 test("Send complex update actions and compare resulting tracing", async (t) => {
-  const createdExplorational = await api.createExplorational(dataSetId, "skeleton", false, null);
+  const createdExplorational = await api.createExplorational(datasetId, "skeleton", false, null);
   const trees = createTreeMapFromTreeArray(generateDummyTrees(5, 5));
   const treeGroups = [
     {

@@ -12,12 +12,11 @@ import {
   TypedArrayWithoutBigInt,
   Vector3,
 } from "oxalis/constants";
-import { Model, api } from "oxalis/singletons";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import {
-  getFlooredPosition,
   getActiveMagIndexForLayer,
+  getFlooredPosition,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   enforceActiveVolumeTracing,
@@ -35,9 +34,11 @@ import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import { Model, api } from "oxalis/singletons";
 import { OxalisState } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
+import { ensureMaybeActiveMappingIsLocked } from "../saga_helpers";
 
 /*
  * This saga is capable of doing segment interpolation between two slices.
@@ -161,10 +162,11 @@ const isEqual = cwise({
 const isEqualFromBigUint64: (
   output: NdArray<TypedArrayWithoutBigInt>,
   a: NdArray<BigUint64Array>,
-  b: BigInt,
+  b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  body: function body(output: number, a: BigInt, b: BigInt) {
+  // biome-ignore lint/correctness/noUnusedVariables: output is needed for the assignment
+  body: function body(output: number, a: bigint, b: bigint) {
     output = a === b ? 1 : 0;
   },
 });
@@ -176,7 +178,7 @@ const isNonZero = cwise({
   // Also, cwise uses this function content to build
   // the target function. Adding a return here would not
   // yield the desired behavior for isNonZero.
-  // eslint-disable-next-line consistent-return, object-shorthand
+
   body: function (a) {
     if (a > 0) {
       return true;
@@ -184,7 +186,7 @@ const isNonZero = cwise({
   },
   // The following function is parsed by cwise which is why
   // the shorthand syntax is not supported.
-  // eslint-disable-next-line object-shorthand
+
   post: function () {
     return false;
   },
@@ -206,6 +208,7 @@ const absMax = cwise({
 
 const assign = cwise({
   args: ["array", "array"],
+  // biome-ignore lint/correctness/noUnusedVariables: a is needed for the assignment
   body: function body(a: number, b: number) {
     a = b;
   },
@@ -216,7 +219,7 @@ export function copyNdArray(
   arr: ndarray.NdArray,
 ): ndarray.NdArray {
   const { shape } = arr;
-  let stride;
+  let stride: number[];
 
   if (arr.shape.length === 3) {
     stride = [1, shape[0], shape[0] * shape[1]];
@@ -349,7 +352,6 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const stride = [1, size[0], size[0] * size[1]];
   const inputNd = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
-  // eslint-disable-next-line no-nested-ternary
   const adaptedInterpolationRange = onlyExtrude
     ? // When extruding and...
       directionFactor > 0
@@ -386,8 +388,8 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   // These two variables will be initialized with binary masks (representing whether
   // a voxel contains the active segment id).
-  let firstSlice;
-  let lastSlice;
+  let firstSlice: NdArray<TypedArrayWithoutBigInt>;
+  let lastSlice: NdArray<TypedArrayWithoutBigInt>;
 
   const isBigUint64 = inputNd.data instanceof BigUint64Array;
   if (isBigUint64) {
@@ -433,6 +435,11 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     );
     return;
   }
+  // As the interpolation will be applied, the potentially existing mapping should be locked to ensure a consistent state.
+  const { isMappingLockedIfNeeded } = yield* call(ensureMaybeActiveMappingIsLocked, volumeTracing);
+  if (!isMappingLockedIfNeeded) {
+    return;
+  }
 
   // In the extrusion case, we don't need any distance transforms. The binary
   // masks are enough to decide whether a voxel needs to be written.
@@ -473,7 +480,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 
   // Theoretically, the user might extrude (or interpolate, even though this is less likely) multiple
-  // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything inbetween manually.
+  // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything in between manually.
   // In that case, the interpolation/extrusion would always start from slice 0 which is unexpected and leads
   // to additional performance overhead (also the maximum interpolation depth will be exceeded at some point).
   // As a counter measure, we simply use the current position to update the current direction (and with it

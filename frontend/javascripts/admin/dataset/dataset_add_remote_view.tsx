@@ -10,6 +10,7 @@ import {
   Modal,
   Divider,
   List,
+  Upload,
 } from "antd";
 import { connect } from "react-redux";
 import React, { useEffect, useState } from "react";
@@ -18,7 +19,7 @@ import type { OxalisState } from "oxalis/store";
 import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "admin/admin_rest_api";
 import messages from "messages";
 import { jsonStringify } from "libs/utils";
-import { CardContainer } from "admin/dataset/dataset_components";
+import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
 import Password from "antd/lib/input/Password";
 import { AsyncButton } from "components/async_clickables";
 import Toast from "libs/toast";
@@ -32,13 +33,13 @@ import DatasetSettingsDataTab, {
 } from "dashboard/dataset/dataset_settings_data_tab";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
-import Upload, { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
+import { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { UnlockOutlined } from "@ant-design/icons";
 import { Unicode } from "oxalis/constants";
 import { readFileAsText } from "libs/read_file";
 import * as Utils from "libs/utils";
+import { ArbitraryObject } from "types/globals";
 
-const { Panel } = Collapse;
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
 
@@ -48,7 +49,6 @@ type OwnProps = {
   onAdded: (
     datasetOrganization: string,
     uploadedDatasetName: string,
-    isRemoteDataset: boolean,
     needsConversion?: boolean | null | undefined,
   ) => Promise<void>;
   datastores: APIDataStore[];
@@ -104,7 +104,9 @@ function mergeNewLayers(
   };
 }
 
-export const parseCredentials = async (file: RcFile | undefined): Promise<Object | null> => {
+export const parseCredentials = async (
+  file: RcFile | undefined,
+): Promise<ArbitraryObject | null> => {
   if (!file) {
     return null;
   }
@@ -170,7 +172,10 @@ export function GoogleAuthFormItem({
 }
 
 function DatasetAddRemoteView(props: Props) {
-  const { activeUser, onAdded } = props;
+  const { activeUser, onAdded, datastores } = props;
+
+  const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
+  const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
 
   const [showAddLayerModal, setShowAddLayerModal] = useState(false);
   const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
@@ -199,8 +204,9 @@ function DatasetAddRemoteView(props: Props) {
     await form.validateFields();
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
 
-    const uploadableDatastores = props.datastores.filter((datastore) => datastore.allowsUpload);
-    const datastoreToUse = uploadableDatastores[0];
+    const datastoreToUse = uploadableDatastores.find(
+      (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
+    );
     if (!datastoreToUse) {
       Toast.error("Could not find datastore that allows uploading.");
       return;
@@ -228,7 +234,7 @@ function DatasetAddRemoteView(props: Props) {
         Toast.error(`The datasource config could not be stored. ${e}`);
         return;
       }
-      onAdded(activeUser.organization, configJSON.id.name, true);
+      onAdded(activeUser.organization, configJSON.id.name);
     }
   }
 
@@ -238,6 +244,7 @@ function DatasetAddRemoteView(props: Props) {
     <div style={{ padding: 5 }}>
       <CardContainer title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset">
         <Form form={form} layout="vertical">
+          <DatastoreFormItem datastores={uploadableDatastores} hidden={hasOnlyOneDatastoreOrNone} />
           <Modal
             title="Add Layer"
             width={800}
@@ -245,8 +252,9 @@ function DatasetAddRemoteView(props: Props) {
             footer={null}
             onCancel={() => setShowAddLayerModal(false)}
           >
-            <AddZarrLayer
+            <AddRemoteLayer
               form={form}
+              uploadableDatastores={uploadableDatastores}
               setDatasourceConfigStr={setDatasourceConfigStr}
               onSuccess={() => setShowAddLayerModal(false)}
               dataSourceEditMode={dataSourceEditMode}
@@ -254,8 +262,9 @@ function DatasetAddRemoteView(props: Props) {
           </Modal>
 
           {hideDatasetUI && (
-            <AddZarrLayer
+            <AddRemoteLayer
               form={form}
+              uploadableDatastores={uploadableDatastores}
               setDatasourceConfigStr={setDatasourceConfigStr}
               dataSourceEditMode={dataSourceEditMode}
             />
@@ -353,13 +362,15 @@ function DatasetAddRemoteView(props: Props) {
   );
 }
 
-function AddZarrLayer({
+function AddRemoteLayer({
   form,
+  uploadableDatastores,
   setDatasourceConfigStr,
   onSuccess,
   dataSourceEditMode,
 }: {
   form: FormInstance;
+  uploadableDatastores: APIDataStore[];
   setDatasourceConfigStr: (dataSourceJson: string) => void;
   onSuccess?: () => void;
   dataSourceEditMode: "simple" | "advanced";
@@ -402,6 +413,13 @@ function AddZarrLayer({
     // Sync simple with advanced and get newest datasourceJson
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
     const datasourceConfigStr = form.getFieldValue("dataSourceJson");
+    const datastoreToUse = uploadableDatastores.find(
+      (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
+    );
+    if (!datastoreToUse) {
+      Toast.error("Could not find datastore that allows uploading.");
+      return;
+    }
 
     const { dataSource: newDataSource, report } = await (async () => {
       // @ts-ignore
@@ -414,6 +432,7 @@ function AddZarrLayer({
           if (credentials) {
             return exploreRemoteDataset(
               [datasourceUrl],
+              datastoreToUse.name,
               {
                 username: "",
                 pass: JSON.stringify(credentials),
@@ -426,6 +445,7 @@ function AddZarrLayer({
         } else if (usernameOrAccessKey && passwordOrSecretKey) {
           return exploreRemoteDataset(
             [datasourceUrl],
+            datastoreToUse.name,
             {
               username: usernameOrAccessKey,
               pass: passwordOrSecretKey,
@@ -434,7 +454,7 @@ function AddZarrLayer({
           );
         }
       }
-      return exploreRemoteDataset([datasourceUrl], null, preferredVoxelSize);
+      return exploreRemoteDataset([datasourceUrl], datastoreToUse.name, null, preferredVoxelSize);
     })();
     setExploreLog(report);
     if (!newDataSource) {
@@ -552,13 +572,20 @@ function AddZarrLayer({
       {exploreLog ? (
         <Row gutter={8}>
           <Col span={24}>
-            <Collapse defaultActiveKey="1">
-              <Panel header="Error Log" key="1">
-                <Hint style={{ width: "90%" }}>
-                  <pre style={{ whiteSpace: "pre-wrap" }}>{exploreLog}</pre>
-                </Hint>
-              </Panel>
-            </Collapse>
+            <Collapse
+              defaultActiveKey="1"
+              items={[
+                {
+                  key: "1",
+                  label: "Error Log",
+                  children: (
+                    <Hint style={{ width: "90%" }}>
+                      <pre style={{ whiteSpace: "pre-wrap" }}>{exploreLog}</pre>
+                    </Hint>
+                  ),
+                },
+              ]}
+            />
           </Col>
         </Row>
       ) : null}

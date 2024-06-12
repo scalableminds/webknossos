@@ -1,4 +1,4 @@
-import { Button, Dropdown, Modal, Tooltip } from "antd";
+import { Button, Dropdown, Modal, Space, Tooltip } from "antd";
 import {
   HistoryOutlined,
   CheckCircleOutlined,
@@ -22,6 +22,8 @@ import {
   StopOutlined,
   VerticalLeftOutlined,
   VerticalRightOutlined,
+  UnlockOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
@@ -35,14 +37,14 @@ import {
   finishAnnotation,
   reOpenAnnotation,
   createExplorational,
+  editLockedState,
 } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import {
   setVersionRestoreVisibilityAction,
   setDownloadModalVisibilityAction,
   setShareModalVisibilityAction,
-  setAINucleiSegmentationModalVisibilityAction,
-  setAINeuronSegmentationModalVisibilityAction,
+  setRenderAnimationModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import { setTracingAction } from "oxalis/model/actions/skeletontracing_actions";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -63,7 +65,11 @@ import DownloadModalView from "oxalis/view/action-bar/download_modal_view";
 import UserScriptsModalView from "oxalis/view/action-bar/user_scripts_modal_view";
 import { api } from "oxalis/singletons";
 import messages from "messages";
-import { screenshotMenuItem } from "oxalis/view/action-bar/view_dataset_actions_view";
+import {
+  screenshotMenuItem,
+  renderAnimationMenuItem,
+} from "oxalis/view/action-bar/view_dataset_actions_view";
+import * as Utils from "libs/utils";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
 import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
@@ -72,10 +78,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
-import {
-  NeuronSegmentationModal,
-  NucleiSegmentationModal,
-} from "../right-border-tabs/starting_job_modals";
+import CreateAnimationModal from "./create_animation_modal";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -93,11 +96,11 @@ type StateProps = {
   hasTracing: boolean;
   isDownloadModalOpen: boolean;
   isShareModalOpen: boolean;
-  isAINeuronSegmentationModalOpen: boolean;
-  isAINucleiSegmentationModalOpen: boolean;
+  isRenderAnimationModalOpen: boolean;
   busyBlockingInfo: BusyBlockingInfo;
   annotationOwner: APIUserBase | null | undefined;
-  othersMayEdit: boolean;
+  isAnnotationLockedByUser: boolean;
+  annotationTags: string[];
 };
 type Props = OwnProps & StateProps;
 type State = {
@@ -135,7 +138,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
     autoSaveLayouts,
     setAutoSaveLayouts,
     saveCurrentLayout,
-    // rome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
+    // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
     setCurrentLayout,
   } = props;
 
@@ -181,6 +184,7 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
 
   return {
     key: "layout-menu",
+    icon: <LayoutOutlined />,
     label: (
       <span
         style={{
@@ -188,7 +192,6 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
           minWidth: 120,
         }}
       >
-        <LayoutOutlined />
         Layout
         <Tooltip placement="top" title={layoutMissingHelpTitle}>
           <InfoCircleOutlined
@@ -256,43 +259,6 @@ export function getLayoutMenu(props: LayoutMenuProps): SubMenuType {
       },
     ],
   };
-}
-
-export function getAISegmentationMenu(
-  isAINucleiSegmentationModalOpen: boolean,
-  isAINeuronSegmentationModalOpen: boolean,
-): [SubMenuType, React.ReactNode] {
-  const AISegmentationMenu = {
-    key: "ai-segmentation-menu",
-    icon: <SettingOutlined />,
-    label: "AI Segmentation",
-    children: [
-      // {
-      //   key: "ai-nuclei-segmentation",
-      //   label: "AI Nuclei Segmentation",
-      //   onClick: () => Store.dispatch(setAINucleiSegmentationModalVisibilityAction(true)),
-      // },
-      {
-        key: "ai-neuron-segmentation",
-        label: "AI Neuron Segmentation",
-        onClick: () => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(true)),
-      },
-    ],
-  };
-
-  const AISegmentationModals = isAINucleiSegmentationModalOpen ? (
-    <NucleiSegmentationModal
-      key="ai-nuclei-segmentation-modal"
-      handleClose={() => Store.dispatch(setAINucleiSegmentationModalVisibilityAction(false))}
-    />
-  ) : isAINeuronSegmentationModalOpen ? (
-    <NeuronSegmentationModal
-      key="ai-neuron-segmentation-modal"
-      handleClose={() => Store.dispatch(setAINeuronSegmentationModalVisibilityAction(false))}
-    />
-  ) : null;
-
-  return [AISegmentationMenu, AISegmentationModals];
 }
 
 class TracingActionsView extends React.PureComponent<Props, State> {
@@ -371,7 +337,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       this.props.annotationId,
       this.props.annotationType,
     );
-    location.href = `/annotations/${newAnnotation.id}`;
+    window.open(`/annotations/${newAnnotation.id}`, "_blank", "noopener,noreferrer");
   };
 
   handleCopySandboxToAccount = async () => {
@@ -488,6 +454,25 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     });
   };
 
+  handleChangeLockedStateOfAnnotation = async (isLocked: boolean) => {
+    try {
+      const { annotationId, annotationType } = this.props;
+      // Ensure saved state, before (un)locking the annotation and then reloading.
+      await Model.ensureSavedState();
+      await editLockedState(annotationId, annotationType, isLocked);
+      Toast.success(
+        isLocked ? messages["annotation.lock.success"] : messages["annotation.unlock.success"],
+      );
+      // Give some time to show the toast before reloading the page.
+      await Utils.sleep(250);
+      location.reload();
+    } catch (error: any) {
+      const verb = isLocked ? "lock" : "unlock";
+      Toast.error(`Could not ${verb} the annotation. ` + error?.message);
+      console.error(`Could not ${verb} the annotation. `, error);
+    }
+  };
+
   render() {
     const { viewMode, controlMode } = Store.getState().temporaryConfiguration;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
@@ -500,16 +485,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       activeUser,
       layoutMenu,
       busyBlockingInfo,
-      othersMayEdit,
+      isAnnotationLockedByUser,
       annotationOwner,
     } = this.props;
-    const copyAnnotationText =
-      !restrictions.allowUpdate &&
-      activeUser != null &&
-      annotationOwner?.id === activeUser.id &&
-      othersMayEdit
-        ? "Duplicate"
-        : "Copy To My Account";
+    const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
+    const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
     const saveButton = restrictions.allowUpdate
       ? [
@@ -569,7 +549,7 @@ class TracingActionsView extends React.PureComponent<Props, State> {
             danger
             disabled
             style={{
-              backgroundColor: "var(--ant-warning-dark-5)",
+              backgroundColor: "var(--ant-color-warning)",
             }}
           >
             Read only
@@ -674,16 +654,17 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       });
     }
 
-    if (features().jobsEnabled) {
-      const [AISegmentationMenu, AISegmentationModals] = getAISegmentationMenu(
-        this.props.isAINucleiSegmentationModalOpen,
-        this.props.isAINeuronSegmentationModalOpen,
-      );
-      menuItems.push(AISegmentationMenu);
-      modals.push(AISegmentationModals);
-    }
-
     menuItems.push(screenshotMenuItem);
+
+    menuItems.push(renderAnimationMenuItem);
+    modals.push(
+      <CreateAnimationModal
+        key="render-animation-modal"
+        isOpen={this.props.isRenderAnimationModalOpen}
+        onClose={() => Store.dispatch(setRenderAnimationModalVisibilityAction(false))}
+      />,
+    );
+
     menuItems.push({
       key: "user-scripts-button",
       onClick: this.handleUserScriptsOpen,
@@ -732,15 +713,23 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         label: "Disable saving",
       });
     }
+    if (isAnnotationOwner) {
+      menuItems.push({
+        key: "lock-unlock-button",
+        onClick: () => this.handleChangeLockedStateOfAnnotation(!isAnnotationLockedByUser),
+        icon: isAnnotationLockedByUser ? <UnlockOutlined /> : <LockOutlined />,
+        label: `${isAnnotationLockedByUser ? "Unlock" : "Lock"} Annotation`,
+      });
+    }
 
     return (
       <>
-        <div className="antd-legacy-group">
+        <Space.Compact>
           {saveButton}
           {finishAndNextTaskButton}
           {reopenTaskButton}
-          {modals}
-        </div>
+        </Space.Compact>
+        {modals}
         <div>
           <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
             <ButtonComponent className="narrow">
@@ -765,10 +754,10 @@ function mapStateToProps(state: OxalisState): StateProps {
     hasTracing: state.tracing.skeleton != null || state.tracing.volumes.length > 0,
     isDownloadModalOpen: state.uiInformation.showDownloadModal,
     isShareModalOpen: state.uiInformation.showShareModal,
-    isAINeuronSegmentationModalOpen: state.uiInformation.showAINeuronSegmentationModal,
-    isAINucleiSegmentationModalOpen: state.uiInformation.showAINucleiSegmentationModal,
+    isRenderAnimationModalOpen: state.uiInformation.showRenderAnimationModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
-    othersMayEdit: state.tracing.othersMayEdit,
+    isAnnotationLockedByUser: state.tracing.isLockedByOwner,
+    annotationTags: state.tracing.tags,
   };
 }
 

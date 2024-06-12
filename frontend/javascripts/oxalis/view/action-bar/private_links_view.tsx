@@ -175,14 +175,14 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const { baseUrl, copyLayerUrlMenu } = useZarrLinkMenu(linkItem.accessToken);
 
   return (
-    <Input.Group compact className="no-borders">
+    <Space.Compact className="no-borders">
       <Input
         value={baseUrl}
         size="small"
         style={{
           width: "90%",
           background: "transparent",
-          color: "var(--ant-text-secondary)",
+          color: "var(--ant-color-text-secondary)",
         }}
         readOnly
         disabled
@@ -191,7 +191,7 @@ function UrlInput({ linkItem }: { linkItem: ZarrPrivateLink }) {
       <Dropdown menu={copyLayerUrlMenu}>
         <Button size="small" icon={<CopyOutlined />} style={{ background: "transparent" }} />
       </Dropdown>
-    </Input.Group>
+    </Space.Compact>
   );
 }
 
@@ -251,7 +251,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   if (linkItem.expirationDateTime == null) {
     return (
       <Dropdown menu={expirationMenu}>
-        <Space style={{ color: "var(--ant-text-secondary)" }}>
+        <Space style={{ color: "var(--ant-color-text-secondary)" }}>
           Add Expiration Date
           <DownOutlined />
         </Space>
@@ -262,7 +262,7 @@ function ExpirationDate({ linkItem }: { linkItem: ZarrPrivateLink }) {
   const maybeWarning =
     Number(new Date()) > linkItem.expirationDateTime ? (
       <Tooltip title="This link has expired">
-        <InfoCircleOutlined style={{ color: "var(--ant-error)" }} />
+        <InfoCircleOutlined style={{ color: "var(--ant-color-error)" }} />
       </Tooltip>
     ) : null;
 
@@ -310,8 +310,12 @@ function HumanizedDuration({ expirationDate }: { expirationDate: dayjs.Dayjs }) 
         // expiration date at 08:00, moment.to() would round the duration and
         // render "2 days" which is confusing if the user selected (in 1 day).
         // Therefore, we pin the time at each date to 23:59 UTC.
-        now.endOf("day").to(expirationDate.endOf("day"));
-  return <span style={{ color: "var(--ant-text-secondary)", marginLeft: 4 }}>{duration}</span>;
+        now
+          .endOf("day")
+          .to(expirationDate.endOf("day"));
+  return (
+    <span style={{ color: "var(--ant-color-text-secondary)", marginLeft: 4 }}>{duration}</span>
+  );
 }
 
 function PrivateLinksView({ annotationId }: { annotationId: string }) {

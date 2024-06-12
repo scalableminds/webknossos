@@ -1,6 +1,6 @@
 package opengraph
 
-import akka.http.scaladsl.model.Uri
+import org.apache.pekko.http.scaladsl.model.Uri
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
@@ -10,12 +10,12 @@ import models.annotation.AnnotationDAO
 import models.dataset.{Dataset, DatasetDAO, DatasetLayerDAO}
 import models.organization.{Organization, OrganizationDAO}
 import models.shortlinks.ShortLinkDAO
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.Full
 import security.URLSharing
 import utils.{ObjectId, WkConf}
 
-import java.net.URLDecoder
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 case class OpenGraphTags(
     title: Option[String],
@@ -45,7 +45,19 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
   private val annotationRouteRegex = "^/annotations/([^/^#]+)".r
 
   def getOpenGraphTags(uriPath: String, sharingToken: Option[String])(implicit ec: ExecutionContext,
-                                                                      ctx: DBAccessContext): Fox[OpenGraphTags] =
+                                                                      ctx: DBAccessContext): Future[OpenGraphTags] =
+    for {
+      tagsBox <- getOpenGraphTagsImpl(uriPath, sharingToken).futureBox
+      // In any error case, fall back to default, so the html template does not break
+      tags = tagsBox match {
+        case Full(tags) => tags
+        case _          => defaultTags(OpenGraphPageType.unknown)
+      }
+    } yield tags
+
+  private def getOpenGraphTagsImpl(uriPath: String, sharingToken: Option[String])(
+      implicit ec: ExecutionContext,
+      ctx: DBAccessContext): Fox[OpenGraphTags] =
     for {
       (uriPathResolved, sharingTokenResolved) <- resolveShortLinkIfNeeded(uriPath, sharingToken)
       ctxWithToken = URLSharing.fallbackTokenAccessContext(sharingTokenResolved)
@@ -72,7 +84,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       case shortLinkRouteRegex(key) =>
         for {
           shortLink <- shortLinkDAO.findOneByKey(key)
-          asUri: Uri = Uri(URLDecoder.decode(shortLink.longLink, "UTF-8"))
+          asUri <- tryo(Uri(shortLink.longLink))
         } yield (asUri.path.toString, asUri.query().get("token").orElse(asUri.query().get("sharingToken")))
       case _ => Fox.successful(uriPath, sharingToken)
     }
@@ -118,7 +130,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
         for {
           annotationIdValidated <- ObjectId.fromString(annotationId)
           annotation <- annotationDAO.findOne(annotationIdValidated)
-          dataset: Dataset <- datasetDAO.findOne(annotation._dataSet)
+          dataset: Dataset <- datasetDAO.findOne(annotation._dataset)
           organization <- organizationDAO.findOne(dataset._organization)
           layers <- datasetLayerDAO.findAllForDataset(dataset._id)
           layerOpt = layers.find(_.category == Category.color)

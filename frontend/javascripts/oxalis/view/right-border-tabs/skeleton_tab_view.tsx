@@ -3,12 +3,12 @@ import {
   Button,
   Dropdown,
   Empty,
-  Input,
   Spin,
   Modal,
   Tooltip,
   notification,
   MenuProps,
+  Space,
 } from "antd";
 import type { Dispatch } from "redux";
 import {
@@ -41,6 +41,7 @@ import {
   getActiveTreeGroup,
   getTree,
   enforceSkeletonTracing,
+  isSkeletonLayerTransformed,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getBuildInfo, importVolumeTracing, clearCache } from "admin/admin_rest_api";
 import {
@@ -84,12 +85,9 @@ import InputComponent from "oxalis/view/components/input_component";
 import { Model } from "oxalis/singletons";
 import type {
   OxalisState,
-  SkeletonTracing,
-  Tracing,
   Tree,
   TreeMap,
   TreeGroup,
-  UserConfiguration,
   MutableTreeMap,
   UserBoundingBox,
 } from "oxalis/store";
@@ -101,9 +99,9 @@ import { api } from "oxalis/singletons";
 import messages from "messages";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 
 const { confirm } = Modal;
-const InputGroup = Input.Group;
 const treeTabId = "tree-list";
 
 type TreeOrTreeGroup = {
@@ -111,12 +109,7 @@ type TreeOrTreeGroup = {
   id: number;
   type: string;
 };
-type StateProps = {
-  annotation: Tracing;
-  skeletonTracing: SkeletonTracing | null | undefined;
-  userConfiguration: UserConfiguration;
-  allowUpdate: boolean;
-};
+type StateProps = ReturnType<typeof mapStateToProps>;
 type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type Props = DispatchProps & StateProps;
 type State = {
@@ -218,7 +211,8 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           throw Error("Zip file doesn't contain an NML file.");
         }
 
-        const nmlBlob = await nmlFileEntry.getData(new BlobWriter());
+        // The type definitions for getData are inaccurate. It is defined for entries obtained through calling ZipReader.getEntries, see https://github.com/gildas-lormeau/zip.js/issues/371#issuecomment-1272316813
+        const nmlBlob = await nmlFileEntry.getData!(new BlobWriter());
         const nmlFile = new File([nmlBlob], nmlFileEntry.filename);
 
         const nmlImportActions = await tryParsingFileAsNml(nmlFile);
@@ -228,7 +222,8 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         );
 
         if (dataFileEntry) {
-          const dataBlob = await dataFileEntry.getData(new BlobWriter());
+          // The type definitions for getData are inaccurate. It is defined for entries obtained through calling ZipReader.getEntries, see https://github.com/gildas-lormeau/zip.js/issues/371#issuecomment-1272316813
+          const dataBlob = await dataFileEntry.getData!(new BlobWriter());
           const dataFile = new File([dataBlob], dataFileEntry.filename);
           await Model.ensureSavedState();
           const storeState = Store.getState();
@@ -558,7 +553,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     Store.dispatch(toggleInactiveTreesAction());
   }
 
-  handleNmlDownload = async () => {
+  handleNmlDownload = async (applyTransforms: boolean) => {
     const { skeletonTracing } = this.props;
 
     if (!skeletonTracing) {
@@ -571,7 +566,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
     const state = Store.getState();
-    const nml = serializeToNml(state, this.props.annotation, skeletonTracing, buildInfo);
+    const nml = serializeToNml(
+      state,
+      this.props.annotation,
+      skeletonTracing,
+      buildInfo,
+      applyTransforms,
+    );
     this.setState({
       isDownloading: false,
     });
@@ -736,11 +737,20 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         },
         {
           key: "handleNmlDownload",
-          onClick: this.handleNmlDownload,
-          title: "Download visible trees as NML",
+          onClick: () => this.handleNmlDownload(false),
           icon: <DownloadOutlined />,
           label: "Download Visible Trees",
+          title: "Download Visible Trees as NML",
         },
+        this.props.isSkeletonLayerTransformed
+          ? {
+              key: "handleNmlDownloadTransformed",
+              onClick: () => this.handleNmlDownload(true),
+              icon: <DownloadOutlined />,
+              label: "Download Visible Trees (Transformed)",
+              title: "The currently active transformation will be applied to each node.",
+            }
+          : null,
         {
           key: "importNml",
           onClick: this.props.showDropzoneModal,
@@ -821,6 +831,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
     const { groupToDelete } = this.state;
     const isEditingDisabled = !this.props.allowUpdate;
+    const { isAnnotationLockedByUser, isOwner } = this.props;
+    const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
+      isAnnotationLockedByUser,
+      isOwner,
+    );
 
     return (
       <div id={treeTabId} className="padded-tab-content">
@@ -840,7 +855,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                 >
                   <Spin />
                 </Modal>
-                <InputGroup compact className="compact-icons">
+                <Space.Compact className="compact-icons">
                   <AdvancedSearchPopover
                     onSelect={this.handleSearchSelect}
                     data={this.getTreeAndTreeGroupList(trees, treeGroups, orderAttribute)}
@@ -854,22 +869,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   </AdvancedSearchPopover>
                   <ButtonComponent
                     onClick={this.props.onCreateTree}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : "Create new Tree (C)"
-                    }
+                    title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
                     disabled={isEditingDisabled}
                   >
                     <i className="fas fa-plus" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.handleDelete}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : "Delete Selected Trees"
-                    }
+                    title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
                     disabled={isEditingDisabled}
                   >
                     <i className="far fa-trash-alt" />
@@ -894,8 +901,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       <DownOutlined />
                     </ButtonComponent>
                   </Dropdown>
-                </InputGroup>
-                <InputGroup compact className="compact-icons compact-items">
+                </Space.Compact>
+                <Space.Compact className="compact-icons compact-items">
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeBackward}
                     title="Select previous tree"
@@ -906,11 +913,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onChange={this.handleChangeName}
                     value={activeTreeName || activeGroupName}
                     disabled={noTreesAndGroups || isEditingDisabled}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : undefined
-                    }
+                    title={isEditingDisabled ? isEditingDisabledMessage : undefined}
                     style={{ width: "70%" }}
                   />
                   <ButtonComponent
@@ -924,12 +927,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                       <i className="fas fa-sort-alpha-down" />
                     </ButtonComponent>
                   </Dropdown>
-                </InputGroup>
+                </Space.Compact>
                 {!showSkeletons ? (
                   <Tooltip title={messages["tracing.skeletons_are_hidden_warning"]}>
                     <WarningOutlined
                       style={{
-                        color: "var(--ant-warning)",
+                        color: "var(--ant-color-warning)",
                       }}
                     />
                   </Tooltip>
@@ -982,6 +985,9 @@ const mapStateToProps = (state: OxalisState) => ({
   allowUpdate: state.tracing.restrictions.allowUpdate,
   skeletonTracing: state.tracing.skeleton,
   userConfiguration: state.userConfiguration,
+  isSkeletonLayerTransformed: isSkeletonLayerTransformed(state),
+  isAnnotationLockedByUser: state.tracing.isLockedByOwner,
+  isOwner: isAnnotationOwner(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

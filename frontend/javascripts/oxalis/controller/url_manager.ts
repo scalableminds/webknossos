@@ -24,6 +24,7 @@ import {
   additionalCoordinateToKeyValue,
   parseAdditionalCoordinateKey,
 } from "oxalis/model/helpers/nml_helpers";
+import { getMeshesForCurrentAdditionalCoordinates } from "oxalis/model/accessors/volumetracing_accessor";
 
 const MAX_UPDATE_INTERVAL = 1000;
 const MINIMUM_VALID_CSV_LENGTH = 5;
@@ -272,11 +273,15 @@ class UrlManager {
     }
 
     for (const layerName of Object.keys(state.localSegmentationData)) {
-      const { meshes: localMeshes, currentMeshFile } = state.localSegmentationData[layerName];
+      const { currentMeshFile } = state.localSegmentationData[layerName];
       const currentMeshFileName = currentMeshFile?.meshFileName;
-      const meshes = Utils.values(localMeshes)
-        .filter(({ isVisible }) => isVisible)
-        .map(mapMeshInfoToUrlMeshDescriptor);
+      const localMeshes = getMeshesForCurrentAdditionalCoordinates(state, layerName);
+      const meshes =
+        localMeshes != null
+          ? Utils.values(localMeshes)
+              .filter(({ isVisible }) => isVisible)
+              .map(mapMeshInfoToUrlMeshDescriptor)
+          : [];
 
       if (currentMeshFileName != null || meshes.length > 0) {
         stateByLayer[layerName] = {
@@ -401,10 +406,13 @@ export function updateTypeAndId(
 // for better url readability
 const urlHashCharacterWhiteList = ["$", "&", "+", ",", ";", "=", ":", "@", "/", "?"];
 // Build lookup table from encoded to decoded value
-const encodedCharacterToDecodedCharacter = urlHashCharacterWhiteList.reduce((obj, decodedValue) => {
-  obj[encodeURIComponent(decodedValue)] = decodedValue;
-  return obj;
-}, {} as Record<string, string>);
+const encodedCharacterToDecodedCharacter = urlHashCharacterWhiteList.reduce(
+  (obj, decodedValue) => {
+    obj[encodeURIComponent(decodedValue)] = decodedValue;
+    return obj;
+  },
+  {} as Record<string, string>,
+);
 // Build RegExp that matches each of the encoded characters (%xy) and a function to decode it
 const re = new RegExp(Object.keys(encodedCharacterToDecodedCharacter).join("|"), "gi");
 

@@ -56,9 +56,8 @@ export class OxalisModel {
       }
     } catch (error) {
       try {
-        const maybeOrganizationToSwitchTo = await isDatasetAccessibleBySwitching(
-          initialCommandType,
-        );
+        const maybeOrganizationToSwitchTo =
+          await isDatasetAccessibleBySwitching(initialCommandType);
 
         if (maybeOrganizationToSwitchTo != null) {
           // @ts-ignore
@@ -343,7 +342,6 @@ export class OxalisModel {
         Store.dispatch(saveNowAction());
       }
 
-      // eslint-disable-next-line no-await-in-loop
       await Utils.sleep(500);
     }
   };

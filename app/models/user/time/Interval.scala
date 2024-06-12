@@ -1,8 +1,11 @@
 package models.user.time
 
 import com.scalableminds.util.time.Instant
-import org.joda.time.{DateTime, DateTimeConstants}
 import play.api.libs.json.{Json, OFormat}
+
+import java.time.temporal.TemporalAdjusters
+import java.time.temporal.TemporalAdjusters.firstInMonth
+import java.time.{DayOfWeek, LocalTime, ZoneId, ZonedDateTime}
 
 trait Interval {
   def start: Instant
@@ -17,12 +20,12 @@ case class Month(month: Int, year: Int) extends Interval with Ordered[Month] {
   override def toString = f"$year%d-$month%02d"
 
   def start: Instant =
-    Instant.fromJoda(jodaMonth.dayOfMonth().withMinimumValue().millisOfDay().withMinimumValue())
+    Instant.fromZonedDateTime(asZonedDateTime.`with`(TemporalAdjusters.firstDayOfMonth()).`with`(LocalTime.MIN))
 
   def end: Instant =
-    Instant.fromJoda(jodaMonth.dayOfMonth().withMaximumValue().millisOfDay().withMaximumValue())
+    Instant.fromZonedDateTime(asZonedDateTime.`with`(TemporalAdjusters.lastDayOfMonth()).`with`(LocalTime.MAX))
 
-  private def jodaMonth: DateTime = new DateTime().withYear(year).withMonthOfYear(month)
+  private def asZonedDateTime: ZonedDateTime = ZonedDateTime.of(year, month, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
 }
 
 object Month {
@@ -35,12 +38,18 @@ case class Week(week: Int, year: Int) extends Interval with Ordered[Week] {
   override def toString = f"$year%d-W$week%02d"
 
   def start: Instant =
-    Instant.fromJoda(jodaWeek.withDayOfWeek(DateTimeConstants.MONDAY).millisOfDay().withMinimumValue())
+    Instant.fromZonedDateTime(
+      asZonedDateTime.`with`(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).`with`(LocalTime.MIN))
 
   def end: Instant =
-    Instant.fromJoda(jodaWeek.dayOfWeek().withMaximumValue().millisOfDay().withMaximumValue())
+    Instant.fromZonedDateTime(
+      asZonedDateTime.`with`(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY)).`with`(LocalTime.MAX))
 
-  private def jodaWeek: DateTime = new DateTime().withYear(year).withWeekOfWeekyear(week)
+  private def asZonedDateTime: ZonedDateTime =
+    ZonedDateTime
+      .of(year, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"))
+      .`with`(firstInMonth(DayOfWeek.MONDAY))
+      .plusWeeks(week - 1)
 }
 
 object Week {
@@ -54,12 +63,13 @@ case class Day(day: Int, month: Int, year: Int) extends Interval with Ordered[Da
   override def toString = f"$year%d-$month%02d-$day%02d"
 
   def start: Instant =
-    Instant.fromJoda(jodaDay.millisOfDay().withMinimumValue())
+    Instant.fromZonedDateTime(asZonedDateTime.`with`(LocalTime.MIN))
 
   def end: Instant =
-    Instant.fromJoda(jodaDay.millisOfDay().withMaximumValue())
+    Instant.fromZonedDateTime(asZonedDateTime.`with`(LocalTime.MAX))
 
-  private def jodaDay = new DateTime().withDate(year, month, day)
+  private def asZonedDateTime: ZonedDateTime =
+    ZonedDateTime.of(year, month, day, 0, 0, 0, 0, ZoneId.of("UTC"))
 }
 
 object Day {

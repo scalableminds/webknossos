@@ -220,6 +220,9 @@ class PlaneMaterialFactory {
       activeCellIdLow: {
         value: new THREE.Vector4(0, 0, 0, 0),
       },
+      isUnmappedSegmentHighlighted: {
+        value: false,
+      },
       blendMode: { value: 1.0 },
     };
 
@@ -651,7 +654,7 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (state) => state.datasetConfiguration.colorLayerOrder,
         (colorLayerOrder) => {
-          let changedLayerOrder =
+          const changedLayerOrder =
             colorLayerOrder.length !== oldLayerOrder.length ||
             colorLayerOrder.some((layerName, index) => layerName !== oldLayerOrder[index]);
           if (changedLayerOrder) {
@@ -744,6 +747,14 @@ class PlaneMaterialFactory {
       );
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
+          (storeState) => getActiveSegmentationTracing(storeState)?.activeUnmappedSegmentId,
+          (activeUnmappedSegmentId) =>
+            (this.uniforms.isUnmappedSegmentHighlighted.value = activeUnmappedSegmentId != null),
+          true,
+        ),
+      );
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
           (storeState) =>
             getMappingInfoForSupportedLayer(storeState).mappingStatus === MappingStatusEnum.ENABLED,
           () => this.updateActiveCellId(),
@@ -818,7 +829,6 @@ class PlaneMaterialFactory {
 
             this.uniforms[`${name}_transform`].value = invertAndTranspose(affineMatrix);
             const hasTransform = !_.isEqual(affineMatrix, Identity4x4);
-            console.log(`${name}_has_transform`, hasTransform);
             this.uniforms[`${name}_has_transform`] = {
               value: hasTransform,
             };

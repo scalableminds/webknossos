@@ -12,6 +12,7 @@ import {
   Tooltip,
   Alert,
   Select,
+  Space,
 } from "antd";
 import {
   LoadingOutlined,
@@ -22,7 +23,6 @@ import {
   HourglassOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import type { APIJob, APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
@@ -114,7 +114,7 @@ function DatasetView(props: Props) {
     if (features().jobsEnabled) {
       getJobs().then((newJobs) => setJobs(newJobs));
     }
-  }, []);
+  }, [setSearchQuery]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -211,7 +211,7 @@ function DatasetView(props: Props) {
   const isUserAdminOrDatasetManagerOrTeamManager =
     isUserAdminOrDatasetManager || Utils.isUserTeamManager(user);
   const search = isUserAdminOrDatasetManager ? (
-    <Input.Group compact style={{ display: "flex" }}>
+    <Space.Compact style={{ display: "flex" }}>
       {searchBox}
       <Dropdown menu={filterMenu} trigger={["click"]}>
         <Button>
@@ -220,7 +220,7 @@ function DatasetView(props: Props) {
           </Badge>
         </Button>
       </Dropdown>
-    </Input.Group>
+    </Space.Compact>
   ) : (
     searchBox
   );
@@ -376,7 +376,7 @@ function GlobalSearchHeader({
       <div style={{ float: "right" }}>
         <Select
           options={SEARCH_OPTIONS}
-          dropdownMatchSelectWidth={false}
+          popupMatchSelectWidth={false}
           onChange={(value) => {
             if (value === "everywhere") {
               setActiveFolderId(null);
@@ -394,8 +394,8 @@ function GlobalSearchHeader({
             activeFolderId == null
               ? "everywhere"
               : context.searchRecursively
-              ? "folder-with-subfolders"
-              : "folder"
+                ? "folder-with-subfolders"
+                : "folder"
           }
         />
       </div>
@@ -403,7 +403,7 @@ function GlobalSearchHeader({
         <SearchOutlined />
         Search Results for &quot;{searchQuery}&quot;
         {filteredDatasets.length === SEARCH_RESULTS_LIMIT ? (
-          <span style={{ color: "var( --ant-text-secondary)", fontSize: 14, marginLeft: 8 }}>
+          <span style={{ color: "var( --ant-color-text-secondary)", fontSize: 14, marginLeft: 8 }}>
             (only showing the first {SEARCH_RESULTS_LIMIT} results)
           </span>
         ) : null}

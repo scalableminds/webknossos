@@ -1,6 +1,6 @@
 package controllers
 
-import com.mohiva.play.silhouette.api.{LoginInfo, Silhouette}
+import play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -17,7 +17,7 @@ import play.api.libs.json.Json
 import utils.{ObjectId, StoreModules, WkConf}
 
 import javax.inject.Inject
-import models.organization.{Organization, OrganizationDAO}
+import models.organization.{Organization, OrganizationDAO, OrganizationService}
 import play.api.mvc.{Action, AnyContent}
 import security.{Token, TokenDAO, TokenType, WkEnv}
 
@@ -50,6 +50,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    publicationDAO: PublicationDAO,
                                    organizationDAO: OrganizationDAO,
                                    storeModules: StoreModules,
+                                   organizationService: OrganizationService,
                                    conf: WkConf)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
@@ -146,9 +147,10 @@ Samplecountry
       _ <- insertLocalDataStoreIfEnabled()
       _ <- insertLocalTracingStoreIfEnabled()
       _ <- assertInitialDataEnabled
-      _ <- assertNoOrganizationsPresent
+      _ <- organizationService.assertNoOrganizationsPresent
       _ <- insertRootFolder()
       _ <- insertOrganization()
+      _ <- createOrganizationDirectory()
       _ <- insertTeams()
       _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, isTeamManager = true)
       _ <- insertDefaultUser(defaultUserEmail2, defaultMultiUser2, defaultUser2, isTeamManager = false)
@@ -161,12 +163,6 @@ Samplecountry
   private def assertInitialDataEnabled: Fox[Unit] =
     for {
       _ <- bool2Fox(conf.WebKnossos.SampleOrganization.enabled) ?~> "initialData.notEnabled"
-    } yield ()
-
-  def assertNoOrganizationsPresent: Fox[Unit] =
-    for {
-      organizations <- organizationDAO.findAll
-      _ <- bool2Fox(organizations.isEmpty) ?~> "initialData.organizationsNotEmpty"
     } yield ()
 
   private def insertRootFolder(): Fox[Unit] =
@@ -324,4 +320,7 @@ Samplecountry
         }
       }
     } else Fox.successful(())
+
+  private def createOrganizationDirectory(): Fox[Unit] =
+    organizationService.createOrganizationDirectory(defaultOrganization.name, RpcTokenHolder.webknossosToken) ?~> "organization.directoryCreation.failed"
 }

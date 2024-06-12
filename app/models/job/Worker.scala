@@ -1,6 +1,6 @@
 package models.job
 
-import akka.actor.ActorSystem
+import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import models.dataset.DataStoreDAO
+import models.job.JobCommand.JobCommand
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import slick.lifted.Rep
@@ -23,7 +24,9 @@ import scala.concurrent.duration._
 case class Worker(_id: ObjectId,
                   _dataStore: String,
                   key: String,
-                  maxParallelJobs: Int,
+                  maxParallelHighPriorityJobs: Int,
+                  maxParallelLowPriorityJobs: Int,
+                  supportedJobCommands: Set[JobCommand],
                   lastHeartBeat: Long = 0,
                   created: Instant = Instant.now,
                   isDeleted: Boolean = false)
@@ -37,33 +40,38 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def isDeletedColumn(x: Workers): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: WorkersRow): Fox[Worker] =
-    Fox.successful(
+    for {
+      supportedJobCommands <- Fox.serialCombined(parseArrayLiteral(r.supportedjobcommands)) { s =>
+        JobCommand.fromString(s).toFox ?~> f"$s is not a valid job command"
+      }
+    } yield
       Worker(
         ObjectId(r._Id),
         r._Datastore,
         r.key,
-        r.maxparalleljobs,
+        r.maxparallelhighpriorityjobs,
+        r.maxparallellowpriorityjobs,
+        supportedJobCommands.toSet,
         r.lastheartbeat.getTime,
         Instant.fromSql(r.created),
         r.isdeleted
       )
-    )
 
   def findOneByKey(key: String): Fox[Worker] =
     for {
-      r: Seq[WorkersRow] <- run(q"select $columns from $existingCollectionName where key = $key".as[WorkersRow])
+      r: Seq[WorkersRow] <- run(q"SELECT $columns FROM $existingCollectionName WHERE key = $key".as[WorkersRow])
       parsed <- parseFirst(r, "key")
     } yield parsed
 
-  def findOneByDataStore(dataStoreName: String): Fox[Worker] =
+  def findAllByDataStore(dataStoreName: String): Fox[List[Worker]] =
     for {
       r: Seq[WorkersRow] <- run(
-        q"select $columns from $existingCollectionName where _dataStore = $dataStoreName".as[WorkersRow])
-      parsed <- parseFirst(r, "dataStoreName")
+        q"SELECT $columns FROM $existingCollectionName WHERE _dataStore = $dataStoreName".as[WorkersRow])
+      parsed <- parseAll(r)
     } yield parsed
 
   def updateHeartBeat(_id: ObjectId): Unit = {
-    run(q"update webknossos.workers set lastHeartBeat = NOW() where _id = ${_id}".asUpdate)
+    run(q"UPDATE webknossos.workers SET lastHeartBeat = NOW() WHERE _id = ${_id}".asUpdate)
     // Note that this should not block the jobs polling operation, failures here are not critical
     ()
   }
@@ -77,7 +85,9 @@ class WorkerService @Inject()(conf: WkConf, dataStoreDAO: DataStoreDAO, workerDA
   def publicWrites(worker: Worker): JsObject =
     Json.obj(
       "id" -> worker._id.id,
-      "maxParallelJobs" -> worker.maxParallelJobs,
+      "maxParallelHighPriorityJobs" -> worker.maxParallelHighPriorityJobs,
+      "maxParallelLowPriorityJobs" -> worker.maxParallelLowPriorityJobs,
+      "supportedJobCommands" -> worker.supportedJobCommands,
       "created" -> worker.created,
       "lastHeartBeat" -> worker.lastHeartBeat,
       "lastHeartBeatIsRecent" -> lastHeartBeatIsRecent(worker)

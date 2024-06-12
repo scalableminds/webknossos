@@ -44,4 +44,11 @@ case class Cuboid(topLeft: VoxelPosition, width: Int, height: Int, depth: Int) {
   }
 
   def mag: Vec3Int = topLeft.mag
+
+  def toMag1: Cuboid = Cuboid(
+    topLeft.toMag1,
+    width * mag.x,
+    height * mag.y,
+    depth * mag.z
+  )
 }

@@ -3,8 +3,9 @@ import { useDispatch, useSelector } from "react-redux";
 import React, { useCallback, useState } from "react";
 import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
-import { OrthoViews } from "oxalis/constants";
+import { AltOrOptionKey, MappingStatusEnum, OrthoViews } from "oxalis/constants";
 import {
+  getMappingInfoOrNull,
   getVisibleSegmentationLayer,
   hasVisibleUint64Segmentation,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -28,7 +29,6 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { V3 } from "libs/mjs";
-import { Model } from "oxalis/singletons";
 import { OxalisState } from "oxalis/store";
 import {
   getActiveSegmentationTracing,
@@ -38,6 +38,7 @@ import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { useInterval } from "libs/react_helpers";
 import _ from "lodash";
 import { AdditionalCoordinate } from "types/api_flow_types";
+import { EmptyObject } from "types/globals";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -75,7 +76,7 @@ function ZoomShortcut() {
             top: -2,
           }}
         >
-          Alt
+          {AltOrOptionKey}
         </span>
       </span>{" "}
       +
@@ -158,21 +159,13 @@ function ShortcutsInfo() {
   );
   const isPlaneMode = useSelector((state: OxalisState) => getIsPlaneMode(state));
   const isShiftPressed = useKeyPress("Shift");
-  const isControlPressed = useKeyPress("Control");
+  const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
-  const adaptedTool = adaptActiveToolToShortcuts(
-    activeTool,
-    isShiftPressed,
-    isControlPressed,
-    isAltPressed,
+  const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const isTDViewportActive = useSelector(
+    (state: OxalisState) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
   );
-  const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
-    adaptedTool,
-    useLegacyBindings,
-    isShiftPressed,
-    isControlPressed,
-    isAltPressed,
-  );
+
   const moreShortcutsLink = (
     <a
       target="_blank"
@@ -187,21 +180,38 @@ function ShortcutsInfo() {
   );
 
   if (!isPlaneMode) {
+    let actionDescriptor = null;
+    if (hasSkeleton && isShiftPressed) {
+      actionDescriptor = getToolClassForAnnotationTool("SKELETON").getActionDescriptors(
+        "SKELETON",
+        useLegacyBindings,
+        isShiftPressed,
+        isControlOrMetaPressed,
+        isAltPressed,
+        isTDViewportActive,
+      );
+    }
+
     return (
       <React.Fragment>
-        <span
-          style={{
-            marginRight: "auto",
-            textTransform: "capitalize",
-          }}
-        >
-          <img
-            className="keyboard-mouse-icon"
-            src="/assets/images/icon-statusbar-mouse-left-drag.svg"
-            alt="Mouse Left Drag"
-          />
-          Move
-        </span>
+        {actionDescriptor != null ? (
+          <LeftClickShortcut actionDescriptor={actionDescriptor} />
+        ) : (
+          <span
+            className="shortcut-info-element"
+            style={{
+              textTransform: "capitalize",
+            }}
+          >
+            <img
+              className="keyboard-mouse-icon"
+              src="/assets/images/icon-statusbar-mouse-left-drag.svg"
+              alt="Mouse Left Drag"
+            />
+            Move
+          </span>
+        )}
+
         <span className="shortcut-info-element">
           <span
             key="space-forward-i"
@@ -306,6 +316,21 @@ function ShortcutsInfo() {
     );
   }
 
+  const adaptedTool = adaptActiveToolToShortcuts(
+    activeTool,
+    isShiftPressed,
+    isControlOrMetaPressed,
+    isAltPressed,
+  );
+  const actionDescriptor = getToolClassForAnnotationTool(adaptedTool).getActionDescriptors(
+    adaptedTool,
+    useLegacyBindings,
+    isShiftPressed,
+    isControlOrMetaPressed,
+    isAltPressed,
+    isTDViewportActive,
+  );
+
   return (
     <React.Fragment>
       <LeftClickShortcut actionDescriptor={actionDescriptor} />
@@ -316,7 +341,7 @@ function ShortcutsInfo() {
           src="/assets/images/icon-statusbar-mouse-wheel.svg"
           alt="Mouse Wheel"
         />
-        {isAltPressed || isControlPressed ? "Zoom in/out" : "Move along 3rd axis"}
+        {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
       </span>
       <span className="shortcut-info-element">
         <img
@@ -332,18 +357,32 @@ function ShortcutsInfo() {
   );
 }
 
-function getCellInfo(globalMousePosition: Vector3 | null | undefined) {
-  const getSegmentIdString = (): string => {
-    const hoveredCellInfo = Model.getHoveredCellId(globalMousePosition);
+function SegmentInfo() {
+  const visibleSegmentationLayer = useSelector((state: OxalisState) =>
+    getVisibleSegmentationLayer(state),
+  );
+  const hasVisibleSegmentation = visibleSegmentationLayer != null;
+  const activeMappingInfo = useSelector((state: OxalisState) =>
+    getMappingInfoOrNull(
+      state.temporaryConfiguration.activeMappingByLayer,
+      visibleSegmentationLayer?.name,
+    ),
+  );
+  const hoveredSegmentId = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId,
+  );
+  if (hasVisibleSegmentation == null) {
+    return null;
+  }
 
-    if (!hoveredCellInfo) {
-      return "-";
-    }
+  const idString =
+    hoveredSegmentId == null
+      ? "-"
+      : activeMappingInfo?.mappingStatus === MappingStatusEnum.ENABLED
+        ? `${hoveredSegmentId} (mapped)`
+        : `${hoveredSegmentId}`;
 
-    return hoveredCellInfo.isMapped ? `${hoveredCellInfo.id} (mapped)` : `${hoveredCellInfo.id}`;
-  };
-
-  return <span className="info-element">Segment {getSegmentIdString()}</span>;
+  return <span className="info-element">Segment {idString}</span>;
 }
 
 function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean, label: string) {
@@ -353,7 +392,7 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
       <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
         <WarningOutlined
           style={{
-            color: "var(--ant-warning)",
+            color: "var(--ant-color-warning)",
           }}
         />
       </Tooltip>
@@ -414,7 +453,7 @@ function Infos() {
             totalDownloadedByteCount,
           )} of Image Data (after decompression)`}
         >
-          <DownloadOutlined />
+          <DownloadOutlined className="icon-margin-right" />
           {formatCountToDataAmountUnit(currentBucketDownloadSpeed)}/s
         </Tooltip>
       </span>
@@ -489,9 +528,6 @@ function Infos() {
 function SegmentAndMousePosition() {
   // This component depends on the mouse position which is a fast-changing property.
   // For the sake of performance, it is isolated as a single component.
-  const hasVisibleSegmentation = useSelector(
-    (state: OxalisState) => getVisibleSegmentationLayer(state) != null,
-  );
   const mousePosition = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.mousePosition,
   );
@@ -512,9 +548,10 @@ function SegmentAndMousePosition() {
 
     return undefined;
   });
+
   return (
     <>
-      {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
+      {isPlaneMode ? <SegmentInfo /> : null}
       {isPlaneMode ? (
         <span className="info-element">
           Pos [
@@ -526,7 +563,7 @@ function SegmentAndMousePosition() {
   );
 }
 
-class Statusbar extends React.PureComponent<{}, {}> {
+class Statusbar extends React.PureComponent<EmptyObject, EmptyObject> {
   render() {
     return (
       <span className="statusbar">

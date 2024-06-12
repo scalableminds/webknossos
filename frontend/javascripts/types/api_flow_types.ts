@@ -1,3 +1,4 @@
+import _ from "lodash";
 import type {
   BoundingBoxObject,
   Edge,
@@ -5,9 +6,13 @@ import type {
   TreeGroup,
   RecommendedConfiguration,
   SegmentGroup,
+  MeshInformation,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
-import type { SkeletonTracingStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import type {
+  SkeletonTracingStats,
+  TracingStats,
+} from "oxalis/model/accessors/annotation_accessor";
 import type {
   Vector3,
   Vector6,
@@ -18,6 +23,7 @@ import type {
   TreeType,
 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { EmptyObject } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -70,6 +76,7 @@ type APIDataLayerBase = {
   readonly dataFormat?: "wkw" | "zarr";
   readonly additionalAxes: Array<AdditionalAxis> | null;
   readonly coordinateTransformations?: CoordinateTransformation[] | null;
+  readonly hasSegmentIndex?: boolean;
 };
 type APIColorLayer = APIDataLayerBase & {
   readonly category: "color";
@@ -84,6 +91,18 @@ export type APISegmentationLayer = APIDataLayerBase & {
   readonly tracingId?: string;
 };
 export type APIDataLayer = APIColorLayer | APISegmentationLayer;
+
+// Only used in rare cases to generalize over actual data layers and
+// a skeleton layer.
+export type APISkeletonLayer = { category: "skeleton" };
+
+export type LayerLink = {
+  datasetId: APIDatasetId;
+  sourceName: string;
+  newName: string;
+  transformations: CoordinateTransformation[];
+};
+
 export type APIHistogramData = HistogramDatum[];
 export type HistogramDatum = {
   numberOfElements: number;
@@ -110,6 +129,8 @@ export type APIDataStore = {
   readonly url: string;
   readonly isScratch: boolean;
   readonly allowsUpload: boolean;
+  readonly jobsEnabled: boolean;
+  readonly jobsSupportedByAvailableWorkers: APIJobType[];
 };
 export type APITracingStore = {
   readonly name: string;
@@ -147,6 +168,7 @@ export type APIDatasetDetails = {
   readonly brainRegion?: string;
   readonly acquisition?: string;
 };
+
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
   folderId: string;
@@ -161,11 +183,11 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   displayName: string | null | undefined;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
-  jobsEnabled: boolean;
   sortingKey: number;
   owningOrganization: string;
   publication: null | undefined;
   tags: Array<string>;
+  usedStorageBytes: number | null;
 };
 type APIDatasetBase = Readonly<MutableAPIDatasetBase>;
 export type MutableAPIDataset = MutableAPIDatasetBase & {
@@ -186,7 +208,7 @@ export type MaintenanceInfo = {
 
 // Should be a strict subset of APIMaybeUnimportedDataset which makes
 // typing easier in some places.
-export type APIDatasetCompactWithoutStatus = Pick<
+export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   APIMaybeUnimportedDataset,
   | "owningOrganization"
   | "name"
@@ -199,12 +221,19 @@ export type APIDatasetCompactWithoutStatus = Pick<
   | "tags"
   | "isUnreported"
 >;
-export type APIDatasetCompact = APIDatasetCompactWithoutStatus & {
+export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id?: string;
   status: MutableAPIDataSourceBase["status"];
+  colorLayerNames: Array<string>;
+  segmentationLayerNames: Array<string>;
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
+  const [colorLayerNames, segmentationLayerNames] = _.partition(
+    dataset.dataSource.dataLayers,
+    (layer) => layer.category === "segmentation",
+  ).map((layers) => layers.map((layer) => layer.name).sort());
+
   return {
     owningOrganization: dataset.owningOrganization,
     name: dataset.name,
@@ -217,6 +246,8 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     status: dataset.dataSource.status,
     tags: dataset.tags,
     isUnreported: dataset.isUnreported,
+    colorLayerNames: colorLayerNames,
+    segmentationLayerNames: segmentationLayerNames,
   };
 }
 
@@ -397,7 +428,6 @@ export type APITask = {
   readonly dataSet: string;
   readonly editPosition: Vector3;
   readonly editRotation: Vector3;
-  readonly formattedHash: string;
   readonly id: string;
   readonly neededExperience: {
     readonly domain: string;
@@ -416,24 +446,25 @@ export type AnnotationLayerDescriptor = {
   name?: string | null | undefined;
   tracingId: string;
   typ: "Skeleton" | "Volume";
+  stats: TracingStats | EmptyObject;
 };
 export type EditableLayerProperties = Partial<{
   name: string | null | undefined;
 }>;
-export type APIAnnotationCompact = {
+export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly dataSetName: string;
   readonly organization: string;
   readonly description: string;
-  readonly formattedHash: string;
   readonly modified: number;
   readonly id: string;
-  readonly visibility: APIAnnotationVisibility;
   readonly name: string;
+  // Not used by the front-end anymore, but the
+  // backend still serves this for backward-compatibility reasons.
+  readonly stats?: SkeletonTracingStats | EmptyObject;
   readonly state: string;
-  readonly stats: SkeletonTracingStats | {};
+  readonly isLockedByOwner: boolean;
   readonly tags: Array<string>;
-  readonly tracingTime: number | null | undefined;
   readonly typ: APIAnnotationType;
   // The owner can be null (e.g., for a sandbox annotation
   // or due to missing permissions).
@@ -442,25 +473,22 @@ export type APIAnnotationCompact = {
   readonly othersMayEdit: boolean;
 };
 
-export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCompact {
+export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfo {
   const {
-    annotationLayers,
     dataSetName,
-    organization,
     description,
-    formattedHash,
     modified,
     id,
-    visibility,
     name,
     state,
-    stats,
+    isLockedByOwner,
     tags,
-    tracingTime,
     typ,
     owner,
     teams,
     othersMayEdit,
+    organization,
+    annotationLayers,
   } = annotation;
 
   return {
@@ -468,15 +496,12 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationCom
     dataSetName,
     organization,
     description,
-    formattedHash,
     modified,
     id,
-    visibility,
+    isLockedByOwner,
     name,
     state,
-    stats,
     tags,
-    tracingTime,
     typ,
     owner,
     teams,
@@ -492,7 +517,10 @@ export type AnnotationViewConfiguration = {
     }
   >;
 };
-type APIAnnotationBase = APIAnnotationCompact & {
+type APIAnnotationBase = APIAnnotationInfo & {
+  readonly visibility: APIAnnotationVisibility;
+  readonly tracingTime: number | null | undefined;
+
   readonly dataStore: APIDataStore;
   readonly tracingStore: APITracingStore;
   readonly restrictions: APIRestrictions;
@@ -513,15 +541,33 @@ export type APIAnnotationWithTask = APIAnnotationBase & {
 export type APITaskWithAnnotation = APITask & {
   readonly annotation: APIAnnotation;
 };
-export type APITimeTracking = {
-  time: string;
-  timestamp: number;
+export type APITimeTrackingPerAnnotation = {
   annotation: string;
-  _id: string;
-  task_id: string;
-  project_name: string;
-  tasktype_id: string;
-  tasktype_summary: string;
+  task: string | undefined;
+  projectName: string | undefined;
+  timeMillis: number;
+  annotationLayerStats: Array<TracingStats>;
+};
+export type APITimeTrackingPerUser = {
+  user: APIUserCompact & {
+    email: string;
+  };
+  timeMillis: number;
+  annotationCount: number;
+};
+export type APITimeTrackingSpan = {
+  userId: string;
+  userEmail: string;
+  datasetOrganization: string;
+  datasetName: string;
+  annotationId: string;
+  taskId: string | undefined;
+  projectName: string | undefined;
+  taskTypeId: string | undefined;
+  taskTypeSummary: string | undefined;
+  timeSpanId: string;
+  timeSpanCreated: number;
+  timeSpanTimeMillis: number;
 };
 export type APIProjectProgressReport = {
   readonly projectName: string;
@@ -540,11 +586,13 @@ export type APIAvailableTasksReport = {
   readonly totalAvailableTasks: number;
   readonly availableTasksByProjects: Record<string, number>;
 };
-export type APIOrganization = {
+export type APIOrganizationCompact = {
   readonly id: string;
   readonly name: string;
-  readonly additionalInformation: string;
   readonly displayName: string;
+};
+export type APIOrganization = APIOrganizationCompact & {
+  readonly additionalInformation: string;
   readonly pricingPlan: PricingPlanEnum;
   readonly enableAutoVerify: boolean;
   readonly newUserMailingList: string;
@@ -615,17 +663,23 @@ export type APIFeatureToggles = {
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
 };
-export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
+export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
-export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | "MANUAL";
+export type APIEffectiveJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
 export enum APIJobType {
-  "CONVERT_TO_WKW" = "convert_to_wkw",
-  "EXPORT_TIFF" = "export_tiff",
-  "COMPUTE_MESH_FILE" = "compute_mesh_file",
-  "FIND_LARGEST_SEGMENT_ID" = "find_largest_segment_id",
-  "INFER_NUCLEI" = "infer_nuclei",
-  "INFER_NEURONS" = "infer_neurons",
-  "MATERIALIZE_VOLUME_ANNOTATION" = "materialize_volume_annotation",
+  ALIGN_SECTIONS = "align_sections",
+  CONVERT_TO_WKW = "convert_to_wkw",
+  EXPORT_TIFF = "export_tiff",
+  RENDER_ANIMATION = "render_animation",
+  COMPUTE_MESH_FILE = "compute_mesh_file",
+  COMPUTE_SEGMENT_INDEX_FILE = "compute_segment_index_file",
+  FIND_LARGEST_SEGMENT_ID = "find_largest_segment_id",
+  INFER_NUCLEI = "infer_nuclei",
+  INFER_NEURONS = "infer_neurons",
+  MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
+  TRAIN_MODEL = "train_model",
+  INFER_WITH_MODEL = "infer_with_model",
+  INFER_MITOCHONDRIA = "infer_mitochondria",
 }
 
 export type APIJob = {
@@ -641,12 +695,25 @@ export type APIJob = {
   readonly boundingBox: string | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
-  readonly state: APIJobState;
-  readonly manualState: string;
+  readonly state: APIEffectiveJobState;
+  readonly manualState: APIJobManualState;
   readonly result: string | null | undefined;
   readonly resultLink: string | null | undefined;
   readonly createdAt: number;
+  readonly voxelyticsWorkflowHash: string | null;
+  readonly trainingAnnotations: Array<{ annotationId: string }>;
 };
+
+export type AiModel = {
+  id: string;
+  name: string;
+  dataStore: APIDataStore;
+  user: APIUser;
+  comment: string;
+  created: number;
+  trainingJob: APIJob | null;
+};
+
 // Tracing related datatypes
 export type APIUpdateActionBatch = {
   version: number;
@@ -752,6 +819,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   resolutions?: Array<Point3>;
   mappingName?: string | null | undefined;
   mappingIsEditable?: boolean;
+  mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
 };
 export type ServerTracing = ServerSkeletonTracing | ServerVolumeTracing;
@@ -798,6 +866,7 @@ export enum VoxelyticsRunState {
   CANCELLED = "CANCELLED",
   STALE = "STALE",
 }
+
 type DistributionConfig = {
   strategy: string;
   resources?: Record<string, string>;
@@ -833,27 +902,15 @@ export type VoxelyticsArtifactConfig = {
   };
 };
 
-export type VoxelyticsRunInfo = (
-  | {
-      state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
-      endTime: null;
-    }
-  | {
-      state:
-        | VoxelyticsRunState.COMPLETE
-        | VoxelyticsRunState.FAILED
-        | VoxelyticsRunState.CANCELLED
-        | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
-    }
-) & {
+export type VoxelyticsRunInfo = {
   id: string;
   name: string;
-  username: string;
-  hostname: string;
+  userName: string;
+  hostName: string;
   voxelyticsVersion: string;
+  state: VoxelyticsRunState;
+  beginTime: Date | null;
+  endTime: Date | null;
 };
 
 export type VoxelyticsWorkflowDagEdge = { source: string; target: string; label: string };
@@ -903,7 +960,7 @@ export type VoxelyticsTaskInfo = {
 
 export type VoxelyticsWorkflowReport = {
   config: {
-    config: {} | null;
+    config: EmptyObject | null;
     git_hash: string | null;
     global_parameters:
       | {
@@ -912,7 +969,7 @@ export type VoxelyticsWorkflowReport = {
           artifacts_path: string | null;
           skip_checksums: boolean;
         }
-      | {};
+      | EmptyObject;
     paths: Array<string>;
     schema_version: number;
     tasks: Record<string, VoxelyticsTaskConfig>;
@@ -928,28 +985,18 @@ export type VoxelyticsWorkflowReport = {
   };
 };
 
-export type VoxelyticsWorkflowListingRun = (
-  | {
-      state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
-      endTime: null;
-    }
-  | {
-      state:
-        | VoxelyticsRunState.COMPLETE
-        | VoxelyticsRunState.FAILED
-        | VoxelyticsRunState.CANCELLED
-        | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
-    }
-) & {
+export type VoxelyticsWorkflowListingRun = {
   id: string;
   name: string;
-  username: string;
-  hostname: string;
+  hostUserName: string;
+  hostName: string;
   voxelyticsVersion: string;
   taskCounts: TaskCounts;
+  userFirstName: string;
+  userLastName: string;
+  state: VoxelyticsRunState;
+  beginTime: Date | null;
+  endTime: Date | null;
 };
 
 export type VoxelyticsWorkflowListing = {
@@ -1048,4 +1095,31 @@ export type FolderUpdater = {
   id: string;
   name: string;
   allowedTeams: string[];
+};
+
+export enum CAMERA_POSITIONS {
+  MOVING = "MOVING",
+  STATIC_XZ = "STATIC_XZ",
+  STATIC_YZ = "STATIC_YZ",
+}
+
+export enum MOVIE_RESOLUTIONS {
+  SD = "SD",
+  HD = "HD",
+}
+
+export type RenderAnimationOptions = {
+  layerName: string;
+  meshes: ({
+    layerName: string;
+    tracingId: string | null;
+    adhocMag: Vector3;
+  } & MeshInformation)[];
+  boundingBox: BoundingBoxObject;
+  includeWatermark: boolean;
+  intensityMin: number;
+  intensityMax: number;
+  magForTextures: Vector3;
+  movieResolution: MOVIE_RESOLUTIONS;
+  cameraPosition: CAMERA_POSITIONS;
 };

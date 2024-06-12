@@ -1,12 +1,11 @@
 import { MenuOutlined, InfoCircleOutlined } from "@ant-design/icons";
-import { List, Collapse, Tooltip } from "antd";
+import { List, Collapse, Tooltip, CollapseProps } from "antd";
 import React from "react";
 import { SortEnd } from "react-sortable-hoc";
 import { SortableContainer, SortableElement, SortableHandle } from "react-sortable-hoc";
 import { settings, settingsTooltips } from "messages";
 
 // Example taken and modified from https://4x.ant.design/components/table/#components-table-demo-drag-sorting-handler.
-const { Panel } = Collapse;
 
 const DragHandle = SortableHandle(() => <MenuOutlined style={{ cursor: "grab", color: "#999" }} />);
 
@@ -31,7 +30,7 @@ export default function ColorLayerOrderingTable({
     document.body.classList.remove("is-dragging");
     if (oldIndex !== newIndex && onChange && colorLayerNames) {
       const movedElement = colorLayerNames[oldIndex];
-      let newColorLayerNames = colorLayerNames.filter((_, index) => index !== oldIndex);
+      const newColorLayerNames = colorLayerNames.filter((_, index) => index !== oldIndex);
       newColorLayerNames.splice(newIndex, 0, movedElement);
       onChange(newColorLayerNames);
     }
@@ -52,9 +51,11 @@ export default function ColorLayerOrderingTable({
     </span>
   );
 
-  return (
-    <Collapse defaultActiveKey={[]} collapsible={isSettingEnabled ? "header" : "disabled"}>
-      <Panel header={panelTitle} key="1">
+  const collapseItems: CollapseProps["items"] = [
+    {
+      label: panelTitle,
+      key: "1",
+      children: (
         <SortableLayerSettingsContainer
           onSortEnd={onSortEnd}
           onSortStart={() =>
@@ -68,7 +69,15 @@ export default function ColorLayerOrderingTable({
             <SortableItem key={name} index={index} name={name} />
           ))}
         </SortableLayerSettingsContainer>
-      </Panel>
-    </Collapse>
+      ),
+    },
+  ];
+
+  return (
+    <Collapse
+      defaultActiveKey={[]}
+      collapsible={isSettingEnabled ? "header" : "disabled"}
+      items={collapseItems}
+    />
   );
 }

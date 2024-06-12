@@ -1,6 +1,5 @@
 import type { OxalisState } from "oxalis/store";
 import { defaultDatasetViewConfigurationWithoutNull } from "types/schemas/dataset_view_configuration.schema";
-import { document } from "libs/window";
 import Constants, {
   ControlModeEnum,
   OrthoViews,
@@ -10,6 +9,9 @@ import Constants, {
   InterpolationModeEnum,
 } from "oxalis/constants";
 import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
+import constants from "oxalis/constants";
+import { getSystemColorTheme } from "theme";
+
 const defaultViewportRect = {
   top: 0,
   left: 0,
@@ -43,9 +45,6 @@ const initialAnnotationInfo = {
   meshes: [],
 };
 
-const primaryStylesheetElement: HTMLLinkElement | null | undefined = document.getElementById(
-  "primary-stylesheet",
-) as HTMLLinkElement;
 const defaultState: OxalisState = {
   datasetConfiguration: defaultDatasetViewConfigurationWithoutNull,
   userConfiguration: {
@@ -136,6 +135,8 @@ const defaultState: OxalisState = {
       url: "http://localhost:9000",
       isScratch: false,
       allowsUpload: true,
+      jobsEnabled: false,
+      jobsSupportedByAvailableWorkers: [],
     },
     owningOrganization: "Connectomics department",
     description: null,
@@ -144,9 +145,9 @@ const defaultState: OxalisState = {
     allowedTeamsCumulative: [],
     logoUrl: null,
     lastUsedByUser: 0,
-    jobsEnabled: false,
     sortingKey: 123,
     publication: null,
+    usedStorageBytes: null,
   },
   tracing: {
     ...initialAnnotationInfo,
@@ -163,6 +164,7 @@ const defaultState: OxalisState = {
     mappings: [],
     skeleton: null,
     owner: null,
+    isLockedByOwner: false,
     contributors: [],
     othersMayEdit: false,
     blockedByUser: null,
@@ -176,8 +178,8 @@ const defaultState: OxalisState = {
     },
     isBusyInfo: {
       skeleton: false,
-      volume: false,
-      mapping: false,
+      volumes: {},
+      mappings: {},
     },
     lastSaveTimestamp: {
       skeleton: 0,
@@ -207,7 +209,6 @@ const defaultState: OxalisState = {
         top: 0,
         bottom: 0,
         up: [0, 0, 0],
-        lookAt: [0, 0, 0],
         position: [0, 0, 0],
       },
       inputCatcherRects: {
@@ -229,8 +230,8 @@ const defaultState: OxalisState = {
     showVersionRestore: false,
     showDownloadModal: false,
     showPythonClientModal: false,
-    showAINucleiSegmentationModal: false,
-    showAINeuronSegmentationModal: false,
+    aIJobModalState: "invisible",
+    showRenderAnimationModal: false,
     showShareModal: false,
     storedLayouts: {},
     isImportingMesh: false,
@@ -240,7 +241,7 @@ const defaultState: OxalisState = {
       right: false,
       left: false,
     },
-    theme: primaryStylesheetElement?.href.includes("dark.css") ? "dark" : "light",
+    theme: getSystemColorTheme(),
     busyBlockingInfo: {
       isBusy: false,
     },
@@ -249,6 +250,17 @@ const defaultState: OxalisState = {
     measurementToolInfo: {
       lastMeasuredPosition: null,
       isMeasuring: false,
+    },
+    navbarHeight: constants.DEFAULT_NAVBAR_HEIGHT,
+    contextInfo: {
+      contextMenuPosition: null,
+      clickedNodeId: null,
+      meshId: null,
+      meshIntersectionPosition: null,
+      clickedBoundingBoxId: null,
+      globalPosition: null,
+      viewport: null,
+      unmappedSegmentId: null,
     },
   },
   localSegmentationData: {},

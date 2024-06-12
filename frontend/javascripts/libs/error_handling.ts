@@ -139,6 +139,23 @@ class ErrorHandling {
       });
     });
 
+    // Report Content Security Policy (CSP) errors
+    document.addEventListener("securitypolicyviolation", (e: SecurityPolicyViolationEvent) => {
+      const additionalProperties = _.pick(e, [
+        "blockedURI",
+        "violatedDirective",
+        "originalPolicy",
+        "documentURI",
+        "sourceFile",
+        "lineNumber",
+        "columnNumber",
+      ]);
+      this.notify(
+        new Error(`Content Security Policy Violation while loading ${e.blockedURI}.`),
+        additionalProperties,
+      );
+    });
+
     window.onerror = (
       message: Event | string,
       _file?: string,
@@ -157,7 +174,6 @@ class ErrorHandling {
         error = new Error(message);
       }
 
-      console.error(error);
       this.notify(error);
 
       if (error.toString() === "Error: Script error.") {

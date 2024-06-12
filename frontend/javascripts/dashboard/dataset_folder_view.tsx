@@ -78,6 +78,8 @@ function DatasetFolderViewInner(props: Props) {
   const folderIdForDetailsSidebar = context.selectedFolder?.key ?? context.activeFolderId;
   const datasetCountForDetailsSidebar =
     context.selectedFolder != null ? selectedFolderDatasets?.length || 0 : context.datasets.length;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only update the selected datasets when the context datasets change.
   useEffect(() => {
     if (selectedDatasets.length === 0 || !context.datasets) {
       return;
@@ -216,7 +218,7 @@ function DatasetFolderViewInner(props: Props) {
         style={{
           gridColumn: "1 / 2",
           overflow: "auto",
-          borderRight: "1px solid var(--ant-border-base)",
+          borderRight: "1px solid var(--ant-color-border)",
           marginRight: 16,
         }}
       >
@@ -236,7 +238,7 @@ function DatasetFolderViewInner(props: Props) {
         style={{
           gridColumn: "3 / 4",
           overflow: "auto",
-          borderLeft: "1px solid var(--ant-border-base)",
+          borderLeft: "1px solid var(--ant-color-border)",
           marginLeft: 4,
         }}
       >

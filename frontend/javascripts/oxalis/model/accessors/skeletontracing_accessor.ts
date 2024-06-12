@@ -15,19 +15,19 @@ import type {
   TreeGroup,
   TreeGroupTypeFlat,
   Node,
+  OxalisState,
 } from "oxalis/store";
 import {
   findGroup,
   MISSING_GROUP_ID,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import type { TreeType } from "oxalis/constants";
+import type { TreeType, Vector3 } from "oxalis/constants";
+import {
+  getTransformsForSkeletonLayer,
+  getTransformsForSkeletonLayerOrNull,
+} from "./dataset_accessor";
+import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 
-export type SkeletonTracingStats = {
-  treeCount: number;
-  nodeCount: number;
-  edgeCount: number;
-  branchPointCount: number;
-};
 export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
   if (tracing.skeleton != null) {
     return Maybe.Just(tracing.skeleton);
@@ -67,7 +67,7 @@ export function getActiveNode(skeletonTracing: SkeletonTracing): Maybe<Node> {
   const { activeTreeId, activeNodeId } = skeletonTracing;
 
   if (activeTreeId != null && activeNodeId != null) {
-    return Maybe.Just(skeletonTracing.trees[activeTreeId].nodes.get(activeNodeId));
+    return Maybe.Just(skeletonTracing.trees[activeTreeId].nodes.getOrThrow(activeNodeId));
   }
 
   return Maybe.Nothing();
@@ -95,7 +95,7 @@ export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tr
   const { activeNodeId } = skeletonTracing;
 
   if (activeNodeId != null) {
-    return Maybe.Just(tree.nodes.get(activeNodeId));
+    return Maybe.Just(tree.nodes.getOrThrow(activeNodeId));
   }
 
   return Maybe.Nothing();
@@ -159,12 +159,12 @@ export function getNodeAndTree(
     let node = null;
 
     if (nodeId != null) {
-      node = tree.nodes.get(nodeId);
+      node = tree.nodes.getOrThrow(nodeId);
     } else {
       const { activeNodeId } = skeletonTracing;
 
       if (activeNodeId != null) {
-        node = tree.nodes.get(activeNodeId);
+        node = tree.nodes.getOrThrow(activeNodeId);
       }
     }
 
@@ -198,6 +198,36 @@ export function getNodeAndTreeOrNull(
       node: null,
     });
 }
+
+export function isSkeletonLayerTransformed(state: OxalisState) {
+  return (
+    getTransformsForSkeletonLayerOrNull(
+      state.dataset,
+      state.datasetConfiguration.nativelyRenderedLayerName,
+    ) != null
+  );
+}
+
+export function getNodePosition(node: Node, state: OxalisState): Vector3 {
+  return transformNodePosition(node.untransformedPosition, state);
+}
+
+export function transformNodePosition(position: Vector3, state: OxalisState): Vector3 {
+  const dataset = state.dataset;
+  const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
+
+  const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+  return transformPointUnscaled(currentTransforms)(position);
+}
+
+export function untransformNodePosition(position: Vector3, state: OxalisState): Vector3 {
+  const dataset = state.dataset;
+  const nativelyRenderedLayerName = state.datasetConfiguration.nativelyRenderedLayerName;
+
+  const currentTransforms = getTransformsForSkeletonLayer(dataset, nativelyRenderedLayerName);
+  return transformPointUnscaled(invertTransform(currentTransforms))(position);
+}
+
 export function getMaxNodeIdInTree(tree: Tree): Maybe<number> {
   const maxNodeId = _.reduce(
     Array.from(tree.nodes.keys()),
@@ -222,16 +252,7 @@ export function getBranchPoints(tracing: Tracing): Maybe<Array<BranchPoint>> {
     _.flatMap(skeletonTracing.trees, (tree) => tree.branchPoints),
   );
 }
-export function getStats(tracing: Tracing): Maybe<SkeletonTracingStats> {
-  return getSkeletonTracing(tracing)
-    .chain((skeletonTracing) => Maybe.fromNullable(skeletonTracing.trees))
-    .map((trees) => ({
-      treeCount: _.size(trees),
-      nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
-      edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
-      branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
-    }));
-}
+
 export function getFlatTreeGroups(skeletonTracing: SkeletonTracing): Array<TreeGroupTypeFlat> {
   return Array.from(
     mapGroupsToGenerator(

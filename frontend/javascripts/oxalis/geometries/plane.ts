@@ -74,7 +74,7 @@ class Plane {
     for (let i = 0; i <= 1; i++) {
       crosshairGeometries.push(new THREE.BufferGeometry());
 
-      // prettier-ignore
+      // biome-ignore format: don't format array
       const crosshairVertices = new Float32Array([
         (-pWidth / 2) * i, (-pWidth / 2) * (1 - i), 0,
         -25 * i, -25 * (1 - i), 0,
@@ -140,12 +140,11 @@ class Plane {
   };
 
   setScale(xFactor: number, yFactor: number): void {
-    if (this.lastScaleFactors[0] !== xFactor || this.lastScaleFactors[1] !== yFactor) {
-      this.lastScaleFactors[0] = xFactor;
-      this.lastScaleFactors[1] = yFactor;
-    } else {
+    if (this.lastScaleFactors[0] === xFactor && this.lastScaleFactors[1] === yFactor) {
       return;
     }
+    this.lastScaleFactors[0] = xFactor;
+    this.lastScaleFactors[1] = yFactor;
 
     const scaleVec = new THREE.Vector3().multiplyVectors(
       new THREE.Vector3(xFactor, yFactor, 1),

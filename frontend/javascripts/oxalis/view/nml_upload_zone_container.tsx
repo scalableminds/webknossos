@@ -9,7 +9,7 @@ import type { OxalisState } from "oxalis/store";
 import { setDropzoneModalVisibilityAction } from "oxalis/model/actions/ui_actions";
 import FormattedDate from "components/formatted_date";
 import { trackAction } from "oxalis/model/helpers/analytics";
-import constants from "oxalis/constants";
+
 type State = {
   files: Array<File>;
   dropzoneActive: boolean;
@@ -25,6 +25,7 @@ type OwnProps = {
 type StateProps = {
   showDropzoneModal: boolean;
   hideDropzoneModal: () => void;
+  navbarHeight: number;
 };
 type Props = StateProps & OwnProps;
 
@@ -58,7 +59,7 @@ function NmlDropArea({
         <InboxOutlined
           style={{
             fontSize: 180,
-            color: "var(--ant-primary)",
+            color: "var(--ant-color-primary)",
           }}
         />
       </div>
@@ -66,7 +67,7 @@ function NmlDropArea({
         <h5>Drop NML or zip files here{isClickAllowed ? " or click to select files" : null}...</h5>
       ) : (
         <h5>
-          Drop NML or zip files here to <b>create a new tracing</b>.
+          Drop NML or zip files here to <b>create a new annotation</b>.
         </h5>
       )}
     </div>
@@ -131,7 +132,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
                   size="large"
                   icon={<FileOutlined />}
                   style={{
-                    backgroundColor: "var(--ant-primary)",
+                    backgroundColor: "var(--ant-color-primary)",
                   }}
                 />
               }
@@ -271,7 +272,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             {...getRootProps()}
             style={{
               position: "relative",
-              height: `calc(100vh - ${constants.NAVBAR_HEIGHT}px)`,
+              height: `calc(100vh - ${this.props.navbarHeight}px)`,
             }}
             className="flex-column"
           >
@@ -290,7 +291,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
             ) : null}
             {
               // If the user explicitly selected the menu option to import NMLs,
-              // we show a proper modal which renderes almost the same hint ("You may drag... or click").
+              // we show a proper modal which renders almost the same hint ("You may drag... or click").
             }
             {this.props.showDropzoneModal ? this.renderDropzoneModal() : null}
 
@@ -309,6 +310,7 @@ class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState) => ({
   showDropzoneModal: state.uiInformation.showDropzoneModal,
+  navbarHeight: state.uiInformation.navbarHeight,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

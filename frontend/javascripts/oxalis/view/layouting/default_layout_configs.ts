@@ -6,7 +6,6 @@
  */
 import _ from "lodash";
 import { getIsInIframe } from "libs/utils";
-import constants from "oxalis/constants";
 import type { BorderTabType, ControlMode, ViewMode } from "oxalis/constants";
 import Constants, {
   ArbitraryViews,
@@ -26,6 +25,7 @@ import type {
   Border,
   ModelConfig,
 } from "./flex_layout_types";
+import { Store } from "oxalis/singletons";
 // Increment this number to invalidate old layoutConfigs in localStorage
 export const currentLayoutVersion = 15;
 const layoutHeaderHeight = 20;
@@ -40,6 +40,7 @@ export const DEFAULT_LAYOUT_NAME = "Custom Layout";
 // when it is set to 0, we use a value near value to make it almost not visible.
 const borderBarSize = 1;
 export const getGroundTruthLayoutRect = () => {
+  const storeState = Store.getState();
   const mainContainer = document.querySelector(".ant-layout .ant-layout-has-sider");
   let width;
   let height;
@@ -48,7 +49,7 @@ export const getGroundTruthLayoutRect = () => {
     if (window.innerWidth) {
       width = window.innerWidth;
       height = window.innerHeight;
-      height -= constants.NAVBAR_HEIGHT;
+      height -= storeState.uiInformation.navbarHeight;
     } else {
       // use fallback values
       height = dummyExtent;

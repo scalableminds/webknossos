@@ -94,9 +94,9 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         .put(dataSource)
     } yield ()
 
-  def hasSegmentIndexFile(organizationName: String, datasetName: String, layerName: String)(
+  def hasSegmentIndexFile(organizationId: String, datasetName: String, layerName: String)(
       implicit ec: ExecutionContext): Fox[Boolean] = {
-    val cacheKey = (organizationName, datasetName, layerName)
+    val cacheKey = (organizationId, datasetName, layerName)
     hasSegmentIndexFileCache.getOrLoad(
       cacheKey,
       k =>

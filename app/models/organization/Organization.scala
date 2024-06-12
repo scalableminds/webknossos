@@ -80,7 +80,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseAll(r)
     } yield parsed
 
-  @deprecated("use findOne with string type instead")
+  @deprecated("use findOne with string type instead", since = "")
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Organization] =
     Fox.failure("Cannot find organization by ObjectId. Use findOne with string type instead")
 

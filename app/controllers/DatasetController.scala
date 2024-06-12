@@ -137,8 +137,6 @@ class DatasetController @Inject()(userService: UserService,
       isActive: Option[Boolean],
       // Optional filtering: If true, list only unreported datasets (a.k.a. no longer available on the datastore), if false, list only reported datasets
       isUnreported: Option[Boolean],
-      // DEPRECATED use organizationId. Optional filtering: List only datasets of the organization specified by its url-safe name, e.g. sample_organization
-      organizationName: Option[String],
       // Optional filtering: List only datasets of the organization specified by its url-safe name, e.g. sample_organization
       organizationId: Option[String],
       // Optional filtering: List only datasets of the requesting user’s organization
@@ -162,7 +160,7 @@ class DatasetController @Inject()(userService: UserService,
       organizationIdOpt = if (onlyMyOrganization.getOrElse(false))
         request.identity.map(_._organization)
       else
-        organizationId.orElse(organizationName)
+        organizationId
       js <- if (compact.getOrElse(false)) {
         for {
           datasetInfos <- datasetDAO.findAllCompactWithSearch(

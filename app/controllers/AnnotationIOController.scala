@@ -297,7 +297,7 @@ class AnnotationIOController @Inject()(
             adaptedTracing <- adaptPropertiesToFallbackLayer(volumeLayer.tracing,
                                                              dataSource,
                                                              dataset,
-                                                             organization.name,
+                                                             organization._id,
                                                              remoteDataStoreClient)
             adaptedAnnotationLayer = volumeLayer.copy(tracing = adaptedTracing)
           } yield adaptedAnnotationLayer
@@ -309,7 +309,7 @@ class AnnotationIOController @Inject()(
       volumeTracing: VolumeTracing,
       dataSource: GenericDataSource[T],
       dataset: Dataset,
-      organizationName: String,
+      organizationId: String,
       remoteDataStoreClient: WKRemoteDataStoreClient): Fox[VolumeTracing] = {
     val fallbackLayerOpt = dataSource.dataLayers.flatMap {
       case layer: SegmentationLayer if volumeTracing.fallbackLayer contains layer.name         => Some(layer)
@@ -323,7 +323,7 @@ class AnnotationIOController @Inject()(
       .map(layer => elementClassToProto(layer.elementClass))
       .getOrElse(elementClassToProto(VolumeTracingDefaults.elementClass))
     for {
-      tracingCanHaveSegmentIndex <- canHaveSegmentIndex(organizationName,
+      tracingCanHaveSegmentIndex <- canHaveSegmentIndex(organizationId,
                                                         dataset.name,
                                                         fallbackLayerOpt.map(_.name),
                                                         remoteDataStoreClient)
@@ -341,13 +341,13 @@ class AnnotationIOController @Inject()(
   }
 
   private def canHaveSegmentIndex(
-      organizationName: String,
+      organizationId: String,
       datasetName: String,
       fallbackLayerName: Option[String],
       remoteDataStoreClient: WKRemoteDataStoreClient)(implicit ec: ExecutionContext): Fox[Boolean] =
     fallbackLayerName match {
       case Some(layerName) =>
-        remoteDataStoreClient.hasSegmentIndexFile(organizationName, datasetName, layerName)
+        remoteDataStoreClient.hasSegmentIndexFile(organizationId, datasetName, layerName)
       case None =>
         Fox.successful(true)
     }

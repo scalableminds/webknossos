@@ -380,11 +380,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- rList.headOption
     } yield r
 
-  @deprecated
-  def findOneByNameAndOrganizationName(name: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[Dataset] =
-    findOneByNameAndOrganization(name, organizationId)
-
   def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery

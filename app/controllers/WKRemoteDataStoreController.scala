@@ -120,7 +120,7 @@ class WKRemoteDataStoreController @Inject()(
     for {
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-      resultLink = s"${conf.Http.uri}/datasets/${organization.name}/$datasetName"
+      resultLink = s"${conf.Http.uri}/datasets/${organization._id}/$datasetName"
       addLabel = if (viaAddRoute) "(via explore+add)" else "(upload without conversion)"
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       _ = slackNotificationService.info(s"Dataset added $addLabel$superUserLabel",
@@ -186,7 +186,7 @@ class WKRemoteDataStoreController @Inject()(
       for {
         datasourceId <- request.body.validate[DataSourceId].asOpt.toFox ?~> "dataStore.upload.invalid"
         existingDataset = datasetDAO
-          .findOneByNameAndOrganizationName(datasourceId.name, datasourceId.team)(GlobalAccessContext)
+          .findOneByNameAndOrganization(datasourceId.name, datasourceId.team)(GlobalAccessContext)
           .futureBox
 
         _ <- existingDataset.flatMap {
@@ -214,7 +214,7 @@ class WKRemoteDataStoreController @Inject()(
           organization <- organizationDAO.findOne(jobOwner._organization)(GlobalAccessContext)
           latestRunId <- job.latestRunId.toFox ?~> "job.notRun"
           exportFileName <- job.exportFileName.toFox ?~> "job.noExportFileName"
-          jobExportProperties = JobExportProperties(jobId, latestRunId, organization.name, exportFileName)
+          jobExportProperties = JobExportProperties(jobId, latestRunId, organization._id, exportFileName)
         } yield Ok(Json.toJson(jobExportProperties))
       }
   }

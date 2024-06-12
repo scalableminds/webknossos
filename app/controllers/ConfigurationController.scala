@@ -68,17 +68,17 @@ class ConfigurationController @Inject()(
       } yield JsonOk(Messages("user.configuration.dataset.updated"))
     }
 
-  def readDatasetAdminViewConfiguration(organizationName: String, datasetName: String): Action[AnyContent] =
+  def readDatasetAdminViewConfiguration(organizationId: String, datasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       datasetConfigurationService
-        .getCompleteAdminViewConfiguration(datasetName, organizationName)
+        .getCompleteAdminViewConfiguration(datasetName, organizationId)
         .map(configuration => Ok(Json.toJson(configuration)))
     }
 
-  def updateDatasetAdminViewConfiguration(organizationName: String, datasetName: String): Action[JsValue] =
+  def updateDatasetAdminViewConfiguration(organizationId: String, datasetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
-        dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName) ?~> "dataset.notFound" ~> NOT_FOUND
+        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> "dataset.notFound" ~> NOT_FOUND
         _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> "notAllowed" ~> FORBIDDEN
         jsObject <- request.body.asOpt[JsObject].toFox ?~> "user.configuration.dataset.invalid"
         _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, jsObject.fields.toMap)

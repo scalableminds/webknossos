@@ -84,7 +84,7 @@ class OrganizationController @Inject()(
                                           autoActivate = true,
                                           isAdmin = true,
                                           isOrganizationOwner = true)
-      } yield Ok(org.name)
+      } yield Ok(org._id)
     }
 
   def getDefault: Action[AnyContent] = Action.async { implicit request =>
@@ -170,7 +170,7 @@ class OrganizationController @Inject()(
                                                                                    organizationName) ~> NOT_FOUND
       _ <- bool2Fox(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
       _ = logger.info(s"Deleting organization ${organization._id}")
-      _ <- organizationDAO.deleteOne(organization._id)
+      // _ <- organizationDAO.deleteOneById(organization._id) TODO
       _ <- userDAO.deleteAllWithOrganization(organization._id)
       _ <- multiUserDAO.removeLastLoggedInIdentitiesWithOrga(organization._id)
       _ <- combinedAuthenticatorService.discard(request.authenticator, Ok)

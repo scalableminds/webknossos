@@ -313,7 +313,7 @@ class JobController @Inject()(
       }
     }
 
-  def runExportTiffJob(organizationName: String,
+  def runExportTiffJob(organizationId: String,
                        datasetName: String,
                        bbox: String,
                        layerName: Option[String],
@@ -324,7 +324,7 @@ class JobController @Inject()(
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
-          dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName) ?~> Messages(
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
@@ -336,7 +336,7 @@ class JobController @Inject()(
           else
             s"${formatDateForFilename(new Date())}__${datasetName}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
           commandArgs = Json.obj(
-            "organization_name" -> organizationName,
+            "organization_name" -> organizationId,
             "dataset_name" -> datasetName,
             "bbox" -> bbox,
             "export_file_name" -> exportFileName,

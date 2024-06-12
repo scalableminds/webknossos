@@ -38,9 +38,9 @@ export default function DatasetSettingsViewConfigTab(props: {
   dataStoreURL: string | undefined;
 }) {
   const { datasetId, dataStoreURL } = props;
-  const [availableMappingsPerLayerCache, setAvailableMappingsPerLayer] = useState(
-    {} as Record<string, [string[], string[]]>,
-  );
+  const [availableMappingsPerLayerCache, setAvailableMappingsPerLayer] = useState<
+    Record<string, [string[], string[]]>
+  >({});
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: Update is not necessary when availableMappingsPerLayer[layerName] changes.
   const validateDefaultMappings = useMemo(
@@ -59,21 +59,20 @@ export default function DatasetSettingsViewConfigTab(props: {
         if (layerName in availableMappingsPerLayerCache) {
           return availableMappingsPerLayerCache[layerName];
         }
-        let jsonAndAgglomerateMappings = [[], []] as [string[], string[]];
         try {
-          jsonAndAgglomerateMappings = await Promise.all([
+          const jsonAndAgglomerateMappings = await Promise.all([
             getMappingsForDatasetLayer(dataStoreURL, datasetId, layerName),
             getAgglomeratesForDatasetLayer(dataStoreURL, datasetId, layerName),
           ]);
+          setAvailableMappingsPerLayer((prev) => ({
+            ...prev,
+            [layerName]: jsonAndAgglomerateMappings,
+          }));
+          return jsonAndAgglomerateMappings;
         } catch (e: any) {
           console.error(e);
           throw new Error(messages["mapping.loading_failed"](layerName));
         }
-        setAvailableMappingsPerLayer((prev) => ({
-          ...prev,
-          [layerName]: jsonAndAgglomerateMappings,
-        }));
-        return jsonAndAgglomerateMappings;
       });
       const mappings = await Promise.all(maybeMappingRequests);
       const errors = layerNamesWithDefaultMappings
@@ -87,11 +86,11 @@ export default function DatasetSettingsViewConfigTab(props: {
               : mappingsForLayer.some((mapping) => mapping === mappingName);
           return doesMappingExist
             ? null
-            : `The default mapping "${mappingName}" of type "${mappingType}" does not exist for layer ${layerName}.`;
+            : `The mapping "${mappingName}" of type "${mappingType}" does not exist for layer ${layerName}.`;
         })
         .filter((error) => error != null);
       if (errors.length > 0) {
-        throw new Error("The following default mappings are invalid: " + errors.join("\n"));
+        throw new Error("The following mappings are invalid: " + errors.join("\n"));
       }
     },
     [availableMappingsPerLayerCache],
@@ -115,24 +114,27 @@ export default function DatasetSettingsViewConfigTab(props: {
       dataIndex: "comment",
     },
   ];
-  const comments: Partial<Record<keyof DatasetLayerConfiguration, [string, string | null]>> = {
-    alpha: ["20 for segmentation layer", null],
-    min: [
-      "Only for color layers",
-      "The minimum possible color range value adjustable with the histogram slider.",
-    ],
-    max: [
-      "Only for color layers",
-      "The maximum possible color range value adjustable with the histogram slider.",
-    ],
-    intensityRange: [
-      "Only for color layers",
-      "The color value range between which color values are interpolated and shown.",
-    ],
-    mapping: [
-      "Active Mapping",
-      "The mapping whose type and name is active by default. This field is an object with the keys 'type' and 'name' like {name: 'agglomerate_65', type: 'HDF5'}.",
-    ],
+  const comments: Partial<
+    Record<keyof DatasetLayerConfiguration, { shortComment: string; tooltip: string }>
+  > = {
+    alpha: { shortComment: "20 for segmentation layer", tooltip: "The default alpha value." },
+    min: {
+      shortComment: "Only for color layers",
+      tooltip: "The minimum possible color range value adjustable with the histogram slider.",
+    },
+    max: {
+      shortComment: "Only for color layers",
+      tooltip: "The maximum possible color range value adjustable with the histogram slider.",
+    },
+    intensityRange: {
+      shortComment: "Only for color layers",
+      tooltip: "The color value range between which color values are interpolated and shown.",
+    },
+    mapping: {
+      shortComment: "Active Mapping",
+      tooltip:
+        "The mapping whose type and name is active by default. This field is an object with the keys 'type' and 'name' like {name: 'agglomerate_65', type: 'HDF5'}.",
+    },
   };
   const layerViewConfigurationEntries = _.map(
     { ...getDefaultLayerViewConfiguration(), min: 0, max: 255, intensityRange: [0, 255] },
@@ -140,20 +142,20 @@ export default function DatasetSettingsViewConfigTab(props: {
       // @ts-ignore Typescript doesn't infer that key will be of type keyof DatasetLayerConfiguration
       const layerViewConfigurationKey: keyof DatasetLayerConfiguration = key;
       const name = layerViewConfigurations[layerViewConfigurationKey];
-      const commentParts = comments[layerViewConfigurationKey];
-      const comment =
-        commentParts != null && commentParts[1] != null ? (
-          <Tooltip title={commentParts[1]}>
-            {commentParts[0]} <InfoCircleOutlined />
+      const comment = comments[layerViewConfigurationKey];
+      const commentContent =
+        comment != null ? (
+          <Tooltip title={comment.tooltip}>
+            {comment.shortComment} <InfoCircleOutlined />
           </Tooltip>
         ) : (
-          commentParts?.[0] || ""
+          ""
         );
       return {
         name,
         key,
         value: defaultValue == null ? "not set" : defaultValue.toString(),
-        comment,
+        comment: commentContent,
       };
     },
   );

@@ -20,7 +20,8 @@ case class CreateTreeSkeletonAction(id: Int,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
                                     `type`: Option[TreeType] = None,
-                                    edgesAreVisible: Option[Boolean])
+                                    edgesAreVisible: Option[Boolean] = None,
+                                    userDefinedProperties: Option[Seq[UserDefinedProperty]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -36,7 +37,8 @@ case class CreateTreeSkeletonAction(id: Int,
       groupId,
       isVisible,
       `type`.map(TreeType.toProto),
-      edgesAreVisible
+      edgesAreVisible,
+      userDefinedProperties = UserDefinedProperty.toProtoMultiple(userDefinedProperties)
     )
     tracing.withTrees(newTree +: tracing.trees)
   }
@@ -73,7 +75,8 @@ case class UpdateTreeSkeletonAction(id: Int,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
-                                    `type`: Option[TreeType] = None)
+                                    `type`: Option[TreeType] = None,
+                                    userDefinedProperties: Option[Seq[UserDefinedProperty]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -85,7 +88,8 @@ case class UpdateTreeSkeletonAction(id: Int,
         comments = comments.map(convertComment),
         name = name,
         groupId = groupId,
-        `type` = `type`.map(TreeType.toProto)
+        `type` = `type`.map(TreeType.toProto),
+        userDefinedProperties = UserDefinedProperty.toProtoMultiple(userDefinedProperties)
       )
 
     tracing.withTrees(mapTrees(tracing, id, treeTransform))

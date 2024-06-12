@@ -3,6 +3,7 @@ syntax = "proto2";
 package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
+import "UserDefinedProperties.proto";
 
 message Segment {
 	  required int64 segmentId = 1;
@@ -12,6 +13,7 @@ message Segment {
     optional ColorProto color = 5;
     optional int32 groupId = 6;
     repeated AdditionalCoordinateProto anchorPositionAdditionalCoordinates = 7;
+    repeated UserDefinedPropertyProto userDefinedProperties = 11;
 }
 
 message VolumeTracing {

@@ -881,6 +881,8 @@ function* handleProofreadCutNeighbors(action: Action) {
 
   const editableMappingId = volumeTracing.mappingName;
 
+  const targetAgglomerate = volumeTracing.segments.getNullable(targetAgglomerateId);
+
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
 
@@ -917,6 +919,22 @@ function* handleProofreadCutNeighbors(action: Action) {
     call(getDataValue, targetPosition),
     ...neighborInfo.neighbors.map((neighbor) => call(getDataValue, neighbor.position)),
   ]);
+
+  if (targetAgglomerate != null && targetAgglomerate.name != null) {
+    // Assign custom name to split-off target.
+    const updateNeighborNamesActions = newNeighborAgglomerateIds.map((newNeighborAgglomerateId) =>
+      put(
+        updateSegmentAction(
+          newNeighborAgglomerateId,
+          { name: targetAgglomerate.name },
+          volumeTracingId,
+        ),
+      ),
+    );
+    yield* all(updateNeighborNamesActions);
+
+    Toast.info(`Assigned name "${targetAgglomerate.name}" to all new split-off segments.`);
+  }
 
   /* Reload meshes */
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [

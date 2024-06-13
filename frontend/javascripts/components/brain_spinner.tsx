@@ -106,7 +106,7 @@ export function CoverWithLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
         }}
         align="middle"
       >
-        <Col span={8}>
+        <Col xs={22} sm={20} md={16} lg={12} xl={8}>
           <h3>Try logging in to view the dataset.</h3>
           <LoginForm layout="horizontal" onLoggedIn={onLoggedIn} />
         </Col>

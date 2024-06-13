@@ -203,7 +203,7 @@ function DatasetFolderViewInner(props: Props) {
     <div
       style={{
         display: "grid",
-        gridTemplate: "auto / auto 1fr auto",
+        gridTemplate: "auto / auto minmax(60%, 1fr) auto",
         flexGrow: 1,
         minHeight: 0,
       }}
@@ -224,7 +224,7 @@ function DatasetFolderViewInner(props: Props) {
       >
         <FolderTreeSidebar setFolderIdForEditModal={setFolderIdForEditModal} />
       </div>
-      <main style={{ gridColumn: "2 / 2", overflow: "auto", paddingRight: 4 }}>
+      <main style={{ gridColumn: "2 / 3", overflow: "auto", paddingRight: 4 }}>
         <DatasetView
           user={props.user}
           onSelectDataset={setSelectedDataset}

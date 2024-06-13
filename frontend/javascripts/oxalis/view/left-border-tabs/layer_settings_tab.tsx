@@ -88,7 +88,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import { userSettings } from "types/schemas/user_settings.schema";
 import type { Vector3, ControlMode } from "oxalis/constants";
-import Constants, { ControlModeEnum } from "oxalis/constants";
+import Constants, { ControlModeEnum, MappingStatusEnum } from "oxalis/constants";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import LinkButton from "components/link_button";
 import { Model } from "oxalis/singletons";
@@ -923,11 +923,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     layerName,
     layerConfiguration,
     isColorLayer,
+    isLastLayer,
     hasLessThanTwoColorLayers = true,
   }: {
     layerName: string;
     layerConfiguration: DatasetLayerConfiguration | null | undefined;
     isColorLayer: boolean;
+    isLastLayer: boolean;
     hasLessThanTwoColorLayers?: boolean;
   }) => {
     // Ensure that every layer needs a layer configuration and that color layers have a color layer.
@@ -936,8 +938,10 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     }
     const elementClass = getElementClass(this.props.dataset, layerName);
     const { isDisabled, isInEditMode } = layerConfiguration;
+    const lastLayerMarginBottom = isLastLayer ? { marginBottom: 30 } : {};
+    const betweenLayersMarginBottom = isLastLayer ? {} : { marginBottom: 30 };
     return (
-      <div key={layerName}>
+      <div key={layerName} style={lastLayerMarginBottom}>
         {this.getLayerSettingsHeader(
           isDisabled,
           isColorLayer,
@@ -950,7 +954,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {isDisabled ? null : (
           <div
             style={{
-              marginBottom: 30,
+              ...betweenLayersMarginBottom,
               marginLeft: 10,
             }}
           >
@@ -1314,8 +1318,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <br />
           This will overwrite the current default view configuration.
           <br />
-          This includes all color and segmentation layer settings, as well as these additional
-          settings:
+          This includes all color and segmentation layer settings, currently active mappings (even
+          those of disabled layers), as well as these additional settings:
           <br />
           <br />
           {dataSource.map((field, index) => {
@@ -1338,14 +1342,42 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       ),
       onOk: async () => {
         try {
-          const { flycam } = Store.getState();
+          const { flycam, temporaryConfiguration } = Store.getState();
           const position = V3.floor(getPosition(flycam));
           const zoom = flycam.zoomStep;
+          const { activeMappingByLayer } = temporaryConfiguration;
           const completeDatasetConfiguration = Object.assign({}, datasetConfiguration, {
             position,
             zoom,
           });
-          await updateDatasetDefaultConfiguration(dataset, completeDatasetConfiguration);
+          const updatedLayers = {
+            ...completeDatasetConfiguration.layers,
+          } as DatasetConfiguration["layers"];
+          Object.keys(activeMappingByLayer).forEach((layerName) => {
+            const mappingInfo = activeMappingByLayer[layerName];
+            if (
+              mappingInfo.mappingStatus === MappingStatusEnum.ENABLED &&
+              mappingInfo.mappingName != null
+            ) {
+              updatedLayers[layerName] = {
+                ...updatedLayers[layerName],
+                mapping: {
+                  name: mappingInfo.mappingName,
+                  type: mappingInfo.mappingType,
+                },
+              };
+            } else {
+              updatedLayers[layerName] = {
+                ...updatedLayers[layerName],
+                mapping: null,
+              };
+            }
+          });
+          const updatedConfiguration = {
+            ...completeDatasetConfiguration,
+            layers: updatedLayers,
+          };
+          await updateDatasetDefaultConfiguration(dataset, updatedConfiguration);
           Toast.success("Successfully saved the current view configuration as default.");
         } catch (error) {
           Toast.error(
@@ -1390,16 +1422,18 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           layerConfiguration={layers[layerName]}
           isColorLayer
           index={index}
+          isLastLayer={index === colorLayerOrder.length - 1}
           disabled={hasLessThanTwoColorLayers}
           hasLessThanTwoColorLayers={hasLessThanTwoColorLayers}
         />
       );
     });
-    const segmentationLayerSettings = segmentationLayerNames.map((layerName) => {
+    const segmentationLayerSettings = segmentationLayerNames.map((layerName, index) => {
       return (
         <LayerSettings
           key={layerName}
           layerName={layerName}
+          isLastLayer={index === segmentationLayerNames.length - 1}
           layerConfiguration={layers[layerName]}
           isColorLayer={false}
         />

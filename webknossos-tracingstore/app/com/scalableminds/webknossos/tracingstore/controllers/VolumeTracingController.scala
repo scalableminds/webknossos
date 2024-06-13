@@ -164,7 +164,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            (data, indices) <- if (tracing.hasEditableMapping.getOrElse(false))
+            (data, indices) <- if (tracing.getHasEditableMapping)
               editableMappingService.volumeData(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
             else tracingService.data(tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
@@ -199,9 +199,9 @@ class VolumeTracingController @Inject()(
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
-            remoteFallbackLayerOpt <- Fox.runIf(tracing.hasEditableMapping.contains(true))(
+            remoteFallbackLayerOpt <- Fox.runIf(tracing.getHasEditableMapping)(
               tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId))
-            newEditableMappingId <- Fox.runIf(tracing.hasEditableMapping.contains(true))(
+            newEditableMappingId <- Fox.runIf(tracing.getHasEditableMapping)(
               editableMappingService.duplicate(tracing.mappingName, version = None, remoteFallbackLayerOpt, userToken))
             (newId, newTracing) <- tracingService.duplicate(
               tracingId,
@@ -289,7 +289,7 @@ class VolumeTracingController @Inject()(
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          (vertices, neighbors) <- if (tracing.hasEditableMapping.getOrElse(false))
+          (vertices, neighbors) <- if (tracing.getHasEditableMapping)
             editableMappingService.createAdHocMesh(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
           else tracingService.createAdHocMesh(tracingId, request.body, urlOrHeaderToken(token, request))
         } yield {

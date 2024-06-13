@@ -374,7 +374,7 @@ class DatasetController @Inject()(userService: UserService,
       for {
         organizationId <- datasetDAO.getOrganizationIdForDataset(datasetName)
         organization <- organizationDAO.findOne(organizationId)
-      } yield Ok(Json.obj("organization" -> organization._id)) // TODO API
+      } yield Ok(Json.obj("organization" -> organization._id))
   }
 
   private def notFoundMessage(datasetName: String)(implicit ctx: DBAccessContext, m: MessagesProvider): String =

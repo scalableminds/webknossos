@@ -112,8 +112,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findOneByNameAndOrganization(name: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[Project] =
+  def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns FROM $existingCollectionName

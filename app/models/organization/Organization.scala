@@ -107,6 +107,11 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
             """.asUpdate)
     } yield ()
 
+  def deleteOne(organizationId: String): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.organizations SET isDeleted = TRUE WHERE _id = $organizationId""".asUpdate)
+    } yield ()
+
   def findOrganizationTeamId(organizationId: String): Fox[ObjectId] =
     for {
       rList <- run(q"SELECT _id FROM webknossos.organizationTeams WHERE _organization = $organizationId".as[String])

@@ -178,8 +178,8 @@ class BinaryDataService(val dataBaseDir: Path,
     val dataSourceId = DataSourceId(datasetName, organizationId)
 
     def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
-      agglomerateKey.datasetName == datasetName && agglomerateKey.organizationId == organizationId && layerName
-        .forall(_ == agglomerateKey.layerName)
+      agglomerateKey.datasetName == datasetName && agglomerateKey.organizationId == organizationId && layerName.forall(
+        _ == agglomerateKey.layerName)
 
     def bucketProviderPredicate(key: (DataSourceId, String)): Boolean =
       key._1 == DataSourceId(datasetName, organizationId) && layerName.forall(_ == key._2)

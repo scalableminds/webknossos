@@ -44,10 +44,10 @@ class ZarrStreamingController @Inject()(
     * Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
     */
   def requestZAttrs(
-                     token: Option[String],
-                     organizationId: String,
-                     datasetName: String,
-                     dataLayerName: String = "",
+      token: Option[String],
+      organizationId: String,
+      datasetName: String,
+      dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
                                       urlOrHeaderToken(token, request)) {
@@ -92,9 +92,9 @@ class ZarrStreamingController @Inject()(
     * Note that the result here is not necessarily equal to the file used in the underlying storage.
     */
   def requestDataSource(
-                         token: Option[String],
-                         organizationId: String,
-                         datasetName: String,
+      token: Option[String],
+      organizationId: String,
+      datasetName: String,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
                                       urlOrHeaderToken(token, request)) {
@@ -154,12 +154,12 @@ class ZarrStreamingController @Inject()(
     }
 
   def requestRawZarrCube(
-                          token: Option[String],
-                          organizationId: String,
-                          datasetName: String,
-                          dataLayerName: String,
-                          mag: String,
-                          cxyz: String,
+      token: Option[String],
+      organizationId: String,
+      datasetName: String,
+      dataLayerName: String,
+      mag: String,
+      cxyz: String,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
                                       urlOrHeaderToken(token, request)) {
@@ -192,11 +192,11 @@ class ZarrStreamingController @Inject()(
     }
 
   private def rawZarrCube(
-                           organizationId: String,
-                           datasetName: String,
-                           dataLayerName: String,
-                           mag: String,
-                           cxyz: String,
+      organizationId: String,
+      datasetName: String,
+      dataLayerName: String,
+      mag: String,
+      cxyz: String,
   )(implicit m: MessagesProvider): Fox[Result] =
     for {
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,

@@ -316,7 +316,7 @@ CREATE TABLE webknossos.timespans(
 
 CREATE TYPE webknossos.PRICING_PLANS AS ENUM ('Basic', 'Team', 'Power', 'Team_Trial', 'Power_Trial', 'Custom');
 CREATE TABLE webknossos.organizations(
-  _id VARCHAR(256) PRIMARY KEY,
+  _id VARCHAR(256) PRIMARY KEY CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$'),
   additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
   logoUrl VARCHAR(2048) NOT NULL DEFAULT '',
   displayName VARCHAR(1024) NOT NULL DEFAULT '',

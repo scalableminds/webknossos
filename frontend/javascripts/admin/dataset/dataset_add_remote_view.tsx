@@ -35,10 +35,11 @@ import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components"
 import FolderSelection from "dashboard/folders/folder_selection";
 import { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { UnlockOutlined } from "@ant-design/icons";
-import { Unicode } from "oxalis/constants";
+import { EMPTY_OBJECT, Unicode } from "oxalis/constants";
 import { readFileAsText } from "libs/read_file";
 import * as Utils from "libs/utils";
 import { ArbitraryObject } from "types/globals";
+import { useFetch } from "libs/react_helpers";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -182,11 +183,9 @@ function DatasetAddRemoteView(props: Props) {
   const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
   const [form] = Form.useForm();
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
-  const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
+  const dataSourceJsonStr = Form.useWatch("dataSourceJson", form);
+  const isDatasourceConfigStrFalsy = dataSourceJsonStr == null;
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
-
-  const isFormWithoutErrors =
-    form.getFieldsError().filter(({ errors }) => errors.length).length === 0;
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -194,13 +193,40 @@ function DatasetAddRemoteView(props: Props) {
     setTargetFolderId(targetFolderId);
   }, []);
 
-  useEffect(() => {
-    if (defaultDatasetUrl == null) return;
-    if (!isDatasourceConfigStrFalsy && isFormWithoutErrors) {
-      console.log("no errors");
-      handleStoreDataset();
+  const getDefaultDatasetName = (url: string | null | undefined) => {
+    let datasetname = "";
+    if (url != null) {
+      const indexOfLastSlash = url.lastIndexOf("/");
+      const subString = url.substring(indexOfLastSlash + 1);
+      if (subString.length > 2) datasetname = subString;
+      else datasetname = subString.padEnd(3, "0"); // todo
     }
-  }, [defaultDatasetUrl, isDatasourceConfigStrFalsy, isFormWithoutErrors]);
+    return datasetname;
+  };
+
+  useFetch(
+    async () => {
+      if (defaultDatasetUrl == null || isDatasourceConfigStrFalsy) return;
+      const dataSourceJson =
+        dataSourceJsonStr != null ? JSON.parse(dataSourceJsonStr) : EMPTY_OBJECT;
+      const defaultDatasetName = getDefaultDatasetName(defaultDatasetUrl);
+      setDatasourceConfigStr(
+        JSON.stringify({ ...dataSourceJson, id: { name: defaultDatasetName, team: "" } }),
+      );
+      try {
+        await form.validateFields();
+      } catch (_e) {
+        // Do nothing, because this always seems to throw an error. Check for actual problems below.
+      }
+      const allFieldsValid =
+        form.getFieldsError().filter(({ errors }) => errors.length).length === 0;
+      if (!isDatasourceConfigStrFalsy && allFieldsValid) {
+        handleStoreDataset();
+      }
+    },
+    null,
+    [defaultDatasetUrl, isDatasourceConfigStrFalsy],
+  );
 
   const setDatasourceConfigStr = (dataSourceJson: string) => {
     form.setFieldsValue({ dataSourceJson });
@@ -211,11 +237,13 @@ function DatasetAddRemoteView(props: Props) {
   };
   async function handleStoreDataset() {
     // Sync simple with advanced and get newest datasourceJson
-    await Utils.sleep(500);
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
-    await form.validateFields();
-    const datasourceConfigStr = form.getFieldValue("dataSourceJson");
-    console.log("store me maybe", datasourceConfigStr);
+    try {
+      await form.validateFields();
+    } catch (_e) {
+      console.warn("Maybe error in form");
+    }
+    if (form.getFieldsError().filter(({ errors }) => errors.length).length !== 0) return;
 
     const datastoreToUse = uploadableDatastores.find(
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
@@ -225,6 +253,7 @@ function DatasetAddRemoteView(props: Props) {
       return;
     }
 
+    const datasourceConfigStr = form.getFieldValue("dataSourceJson");
     if (datasourceConfigStr && activeUser) {
       let configJSON;
       try {
@@ -240,7 +269,7 @@ function DatasetAddRemoteView(props: Props) {
           datastoreToUse.url,
           configJSON.id.name,
           activeUser.organization,
-          datasourceConfigStr,
+          dataSourceJsonStr,
           targetFolderId,
         );
       } catch (e) {
@@ -313,7 +342,7 @@ function DatasetAddRemoteView(props: Props) {
 
             {/* Only the component's visibility is changed, so that the form is always rendered.
                 This is necessary so that the form's structure is always populated. */}
-            <DatasetSettingsDataTab //!!!
+            <DatasetSettingsDataTab
               allowRenamingDataset
               form={form}
               activeDataSourceEditMode={dataSourceEditMode}
@@ -357,7 +386,7 @@ function DatasetAddRemoteView(props: Props) {
                         type="primary"
                         style={{ width: "100%" }}
                         onClick={handleStoreDataset}
-                        disabled={isDatasourceConfigStrFalsy || !isFormWithoutErrors}
+                        disabled={isDatasourceConfigStrFalsy}
                       >
                         Import
                       </Button>
@@ -388,7 +417,7 @@ function AddRemoteLayer({
   dataSourceEditMode: "simple" | "advanced";
   defaultUri?: string | null | undefined;
 }) {
-  const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
+  const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) != null;
   const datasourceUrl: string | null = Form.useWatch("url", form);
   const [exploreLog, setExploreLog] = useState<string | null>(null);
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
@@ -400,25 +429,9 @@ function AddRemoteLayer({
   useEffect(() => {
     if (defaultUri != null) {
       form.setFieldValue("url", defaultUri);
-      const dataSourceJson = form.getFieldValue("dataSourceJson");
-      const defaultDatasetName = getDefaultDatasetName(defaultUri);
-      setDatasourceConfigStr(
-        jsonStringify({ ...dataSourceJson, id: { name: defaultDatasetName } }),
-      );
       if (datasourceUrl != null) handleExplore();
     }
-  }, [defaultUri, datasourceUrl]);
-
-  const getDefaultDatasetName = (url: string | null | undefined) => {
-    let datasetname = "";
-    if (url != null) {
-      const indexOfLastSlash = url.lastIndexOf("/");
-      const subString = url.substring(indexOfLastSlash + 1);
-      if (subString.length > 2) datasetname = subString;
-      else datasetname = subString.padEnd(3, "0"); // todo
-    }
-    return datasetname;
-  };
+  }, [defaultUri, datasourceUrl, form.setFieldValue]);
 
   const handleChange = (info: UploadChangeParam<UploadFile<any>>) => {
     // Restrict the upload list to the latest file
@@ -448,7 +461,7 @@ function AddRemoteLayer({
 
     // Sync simple with advanced and get newest datasourceJson
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
-    const datasourceConfigStr = form.getFieldValue("dataSourceJson");
+    const datasourceJsonStr = form.getFieldValue("dataSourceJson");
     const datastoreToUse = uploadableDatastores.find(
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
     );
@@ -459,7 +472,7 @@ function AddRemoteLayer({
 
     const { dataSource: newDataSource, report } = await (async () => {
       // @ts-ignore
-      const preferredVoxelSize = Utils.parseMaybe(datasourceConfigStr)?.scale;
+      const preferredVoxelSize = Utils.parseMaybe(datasourceJsonStr)?.scale;
 
       if (showCredentialsFields) {
         if (selectedProtocol === "gs") {
@@ -500,20 +513,23 @@ function AddRemoteLayer({
       return;
     }
     ensureLargestSegmentIdsInPlace(newDataSource);
-    if (!datasourceConfigStr) {
+    if (!datasourceJsonStr) {
       setDatasourceConfigStr(jsonStringify(newDataSource));
       return;
     }
-    let existingDatasource;
+    let existingDatasource: DatasourceConfiguration;
     try {
-      existingDatasource = JSON.parse(datasourceConfigStr);
+      existingDatasource = JSON.parse(datasourceJsonStr);
     } catch (_e) {
       Toast.error(
         "The current datasource config contains invalid JSON. Cannot add the new Zarr/N5 data.",
       );
       return;
     }
-    if (existingDatasource != null && !_.isEqual(existingDatasource.scale, newDataSource.scale)) {
+    if (
+      existingDatasource?.scale != null &&
+      !_.isEqual(existingDatasource.scale, newDataSource.scale)
+    ) {
       Toast.warning(
         `${messages["dataset.add_zarr_different_scale_warning"]}\n${formatScale(
           newDataSource.scale,
@@ -522,7 +538,6 @@ function AddRemoteLayer({
       );
     }
     setDatasourceConfigStr(jsonStringify(mergeNewLayers(existingDatasource, newDataSource)));
-    // todo setDatasourceConfigStr() name
     if (onSuccess) {
       console.log("success");
       onSuccess();

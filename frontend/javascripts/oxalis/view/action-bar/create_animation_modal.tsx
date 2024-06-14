@@ -155,7 +155,7 @@ function CreateAnimationModal(props: Props) {
 
     const isDtypeSupported = colorLayer.elementClass !== "uint24";
     if (!isDtypeSupported)
-      errorMessages.push("Sorry, animations are not supported for uInt24 datasets.");
+      errorMessages.push("Sorry, animations are not supported for uInt24 color layers.");
 
     const isDataset3D =
       !is2dDataset(state.dataset) && (colorLayer.additionalAxes?.length || 0) === 0;

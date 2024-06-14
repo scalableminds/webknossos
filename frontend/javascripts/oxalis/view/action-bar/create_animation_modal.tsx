@@ -50,14 +50,14 @@ const MAX_MESHES_PER_ANIMATION = 40; // arbitrary limit to not overload the serv
 
 function selectMagForTextureCreation(
   colorLayer: APIDataLayer,
-  boundingBox: BoundingBoxType,
+  boundingBox: BoundingBox,
 ): [Vector3, number] {
   // Utility method to determine the best mag in relation to the dataset size to create the textures in the worker job
   // We aim to create textures with a rough length/height of 2000px (aka target_video_frame_size)
   const colorLayerBB = new BoundingBox(
     computeBoundingBoxFromBoundingBoxObject(colorLayer.boundingBox),
   );
-  const bb = new BoundingBox(boundingBox).intersectedWith(colorLayerBB);
+  const bb = boundingBox.intersectedWith(colorLayerBB);
 
   const longestSide = Math.max(...bb.getSize());
   const dimensionLongestSide = bb.getSize().indexOf(longestSide);
@@ -145,7 +145,8 @@ function CreateAnimationModal(props: Props) {
     const state = Store.getState();
     const errorMessages: string[] = [];
 
-    const [_, estimatedTextureSize] = selectMagForTextureCreation(colorLayer, selectedBoundingBox);
+    const boundingBox = new BoundingBox(selectedBoundingBox);
+    const [_, estimatedTextureSize] = selectMagForTextureCreation(colorLayer, boundingBox);
 
     const hasEnoughMags = estimatedTextureSize < 1.5 * TARGET_TEXTURE_SIZE;
     if (!hasEnoughMags)
@@ -167,7 +168,14 @@ function CreateAnimationModal(props: Props) {
         `You selected too many meshes for the animation. Please keep the number of meshes below ${MAX_MESHES_PER_ANIMATION} to create an animation.`,
       );
 
-    const validationStatus = hasEnoughMags && isDtypeSupported && isDataset3D && !isTooManyMeshes;
+    const isBoundingBoxEmpty = boundingBox.getVolume() === 0;
+    if (isBoundingBoxEmpty)
+      errorMessages.push(
+        "Please select a bounding box that is not empty. Width, height, and depth of the bounding box must be larger than zero.",
+      );
+
+    const validationStatus =
+      hasEnoughMags && isDtypeSupported && isDataset3D && !isTooManyMeshes && !isBoundingBoxEmpty;
 
     setValidationErrors(errorMessages);
     setIsValid(validationStatus);
@@ -216,7 +224,10 @@ function CreateAnimationModal(props: Props) {
       state.datasetConfiguration,
     );
 
-    const [magForTextures, _] = selectMagForTextureCreation(colorLayer, boundingBox);
+    const [magForTextures, _] = selectMagForTextureCreation(
+      colorLayer,
+      new BoundingBox(boundingBox),
+    );
 
     const animationOptions: RenderAnimationOptions = {
       layerName: selectedColorLayerName,

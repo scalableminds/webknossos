@@ -155,7 +155,7 @@ function CreateAnimationModal(props: Props) {
 
     const isDtypeSupported = colorLayer.elementClass !== "uint24";
     if (!isDtypeSupported)
-      errorMessages.push("Sorry, animations are not supported for uInt24 datasets.");
+      errorMessages.push("Sorry, animations are not supported for uInt24 color layers.");
 
     const isDataset3D =
       !is2dDataset(state.dataset) && (colorLayer.additionalAxes?.length || 0) === 0;
@@ -230,7 +230,7 @@ function CreateAnimationModal(props: Props) {
       cameraPosition: selectedCameraPosition,
     };
 
-    if (!validateAnimationOptions(colorLayer, boundingBox, meshes)) return;
+    if (!validateAnimationOptions(selectedColorLayer, boundingBox, meshes)) return;
 
     startRenderAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);
 
@@ -395,7 +395,7 @@ function CreateAnimationModal(props: Props) {
           <Row gutter={[8, 20]}>
             <Alert
               type="error"
-              style={{ marginTop: 18 }}
+              style={{ marginTop: 18, width: "100%" }}
               message={
                 <ul>
                   {validationErrors.map((errorMessage) => (

@@ -230,7 +230,8 @@ function CreateAnimationModal(props: Props) {
       cameraPosition: selectedCameraPosition,
     };
 
-    if (!validateAnimationOptions(colorLayer, boundingBox, meshes)) return;
+    const selectedColor = colorLayers.find((layer => layer.name === selectedColorLayerName))!;
+    if (!validateAnimationOptions(selectedColor, boundingBox, meshes)) return;
 
     startRenderAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);
 
@@ -395,7 +396,7 @@ function CreateAnimationModal(props: Props) {
           <Row gutter={[8, 20]}>
             <Alert
               type="error"
-              style={{ marginTop: 18 }}
+              style={{ marginTop: 18, width: "100%" }}
               message={
                 <ul>
                   {validationErrors.map((errorMessage) => (

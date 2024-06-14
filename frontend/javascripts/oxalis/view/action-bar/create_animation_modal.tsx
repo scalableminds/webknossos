@@ -230,7 +230,6 @@ function CreateAnimationModal(props: Props) {
       cameraPosition: selectedCameraPosition,
     };
 
-    const selectedColorLayer = colorLayers.find((layer) => layer.name === selectedColorLayerName)!;
     if (!validateAnimationOptions(selectedColorLayer, boundingBox, meshes)) return;
 
     startRenderAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);

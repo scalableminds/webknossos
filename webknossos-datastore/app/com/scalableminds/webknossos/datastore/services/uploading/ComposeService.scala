@@ -65,7 +65,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
   def composeDataset(composeRequest: ComposeRequest, userToken: Option[String])(
       implicit ec: ExecutionContext): Fox[DataSource] =
     for {
-      _ <- Fox.bool2Fox(Files.isWritable(dataBaseDir)) ?~> "Datastore can not write to its data directory."
+      _ <- Fox.bool2Fox(Files.isWritable(dataBaseDir.resolve(composeRequest.organizationName))) ?~> "Datastore can not write to its data directory."
 
       reserveUploadInfo = ReserveUploadInformation("",
                                                    composeRequest.newDatasetName,

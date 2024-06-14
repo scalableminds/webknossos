@@ -103,7 +103,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       await createDatasetComposition(datastoreToUse.url, {
         newDatasetName,
         targetFolderId: form.getFieldValue(["targetFolderId"]),
-        organizationName: activeUser.organization,
+        organizationId: activeUser.organization,
         scale: linkedDatasets[1].dataSource.scale,
         layers,
       });

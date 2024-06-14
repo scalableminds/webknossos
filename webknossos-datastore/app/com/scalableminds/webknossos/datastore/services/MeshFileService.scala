@@ -176,8 +176,8 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
   private lazy val meshFileCache = new Hdf5FileCache(30)
 
-  def exploreMeshFiles(organizationName: String, datasetName: String, dataLayerName: String): Fox[Set[MeshFileInfo]] = {
-    val layerDir = dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName)
+  def exploreMeshFiles(organizationId: String, datasetName: String, dataLayerName: String): Fox[Set[MeshFileInfo]] = {
+    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName)
     val meshFileNames = PathUtils
       .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
       .map { paths =>
@@ -216,13 +216,13 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   }
 
   // Same as above but this variant constructs the meshFilePath itself and converts null to None
-  def mappingNameForMeshFile(organizationName: String,
+  def mappingNameForMeshFile(organizationId: String,
                              datasetName: String,
                              dataLayerName: String,
                              meshFileName: String): Option[String] = {
     val meshFilePath =
       dataBaseDir
-        .resolve(organizationName)
+        .resolve(organizationId)
         .resolve(datasetName)
         .resolve(dataLayerName)
         .resolve(meshesDir)
@@ -239,13 +239,13 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       cachedMeshFile.reader.int64().getAttr("/", "artifact_schema_version")
     }.toOption.getOrElse(0)
 
-  def listMeshChunksForSegments(organizationName: String,
+  def listMeshChunksForSegments(organizationId: String,
                                 datasetName: String,
                                 dataLayerName: String,
                                 meshFileName: String,
                                 segmentIds: Seq[Long])(implicit m: MessagesProvider): Fox[WebknossosSegmentInfo] = {
     val meshChunksForUnmappedSegments = segmentIds.map(segmentId =>
-      listMeshChunksForSegment(organizationName, datasetName, dataLayerName, meshFileName, segmentId).toOption)
+      listMeshChunksForSegment(organizationId, datasetName, dataLayerName, meshFileName, segmentId).toOption)
     val meshChunksForUnmappedSegmentsFlat = meshChunksForUnmappedSegments.flatten
     for {
       _ <- bool2Fox(meshChunksForUnmappedSegmentsFlat.nonEmpty) ?~> "zero chunks" ?~> Messages(
@@ -256,14 +256,14 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     } yield chunkInfos
   }
 
-  private def listMeshChunksForSegment(organizationName: String,
+  private def listMeshChunksForSegment(organizationId: String,
                                        datasetName: String,
                                        dataLayerName: String,
                                        meshFileName: String,
                                        segmentId: Long): Box[WebknossosSegmentInfo] = {
     val meshFilePath =
       dataBaseDir
-        .resolve(organizationName)
+        .resolve(organizationId)
         .resolve(datasetName)
         .resolve(dataLayerName)
         .resolve(meshesDir)
@@ -356,7 +356,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     (neuroglancerStart, neuroglancerEnd)
   }
 
-  def readMeshChunk(organizationName: String,
+  def readMeshChunk(organizationId: String,
                     datasetName: String,
                     dataLayerName: String,
                     meshChunkDataRequests: MeshChunkDataRequestList,
@@ -368,7 +368,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       )(requestAndIndex => {
         val meshChunkDataRequest = requestAndIndex._1
         val meshFilePath = dataBaseDir
-          .resolve(organizationName)
+          .resolve(organizationId)
           .resolve(datasetName)
           .resolve(dataLayerName)
           .resolve(meshesDir)

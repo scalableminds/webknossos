@@ -47,11 +47,11 @@ object ReserveManualUploadInformation {
     Json.format[ReserveManualUploadInformation]
 }
 
-case class LinkedLayerIdentifier(organizationName: String,
+case class LinkedLayerIdentifier(organizationId: String,
                                  dataSetName: String,
                                  layerName: String,
                                  newLayerName: Option[String] = None) {
-  def pathIn(dataBaseDir: Path): Path = dataBaseDir.resolve(organizationName).resolve(dataSetName).resolve(layerName)
+  def pathIn(dataBaseDir: Path): Path = dataBaseDir.resolve(organizationId).resolve(dataSetName).resolve(layerName)
 }
 
 object LinkedLayerIdentifier {
@@ -118,8 +118,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   def extractDatasetUploadId(uploadFileId: String): String = uploadFileId.split("/").headOption.getOrElse("")
 
-  private def uploadDirectory(organizationName: String, uploadId: String): Path =
-    dataBaseDir.resolve(organizationName).resolve(uploadingDir).resolve(uploadId)
+  private def uploadDirectory(organizationId: String, uploadId: String): Path =
+    dataBaseDir.resolve(organizationId).resolve(uploadingDir).resolve(uploadId)
 
   def getDataSourceIdByUploadId(uploadId: String): Fox[DataSourceId] =
     getObjectFromRedis[DataSourceId](redisKeyForDataSourceId(uploadId))
@@ -230,7 +230,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                             dataSourceId,
                             datasetNeedsConversion,
                             label = s"processing dataset at $unpackToDir")
-      dataSource = dataSourceService.dataSourceFromFolder(unpackToDir, dataSourceId.team)
+      dataSource = dataSourceService.dataSourceFromDir(unpackToDir, dataSourceId.team)
       _ <- dataSourceRepository.updateDataSource(dataSource)
       datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue)
     } yield (dataSourceId, datasetSizeBytes)
@@ -343,12 +343,12 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   }
 
   private def addLinkedLayersToDataSourceProperties(unpackToDir: Path,
-                                                    organizationName: String,
+                                                    organizationId: String,
                                                     layersToLink: List[LinkedLayerIdentifier]): Fox[Unit] =
     if (layersToLink.isEmpty) {
       Fox.successful(())
     } else {
-      val dataSource = dataSourceService.dataSourceFromFolder(unpackToDir, organizationName)
+      val dataSource = dataSourceService.dataSourceFromDir(unpackToDir, organizationId)
       for {
         dataSourceUsable <- dataSource.toUsable.toFox ?~> "Uploaded dataset has no valid properties file, cannot link layers"
         layers <- Fox.serialCombined(layersToLink)(layerFromIdentifier)
@@ -359,7 +359,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def layerFromIdentifier(layerIdentifier: LinkedLayerIdentifier): Fox[DataLayer] = {
     val dataSourcePath = layerIdentifier.pathIn(dataBaseDir).getParent
-    val inboxDataSource = dataSourceService.dataSourceFromFolder(dataSourcePath, layerIdentifier.organizationName)
+    val inboxDataSource = dataSourceService.dataSourceFromDir(dataSourcePath, layerIdentifier.organizationId)
     for {
       usableDataSource <- inboxDataSource.toUsable.toFox ?~> "Layer to link is not in dataset with valid properties file."
       layer: DataLayer <- usableDataSource.getDataLayer(layerIdentifier.layerName).toFox

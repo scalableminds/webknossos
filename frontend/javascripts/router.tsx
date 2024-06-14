@@ -175,7 +175,7 @@ class ReactRouter extends React.Component<Props> {
             type: ControlModeEnum.SANDBOX,
             tracingType,
             name: match.params.datasetName || "",
-            owningOrganization: match.params.organizationName || "",
+            owningOrganization: match.params.organizationId || "",
           }}
         />
       );
@@ -190,7 +190,7 @@ class ReactRouter extends React.Component<Props> {
       initialCommandType={{
         type: ControlModeEnum.VIEW,
         name: match.params.datasetName || "",
-        owningOrganization: match.params.organizationName || "",
+        owningOrganization: match.params.organizationId || "",
       }}
     />
   );
@@ -438,14 +438,14 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationName/:datasetName/import"
+                path="/datasets/:organizationId/:datasetName/import"
                 requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <DatasetSettingsView
                     isEditingMode={false}
                     datasetId={{
                       name: match.params.datasetName || "",
-                      owningOrganization: match.params.organizationName || "",
+                      owningOrganization: match.params.organizationId || "",
                     }}
                     onComplete={() =>
                       window.location.replace(`${window.location.origin}/dashboard/datasets`)
@@ -456,14 +456,14 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationName/:datasetName/edit"
+                path="/datasets/:organizationId/:datasetName/edit"
                 requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (
                   <DatasetSettingsView
                     isEditingMode
                     datasetId={{
                       name: match.params.datasetName || "",
-                      owningOrganization: match.params.organizationName || "",
+                      owningOrganization: match.params.organizationId || "",
                     }}
                     onComplete={() => window.history.back()}
                     onCancel={() => window.history.back()}
@@ -545,7 +545,7 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/organizations/:organizationName"
+                path="/organizations/:organizationId"
                 render={() => <OrganizationEditView />}
               />
               <RouteWithErrorBoundary
@@ -616,7 +616,7 @@ class ReactRouter extends React.Component<Props> {
                 }}
               />
               <Route
-                path="/datasets/:organizationName/:datasetName/view"
+                path="/datasets/:organizationId/:datasetName/view"
                 render={this.tracingViewMode}
               />
               <RouteWithErrorBoundary
@@ -625,25 +625,25 @@ class ReactRouter extends React.Component<Props> {
                   <AsyncRedirect
                     redirectTo={async () => {
                       const datasetName = match.params.id || "";
-                      const organizationName = await getOrganizationForDataset(datasetName);
-                      return `/datasets/${organizationName}/${datasetName}/view${location.search}${location.hash}`;
+                      const organizationId = await getOrganizationForDataset(datasetName);
+                      return `/datasets/${organizationId}/${datasetName}/view${location.search}${location.hash}`;
                     }}
                   />
                 )}
               />
               <RouteWithErrorBoundary
-                path="/datasets/:organizationName/:datasetName/sandbox/:type"
+                path="/datasets/:organizationId/:datasetName/sandbox/:type"
                 render={this.tracingSandbox}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationName/:datasetName/createExplorative/:type"
+                path="/datasets/:organizationId/:datasetName/createExplorative/:type"
                 render={({ match }: ContextRouter) => (
                   <AsyncRedirect
                     pushToHistory={false}
                     redirectTo={async () => {
                       if (
-                        !match.params.organizationName ||
+                        !match.params.organizationId ||
                         !match.params.datasetName ||
                         !match.params.type
                       ) {
@@ -652,7 +652,7 @@ class ReactRouter extends React.Component<Props> {
                       }
 
                       const dataset = {
-                        owningOrganization: match.params.organizationName,
+                        owningOrganization: match.params.organizationId,
                         name: match.params.datasetName,
                       };
                       const type =
@@ -695,10 +695,7 @@ class ReactRouter extends React.Component<Props> {
                 // Note that this route has to be beneath all others sharing the same prefix,
                 // to avoid url mismatching
               }
-              <Route
-                path="/datasets/:organizationName/:datasetName"
-                render={this.tracingViewMode}
-              />
+              <Route path="/datasets/:organizationId/:datasetName" render={this.tracingViewMode} />
               <RouteWithErrorBoundary
                 path="/publications/:id"
                 render={({ match }: ContextRouter) => (

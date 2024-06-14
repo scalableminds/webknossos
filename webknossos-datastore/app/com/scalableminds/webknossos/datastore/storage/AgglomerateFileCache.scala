@@ -20,14 +20,14 @@ case class CachedAgglomerateFile(reader: IHDF5Reader,
 }
 
 case class AgglomerateFileKey(
-    organizationName: String,
+    organizationId: String,
     datasetName: String,
     layerName: String,
     mappingName: String
 ) {
   def path(dataBaseDir: Path, agglomerateDir: String, agglomerateFileExtension: String): Path =
     dataBaseDir
-      .resolve(organizationName)
+      .resolve(organizationId)
       .resolve(datasetName)
       .resolve(layerName)
       .resolve(agglomerateDir)

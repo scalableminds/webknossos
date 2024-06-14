@@ -23,7 +23,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = defaultSender,
       subject =
-        s"WEBKNOSSOS | A new user ($name, $email) registered on $uri for ${organization.displayName} (${organization.name})",
+        s"WEBKNOSSOS | A new user ($name, $email) registered on $uri for ${organization.displayName} (${organization._id})",
       bodyHtml = html.mail.notifyAdminNewUser(name, uri, autoActivate).body,
       recipients = List(recipient)
     )

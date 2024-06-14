@@ -46,9 +46,9 @@ export default function AcceptInviteView({
     );
   }
 
-  const targetOrganizationName =
+  const targetOrganizationId =
     targetOrganization != null
-      ? targetOrganization.displayName || targetOrganization.name
+      ? targetOrganization.displayName || targetOrganization.id
       : "unknown";
 
   const onSuccessfulJoin = (userJustRegistered: boolean = false) => {
@@ -56,13 +56,13 @@ export default function AcceptInviteView({
 
     if (userJustRegistered) {
       // Since the user just registered, the organization is already active.
-      Toast.success(`You successfully joined ${targetOrganizationName}.`);
+      Toast.success(`You successfully joined ${targetOrganizationId}.`);
       location.reload();
     } else {
-      Toast.success(`You successfully joined ${targetOrganizationName}. Switching to it now...`);
+      Toast.success(`You successfully joined ${targetOrganizationId}. Switching to it now...`);
 
       if (targetOrganization) {
-        switchToOrganization(targetOrganization.name);
+        switchToOrganization(targetOrganization.id);
       }
     }
   };
@@ -93,7 +93,7 @@ export default function AcceptInviteView({
       }}
     >
       <AuthenticationModal
-        alertMessage={`Please register or login to join ${targetOrganizationName}.`}
+        alertMessage={`Please register or login to join ${targetOrganizationId}.`}
         inviteToken={token}
         onLoggedIn={async (userJustRegistered) => {
           setIsAuthenticationModalOpen(false);
@@ -114,7 +114,7 @@ export default function AcceptInviteView({
           icon={<GiftTwoTone />}
           title={
             <div>
-              You have been invited to the organization &ldquo;{targetOrganizationName}&rdquo;!
+              You have been invited to the organization &ldquo;{targetOrganizationId}&rdquo;!
               {authenticateMessage}
             </div>
           }

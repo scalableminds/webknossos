@@ -272,7 +272,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                          GROUP BY _project""".as[(String, Long, Option[Long])])
     } yield rowsRaw.toList.map(r => (ObjectId(r._1), (r._2, r._3.getOrElse(0L)))).toMap
 
-  def listExperienceDomains(organizationId: ObjectId): Fox[List[String]] =
+  def listExperienceDomains(organizationId: String): Fox[List[String]] =
     for {
       rowsRaw <- run(
         q"SELECT domain FROM webknossos.experienceDomains WHERE _organization = $organizationId".as[String])

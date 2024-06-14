@@ -17,7 +17,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class AiInference(_id: ObjectId,
-                       _organization: ObjectId,
+                       _organization: String,
                        _aiModel: ObjectId,
                        _newDataset: Option[ObjectId],
                        _annotation: Option[ObjectId],
@@ -83,7 +83,7 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     } yield
       AiInference(
         ObjectId(r._Id),
-        ObjectId(r._Organization),
+        r._Organization,
         ObjectId(r._Aimodel),
         r._Newdataset.map(ObjectId(_)),
         r._Annotation.map(ObjectId(_)),

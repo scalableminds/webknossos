@@ -20,7 +20,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class AiModel(_id: ObjectId,
-                   _organization: ObjectId,
+                   _organization: String,
                    _dataStore: String,
                    _user: ObjectId,
                    _trainingJob: Option[ObjectId],
@@ -73,7 +73,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield
       AiModel(
         ObjectId(r._Id),
-        ObjectId(r._Organization),
+        r._Organization,
         r._Datastore.trim,
         ObjectId(r._User),
         r._Trainingjob.map(ObjectId(_)),
@@ -96,7 +96,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def countByNameAndOrganization(aiModelName: String, organizationId: ObjectId): Fox[Int] =
+  def countByNameAndOrganization(aiModelName: String, organizationId: String): Fox[Int] =
     for {
       countList <- run(
         q"SELECT COUNT(*) FROM webknossos.aiModels WHERE name = $aiModelName AND _organization = $organizationId"

@@ -127,7 +127,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       val projectQuery = projectIdsFilterQuery(projectIds)
       for {
         tuples <- run(
-          q"""SELECT ts._user, mu.email, o.name, d.name, a._id, t._id, p.name, tt._id, tt.summary, ts._id, ts.created, ts.time
+          q"""SELECT ts._user, mu.email, o._id, d.name, a._id, t._id, p.name, tt._id, tt.summary, ts._id, ts.created, ts.time
               FROM webknossos.timespans_ ts
               JOIN webknossos.annotations_ a on ts._annotation = a._id
               JOIN webknossos.users_ u on ts._user = u._id

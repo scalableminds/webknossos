@@ -115,9 +115,7 @@ function TreeHierarchyView(props: Props) {
   useEffectOnlyOnce(() => {
     // set default expanded keys
     // the defaults should include the root node and at the active tree's group if applicable
-    let defaultExpandedKeys: React.Key[] = [
-      getNodeKey(GroupTypeEnum.GROUP, MISSING_GROUP_ID),
-    ];
+    let defaultExpandedKeys: React.Key[] = [getNodeKey(GroupTypeEnum.GROUP, MISSING_GROUP_ID)];
     if (props.activeTreeId) {
       const activeTreesGroupId = props.trees[props.activeTreeId].groupId;
       if (activeTreesGroupId) {
@@ -133,8 +131,12 @@ function TreeHierarchyView(props: Props) {
     if (treeRef.current && props.activeTreeId) {
       const activeTreeKey = getNodeKey(GroupTypeEnum.TREE, props.activeTreeId);
       treeRef.current.scrollTo({ key: activeTreeKey, align: "top" });
+
+      // Make sure to select the active tree (for highlighting etc)
+      // Remember, the active tree can be changed by actions outside of this component
+      props.onSingleSelectTree(props.activeTreeId);
     }
-  }, [props.activeTreeId]);
+  }, [props.activeTreeId, props.onSingleSelectTree]);
 
   useEffect(() => {
     // scroll to active group if it changes

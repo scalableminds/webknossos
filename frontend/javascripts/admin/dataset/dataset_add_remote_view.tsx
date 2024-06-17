@@ -207,8 +207,7 @@ function DatasetAddRemoteView(props: Props) {
   useFetch(
     async () => {
       if (defaultDatasetUrl == null || isDatasourceConfigStrFalsy) return;
-      const dataSourceJson =
-        dataSourceJsonStr != null ? JSON.parse(dataSourceJsonStr) : EMPTY_OBJECT;
+      const dataSourceJson = JSON.parse(dataSourceJsonStr);
       const defaultDatasetName = getDefaultDatasetName(defaultDatasetUrl);
       setDatasourceConfigStr(
         JSON.stringify({ ...dataSourceJson, id: { name: defaultDatasetName, team: "" } }),

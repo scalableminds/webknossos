@@ -116,7 +116,6 @@ function TreeHierarchyView(props: Props) {
     // set default expanded keys
     // the defaults should include the root node and at the active tree's group if applicable
     let defaultExpandedKeys: React.Key[] = [
-      ...expandedNodeKeys,
       getNodeKey(GroupTypeEnum.GROUP, MISSING_GROUP_ID),
     ];
     if (props.activeTreeId) {
@@ -245,7 +244,7 @@ function TreeHierarchyView(props: Props) {
     );
 
     if (expanded) {
-      setExpandedNodeKeys([...expandedNodeKeys, selectedGroupIdKey, ...subGroupKeys]);
+      setExpandedNodeKeys(_.uniq([...expandedNodeKeys, ...subGroupKeys]));
     } else {
       setExpandedNodeKeys(_.without(expandedNodeKeys, selectedGroupIdKey, ...subGroupKeys));
     }

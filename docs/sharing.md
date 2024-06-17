@@ -43,7 +43,7 @@ WEBKNOSSOS shares datasets publicly (everyone can view them without any login) o
 ### Private and Internal Sharing
 
 A privately shared dataset can only be accessed by outside users using the correct URL.
-A unique authentification token is part of the URL, so anyone with this URL has access permission for viewing the dataset.
+A unique authentication token is part of the URL, so anyone with this URL has access permission for viewing the dataset.
 The dataset is NOT featured publicly anywhere else on your WEBKNOSSOS instance.
 
 Private sharing is useful for giving outside users (reviewers, editors, journalists etc.) an opportunity to look at your data without having to publish it publicly.
@@ -234,5 +234,4 @@ WEBKNOSSOS does not yet resolve changes made by multiple people annotating simul
 Please coordinate accordingly with your collaborators. We aim to improve this aspect in the future.
 
 !!! info
-  In addition to the integrated Sharing features, you can also [download annotations](./export.md) and send them via email to collaborators.
-```
+    In addition to the integrated Sharing features, you can also [download annotations](./export.md) and send them via email to collaborators.

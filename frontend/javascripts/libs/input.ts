@@ -296,7 +296,7 @@ export class InputKeyboard {
     this.bindings.push(binding);
   }
 
-  // In order to continously fire callbacks we have to loop
+  // In order to continuously fire callbacks we have to loop
   // through all the buttons that a marked as "pressed".
   buttonLoop() {
     if (!this.isStarted) {

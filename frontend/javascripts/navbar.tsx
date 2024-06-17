@@ -10,6 +10,7 @@ import {
   Tag,
   Input,
   InputRef,
+  ConfigProvider,
 } from "antd";
 import _ from "lodash";
 import {
@@ -25,7 +26,7 @@ import {
 import { useHistory, Link } from "react-router-dom";
 
 import classnames from "classnames";
-import { connect } from "react-redux";
+import { connect, useSelector } from "react-redux";
 import React, { useState, useEffect, useRef } from "react";
 import Toast from "libs/toast";
 import type {
@@ -61,8 +62,10 @@ import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
 import { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
-import { MaintenanceBanner } from "maintenance_banner";
-import { getSystemColorTheme } from "theme";
+import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
+import { getAntdTheme, getSystemColorTheme } from "theme";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
+import { isAnnotationOwner as isAnnotationOwnerAccessor } from "oxalis/model/accessors/annotation_accessor";
 
 const { Header } = Layout;
 
@@ -82,6 +85,9 @@ type StateProps = {
   hasOrganizations: boolean;
   othersMayEdit: boolean;
   allowUpdate: boolean;
+  isLockedByOwner: boolean;
+  isAnnotationOwner: boolean;
+  annotationOwnerName: string;
   blockedByUser: APIUserCompact | null | undefined;
   navbarHeight: number;
 };
@@ -95,10 +101,8 @@ function useOlvy() {
   useEffect(() => {
     const OlvyConfig = {
       organisation: "webknossos",
-      // This target needs to be defined (otherwise, Olvy crashes when using .show()). However,
-      // we don't want Olvy to add any notification icons, since we do this on our own. Therefore,
-      // provide a dummy value here.
-      target: "#unused-olvy-target",
+      // This target needs to be an empty string as else olvy will eagerly init the modal and thus fetch all its contents.
+      target: "",
       type: "modal",
       view: {
         showSearch: false,
@@ -236,11 +240,18 @@ function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser) {
       label: <Link to="/jobs">Processing Jobs</Link>,
     });
 
-  if (isAdmin)
+  if (isAdmin) {
     adminstrationSubMenuItems.push({
       key: "/organization",
       label: <Link to={`/organizations/${organization}`}>Organization</Link>,
     });
+  }
+  if (activeUser.isSuperUser) {
+    adminstrationSubMenuItems.push({
+      key: "/aiModels",
+      label: <Link to={"/aiModels"}>AI Models</Link>,
+    });
+  }
 
   if (features().voxelyticsEnabled)
     adminstrationSubMenuItems.push({
@@ -472,6 +483,8 @@ function NotificationIcon({
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
+      // Setting the target lazily, to finally let olvy  load the whats new modal as it should be shown now.
+      window.Olvy.config.target = "#unused-olvy-target";
       window.Olvy.show();
     }
   };
@@ -482,8 +495,7 @@ function NotificationIcon({
         position: "relative",
         display: "flex",
         marginRight: 12,
-        paddingTop:
-          navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT : 0,
+        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
       }}
     >
       <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
@@ -517,7 +529,7 @@ function OrganizationFilterInput({
 }: { onChange: (val: string) => void; isVisible: boolean; onPressEnter: () => void }) {
   const ref = useRef<InputRef>(null);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesnt understand that ref.current is accessed?
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Biome doesn't understand that ref.current is accessed?
   useEffect(() => {
     if (ref?.current && isVisible) {
       setTimeout(() => {
@@ -610,8 +622,7 @@ function LoggedInAvatar({
       selectedKeys={["prevent highlighting of this menu"]}
       mode="horizontal"
       style={{
-        paddingTop:
-          navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.MAINTENANCE_BANNER_HEIGHT : 0,
+        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
       }}
       theme="dark"
@@ -701,6 +712,9 @@ function LoggedInAvatar({
 }
 
 function AnonymousAvatar() {
+  const bannerHeight = useSelector(
+    (state: OxalisState) => state.uiInformation.navbarHeight - constants.DEFAULT_NAVBAR_HEIGHT,
+  );
   return (
     <Popover
       placement="bottomRight"
@@ -722,6 +736,7 @@ function AnonymousAvatar() {
         icon={<UserOutlined />}
         style={{
           marginLeft: 8,
+          marginTop: bannerHeight,
         }}
       />
     </Popover>
@@ -748,13 +763,17 @@ function AnnotationLockedByUserTag({
   if (blockedByUser == null) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
-        <Tag color="warning">Locked by unknown user.</Tag>
+        <Tag color="warning" className="flex-center-child">
+          Locked by unknown user.
+        </Tag>
       </Tooltip>
     );
   } else if (blockedByUser.id === activeUser.id) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
-        <Tag color="success">Locked by you. Reload to edit.</Tag>
+        <Tag color="success" className="flex-center-child">
+          Locked by you. Reload to edit.
+        </Tag>
       </Tooltip>
     );
   } else {
@@ -765,7 +784,9 @@ function AnnotationLockedByUserTag({
           userName: blockingUserName,
         })}
       >
-        <Tag color="warning">Locked by {blockingUserName}</Tag>
+        <Tag color="warning" className="flex-center-child">
+          Locked by {blockingUserName}
+        </Tag>
       </Tooltip>
     );
   }
@@ -773,6 +794,21 @@ function AnnotationLockedByUserTag({
     <span style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
       {content}
     </span>
+  );
+}
+
+function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwner: boolean }) {
+  const unlockHintForOwners = props.isOwner
+    ? " You can unlock the annotation in the navbar annotation menu."
+    : "";
+  const tooltipMessage =
+    messages["tracing.read_only_mode_notification"](true, props.isOwner) + unlockHintForOwners;
+  return (
+    <Tooltip title={tooltipMessage}>
+      <Tag color="warning" className="flex-center-child">
+        Locked by {props.annotationOwnerName}
+      </Tag>
+    </Tooltip>
   );
 }
 
@@ -784,7 +820,10 @@ function Navbar({
   othersMayEdit,
   blockedByUser,
   allowUpdate,
+  annotationOwnerName,
+  isLockedByOwner,
   navbarHeight,
+  isAnnotationOwner,
 }: Props) {
   const history = useHistory();
 
@@ -847,12 +886,21 @@ function Navbar({
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    if (othersMayEdit && !allowUpdate) {
+    if (othersMayEdit && !allowUpdate && !isLockedByOwner) {
       trailingNavItems.push(
         <AnnotationLockedByUserTag
           key="locked-by-user-tag"
           blockedByUser={blockedByUser}
           activeUser={activeUser}
+        />,
+      );
+    }
+    if (isLockedByOwner) {
+      trailingNavItems.push(
+        <AnnotationLockedByOwnerTag
+          key="locked-by-owner-tag"
+          annotationOwnerName={annotationOwnerName}
+          isOwner={isAnnotationOwner}
         />,
       );
     }
@@ -899,15 +947,15 @@ function Navbar({
       })}
     >
       <MaintenanceBanner />
+      <ConfigProvider theme={{ ...getAntdTheme("light") }}>
+        <UpgradeVersionBanner />
+      </ConfigProvider>
       <Menu
         mode="horizontal"
         selectedKeys={selectedKeys}
         onOpenChange={(openKeys) => setIsHelpMenuOpen(openKeys.includes(HELP_MENU_KEY))}
         style={{
-          paddingTop:
-            navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT
-              ? constants.MAINTENANCE_BANNER_HEIGHT
-              : 0,
+          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
           lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
         }}
         theme="dark"
@@ -930,10 +978,7 @@ function Navbar({
         style={{
           flex: 1,
           display: "flex",
-          paddingTop:
-            navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT
-              ? constants.MAINTENANCE_BANNER_HEIGHT
-              : 0,
+          paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         }}
       />
 
@@ -957,6 +1002,9 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   othersMayEdit: state.tracing.othersMayEdit,
   blockedByUser: state.tracing.blockedByUser,
   allowUpdate: state.tracing.restrictions.allowUpdate,
+  isLockedByOwner: state.tracing.isLockedByOwner,
+  annotationOwnerName: formatUserName(state.activeUser, state.tracing.owner),
+  isAnnotationOwner: isAnnotationOwnerAccessor(state),
   navbarHeight: state.uiInformation.navbarHeight,
 });
 

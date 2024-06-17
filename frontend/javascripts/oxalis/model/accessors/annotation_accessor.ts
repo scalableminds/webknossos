@@ -12,8 +12,16 @@ export function mayEditAnnotationProperties(state: OxalisState) {
     restrictions.allowUpdate &&
     restrictions.allowSave &&
     activeUser &&
-    owner?.id === activeUser.id
+    owner?.id === activeUser.id &&
+    !state.tracing.isLockedByOwner
   );
+}
+
+export function isAnnotationOwner(state: OxalisState) {
+  const activeUser = state.activeUser;
+  const owner = state.tracing.owner;
+
+  return !!(activeUser && owner?.id === activeUser.id);
 }
 
 export type SkeletonTracingStats = {

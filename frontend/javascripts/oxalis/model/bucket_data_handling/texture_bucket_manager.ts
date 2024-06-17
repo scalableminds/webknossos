@@ -182,7 +182,7 @@ export default class TextureBucketManager {
   // Commit "active" buckets by writing these to the dataTexture.
   processWriterQueue() {
     // uniqBy removes multiple write-buckets-requests for the same index.
-    // It preserves the first occurence of each duplicate, which is why
+    // It preserves the first occurrence of each duplicate, which is why
     // this queue has to be filled from the front (via unshift) und read from the
     // back (via pop). This ensures that the newest bucket "wins" if there are
     // multiple buckets for the same index.

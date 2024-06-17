@@ -26,6 +26,7 @@ case class Job(
     state: JobState = JobState.PENDING,
     manualState: Option[JobState] = None,
     _worker: Option[ObjectId] = None,
+    _voxelyticsWorkflowHash: Option[String] = None,
     latestRunId: Option[String] = None,
     returnValue: Option[String] = None,
     started: Option[Long] = None,
@@ -62,7 +63,8 @@ case class Job(
           }
         case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this._id}/export")
-        case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation =>
+        case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
+            JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections =>
           returnValue.map { resultDatasetName =>
             s"/datasets/$organizationName/$resultDatasetName/view"
           }
@@ -106,6 +108,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         state,
         manualStateOpt,
         r._Worker.map(ObjectId(_)),
+        r._VoxelyticsWorkflowhash,
         r.latestrunid,
         r.returnvalue,
         r.started.map(_.getTime),
@@ -153,7 +156,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     if (jobCommands.isEmpty) Fox.successful(0)
     else {
       for {
-        r <- run(q"""SELECT COUNT(_id) from $existingCollectionName
+        r <- run(q"""SELECT COUNT(*) from $existingCollectionName
                    WHERE state = ${JobState.PENDING}
                    AND command IN ${SqlToken.tupleFromList(jobCommands)}
                    AND manualState IS NULL
@@ -167,12 +170,12 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     if (jobCommands.isEmpty) Fox.successful(0)
     else {
       for {
-        r <- run(q"""SELECT COUNT(_id)
-                   FROM $existingCollectionName
-                   WHERE _worker = $workerId
-                   AND state IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
-                   AND command IN ${SqlToken.tupleFromList(jobCommands)}
-                   AND manualState IS NULL""".as[Int])
+        r <- run(q"""SELECT COUNT(*)
+                     FROM $existingCollectionName
+                     WHERE _worker = $workerId
+                     AND state IN ${SqlToken.tupleFromValues(JobState.PENDING, JobState.STARTED)}
+                     AND command IN ${SqlToken.tupleFromList(jobCommands)}
+                     AND manualState IS NULL""".as[Int])
         head <- r.headOption
       } yield head
     }
@@ -180,7 +183,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllUnfinishedByWorker(workerId: ObjectId): Fox[List[Job]] =
     for {
       r <- run(q"""SELECT $columns from $existingCollectionName
-                   WHERE _worker = $workerId and state in ${SqlToken
+                   WHERE _worker = $workerId AND state IN ${SqlToken
         .tupleFromValues(JobState.PENDING, JobState.STARTED)}
                    AND manualState IS NULL
                    ORDER BY created""".as[JobsRow])
@@ -201,6 +204,16 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    AND manualState = ${JobState.CANCELLED}""".as[JobsRow])
       parsed <- parseAll(r)
     } yield parsed
+
+  def organizationIdForJobId(jobId: ObjectId): Fox[ObjectId] =
+    for {
+      r <- run(q"""SELECT u._organization
+           FROM webknossos.users u
+           JOIN webknossos.jobs j ON j._owner = u._id
+           WHERE j._id = $jobId
+           """.as[ObjectId])
+      firstRow <- r.headOption
+    } yield firstRow
 
   def insertOne(j: Job): Fox[Unit] =
     for {
@@ -232,6 +245,11 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    started = ${s.started},
                    ended = ${s.ended}
                    WHERE _id = $jobId""".asUpdate)
+    } yield ()
+
+  def updateVoxelyticsWorkflow(jobId: ObjectId, workflowHash: String): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.jobs SET _voxelytics_workflowHash = $workflowHash WHERE _id = $jobId""".asUpdate)
     } yield ()
 
   def reserveNextJob(worker: Worker, jobCommands: Set[JobCommand]): Fox[Unit] =

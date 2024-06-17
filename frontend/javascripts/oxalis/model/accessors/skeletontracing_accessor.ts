@@ -68,7 +68,7 @@ export function getActiveNode(skeletonTracing: SkeletonTracing): Maybe<Node> {
   const { activeTreeId, activeNodeId } = skeletonTracing;
 
   if (activeTreeId != null && activeNodeId != null) {
-    return Maybe.Just(skeletonTracing.trees[activeTreeId].nodes.get(activeNodeId));
+    return Maybe.Just(skeletonTracing.trees[activeTreeId].nodes.getOrThrow(activeNodeId));
   }
 
   return Maybe.Nothing();
@@ -96,7 +96,7 @@ export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tr
   const { activeNodeId } = skeletonTracing;
 
   if (activeNodeId != null) {
-    return Maybe.Just(tree.nodes.get(activeNodeId));
+    return Maybe.Just(tree.nodes.getOrThrow(activeNodeId));
   }
 
   return Maybe.Nothing();
@@ -160,12 +160,12 @@ export function getNodeAndTree(
     let node = null;
 
     if (nodeId != null) {
-      node = tree.nodes.get(nodeId);
+      node = tree.nodes.getOrThrow(nodeId);
     } else {
       const { activeNodeId } = skeletonTracing;
 
       if (activeNodeId != null) {
-        node = tree.nodes.get(activeNodeId);
+        node = tree.nodes.getOrThrow(activeNodeId);
       }
     }
 

@@ -345,8 +345,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     Toast.error("Proofreading is currently not supported when the skeleton layer is transformed.");
     return;
   }
-  const sourceNodePosition = sourceTree.nodes.get(sourceNodeId).untransformedPosition;
-  const targetNodePosition = targetTree.nodes.get(targetNodeId).untransformedPosition;
+  const sourceNodePosition = sourceTree.nodes.getOrThrow(sourceNodeId).untransformedPosition;
+  const targetNodePosition = targetTree.nodes.getOrThrow(targetNodeId).untransformedPosition;
 
   const idInfos = yield* call(getAgglomerateInfos, preparation.getMappedAndUnmapped, [
     sourceNodePosition,

@@ -1,6 +1,6 @@
 import { Card, Button, Tooltip } from "antd";
 import { LinkOutlined } from "@ant-design/icons";
-import Markdown from "react-remarkable";
+import Markdown from "libs/markdown_adapter";
 import React, { useState } from "react";
 import classNames from "classnames";
 import { Link } from "react-router-dom";
@@ -234,14 +234,7 @@ function PublicationCard({ publication, showDetailedLink }: Props) {
             ) : null}
           </h3>
           <div className="publication-description-body nice-scrollbar">
-            <Markdown
-              source={publication.description}
-              options={{
-                html: false,
-                breaks: true,
-                linkify: true,
-              }}
-            />
+            <Markdown>{publication.description}</Markdown>
           </div>
         </div>
         <PublicationThumbnail

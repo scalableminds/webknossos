@@ -8,6 +8,7 @@ import duration from "dayjs/plugin/duration";
 import updateLocale from "dayjs/plugin/updateLocale";
 import relativeTime from "dayjs/plugin/relativeTime";
 import localizedFormat from "dayjs/plugin/localizedFormat";
+import customParseFormat from "dayjs/plugin/customParseFormat";
 import calendar from "dayjs/plugin/calendar";
 import utc from "dayjs/plugin/utc";
 import weekday from "dayjs/plugin/weekday";
@@ -22,6 +23,7 @@ dayjs.extend(relativeTime);
 dayjs.extend(utc);
 dayjs.extend(calendar);
 dayjs.extend(weekday);
+dayjs.extend(customParseFormat);
 dayjs.extend(localeData);
 dayjs.extend(localizedFormat);
 dayjs.updateLocale("en", {
@@ -319,6 +321,28 @@ export function formatBytes(nbytes: number) {
     return `${(nbytes / 2 ** 10).toPrecision(4)} KiB`;
   }
   return `${nbytes} B`;
+}
+
+export function formatVoxels(voxelCount: number) {
+  if (voxelCount == null || !Number.isFinite(voxelCount)) {
+    return "";
+  }
+  if (voxelCount > 2 ** 50) {
+    return `${(voxelCount / 2 ** 50).toPrecision(4)} PVx`;
+  }
+  if (voxelCount > 2 ** 40) {
+    return `${(voxelCount / 2 ** 40).toPrecision(4)} TVx`;
+  }
+  if (voxelCount > 2 ** 30) {
+    return `${(voxelCount / 2 ** 30).toPrecision(4)} GVx`;
+  }
+  if (voxelCount > 2 ** 20) {
+    return `${(voxelCount / 2 ** 20).toPrecision(4)} MVx`;
+  }
+  if (voxelCount > 2 ** 10) {
+    return `${(voxelCount / 2 ** 10).toPrecision(4)} KVx`;
+  }
+  return `${voxelCount} B`;
 }
 
 export function formatNumber(num: number): string {

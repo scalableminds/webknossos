@@ -51,7 +51,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   private def visibleRunsQ(currentUser: User, allowUnlisted: Boolean) = {
     val organizationId = currentUser._organization
     val readAccessQ =
-      if (currentUser.isAdmin || currentUser.isDatasetManager || allowUnlisted) q"${true}"
+      if (currentUser.isAdmin || currentUser.isDatasetManager || allowUnlisted) q"TRUE"
       else q"(__r._user = ${currentUser._id})"
     q"""SELECT __r.*
         FROM webknossos.voxelytics_runs __r
@@ -369,12 +369,12 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
               RunEntry(
                 id = ObjectId(row._1),
                 name = row._2,
-                username = row._3,
-                hostname = row._4,
+                hostUserName = row._3,
+                hostName = row._4,
                 voxelyticsVersion = row._5,
-                workflow_hash = row._6,
-                workflow_yamlContent = row._7,
-                workflow_config = Json.parse(row._8).as[JsObject],
+                workflowHash = row._6,
+                workflowYamlContent = row._7,
+                workflowConfig = Json.parse(row._8).as[JsObject],
                 state = state,
                 beginTime = row._10,
                 endTime = row._11
@@ -467,7 +467,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           COALESCE(tasks.complete, 0) AS tasksComplete,
           COALESCE(tasks.cancelled, 0) AS tasksCancelled,
           COALESCE(tasks.fileSize, 0) AS fileSize,
-          COALESCE(tasks.inodeCount, 0) AS inodeCount
+          COALESCE(tasks.inodeCount, 0) AS inodeCount,
+          u.firstName,
+          u.lastName
         FROM (${visibleRunsQ(currentUser, allowUnlisted = false)}) r
         JOIN (${runsWithStateQ(staleTimeout)}) rs ON rs._id = r._id
         LEFT JOIN (
@@ -490,6 +492,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           ) ta ON ta._task = t._id
           GROUP BY t._run
         ) tasks ON tasks._run = r._id
+        LEFT JOIN webknossos.users_ u ON r._user = u._id
         WHERE r._organization = $organizationId
         """.as[(String,
                 String,
@@ -506,7 +509,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                 Long,
                 Long,
                 Long,
-                Long)])
+                Long,
+                Option[String],
+                Option[String])])
       results <- Fox.combined(
         r.toList.map(
           row =>
@@ -516,10 +521,10 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
               WorkflowListingRunEntry(
                 id = ObjectId(row._1),
                 name = row._2,
-                username = row._3,
-                hostname = row._4,
+                hostUserName = row._3,
+                hostName = row._4,
                 voxelyticsVersion = row._5,
-                workflow_hash = row._6,
+                workflowHash = row._6,
                 state = state,
                 beginTime = row._8,
                 endTime = row._9,
@@ -531,14 +536,16 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                   cancelled = row._14,
                   fileSize = row._15,
                   inodeCount = row._16
-                )
+                ),
+                userFirstName = row._17,
+                userLastName = row._18
             )))
     } yield results
   }
 
   def getRunIdByNameAndWorkflowHash(runName: String, workflowHash: String, currentUser: User): Fox[ObjectId] = {
     val readAccessQ =
-      if (currentUser.isAdmin) q"${true}"
+      if (currentUser.isAdmin) q"TRUE"
       else q"_user = ${currentUser._id}"
     for {
       objectIdList <- run(q"""
@@ -981,9 +988,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                 username: String,
                 hostname: String,
                 voxelyticsVersion: String,
-                workflow_hash: String,
-                workflow_yamlContent: Option[String],
-                workflow_config: JsValue): Fox[ObjectId] =
+                workflowHash: String,
+                workflowYamlContent: Option[String],
+                workflowConfig: JsValue): Fox[ObjectId] =
     for {
       _ <- run(q"""
         INSERT INTO webknossos.voxelytics_runs (_id, _organization, _user, name, username, hostname, voxelyticsVersion, workflow_hash, workflow_yamlContent, workflow_config)
@@ -994,9 +1001,9 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                                           username,
                                           hostname,
                                           voxelyticsVersion,
-                                          workflow_hash,
-                                          workflow_yamlContent,
-                                          workflow_config)}
+                                          workflowHash,
+                                          workflowYamlContent,
+                                          workflowConfig)}
         ON CONFLICT (_organization, name)
           DO UPDATE SET
             _user = EXCLUDED._user,

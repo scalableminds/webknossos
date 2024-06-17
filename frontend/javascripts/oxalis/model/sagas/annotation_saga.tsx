@@ -32,7 +32,7 @@ import {
   cancelled,
 } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
+import { getMappingInfo, is2dDataset } from "oxalis/model/accessors/dataset_accessor";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
 import { Model } from "oxalis/singletons";
 import Store from "oxalis/store";
@@ -43,6 +43,9 @@ import { APIUserCompact } from "types/api_flow_types";
 import { Button } from "antd";
 import ErrorHandling from "libs/error_handling";
 import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
+import { determineLayout } from "oxalis/view/layouting/default_layout_configs";
+import { getLastActiveLayout, getLayoutConfig } from "oxalis/view/layouting/layout_persistence";
+import { is3dViewportMaximized } from "oxalis/view/layouting/flex_layout_helper";
 
 /* Note that this must stay in sync with the back-end constant
   compare https://github.com/scalableminds/webknossos/issues/5223 */
@@ -112,7 +115,8 @@ function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Sag
 }
 
 function shouldDisplaySegmentationData(): boolean {
-  const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
+  const state = Store.getState();
+  const currentViewMode = state.temporaryConfiguration.viewMode;
   const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
   const segmentationLayer = Model.getVisibleSegmentationLayer();
 
@@ -122,8 +126,17 @@ function shouldDisplaySegmentationData(): boolean {
 
   const segmentationLayerName = segmentationLayer.name;
   const isSegmentationLayerDisabled =
-    Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled;
-  return !isSegmentationLayerDisabled;
+    state.datasetConfiguration.layers[segmentationLayerName].isDisabled;
+  if (isSegmentationLayerDisabled) {
+    return false;
+  }
+  const is2d = is2dDataset(state.dataset);
+  const controlMode = state.temporaryConfiguration.controlMode;
+  const currentLayoutType = determineLayout(controlMode, currentViewMode, is2d);
+  const lastActiveLayoutName = getLastActiveLayout(currentLayoutType);
+  const layout = getLayoutConfig(currentLayoutType, lastActiveLayoutName);
+  const onlyViewing3dViewport = is3dViewportMaximized(layout);
+  return !onlyViewing3dViewport;
 }
 
 export function* warnAboutSegmentationZoom(): Saga<void> {
@@ -193,7 +206,7 @@ export function* watchAnnotationAsync(): Saga<void> {
   // Consuming the latest action here handles an offline scenario better.
   // If the user is offline and performs multiple changes to the annotation
   // name, only the latest action is relevant. If `_takeEvery` was used,
-  // all updates to the annotation name would be retried regularily, which
+  // all updates to the annotation name would be retried regularly, which
   // would also cause race conditions.
   yield* takeLatest("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
   yield* takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);

@@ -648,7 +648,7 @@ function* uncachedDiffSegmentLists(
   }
 
   for (const segmentId of addedSegmentIds) {
-    const segment = newSegments.get(segmentId);
+    const segment = newSegments.getOrThrow(segmentId);
     yield createSegmentVolumeAction(
       segment.id,
       segment.somePosition,
@@ -659,8 +659,8 @@ function* uncachedDiffSegmentLists(
   }
 
   for (const segmentId of bothSegmentIds) {
-    const segment = newSegments.get(segmentId);
-    const prevSegment = prevSegments.get(segmentId);
+    const segment = newSegments.getOrThrow(segmentId);
+    const prevSegment = prevSegments.getOrThrow(segmentId);
 
     if (segment !== prevSegment) {
       yield updateSegmentVolumeAction(

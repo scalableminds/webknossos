@@ -32,7 +32,11 @@ function RegistrationFormGeneric(props: Props) {
         ? "/api/auth/createOrganizationWithAdmin"
         : "/api/auth/register",
       {
-        data: formValues,
+        data: {
+          ...formValues,
+          firstName: formValues.firstName.trim(),
+          lastName: formValues.lastName.trim(),
+        },
       },
     );
     Store.dispatch(setHasOrganizationsAction(true));

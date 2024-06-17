@@ -2,6 +2,7 @@ import memoizeOne from "memoize-one";
 import type {
   APIAnnotation,
   APIAnnotationInfo,
+  APIDataLayer,
   APIDataset,
   APISegmentationLayer,
   AdditionalCoordinate,
@@ -823,3 +824,12 @@ export const getBucketRetrievalSourceFn =
       return ["REQUESTED-WITH-MAPPING", mappingInfo.mappingName];
     }),
   );
+
+export function getReadableNameOfVolumeLayer(
+  layer: APIDataLayer,
+  tracing: HybridTracing,
+): string | null {
+  return "tracingId" in layer && layer.tracingId != null
+    ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+    : null;
+}

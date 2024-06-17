@@ -8,7 +8,7 @@
 #
 ## Development
 # Note: the generated proto python classes are checked into the repostitory next to this file.
-#       To regnerate them, both old and new format editable mapping proto definitions are needed.
+#       To regenerate them, both old and new format editable mapping proto definitions are needed.
 #
 # python3 -m grpc_tools.protoc -I../../webknossos/webknossos-datastore/proto --python_out=. --grpc_python_out=. ../../webknossos/webknossos-datastore/proto/fossildbapi.proto
 #

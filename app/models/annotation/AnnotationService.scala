@@ -436,15 +436,6 @@ class AnnotationService @Inject()(
       _ <- annotationLayersDAO.replaceTracingId(annotation._id, volumeAnnotationLayer.tracingId, newVolumeTracingId)
     } yield ()
 
-  def addSegmentIndex(annotation: Annotation, volumeAnnotationLayer: AnnotationLayer)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
-      _ <- bool2Fox(volumeAnnotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.segmentIndex.volumeOnly"
-      rpcClient <- tracingStoreService.clientFor(dataset)
-      _ <- rpcClient.addSegmentIndex(volumeAnnotationLayer.tracingId, dryRun = false)
-    } yield ()
-
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
   def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(
       implicit ctx: DBAccessContext): Fox[String] = {
@@ -469,7 +460,7 @@ class AnnotationService @Inject()(
           executeFinish
         } else if (annotation.state == Finished) {
           logger.info(
-            s"Silently not finishing annotation ${annotation._id.toString} for it is aready finished. Access context: ${ctx.toStringAnonymous}")
+            s"Silently not finishing annotation ${annotation._id.toString} for it is already finished. Access context: ${ctx.toStringAnonymous}")
           Fox.successful("annotation.finished")
         } else {
           logger.info(
@@ -908,6 +899,7 @@ class AnnotationService @Inject()(
       Json.obj(
         "modified" -> annotation.modified,
         "state" -> annotation.state,
+        "isLockedByOwner" -> annotation.isLockedByOwner,
         "id" -> annotation.id,
         "name" -> annotation.name,
         "description" -> annotation.description,
@@ -1010,6 +1002,7 @@ class AnnotationService @Inject()(
       "description" -> annotationInfo.description,
       "typ" -> annotationInfo.typ,
       "stats" -> Json.obj(), // included for legacy parsers
+      "isLockedByOwner" -> annotationInfo.isLockedByOwner,
       "annotationLayers" -> annotationLayerJson,
       "dataSetName" -> annotationInfo.dataSetName,
       "organization" -> annotationInfo.organizationName,

@@ -15,6 +15,7 @@ import type {
 } from "oxalis/constants";
 import window, { document, location } from "libs/window";
 import { ArbitraryObject, Comparator } from "types/globals";
+import dayjs from "dayjs";
 
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
@@ -412,7 +413,7 @@ export function localeCompareBy<T>(
 export function stringToNumberArray(s: string): Array<number> {
   // remove leading/trailing whitespaces
   s = s.trim();
-  // replace remaining whitespaces with commata
+  // replace remaining whitespaces with commas
   s = s.replace(/,?\s+,?/g, ",");
   const stringArray = s.split(",");
   const result = [];
@@ -573,6 +574,15 @@ export function isFileExtensionEqualTo(
   }
 
   return passedExtension === extensionOrExtensions;
+}
+
+// Parses dates in format "Thu Jan 1 00:00:00 1970 +0000".
+export function parseCTimeDefaultDate(dateString: string) {
+  const commitDateWithoutWeekday = dateString.replace(
+    /(Mon)|(Tue)|(Wed)|(Thu)|(Fri)|(Sat)|(Sun)\w*/,
+    "",
+  );
+  return dayjs(commitDateWithoutWeekday, "MMM D HH:mm:ss YYYY ZZ");
 }
 
 // Only use this function if you really need a busy wait (useful
@@ -1221,4 +1231,8 @@ export function chainIterators<T extends number | bigint>(
 export function isNumberMap(x: Map<any, any>): x is Map<number, number> {
   const { value } = x.entries().next();
   return value && typeof value[0] === "number";
+}
+
+export function assertNever(value: never): never {
+  throw new Error(`Unexpected value that is not 'never': ${JSON.stringify(value)}`);
 }

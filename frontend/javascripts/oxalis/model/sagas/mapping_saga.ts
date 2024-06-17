@@ -296,7 +296,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
         yield* take(
           ((action: Action) =>
             action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
-            action.value.isBusy) as ActionPattern,
+            !action.value.isBusy) as ActionPattern,
         );
       }
 

@@ -43,6 +43,7 @@ function makeTreeNode(
     key: getNodeKey(type, id),
     id,
     type,
+    title: name,
     name,
     timestamp: 0,
     children: [],

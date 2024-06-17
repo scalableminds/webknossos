@@ -167,7 +167,7 @@ export type APIDatasetDetails = {
   readonly species?: string;
   readonly brainRegion?: string;
   readonly acquisition?: string;
-};
+} & Record<string, string | number | string[]>;
 
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
@@ -220,6 +220,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "lastUsedByUser"
   | "tags"
   | "isUnreported"
+  | "details"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id?: string;
@@ -245,6 +246,7 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     lastUsedByUser: dataset.lastUsedByUser,
     status: dataset.dataSource.status,
     tags: dataset.tags,
+    details: dataset.details,
     isUnreported: dataset.isUnreported,
     colorLayerNames: colorLayerNames,
     segmentationLayerNames: segmentationLayerNames,

@@ -1,4 +1,4 @@
-import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
+import { FileOutlined, FolderOpenOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Dropdown, MenuProps, TableProps, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
@@ -14,12 +14,9 @@ import type {
 } from "types/api_flow_types";
 import { type DatasetFilteringMode } from "dashboard/dataset_view";
 import { stringToColor } from "libs/format_utils";
-import { trackAction } from "oxalis/model/helpers/analytics";
-import CategorizationLabel from "oxalis/view/components/categorization_label";
 import DatasetActionView, {
   getDatasetActionContextMenu,
 } from "dashboard/advanced_dataset/dataset_action_view";
-import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FormattedDate from "components/formatted_date";
 import * as Utils from "libs/utils";
 import FixedExpandableTable from "components/fixed_expandable_table";
@@ -309,7 +306,6 @@ class DatasetRenderer {
             {this.data.name}
           </Link>
 
-          {this.renderTags()}
           {this.datasetTable.props.context.globalSearchQuery != null ? (
             <>
               <br />
@@ -318,23 +314,6 @@ class DatasetRenderer {
           ) : null}
         </div>
       </>
-    );
-  }
-  renderTags() {
-    return this.data.isActive ? (
-      <DatasetTags
-        dataset={this.data}
-        onClickTag={this.datasetTable.props.addTagToSearch}
-        updateDataset={this.datasetTable.props.updateDataset}
-      />
-    ) : (
-      <Tooltip title="No tags available for inactive datasets">
-        <WarningOutlined
-          style={{
-            color: "@disabled-color",
-          }}
-        />
-      </Tooltip>
     );
   }
   renderCreationDateColumn() {
@@ -764,69 +743,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
       </DndProvider>
     );
   }
-}
-
-export function DatasetTags({
-  dataset,
-  onClickTag,
-  updateDataset,
-}: {
-  dataset: APIDatasetCompact;
-  onClickTag?: (t: string) => void;
-  updateDataset: (id: APIDatasetId, updater: DatasetUpdater) => void;
-}) {
-  const editTagFromDataset = (
-    shouldAddTag: boolean,
-    tag: string,
-    event: React.SyntheticEvent,
-  ): void => {
-    event.stopPropagation(); // prevent the onClick event
-
-    if (!dataset.isActive) {
-      console.error(
-        `Tags can only be modified for active datasets. ${dataset.name} is not active.`,
-      );
-      return;
-    }
-    let updater = {};
-    if (shouldAddTag) {
-      if (!dataset.tags.includes(tag)) {
-        updater = {
-          tags: [...dataset.tags, tag],
-        };
-      }
-    } else {
-      const newTags = _.without(dataset.tags, tag);
-      updater = {
-        tags: newTags,
-      };
-    }
-
-    trackAction("Edit dataset tag");
-    updateDataset(dataset, updater);
-  };
-
-  return (
-    <div className="tags-container">
-      {dataset.tags.map((tag) => (
-        <CategorizationLabel
-          tag={tag}
-          key={tag}
-          kind="datasets"
-          onClick={_.partial(onClickTag || _.noop, tag)}
-          onClose={_.partial(editTagFromDataset, false, tag)}
-          closable={dataset.isEditable}
-        />
-      ))}
-      {dataset.isEditable ? (
-        <EditableTextIcon
-          icon={<PlusOutlined />}
-          onChange={_.partial(editTagFromDataset, true)}
-          label="Add Tag"
-        />
-      ) : null}
-    </div>
-  );
 }
 
 export function DatasetLayerTags({ dataset }: { dataset: APIMaybeUnimportedDataset }) {

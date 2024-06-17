@@ -1174,6 +1174,7 @@ export type DatasetUpdater = {
   isPublic?: boolean;
   tags?: string[];
   folderId?: string;
+  details?: APIDataset["details"];
 };
 
 export function updateDatasetPartial(

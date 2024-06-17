@@ -4,8 +4,10 @@ import {
   SearchOutlined,
   EditOutlined,
   LoadingOutlined,
+  DeleteOutlined,
+  PlusCircleOutlined,
 } from "@ant-design/icons";
-import { Result, Spin, Tag, Tooltip } from "antd";
+import { Button, Typography, Input, Result, Spin, Table, Tag, Tooltip } from "antd";
 import { stringToColor, formatCountToDataAmountUnit } from "libs/format_utils";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
@@ -14,15 +16,19 @@ import {
   OwningOrganizationRow,
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { APIDatasetCompact, Folder } from "types/api_flow_types";
-import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
-import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
+import { DatasetLayerTags, TeamTags } from "../advanced_dataset/dataset_table";
+import {
+  DatasetCollectionContextValue,
+  useDatasetCollectionContext,
+} from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { getOrganization } from "admin/admin_rest_api";
 import { useQuery } from "@tanstack/react-query";
+import { useEffectOnUpdate } from "libs/react_hooks";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -59,6 +65,7 @@ export function DetailsSidebar({
       setSelectedDataset(null);
     }
   }, [selectedDatasets, context.activeFolderId]);
+  console.log("showing2", selectedDatasets?.[0]);
 
   return (
     <div style={{ width: 300, padding: 16 }}>
@@ -86,9 +93,157 @@ function getMaybeSelectMessage(datasetCount: number) {
   return datasetCount > 0 ? "Select one to see details." : "";
 }
 
-function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
+function MetadataTable({
+  selectedDataset,
+  setIgnoreFetching,
+}: { selectedDataset: APIDatasetCompact; setIgnoreFetching: (value: boolean) => void }) {
   const context = useDatasetCollectionContext();
+  const [datasetDetails, setDatasetDetails] = useState<APIDatasetCompact["details"]>(
+    selectedDataset.details,
+  );
+  const [errors, setErrors] = useState<Record<string, string>>({}); // propName -> error message.
+  const [focusedRow, setFocusedRow] = useState<number | null>(null);
+
+  const updateCachedDatasetDebounced = useMemo(
+    () =>
+      _.debounce(
+        async (
+          context: DatasetCollectionContextValue,
+          selectedDataset: APIDatasetCompact,
+          datasetDetails: APIDatasetCompact["details"],
+        ) => {
+          console.log("updating", selectedDataset, datasetDetails);
+          // Explicitly ignoring fetching here to avoid unnecessary rendering of the loading spinner and thus hiding the metadata table.
+          setIgnoreFetching(true);
+          await context.updateCachedDataset(selectedDataset, { details: datasetDetails });
+          setIgnoreFetching(false);
+        },
+        2000,
+      ),
+    [setIgnoreFetching],
+  );
+
+  useEffectOnUpdate(() => {
+    updateCachedDatasetDebounced(context, selectedDataset, datasetDetails);
+  }, [datasetDetails]);
+
+  const updatePropName = (previousPropName: string, newPropName: string) => {
+    setDatasetDetails((prev) => {
+      if (prev && newPropName in prev) {
+        setErrors((prev) => ({
+          ...prev,
+          [previousPropName]: `Property ${newPropName} already exists.`,
+        }));
+        return prev;
+      }
+      if (prev && previousPropName in prev) {
+        const { [previousPropName]: value, ...rest } = prev;
+        setErrors((prev) => {
+          const { [previousPropName]: _, ...rest } = prev;
+          return rest;
+        });
+        return { ...rest, [newPropName]: value };
+      }
+      return { ...prev, [newPropName]: "" };
+    });
+  };
+  const updateValue = (propName: string, newValue: string) => {
+    setDatasetDetails((prev) => {
+      if (prev) {
+        return { ...prev, [propName]: newValue };
+      }
+      return { key: newValue };
+    });
+  };
+
+  const deleteKey = (propName: string) => {
+    setDatasetDetails((prev) => {
+      if (prev) {
+        const { [propName]: _, ...rest } = prev;
+        return rest;
+      }
+      return prev;
+    });
+  };
+
+  const columnData =
+    // "": "" is added to always have a row for adding new metadata.
+    Object.entries({ ...datasetDetails, "": "" }).map(([propName, value], index) => ({
+      propName,
+      value,
+      key: index,
+    }));
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div className="sidebar-label">Metadata</div>
+      <Table
+        dataSource={columnData}
+        columns={[
+          {
+            title: "Property",
+            dataIndex: "propName",
+            render: (propName, record) => {
+              const error = errors[propName] ? (
+                <Typography.Text type="warning">{errors[propName]}</Typography.Text>
+              ) : null;
+              return (
+                <>
+                  <Input
+                    onFocus={() => setFocusedRow(record.key)}
+                    variant={record.key === focusedRow ? "outlined" : "borderless"}
+                    value={propName}
+                    onChange={(evt) => updatePropName(propName, evt.target.value)}
+                  />
+                  <br />
+                  {error}
+                </>
+              );
+            },
+          },
+          {
+            title: "Value",
+            dataIndex: "value",
+            className: "top-aligned-column", // Needed in case of an error in the propName column.
+            render: (value, record) => (
+              <Input
+                onFocus={() => setFocusedRow(record.key)}
+                onBlur={() => setFocusedRow(null)}
+                variant={record.key === focusedRow ? "outlined" : "borderless"}
+                value={value}
+                onChange={(evt) => updateValue(record.propName, evt.target.value)}
+              />
+            ),
+          },
+          {
+            title: "",
+            key: "del",
+            render: (_, record) => <DeleteOutlined onClick={() => deleteKey(record.propName)} />,
+          },
+        ]}
+        pagination={false}
+        size="small"
+      />
+      <div className="flex-center-child" style={{ marginTop: 8 }}>
+        <Button
+          size="small"
+          icon={<PlusCircleOutlined />}
+          onClick={() => {
+            context.updateCachedDataset(selectedDataset, {
+              details: { ...selectedDataset.details, key: "edit me" },
+            });
+          }}
+        >
+          Add Metadata
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
   const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset);
+  const [ignoreFetching, setIgnoreFetching] = useState(false);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const { data: owningOrganization } = useQuery(
     ["organizations", selectedDataset.owningOrganization],
@@ -117,7 +272,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
   return (
     <>
       <h4 style={{ wordBreak: "break-all" }}>
-        {isFetching ? (
+        {isFetching && !ignoreFetching ? (
           <LoadingOutlined style={{ marginRight: 4 }} />
         ) : (
           <FileOutlined style={{ marginRight: 4 }} />
@@ -174,13 +329,6 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         </div>
       </Spin>
 
-      {selectedDataset.isActive ? (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Tags</div>
-          <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
-        </div>
-      ) : null}
-
       {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Used Storage</div>
@@ -188,6 +336,10 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
             <div>{formatCountToDataAmountUnit(fullDataset.usedStorageBytes, true)}</div>
           </Tooltip>
         </div>
+      ) : null}
+
+      {selectedDataset.isActive ? (
+        <MetadataTable selectedDataset={selectedDataset} setIgnoreFetching={setIgnoreFetching} />
       ) : null}
     </>
   );

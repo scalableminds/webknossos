@@ -611,7 +611,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   };
 
   onMultiSelectTree = (id: number) => {
-    // Use this method only for selecting invididual trees for multi-select (CRTL/SHIFT + click)
+    // Use this method only for selecting individual trees for multi-select (CTRL/SHIFT + click)
     const tracing = this.props.skeletonTracing;
     const { selectedTrees } = this.state;
 

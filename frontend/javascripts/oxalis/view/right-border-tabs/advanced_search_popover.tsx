@@ -1,4 +1,4 @@
-import { Input, Tooltip, Popover, Space } from "antd";
+import { Input, Tooltip, Popover, Space, InputRef } from "antd";
 import { DownOutlined, UpOutlined } from "@ant-design/icons";
 import * as React from "react";
 import memoizeOne from "memoize-one";
@@ -93,6 +93,12 @@ export default class AdvancedSearchPopover<
     });
   };
 
+  autoFocus = (inputElement: InputRef) => {
+    if (inputElement) {
+      setTimeout(() => inputElement.focus(), 0);
+    }
+  };
+
   render() {
     const { data, searchKey, provideShortcut, children, targetId } = this.props;
     const { searchQuery, isVisible } = this.state;
@@ -168,6 +174,7 @@ export default class AdvancedSearchPopover<
                       })
                     }
                     addonAfter={`${currentPosition + 1}/${numberOfAvailableOptions}`}
+                    ref={this.autoFocus}
                     autoFocus
                   />
                   <Tooltip title="Previous (shift+enter)">

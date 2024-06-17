@@ -207,7 +207,7 @@ function TreeHierarchyView(props: Props) {
         }
       }
     } else {
-      // regular click on a single node wihtout any multi-selection stuff
+      // Regular click on a single node without any multi-selection stuff.
       props.deselectAllTrees();
       props.onSingleSelectTree(selectedTreeId);
     }

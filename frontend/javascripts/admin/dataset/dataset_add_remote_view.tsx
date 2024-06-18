@@ -248,7 +248,7 @@ function DatasetAddRemoteView(props: Props) {
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
     try {
       await form.validateFields();
-    } catch (_e) {}
+    } catch (_e) { }
     if (hasFormAnyErrors(form)) {
       setShowLoadingOverlay(false);
       return;
@@ -562,7 +562,6 @@ function AddRemoteLayer({
     }
     setDatasourceConfigStr(jsonStringify(mergeNewLayers(existingDatasource, newDataSource)));
     if (onSuccess) {
-      console.log("success");
       onSuccess();
     }
   }

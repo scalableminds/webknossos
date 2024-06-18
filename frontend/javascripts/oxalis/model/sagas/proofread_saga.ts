@@ -436,8 +436,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       return;
     }
 
-    // Now that the changes are saved, we can split the mapping locally (because it requires
-    // communication with the back-end).
+    // Because we ensured a saved state a few lines above, we can now split the mapping locally
+    // as this still requires some communication with the back-end.
     const splitMapping = yield* splitAgglomerateInMapping(
       activeMapping,
       sourceAgglomerateId,

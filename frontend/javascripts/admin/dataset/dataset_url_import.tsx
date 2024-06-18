@@ -26,14 +26,13 @@ export function DatasetURLImport() {
     [],
   );
   const params = Utils.getUrlParamsObject();
-  const datasetUri = _.has(params, "uri") ? params.uri : null;
+  const datasetUri = _.has(params, "url") ? params.url : null;
   const handleDatasetAdded = async (
     datasetAddType: DatasetAddType,
     datasetOrganization: string,
     uploadedDatasetName: string,
     needsConversion: boolean | null | undefined,
   ): Promise<void> => {
-    console.log("added");
     setOrganization(datasetOrganization);
     setDatasetName(uploadedDatasetName);
     setImportType(datasetAddType);

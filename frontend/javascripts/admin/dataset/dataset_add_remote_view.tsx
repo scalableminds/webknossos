@@ -23,7 +23,7 @@ import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_componen
 import Password from "antd/lib/input/Password";
 import { AsyncButton } from "components/async_clickables";
 import Toast from "libs/toast";
-import _, { set } from "lodash";
+import _ from "lodash";
 import { Hint } from "oxalis/view/action-bar/download_modal_view";
 import { formatScale } from "libs/format_utils";
 import { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
@@ -35,7 +35,7 @@ import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components"
 import FolderSelection from "dashboard/folders/folder_selection";
 import { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { UnlockOutlined } from "@ant-design/icons";
-import { EMPTY_OBJECT, Unicode } from "oxalis/constants";
+import { Unicode } from "oxalis/constants";
 import { readFileAsText } from "libs/read_file";
 import * as Utils from "libs/utils";
 import { ArbitraryObject } from "types/globals";
@@ -189,11 +189,6 @@ function DatasetAddRemoteView(props: Props) {
   const isDatasourceConfigStrFalsy = dataSourceJsonStr == null;
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
 
-  const setFalse = () => {
-    setShowLoadingOverlay(false);
-    console.log("set false");
-  };
-
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const targetFolderId = params.get("to");
@@ -206,10 +201,13 @@ function DatasetAddRemoteView(props: Props) {
       const indexOfLastSlash = url.lastIndexOf("/");
       const subString = url.substring(indexOfLastSlash + 1);
       if (subString.length > 2) datasetname = subString;
-      else datasetname = subString.padEnd(3, "0"); // todo
+      else datasetname = subString.padEnd(3, "_");
     }
     return datasetname;
   };
+
+  const hasFormAnyErrors = (form: FormInstance) =>
+    form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
 
   useFetch(
     async () => {
@@ -251,7 +249,7 @@ function DatasetAddRemoteView(props: Props) {
     try {
       await form.validateFields();
     } catch (_e) {}
-    if (form.getFieldsError().filter(({ errors }) => errors.length).length !== 0) {
+    if (hasFormAnyErrors(form)) {
       setShowLoadingOverlay(false);
       return;
     }
@@ -265,11 +263,11 @@ function DatasetAddRemoteView(props: Props) {
       return;
     }
 
-    const datasourceConfigStr = form.getFieldValue("dataSourceJson");
-    if (datasourceConfigStr && activeUser) {
+    const dataSourceJsonStr = form.getFieldValue("dataSourceJson");
+    if (dataSourceJsonStr && activeUser) {
       let configJSON;
       try {
-        configJSON = JSON.parse(datasourceConfigStr);
+        configJSON = JSON.parse(dataSourceJsonStr);
         const nameValidationResult = await isDatasetNameValid({
           name: configJSON.id.name,
           owningOrganization: activeUser.organization,
@@ -323,8 +321,8 @@ function DatasetAddRemoteView(props: Props) {
               uploadableDatastores={uploadableDatastores}
               setDatasourceConfigStr={setDatasourceConfigStr}
               dataSourceEditMode={dataSourceEditMode}
-              defaultUri={defaultDatasetUrl}
-              onError={setFalse}
+              defaultUrl={defaultDatasetUrl}
+              onError={() => setShowLoadingOverlay(false)}
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -424,7 +422,7 @@ function AddRemoteLayer({
   onSuccess,
   onError,
   dataSourceEditMode,
-  defaultUri,
+  defaultUrl,
 }: {
   form: FormInstance;
   uploadableDatastores: APIDataStore[];
@@ -432,7 +430,7 @@ function AddRemoteLayer({
   onSuccess?: () => void;
   onError?: () => void;
   dataSourceEditMode: "simple" | "advanced";
-  defaultUri?: string | null | undefined;
+  defaultUrl?: string | null | undefined;
 }) {
   const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) != null;
   const datasourceUrl: string | null = Form.useWatch("url", form);
@@ -444,11 +442,11 @@ function AddRemoteLayer({
   const [fileList, setFileList] = useState<FileList>([]);
 
   useEffect(() => {
-    if (defaultUri != null) {
-      form.setFieldValue("url", defaultUri);
+    if (defaultUrl != null) {
+      form.setFieldValue("url", defaultUrl);
       if (datasourceUrl != null) handleExplore();
     }
-  }, [defaultUri, datasourceUrl, form.setFieldValue]);
+  }, [defaultUrl, datasourceUrl, form.setFieldValue]);
 
   const handleChange = (info: UploadChangeParam<UploadFile<any>>) => {
     // Restrict the upload list to the latest file
@@ -471,8 +469,6 @@ function AddRemoteLayer({
   }
 
   const handleFailure = () => {
-    debugger;
-    console.log("fail");
     if (onError) onError();
   };
 
@@ -485,7 +481,7 @@ function AddRemoteLayer({
 
     // Sync simple with advanced and get newest datasourceJson
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
-    const datasourceJsonStr = form.getFieldValue("dataSourceJson");
+    const datasourceConfigStr = form.getFieldValue("dataSourceJson");
     const datastoreToUse = uploadableDatastores.find(
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
     );
@@ -497,7 +493,7 @@ function AddRemoteLayer({
 
     const { dataSource: newDataSource, report } = await (async () => {
       // @ts-ignore
-      const preferredVoxelSize = Utils.parseMaybe(datasourceJsonStr)?.scale;
+      const preferredVoxelSize = Utils.parseMaybe(datasourceConfigStr)?.scale;
 
       if (showCredentialsFields) {
         if (selectedProtocol === "gs") {
@@ -539,13 +535,13 @@ function AddRemoteLayer({
       return;
     }
     ensureLargestSegmentIdsInPlace(newDataSource);
-    if (!datasourceJsonStr) {
+    if (!datasourceConfigStr) {
       setDatasourceConfigStr(jsonStringify(newDataSource));
       return;
     }
     let existingDatasource: DatasourceConfiguration;
     try {
-      existingDatasource = JSON.parse(datasourceJsonStr);
+      existingDatasource = JSON.parse(datasourceConfigStr);
     } catch (_e) {
       handleFailure();
       Toast.error(

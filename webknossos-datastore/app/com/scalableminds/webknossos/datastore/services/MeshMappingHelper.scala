@@ -52,6 +52,8 @@ trait MeshMappingHelper {
           }
         } yield segmentIds
       case (Some(mappingName), Some(tracingId)) =>
+        // An editable mapping tracing id is supplied. Ask the tracingstore for the segment ids. If it doesn’t know,
+        // use the mappingName (here the editable mapping’s base mapping) to look it up from file.
         for {
           tracingstoreUri <- dsRemoteWebknossosClient.getTracingstoreUri
           segmentIdsResult <- dsRemoteTracingstoreClient.getEditableMappingSegmentIdsForAgglomerate(tracingstoreUri,

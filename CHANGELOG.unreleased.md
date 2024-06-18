@@ -34,5 +34,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug with incorrect valiation of layer names in the animation modal. [#7882](https://github.com/scalableminds/webknossos/pull/7882)
 
 ### Removed
+- Removed improvement suggestions for datasource-properties.json in the dataset settings for wkw datasets. [#7697](https://github.com/scalableminds/webknossos/pull/7697)
 
 ### Breaking Changes

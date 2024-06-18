@@ -168,6 +168,10 @@ const initialSkeletonTracing: SkeletonTracing = {
 };
 
 const initialState: OxalisState = _.extend({}, defaultState, {
+  dataset: {
+    ...defaultState.dataset,
+    name: "Test Dataset",
+  },
   tracing: {
     name: "",
     restrictions: {

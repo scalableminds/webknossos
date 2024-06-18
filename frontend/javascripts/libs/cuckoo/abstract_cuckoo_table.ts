@@ -3,7 +3,6 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 
-const TEXTURE_CHANNEL_COUNT = 4;
 const DEFAULT_LOAD_FACTOR = 0.25;
 export const EMPTY_KEY_VALUE = 2 ** 32 - 1;
 
@@ -18,6 +17,10 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   seedSubscribers: Array<SeedSubscriberFn> = [];
   _texture: UpdatableTexture;
   textureWidth: number;
+
+  static getTextureChannelCount() {
+    return 4;
+  }
 
   static getElementsPerEntry() {
     return 4;
@@ -45,7 +48,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     this._texture = createUpdatableTexture(
       textureWidth,
       textureWidth,
-      TEXTURE_CHANNEL_COUNT,
+      this.getClass().getTextureChannelCount(),
       this.getClass().getTextureType(),
       getRenderer(),
       this.getClass().getTextureFormat(),
@@ -56,10 +59,10 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     // See https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
     // for a reference of the internal formats.
     this._texture.internalFormat = this.getClass().getInternalFormat();
-    console.log("this._texture.internalFormat", this._texture.internalFormat);
 
     this.entryCapacity = Math.floor(
-      (textureWidth ** 2 * TEXTURE_CHANNEL_COUNT) / this.getClass().getElementsPerEntry(),
+      (textureWidth ** 2 * this.getClass().getTextureChannelCount()) /
+        this.getClass().getElementsPerEntry(),
     );
 
     this.initializeTableArray();
@@ -70,7 +73,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   static computeTextureWidthFromCapacity(requestedCapacity: number): number {
     const capacity = requestedCapacity / DEFAULT_LOAD_FACTOR;
     const textureWidth = Math.ceil(
-      Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / this.getElementsPerEntry()),
+      Math.sqrt((capacity * this.getTextureChannelCount()) / this.getElementsPerEntry()),
     );
     return textureWidth;
   }
@@ -83,7 +86,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       // Use 1x1 texture to avoid WebGL warnings.
       1,
       1,
-      TEXTURE_CHANNEL_COUNT,
+      this.getTextureChannelCount(),
       this.getTextureType(),
       getRenderer(),
       this.getTextureFormat(),
@@ -93,7 +96,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     return cachedNullTexture;
   }
 
-  // todop: make private again
+  // todop (easy): make private again
   initializeTableArray() {
     this.table = new Uint32Array(
       AbstractCuckooTable.getElementsPerEntry() * this.entryCapacity,
@@ -132,7 +135,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     return {
       CUCKOO_ENTRY_CAPACITY: this.entryCapacity,
       CUCKOO_ELEMENTS_PER_ENTRY: this.getClass().getElementsPerEntry(),
-      CUCKOO_ELEMENTS_PER_TEXEL: TEXTURE_CHANNEL_COUNT,
+      CUCKOO_ELEMENTS_PER_TEXEL: this.getClass().getTextureChannelCount(),
       CUCKOO_TWIDTH: this.textureWidth,
     };
   }
@@ -290,12 +293,12 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       // Only partially update if we are not rehashing. Otherwise, it makes more
       // sense to flush the entire texture content after the rehashing is done.
       const offset = hashedAddress * this.getClass().getElementsPerEntry();
-      const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
+      const texelOffset = offset / this.getClass().getTextureChannelCount();
       this._texture.update(
         this.table.subarray(offset, offset + this.getClass().getElementsPerEntry()),
         texelOffset % this.textureWidth,
         Math.floor(texelOffset / this.textureWidth),
-        this.getClass().getElementsPerEntry() / TEXTURE_CHANNEL_COUNT,
+        this.getClass().getElementsPerEntry() / this.getClass().getTextureChannelCount(),
         1,
       );
     }

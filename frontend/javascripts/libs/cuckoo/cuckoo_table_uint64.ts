@@ -22,7 +22,7 @@ export class CuckooTableUint64 extends AbstractCuckooTable<Key, Value, Entry> {
     return EMPTY_VALUE;
   }
 
-  // todop: remove again
+  // todop (easy): remove again
   // initializeTableArray() {
   //   this.table = new Uint32Array(this.getClass().getElementsPerEntry() * this.entryCapacity).fill(
   //     EMPTY_KEY_VALUE,

@@ -9,7 +9,6 @@ import {
 } from "oxalis/shaders/utils.glsl";
 import { Vector3, Vector4 } from "oxalis/constants";
 import type { ShaderModule } from "./shader_module_system";
-import { binarySearchIndex } from "./mappings.glsl";
 import { getRgbaAtIndex } from "./texture_access.glsl";
 import { hashCombine } from "./hashing.glsl";
 
@@ -53,10 +52,26 @@ export const convertCellIdToRGB: ShaderModule = {
 
       return vec3(customColor) / 255.;
     }
-    ivec2 attemptMappingLookUp(uint high, uint low, uint seed) {
+    ivec2 attemptMappingLookUp32(uint value, uint seed) {
+      highp uint h0 = hashCombine(seed, value);
+      h0 = h0 % MAPPING_CUCKOO_ENTRY_CAPACITY;
+      h0 = uint(h0 * MAPPING_CUCKOO_ELEMENTS_PER_ENTRY / MAPPING_CUCKOO_ELEMENTS_PER_TEXEL);
+
+      highp uint x = h0 % MAPPING_CUCKOO_TWIDTH;
+      highp uint y = h0 / MAPPING_CUCKOO_TWIDTH;
+
+      uvec4 customEntry = texelFetch(segmentation_mapping_texture, ivec2(x, y), 0);
+
+      if (customEntry.r != value) {
+         return ivec2(-1.);
+      }
+
+      return ivec2(0u, customEntry.g);
+    }
+    ivec2 attemptMappingLookUp64(uint high, uint low, uint seed) {
       highp uint h0 = hashCombine(seed, high);
       h0 = hashCombine(h0, low);
-      h0 = h0 % MAPPING_CUCKOO_ENTRY_CAPACITY; // todop: different capacity?
+      h0 = h0 % MAPPING_CUCKOO_ENTRY_CAPACITY;
       h0 = uint(h0 * MAPPING_CUCKOO_ELEMENTS_PER_ENTRY / MAPPING_CUCKOO_ELEMENTS_PER_TEXEL);
       highp uint x = h0 % MAPPING_CUCKOO_TWIDTH;
       highp uint y = h0 / MAPPING_CUCKOO_TWIDTH;
@@ -292,7 +307,7 @@ export const getCrossHairOverlay: ShaderModule = {
 };
 
 export const getSegmentId: ShaderModule = {
-  requirements: [binarySearchIndex, getRgbaAtIndex, convertCellIdToRGB],
+  requirements: [getRgbaAtIndex, convertCellIdToRGB],
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
@@ -329,19 +344,21 @@ export const getSegmentId: ShaderModule = {
       uint low_integer = vec4ToUint(255. * mapped_id[1]);
 
       if (shouldApplyMappingOnGPU) {
-        ivec2 mapped_entry = attemptMappingLookUp(high_integer, low_integer, mapping_seeds[0]);
+        // todop: use attemptMappingLookUp64 when necessary
+        ivec2 mapped_entry = attemptMappingLookUp32(/*high_integer,*/ low_integer, mapping_seeds[0]);
         if (mapped_entry.r == -1) {
-          mapped_entry = attemptMappingLookUp(high_integer, low_integer, mapping_seeds[1]);
+          mapped_entry = attemptMappingLookUp32(/*high_integer,*/ low_integer, mapping_seeds[1]);
         }
         if (mapped_entry.r == -1) {
-          mapped_entry = attemptMappingLookUp(high_integer, low_integer, mapping_seeds[2]);
+          mapped_entry = attemptMappingLookUp32(/*high_integer,*/ low_integer, mapping_seeds[2]);
         }
         if (mapped_entry.r != -1) {
           mapped_id[0] = uintToVec4(uint(mapped_entry[0]));
           mapped_id[1] = uintToVec4(uint(mapped_entry[1]));
         } else if (hideUnmappedIds ||
-          isProofreading // todop: instead of isProofreading it should be, usesHdf5Mapping or something like that
+          isProofreading // todop: instead of isProofreading it should be, usesLocalHdf5Mapping or something like that
         ) {
+          mapped_id[0] = vec4(0.0);
           mapped_id[1] = vec4(0.0);
         }
       } else {

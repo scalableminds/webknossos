@@ -1,3 +1,4 @@
+import * as THREE from "three";
 import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
 
 const EMPTY_KEY = EMPTY_KEY_VALUE;
@@ -11,6 +12,12 @@ type Entry = [Key, Value];
 export class CuckooTableUint32 extends AbstractCuckooTable<Key, Value, Entry> {
   static getElementsPerEntry() {
     return 2;
+  }
+  static getTextureChannelCount() {
+    return 2;
+  }
+  static getTextureFormat() {
+    return THREE.RGIntegerFormat;
   }
   static getInternalFormat(): THREE.PixelFormatGPU {
     return "RG32UI";
@@ -27,16 +34,12 @@ export class CuckooTableUint32 extends AbstractCuckooTable<Key, Value, Entry> {
     return EMPTY_VALUE;
   }
 
-  // todop: remove again
+  // todop (easy): remove again
   // initializeTableArray() {
   //   this.table = new Uint32Array(this.getClass().getElementsPerEntry() * this.entryCapacity).fill(
   //     EMPTY_KEY_VALUE,
   //   );
 
-  //   // The chance of colliding seeds is super low which is why
-  //   // we ignore this case (a rehash would happen automatically, anyway).
-  //   // Note that it makes sense to use all 32 bits for the seeds. Otherwise,
-  //   // hash collisions are more likely to happen.
   //   this.seeds = [11, 11, 11];
   //   this.notifySeedListeners();
   // }

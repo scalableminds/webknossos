@@ -57,7 +57,7 @@ class Mappings {
       throw new Error("cuckooTable null when updateMappingTextures was called.");
     }
 
-    // todo: find out what part of the mapping changed and then remove/add entries
+    // todop: find out what part of the mapping changed and then remove/add entries
     // based on that diff? for performance...
 
     if (this.is64Bit()) {

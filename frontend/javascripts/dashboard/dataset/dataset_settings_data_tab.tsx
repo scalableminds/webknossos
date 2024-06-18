@@ -213,12 +213,12 @@ function SimpleDatasetForm({
                   rules={[
                     {
                       required: true,
-                      message: "Please provide a scale for the dataset.",
+                      message: "Please provide a voxel size for the dataset.",
                     },
                     {
                       validator: syncValidator(
                         (value: Vector3) => value?.every((el) => el > 0),
-                        "Each component of the scale must be greater than 0",
+                        "Each component of the voxel size must be greater than 0",
                       ),
                     },
                   ]}

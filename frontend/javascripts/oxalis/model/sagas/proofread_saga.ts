@@ -14,6 +14,7 @@ import {
   initializeEditableMappingAction,
   removeSegmentAction,
   setMappingIsEditableAction,
+  updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { ProofreadAtPositionAction } from "oxalis/model/actions/proofread_actions";
 import {
@@ -39,6 +40,7 @@ import {
   getSegmentsForLayer,
   getMeshInfoForSegment,
   getEditableMappingForVolumeTracingId,
+  getSegmentName,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   getLayerByName,
@@ -711,6 +713,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   const [sourceInfo, targetInfo] = idInfos;
   const sourceAgglomerateId = sourceInfo.agglomerateId;
   const targetAgglomerateId = targetInfo.agglomerateId;
+  const sourceAgglomerate = volumeTracing.segments.getNullable(sourceAgglomerateId);
+  const targetAgglomerate = volumeTracing.segments.getNullable(targetAgglomerateId);
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
@@ -786,6 +790,36 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     volumeTracing.tracingId,
     targetInfo.unmappedId,
   );
+  // Preserving custom names across merges & splits.
+  if (
+    action.type === "PROOFREAD_MERGE" &&
+    sourceAgglomerate &&
+    targetAgglomerate &&
+    (sourceAgglomerate.name || targetAgglomerate.name)
+  ) {
+    const mergedName = _.uniq([sourceAgglomerate.name, targetAgglomerate.name])
+      .filter((name) => name != null)
+      .join(",");
+    if (mergedName !== sourceAgglomerate.name) {
+      yield* put(updateSegmentAction(sourceAgglomerateId, { name: mergedName }, volumeTracingId));
+      Toast.info(`Renamed segment "${getSegmentName(sourceAgglomerate)}" to "${mergedName}."`);
+    }
+  } else if (
+    action.type === "MIN_CUT_AGGLOMERATE_WITH_POSITION" &&
+    sourceAgglomerate &&
+    sourceAgglomerate.name != null
+  ) {
+    // Assign custom name to split-off target.
+    yield* put(
+      updateSegmentAction(
+        newTargetAgglomerateId,
+        { name: sourceAgglomerate.name },
+        volumeTracingId,
+      ),
+    );
+
+    Toast.info(`Assigned name "${sourceAgglomerate.name}" to new split-off segment.`);
+  }
 
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [
     {
@@ -847,6 +881,8 @@ function* handleProofreadCutNeighbors(action: Action) {
 
   const editableMappingId = volumeTracing.mappingName;
 
+  const targetAgglomerate = volumeTracing.segments.getNullable(targetAgglomerateId);
+
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
 
@@ -883,6 +919,22 @@ function* handleProofreadCutNeighbors(action: Action) {
     call(getDataValue, targetPosition),
     ...neighborInfo.neighbors.map((neighbor) => call(getDataValue, neighbor.position)),
   ]);
+
+  if (targetAgglomerate != null && targetAgglomerate.name != null) {
+    // Assign custom name to split-off target.
+    const updateNeighborNamesActions = newNeighborAgglomerateIds.map((newNeighborAgglomerateId) =>
+      put(
+        updateSegmentAction(
+          newNeighborAgglomerateId,
+          { name: targetAgglomerate.name },
+          volumeTracingId,
+        ),
+      ),
+    );
+    yield* all(updateNeighborNamesActions);
+
+    Toast.info(`Assigned name "${targetAgglomerate.name}" to all new split-off segments.`);
+  }
 
   /* Reload meshes */
   yield* spawn(refreshAffectedMeshes, volumeTracingId, [

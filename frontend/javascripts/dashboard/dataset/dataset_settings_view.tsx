@@ -572,7 +572,10 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         forceRender: true,
         children: (
           <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
-            <DatasetSettingsViewConfigTab />
+            <DatasetSettingsViewConfigTab
+              datasetId={this.props.datasetId}
+              dataStoreURL={this.state.dataset?.dataStore.url}
+            />
           </Hideable>
         ),
       },

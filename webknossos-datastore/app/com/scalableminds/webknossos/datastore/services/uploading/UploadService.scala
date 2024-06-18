@@ -291,7 +291,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
             } yield explored)
           .toList)
       combinedLayers = exploreLocalLayerService.makeLayerNamesUnique(dataSources.flatMap(_.dataLayers))
-      dataSource = GenericDataSource[DataLayer](dataSourceId, combinedLayers, dataSources.head.scale)
+      firstExploredDatasource <- dataSources.headOption.toFox
+      dataSource = GenericDataSource[DataLayer](dataSourceId, combinedLayers, firstExploredDatasource.scale)
       path <- Fox.runIf(combinedLayers.nonEmpty)(
         exploreLocalLayerService.writeLocalDatasourceProperties(dataSource, path))
     } yield path
@@ -419,7 +420,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def looksLikeN5Multilayer(dataSourceDir: Path): Box[Boolean] =
     for {
-      _ <- containsMatchingFile(List(FILENAME_ATTRIBUTES_JSON), dataSourceDir, 1) // root attributes.json
+      matchingFileIsPresent <- containsMatchingFile(List(FILENAME_ATTRIBUTES_JSON), dataSourceDir, 1) // root attributes.json
+      _ <- bool2Box(matchingFileIsPresent)
       directories <- PathUtils.listDirectories(dataSourceDir, silent = false)
       detectedLayerBoxes = directories.map(looksLikeN5MultiscalesLayer)
       _ <- bool2Box(detectedLayerBoxes.forall(_.openOr(false)))
@@ -434,7 +436,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     //        - directories 0 to n
     //        - attributes.json (N5Header, dimension, compression,...)
     for {
-      _ <- containsMatchingFile(List(FILENAME_ATTRIBUTES_JSON), dataSourceDir, 1) // root attributes.json
+      matchingFileIsPresent <- containsMatchingFile(List(FILENAME_ATTRIBUTES_JSON), dataSourceDir, 1) // root attributes.json
+      _ <- bool2Box(matchingFileIsPresent)
       datasetDir <- PathUtils.listDirectories(dataSourceDir, silent = false).map(_.headOption)
       scaleDirs <- datasetDir.map(PathUtils.listDirectories(_, silent = false)).getOrElse(Full(Seq.empty))
       _ <- bool2Box(scaleDirs.length == 1) // Must be 1, otherwise it is a multiscale dataset

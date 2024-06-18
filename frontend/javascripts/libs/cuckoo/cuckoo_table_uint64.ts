@@ -3,6 +3,8 @@ import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
 const EMPTY_KEY = [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE] as Value;
 const EMPTY_VALUE = [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE] as Value;
 
+// This module defines a cuckoo table that can map from a 64-bit key to 64-bit value.
+// Both key and value are stored as a tuple of: [High-32-Bits, Low-32-Bits]
 type Key = [number, number];
 type Value = [number, number];
 type Entry = [Key, Value];

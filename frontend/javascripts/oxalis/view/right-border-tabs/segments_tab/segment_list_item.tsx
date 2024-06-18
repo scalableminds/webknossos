@@ -29,7 +29,10 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import { getSegmentColorAsHSLA } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getSegmentColorAsHSLA,
+  getSegmentName,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
 import { hslaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
@@ -41,7 +44,7 @@ import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
-function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
+export function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
   const hslaCss = hslaToCSS(segmentColorHSLA);
 
   return (
@@ -745,11 +748,6 @@ function getComputeMeshAdHocTooltipInfo(
     disabled,
     title,
   };
-}
-
-function getSegmentName(segment: Segment, fallbackToId: boolean = false): string {
-  const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
-  return segment.name || fallback;
 }
 
 export default SegmentListItem;

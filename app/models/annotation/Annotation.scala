@@ -11,6 +11,7 @@ import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json._
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.GetResult
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
@@ -33,6 +34,7 @@ case class Annotation(
     name: String = "",
     viewConfiguration: Option[JsObject] = None,
     state: AnnotationState.Value = Active,
+    isLockedByOwner: Boolean = false,
     tags: Set[String] = Set.empty,
     tracingTime: Option[Long] = None,
     typ: AnnotationType.Value = AnnotationType.Explorational,
@@ -84,6 +86,7 @@ case class AnnotationCompactInfo(id: ObjectId,
                                  modified: Instant,
                                  tags: Set[String],
                                  state: AnnotationState.Value = Active,
+                                 isLockedByOwner: Boolean,
                                  dataSetName: String,
                                  visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
                                  tracingTime: Option[Long] = None,
@@ -92,10 +95,6 @@ case class AnnotationCompactInfo(id: ObjectId,
                                  annotationLayerNames: Seq[String],
                                  annotationLayerTypes: Seq[String],
                                  annotationLayerStatistics: Seq[JsObject])
-
-object AnnotationCompactInfo {
-  implicit val jsonFormat: Format[AnnotationCompactInfo] = Json.format[AnnotationCompactInfo]
-}
 
 class AnnotationLayerDAO @Inject()(SQLClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(SQLClient) {
@@ -218,6 +217,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
         r.name,
         viewconfigurationOpt,
         state,
+        r.islockedbyowner,
         parseArrayLiteral(r.tags).toSet,
         r.tracingtime,
         typ,
@@ -322,6 +322,43 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     } yield parsed
   }
 
+  // Necessary since a tuple can only have 22 elements
+  implicit def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] = GetResult { prs =>
+    import prs._
+
+    val id = <<[ObjectId]
+    val name = <<[String]
+    val description = <<[String]
+    val ownerId = <<[ObjectId]
+    val ownerFirstName = <<[String]
+    val ownerLastName = <<[String]
+    val othersMayEdit = <<[Boolean]
+    val teamIds = parseArrayLiteral(<<[String]).map(ObjectId(_))
+    val teamNames = parseArrayLiteral(<<[String])
+    val teamOrganizationIds = parseArrayLiteral(<<[String]).map(ObjectId(_))
+    val modified = <<[Instant]
+    val tags = parseArrayLiteral(<<[String]).toSet
+    val state = AnnotationState.fromString(<<[String]).getOrElse(AnnotationState.Active)
+    val isLockedByOwner = <<[Boolean]
+    val dataSetName = <<[String]
+    val typ = AnnotationType.fromString(<<[String]).getOrElse(AnnotationType.Explorational)
+    val visibility = AnnotationVisibility.fromString(<<[String]).getOrElse(AnnotationVisibility.Internal)
+    val tracingTime = Option(<<[Long])
+    val organizationName = <<[String]
+    val tracingIds = parseArrayLiteral(<<[String])
+    val annotationLayerNames = parseArrayLiteral(<<[String])
+    val annotationLayerTypes = parseArrayLiteral(<<[String])
+    val annotationLayerStatistics =
+      parseArrayLiteral(<<[String]).map(layerStats => Json.parse(layerStats).validate[JsObject].getOrElse(Json.obj()))
+
+    // format: off
+    AnnotationCompactInfo(id, typ, name,description,ownerId,ownerFirstName,ownerLastName, othersMayEdit,teamIds,
+      teamNames,teamOrganizationIds,modified,tags,state,isLockedByOwner,dataSetName,visibility,tracingTime,
+      organizationName,tracingIds,annotationLayerNames,annotationLayerTypes,annotationLayerStatistics
+    )
+    // format: on
+  }
+
   def findAllListableExplorationals(
       isFinished: Option[Boolean],
       forUser: Option[ObjectId],
@@ -366,6 +403,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                     a.modified,
                     a.tags,
                     a.state,
+                    a.isLockedByOwner,
                     d.name,
                     a.typ,
                     a.visibility,
@@ -384,67 +422,15 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                   WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
                   GROUP BY
                     a._id, a.name, a.description, a._user, a.othersmayedit, a.modified,
-                    a.tags, a.state, a.typ, a.visibility, a.tracingtime,
+                    a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
                     u.firstname, u.lastname,
                     teams_agg.team_ids, teams_agg.team_names, teams_agg.team_organization_ids,
                     d.name, o.name
                   ORDER BY a._id DESC
                   LIMIT $limit
                   OFFSET ${pageNumber * limit}"""
-      rows <- run(
-        query.as[
-          (ObjectId,
-           String,
-           String,
-           ObjectId,
-           String,
-           String,
-           Boolean,
-           String,
-           String,
-           String,
-           Instant,
-           String,
-           String,
-           String,
-           String,
-           String,
-           Long,
-           String,
-           String,
-           String,
-           String,
-           String)])
-    } yield
-      rows.toList.map(
-        r => {
-          AnnotationCompactInfo(
-            id = r._1,
-            name = r._2,
-            description = r._3,
-            ownerId = r._4,
-            ownerFirstName = r._5,
-            ownerLastName = r._6,
-            othersMayEdit = r._7,
-            teamIds = parseArrayLiteral(r._8).map(ObjectId(_)),
-            teamNames = parseArrayLiteral(r._9),
-            teamOrganizationIds = parseArrayLiteral(r._10).map(ObjectId(_)),
-            modified = r._11,
-            tags = parseArrayLiteral(r._12).toSet,
-            state = AnnotationState.fromString(r._13).getOrElse(AnnotationState.Active),
-            dataSetName = r._14,
-            typ = AnnotationType.fromString(r._15).getOrElse(AnnotationType.Explorational),
-            visibility = AnnotationVisibility.fromString(r._16).getOrElse(AnnotationVisibility.Internal),
-            tracingTime = Option(r._17),
-            organizationName = r._18,
-            tracingIds = parseArrayLiteral(r._19),
-            annotationLayerNames = parseArrayLiteral(r._20),
-            annotationLayerTypes = parseArrayLiteral(r._21),
-            annotationLayerStatistics = parseArrayLiteral(r._22).map(layerStats =>
-              Json.parse(layerStats).validate[JsObject].getOrElse(Json.obj()))
-          )
-        }
-      )
+      rows <- run(query.as[AnnotationCompactInfo])
+    } yield rows.toList
 
   def countAllListableExplorationals(isFinished: Option[Boolean])(implicit ctx: DBAccessContext): Fox[Long] = {
     val stateQuery = getStateQuery(isFinished)
@@ -690,6 +676,18 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
         retryCount = 50,
         retryIfErrorContains = List(transactionSerializationError)) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
       _ = logger.info(s"Updated state of Annotation $id to $state, access context: ${ctx.toStringAnonymous}")
+    } yield ()
+
+  def updateLockedState(id: ObjectId, isLocked: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
+      query = q"UPDATE webknossos.annotations SET isLockedByOwner = $isLocked WHERE _id = $id".asUpdate
+      _ <- run(
+        query.withTransactionIsolation(Serializable),
+        retryCount = 50,
+        retryIfErrorContains = List(transactionSerializationError)) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
+      _ = logger.info(
+        s"Updated isLockedByOwner of Annotation $id to $isLocked, access context: ${ctx.toStringAnonymous}")
     } yield ()
 
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext): Fox[Unit] =

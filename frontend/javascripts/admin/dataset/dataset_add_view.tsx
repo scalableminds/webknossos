@@ -313,9 +313,10 @@ export const getPostUploadModal = (
           >
             {datasetNeedsConversion ? (
               <React.Fragment>
-                <Button type="primary" onClick={() => history?.push("/jobs")}>
+                <Button type="primary" onClick={() => history.push("/jobs")}>
                   View the Jobs Queue
                 </Button>
+                import
                 <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
               </React.Fragment>
             ) : (
@@ -327,7 +328,7 @@ export const getPostUploadModal = (
                   View the Dataset
                 </Button>
                 <Button
-                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/import`)}
+                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/edit`)}
                 >
                   Go to Dataset Settings
                 </Button>
@@ -336,7 +337,7 @@ export const getPostUploadModal = (
             )}
           </div>
         </div>
-      </div>
+      </div>{" "}
     </Modal>
   );
 };

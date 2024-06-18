@@ -33,9 +33,10 @@ import {
   PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
-import { BoundingBoxType, Vector3 } from "oxalis/constants";
+import { Vector3 } from "oxalis/constants";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import { BoundingBoxSelection, LayerSelection } from "./starting_job_modals";
+import { BoundingBoxSelection } from "./starting_job_modals";
+import { LayerSelection } from "components/layer_selection";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 
 type Props = {
@@ -49,17 +50,13 @@ const MAX_MESHES_PER_ANIMATION = 40; // arbitrary limit to not overload the serv
 
 function selectMagForTextureCreation(
   colorLayer: APIDataLayer,
-  boundingBox: BoundingBoxType,
+  boundingBox: BoundingBox,
 ): [Vector3, number] {
   // Utility method to determine the best mag in relation to the dataset size to create the textures in the worker job
   // We aim to create textures with a rough length/height of 2000px (aka target_video_frame_size)
-  const colorLayerBB = new BoundingBox(
-    computeBoundingBoxFromBoundingBoxObject(colorLayer.boundingBox),
-  );
-  const bb = new BoundingBox(boundingBox).intersectedWith(colorLayerBB);
 
-  const longestSide = Math.max(...bb.getSize());
-  const dimensionLongestSide = bb.getSize().indexOf(longestSide);
+  const longestSide = Math.max(...boundingBox.getSize());
+  const dimensionLongestSide = boundingBox.getSize().indexOf(longestSide);
 
   let bestMag = colorLayer.resolutions[0];
   let bestDifference = Infinity;
@@ -136,7 +133,8 @@ function CreateAnimationModal(props: Props) {
 
   const validateAnimationOptions = (
     colorLayer: APIDataLayer,
-    selectedBoundingBox: BoundingBoxType,
+    selectedBoundingBox: BoundingBox,
+    renderingBoundingBox: BoundingBox,
     meshes: Partial<MeshInformation>[],
   ) => {
     //  Validate the select parameters and dataset to make sure it actually works and does not overload the server
@@ -144,7 +142,7 @@ function CreateAnimationModal(props: Props) {
     const state = Store.getState();
     const errorMessages: string[] = [];
 
-    const [_, estimatedTextureSize] = selectMagForTextureCreation(colorLayer, selectedBoundingBox);
+    const [_, estimatedTextureSize] = selectMagForTextureCreation(colorLayer, renderingBoundingBox);
 
     const hasEnoughMags = estimatedTextureSize < 1.5 * TARGET_TEXTURE_SIZE;
     if (!hasEnoughMags)
@@ -154,7 +152,7 @@ function CreateAnimationModal(props: Props) {
 
     const isDtypeSupported = colorLayer.elementClass !== "uint24";
     if (!isDtypeSupported)
-      errorMessages.push("Sorry, animations are not supported for uInt24 datasets.");
+      errorMessages.push("Sorry, animations are not supported for uInt24 color layers.");
 
     const isDataset3D =
       !is2dDataset(state.dataset) && (colorLayer.additionalAxes?.length || 0) === 0;
@@ -166,7 +164,25 @@ function CreateAnimationModal(props: Props) {
         `You selected too many meshes for the animation. Please keep the number of meshes below ${MAX_MESHES_PER_ANIMATION} to create an animation.`,
       );
 
-    const validationStatus = hasEnoughMags && isDtypeSupported && isDataset3D && !isTooManyMeshes;
+    const isBoundingBoxEmpty = selectedBoundingBox.getVolume() === 0;
+    if (isBoundingBoxEmpty)
+      errorMessages.push(
+        "Please select a bounding box that is not empty. Width, height, and depth of the bounding box must be larger than zero.",
+      );
+
+    const isRenderingBoundingBoxEmpty = renderingBoundingBox.getVolume() === 0;
+    if (isRenderingBoundingBoxEmpty && !isBoundingBoxEmpty)
+      errorMessages.push(
+        "Your selected bounding box is located outside the dataset's volume. Please select a bounding box contained within the dataset's outer bounds.",
+      );
+
+    const validationStatus =
+      hasEnoughMags &&
+      isDtypeSupported &&
+      isDataset3D &&
+      !isTooManyMeshes &&
+      !isBoundingBoxEmpty &&
+      !isRenderingBoundingBoxEmpty;
 
     setValidationErrors(errorMessages);
     setIsValid(validationStatus);
@@ -215,7 +231,14 @@ function CreateAnimationModal(props: Props) {
       state.datasetConfiguration,
     );
 
-    const [magForTextures, _] = selectMagForTextureCreation(colorLayer, boundingBox);
+    // the actual rendering bounding box in Blender is the intersection of the selected user bounding box and the color layer's outer bounds
+    const colorLayerBB = new BoundingBox(
+      computeBoundingBoxFromBoundingBoxObject(selectedColorLayer.boundingBox),
+    );
+    const selectedBoundingBox = new BoundingBox(boundingBox);
+    const renderingBoundingBox = selectedBoundingBox.intersectedWith(colorLayerBB);
+
+    const [magForTextures, _] = selectMagForTextureCreation(colorLayer, renderingBoundingBox);
 
     const animationOptions: RenderAnimationOptions = {
       layerName: selectedColorLayerName,
@@ -229,7 +252,15 @@ function CreateAnimationModal(props: Props) {
       cameraPosition: selectedCameraPosition,
     };
 
-    if (!validateAnimationOptions(colorLayer, boundingBox, meshes)) return;
+    if (
+      !validateAnimationOptions(
+        selectedColorLayer,
+        selectedBoundingBox,
+        renderingBoundingBox,
+        meshes,
+      )
+    )
+      return;
 
     startRenderAnimationJob(state.dataset.owningOrganization, state.dataset.name, animationOptions);
 
@@ -394,7 +425,7 @@ function CreateAnimationModal(props: Props) {
           <Row gutter={[8, 20]}>
             <Alert
               type="error"
-              style={{ marginTop: 18 }}
+              style={{ marginTop: 18, width: "100%" }}
               message={
                 <ul>
                   {validationErrors.map((errorMessage) => (

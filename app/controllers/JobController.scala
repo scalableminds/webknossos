@@ -46,7 +46,7 @@ object AnimationJobOptions {
   implicit val jsonFormat: OFormat[AnimationJobOptions] = Json.format[AnimationJobOptions]
 }
 
-class JobsController @Inject()(
+class JobController @Inject()(
     jobDAO: JobDAO,
     sil: Silhouette[WkEnv],
     datasetDAO: DatasetDAO,
@@ -278,6 +278,36 @@ class JobsController @Inject()(
             "bbox" -> bbox,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunInferMitochondria"
+          js <- jobService.publicWrites(job)
+        } yield Ok(js)
+      }
+    }
+
+  def runAlignSectionsJob(organizationName: String,
+                          datasetName: String,
+                          layerName: String,
+                          newDatasetName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                       organizationName)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.alignSections.notAllowed.organization" ~> FORBIDDEN
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
+            "dataset.notFound",
+            datasetName) ~> NOT_FOUND
+          _ <- datasetService.assertValidDatasetName(newDatasetName)
+          _ <- datasetService.assertValidLayerNameLax(layerName)
+          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.alignSections.notAllowed.onlySuperUsers"
+          command = JobCommand.align_sections
+          commandArgs = Json.obj(
+            "organization_name" -> organizationName,
+            "dataset_name" -> datasetName,
+            "new_dataset_name" -> newDatasetName,
+            "layer_name" -> layerName,
+          )
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunAlignSections"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }

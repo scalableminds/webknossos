@@ -256,11 +256,6 @@ type APIUnimportedDataset = APIDatasetBase & {
   readonly isActive: false;
 };
 export type APIMaybeUnimportedDataset = APIUnimportedDataset | APIDataset;
-export type APIDataSourceWithMessages = {
-  readonly dataSource?: APIDataSource;
-  readonly previousDataSource?: APIDataSource | APIUnimportedDatasource;
-  readonly messages: Array<APIMessage>;
-};
 export type APITeamMembership = {
   readonly id: string;
   readonly name: string;
@@ -463,6 +458,7 @@ export type APIAnnotationInfo = {
   // backend still serves this for backward-compatibility reasons.
   readonly stats?: SkeletonTracingStats | EmptyObject;
   readonly state: string;
+  readonly isLockedByOwner: boolean;
   readonly tags: Array<string>;
   readonly typ: APIAnnotationType;
   // The owner can be null (e.g., for a sandbox annotation
@@ -480,6 +476,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     id,
     name,
     state,
+    isLockedByOwner,
     tags,
     typ,
     owner,
@@ -496,6 +493,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     description,
     modified,
     id,
+    isLockedByOwner,
     name,
     state,
     tags,
@@ -660,10 +658,11 @@ export type APIFeatureToggles = {
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
 };
-export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
+export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
-export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
+export type APIEffectiveJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
 export enum APIJobType {
+  ALIGN_SECTIONS = "align_sections",
   CONVERT_TO_WKW = "convert_to_wkw",
   EXPORT_TIFF = "export_tiff",
   RENDER_ANIMATION = "render_animation",
@@ -673,6 +672,9 @@ export enum APIJobType {
   INFER_NUCLEI = "infer_nuclei",
   INFER_NEURONS = "infer_neurons",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
+  TRAIN_MODEL = "train_model",
+  INFER_WITH_MODEL = "infer_with_model",
+  INFER_MITOCHONDRIA = "infer_mitochondria",
 }
 
 export type APIJob = {
@@ -688,12 +690,25 @@ export type APIJob = {
   readonly boundingBox: string | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
-  readonly state: APIJobState;
+  readonly state: APIEffectiveJobState;
   readonly manualState: APIJobManualState;
   readonly result: string | null | undefined;
   readonly resultLink: string | null | undefined;
   readonly createdAt: number;
+  readonly voxelyticsWorkflowHash: string | null;
+  readonly trainingAnnotations: Array<{ annotationId: string }>;
 };
+
+export type AiModel = {
+  id: string;
+  name: string;
+  dataStore: APIDataStore;
+  user: APIUser;
+  comment: string;
+  created: number;
+  trainingJob: APIJob | null;
+};
+
 // Tracing related datatypes
 export type APIUpdateActionBatch = {
   version: number;
@@ -846,6 +861,7 @@ export enum VoxelyticsRunState {
   CANCELLED = "CANCELLED",
   STALE = "STALE",
 }
+
 type DistributionConfig = {
   strategy: string;
   resources?: Record<string, string>;
@@ -881,27 +897,15 @@ export type VoxelyticsArtifactConfig = {
   };
 };
 
-export type VoxelyticsRunInfo = (
-  | {
-      state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
-      endTime: null;
-    }
-  | {
-      state:
-        | VoxelyticsRunState.COMPLETE
-        | VoxelyticsRunState.FAILED
-        | VoxelyticsRunState.CANCELLED
-        | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
-    }
-) & {
+export type VoxelyticsRunInfo = {
   id: string;
   name: string;
-  username: string;
-  hostname: string;
+  userName: string;
+  hostName: string;
   voxelyticsVersion: string;
+  state: VoxelyticsRunState;
+  beginTime: Date | null;
+  endTime: Date | null;
 };
 
 export type VoxelyticsWorkflowDagEdge = { source: string; target: string; label: string };
@@ -976,28 +980,18 @@ export type VoxelyticsWorkflowReport = {
   };
 };
 
-export type VoxelyticsWorkflowListingRun = (
-  | {
-      state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
-      endTime: null;
-    }
-  | {
-      state:
-        | VoxelyticsRunState.COMPLETE
-        | VoxelyticsRunState.FAILED
-        | VoxelyticsRunState.CANCELLED
-        | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
-    }
-) & {
+export type VoxelyticsWorkflowListingRun = {
   id: string;
   name: string;
-  username: string;
-  hostname: string;
+  hostUserName: string;
+  hostName: string;
   voxelyticsVersion: string;
   taskCounts: TaskCounts;
+  userFirstName: string;
+  userLastName: string;
+  state: VoxelyticsRunState;
+  beginTime: Date | null;
+  endTime: Date | null;
 };
 
 export type VoxelyticsWorkflowListing = {

@@ -2,6 +2,7 @@ import memoizeOne from "memoize-one";
 import type {
   APIAnnotation,
   APIAnnotationInfo,
+  APIDataLayer,
   APIDataset,
   APISegmentationLayer,
   AdditionalCoordinate,
@@ -14,6 +15,7 @@ import type {
   HybridTracing,
   LabelAction,
   OxalisState,
+  Segment,
   SegmentGroup,
   SegmentMap,
   Tracing,
@@ -620,6 +622,11 @@ export function getLabelActionFromPreviousSlice(
   );
 }
 
+export function getSegmentName(segment: Segment, fallbackToId: boolean = false): string {
+  const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
+  return segment.name || fallback;
+}
+
 // Output is in [0,1] for R, G, B, and A
 export function getSegmentColorAsRGBA(
   state: OxalisState,
@@ -777,4 +784,13 @@ export function getMeshInfoForSegment(
   );
   if (meshesForAddCoords == null) return null;
   return meshesForAddCoords[segmentId];
+}
+
+export function getReadableNameOfVolumeLayer(
+  layer: APIDataLayer,
+  tracing: HybridTracing,
+): string | null {
+  return "tracingId" in layer && layer.tracingId != null
+    ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+    : null;
 }

@@ -511,9 +511,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             zipFile: [],
           });
         }
-        // We return here since not more than 1 zip archive is supported anyway. This is guarded
-        // against via form validation.
-        return;
+        // The loop breaks here in case of zip because at most one zip archive is supported anyway.
+        // Form validation takes care of that assertion.
+        break;
       }
     }
 
@@ -725,12 +725,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 rules={[
                   {
                     required: this.state.needsConversion,
-                    message: "Please provide a scale for the dataset.",
+                    message: "Please provide a voxel size for the dataset.",
                   },
                   {
                     validator: syncValidator(
                       (value: Vector3) => value?.every((el) => el > 0),
-                      "Each component of the scale must be larger than 0.",
+                      "Each component of the voxel size must be larger than 0.",
                     ),
                   },
                 ]}

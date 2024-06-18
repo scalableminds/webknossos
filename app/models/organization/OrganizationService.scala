@@ -164,9 +164,6 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       } yield ownerEmail
     }
 
-  def overTimeMailRecipient(organization: Organization)(implicit ctx: DBAccessContext): Fox[String] =
-    fallbackOnOwnerEmail(organization.overTimeMailingList, organization)
-
   def newUserMailRecipient(organization: Organization)(implicit ctx: DBAccessContext): Fox[String] =
     fallbackOnOwnerEmail(organization.newUserMailingList, organization)
 

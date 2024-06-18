@@ -96,7 +96,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
                   View the Dataset
                 </Button>
                 <Button
-                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/import`)}
+                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/edit`)}
                 >
                   Go to Dataset Settings
                 </Button>

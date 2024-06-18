@@ -258,11 +258,6 @@ type APIUnimportedDataset = APIDatasetBase & {
   readonly isActive: false;
 };
 export type APIMaybeUnimportedDataset = APIUnimportedDataset | APIDataset;
-export type APIDataSourceWithMessages = {
-  readonly dataSource?: APIDataSource;
-  readonly previousDataSource?: APIDataSource | APIUnimportedDatasource;
-  readonly messages: Array<APIMessage>;
-};
 export type APITeamMembership = {
   readonly id: string;
   readonly name: string;

@@ -64,14 +64,12 @@ export default function DatasetSettingsDataTab({
   form,
   activeDataSourceEditMode,
   onChange,
-  additionalAlert,
   dataset,
 }: {
   allowRenamingDataset: boolean;
   form: FormInstance;
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
-  additionalAlert?: React.ReactNode | null | undefined;
   dataset?: APIDataset | null | undefined;
 }) {
   // Using the return value of useWatch for the `dataSource` var
@@ -112,8 +110,6 @@ export default function DatasetSettingsDataTab({
           />
         </Tooltip>
       </div>
-
-      {additionalAlert}
 
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
@@ -217,12 +213,12 @@ function SimpleDatasetForm({
                   rules={[
                     {
                       required: true,
-                      message: "Please provide a scale for the dataset.",
+                      message: "Please provide a voxel size for the dataset.",
                     },
                     {
                       validator: syncValidator(
                         (value: Vector3) => value?.every((el) => el > 0),
-                        "Each component of the scale must be greater than 0",
+                        "Each component of the voxel size must be greater than 0",
                       ),
                     },
                   ]}

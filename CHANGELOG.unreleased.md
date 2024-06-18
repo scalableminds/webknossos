@@ -34,5 +34,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug with incorrect valiation of layer names in the animation modal. [#7882](https://github.com/scalableminds/webknossos/pull/7882)
 
 ### Removed
+- If the datasource-properties.json file for a dataset is missing or contains errors, WEBKNOSSOS no longer attempts to guess its contents from the raw data. Exploring remote datasets will still create the file. [#7697](https://github.com/scalableminds/webknossos/pull/7697)
 
 ### Breaking Changes

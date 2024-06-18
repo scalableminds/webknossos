@@ -120,7 +120,7 @@ export async function requestWithFallback(
   // For non-segmentation layers and for viewing datasets, we'll always use the datastore URL.
   // We also use the data store, if a hdf5 mapping should be locally applied. This is only the
   // case if the proofreading tool is active or the layer was already proofread. In that case,
-  // no changes can exist on the tracing store.
+  // no bucket data changes can exist on the tracing store.
   const shouldUseDataStore =
     maybeVolumeTracing == null || needsLocalHdf5Mapping(state, layerInfo.name);
 

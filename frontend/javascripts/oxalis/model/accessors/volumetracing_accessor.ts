@@ -525,10 +525,9 @@ export const getRenderableResolutionForActiveSegmentationTracing = reuseInstance
 
 export function getMappingInfoForVolumeTracing(
   state: OxalisState,
-  // layerName instead of tracingId is also supported
-  tracingId: string | null | undefined,
+  tracingIdOrLayerName: string | null | undefined,
 ): ActiveMappingInfo {
-  return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
+  return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingIdOrLayerName);
 }
 
 function getVolumeTracingForLayerName(
@@ -789,6 +788,9 @@ export function needsLocalHdf5Mapping(state: OxalisState, layerName: string) {
   }
 
   return (
+    // An annotation that has an editable mapping is likely proofread a lot.
+    // Switching between tools should not require a reload which is why
+    // needsLocalHdf5Mapping() will always return true in that case.
     volumeTracing.hasEditableMapping ||
     state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD
   );

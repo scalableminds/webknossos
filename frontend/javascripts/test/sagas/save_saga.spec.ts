@@ -8,7 +8,7 @@ import mockRequire from "mock-require";
 import test from "ava";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
-import { Unit } from "oxalis/constants";
+import { UnitLong } from "oxalis/constants";
 
 const TIMESTAMP = 1494695001688;
 const DateMock = {
@@ -32,7 +32,7 @@ const tracingId = "1234567890";
 const initialState = {
   dataset: {
     dataSource: {
-      scale: { factor: [5, 5, 5], unit: Unit.nm },
+      scale: { factor: [5, 5, 5], unit: UnitLong.nm },
     },
   },
   task: {

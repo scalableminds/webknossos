@@ -1,4 +1,4 @@
-import { UnitLongNames } from "oxalis/constants";
+import { UnitLong } from "oxalis/constants";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 
 export default {
@@ -418,7 +418,7 @@ export default {
               maxItems: 3,
             },
             unit: {
-              enum: Object.keys(UnitLongNames),
+              enum: Object.values(UnitLong),
             },
           },
         },

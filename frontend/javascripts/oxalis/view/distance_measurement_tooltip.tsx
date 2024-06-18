@@ -2,7 +2,7 @@ import { useDispatch, useSelector } from "react-redux";
 import _ from "lodash";
 import React, { useEffect, useRef } from "react";
 import type { OxalisState } from "oxalis/store";
-import { AnnotationToolEnum, MeasurementTools, Vector3 } from "oxalis/constants";
+import { AnnotationToolEnum, MeasurementTools, UnitShortMap, Vector3 } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -82,14 +82,14 @@ export default function DistanceMeasurementTooltip() {
     valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(notScalingFactor), 1);
     valueInMetricUnit = formatNumberToLength(
       lineMeasurementGeometry.getDistance(voxelSize.factor),
-      voxelSize.unit,
+      UnitShortMap[voxelSize.unit],
     );
   } else if (activeTool === AnnotationToolEnum.AREA_MEASUREMENT) {
     const { areaMeasurementGeometry } = getSceneController();
     valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea(notScalingFactor), 1);
     valueInMetricUnit = formatNumberToArea(
       areaMeasurementGeometry.getArea(voxelSize.factor),
-      voxelSize.unit,
+      UnitShortMap[voxelSize.unit],
     );
   }
   const {

@@ -58,7 +58,7 @@ import { Vector3Input } from "libs/vector_input";
 import features from "features";
 import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";
-import { AllUnits, Unit, UnitLongNames, type Vector3 } from "oxalis/constants";
+import { AllUnits, UnitLong, UnitShortMap, type Vector3 } from "oxalis/constants";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
@@ -677,7 +677,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               scale: [0, 0, 0],
               zipFile: [],
               targetFolderId: new URLSearchParams(location.search).get("to"),
-              unit: Unit.nm,
+              unit: UnitLong.nm,
             }}
           >
             {features().isWkorgInstance && (
@@ -781,7 +781,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                         value: unit,
                         label: (
                           <span>
-                            <Tooltip title={UnitLongNames[unit]}>{unit}</Tooltip>
+                            <Tooltip title={unit}>{UnitShortMap[unit]}</Tooltip>
                           </span>
                         ),
                       }))}

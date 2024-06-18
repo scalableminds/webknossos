@@ -1,6 +1,6 @@
 import Request from "libs/request";
 import { location } from "libs/window";
-import type { Unit, Vector3, Vector6 } from "oxalis/constants";
+import type { UnitLong, Vector3, Vector6 } from "oxalis/constants";
 import type {
   APIAnnotationType,
   APIJob,
@@ -73,7 +73,7 @@ export async function startConvertToWkwJob(
   datasetName: string,
   organizationName: string,
   scale: Vector3,
-  unit: Unit,
+  unit: UnitLong,
 ): Promise<APIJob> {
   return Request.receiveJSON(
     `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}&unit=${unit}`,

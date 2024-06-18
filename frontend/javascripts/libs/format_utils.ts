@@ -1,5 +1,5 @@
 import { presetPalettes } from "@ant-design/colors";
-import { Unit, type Vector3, type Vector6 } from "oxalis/constants";
+import { UnitShort, type Vector3, type Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -51,7 +51,7 @@ const COLOR_MAP: Array<string> = [
   "#750790",
 ];
 
-export const UnitsMap: Record<Unit, number> = {
+export const UnitsMap: Record<UnitShort, number> = {
   ym: 1e-15,
   zm: 1e-12,
   am: 1e-9,
@@ -80,22 +80,22 @@ export const UnitsMap: Record<Unit, number> = {
   pc: 3.085677581e25,
 };
 
-const uncommonUnitsToCommon: Map<Unit, Unit> = new Map([
-  [Unit.cm, Unit.mm],
-  [Unit.dm, Unit.mm],
-  [Unit.hm, Unit.m],
-  [Unit.Å, Unit.pm],
-  [Unit.in, Unit.mm],
-  [Unit.ft, Unit.mm],
-  [Unit.yd, Unit.mm],
-  [Unit.mi, Unit.km],
-  [Unit.pc, Unit.Pm],
+const uncommonUnitsToCommon: Map<UnitShort, UnitShort> = new Map([
+  [UnitShort.cm, UnitShort.mm],
+  [UnitShort.dm, UnitShort.mm],
+  [UnitShort.hm, UnitShort.m],
+  [UnitShort.Å, UnitShort.pm],
+  [UnitShort.in, UnitShort.mm],
+  [UnitShort.ft, UnitShort.mm],
+  [UnitShort.yd, UnitShort.mm],
+  [UnitShort.mi, UnitShort.km],
+  [UnitShort.pc, UnitShort.Pm],
 ]);
 
 function getFactorToNextSmallestCommonUnit(
-  unit: Unit,
+  unit: UnitShort,
   dimensionsCount: number = 1,
-): [number, Unit] {
+): [number, UnitShort] {
   const commonUnit = uncommonUnitsToCommon.get(unit);
   if (commonUnit == null) {
     return [1, unit];
@@ -218,7 +218,7 @@ export const nmFactorToUnit = new Map([
 // E.g. formatNumberToLength(0.003, Unit.m) == "3.0 mm"
 export function formatNumberToLength(
   length: number,
-  unit: string,
+  unit: UnitShort,
   decimalPrecision: number = 1,
   preferShorterDecimals: boolean = false,
 ): string {
@@ -258,7 +258,7 @@ export const nmFactorToUnit2D = new Map([
 // E.g. formatNumberToArea(0.003, Unit.m) == "30.0 cm²"
 export function formatNumberToArea(
   lengthInUnit2: number,
-  unit: string,
+  unit: UnitShort,
   decimalPrecision: number = 1,
   preferShorterDecimals: boolean = false,
 ): string {
@@ -298,7 +298,7 @@ export const nmFactorToUnit3D = new Map([
 // E.g. formatNumberToVolume(0.003, Unit.m) == "3000.0 cm³"
 export function formatNumberToVolume(
   lengthInUnit3: number,
-  unit: string,
+  unit: UnitShort,
   decimalPrecision: number = 1,
   preferShorterDecimals: boolean = false,
 ): string {
@@ -345,7 +345,7 @@ const getSortedFactorsAndUnits = _.memoize((unitMap: Map<number, string>) =>
 type UnitDimension = { unit: string; dimension: number };
 
 function adjustUnitToDimension(unit: string, dimension: number): string {
-  return (unit = dimension === 1 ? unit : dimension === 2 ? `${unit}²` : `${unit}³`);
+  return dimension === 1 ? unit : dimension === 2 ? `${unit}²` : `${unit}³`;
 }
 
 function findBestUnitForFormatting(
@@ -360,15 +360,16 @@ function findBestUnitForFormatting(
   if (isLengthUnit) {
     // In case of a length unit, ensure it is among the common length units that we support conversion for.
     [factorToNextSmallestCommonUnit, unit] = getFactorToNextSmallestCommonUnit(
-      unit as Unit,
+      unit as UnitShort,
       dimension,
     );
   }
-  unit = adjustUnitToDimension(unit, dimension);
+  const adjustedUnit = adjustUnitToDimension(unit, dimension);
   const sortedFactorsAndUnits = getSortedFactorsAndUnits(unitMap);
-  const currentFactor = sortedFactorsAndUnits.find((entry) => entry[1] === unit)?.[0] || undefined;
+  const currentFactor =
+    sortedFactorsAndUnits.find((entry) => entry[1] === adjustedUnit)?.[0] || undefined;
   if (currentFactor == null) {
-    throw new Error(`Couldn't look up appropriate unit for ${unit}.`);
+    throw new Error(`Couldn't look up appropriate unit for ${adjustedUnit}.`);
   }
   const currentFactorFromSmallestCommonUnit = currentFactor * factorToNextSmallestCommonUnit;
   let closestConversionFactor = sortedFactorsAndUnits[0][0] / currentFactorFromSmallestCommonUnit; // The default is 1 as in this case there is no conversion.

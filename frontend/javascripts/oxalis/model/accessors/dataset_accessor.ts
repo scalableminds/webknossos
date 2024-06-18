@@ -19,7 +19,7 @@ import type {
   ActiveMappingInfo,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import { IdentityTransform, Vector3, Vector4, ViewMode } from "oxalis/constants";
+import { IdentityTransform, UnitShortMap, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import { aggregateBoundingBox, maxValue } from "libs/utils";
 import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
@@ -328,7 +328,7 @@ export function getDatasetExtentAsString(
 
   const extent = getDatasetExtentInUnit(dataset);
   return formatExtentInUnitWithLength(extent, (length) =>
-    formatNumberToLength(length, dataset.dataSource.scale.unit),
+    formatNumberToLength(length, UnitShortMap[dataset.dataSource.scale.unit]),
   );
 }
 export function determineAllowedModes(settings?: Settings): {

@@ -28,6 +28,8 @@ import {
   VolumeTools,
   AltOrOptionKey,
   CtrlOrCmdKey,
+  UnitShortMap,
+  UnitLong,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
@@ -194,7 +196,7 @@ function copyIconWithTooltip(value: string | number, title: string) {
 function measureAndShowLengthBetweenNodes(
   sourceNodeId: number,
   targetNodeId: number,
-  voxelSizeUnit: string,
+  voxelSizeUnit: UnitLong,
 ) {
   const [lengthInUnit, lengthInVx] = api.tracing.measurePathLengthBetweenNodes(
     sourceNodeId,
@@ -203,7 +205,7 @@ function measureAndShowLengthBetweenNodes(
   notification.open({
     message: `The shortest path length between the nodes is ${formatNumberToLength(
       lengthInUnit,
-      voxelSizeUnit,
+      UnitShortMap[voxelSizeUnit],
     )} (${formatLengthAsVx(lengthInVx)}).`,
     icon: <i className="fas fa-ruler" />,
   });
@@ -222,12 +224,12 @@ function extractShortestPathAsNewTree(
   }
 }
 
-function measureAndShowFullTreeLength(treeId: number, treeName: string, voxelSizeUnit: string) {
+function measureAndShowFullTreeLength(treeId: number, treeName: string, voxelSizeUnit: UnitLong) {
   const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
   notification.open({
     message: messages["tracing.tree_length_notification"](
       treeName,
-      formatNumberToLength(lengthInUnit, voxelSizeUnit),
+      formatNumberToLength(lengthInUnit, UnitShortMap[voxelSizeUnit]),
       formatLengthAsVx(lengthInVx),
     ),
     icon: <i className="fas fa-ruler" />,
@@ -1480,7 +1482,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
         const volumeInUnit3 = voxelToVolumeInUnit(voxelSize, layersFinestResolution, segmentSize);
         return [
-          formatNumberToVolume(volumeInUnit3, voxelSize.unit),
+          formatNumberToVolume(volumeInUnit3, UnitShortMap[voxelSize.unit]),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
         ];
       } catch (_error) {
@@ -1536,7 +1538,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       ? [
           formatNumberToLength(
             V3.scaledDist(getActiveNodePosition(), positionToMeasureDistanceTo, voxelSize.factor),
-            voxelSize.unit,
+            UnitShortMap[voxelSize.unit],
           ),
           formatLengthAsVx(V3.length(V3.sub(getActiveNodePosition(), positionToMeasureDistanceTo))),
         ]

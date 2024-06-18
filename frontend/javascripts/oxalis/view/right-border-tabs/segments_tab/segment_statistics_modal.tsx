@@ -3,7 +3,7 @@ import { Alert, Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
-import { Vector3 } from "oxalis/constants";
+import { UnitShortMap, Vector3 } from "oxalis/constants";
 import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { OxalisState, Segment } from "oxalis/store";
 import React from "react";
@@ -186,7 +186,7 @@ export function SegmentStatisticsModal({
               groupName: getGroupNameForId(currentGroupId),
               volumeInVoxel: currentSegmentSizeInVx,
               volumeInUnit3: volumeInUnit3,
-              formattedSize: formatNumberToVolume(volumeInUnit3, voxelSize.unit),
+              formattedSize: formatNumberToVolume(volumeInUnit3, UnitShortMap[voxelSize.unit]),
               boundingBoxTopLeft: boundingBoxInMag1.topLeft,
               boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
               boundingBoxPosition: [

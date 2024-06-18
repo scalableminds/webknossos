@@ -1,0 +1,16 @@
+syntax = "proto2";
+
+package com.scalableminds.webknossos.datastore;
+
+message AnnotationProto {
+  optional string name = 1;
+  optional string description = 2;
+  required int64 version = 3;
+  repeated AnnotationLayerProto layers = 4;
+}
+
+message AnnotationLayerProto {
+  required string name = 1;
+  required int64 version = 2;
+  required string tracingId = 3;
+}

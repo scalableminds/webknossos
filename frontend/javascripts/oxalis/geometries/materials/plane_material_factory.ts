@@ -342,15 +342,13 @@ class PlaneMaterialFactory {
   attachSegmentationMappingTextures(): void {
     const segmentationLayer = Model.getSegmentationLayerWithMappingSupport();
     const cuckoo =
-      segmentationLayer?.mappings != null
-        ? segmentationLayer.mappings.getCuckooTable() // It's important to set up the uniforms (even when they are null), since later
-        : // additions to `this.uniforms` won't be properly attached otherwise.
-          null;
+      segmentationLayer?.mappings != null ? segmentationLayer.mappings.getCuckooTable() : null;
 
+    // It's important to set up the uniforms, since later additions to
+    // `this.uniforms` won't be properly attached otherwise.
     this.uniforms.segmentation_mapping_texture = {
-      value: cuckoo?.getTexture() || null,
+      value: cuckoo?.getTexture() || CuckooTable.getNullTexture(),
     };
-    console.log("attached texture", this.uniforms.segmentation_mapping_texture.value);
     this.uniforms.mapping_seeds = { value: [0, 0, 0] };
 
     this.unsubscribeMappingSeedsFn?.();
@@ -369,6 +367,12 @@ class PlaneMaterialFactory {
       this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_ENTRY = { value: CUCKOO_ELEMENTS_PER_ENTRY };
       this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
       this.uniforms.MAPPING_CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
+    } else {
+      // todop: not necessary?
+      this.uniforms.MAPPING_CUCKOO_ENTRY_CAPACITY = { value: null };
+      this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_ENTRY = { value: null };
+      this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_TEXEL = { value: null };
+      this.uniforms.MAPPING_CUCKOO_TWIDTH = { value: null };
     }
   }
 

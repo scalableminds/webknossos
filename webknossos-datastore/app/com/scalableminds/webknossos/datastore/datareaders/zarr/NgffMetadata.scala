@@ -70,7 +70,7 @@ object NgffMetadata {
           List(NgffCoordinateTransformation(
             scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList)))
       ))
-    val lengthUnitStr = LengthUnit.toNgffString(dataSourceVoxelSize.unit)
+    val lengthUnitStr = dataSourceVoxelSize.unit.toString
     val axes = List(
       NgffAxis(name = "c", `type` = "channel"),
       NgffAxis(name = "x", `type` = "space", unit = Some(lengthUnitStr)),

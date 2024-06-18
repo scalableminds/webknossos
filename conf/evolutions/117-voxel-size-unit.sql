@@ -4,7 +4,7 @@ do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 1
 
 DROP VIEW webknossos.datasets_;
 
-CREATE TYPE webknossos.LENGTH_UNIT AS ENUM ('ym', 'zm', 'am', 'fm', 'pm', 'nm', 'µm', 'mm', 'cm', 'dm', 'm', 'hm', 'km', 'Mm', 'Gm', 'Tm', 'Pm', 'Em', 'Zm', 'Ym', 'Å', 'in', 'ft', 'yd', 'mi', 'pc');
+CREATE TYPE webknossos.LENGTH_UNIT AS ENUM ('yoctometer', 'zeptometer', 'attometer', 'femtometer', 'picometer', 'nanometer', 'micrometer', 'millimeter', 'centimeter', 'decimeter', 'meter', 'hectometer', 'kilometer', 'megameter', 'gigameter', 'terameter', 'petameter', 'exameter', 'zettameter', 'yottameter', 'angstrom', 'inch', 'foot', 'yard', 'mile', 'parsec');
 
 ALTER TABLE webknossos.datasets RENAME COLUMN scale TO voxelSizeFactor;
 ALTER TABLE webknossos.datasets ADD COLUMN voxelSizeUnit webknossos.LENGTH_UNIT;

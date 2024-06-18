@@ -23,7 +23,7 @@ import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_componen
 import Password from "antd/lib/input/Password";
 import { AsyncButton } from "components/async_clickables";
 import Toast from "libs/toast";
-import _ from "lodash";
+import _, { set } from "lodash";
 import { Hint } from "oxalis/view/action-bar/download_modal_view";
 import { formatScale } from "libs/format_utils";
 import { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
@@ -40,6 +40,7 @@ import { readFileAsText } from "libs/read_file";
 import * as Utils from "libs/utils";
 import { ArbitraryObject } from "types/globals";
 import { useFetch } from "libs/react_helpers";
+import BrainSpinner from "components/brain_spinner";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -180,12 +181,18 @@ function DatasetAddRemoteView(props: Props) {
   const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
 
   const [showAddLayerModal, setShowAddLayerModal] = useState(false);
+  const [showLoadingOverlay, setShowLoadingOverlay] = useState(defaultDatasetUrl != null);
   const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
   const [form] = Form.useForm();
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
   const dataSourceJsonStr = Form.useWatch("dataSourceJson", form);
   const isDatasourceConfigStrFalsy = dataSourceJsonStr == null;
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
+
+  const setFalse = () => {
+    setShowLoadingOverlay(false);
+    console.log("set false");
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -206,7 +213,9 @@ function DatasetAddRemoteView(props: Props) {
 
   useFetch(
     async () => {
-      if (defaultDatasetUrl == null || isDatasourceConfigStrFalsy) return;
+      if (defaultDatasetUrl == null || isDatasourceConfigStrFalsy) {
+        return;
+      }
       const dataSourceJson = JSON.parse(dataSourceJsonStr);
       const defaultDatasetName = getDefaultDatasetName(defaultDatasetUrl);
       setDatasourceConfigStr(
@@ -221,6 +230,8 @@ function DatasetAddRemoteView(props: Props) {
         form.getFieldsError().filter(({ errors }) => errors.length).length === 0;
       if (!isDatasourceConfigStrFalsy && allFieldsValid) {
         handleStoreDataset();
+      } else {
+        setShowLoadingOverlay(false);
       }
     },
     null,
@@ -239,15 +250,17 @@ function DatasetAddRemoteView(props: Props) {
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
     try {
       await form.validateFields();
-    } catch (_e) {
-      console.warn("Maybe error in form");
+    } catch (_e) {}
+    if (form.getFieldsError().filter(({ errors }) => errors.length).length !== 0) {
+      setShowLoadingOverlay(false);
+      return;
     }
-    if (form.getFieldsError().filter(({ errors }) => errors.length).length !== 0) return;
 
     const datastoreToUse = uploadableDatastores.find(
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
     );
     if (!datastoreToUse) {
+      setShowLoadingOverlay(false);
       Toast.error("Could not find datastore that allows uploading.");
       return;
     }
@@ -272,6 +285,7 @@ function DatasetAddRemoteView(props: Props) {
           targetFolderId,
         );
       } catch (e) {
+        setShowLoadingOverlay(false);
         Toast.error(`The datasource config could not be stored. ${e}`);
         return;
       }
@@ -283,6 +297,7 @@ function DatasetAddRemoteView(props: Props) {
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
+      {showLoadingOverlay ? <BrainSpinner /> : null}
       <CardContainer title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset">
         <Form form={form} layout="vertical">
           <DatastoreFormItem datastores={uploadableDatastores} hidden={hasOnlyOneDatastoreOrNone} />
@@ -309,6 +324,7 @@ function DatasetAddRemoteView(props: Props) {
               setDatasourceConfigStr={setDatasourceConfigStr}
               dataSourceEditMode={dataSourceEditMode}
               defaultUri={defaultDatasetUrl}
+              onError={setFalse}
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -406,6 +422,7 @@ function AddRemoteLayer({
   uploadableDatastores,
   setDatasourceConfigStr,
   onSuccess,
+  onError,
   dataSourceEditMode,
   defaultUri,
 }: {
@@ -413,6 +430,7 @@ function AddRemoteLayer({
   uploadableDatastores: APIDataStore[];
   setDatasourceConfigStr: (dataSourceJson: string) => void;
   onSuccess?: () => void;
+  onError?: () => void;
   dataSourceEditMode: "simple" | "advanced";
   defaultUri?: string | null | undefined;
 }) {
@@ -452,8 +470,15 @@ function AddRemoteLayer({
     }
   }
 
+  const handleFailure = () => {
+    debugger;
+    console.log("fail");
+    if (onError) onError();
+  };
+
   async function handleExplore() {
     if (!datasourceUrl) {
+      handleFailure();
       Toast.error("Please provide a valid URL for exploration.");
       return;
     }
@@ -465,6 +490,7 @@ function AddRemoteLayer({
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
     );
     if (!datastoreToUse) {
+      handleFailure();
       Toast.error("Could not find datastore that allows uploading.");
       return;
     }
@@ -506,6 +532,7 @@ function AddRemoteLayer({
     })();
     setExploreLog(report);
     if (!newDataSource) {
+      handleFailure();
       Toast.error(
         "Exploring this remote dataset did not return a datasource. Please check the Log.",
       );
@@ -520,6 +547,7 @@ function AddRemoteLayer({
     try {
       existingDatasource = JSON.parse(datasourceJsonStr);
     } catch (_e) {
+      handleFailure();
       Toast.error(
         "The current datasource config contains invalid JSON. Cannot add the new Zarr/N5 data.",
       );
@@ -566,6 +594,7 @@ function AddRemoteLayer({
                 validateUrls(value);
                 return Promise.resolve();
               } catch (e) {
+                handleFailure();
                 return Promise.reject(e);
               }
             },

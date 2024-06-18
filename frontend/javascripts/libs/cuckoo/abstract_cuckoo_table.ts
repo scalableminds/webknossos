@@ -12,7 +12,6 @@ export type SeedSubscriberFn = (seeds: number[]) => void;
 let cachedNullTexture: UpdatableTexture | undefined;
 
 export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
-  static ELEMENTS_PER_ENTRY = 4;
   entryCapacity: number;
   table!: Uint32Array;
   seeds!: number[];
@@ -20,25 +19,47 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   _texture: UpdatableTexture;
   textureWidth: number;
 
+  static getElementsPerEntry() {
+    return 4;
+  }
+
+  static getTextureType() {
+    return THREE.UnsignedIntType;
+  }
+
+  static getTextureFormat() {
+    return THREE.RGBAIntegerFormat;
+  }
+
+  static getInternalFormat(): THREE.PixelFormatGPU {
+    return "RGBA32UI";
+  }
+
+  getClass(): typeof AbstractCuckooTable {
+    const thisConstructor = this.constructor as typeof AbstractCuckooTable;
+    return thisConstructor;
+  }
+
   constructor(textureWidth: number) {
     this.textureWidth = textureWidth;
     this._texture = createUpdatableTexture(
       textureWidth,
       textureWidth,
       TEXTURE_CHANNEL_COUNT,
-      THREE.UnsignedIntType,
+      this.getClass().getTextureType(),
       getRenderer(),
-      THREE.RGBAIntegerFormat,
+      this.getClass().getTextureFormat(),
     );
 
     // The internal format has to be set manually, since ThreeJS does not
     // derive this value by itself.
     // See https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
     // for a reference of the internal formats.
-    this._texture.internalFormat = "RGBA32UI";
+    this._texture.internalFormat = this.getClass().getInternalFormat();
+    console.log("this._texture.internalFormat", this._texture.internalFormat);
 
     this.entryCapacity = Math.floor(
-      (textureWidth ** 2 * TEXTURE_CHANNEL_COUNT) / AbstractCuckooTable.ELEMENTS_PER_ENTRY,
+      (textureWidth ** 2 * TEXTURE_CHANNEL_COUNT) / this.getClass().getElementsPerEntry(),
     );
 
     this.initializeTableArray();
@@ -49,7 +70,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   static computeTextureWidthFromCapacity(requestedCapacity: number): number {
     const capacity = requestedCapacity / DEFAULT_LOAD_FACTOR;
     const textureWidth = Math.ceil(
-      Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / AbstractCuckooTable.ELEMENTS_PER_ENTRY),
+      Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / this.getElementsPerEntry()),
     );
     return textureWidth;
   }
@@ -63,20 +84,20 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       1,
       1,
       TEXTURE_CHANNEL_COUNT,
-      THREE.UnsignedIntType,
+      this.getTextureType(),
       getRenderer(),
-      THREE.RGBAIntegerFormat,
+      this.getTextureFormat(),
     );
-    cachedNullTexture.internalFormat = "RGBA32UI";
+    cachedNullTexture.internalFormat = this.getInternalFormat();
 
     return cachedNullTexture;
   }
 
   // todop: make private again
   initializeTableArray() {
-    this.table = new Uint32Array(AbstractCuckooTable.ELEMENTS_PER_ENTRY * this.entryCapacity).fill(
-      EMPTY_KEY_VALUE,
-    );
+    this.table = new Uint32Array(
+      AbstractCuckooTable.getElementsPerEntry() * this.entryCapacity,
+    ).fill(EMPTY_KEY_VALUE);
 
     // The chance of colliding seeds is super low which is why
     // we ignore this case (a rehash would happen automatically, anyway).
@@ -110,7 +131,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   getUniformValues() {
     return {
       CUCKOO_ENTRY_CAPACITY: this.entryCapacity,
-      CUCKOO_ELEMENTS_PER_ENTRY: AbstractCuckooTable.ELEMENTS_PER_ENTRY,
+      CUCKOO_ELEMENTS_PER_ENTRY: this.getClass().getElementsPerEntry(),
       CUCKOO_ELEMENTS_PER_TEXEL: TEXTURE_CHANNEL_COUNT,
       CUCKOO_TWIDTH: this.textureWidth,
     };
@@ -212,14 +233,14 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
 
     for (
       let offset = 0;
-      offset < this.entryCapacity * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
-      offset += AbstractCuckooTable.ELEMENTS_PER_ENTRY
+      offset < this.entryCapacity * this.getClass().getElementsPerEntry();
+      offset += this.getClass().getElementsPerEntry()
     ) {
       if (oldTable[offset] === EMPTY_KEY_VALUE) {
         continue;
       }
       const [key, value] = this.getEntryAtAddress(
-        offset / AbstractCuckooTable.ELEMENTS_PER_ENTRY,
+        offset / this.getClass().getElementsPerEntry(),
         oldTable,
       );
       this.set(key, value, rehashAttempt);
@@ -268,13 +289,13 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     if (!isRehashing) {
       // Only partially update if we are not rehashing. Otherwise, it makes more
       // sense to flush the entire texture content after the rehashing is done.
-      const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
+      const offset = hashedAddress * this.getClass().getElementsPerEntry();
       const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
       this._texture.update(
-        this.table.subarray(offset, offset + AbstractCuckooTable.ELEMENTS_PER_ENTRY),
+        this.table.subarray(offset, offset + this.getClass().getElementsPerEntry()),
         texelOffset % this.textureWidth,
         Math.floor(texelOffset / this.textureWidth),
-        AbstractCuckooTable.ELEMENTS_PER_ENTRY / TEXTURE_CHANNEL_COUNT,
+        this.getClass().getElementsPerEntry() / TEXTURE_CHANNEL_COUNT,
         1,
       );
     }

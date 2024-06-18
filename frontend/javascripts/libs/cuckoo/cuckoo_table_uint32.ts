@@ -1,16 +1,22 @@
-import { Vector3 } from "oxalis/constants";
 import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
 
 const EMPTY_KEY = EMPTY_KEY_VALUE;
-const EMPTY_VALUE = [EMPTY_KEY, EMPTY_KEY, EMPTY_KEY] as Value;
+const EMPTY_VALUE = EMPTY_KEY_VALUE;
 
+// This module defines a cuckoo table that can map from a 32-bit key to 32-bit value.
 type Key = number;
-type Value = Vector3;
+type Value = number;
 type Entry = [Key, Value];
 
-export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
-  static fromCapacity(requestedCapacity: number): CuckooTable {
-    return new CuckooTable(this.computeTextureWidthFromCapacity(requestedCapacity));
+export class CuckooTableUint32 extends AbstractCuckooTable<Key, Value, Entry> {
+  static getElementsPerEntry() {
+    return 2;
+  }
+  static getInternalFormat(): THREE.PixelFormatGPU {
+    return "RG32UI";
+  }
+  static fromCapacity(requestedCapacity: number): CuckooTableUint32 {
+    return new CuckooTableUint32(this.computeTextureWidthFromCapacity(requestedCapacity));
   }
 
   getEmptyKey(): Key {
@@ -21,10 +27,24 @@ export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
     return EMPTY_VALUE;
   }
 
+  // todop: remove again
+  // initializeTableArray() {
+  //   this.table = new Uint32Array(this.getClass().getElementsPerEntry() * this.entryCapacity).fill(
+  //     EMPTY_KEY_VALUE,
+  //   );
+
+  //   // The chance of colliding seeds is super low which is why
+  //   // we ignore this case (a rehash would happen automatically, anyway).
+  //   // Note that it makes sense to use all 32 bits for the seeds. Otherwise,
+  //   // hash collisions are more likely to happen.
+  //   this.seeds = [11, 11, 11];
+  //   this.notifySeedListeners();
+  // }
+
   getEntryAtAddress(hashedAddress: number, optTable?: Uint32Array): Entry {
     const table = optTable || this.table;
     const offset = hashedAddress * this.getClass().getElementsPerEntry();
-    return [table[offset], [table[offset + 1], table[offset + 2], table[offset + 3]]];
+    return [table[offset], table[offset + 1]];
   }
 
   canDisplacedEntryBeIgnored(displacedKey: Key, newKey: Key): boolean {
@@ -49,13 +69,11 @@ export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
   writeEntryToTable(key: Key, value: Value, hashedAddress: number) {
     const offset = hashedAddress * this.getClass().getElementsPerEntry();
     this.table[offset] = key;
-    this.table[offset + 1] = value[0];
-    this.table[offset + 2] = value[1];
-    this.table[offset + 3] = value[2];
+    this.table[offset + 1] = value;
   }
 
   _hashKeyToAddress(seed: number, key: Key): number {
-    const state = this._hashCombine(seed, key);
+    let state = this._hashCombine(seed, key);
 
     return state % this.entryCapacity;
   }

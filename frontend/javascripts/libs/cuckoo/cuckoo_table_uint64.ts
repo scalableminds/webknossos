@@ -24,7 +24,7 @@ export class CuckooTableUint64 extends AbstractCuckooTable<Key, Value, Entry> {
 
   // todop: remove again
   // initializeTableArray() {
-  //   this.table = new Uint32Array(AbstractCuckooTable.ELEMENTS_PER_ENTRY * this.entryCapacity).fill(
+  //   this.table = new Uint32Array(this.getClass().getElementsPerEntry() * this.entryCapacity).fill(
   //     EMPTY_KEY_VALUE,
   //   );
 
@@ -38,7 +38,7 @@ export class CuckooTableUint64 extends AbstractCuckooTable<Key, Value, Entry> {
 
   getEntryAtAddress(hashedAddress: number, optTable?: Uint32Array): Entry {
     const table = optTable || this.table;
-    const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
+    const offset = hashedAddress * this.getClass().getElementsPerEntry();
     return [
       [table[offset], table[offset + 1]],
       [table[offset + 2], table[offset + 3]],
@@ -65,7 +65,7 @@ export class CuckooTableUint64 extends AbstractCuckooTable<Key, Value, Entry> {
   }
 
   writeEntryToTable(key: Key, value: Value, hashedAddress: number) {
-    const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
+    const offset = hashedAddress * this.getClass().getElementsPerEntry();
     this.table[offset] = key[0];
     this.table[offset + 1] = key[1];
     this.table[offset + 2] = value[0];

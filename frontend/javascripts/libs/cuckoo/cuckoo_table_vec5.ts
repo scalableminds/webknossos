@@ -56,7 +56,7 @@ export class CuckooTableVec5 extends AbstractCuckooTable<Key, Value, Entry> {
   }
 
   getEntryAtAddress(hashedAddress: number, optTable?: Uint32Array): Entry {
-    const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
+    const offset = hashedAddress * this.getClass().getElementsPerEntry();
     return this.readDecompressedEntry(offset, optTable);
   }
 
@@ -81,7 +81,7 @@ export class CuckooTableVec5 extends AbstractCuckooTable<Key, Value, Entry> {
   readDecompressedEntry(offset: number, optTable?: Uint32Array) {
     const table = optTable || this.table;
     return this.decompressEntry(
-      table.slice(offset, offset + AbstractCuckooTable.ELEMENTS_PER_ENTRY) as unknown as Vector4,
+      table.slice(offset, offset + this.getClass().getElementsPerEntry()) as unknown as Vector4,
     );
   }
 
@@ -108,7 +108,7 @@ export class CuckooTableVec5 extends AbstractCuckooTable<Key, Value, Entry> {
 
   writeEntryToTable(key: Key, value: Value, hashedAddress: number) {
     const compressedEntry = this.compressEntry(key, value);
-    const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
+    const offset = hashedAddress * this.getClass().getElementsPerEntry();
     for (let i = 0; i < compressedEntry.length; i++) {
       this.table[offset + i] = compressedEntry[i];
     }

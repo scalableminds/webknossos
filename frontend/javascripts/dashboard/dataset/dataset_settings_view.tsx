@@ -406,7 +406,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
           <Alert
             key="dataSourceStatus"
             message={<span>{messages["dataset.missing_datasource_json"]}</span>}
-            type="info"
+            type="error"
             showIcon
           />
         ) : (

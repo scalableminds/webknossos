@@ -1709,17 +1709,16 @@ function ContextMenuInner(propsWithInputRef: Props) {
   return (
     <React.Fragment>
       <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
-      {
-        <Dropdown
-          menu={menu}
-          overlayClassName="dropdown-overlay-container-for-context-menu"
-          open={contextMenuPosition != null}
-          getPopupContainer={() => refContent}
-          destroyPopupOnHide
-        >
-          <div />
-        </Dropdown>
-      }
+
+      <Dropdown
+        menu={menu}
+        overlayClassName="dropdown-overlay-container-for-context-menu"
+        open={contextMenuPosition != null}
+        getPopupContainer={() => refContent}
+        destroyPopupOnHide
+      >
+        <div />
+      </Dropdown>
     </React.Fragment>
   );
 }

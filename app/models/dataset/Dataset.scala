@@ -23,6 +23,7 @@ import controllers.DatasetUpdateParameters
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
+import play.api.libs.json.JsonConfiguration.Aux
 import play.api.libs.json._
 import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._
@@ -82,6 +83,8 @@ case class DatasetCompactInfo(
 )
 
 object DatasetCompactInfo {
+  // Enforce serializing null values for optional fields as frontend expects them to be set (currently only details).
+  implicit val config: Aux[Json.MacroOptions] = JsonConfiguration(optionHandlers = OptionHandlers.WritesNull)
   implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
 }
 

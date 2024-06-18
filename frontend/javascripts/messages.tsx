@@ -93,6 +93,7 @@ export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfigura
   isInverted: "Inverted Layer",
   isInEditMode: "Configuration Mode",
   gammaCorrectionValue: "Gamma Correction",
+  mapping: "Active Mapping",
 };
 export const layerViewConfigurationTooltips: Partial<
   Record<keyof DatasetLayerConfiguration, string>
@@ -262,6 +263,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The active volume annotation layer has an active mapping. By mutating the layer, the mapping will be permanently locked and can no longer be changed or disabled. This can only be undone by restoring an older version of this annotation. Are you sure you want to continue?",
   "tracing.locked_mapping_confirmed": (mappingName: string) =>
     `The mapping ${mappingName} is now locked for this annotation and can no longer be changed or disabled.`,
+  "mapping.loading_failed": (layerName: string) =>
+    `Loading the available mappings for layer ${layerName} failed.`,
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",
@@ -335,11 +338,11 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The explored data has a different voxel size from the datasource that was already loaded. The explored voxel size was:",
   "dataset.segmentationlayer_not_existing": "This annotation has no segmentation layer.",
   "dataset.invalid_datasource_json":
-    "The datasource-properties.json on disk is invalid. Please review all properties before importing the dataset. You can always go back and change the values later.",
+    "The datasource-properties.json on disk is invalid. Please review all properties below to use the dataset. You can always go back and change the values later.",
   "dataset.missing_datasource_json":
-    "The datasource-properties.json was not found. The values below are guessed by WEBKNOSSOS. Please review all properties before importing the dataset. You can always go back and change the values later.",
+    "A datasource-properties.json file was not found. Please review all properties below to use the dataset. You can always go back and change the values later.",
   "dataset.import_complete":
-    "A valid datasource-properties.json was found. The dataset is imported and ready to use. You may still change the properties below.",
+    "A valid datasource-properties.json file was found. The dataset is imported and ready to use. You may still change the properties below.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
   "dataset.does_not_exist": "Selected dataset doesn't exist!",

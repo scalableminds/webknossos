@@ -587,9 +587,9 @@ function StartJobForm(props: StartJobFormProps) {
     initialLayerName = fixedSelectedLayer.name;
     initialOutputSegmentationLayerName = getReadableNameOfVolumeLayer(fixedSelectedLayer, tracing);
   }
-  initialOutputSegmentationLayerName = `${
-    initialOutputSegmentationLayerName || "segmentation"
-  }_corrected`;
+  initialOutputSegmentationLayerName = `${initialOutputSegmentationLayerName || "segmentation"}${
+    fixedSelectedLayer ? "_corrected" : "_inferred"
+  }`;
   const hasOutputSegmentationLayer =
     jobTypeWithConfigurableOutputSegmentationLayerName.indexOf(jobName) > -1;
   const notAllowedOutputLayerNames = allLayers
@@ -854,7 +854,6 @@ function CustomAiModelInferenceForm() {
             rules={[{ required: true }]}
           >
             <Select
-              style={{ width: 120 }}
               loading={isLoading}
               options={aiModels.map((aiModel) => ({ value: aiModel.id, label: aiModel.name }))}
             />

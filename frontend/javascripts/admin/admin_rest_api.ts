@@ -11,7 +11,6 @@ import type {
   APIBuildInfo,
   APIConnectomeFile,
   APIDataSource,
-  APIDataSourceWithMessages,
   APIDataStore,
   APIDataset,
   APIDatasetId,
@@ -1114,16 +1113,6 @@ export async function getDatasets(
   const datasets = await Request.receiveJSON(`/api/datasets?${params}`);
   assertResponseLimit(datasets);
   return datasets;
-}
-
-export function getDatasetDatasource(
-  dataset: APIMaybeUnimportedDataset,
-): Promise<APIDataSourceWithMessages> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}?token=${token}`,
-    ),
-  );
 }
 
 export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSource> {

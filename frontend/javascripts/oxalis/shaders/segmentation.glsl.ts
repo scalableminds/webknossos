@@ -328,7 +328,7 @@ export const getSegmentId: ShaderModule = {
       uint high_integer = vec4ToUint(255. * mapped_id[0]);
       uint low_integer = vec4ToUint(255. * mapped_id[1]);
 
-      if (isMappingEnabled) {
+      if (shouldApplyMappingOnGPU) {
         ivec2 mapped_entry = attemptMappingLookUp(high_integer, low_integer, mapping_seeds[0]);
         if (mapped_entry.r == -1) {
           mapped_entry = attemptMappingLookUp(high_integer, low_integer, mapping_seeds[1]);

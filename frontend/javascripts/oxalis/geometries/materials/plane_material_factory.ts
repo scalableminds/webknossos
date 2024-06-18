@@ -14,6 +14,7 @@ import {
   getActiveCellId,
   getActiveSegmentationTracing,
   getActiveSegmentPosition,
+  getBucketRetrievalSourceFn,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
@@ -159,7 +160,7 @@ class PlaneMaterialFactory {
       viewportExtent: {
         value: [0, 0],
       },
-      isMappingEnabled: {
+      shouldApplyMappingOnGPU: {
         value: false,
       },
       mappingSize: {
@@ -820,10 +821,26 @@ class PlaneMaterialFactory {
       );
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
-          (storeState) =>
-            getMappingInfoForSupportedLayer(storeState).mappingStatus === MappingStatusEnum.ENABLED,
-          (isEnabled) => {
-            this.uniforms.isMappingEnabled.value = isEnabled;
+          (storeState) => {
+            const layer = getSegmentationLayerWithMappingSupport(storeState);
+            if (!layer) {
+              return false;
+            }
+
+            return (
+              getMappingInfoForSupportedLayer(storeState).mappingStatus ===
+                MappingStatusEnum.ENABLED &&
+              _.isEqual(getBucketRetrievalSourceFn(layer.name)(storeState).slice(0, 2), [
+                "REQUESTED-WITHOUT-MAPPING",
+                "LOCAL-MAPPING-APPLIED",
+              ])
+            );
+          },
+          (shouldApplyMappingOnGPU) => {
+            console.log(
+              `this.uniforms.shouldApplyMappingOnGPU.value = ${shouldApplyMappingOnGPU};`,
+            );
+            this.uniforms.shouldApplyMappingOnGPU.value = shouldApplyMappingOnGPU;
           },
         ),
       );

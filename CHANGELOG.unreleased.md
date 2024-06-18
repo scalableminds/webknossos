@@ -31,6 +31,6 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where dataset uploads of zipped tiff data via the UI would be rejected. [#7856](https://github.com/scalableminds/webknossos/pull/7856)
 
 ### Removed
-- HTTP API versions 1 and 2 are no longer supported. Current is 7.
+- REST API versions 1 and 2 are no longer supported. Current is 7.
 data
 ### Breaking Changes

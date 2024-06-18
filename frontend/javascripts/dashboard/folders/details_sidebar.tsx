@@ -65,7 +65,6 @@ export function DetailsSidebar({
       setSelectedDataset(null);
     }
   }, [selectedDatasets, context.activeFolderId]);
-  console.log("showing2", selectedDatasets?.[0]);
 
   return (
     <div style={{ width: 300, padding: 16 }}>
@@ -94,28 +93,39 @@ function getMaybeSelectMessage(datasetCount: number) {
 }
 
 function MetadataTable({
-  selectedDataset,
+  selectedDatasetOrFolder,
   setIgnoreFetching,
-}: { selectedDataset: APIDatasetCompact; setIgnoreFetching: (value: boolean) => void }) {
+}: {
+  selectedDatasetOrFolder: APIDatasetCompact | Folder;
+  setIgnoreFetching: (value: boolean) => void;
+}) {
   const context = useDatasetCollectionContext();
-  const [datasetDetails, setDatasetDetails] = useState<APIDatasetCompact["details"]>(
-    selectedDataset.details,
+  const [details, setDetails] = useState<APIDatasetCompact["details"]>(
+    selectedDatasetOrFolder.details,
   );
   const [errors, setErrors] = useState<Record<string, string>>({}); // propName -> error message.
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
 
-  const updateCachedDatasetDebounced = useMemo(
+  const updateCachedDatasetOrFolderDebounced = useMemo(
     () =>
       _.debounce(
         async (
           context: DatasetCollectionContextValue,
-          selectedDataset: APIDatasetCompact,
-          datasetDetails: APIDatasetCompact["details"],
+          selectedDatasetOrFolder: APIDatasetCompact | Folder,
+          details: APIDatasetCompact["details"],
         ) => {
-          console.log("updating", selectedDataset, datasetDetails);
+          console.log("updating", selectedDatasetOrFolder, details);
           // Explicitly ignoring fetching here to avoid unnecessary rendering of the loading spinner and thus hiding the metadata table.
           setIgnoreFetching(true);
-          await context.updateCachedDataset(selectedDataset, { details: datasetDetails });
+          if ("status" in selectedDatasetOrFolder) {
+            await context.updateCachedDataset(selectedDatasetOrFolder, { details: details });
+          } else {
+            const folder = selectedDatasetOrFolder as Folder;
+            await context.queries.updateFolderMutation.mutateAsync({
+              ...folder,
+              details,
+            });
+          }
           setIgnoreFetching(false);
         },
         2000,
@@ -124,11 +134,11 @@ function MetadataTable({
   );
 
   useEffectOnUpdate(() => {
-    updateCachedDatasetDebounced(context, selectedDataset, datasetDetails);
-  }, [datasetDetails]);
+    updateCachedDatasetOrFolderDebounced(context, selectedDatasetOrFolder, details);
+  }, [details]);
 
   const updatePropName = (previousPropName: string, newPropName: string) => {
-    setDatasetDetails((prev) => {
+    setDetails((prev) => {
       if (prev && newPropName in prev) {
         setErrors((prev) => ({
           ...prev,
@@ -148,7 +158,7 @@ function MetadataTable({
     });
   };
   const updateValue = (propName: string, newValue: string) => {
-    setDatasetDetails((prev) => {
+    setDetails((prev) => {
       if (prev) {
         return { ...prev, [propName]: newValue };
       }
@@ -157,7 +167,7 @@ function MetadataTable({
   };
 
   const deleteKey = (propName: string) => {
-    setDatasetDetails((prev) => {
+    setDetails((prev) => {
       if (prev) {
         const { [propName]: _, ...rest } = prev;
         return rest;
@@ -168,7 +178,7 @@ function MetadataTable({
 
   const columnData =
     // "": "" is added to always have a row for adding new metadata.
-    Object.entries({ ...datasetDetails, "": "" }).map(([propName, value], index) => ({
+    Object.entries({ ...details, "": "" }).map(([propName, value], index) => ({
       propName,
       value,
       key: index,
@@ -229,8 +239,8 @@ function MetadataTable({
           size="small"
           icon={<PlusCircleOutlined />}
           onClick={() => {
-            context.updateCachedDataset(selectedDataset, {
-              details: { ...selectedDataset.details, key: "edit me" },
+            context.updateCachedDataset(selectedDatasetOrFolder, {
+              details: { ...selectedDatasetOrFolder.details, key: "edit me" },
             });
           }}
         >

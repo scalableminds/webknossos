@@ -1060,21 +1060,23 @@ export type VoxelyticsLogLine = {
   wk_url: string;
 };
 
-// Backend type
+// Backend type returned by the getFolderTree api method.
 export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent: string | null;
+  details: Record<string, string | number | string[]>;
   isEditable: boolean;
 };
 
-// Frontend type
+// Frontend type of FlatFolderTreeItem with inferred nested structure.
 export type FolderItem = {
   title: string;
   key: string;
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;
+  details: FlatFolderTreeItem["details"];
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1085,6 +1087,7 @@ export type Folder = {
   id: string;
   allowedTeams: APITeam[];
   allowedTeamsCumulative: APITeam[];
+  details: FlatFolderTreeItem["details"];
   isEditable: boolean;
 };
 
@@ -1092,6 +1095,7 @@ export type FolderUpdater = {
   id: string;
   name: string;
   allowedTeams: string[];
+  details: FlatFolderTreeItem["details"];
 };
 
 export enum CAMERA_POSITIONS {

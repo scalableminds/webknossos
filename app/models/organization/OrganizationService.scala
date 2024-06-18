@@ -111,7 +111,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
-      organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName)
+      organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsObject.empty)
 
       organization = Organization(
         ObjectId.generate,

@@ -13,7 +13,7 @@ import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
 import net.liftweb.common.{Box, Full}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import utils.{ObjectId, StoreModules, WkConf}
 
 import javax.inject.Inject
@@ -169,7 +169,8 @@ Samplecountry
   private def insertRootFolder(): Fox[Unit] =
     folderDAO.findOne(defaultOrganization._rootFolder).futureBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _       => folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName))
+      case _ =>
+        folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName, JsObject.empty))
     }
 
   private def insertDefaultUser(userEmail: String,

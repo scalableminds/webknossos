@@ -34,7 +34,7 @@ import classNames from "classnames";
 import { EmptyObject } from "types/globals";
 
 type FolderItemWithName = FolderItem & { name: string };
-type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
+export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
 
 const { ThinSpace } = Unicode;
@@ -519,13 +519,19 @@ class DatasetTable extends React.PureComponent<Props, State> {
     const datasetToRankMap: Map<DatasetOrFolder, number> = new Map(
       dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
     );
+    const getNameAndMetaData = (datasetOrFolder: DatasetOrFolder) => {
+      return `${datasetOrFolder}${Object.entries(datasetOrFolder.details || {})
+        .map(([key, value]) => `${key}:${value}`)
+        .join(",")}`;
+    };
     const sortedDataSource =
       // Sort using the dice coefficient if the table is not sorted by another key
       // and if the query is at least 3 characters long to avoid sorting *all* datasets
       isSearchQueryLongEnough && sortedInfo.columnKey == null
         ? _.chain([...filteredDataSource, ...activeSubfolders])
             .map((datasetOrFolder) => {
-              const diceCoefficient = dice(datasetOrFolder.name, this.props.searchQuery);
+              const nameAndMetadata = getNameAndMetaData(datasetOrFolder);
+              const diceCoefficient = dice(nameAndMetadata, this.props.searchQuery);
               const rank = useLruRank ? datasetToRankMap.get(datasetOrFolder) || 0 : 0;
               const rankCoefficient = 1 - rank / filteredDataSource.length;
               const coefficient = (diceCoefficient + rankCoefficient) / 2;

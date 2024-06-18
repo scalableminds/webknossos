@@ -1,13 +1,13 @@
 package controllers
 
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import models.dataset.DatasetDAO
 import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.UserService
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 import utils.ObjectId
@@ -53,6 +53,7 @@ class FolderController @Inject()(
         _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
         - <- Fox.assertTrue(folderDAO.isEditable(idValidated)) ?~> "folder.update.notAllowed" ~> FORBIDDEN
         _ <- folderService.assertValidFolderName(params.name)
+        _ <- folderDAO.updateDetails(idValidated, params.details)
         _ <- folderDAO.updateName(idValidated, params.name) ?~> "folder.update.name.failed"
         _ <- folderService
           .updateAllowedTeams(idValidated, params.allowedTeams, request.identity) ?~> "folder.update.teams.failed"
@@ -103,7 +104,7 @@ class FolderController @Inject()(
     for {
       parentIdValidated <- ObjectId.fromString(parentId)
       _ <- folderService.assertValidFolderName(name)
-      newFolder = Folder(ObjectId.generate, name)
+      newFolder = Folder(ObjectId.generate, name, JsObject.empty)
       _ <- folderDAO.findOne(parentIdValidated) ?~> "folder.notFound"
       _ <- folderDAO.insertAsChild(parentIdValidated, newFolder) ?~> "folder.create.failed"
       organization <- organizationDAO.findOne(request.identity._organization) ?~> "folder.notFound"

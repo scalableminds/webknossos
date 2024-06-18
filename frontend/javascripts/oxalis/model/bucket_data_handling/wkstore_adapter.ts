@@ -180,7 +180,7 @@ export async function requestFromStore(
   const fourBit = state.datasetConfiguration.fourBit && !isSegmentation;
 
   // Mappings can be applied in the frontend or on the server.
-  const applyAgglomeratesOnServer = (() => {
+  const agglomerateMappingNameToApplyOnServer = (() => {
     if (!isSegmentation) {
       return null;
     }
@@ -208,7 +208,7 @@ export async function requestFromStore(
       zoomedAddress,
       resolutionInfo,
       fourBit,
-      applyAgglomeratesOnServer,
+      agglomerateMappingNameToApplyOnServer,
       version,
     ),
   );

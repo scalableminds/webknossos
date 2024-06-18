@@ -363,7 +363,7 @@ function* handleSetMapping(
     // Only the custom colors have to be configured, if they
     // were passed.
     if (action.mappingColors) {
-      const classes = convertMappingObjectToClasses(existingMapping);
+      const classes = convertMappingObjectToEquivalenceClasses(existingMapping);
       yield* call(setCustomColors, action, classes, layerName);
     }
     return;
@@ -559,7 +559,7 @@ function* handleSetJsonMapping(
   yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
 }
 
-function convertMappingObjectToClasses(existingMapping: Mapping) {
+function convertMappingObjectToEquivalenceClasses(existingMapping: Mapping) {
   const classesByRepresentative: Record<number, number[]> = {};
   for (const unmapped of existingMapping.keys()) {
     // @ts-ignore unmapped is guaranteed to exist in existingMapping as it was obtained using existingMapping.keys()

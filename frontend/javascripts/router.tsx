@@ -438,24 +438,6 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationName/:datasetName/import"
-                requiresAdminOrManagerRole
-                render={({ match }: ContextRouter) => (
-                  <DatasetSettingsView
-                    isEditingMode={false}
-                    datasetId={{
-                      name: match.params.datasetName || "",
-                      owningOrganization: match.params.organizationName || "",
-                    }}
-                    onComplete={() =>
-                      window.location.replace(`${window.location.origin}/dashboard/datasets`)
-                    }
-                    onCancel={() => window.history.back()}
-                  />
-                )}
-              />
-              <SecuredRouteWithErrorBoundary
-                isAuthenticated={isAuthenticated}
                 path="/datasets/:organizationName/:datasetName/edit"
                 requiresAdminOrManagerRole
                 render={({ match }: ContextRouter) => (

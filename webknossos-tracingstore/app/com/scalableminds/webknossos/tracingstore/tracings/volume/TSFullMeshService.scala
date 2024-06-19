@@ -49,8 +49,9 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       remoteFallbackLayer <- remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+      baseMappingName <- volumeTracingService.baseMappingName(tracing)
       fullMeshRequestAdapted = if (tracing.mappingIsEditable.getOrElse(false))
-        fullMeshRequest.copy(mappingName = tracing.mappingName,
+        fullMeshRequest.copy(mappingName = baseMappingName,
                              editableMappingTracingId = Some(tracingId),
                              mappingType = Some("HDF5"))
       else fullMeshRequest

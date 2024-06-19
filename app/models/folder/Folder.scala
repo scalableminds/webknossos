@@ -294,7 +294,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               FROM webknossos.folder_paths
               WHERE _ancestor = $folderId)
               AND $accessQueryWithPrefix
-              UNION ALL SELECT _id, name, NULL -- find self again, with no parent
+              UNION ALL SELECT _id, name, details, NULL -- find self again, with no parent
               FROM webknossos.folders_
               WHERE _id = $folderId
               AND $accessQuery

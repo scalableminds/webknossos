@@ -39,7 +39,6 @@ import { Unicode } from "oxalis/constants";
 import { readFileAsText } from "libs/read_file";
 import * as Utils from "libs/utils";
 import { ArbitraryObject } from "types/globals";
-import { useFetch } from "libs/react_helpers";
 import BrainSpinner from "components/brain_spinner";
 
 const FormItem = Form.Item;
@@ -203,18 +202,20 @@ function DatasetAddRemoteView(props: Props) {
       if (subString.length > 2) datasetname = subString;
       else datasetname = subString.padEnd(3, "_");
     }
-    return datasetname;
+    return datasetname + new Date().getTime(); // TODO_c remove
   };
 
   const hasFormAnyErrors = (form: FormInstance) =>
     form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
 
-  useFetch(
+  const onSuccesfulExplore =
     async () => {
-      if (defaultDatasetUrl == null || isDatasourceConfigStrFalsy) {
+      const dataSourceJsonString = form.getFieldValue("dataSourceJson");
+      if (defaultDatasetUrl == null || dataSourceJsonString == null) {
+        setShowLoadingOverlay(false);
         return;
       }
-      const dataSourceJson = JSON.parse(dataSourceJsonStr);
+      const dataSourceJson = JSON.parse(dataSourceJsonString);
       const defaultDatasetName = getDefaultDatasetName(defaultDatasetUrl);
       setDatasourceConfigStr(
         JSON.stringify({ ...dataSourceJson, id: { name: defaultDatasetName, team: "" } }),
@@ -222,19 +223,16 @@ function DatasetAddRemoteView(props: Props) {
       try {
         await form.validateFields();
       } catch (_e) {
-        // Do nothing, because this always seems to throw an error. Check for actual problems below.
+        console.warn(_e)
       }
       const allFieldsValid =
         form.getFieldsError().filter(({ errors }) => errors.length).length === 0;
-      if (!isDatasourceConfigStrFalsy && allFieldsValid) {
+      if (allFieldsValid) {
         handleStoreDataset();
       } else {
         setShowLoadingOverlay(false);
       }
-    },
-    null,
-    [defaultDatasetUrl, isDatasourceConfigStrFalsy],
-  );
+    };
 
   const setDatasourceConfigStr = (dataSourceJson: string) => {
     form.setFieldsValue({ dataSourceJson });
@@ -323,6 +321,7 @@ function DatasetAddRemoteView(props: Props) {
               dataSourceEditMode={dataSourceEditMode}
               defaultUrl={defaultDatasetUrl}
               onError={() => setShowLoadingOverlay(false)}
+              onSuccess={onSuccesfulExplore}
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -537,6 +536,9 @@ function AddRemoteLayer({
     ensureLargestSegmentIdsInPlace(newDataSource);
     if (!datasourceConfigStr) {
       setDatasourceConfigStr(jsonStringify(newDataSource));
+      if (onSuccess) {
+        onSuccess();
+      }
       return;
     }
     let existingDatasource: DatasourceConfiguration;

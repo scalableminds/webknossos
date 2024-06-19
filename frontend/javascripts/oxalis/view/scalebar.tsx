@@ -7,7 +7,7 @@ import { formatNumberToLength } from "libs/format_utils";
 import { getViewportExtents, getTDViewZoom } from "oxalis/model/accessors/view_mode_accessor";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import type { OrthoView } from "oxalis/constants";
-import constants, { Unicode, OrthoViews, UnitShortMap } from "oxalis/constants";
+import constants, { Unicode, OrthoViews, LongUnitToShortUnitMap } from "oxalis/constants";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 const { ThinSpace, MultiplicationSymbol } = Unicode;
 type OwnProps = {
@@ -62,11 +62,11 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
     maxScaleBarWidthFactor,
   );
   const tooltip = [
-    formatNumberToLength(viewportWidthInUnit, UnitShortMap[voxelSizeUnit], 1, true),
+    formatNumberToLength(viewportWidthInUnit, LongUnitToShortUnitMap[voxelSizeUnit], 1, true),
     ThinSpace,
     MultiplicationSymbol,
     ThinSpace,
-    formatNumberToLength(viewportHeightInUnit, UnitShortMap[voxelSizeUnit], 1, true),
+    formatNumberToLength(viewportHeightInUnit, LongUnitToShortUnitMap[voxelSizeUnit], 1, true),
   ].join("");
   const collapseScalebar = viewportWidthInPixels < minWidthToFillScalebar;
   const limitScalebar = scaleBarWidthFactor === maxScaleBarWidthFactor;
@@ -106,7 +106,12 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
         >
           {collapseScalebar
             ? "i"
-            : formatNumberToLength(scalebarWidthInUnit, UnitShortMap[voxelSizeUnit], 1, true)}
+            : formatNumberToLength(
+                scalebarWidthInUnit,
+                LongUnitToShortUnitMap[voxelSizeUnit],
+                1,
+                true,
+              )}
         </div>
       </div>
     </Tooltip>

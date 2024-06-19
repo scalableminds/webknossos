@@ -21,7 +21,12 @@ import {
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
-import { TreeTypeEnum, UnitShortMap, type TreeType, type Vector3 } from "oxalis/constants";
+import {
+  TreeTypeEnum,
+  LongUnitToShortUnitMap,
+  type TreeType,
+  type Vector3,
+} from "oxalis/constants";
 
 import {
   getGroupByIdWithSubgroups,
@@ -401,7 +406,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     notification.open({
       message: messages["tracing.tree_length_notification"](
         treeName,
-        formatNumberToLength(lengthInUnit, UnitShortMap[dataSourceUnit]),
+        formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[dataSourceUnit]),
         formatLengthAsVx(lengthInVx),
       ),
       icon: <i className="fas fa-ruler" />,

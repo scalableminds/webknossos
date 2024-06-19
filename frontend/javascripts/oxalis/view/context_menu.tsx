@@ -28,7 +28,7 @@ import {
   VolumeTools,
   AltOrOptionKey,
   CtrlOrCmdKey,
-  UnitShortMap,
+  LongUnitToShortUnitMap,
   UnitLong,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
@@ -205,7 +205,7 @@ function measureAndShowLengthBetweenNodes(
   notification.open({
     message: `The shortest path length between the nodes is ${formatNumberToLength(
       lengthInUnit,
-      UnitShortMap[voxelSizeUnit],
+      LongUnitToShortUnitMap[voxelSizeUnit],
     )} (${formatLengthAsVx(lengthInVx)}).`,
     icon: <i className="fas fa-ruler" />,
   });
@@ -229,7 +229,7 @@ function measureAndShowFullTreeLength(treeId: number, treeName: string, voxelSiz
   notification.open({
     message: messages["tracing.tree_length_notification"](
       treeName,
-      formatNumberToLength(lengthInUnit, UnitShortMap[voxelSizeUnit]),
+      formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[voxelSizeUnit]),
       formatLengthAsVx(lengthInVx),
     ),
     icon: <i className="fas fa-ruler" />,
@@ -1482,7 +1482,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
         const volumeInUnit3 = voxelToVolumeInUnit(voxelSize, layersFinestResolution, segmentSize);
         return [
-          formatNumberToVolume(volumeInUnit3, UnitShortMap[voxelSize.unit]),
+          formatNumberToVolume(volumeInUnit3, LongUnitToShortUnitMap[voxelSize.unit]),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
         ];
       } catch (_error) {
@@ -1538,7 +1538,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       ? [
           formatNumberToLength(
             V3.scaledDist(getActiveNodePosition(), positionToMeasureDistanceTo, voxelSize.factor),
-            UnitShortMap[voxelSize.unit],
+            LongUnitToShortUnitMap[voxelSize.unit],
           ),
           formatLengthAsVx(V3.length(V3.sub(getActiveNodePosition(), positionToMeasureDistanceTo))),
         ]

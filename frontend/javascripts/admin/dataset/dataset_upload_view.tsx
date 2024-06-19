@@ -58,7 +58,7 @@ import { Vector3Input } from "libs/vector_input";
 import features from "features";
 import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";
-import { AllUnits, UnitLong, UnitShortMap, type Vector3 } from "oxalis/constants";
+import { AllUnits, UnitLong, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
@@ -781,7 +781,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                         value: unit,
                         label: (
                           <span>
-                            <Tooltip title={unit}>{UnitShortMap[unit]}</Tooltip>
+                            <Tooltip title={unit}>{LongUnitToShortUnitMap[unit]}</Tooltip>
                           </span>
                         ),
                       }))}

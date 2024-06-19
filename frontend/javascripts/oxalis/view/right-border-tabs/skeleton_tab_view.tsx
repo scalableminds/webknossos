@@ -100,7 +100,7 @@ import messages from "messages";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
-import { UnitShortMap } from "oxalis/constants";
+import { LongUnitToShortUnitMap } from "oxalis/constants";
 
 const { confirm } = Modal;
 const treeTabId = "tree-list";
@@ -794,7 +794,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     notification.open({
       message: `The total length of all skeletons is ${formatNumberToLength(
         totalLengthNm,
-        UnitShortMap[unit],
+        LongUnitToShortUnitMap[unit],
       )} (${formatLengthAsVx(totalLengthVx)}).`,
       icon: <i className="fas fa-ruler" />,
     });

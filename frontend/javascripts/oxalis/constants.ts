@@ -454,7 +454,7 @@ export enum UnitShort {
   pc = "pc",
 }
 
-export const UnitShortMap: Record<UnitLong, UnitShort> = {
+export const LongUnitToShortUnitMap: Record<UnitLong, UnitShort> = {
   [UnitLong.ym]: UnitShort.ym,
   [UnitLong.zm]: UnitShort.zm,
   [UnitLong.am]: UnitShort.am,

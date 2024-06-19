@@ -15,7 +15,7 @@ import {
   OwningOrganizationRow,
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { APIDatasetCompact, APIDetails, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, TeamTags } from "../advanced_dataset/dataset_table";
 import {
@@ -91,6 +91,30 @@ function getMaybeSelectMessage(datasetCount: number) {
   return datasetCount > 0 ? "Select one to see details." : "";
 }
 
+const updateCachedDatasetOrFolderDebounced = _.debounce(
+  async (
+    context: DatasetCollectionContextValue,
+    selectedDatasetOrFolder: APIDatasetCompact | Folder,
+    details: APIDetails,
+    setIgnoreFetching: (value: boolean) => void,
+  ) => {
+    // Explicitly ignoring fetching here to avoid unnecessary rendering of the loading spinner and thus hiding the metadata table.
+    setIgnoreFetching(true);
+    if ("status" in selectedDatasetOrFolder) {
+      await context.updateCachedDataset(selectedDatasetOrFolder, { details: details });
+    } else {
+      const folder = selectedDatasetOrFolder as Folder;
+      await context.queries.updateFolderMutation.mutateAsync({
+        ...folder,
+        allowedTeams: folder.allowedTeams.map((t) => t.id),
+        details,
+      });
+    }
+    setIgnoreFetching(false);
+  },
+  2000,
+);
+
 function MetadataTable({
   selectedDatasetOrFolder,
   setIgnoreFetching,
@@ -103,36 +127,13 @@ function MetadataTable({
   const [errors, setErrors] = useState<Record<string, string>>({}); // propName -> error message.
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
 
-  const updateCachedDatasetOrFolderDebounced = useMemo(
-    () =>
-      _.debounce(
-        async (
-          context: DatasetCollectionContextValue,
-          selectedDatasetOrFolder: APIDatasetCompact | Folder,
-          details: APIDetails,
-        ) => {
-          console.log("updating", selectedDatasetOrFolder, details);
-          // Explicitly ignoring fetching here to avoid unnecessary rendering of the loading spinner and thus hiding the metadata table.
-          setIgnoreFetching(true);
-          if ("status" in selectedDatasetOrFolder) {
-            await context.updateCachedDataset(selectedDatasetOrFolder, { details: details });
-          } else {
-            const folder = selectedDatasetOrFolder as Folder;
-            await context.queries.updateFolderMutation.mutateAsync({
-              ...folder,
-              allowedTeams: folder.allowedTeams.map((t) => t.id),
-              details,
-            });
-          }
-          setIgnoreFetching(false);
-        },
-        2000,
-      ),
-    [setIgnoreFetching],
-  );
-
   useEffectOnUpdate(() => {
-    updateCachedDatasetOrFolderDebounced(context, selectedDatasetOrFolder, details);
+    updateCachedDatasetOrFolderDebounced(
+      context,
+      selectedDatasetOrFolder,
+      details,
+      setIgnoreFetching,
+    );
   }, [details]);
 
   const updatePropName = (previousPropName: string, newPropName: string) => {
@@ -226,7 +227,10 @@ function MetadataTable({
           {
             title: "",
             key: "del",
-            render: (_, record) => <DeleteOutlined onClick={() => deleteKey(record.propName)} />,
+            render: (_, record) =>
+              record.propName === "" ? null : (
+                <DeleteOutlined onClick={() => deleteKey(record.propName)} />
+              ),
           },
         ]}
         pagination={false}
@@ -430,7 +434,9 @@ function FolderDetails({
             . {message}
           </p>
           <div className="sidebar-label">Access Permissions</div>
-          <FolderTeamTags folder={folder} />
+          <div style={{ marginBottom: 4 }}>
+            <FolderTeamTags folder={folder} />
+          </div>
           <MetadataTable selectedDatasetOrFolder={folder} setIgnoreFetching={() => {}} />
         </div>
       ) : error ? (

@@ -163,9 +163,6 @@ class PlaneMaterialFactory {
       shouldApplyMappingOnGPU: {
         value: false,
       },
-      mappingSize: {
-        value: 0,
-      },
       hideUnmappedIds: {
         value: false,
       },
@@ -591,15 +588,6 @@ class PlaneMaterialFactory {
         (storeState) => getZoomValue(storeState.flycam),
         (zoomValue) => {
           this.uniforms.zoomValue.value = zoomValue;
-        },
-        true,
-      ),
-    );
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        (storeState) => getMappingInfoForSupportedLayer(storeState).mappingSize,
-        (mappingSize) => {
-          this.uniforms.mappingSize.value = mappingSize;
         },
         true,
       ),

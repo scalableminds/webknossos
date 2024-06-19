@@ -278,7 +278,6 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
           mapping,
           mappingColors,
           mappingType,
-          mappingSize: mapping != null ? mapping.size : 0,
           hideUnmappedIds,
           mappingStatus:
             mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,

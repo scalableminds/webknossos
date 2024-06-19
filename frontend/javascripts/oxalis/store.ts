@@ -404,7 +404,6 @@ export type ActiveMappingInfo = {
   readonly mappingColors: number[] | null | undefined;
   readonly hideUnmappedIds: boolean;
   readonly mappingStatus: MappingStatus;
-  readonly mappingSize: number;
   readonly mappingType: MappingType;
 };
 export type TemporaryConfiguration = {

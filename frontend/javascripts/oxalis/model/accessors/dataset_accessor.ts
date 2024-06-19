@@ -658,7 +658,6 @@ const dummyMapping = {
   mappingColors: null,
   hideUnmappedIds: false,
   mappingStatus: MappingStatusEnum.DISABLED,
-  mappingSize: 0,
   mappingType: "JSON",
 } as const;
 

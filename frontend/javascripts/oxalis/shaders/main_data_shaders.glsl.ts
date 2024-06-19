@@ -97,7 +97,6 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform float segmentationPatternOpacity;
 
   uniform bool shouldApplyMappingOnGPU;
-  uniform float mappingSize;
   uniform bool hideUnmappedIds;
   uniform bool is_mapping_64bit;
   uniform highp uint mapping_seeds[3];

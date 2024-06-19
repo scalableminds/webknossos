@@ -30,9 +30,10 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 - Fixed a bug where the warning to zoom in to see the agglomerate mapping was shown to the user even when the 3D viewport was maximized and no volume data was shown. [#7865](https://github.com/scalableminds/webknossos/issues/7865) 
 - Fixed a bug where brushing on a fallback segmentation with active mapping and with segment index file would lead to failed saves. [#7833](https://github.com/scalableminds/webknossos/pull/7833)
+- Fixed a bug where the "Hide Meshes" / "Show Meshes" options of the context menu for segment groups were not available although at leas one mesh was set to visible / invisible. [#7890](https://github.com/scalableminds/webknossos/pull/7890)
 - Fixed a bug where sometimes old mismatching javascript code would be served after upgrades. [#7854](https://github.com/scalableminds/webknossos/pull/7854)
 - Fixed a bug where dataset uploads of zipped tiff data via the UI would be rejected. [#7856](https://github.com/scalableminds/webknossos/pull/7856)
-- Fixed a bug with incorrect valiation of layer names in the animation modal. [#7882](https://github.com/scalableminds/webknossos/pull/7882)
+- Fixed a bug with incorrect validation of layer names in the animation modal. [#7882](https://github.com/scalableminds/webknossos/pull/7882)
 - Fixed a bug in the fullMesh.stl route used by the render_animation worker job, where some meshes in proofreading annotations could not be loaded. [#7887](https://github.com/scalableminds/webknossos/pull/7887)
 
 ### Removed

@@ -5,6 +5,8 @@
 # Health endpoint
 GET         /health                                             @com.scalableminds.webknossos.tracingstore.controllers.Application.health
 
+POST        /annotation/initialize                              @com.scalableminds.webknossos.tracingstore.controllers.DSAnnotationController.initialize(annotationId: String, token: Option[String])
+
 # Volume tracings
 POST        /volume/save                                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save(token: Option[String])
 POST        /volume/:tracingId/initialData                      @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialData(token: Option[String], tracingId: String, minResolution: Option[Int], maxResolution: Option[Int])

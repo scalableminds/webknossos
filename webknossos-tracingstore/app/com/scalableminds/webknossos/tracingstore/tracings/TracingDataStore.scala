@@ -42,6 +42,8 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
 
   lazy val editableMappingUpdates = new FossilDBClient("editableMappingUpdates", config, slackNotificationService)
 
+  lazy val annotations = new FossilDBClient("annotations", config, slackNotificationService)
+
   private def shutdown(): Unit = {
     healthClient.shutdown()
     skeletons.shutdown()

@@ -351,6 +351,9 @@ class PlaneMaterialFactory {
       value: cuckoo?.getTexture() || CuckooTable.getNullTexture(),
     };
     this.uniforms.mapping_seeds = { value: [0, 0, 0] };
+    this.uniforms.is_mapping_64bit = {
+      value: segmentationLayer?.mappings?.is64Bit() || false,
+    };
 
     this.unsubscribeMappingSeedsFn?.();
 

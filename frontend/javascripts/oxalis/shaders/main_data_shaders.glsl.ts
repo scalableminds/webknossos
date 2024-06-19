@@ -99,6 +99,7 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform bool shouldApplyMappingOnGPU;
   uniform float mappingSize;
   uniform bool hideUnmappedIds;
+  uniform bool is_mapping_64bit;
   uniform highp uint mapping_seeds[3];
   uniform highp uint MAPPING_CUCKOO_ENTRY_CAPACITY;
   uniform highp uint MAPPING_CUCKOO_ELEMENTS_PER_ENTRY;

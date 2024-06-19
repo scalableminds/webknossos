@@ -344,13 +344,18 @@ export const getSegmentId: ShaderModule = {
       uint low_integer = vec4ToUint(255. * mapped_id[1]);
 
       if (shouldApplyMappingOnGPU) {
-        // todop: use attemptMappingLookUp64 when necessary
-        ivec2 mapped_entry = attemptMappingLookUp32(/*high_integer,*/ low_integer, mapping_seeds[0]);
+        ivec2 mapped_entry = is_mapping_64bit
+          ? attemptMappingLookUp64(high_integer, low_integer, mapping_seeds[0])
+          : attemptMappingLookUp32(low_integer, mapping_seeds[0]);
         if (mapped_entry.r == -1) {
-          mapped_entry = attemptMappingLookUp32(/*high_integer,*/ low_integer, mapping_seeds[1]);
+          mapped_entry = is_mapping_64bit
+          ? attemptMappingLookUp64(high_integer, low_integer, mapping_seeds[1])
+          : attemptMappingLookUp32(low_integer, mapping_seeds[1]);
         }
         if (mapped_entry.r == -1) {
-          mapped_entry = attemptMappingLookUp32(/*high_integer,*/ low_integer, mapping_seeds[2]);
+          mapped_entry = is_mapping_64bit
+            ? attemptMappingLookUp64(high_integer, low_integer, mapping_seeds[2])
+            : attemptMappingLookUp32(low_integer, mapping_seeds[2]);
         }
         if (mapped_entry.r != -1) {
           mapped_id[0] = uintToVec4(uint(mapped_entry[0]));
@@ -368,7 +373,6 @@ export const getSegmentId: ShaderModule = {
 
       segment_id[0] *= 255.0;
       segment_id[1] *= 255.0;
-      return;
     }
 <% }) %>
   `,

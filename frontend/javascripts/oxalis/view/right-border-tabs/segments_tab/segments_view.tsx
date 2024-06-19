@@ -1302,14 +1302,14 @@ class SegmentsView extends React.Component<Props, State> {
       menuOptions.push({
         key: "showMeshes",
         icon: <EyeOutlined />,
-        label: <div onClick={() => changeVisibility(true)}>Show All Meshes</div>,
+        label: <div onClick={() => changeVisibility(true)}>Show Meshes</div>,
       });
     }
     if (areSomeSegmentsVisible) {
       menuOptions.push({
         key: "hideMeshes",
         icon: <EyeInvisibleOutlined />,
-        label: <div onClick={() => changeVisibility(false)}>Hide All Meshes</div>,
+        label: <div onClick={() => changeVisibility(false)}>Hide Meshes</div>,
       });
     }
     return menuOptions;

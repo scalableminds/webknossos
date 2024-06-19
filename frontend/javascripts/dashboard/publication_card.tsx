@@ -6,7 +6,7 @@ import classNames from "classnames";
 import { Link } from "react-router-dom";
 import type {
   APIDataset,
-  APIDatasetDetails,
+  APIDetails,
   APIPublication,
   APIPublicationAnnotation,
 } from "types/api_flow_types";
@@ -18,7 +18,7 @@ import {
   getDatasetExtentAsString,
 } from "oxalis/model/accessors/dataset_accessor";
 import { compareBy } from "libs/utils";
-type ExtendedDatasetDetails = APIDatasetDetails & {
+type ExtendedDatasetDetails = APIDetails & {
   name: string;
   scale: string;
   extent: string;

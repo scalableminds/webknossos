@@ -163,11 +163,7 @@ export type MutableAPIDatasetId = {
   name: string;
 };
 export type APIDatasetId = Readonly<MutableAPIDatasetId>;
-export type APIDatasetDetails = {
-  readonly species?: string;
-  readonly brainRegion?: string;
-  readonly acquisition?: string;
-} & Record<string, string | number | string[]>;
+export type APIDetails = Record<string, string | number | string[]>;
 
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
@@ -177,7 +173,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   created: number;
   dataStore: APIDataStore;
   description: string | null | undefined;
-  details: APIDatasetDetails | null | undefined;
+  details: APIDetails | null | undefined;
   isEditable: boolean;
   isPublic: boolean;
   displayName: string | null | undefined;
@@ -1065,7 +1061,7 @@ export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent: string | null;
-  details: Record<string, string | number | string[]>;
+  details: APIDetails;
   isEditable: boolean;
 };
 
@@ -1076,7 +1072,7 @@ export type FolderItem = {
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;
-  details: FlatFolderTreeItem["details"];
+  details: APIDetails;
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1087,7 +1083,7 @@ export type Folder = {
   id: string;
   allowedTeams: APITeam[];
   allowedTeamsCumulative: APITeam[];
-  details: FlatFolderTreeItem["details"];
+  details: APIDetails;
   isEditable: boolean;
 };
 
@@ -1095,7 +1091,7 @@ export type FolderUpdater = {
   id: string;
   name: string;
   allowedTeams: string[];
-  details: FlatFolderTreeItem["details"];
+  details: APIDetails;
 };
 
 export enum CAMERA_POSITIONS {

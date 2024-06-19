@@ -5,9 +5,8 @@ import {
   EditOutlined,
   LoadingOutlined,
   DeleteOutlined,
-  PlusCircleOutlined,
 } from "@ant-design/icons";
-import { Button, Typography, Input, Result, Spin, Table, Tag, Tooltip } from "antd";
+import { Typography, Input, Result, Spin, Table, Tag, Tooltip } from "antd";
 import { stringToColor, formatCountToDataAmountUnit } from "libs/format_utils";
 import { pluralize } from "libs/utils";
 import _ from "lodash";
@@ -17,7 +16,7 @@ import {
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect, useMemo, useState } from "react";
-import { APIDatasetCompact, Folder } from "types/api_flow_types";
+import { APIDatasetCompact, APIDetails, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, TeamTags } from "../advanced_dataset/dataset_table";
 import {
   DatasetCollectionContextValue,
@@ -100,9 +99,7 @@ function MetadataTable({
   setIgnoreFetching: (value: boolean) => void;
 }) {
   const context = useDatasetCollectionContext();
-  const [details, setDetails] = useState<APIDatasetCompact["details"]>(
-    selectedDatasetOrFolder.details,
-  );
+  const [details, setDetails] = useState<APIDetails>(selectedDatasetOrFolder.details || {});
   const [errors, setErrors] = useState<Record<string, string>>({}); // propName -> error message.
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
 
@@ -112,7 +109,7 @@ function MetadataTable({
         async (
           context: DatasetCollectionContextValue,
           selectedDatasetOrFolder: APIDatasetCompact | Folder,
-          details: APIDatasetCompact["details"],
+          details: APIDetails,
         ) => {
           console.log("updating", selectedDatasetOrFolder, details);
           // Explicitly ignoring fetching here to avoid unnecessary rendering of the loading spinner and thus hiding the metadata table.
@@ -123,6 +120,7 @@ function MetadataTable({
             const folder = selectedDatasetOrFolder as Folder;
             await context.queries.updateFolderMutation.mutateAsync({
               ...folder,
+              allowedTeams: folder.allowedTeams.map((t) => t.id),
               details,
             });
           }
@@ -234,19 +232,6 @@ function MetadataTable({
         pagination={false}
         size="small"
       />
-      <div className="flex-center-child" style={{ marginTop: 8 }}>
-        <Button
-          size="small"
-          icon={<PlusCircleOutlined />}
-          onClick={() => {
-            context.updateCachedDataset(selectedDatasetOrFolder, {
-              details: { ...selectedDatasetOrFolder.details, key: "edit me" },
-            });
-          }}
-        >
-          Add Metadata
-        </Button>
-      </div>
     </div>
   );
 }
@@ -349,7 +334,10 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
       ) : null}
 
       {selectedDataset.isActive ? (
-        <MetadataTable selectedDataset={selectedDataset} setIgnoreFetching={setIgnoreFetching} />
+        <MetadataTable
+          selectedDatasetOrFolder={selectedDataset}
+          setIgnoreFetching={setIgnoreFetching}
+        />
       ) : null}
     </>
   );
@@ -443,6 +431,7 @@ function FolderDetails({
           </p>
           <div className="sidebar-label">Access Permissions</div>
           <FolderTeamTags folder={folder} />
+          <MetadataTable selectedDatasetOrFolder={folder} setIgnoreFetching={() => {}} />
         </div>
       ) : error ? (
         "Could not load folder."

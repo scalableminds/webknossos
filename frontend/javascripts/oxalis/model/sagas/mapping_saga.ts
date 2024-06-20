@@ -67,7 +67,7 @@ import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 import DataCube from "../bucket_data_handling/data_cube";
-import { chainIterators, diffMaps, sleep } from "libs/utils";
+import { chainIterators, diffMaps, diffSets, sleep } from "libs/utils";
 import { Action } from "../actions/actions";
 import { ActionPattern } from "redux-saga/effects";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
@@ -421,32 +421,6 @@ function* handleSetHdf5Mapping(
   }
 }
 
-function computeSetOperations<T>(setA: Set<T>, setB: Set<T>) {
-  const aWithoutB = new Set<T>();
-  const bWithoutA = new Set<T>();
-  const intersection = new Set<T>();
-
-  for (const item of setA) {
-    if (setB.has(item)) {
-      intersection.add(item);
-    } else {
-      aWithoutB.add(item);
-    }
-  }
-
-  for (const item of setB) {
-    if (!setA.has(item)) {
-      bWithoutA.add(item);
-    }
-  }
-
-  return {
-    aWithoutB: aWithoutB,
-    bWithoutA: bWithoutA,
-    intersection: intersection,
-  };
-}
-
 function diffMappings(
   mappingA: Mapping,
   mappingB: Mapping,
@@ -506,7 +480,7 @@ function* updateLocalHdf5Mapping(
     aWithoutB: newSegmentIds,
     bWithoutA: deletedValues,
     intersection: remainingValues,
-  } = computeSetOperations(
+  } = diffSets(
     segmentIds as Set<NumberLike>,
     new Set((previousMapping as Map<NumberLike, NumberLike>).keys()),
   );

@@ -1151,6 +1151,32 @@ export function diffObjects(
   return changes(object, base);
 }
 
+export function diffSets<T>(setA: Set<T>, setB: Set<T>) {
+  const aWithoutB = new Set<T>();
+  const bWithoutA = new Set<T>();
+  const intersection = new Set<T>();
+
+  for (const item of setA) {
+    if (setB.has(item)) {
+      intersection.add(item);
+    } else {
+      aWithoutB.add(item);
+    }
+  }
+
+  for (const item of setB) {
+    if (!setA.has(item)) {
+      bWithoutA.add(item);
+    }
+  }
+
+  return {
+    aWithoutB: aWithoutB,
+    bWithoutA: bWithoutA,
+    intersection: intersection,
+  };
+}
+
 export function coalesce<T extends {}>(e: T, token: any): T[keyof T] | null {
   return Object.values(e).includes(token as T[keyof T]) ? token : null;
 }

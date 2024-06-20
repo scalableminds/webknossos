@@ -12,6 +12,7 @@ import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
 import { CuckooTableUint32 } from "libs/cuckoo/cuckoo_table_uint32";
 import * as Utils from "libs/utils";
 import { message } from "antd";
+import { cachedDiffMappings } from "../sagas/mapping_saga";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_MESSAGE_KEY = "mappings";
@@ -61,7 +62,7 @@ class Mappings {
     console.time("diff maps");
     const { changed, onlyA, onlyB } =
       this.previousMapping != null
-        ? Utils.diffMaps(this.previousMapping, mapping)
+        ? cachedDiffMappings(this.previousMapping, mapping)
         : { changed: [], onlyA: [], onlyB: Array.from(mapping.keys()) };
     console.timeEnd("diff maps");
 

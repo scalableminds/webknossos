@@ -67,10 +67,11 @@ import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 import DataCube from "../bucket_data_handling/data_cube";
-import { chainIterators, sleep } from "libs/utils";
+import { chainIterators, diffMaps, sleep } from "libs/utils";
 import { Action } from "../actions/actions";
 import { ActionPattern } from "redux-saga/effects";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
+import memoizeOne from "memoize-one";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
@@ -427,6 +428,32 @@ function getSetIntersectedMapKeys<T>(valueSet: Iterable<T>, map: Map<T, T>): Set
   return new Set([...valueSet].filter((i) => map.has(i)));
 }
 
+function diffMappings(
+  mappingA: Mapping,
+  mappingB: Mapping,
+  cacheResult?: ReturnType<typeof diffMaps>,
+) {
+  if (cacheResult != null) {
+    return cacheResult;
+  }
+  return diffMaps<number | bigint, number | bigint>(mappingA, mappingB);
+}
+
+export const cachedDiffMappings = memoizeOne(
+  diffMappings,
+  (newInputs, lastInputs) =>
+    // If cacheResult was passed, the inputs must be considered as not equal
+    // so that the new result can be set
+    newInputs[2] == null && newInputs[0] === lastInputs[0] && newInputs[1] === lastInputs[1],
+);
+export const setCacheResultForDiffMappings = (
+  mappingA: Mapping,
+  mappingB: Mapping,
+  cacheResult: ReturnType<typeof diffMaps>,
+) => {
+  cachedDiffMappings(mappingA, mappingB, cacheResult);
+};
+
 function* updateLocalHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
@@ -447,7 +474,10 @@ function* updateLocalHdf5Mapping(
   );
 
   const cube = Model.getCubeByLayerName(layerName);
-  // todop: avoid this call
+  // todop: the union could be maintained when
+  //   - bucket data was received
+  //   - bucket data was changed (recompute?)
+  //   - bucket was gc'ed (recompute?)
   const segmentIds = cube.getValueSetForAllBuckets();
 
   const previousMapping = yield* select(
@@ -456,10 +486,18 @@ function* updateLocalHdf5Mapping(
       (new Map() as Mapping),
   );
 
+  // todop: lots of set operations below. might be redundant partially?
+
   const newSegmentIds: Set<NumberLike> = getSetWithoutMapKeys(
     // @ts-ignore segmentIds and previousMapping are expected to have the same value type
     segmentIds,
     previousMapping,
+  );
+
+  const deletedValues: Set<NumberLike> = getSetWithoutMapKeys(
+    // @ts-ignore segmentIds and previousMapping are expected to have the same value type
+    previousMapping.keys(),
+    segmentIds,
   );
 
   const remainingValues: Set<NumberLike> = getSetIntersectedMapKeys(
@@ -496,18 +534,20 @@ function* updateLocalHdf5Mapping(
         );
   console.log("received mapped segment ids from server", newEntries);
 
-  const a = [...previousMapping.entries()] as Array<[NumberLike, NumberLike]>;
-
-  const remainingEntries = a.filter(([key, _]) => remainingValues.has(key));
-  // const filtered = a.filter(([key, _]) => remainingValues.has(key));
-  // const remainingMapping = new Map<NumberLike, NumberLike>(filtered) as Mapping;
-  // const remainingEntries = remainingMapping.entries();
+  const previousEntries = [...previousMapping.entries()] as Array<[NumberLike, NumberLike]>;
+  const remainingEntries = previousEntries.filter(([key, _]) => remainingValues.has(key));
   const chainedIterator = chainIterators<NumberLike>(
     // @ts-ignore remainingEntries and newEntries are expected to have the same value type
     remainingEntries,
     newEntries.entries(),
   );
   const mapping = new Map(chainedIterator) as Mapping;
+
+  setCacheResultForDiffMappings(previousMapping, mapping, {
+    changed: [],
+    onlyA: Array.from(deletedValues),
+    onlyB: newUniqueSegmentIds,
+  });
 
   console.log("dispatch setMappingAction in mapping saga");
   yield* put(setMappingAction(layerName, mappingName, mappingType, { mapping }));

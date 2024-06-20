@@ -610,10 +610,8 @@ class SegmentsView extends React.Component<Props, State> {
           const segmentMesh = meshes[segment.id];
           // Only regard loaded, but invisible meshes
           if (segmentMesh != null) {
-            visibilityEntry.areSomeSegmentsVisible =
-              visibilityEntry.areSomeSegmentsVisible || segmentMesh.isVisible;
-            visibilityEntry.areSomeSegmentsInvisible =
-              visibilityEntry.areSomeSegmentsInvisible || !segmentMesh.isVisible;
+            visibilityEntry.areSomeSegmentsVisible ||= segmentMesh.isVisible;
+            visibilityEntry.areSomeSegmentsInvisible ||= !segmentMesh.isVisible;
           }
         });
         newVisibleMap[group.groupId] = visibilityEntry;

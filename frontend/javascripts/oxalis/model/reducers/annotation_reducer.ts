@@ -11,6 +11,8 @@ import _ from "lodash";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
 import { AdditionalCoordinate } from "types/api_flow_types";
+import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
+import BoundingBox from "../bucket_data_handling/bounding_box";
 
 const updateTracing = (state: OxalisState, shape: Partial<OxalisState["tracing"]>): OxalisState =>
   updateKey(state, "tracing", shape);
@@ -178,17 +180,25 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
           max: V3.toArray(V3.round(V3.add(action.center, halfBoxExtent))),
         };
       }
-      let newBoundingBox: UserBoundingBox;
+      let newUserBoundingBox: UserBoundingBox;
       if (action.newBoundingBox != null) {
-        newBoundingBox = {
+        newUserBoundingBox = {
           ...newBoundingBoxTemplate,
           ...action.newBoundingBox,
         };
       } else {
-        newBoundingBox = newBoundingBoxTemplate;
+        newUserBoundingBox = newBoundingBoxTemplate;
       }
 
-      const updatedUserBoundingBoxes = [...userBoundingBoxes, newBoundingBox];
+      // Ensure the new bounding box is within the dataset bounding box.
+      const datasetBoundingBox = getDatasetBoundingBox(state.dataset);
+      const newBoundingBox = new BoundingBox(newUserBoundingBox.boundingBox);
+      const newBoundingBoxWithinDataset = newBoundingBox
+        .intersectedWith(datasetBoundingBox)
+        .toBoundingBoxType();
+      newUserBoundingBox.boundingBox = newBoundingBoxWithinDataset;
+
+      const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
       return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
     }
 

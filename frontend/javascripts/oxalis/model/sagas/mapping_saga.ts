@@ -421,11 +421,30 @@ function* handleSetHdf5Mapping(
   }
 }
 
-function getSetWithoutMapKeys<T>(valueSet: Iterable<T>, map: Map<T, T>): Set<T> {
-  return new Set([...valueSet].filter((i) => !map.has(i)));
-}
-function getSetIntersectedMapKeys<T>(valueSet: Iterable<T>, map: Map<T, T>): Set<T> {
-  return new Set([...valueSet].filter((i) => map.has(i)));
+function computeSetOperations<T>(setA: Set<T>, setB: Set<T>) {
+  const aWithoutB = new Set<T>();
+  const bWithoutA = new Set<T>();
+  const intersection = new Set<T>();
+
+  for (const item of setA) {
+    if (setB.has(item)) {
+      intersection.add(item);
+    } else {
+      aWithoutB.add(item);
+    }
+  }
+
+  for (const item of setB) {
+    if (!setA.has(item)) {
+      bWithoutA.add(item);
+    }
+  }
+
+  return {
+    aWithoutB: aWithoutB,
+    bWithoutA: bWithoutA,
+    intersection: intersection,
+  };
 }
 
 function diffMappings(
@@ -482,26 +501,18 @@ function* updateLocalHdf5Mapping(
       (new Map() as Mapping),
   );
 
-  // todop: lots of set operations below. might be redundant partially?
-
-  const newSegmentIds: Set<NumberLike> = getSetWithoutMapKeys(
-    // @ts-ignore segmentIds and previousMapping are expected to have the same value type
-    segmentIds,
-    previousMapping,
+  console.time("set operations in mapping saga");
+  const {
+    aWithoutB: newSegmentIds,
+    bWithoutA: deletedValues,
+    intersection: remainingValues,
+  } = computeSetOperations(
+    segmentIds as Set<NumberLike>,
+    new Set((previousMapping as Map<NumberLike, NumberLike>).keys()),
   );
 
-  const deletedValues: Set<NumberLike> = getSetWithoutMapKeys(
-    // @ts-ignore segmentIds and previousMapping are expected to have the same value type
-    previousMapping.keys(),
-    segmentIds,
-  );
-
-  const remainingValues: Set<NumberLike> = getSetIntersectedMapKeys(
-    // @ts-ignore segmentIds and previousMapping are expected to have the same value type
-    previousMapping.keys(),
-    segmentIds,
-  );
   const newUniqueSegmentIds = [...newSegmentIds].sort(<T extends NumberLike>(a: T, b: T) => a - b);
+  console.timeEnd("set operations in mapping saga");
   console.log(
     "New values",
     newSegmentIds.size,

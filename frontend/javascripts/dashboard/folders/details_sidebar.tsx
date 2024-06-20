@@ -200,6 +200,7 @@ function MetadataTable({
                 <>
                   <Input
                     onFocus={() => setFocusedRow(record.key)}
+                    onBlur={() => setFocusedRow(null)}
                     variant={record.key === focusedRow ? "outlined" : "borderless"}
                     value={propName}
                     onChange={(evt) => updatePropName(propName, evt.target.value)}

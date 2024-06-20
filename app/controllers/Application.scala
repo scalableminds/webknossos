@@ -15,6 +15,11 @@ import utils.{ApiVersioning, StoreModules, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import scalapb.GeneratedMessage
+import com.scalableminds.webknossos.datastore.Annotation.{
+  UpdateLayerAnnotationUpdateAction,
+  UpdateLayerMetadataAnnotationUpdateAction
+}
 
 class Application @Inject()(actorSystem: ActorSystem,
                             userService: UserService,
@@ -29,6 +34,16 @@ class Application @Inject()(actorSystem: ActorSystem,
 
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
+
+  def test: Action[AnyContent] = Action.async { implicit request =>
+    Fox.successful(Ok(matchThing(UpdateLayerMetadataAnnotationUpdateAction("id", "name"))))
+  }
+
+  private def matchThing(m: GeneratedMessage): String = m match {
+    case u: UpdateLayerAnnotationUpdateAction         => "update!"
+    case u: UpdateLayerMetadataAnnotationUpdateAction => "other update!"
+    case _                                            => "anything else!"
+  }
 
   // Note: This route is used by external applications, keep stable
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async {

@@ -1,6 +1,7 @@
 # Routes
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
+GET           /test                                                                        controllers.Application.test()
 GET           /buildinfo                                                                        controllers.Application.buildInfo()
 GET           /features                                                                         controllers.Application.features()
 GET           /health                                                                           controllers.Application.health()

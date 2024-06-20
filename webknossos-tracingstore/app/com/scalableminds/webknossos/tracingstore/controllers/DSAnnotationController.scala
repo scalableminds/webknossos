@@ -3,15 +3,16 @@ package com.scalableminds.webknossos.tracingstore.controllers
 import com.google.inject.Inject
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.controllers.Controller
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class DSAnnotationController @Inject()(accessTokenService: AccessTokenService, tracingDataStore: TracingDataStore)(
-    implicit ec: ExecutionContext,
-    bodyParsers: PlayBodyParsers)
+class DSAnnotationController @Inject()(
+    accessTokenService: TracingStoreAccessTokenService,
+    tracingDataStore: TracingDataStore)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreImplicits {
 

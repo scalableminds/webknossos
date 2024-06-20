@@ -85,10 +85,7 @@ class DataCube {
   resolutionInfo: ResolutionInfo;
   layerName: string;
   emitter: Emitter;
-
   lastRequestForValueSet: number | null = null;
-  // See DataBucket.cachedValueSet for details.
-  cachedValueSet: Set<number> | Set<bigint> | null = null;
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
@@ -405,9 +402,6 @@ class DataCube {
 
   getValueSetForAllBuckets(): Set<number> | Set<bigint> {
     this.lastRequestForValueSet = Date.now();
-    if (this.cachedValueSet != null) {
-      return this.cachedValueSet;
-    }
 
     // todop (idea): can we avoid examining the value set of a bucket for which
     // finer buckets were already loaded?
@@ -421,21 +415,7 @@ class DataCube {
     // @ts-ignore The buckets of a single layer all have the same element class, so they are all number or all bigint
     const valueSet = union(valueSets);
     console.timeEnd("valueUnion");
-
-    this.cachedValueSet = valueSet;
     return valueSet;
-  }
-
-  incorporateValueSet(valueSet: Set<number> | Set<bigint>) {
-    if (this.cachedValueSet == null) {
-      return;
-    }
-    // @ts-ignore The buckets of a single layer all have the same element class, so they are all number or all bigint
-    this.cachedValueSet = union([this.cachedValueSet, valueSet]);
-  }
-
-  invalidateValueSet() {
-    this.cachedValueSet = null;
   }
 
   collectBucket(bucket: DataBucket): void {

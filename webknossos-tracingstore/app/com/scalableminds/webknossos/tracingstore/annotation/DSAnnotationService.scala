@@ -19,33 +19,36 @@ import scala.concurrent.ExecutionContext
 class DSAnnotationService @Inject()() {
   def storeUpdate(updateAction: GeneratedMessage)(implicit ec: ExecutionContext): Fox[Unit] = Fox.successful(())
 
-  def applyUpdate(annotation: AnnotationProto, updateAction: GeneratedMessage): AnnotationProto = {
+  def newestMaterializableVersion(annotationId: String): Fox[Long] = ???
 
-    val withAppliedChange = updateAction match {
-      case a: AddLayerAnnotationUpdateAction =>
-        annotation.copy(
-          layers = annotation.layers :+ AnnotationLayerProto(a.tracingId,
-                                                             a.name,
-                                                             version = 0L,
-                                                             editableMappingVersion = None,
-                                                             `type` = a.`type`))
-      case a: DeleteLayerAnnotationUpdateAction =>
-        annotation.copy(layers = annotation.layers.filter(_.tracingId != a.tracingId))
-      case a: UpdateLayerAnnotationUpdateAction =>
-        annotation.copy(
-          layers = annotation.layers.map(l => if (l.tracingId == a.tracingId) l.copy(version = a.layerVersion) else l))
-      case a: UpdateLayerEditableMappingAnnotationUpdateAction =>
-        annotation.copy(layers = annotation.layers.map(l =>
-          if (l.tracingId == a.tracingId) l.copy(editableMappingVersion = Some(a.editableMappingVersion)) else l))
-      case a: UpdateLayerMetadataAnnotationUpdateAction =>
-        annotation.copy(
-          layers = annotation.layers.map(l => if (l.tracingId == a.tracingId) l.copy(name = a.name) else l))
-      case a: UpdateMetadataAnnotationUpdateAction =>
-        annotation.copy(name = a.name, description = a.description)
-      // TODO error case
+  def applyUpdate(annotation: AnnotationProto, updateAction: GeneratedMessage)(
+      implicit ec: ExecutionContext): Fox[AnnotationProto] =
+    for {
 
-    }
-    withAppliedChange.copy(version = withAppliedChange.version + 1L)
-  }
+      withAppliedChange <- updateAction match {
+        case a: AddLayerAnnotationUpdateAction =>
+          Fox.successful(
+            annotation.copy(
+              layers = annotation.layers :+ AnnotationLayerProto(a.tracingId,
+                                                                 a.name,
+                                                                 version = 0L,
+                                                                 editableMappingVersion = None,
+                                                                 `type` = a.`type`)))
+        case a: DeleteLayerAnnotationUpdateAction =>
+          Fox.successful(annotation.copy(layers = annotation.layers.filter(_.tracingId != a.tracingId)))
+        case a: UpdateLayerAnnotationUpdateAction =>
+          Fox.successful(annotation.copy(layers = annotation.layers.map(l =>
+            if (l.tracingId == a.tracingId) l.copy(version = a.layerVersion) else l)))
+        case a: UpdateLayerEditableMappingAnnotationUpdateAction =>
+          Fox.successful(annotation.copy(layers = annotation.layers.map(l =>
+            if (l.tracingId == a.tracingId) l.copy(editableMappingVersion = Some(a.editableMappingVersion)) else l)))
+        case a: UpdateLayerMetadataAnnotationUpdateAction =>
+          Fox.successful(annotation.copy(layers = annotation.layers.map(l =>
+            if (l.tracingId == a.tracingId) l.copy(name = a.name) else l)))
+        case a: UpdateMetadataAnnotationUpdateAction =>
+          Fox.successful(annotation.copy(name = a.name, description = a.description))
+        case _ => Fox.failure("Received unsupported AnnotationUpdaetAction action")
+      }
+    } yield withAppliedChange.copy(version = withAppliedChange.version + 1L)
 
 }

@@ -51,3 +51,5 @@ message UpdateMetadataAnnotationUpdateAction {
   optional string name = 1;
   optional string description = 2;
 }
+
+// TODO restoreLayer?

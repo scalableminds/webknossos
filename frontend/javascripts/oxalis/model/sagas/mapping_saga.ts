@@ -474,10 +474,6 @@ function* updateLocalHdf5Mapping(
   );
 
   const cube = Model.getCubeByLayerName(layerName);
-  // todop: the union could be maintained when
-  //   - bucket data was received
-  //   - bucket data was changed (recompute?)
-  //   - bucket was gc'ed (recompute?)
   const segmentIds = cube.getValueSetForAllBuckets();
 
   const previousMapping = yield* select(

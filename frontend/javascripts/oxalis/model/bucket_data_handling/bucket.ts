@@ -627,6 +627,8 @@ export class DataBucket {
         }
         if (needsValueSetInvalidation) {
           this.invalidateValueSet();
+        } else if (valueSet != null) {
+          this.cube.incorporateValueSet(valueSet);
         }
 
         this.state = BucketStateEnum.LOADED;
@@ -642,6 +644,7 @@ export class DataBucket {
 
   private invalidateValueSet() {
     this.cachedValueSet = null;
+    this.cube.invalidateValueSet();
   }
 
   private ensureValueSet(): asserts this is { cachedValueSet: Set<number> | Set<bigint> } {

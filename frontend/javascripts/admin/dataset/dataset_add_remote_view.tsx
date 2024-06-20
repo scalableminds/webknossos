@@ -20,7 +20,6 @@ import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "ad
 import messages from "messages";
 import { jsonStringify } from "libs/utils";
 import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
-import Password from "antd/lib/input/Password";
 import { AsyncButton } from "components/async_clickables";
 import Toast from "libs/toast";
 import _ from "lodash";
@@ -43,6 +42,7 @@ import BrainSpinner from "components/brain_spinner";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
+const { Password } = Input;
 
 type FileList = UploadFile<any>[];
 

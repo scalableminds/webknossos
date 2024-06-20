@@ -366,7 +366,7 @@ class FolderRenderer {
 class DatasetTable extends React.PureComponent<Props, State> {
   state: State = {
     sortedInfo: {
-      columnKey: useLruRank ? "" : "created",
+      columnKey: useLruRank ? undefined : "created",
       order: "descend",
     },
     prevSearchQuery: "",
@@ -529,6 +529,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
       // and if the query is at least 3 characters long to avoid sorting *all* datasets
       isSearchQueryLongEnough && sortedInfo.columnKey == null
         ? _.chain([...filteredDataSource, ...activeSubfolders])
+            // TODO: Check whether this is dead code as columnKey never seems to be null.
             .map((datasetOrFolder) => {
               const nameAndMetadata = getNameAndMetaData(datasetOrFolder);
               const diceCoefficient = dice(nameAndMetadata, this.props.searchQuery);

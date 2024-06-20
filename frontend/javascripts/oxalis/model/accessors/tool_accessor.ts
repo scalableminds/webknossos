@@ -21,6 +21,7 @@ import {
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
+import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 const zoomInToUseToolMessage =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted resolutions from the extended annotation menu in the dashboard.";
@@ -336,19 +337,19 @@ function getDisabledVolumeInfo(state: OxalisState) {
 }
 
 const getVolumeDisabledWhenVolumeIsEnabled = memoizeOne(_getVolumeDisabledWhenVolumeIsEnabled);
-export function getDisabledInfoForTools(
-  state: OxalisState,
-): Record<AnnotationToolEnum, DisabledInfo> {
-  const hasSkeleton = state.tracing.skeleton != null;
-  const skeletonToolInfo = getSkeletonToolInfo(hasSkeleton, isSkeletonLayerTransformed(state));
+export const getDisabledInfoForTools = reuseInstanceOnEquality(
+  (state: OxalisState): Record<AnnotationToolEnum, DisabledInfo> => {
+    const hasSkeleton = state.tracing.skeleton != null;
+    const skeletonToolInfo = getSkeletonToolInfo(hasSkeleton, isSkeletonLayerTransformed(state));
 
-  const disabledVolumeInfo = getDisabledVolumeInfo(state);
-  return {
-    ...ALWAYS_ENABLED_TOOL_INFOS,
-    ...skeletonToolInfo,
-    ...disabledVolumeInfo,
-  };
-}
+    const disabledVolumeInfo = getDisabledVolumeInfo(state);
+    return {
+      ...ALWAYS_ENABLED_TOOL_INFOS,
+      ...skeletonToolInfo,
+      ...disabledVolumeInfo,
+    };
+  },
+);
 
 export function adaptActiveToolToShortcuts(
   activeTool: AnnotationTool,

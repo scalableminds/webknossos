@@ -124,7 +124,7 @@ function MetadataTable({
 }) {
   const context = useDatasetCollectionContext();
   const [details, setDetails] = useState<APIDetails>(selectedDatasetOrFolder.details || {});
-  const [errors, setErrors] = useState<Record<string, string>>({}); // propName -> error message.
+  const [error, setError] = useState<[string, string] | null>(null); // propName -> error message.
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
 
   useEffectOnUpdate(() => {
@@ -139,18 +139,12 @@ function MetadataTable({
   const updatePropName = (previousPropName: string, newPropName: string) => {
     setDetails((prev) => {
       if (prev && newPropName in prev) {
-        setErrors((prev) => ({
-          ...prev,
-          [previousPropName]: `Property ${newPropName} already exists.`,
-        }));
+        setError([previousPropName, `Property ${newPropName} already exists.`]);
         return prev;
       }
       if (prev && previousPropName in prev) {
+        setError(null);
         const { [previousPropName]: value, ...rest } = prev;
-        setErrors((prev) => {
-          const { [previousPropName]: _, ...rest } = prev;
-          return rest;
-        });
         return { ...rest, [newPropName]: value };
       }
       return { ...prev, [newPropName]: "" };
@@ -192,24 +186,23 @@ function MetadataTable({
           {
             title: "Property",
             dataIndex: "propName",
-            render: (propName, record) => {
-              const error = errors[propName] ? (
-                <Typography.Text type="warning">{errors[propName]}</Typography.Text>
-              ) : null;
-              return (
-                <>
-                  <Input
-                    onFocus={() => setFocusedRow(record.key)}
-                    onBlur={() => setFocusedRow(null)}
-                    variant={record.key === focusedRow ? "outlined" : "borderless"}
-                    value={propName}
-                    onChange={(evt) => updatePropName(propName, evt.target.value)}
-                  />
-                  <br />
-                  {error}
-                </>
-              );
-            },
+            render: (propName, record) => (
+              <>
+                <Input
+                  onFocus={() => setFocusedRow(record.key)}
+                  onBlur={() => setFocusedRow(null)}
+                  variant={record.key === focusedRow ? "outlined" : "borderless"}
+                  value={propName}
+                  onChange={(evt) => updatePropName(propName, evt.target.value)}
+                />
+                {error != null && error[0] === propName ? (
+                  <>
+                    <br />
+                    <Typography.Text type="warning">{error[1]}</Typography.Text>
+                  </>
+                ) : null}
+              </>
+            ),
           },
           {
             title: "Value",

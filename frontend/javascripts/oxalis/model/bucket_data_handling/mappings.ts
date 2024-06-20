@@ -59,14 +59,10 @@ class Mappings {
       throw new Error("cuckooTable null when updateMappingTextures was called.");
     }
 
-    console.time("diff maps");
     const { changed, onlyA, onlyB } =
       this.previousMapping != null
         ? cachedDiffMappings(this.previousMapping, mapping)
         : { changed: [], onlyA: [], onlyB: Array.from(mapping.keys()) };
-    console.timeEnd("diff maps");
-
-    console.time("update cuckoo");
 
     const cuckooTable = this.cuckooTable; // as CuckooTableUint32;
     for (const keyToDelete of onlyA) {
@@ -78,7 +74,6 @@ class Mappings {
     for (const key of onlyB) {
       cuckooTable.utilSet(key, mapping.get(key));
     }
-    console.timeEnd("update cuckoo");
     this.previousMapping = mapping;
 
     message.destroy(MAPPING_MESSAGE_KEY);

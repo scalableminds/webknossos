@@ -406,15 +406,11 @@ class DataCube {
     // todop (idea): can we avoid examining the value set of a bucket for which
     // finer buckets were already loaded?
     // maybe not necessary?
-    console.time("getValueSets");
     const valueSets = this.buckets
       .filter((bucket) => bucket.state === "LOADED")
       .map((bucket) => bucket.getValueSet());
-    console.timeEnd("getValueSets");
-    console.time("valueUnion");
     // @ts-ignore The buckets of a single layer all have the same element class, so they are all number or all bigint
     const valueSet = union(valueSets);
-    console.timeEnd("valueUnion");
     return valueSet;
   }
 

@@ -827,9 +827,6 @@ class PlaneMaterialFactory {
             );
           },
           (shouldApplyMappingOnGPU) => {
-            console.log(
-              `this.uniforms.shouldApplyMappingOnGPU.value = ${shouldApplyMappingOnGPU};`,
-            );
             this.uniforms.shouldApplyMappingOnGPU.value = shouldApplyMappingOnGPU;
           },
         ),

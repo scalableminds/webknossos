@@ -80,4 +80,12 @@ export class CuckooTableUint32 extends AbstractCuckooTable<Key, Value, Entry> {
 
     return state % this.entryCapacity;
   }
+
+  utilSet(key: number, value: number) {
+    this.set(key, value);
+  }
+
+  utilUnset(key: number, value: number) {
+    this.unset(key);
+  }
 }

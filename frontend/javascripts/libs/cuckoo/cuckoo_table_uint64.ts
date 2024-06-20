@@ -1,3 +1,4 @@
+import { convertNumberTo64BitTuple } from "libs/utils";
 import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
 
 const EMPTY_KEY = [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE] as Value;
@@ -77,5 +78,17 @@ export class CuckooTableUint64 extends AbstractCuckooTable<Key, Value, Entry> {
     state = this._hashCombine(state, key[1]);
 
     return state % this.entryCapacity;
+  }
+
+  utilUnset(key: bigint) {
+    const keyTuple = convertNumberTo64BitTuple(key);
+    this.unset(keyTuple);
+  }
+
+  utilSet(key: bigint, value: bigint) {
+    const keyTuple = convertNumberTo64BitTuple(key);
+    const valueTuple = convertNumberTo64BitTuple(value);
+
+    this.set(keyTuple, valueTuple);
   }
 }

@@ -447,6 +447,7 @@ function* updateLocalHdf5Mapping(
   );
 
   const cube = Model.getCubeByLayerName(layerName);
+  // todop: avoid this call
   const segmentIds = cube.getValueSetForAllBuckets();
 
   const previousMapping = yield* select(

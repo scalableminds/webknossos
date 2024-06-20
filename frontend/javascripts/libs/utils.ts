@@ -637,6 +637,26 @@ export function diffArrays<T>(
   };
 }
 
+export function diffMaps<K, V>(
+  stateA: Map<K, V>,
+  stateB: Map<K, V>,
+): {
+  changed: Array<K>;
+  onlyA: Array<K>;
+  onlyB: Array<K>;
+} {
+  const keysOfA = Array.from(stateA.keys());
+  const keysOfB = Array.from(stateB.keys());
+  const changed = keysOfA.filter((x) => stateB.has(x) && stateB.get(x) !== stateA.get(x));
+  const onlyA = keysOfA.filter((x) => !stateB.has(x));
+  const onlyB = keysOfB.filter((x) => !stateA.has(x));
+  return {
+    changed,
+    onlyA,
+    onlyB,
+  };
+}
+
 export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
   // This set-based implementation avoids stackoverflow errors from which
   // _.without(arr, ...elements) suffers.

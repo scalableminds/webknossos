@@ -21,6 +21,7 @@ class Mappings {
   mappingTexture!: UpdatableTexture;
   mappingLookupTexture!: UpdatableTexture;
   cuckooTable: CuckooTableUint64 | CuckooTableUint32 | null = null;
+  previousMapping: Mapping | null | undefined = null;
 
   constructor(layerName: string) {
     this.layerName = layerName;
@@ -57,23 +58,27 @@ class Mappings {
       throw new Error("cuckooTable null when updateMappingTextures was called.");
     }
 
-    // todop: find out what part of the mapping changed and then remove/add entries
-    // based on that diff? for performance...
+    console.time("diff maps");
+    const { changed, onlyA, onlyB } =
+      this.previousMapping != null
+        ? Utils.diffMaps(this.previousMapping, mapping)
+        : { changed: [], onlyA: [], onlyB: Array.from(mapping.keys()) };
+    console.timeEnd("diff maps");
 
-    if (this.is64Bit()) {
-      const cuckooTable = this.cuckooTable as CuckooTableUint64;
-      for (const [key, value] of mapping.entries()) {
-        const keyTuple = Utils.convertNumberTo64BitTuple(key);
-        const valueTuple = Utils.convertNumberTo64BitTuple(value);
+    console.time("update cuckoo");
 
-        cuckooTable.set(keyTuple, valueTuple);
-      }
-    } else {
-      const cuckooTable = this.cuckooTable as CuckooTableUint32;
-      for (const [key, value] of mapping.entries()) {
-        cuckooTable.set(key as number, value as number);
-      }
+    const cuckooTable = this.cuckooTable; // as CuckooTableUint32;
+    for (const keyToDelete of onlyA) {
+      cuckooTable.utilUnset(keyToDelete);
     }
+    for (const key of changed) {
+      cuckooTable.utilSet(key, mapping.get(key));
+    }
+    for (const key of onlyB) {
+      cuckooTable.utilSet(key, mapping.get(key));
+    }
+    console.timeEnd("update cuckoo");
+    this.previousMapping = mapping;
 
     message.destroy(MAPPING_MESSAGE_KEY);
     Store.dispatch(finishMappingInitializationAction(this.layerName));

@@ -2,6 +2,11 @@ syntax = "proto2";
 
 package com.scalableminds.webknossos.datastore;
 
+enum AnnotationLayerTypeProto {
+  skeleton = 1;
+  volume = 2;
+}
+
 message AnnotationProto {
   optional string name = 1;
   optional string description = 2;
@@ -10,7 +15,39 @@ message AnnotationProto {
 }
 
 message AnnotationLayerProto {
+  required string tracingId = 1;
+  required string name = 2;
+  required int64 version = 3;
+  optional int64 editableMappingVersion = 4;
+  required AnnotationLayerTypeProto type = 5;
+}
+
+message AddLayerAnnotationUpdateAction {
   required string name = 1;
-  required int64 version = 2;
-  required string tracingId = 3;
+  required string tracingId = 2;
+  required AnnotationLayerTypeProto type = 5;
+}
+
+message DeleteLayerAnnotationUpdateAction {
+  required string tracingId = 1;
+}
+
+message UpdateLayerAnnotationUpdateAction {
+  required string tracingId = 1;
+  required int64 layerVersion = 2;
+}
+
+message UpdateLayerEditableMappingAnnotationUpdateAction {
+  required string tracingId = 1;
+  required int64 editableMappingVersion = 2;
+}
+
+message UpdateLayerMetadataAnnotationUpdateAction {
+  required string tracingId = 1;
+  required string name = 2;
+}
+
+message UpdateMetadataAnnotationUpdateAction {
+  optional string name = 1;
+  optional string description = 2;
 }

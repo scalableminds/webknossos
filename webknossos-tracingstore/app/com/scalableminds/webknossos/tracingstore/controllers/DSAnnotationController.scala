@@ -38,3 +38,5 @@ class DSAnnotationController @Inject()(accessTokenService: AccessTokenService, t
 // add layer
 
 // skeleton + volume routes can now take annotationVersion
+
+// Is an editable mapping a layer?

@@ -26,6 +26,7 @@ import PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import {
   createBoundingBoxAndGetEdges,
+  handleMovingBoundingBox,
   SelectedEdge,
 } from "oxalis/controller/combinations/bounding_box_handlers";
 import {
@@ -561,12 +562,17 @@ export class BoundingBoxTool {
         delta: Point2,
         pos: Point2,
         _id: string | null | undefined,
-        _event: MouseEvent,
+        event: MouseEvent,
       ) => {
-        if (primarySelectedEdge != null) {
-          handleResizingBoundingBox(pos, planeId, primarySelectedEdge, secondarySelectedEdge);
-        } else {
+        if (primarySelectedEdge == null) {
           MoveHandlers.handleMovePlane(delta);
+          return;
+        }
+        if (event.altKey) {
+          // Consider using a different key -> e.g. control / meta
+          handleMovingBoundingBox(delta, planeId, primarySelectedEdge);
+        } else {
+          handleResizingBoundingBox(pos, planeId, primarySelectedEdge, secondarySelectedEdge);
         }
       },
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {

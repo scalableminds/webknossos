@@ -4,7 +4,7 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import _ from "lodash";
 import type { OrthoView, Point2, Vector3, BoundingBoxType, Vector2 } from "oxalis/constants";
-import Store from "oxalis/store";
+import Store, { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import type { DimensionMap, DimensionIndices } from "oxalis/model/dimensions";
 import Dimension from "oxalis/model/dimensions";
@@ -295,6 +295,15 @@ export const highlightAndSetCursorOnHoveredBoundingBox = _.throttle(
   },
   BOUNDING_BOX_HOVERING_THROTTLE_TIME,
 );
+
+function getBoundingBoxOfPrimaryEdge(
+  primaryEdge: SelectedEdge,
+  state: OxalisState,
+): UserBoundingBox | undefined {
+  const { userBoundingBoxes } = getSomeTracing(state.tracing);
+  return userBoundingBoxes.find((bbox) => bbox.id === primaryEdge.boxId);
+}
+
 export function handleResizingBoundingBox(
   mousePosition: Point2,
   planeId: OrthoView,
@@ -303,8 +312,7 @@ export function handleResizingBoundingBox(
 ) {
   const state = Store.getState();
   const globalMousePosition = calculateGlobalPos(state, mousePosition, planeId);
-  const { userBoundingBoxes } = getSomeTracing(state.tracing);
-  const bboxToResize = userBoundingBoxes.find((bbox) => bbox.id === primaryEdge.boxId);
+  const bboxToResize = getBoundingBoxOfPrimaryEdge(primaryEdge, state);
 
   if (!bboxToResize) {
     return;
@@ -357,6 +365,35 @@ export function handleResizingBoundingBox(
       secondaryEdge.isMaxEdge = !secondaryEdge.isMaxEdge;
     }
   }
+
+  Store.dispatch(
+    changeUserBoundingBoxAction(primaryEdge.boxId, {
+      boundingBox: updatedBounds,
+    }),
+  );
+}
+
+export function handleMovingBoundingBox(
+  delta: Point2,
+  planeId: OrthoView,
+  primaryEdge: SelectedEdge,
+) {
+  const state = Store.getState();
+  const dimensionIndices = Dimension.getIndices(planeId);
+  const bboxToResize = getBoundingBoxOfPrimaryEdge(primaryEdge, state);
+
+  if (!bboxToResize) {
+    return;
+  }
+
+  const updatedBounds = {
+    min: [...bboxToResize.boundingBox.min] as Vector3,
+    max: [...bboxToResize.boundingBox.max] as Vector3,
+  };
+  updatedBounds.min[dimensionIndices[0]] += delta.x;
+  updatedBounds.max[dimensionIndices[0]] += delta.x;
+  updatedBounds.min[dimensionIndices[1]] += delta.y;
+  updatedBounds.max[dimensionIndices[1]] += delta.y;
 
   Store.dispatch(
     changeUserBoundingBoxAction(primaryEdge.boxId, {

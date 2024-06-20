@@ -85,6 +85,7 @@ class DataCube {
   resolutionInfo: ResolutionInfo;
   layerName: string;
   emitter: Emitter;
+  lastRequestForValueSet: number | null = null;
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
@@ -393,7 +394,18 @@ class DataCube {
     this.emitter.emit("bucketDataChanged");
   }
 
+  shouldEagerlyMaintainUsedValueSet() {
+    // The value set for all buckets in this cube should be maintained eagerly
+    // if the valueSet was used within the last 2 minutes.
+    return Date.now() - (this.lastRequestForValueSet || 0) < 2 * 60 * 1000;
+  }
+
   getValueSetForAllBuckets(): Set<number> | Set<bigint> {
+    this.lastRequestForValueSet = Date.now();
+
+    // todop (idea): can we avoid examining the value set of a bucket for which
+    // finer buckets were already loaded?
+    // maybe not necessary?
     console.time("getValueSets");
     const valueSets = this.buckets
       .filter((bucket) => bucket.state === "LOADED")

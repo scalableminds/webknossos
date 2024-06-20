@@ -16,6 +16,10 @@ import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bu
 import window from "libs/window";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { createWorker } from "oxalis/workers/comlink_wrapper";
+import CreateSetFromArrayWorker from "oxalis/workers/create_set_from_array.worker";
+
+export const createSetFromArray = createWorker(CreateSetFromArrayWorker);
 
 export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
@@ -581,7 +585,10 @@ export class DataBucket {
     }
   }
 
-  receiveData(arrayBuffer: Uint8Array | null | undefined): void {
+  receiveData(
+    arrayBuffer: Uint8Array | null | undefined,
+    valueSet?: Set<number> | Set<bigint>,
+  ): void {
     const data = this.uint8ToTypedBuffer(arrayBuffer);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
@@ -608,12 +615,19 @@ export class DataBucket {
         const dataClone = new TypedArrayClass(data);
         this.trigger("unmergedBucketDataLoaded", dataClone);
 
+        let needsValueSetInvalidation = true;
         if (this.dirty) {
           this.merge(data);
         } else {
           this.data = data;
+          if (valueSet != null) {
+            this.cachedValueSet = valueSet;
+            needsValueSetInvalidation = false;
+          }
         }
-        this.invalidateValueSet();
+        if (needsValueSetInvalidation) {
+          this.invalidateValueSet();
+        }
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);

@@ -51,7 +51,10 @@ import type {
   NumberLikeMap,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings";
+import {
+  MAPPING_MESSAGE_KEY,
+  setCacheResultForDiffMappings,
+} from "oxalis/model/bucket_data_handling/mappings";
 import { Model } from "oxalis/singletons";
 import {
   isMappingActivationAllowed,
@@ -66,11 +69,10 @@ import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 import DataCube from "../bucket_data_handling/data_cube";
-import { diffMaps, fastDiffSetAndMap, sleep } from "libs/utils";
+import { fastDiffSetAndMap, sleep } from "libs/utils";
 import { Action } from "../actions/actions";
 import { ActionPattern } from "redux-saga/effects";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
-import memoizeOne from "memoize-one";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
@@ -419,32 +421,6 @@ function* handleSetHdf5Mapping(
     yield* call(maybeReloadData, oldActiveMappingByLayer, action);
   }
 }
-
-function diffMappings(
-  mappingA: Mapping,
-  mappingB: Mapping,
-  cacheResult?: ReturnType<typeof diffMaps<NumberLike, NumberLike>>,
-) {
-  if (cacheResult != null) {
-    return cacheResult;
-  }
-  return diffMaps<NumberLike, NumberLike>(mappingA, mappingB);
-}
-
-export const cachedDiffMappings = memoizeOne(
-  diffMappings,
-  (newInputs, lastInputs) =>
-    // If cacheResult was passed, the inputs must be considered as not equal
-    // so that the new result can be set
-    newInputs[2] == null && newInputs[0] === lastInputs[0] && newInputs[1] === lastInputs[1],
-);
-export const setCacheResultForDiffMappings = (
-  mappingA: Mapping,
-  mappingB: Mapping,
-  cacheResult: ReturnType<typeof diffMaps<NumberLike, NumberLike>>,
-) => {
-  cachedDiffMappings(mappingA, mappingB, cacheResult);
-};
 
 function* updateLocalHdf5Mapping(
   layerName: string,

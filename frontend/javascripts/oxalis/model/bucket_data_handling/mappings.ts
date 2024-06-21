@@ -5,16 +5,43 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { finishMappingInitializationAction } from "oxalis/model/actions/settings_actions";
-import type { Mapping } from "oxalis/store";
+import type { Mapping, NumberLike } from "oxalis/store";
 import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
 import { CuckooTableUint32 } from "libs/cuckoo/cuckoo_table_uint32";
 import { message } from "antd";
-import { cachedDiffMappings } from "../sagas/mapping_saga";
+import { diffMaps } from "libs/utils";
+import memoizeOne from "memoize-one";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_MESSAGE_KEY = "mappings";
+
+function diffMappings(
+  mappingA: Mapping,
+  mappingB: Mapping,
+  cacheResult?: ReturnType<typeof diffMaps<NumberLike, NumberLike>>,
+) {
+  if (cacheResult != null) {
+    return cacheResult;
+  }
+  return diffMaps<NumberLike, NumberLike>(mappingA, mappingB);
+}
+
+export const cachedDiffMappings = memoizeOne(
+  diffMappings,
+  (newInputs, lastInputs) =>
+    // If cacheResult was passed, the inputs must be considered as not equal
+    // so that the new result can be set
+    newInputs[2] == null && newInputs[0] === lastInputs[0] && newInputs[1] === lastInputs[1],
+);
+export const setCacheResultForDiffMappings = (
+  mappingA: Mapping,
+  mappingB: Mapping,
+  cacheResult: ReturnType<typeof diffMaps<NumberLike, NumberLike>>,
+) => {
+  cachedDiffMappings(mappingA, mappingB, cacheResult);
+};
 
 class Mappings {
   layerName: string;

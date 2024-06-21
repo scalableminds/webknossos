@@ -61,16 +61,19 @@ class Mappings {
     const { changed, onlyA, onlyB } =
       this.previousMapping != null
         ? cachedDiffMappings(this.previousMapping, mapping)
-        : { changed: [], onlyA: [], onlyB: Array.from(mapping.keys()) };
+        : { changed: [], onlyA: [], onlyB: Array.from(mapping.keys() as Iterable<number>) };
 
-    const cuckooTable = this.cuckooTable; // as CuckooTableUint32;
+    const cuckooTable = this.cuckooTable;
     for (const keyToDelete of onlyA) {
+      // @ts-ignore keyToDelete will be either number or bigint depending on the context
       cuckooTable.utilUnset(keyToDelete);
     }
     for (const key of changed) {
+      // @ts-ignore key will be either number or bigint depending on the context
       cuckooTable.utilSet(key, mapping.get(key));
     }
     for (const key of onlyB) {
+      // @ts-ignore key will be either number or bigint depending on the context
       cuckooTable.utilSet(key, mapping.get(key));
     }
     this.previousMapping = mapping;

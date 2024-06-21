@@ -423,12 +423,12 @@ function* handleSetHdf5Mapping(
 function diffMappings(
   mappingA: Mapping,
   mappingB: Mapping,
-  cacheResult?: ReturnType<typeof diffMaps>,
+  cacheResult?: ReturnType<typeof diffMaps<NumberLike, NumberLike>>,
 ) {
   if (cacheResult != null) {
     return cacheResult;
   }
-  return diffMaps<number | bigint, number | bigint>(mappingA, mappingB);
+  return diffMaps<NumberLike, NumberLike>(mappingA, mappingB);
 }
 
 export const cachedDiffMappings = memoizeOne(
@@ -441,7 +441,7 @@ export const cachedDiffMappings = memoizeOne(
 export const setCacheResultForDiffMappings = (
   mappingA: Mapping,
   mappingB: Mapping,
-  cacheResult: ReturnType<typeof diffMaps>,
+  cacheResult: ReturnType<typeof diffMaps<NumberLike, NumberLike>>,
 ) => {
   cachedDiffMappings(mappingA, mappingB, cacheResult);
 };

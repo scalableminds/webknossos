@@ -67,7 +67,7 @@ import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 import DataCube from "../bucket_data_handling/data_cube";
-import { chainIterators, diffMaps, diffSets, sleep } from "libs/utils";
+import { chainIterators, diffMaps, fastDiffSetAndMap, sleep } from "libs/utils";
 import { Action } from "../actions/actions";
 import { ActionPattern } from "redux-saga/effects";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
@@ -475,35 +475,32 @@ function* updateLocalHdf5Mapping(
       (new Map() as Mapping),
   );
 
-  console.time("set operations in mapping saga");
   const {
     aWithoutB: newSegmentIds,
     bWithoutA: deletedValues,
-    intersection: remainingValues,
-  } = diffSets(
-    segmentIds as Set<NumberLike>,
-    new Set((previousMapping as Map<NumberLike, NumberLike>).keys()),
-  );
+    // The `intersection` value returned by diffSetAndMap
+    // is a fresh Map instance which is why we may mutate
+    // that without any problems. This is done later to
+    // avoid duplicating data for performance reasons.
+    intersection: mutableRemainingEntries,
+  } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMapping);
 
-  const newUniqueSegmentIds = [...newSegmentIds].sort(<T extends NumberLike>(a: T, b: T) => a - b);
-  console.timeEnd("set operations in mapping saga");
   console.log(
     "New values",
     newSegmentIds.size,
     "remaining values",
-    remainingValues.size,
+    mutableRemainingEntries.size,
     "previous size",
     previousMapping.size,
   );
 
-  console.log("asking server to map segment ids");
   const newEntries =
     isEditableMappingActive && editableMapping != null
       ? yield* call(
           getAgglomeratesForSegmentsFromTracingstore,
           annotation.tracingStore.url,
           editableMapping.tracingId,
-          newUniqueSegmentIds,
+          Array.from(newSegmentIds),
         )
       : yield* call(
           getAgglomeratesForSegmentsFromDatastore,
@@ -511,23 +508,22 @@ function* updateLocalHdf5Mapping(
           dataset,
           mappingLayerName,
           mappingName,
-          newUniqueSegmentIds,
+          Array.from(newSegmentIds),
         );
   console.log("received mapped segment ids from server", newEntries);
 
-  const previousEntries = [...previousMapping.entries()] as Array<[NumberLike, NumberLike]>;
-  const remainingEntries = previousEntries.filter(([key, _]) => remainingValues.has(key));
-  const chainedIterator = chainIterators<NumberLike>(
-    // @ts-ignore remainingEntries and newEntries are expected to have the same value type
-    remainingEntries,
-    newEntries.entries(),
-  );
-  const mapping = new Map(chainedIterator) as Mapping;
+  // It is safe to mutate mutableRemainingEntries to compute the merged,
+  // new mapping. See the definition of mutableRemainingEntries.
+  const mapping = mutableRemainingEntries as Mapping;
+  for (const [key, val] of newEntries.entries()) {
+    // @ts-ignore
+    mapping.set(key, val);
+  }
 
   setCacheResultForDiffMappings(previousMapping, mapping, {
     changed: [],
-    onlyA: Array.from(deletedValues),
-    onlyB: newUniqueSegmentIds,
+    onlyA: deletedValues,
+    onlyB: newSegmentIds,
   });
 
   console.log("dispatch setMappingAction in mapping saga");

@@ -641,9 +641,9 @@ export function diffMaps<K, V>(
   stateA: Map<K, V>,
   stateB: Map<K, V>,
 ): {
-  changed: Array<K>;
-  onlyA: Array<K>;
-  onlyB: Array<K>;
+  changed: Iterable<K>;
+  onlyA: Iterable<K>;
+  onlyB: Iterable<K>;
 } {
   const keysOfA = Array.from(stateA.keys());
   const keysOfB = Array.from(stateB.keys());
@@ -1151,7 +1151,8 @@ export function diffObjects(
   return changes(object, base);
 }
 
-export function diffSets<T>(setA: Set<T>, setB: Set<T>) {
+// todop: remove again
+function diffSets<T>(setA: Set<T>, setB: Set<T>) {
   const aWithoutB = new Set<T>();
   const bWithoutA = new Set<T>();
   const intersection = new Set<T>();
@@ -1167,6 +1168,44 @@ export function diffSets<T>(setA: Set<T>, setB: Set<T>) {
   for (const item of setB) {
     if (!setA.has(item)) {
       bWithoutA.add(item);
+    }
+  }
+
+  return {
+    aWithoutB: aWithoutB,
+    bWithoutA: bWithoutA,
+    intersection: intersection,
+  };
+}
+
+export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
+  /*
+   * This function was designed for a special use case within the mapping saga,
+   * where a Set of (potentially new) segment IDs is passed for setA and a known mapping from
+   * id->id is passed for mapB.
+   * The function computes:
+   * - aWithoutB: segment IDs that are in setA but not in mapB.keys()
+   * - bWithoutA: segment IDs that are in mapB.keys() but not in setA
+   * - intersection: a Map only contains keys that are in both setA and mapB.keys() (the values are used from mapB).
+   */
+  const aWithoutB = new Set<T>();
+  const bWithoutA = new Set<T>();
+  // This function assumes that the returned intersection is relatively large which is common
+  // for the use case it was designed for. Under this assumption, mapB is simply copied to
+  // initialize the intersection. Afterwards, items that are not within setA are removed from
+  // the intersection.
+  const intersection = new Map(mapB);
+
+  for (const item of setA) {
+    if (!mapB.has(item)) {
+      aWithoutB.add(item);
+    }
+  }
+
+  for (const item of mapB.keys()) {
+    if (!setA.has(item)) {
+      bWithoutA.add(item);
+      intersection.delete(item);
     }
   }
 

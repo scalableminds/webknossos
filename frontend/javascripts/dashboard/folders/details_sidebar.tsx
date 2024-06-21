@@ -176,12 +176,12 @@ function MetadataTable({
       value,
       key: index,
     }));
-
   return (
     <div style={{ marginBottom: 16 }}>
       <div className="sidebar-label">Metadata</div>
       <Table
         dataSource={columnData}
+        className="metadata-table"
         columns={[
           {
             title: "Property",
@@ -194,6 +194,8 @@ function MetadataTable({
                   variant={record.key === focusedRow ? "outlined" : "borderless"}
                   value={propName}
                   onChange={(evt) => updatePropName(propName, evt.target.value)}
+                  placeholder="New property"
+                  size="small"
                 />
                 {error != null && error[0] === propName ? (
                   <>
@@ -215,6 +217,8 @@ function MetadataTable({
                 variant={record.key === focusedRow ? "outlined" : "borderless"}
                 value={value}
                 onChange={(evt) => updateValue(record.propName, evt.target.value)}
+                placeholder="Value"
+                size="small"
               />
             ),
           },
@@ -223,7 +227,10 @@ function MetadataTable({
             key: "del",
             render: (_, record) =>
               record.propName === "" ? null : (
-                <DeleteOutlined onClick={() => deleteKey(record.propName)} />
+                <DeleteOutlined
+                  onClick={() => deleteKey(record.propName)}
+                  style={{ color: "var(--ant-table-header-icon-color)" }}
+                />
               ),
           },
         ]}

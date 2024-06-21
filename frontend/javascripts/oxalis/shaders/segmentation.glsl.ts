@@ -11,6 +11,7 @@ import { Vector3, Vector4 } from "oxalis/constants";
 import type { ShaderModule } from "./shader_module_system";
 import { getRgbaAtIndex } from "./texture_access.glsl";
 import { hashCombine } from "./hashing.glsl";
+import { attemptMappingLookUp } from "./mappings.glsl";
 
 export const convertCellIdToRGB: ShaderModule = {
   requirements: [
@@ -52,38 +53,7 @@ export const convertCellIdToRGB: ShaderModule = {
 
       return vec3(customColor) / 255.;
     }
-    ivec2 attemptMappingLookUp32(uint value, uint seed) {
-      highp uint h0 = hashCombine(seed, value);
-      h0 = h0 % MAPPING_CUCKOO_ENTRY_CAPACITY;
-      h0 = uint(h0 * MAPPING_CUCKOO_ELEMENTS_PER_ENTRY / MAPPING_CUCKOO_ELEMENTS_PER_TEXEL);
 
-      highp uint x = h0 % MAPPING_CUCKOO_TWIDTH;
-      highp uint y = h0 / MAPPING_CUCKOO_TWIDTH;
-
-      uvec4 customEntry = texelFetch(segmentation_mapping_texture, ivec2(x, y), 0);
-
-      if (customEntry.r != value) {
-         return ivec2(-1.);
-      }
-
-      return ivec2(0u, customEntry.g);
-    }
-    ivec2 attemptMappingLookUp64(uint high, uint low, uint seed) {
-      highp uint h0 = hashCombine(seed, high);
-      h0 = hashCombine(h0, low);
-      h0 = h0 % MAPPING_CUCKOO_ENTRY_CAPACITY;
-      h0 = uint(h0 * MAPPING_CUCKOO_ELEMENTS_PER_ENTRY / MAPPING_CUCKOO_ELEMENTS_PER_TEXEL);
-      highp uint x = h0 % MAPPING_CUCKOO_TWIDTH;
-      highp uint y = h0 / MAPPING_CUCKOO_TWIDTH;
-
-      uvec4 customEntry = texelFetch(segmentation_mapping_texture, ivec2(x, y), 0);
-
-      if (customEntry.r != uint(high) || customEntry.g != uint(low)) {
-         return ivec2(-1.);
-      }
-
-      return ivec2(customEntry.ba);
-    }
     vec3 convertCellIdToRGB(vec4 idHigh, vec4 idLow) {
       /*
       This function maps from a segment id to a color with a pattern.
@@ -307,7 +277,7 @@ export const getCrossHairOverlay: ShaderModule = {
 };
 
 export const getSegmentId: ShaderModule = {
-  requirements: [getRgbaAtIndex, convertCellIdToRGB],
+  requirements: [getRgbaAtIndex, convertCellIdToRGB, attemptMappingLookUp],
   code: `
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>

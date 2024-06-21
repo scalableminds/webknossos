@@ -6,8 +6,6 @@ import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { DataStoreInfo } from "oxalis/store";
 import Store from "oxalis/store";
 import { asAbortable, sleep } from "libs/utils";
-import { createSetFromArray } from "./bucket";
-import { transfer } from "oxalis/workers/comlink_wrapper";
 
 export type PullQueueItem = {
   priority: number;

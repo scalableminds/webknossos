@@ -16,10 +16,6 @@ import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bu
 import window from "libs/window";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import { createWorker } from "oxalis/workers/comlink_wrapper";
-import CreateSetFromArrayWorker from "oxalis/workers/create_set_from_array.worker";
-
-export const createSetFromArray = createWorker(CreateSetFromArrayWorker);
 
 export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",

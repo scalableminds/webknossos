@@ -7,6 +7,7 @@ import type { DataStoreInfo } from "oxalis/store";
 import Store from "oxalis/store";
 import { asAbortable, sleep } from "libs/utils";
 import { createSetFromArray } from "./bucket";
+import { transfer } from "oxalis/workers/comlink_wrapper";
 
 export type PullQueueItem = {
   priority: number;
@@ -169,9 +170,9 @@ class PullQueue {
         // That way, the computations of the value set are spread out over time instead of being
         // clustered when DataCube.getValueSetForAllBuckets is called. This improves the FPS rate.
         const typedArray = bucket.uint8ToTypedBuffer(bucketData);
-        createSetFromArray(typedArray).then((set) => {
-          bucket.receiveData(bucketData, set);
-        });
+        // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
+        const valueSet = new Set(typedArray);
+        bucket.receiveData(bucketData, valueSet);
       } else {
         bucket.receiveData(bucketData);
       }

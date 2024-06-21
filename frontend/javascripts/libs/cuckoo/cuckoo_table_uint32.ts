@@ -81,6 +81,7 @@ export class CuckooTableUint32 extends AbstractCuckooTable<Key, Value, Entry> {
     return state % this.entryCapacity;
   }
 
+  // todop: rename or add explanation?
   utilSet(key: number, value: number) {
     this.set(key, value);
   }

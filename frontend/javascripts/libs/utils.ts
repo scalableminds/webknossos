@@ -1151,33 +1151,6 @@ export function diffObjects(
   return changes(object, base);
 }
 
-// todop: remove again
-function diffSets<T>(setA: Set<T>, setB: Set<T>) {
-  const aWithoutB = new Set<T>();
-  const bWithoutA = new Set<T>();
-  const intersection = new Set<T>();
-
-  for (const item of setA) {
-    if (setB.has(item)) {
-      intersection.add(item);
-    } else {
-      aWithoutB.add(item);
-    }
-  }
-
-  for (const item of setB) {
-    if (!setA.has(item)) {
-      bWithoutA.add(item);
-    }
-  }
-
-  return {
-    aWithoutB: aWithoutB,
-    bWithoutA: bWithoutA,
-    intersection: intersection,
-  };
-}
-
 export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
   /*
    * This function was designed for a special use case within the mapping saga,
@@ -1298,16 +1271,6 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
   // e.g. [1, 2, undefined].filter(notEmpty) => type should be number[]
   // Source https://github.com/microsoft/TypeScript/issues/45097#issuecomment-882526325
   return value !== null && value !== undefined;
-}
-
-export function chainIterators<T extends number | bigint>(
-  a: Iterable<[T, T]>,
-  b: Iterable<[T, T]>,
-): Iterable<[T, T]> {
-  return (function* () {
-    yield* a;
-    yield* b;
-  })();
 }
 
 // function isNumberTupleArray(x: any[]): x is Array<[number, number]> {

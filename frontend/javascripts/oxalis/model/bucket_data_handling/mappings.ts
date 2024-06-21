@@ -10,7 +10,6 @@ import Store from "oxalis/store";
 import UpdatableTexture from "libs/UpdatableTexture";
 import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
 import { CuckooTableUint32 } from "libs/cuckoo/cuckoo_table_uint32";
-import * as Utils from "libs/utils";
 import { message } from "antd";
 import { cachedDiffMappings } from "../sagas/mapping_saga";
 

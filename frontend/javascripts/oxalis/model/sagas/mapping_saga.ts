@@ -67,7 +67,7 @@ import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 import DataCube from "../bucket_data_handling/data_cube";
-import { chainIterators, diffMaps, fastDiffSetAndMap, sleep } from "libs/utils";
+import { diffMaps, fastDiffSetAndMap, sleep } from "libs/utils";
 import { Action } from "../actions/actions";
 import { ActionPattern } from "redux-saga/effects";
 import { listenToStoreProperty } from "../helpers/listener_helpers";

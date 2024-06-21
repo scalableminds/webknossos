@@ -1,15 +1,13 @@
 import * as React from "react";
-import { Modal, Button, Spin, Tooltip, Alert } from "antd";
-import { useSelector } from "react-redux";
-import { hasVisibleUint64Segmentation } from "oxalis/model/accessors/dataset_accessor";
+import { Modal, Button, Spin, Tooltip } from "antd";
+
 type Props = {
   isCloseable: boolean;
   onClose: () => void;
   progress: number;
 };
-export default function MergerModeModalView({ isCloseable, onClose, progress }: Props) {
-  const isUint64SegmentationVisible = useSelector(hasVisibleUint64Segmentation);
 
+export default function MergerModeModalView({ isCloseable, onClose, progress }: Props) {
   const closeButton = (
     <Button type="primary" onClick={onClose} disabled={!isCloseable}>
       Close

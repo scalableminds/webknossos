@@ -393,7 +393,7 @@ function* handleSetMapping(
   }
 
   if (mappingType === "JSON") {
-    yield* call(handleSetJsonMapping, layerName, layerInfo, mappingName, mappingType);
+    yield* call(handleSetJsonMapping, layerName, mappingName, mappingType);
   } else if (mappingType === "HDF5") {
     yield* call(
       handleSetHdf5Mapping,
@@ -506,7 +506,6 @@ function* updateLocalHdf5Mapping(
 
 function* handleSetJsonMapping(
   layerName: string,
-  layerInfo: APIDataLayer,
   mappingName: string,
   mappingType: MappingType,
 ): Saga<void> {

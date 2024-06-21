@@ -38,6 +38,8 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
         }
     }
 
+  def listDirectory()(implicit ec: ExecutionContext): Fox[List[VaultPath]] = dataVault.listDirectory(this)
+
   private def decodeBrotli(bytes: Array[Byte]) = {
     Brotli4jLoader.ensureAvailability()
     val brotliInputStream = new BrotliInputStream(new ByteArrayInputStream(bytes))

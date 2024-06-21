@@ -72,6 +72,8 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     } yield (bytes, encoding)
   }
 
+  override def listDirectory(path: VaultPath)(implicit ec: ExecutionContext): Fox[List[VaultPath]] = Fox.successful(List.empty)
+
   private def getUri = uri
   private def getCredential = credential
 

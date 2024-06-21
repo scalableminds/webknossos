@@ -14,11 +14,12 @@ import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{DataVaultCredential, DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
 import javax.inject.Inject
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
@@ -105,6 +106,36 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localFolderWhitelist"
     } else Fox.successful(())
 
+  private def recursiveExploreRemoteLayerAtWith(remotePaths: ListBuffer[VaultPath],
+                                                explorer: RemoteLayerExplorer,
+                                                credentialId: Option[String],
+                                                reportMutable: ListBuffer[String])(
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] = {
+    var nextPath: Option[VaultPath] = None
+    if (remotePaths.nonEmpty) {
+      nextPath = Some(remotePaths.remove(0))
+    }
+    nextPath match {
+      case Some(path) =>
+        explorer.explore(path, credentialId).futureBox.flatMap {
+          case Full(layersWithVoxelSizes) =>
+            reportMutable += s"Found ${layersWithVoxelSizes.length} ${explorer.name} layers at $path."
+            Fox.successful(layersWithVoxelSizes)
+          case f: Failure =>
+            reportMutable += s"Error when reading $path as ${explorer.name}: ${Fox.failureChainAsString(f)}"
+            path.listDirectory().map(subDirs => remotePaths ++= subDirs)
+            recursiveExploreRemoteLayerAtWith(remotePaths, explorer, credentialId, reportMutable)
+          case Empty =>
+            reportMutable += s"Error when reading $path as ${explorer.name}: Empty"
+            path.listDirectory().map(subDirs => remotePaths ++= subDirs)
+            recursiveExploreRemoteLayerAtWith(remotePaths, explorer, credentialId, reportMutable)
+        }
+      case None =>
+        Fox.empty
+    }
+
+  }
+
   private def exploreRemoteLayersForRemotePath(remotePath: VaultPath,
                                                credentialId: Option[String],
                                                reportMutable: ListBuffer[String],
@@ -114,17 +145,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       case Nil => Fox.empty
       case currentExplorer :: remainingExplorers =>
         reportMutable += s"\nTrying to explore $remotePath as ${currentExplorer.name}..."
-        currentExplorer.explore(remotePath, credentialId).futureBox.flatMap {
-          case Full(layersWithVoxelSizes) =>
-            reportMutable += s"Found ${layersWithVoxelSizes.length} ${currentExplorer.name} layers at $remotePath."
-            Fox.successful(layersWithVoxelSizes)
-          case f: Failure =>
-            reportMutable += s"Error when reading $remotePath as ${currentExplorer.name}: ${Fox.failureChainAsString(f)}"
-            exploreRemoteLayersForRemotePath(remotePath, credentialId, reportMutable, remainingExplorers)
-          case Empty =>
-            reportMutable += s"Error when reading $remotePath as ${currentExplorer.name}: Empty"
-            exploreRemoteLayersForRemotePath(remotePath, credentialId, reportMutable, remainingExplorers)
-        }
+        val remotePaths = ListBuffer(remotePath)
+        recursiveExploreRemoteLayerAtWith(remotePaths, currentExplorer, credentialId, reportMutable)
     }
-
 }

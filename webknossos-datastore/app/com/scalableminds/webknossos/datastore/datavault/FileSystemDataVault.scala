@@ -53,6 +53,8 @@ class FileSystemDataVault extends DataVault {
       }
     } else Fox.empty
 
+  override def listDirectory(path: VaultPath)(implicit ec: ExecutionContext): Fox[List[VaultPath]] = Fox.successful(List.empty)
+
   override def hashCode(): Int =
     new HashCodeBuilder(19, 31).toHashCode
 

@@ -96,8 +96,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     return cachedNullTexture;
   }
 
-  // todop (easy): make private again
-  initializeTableArray() {
+  private initializeTableArray() {
     this.table = new Uint32Array(
       AbstractCuckooTable.getElementsPerEntry() * this.entryCapacity,
     ).fill(EMPTY_KEY_VALUE);

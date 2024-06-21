@@ -23,20 +23,6 @@ export class CuckooTableUint64 extends AbstractCuckooTable<Key, Value, Entry> {
     return EMPTY_VALUE;
   }
 
-  // todop (easy): remove again
-  // initializeTableArray() {
-  //   this.table = new Uint32Array(this.getClass().getElementsPerEntry() * this.entryCapacity).fill(
-  //     EMPTY_KEY_VALUE,
-  //   );
-
-  //   // The chance of colliding seeds is super low which is why
-  //   // we ignore this case (a rehash would happen automatically, anyway).
-  //   // Note that it makes sense to use all 32 bits for the seeds. Otherwise,
-  //   // hash collisions are more likely to happen.
-  //   this.seeds = [11, 11, 11];
-  //   this.notifySeedListeners();
-  // }
-
   getEntryAtAddress(hashedAddress: number, optTable?: Uint32Array): Entry {
     const table = optTable || this.table;
     const offset = hashedAddress * this.getClass().getElementsPerEntry();

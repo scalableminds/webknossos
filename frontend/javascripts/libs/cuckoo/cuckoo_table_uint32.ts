@@ -34,16 +34,6 @@ export class CuckooTableUint32 extends AbstractCuckooTable<Key, Value, Entry> {
     return EMPTY_VALUE;
   }
 
-  // todop (easy): remove again
-  // initializeTableArray() {
-  //   this.table = new Uint32Array(this.getClass().getElementsPerEntry() * this.entryCapacity).fill(
-  //     EMPTY_KEY_VALUE,
-  //   );
-
-  //   this.seeds = [11, 11, 11];
-  //   this.notifySeedListeners();
-  // }
-
   getEntryAtAddress(hashedAddress: number, optTable?: Uint32Array): Entry {
     const table = optTable || this.table;
     const offset = hashedAddress * this.getClass().getElementsPerEntry();

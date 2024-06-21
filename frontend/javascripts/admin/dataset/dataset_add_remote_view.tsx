@@ -195,14 +195,15 @@ function DatasetAddRemoteView(props: Props) {
   }, []);
 
   const getDefaultDatasetName = (url: string | null | undefined) => {
-    let datasetname = "";
-    if (url != null) {
-      const indexOfLastSlash = url.lastIndexOf("/");
-      const subString = url.substring(indexOfLastSlash + 1);
-      if (subString.length > 2) datasetname = subString;
-      else datasetname = subString.padEnd(3, "_");
-    }
-    return datasetname + new Date().getTime(); // TODO_c remove
+    if (url == null) return "";
+    const indexOfLastSlash = url.lastIndexOf("/");
+    const subString = url.substring(indexOfLastSlash + 1);
+    const urlHash = Utils.computeHash(url);
+    console.log(Utils.computeHash("https://open.neurodata.io/brainlit/brain1"))
+    console.log(Utils.computeHash("https://open.neurodata.io/brainlit/brain4"))
+    console.log(Utils.computeHash("https://open.neurod?????rainlit/brain1"))
+    console.log(Utils.computeHash("https://open.neurodata.io/brainlit/brain1###*+?ndf=i"))
+    return subString + urlHash + new Date().getTime(); // TODO_c remove
   };
 
   const hasFormAnyErrors = (form: FormInstance) =>

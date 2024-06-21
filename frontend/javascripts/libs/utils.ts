@@ -1203,3 +1203,33 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
 export function assertNever(value: never): never {
   throw new Error(`Unexpected value that is not 'never': ${JSON.stringify(value)}`);
 }
+
+/**
+ * Returns a URL safe, base 64 encoded hash code from a string
+ * @param  {String} str The string to hash.
+ * @return {Number}    A 32bit integer
+ * @see https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript (original link is dead)
+ */
+export function computeHash(str: string): string | undefined {
+  let hash = 0;
+  for (let i = 0, len = str.length; i < len; i++) {
+    let chr = str.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  const hashString = encodeToBase62(hash);
+  return hashString;
+}
+
+function encodeToBase62(numberToEncode: number): string {
+  const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  let encoded = "";
+  let num = numberToEncode;
+  while (num !== 0 && num !== -1) {
+    // for positive numberToEncode, num will eventually be 0, for negative numberToEncode, num will eventually be -1
+    const modulo = mod(num, 62);
+    encoded = base62Chars[modulo < 0 ? 62 + modulo : modulo] + encoded;
+    num = Math.floor(num / 62);
+  }
+  return encoded;
+}

@@ -540,13 +540,6 @@ function* handleSetJsonMapping(
     yield* call(setCustomColors, mappingProperties, fetchedMapping.classes || [], layerName);
   }
 
-  if (layerInfo.elementClass === "uint64") {
-    yield* call(
-      [Toast, Toast.warning],
-      "The activated mapping will only be valid for the lower 32-bits of the active 64-bit segmentation.",
-      { sticky: true },
-    );
-  }
   console.timeEnd("MappingSaga JSON");
   yield* put(setMappingAction(layerName, mappingName, mappingType, mappingProperties));
 }

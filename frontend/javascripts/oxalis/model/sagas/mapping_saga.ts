@@ -55,7 +55,6 @@ import { MAPPING_MESSAGE_KEY } from "oxalis/model/bucket_data_handling/mappings"
 import { Model } from "oxalis/singletons";
 import {
   isMappingActivationAllowed,
-  hasEditableMapping,
   getEditableMappingForVolumeTracingId,
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
   getVolumeTracings,
@@ -461,7 +460,6 @@ function* updateLocalHdf5Mapping(
       ? layerInfo.fallbackLayer
       : layerName;
 
-  const isEditableMappingActive = yield* select((state) => hasEditableMapping(state, layerName));
   const editableMapping = yield* select((state) =>
     getEditableMappingForVolumeTracingId(state, layerName),
   );
@@ -495,7 +493,7 @@ function* updateLocalHdf5Mapping(
   );
 
   const newEntries =
-    isEditableMappingActive && editableMapping != null
+    editableMapping != null
       ? yield* call(
           getAgglomeratesForSegmentsFromTracingstore,
           annotation.tracingStore.url,

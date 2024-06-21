@@ -307,11 +307,11 @@ export const getSegmentId: ShaderModule = {
         segment_id[1] = vec4(segment_id[1].r, segment_id[1].g, 0.0, 0.0);
       <% } %>
 
-      mapped_id[0] = segment_id[0]; // High
-      mapped_id[1] = segment_id[1]; // Low
+      mapped_id[0] = 255. * segment_id[0]; // High
+      mapped_id[1] = 255. * segment_id[1]; // Low
 
-      uint high_integer = vec4ToUint(255. * mapped_id[0]);
-      uint low_integer = vec4ToUint(255. * mapped_id[1]);
+      uint high_integer = vec4ToUint(mapped_id[0]);
+      uint low_integer = vec4ToUint(mapped_id[1]);
 
       if (shouldApplyMappingOnGPU) {
         ivec2 mapped_entry = is_mapping_64bit
@@ -336,9 +336,6 @@ export const getSegmentId: ShaderModule = {
           mapped_id[0] = vec4(0.0);
           mapped_id[1] = vec4(0.0);
         }
-      } else {
-        mapped_id[0] *= 255.0;
-        mapped_id[1] *= 255.0;
       }
 
       segment_id[0] *= 255.0;

@@ -1162,11 +1162,14 @@ function* splitAgglomerateInMapping(
   sourceAgglomerateId: number,
   volumeTracingId: string,
 ) {
+  // Obtain all segment ids that map to sourceAgglomerateId
   const splitSegmentIds = Array.from(activeMapping.mapping as NumberLikeMap)
     .filter(([_segmentId, agglomerateId]) => agglomerateId === sourceAgglomerateId)
     .map(([segmentId, _agglomerateId]) => segmentId);
 
   const tracingStoreHost = yield* select((state) => state.tracing.tracingStore.url);
+  // Ask the server to map the (split) segment ids. This creates a partial mapping
+  // that only contains these ids.
   const mappingAfterSplit = yield* call(
     getAgglomeratesForSegmentsFromTracingstore,
     tracingStoreHost,
@@ -1174,6 +1177,8 @@ function* splitAgglomerateInMapping(
     splitSegmentIds,
   );
 
+  // Create a new mapping which is equal to the old one with the difference that
+  // ids from splitSegmentIds are mapped to their new target agglomerate ids.
   const splitMapping = new Map(
     Array.from(activeMapping.mapping as NumberLikeMap, ([segmentId, agglomerateId]) => {
       const mappedId = mappingAfterSplit.get(

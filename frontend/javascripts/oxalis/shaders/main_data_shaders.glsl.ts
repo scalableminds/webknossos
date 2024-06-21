@@ -292,9 +292,6 @@ void main() {
          && activeCellIdHigh == <%= segmentationName %>_id_high;
       // Highlight cell only if it's hovered or active during proofreading
       // and if segmentation opacity is not zero
-      /// float hoverAlphaIncrement = isHoveredSegment && <%= segmentationName %>_alpha > 0.0 ? 1.2 : 0.0;
-      /// float proofreadingHoverAlphaIncrement = isActiveCell
-      /// float proofreadingAlphaIncrement = isActiveCell && isProofreading && <%= segmentationName %>_alpha > 0.0 ? 0.4 : -1.0;
       float alphaIncrement = isProofreading
         ? (isActiveCell
             ? (isHoveredUnmappedSegment

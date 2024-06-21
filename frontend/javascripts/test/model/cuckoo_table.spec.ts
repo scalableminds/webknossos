@@ -8,7 +8,7 @@ import "test/mocks/updatable_texture.mock";
 
 type Entry = [number, Vector3];
 
-const { CuckooTable } = mock.reRequire("oxalis/model/bucket_data_handling/cuckoo_table");
+const { CuckooTable } = mock.reRequire("libs/cuckoo/cuckoo_table");
 
 function generateRandomEntry(): [number, Vector3] {
   return [

@@ -10,7 +10,7 @@ type Key = Vector5; // [x, y, z, layerIdx, requestedMagIdx]
 type Value = number; // [address, actualMagIdx]
 type Entry = [Key, Value];
 
-const { CuckooTableVec5 } = mock.reRequire("oxalis/model/bucket_data_handling/cuckoo_table_vec5");
+const { CuckooTableVec5 } = mock.reRequire("libs/cuckoo/cuckoo_table_vec5");
 
 function generateRandomEntry(): Entry {
   return [

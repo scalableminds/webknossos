@@ -15,6 +15,7 @@ const temporalBucketManagerMock = {
 };
 const mockedCube = {
   isSegmentation: false,
+  triggerBucketDataChanged: () => {},
 };
 const { default: TextureBucketManager } = mock.reRequire(
   "oxalis/model/bucket_data_handling/texture_bucket_manager",

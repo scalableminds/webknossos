@@ -104,7 +104,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         newDatasetName,
         targetFolderId: form.getFieldValue(["targetFolderId"]),
         organizationName: activeUser.organization,
-        voxelSize: linkedDatasets[1].dataSource.scale,
+        voxelSize: linkedDatasets.slice(-1)[0].dataSource.scale,
         layers,
       });
     } finally {

@@ -126,9 +126,8 @@ The term "magnifications" is used synonymously for resolutions throughout the UI
 At the moment, WebKnossos guarantees correct rendering of data with non-uniform resolution factors only if the z-component between two resolutions changes by a factor of 1 or 2.
 
 Most users do not create these metadata files manually.
-WEBKNOSSOS can infer most of these properties automatically, except for `scale` and `largestSegmentId`.
-During the data import process, WEBKNOSSOS will ask for the necessary properties.
 When using the [WEBKNOSSOS CLI](http://docs.webknossos.org/cli), a metadata file is automatically generated. Alternatively, you can create and edit WEBKNOSSOS datasets using the [WEBKNOSSOS Python library](https://github.com/scalableminds/webknossos-libs/).
+During the data import process, WEBKNOSSOS will ask for the necessary properties.
 
 [See below for the full specification](#dataset-metadata-specification).
 

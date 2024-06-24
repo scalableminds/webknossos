@@ -16,7 +16,6 @@ import type {
 import window, { document, location } from "libs/window";
 import { ArbitraryObject, Comparator } from "types/globals";
 import dayjs from "dayjs";
-import { number } from "@scalableminds/prop-types";
 
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
@@ -1208,7 +1207,7 @@ export function assertNever(value: never): never {
 /**
  * Returns a URL safe, base 64 encoded hash code from a string
  * @param  {String} str The string to hash.
- * @return {Number}    A 32bit integer
+ * @return {string}    A 32bit integer hash code encoded in base 62.
  * @see https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript (original link is dead)
  */
 export function computeHash(str: string): string | undefined {
@@ -1232,7 +1231,6 @@ export function encodeToBase62(numberToEncode: number): string {
     // for positive numberToEncode, num will eventually be 0, for negative numberToEncode, num will eventually be -1
     const modulo = mod(num, 62);
     encoded = base62Chars[modulo < 0 ? 62 + modulo : modulo] + encoded;
-    console.log(encoded);
     num = Math.floor(num / 62);
   }
   return encoded;

@@ -13,6 +13,7 @@ import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import DatasetAddComposeView from "./dataset_add_compose_view";
+import { History } from "history";
 
 const { Content, Sider } = Layout;
 
@@ -267,7 +268,7 @@ export const getPostUploadModal = (
   organization: string,
   datasetName: string,
   setDatasetName: (arg0: string) => void,
-  history,
+  history: History<unknown>,
 ) => {
   return (
     <Modal

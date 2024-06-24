@@ -39,6 +39,7 @@ import { readFileAsText } from "libs/read_file";
 import * as Utils from "libs/utils";
 import { ArbitraryObject } from "types/globals";
 import BrainSpinner from "components/brain_spinner";
+import { useHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -174,6 +175,9 @@ export function GoogleAuthFormItem({
 }
 
 function DatasetAddRemoteView(props: Props) {
+  const datasetNameTakenWarningString =
+    "This name is already being used by a different dataset. Please choose a different name.";
+
   const { activeUser, onAdded, datastores, defaultDatasetUrl } = props;
 
   const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
@@ -187,6 +191,7 @@ function DatasetAddRemoteView(props: Props) {
   const dataSourceJsonStr = Form.useWatch("dataSourceJson", form);
   const isDatasourceConfigStrFalsy = dataSourceJsonStr == null;
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
+  const history = useHistory();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -199,41 +204,47 @@ function DatasetAddRemoteView(props: Props) {
     const indexOfLastSlash = url.lastIndexOf("/");
     const subString = url.substring(indexOfLastSlash + 1);
     const urlHash = Utils.computeHash(url);
-    console.log(Utils.computeHash("https://open.neurodata.io/brainlit/brain1"))
-    console.log(Utils.computeHash("https://open.neurodata.io/brainlit/brain4"))
-    console.log(Utils.computeHash("https://open.neurod?????rainlit/brain1"))
-    console.log(Utils.computeHash("https://open.neurodata.io/brainlit/brain1###*+?ndf=i"))
     return subString + urlHash + new Date().getTime(); // TODO_c remove
+  };
+
+  const maybeOpenExistingDataset = () => {
+    const maybeDSNameError = form
+      .getFieldError("datasetName")
+      .filter((error) => error === datasetNameTakenWarningString);
+    if (maybeDSNameError == null) return; // maybe add isoutdated? todo_c
+    history.push(
+      `/datasets/${activeUser?.organization}/${form.getFieldValue(["dataSource", "id", "name"])}`,
+    );
   };
 
   const hasFormAnyErrors = (form: FormInstance) =>
     form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
 
-  const onSuccesfulExplore =
-    async () => {
-      const dataSourceJsonString = form.getFieldValue("dataSourceJson");
-      if (defaultDatasetUrl == null || dataSourceJsonString == null) {
-        setShowLoadingOverlay(false);
-        return;
-      }
-      const dataSourceJson = JSON.parse(dataSourceJsonString);
-      const defaultDatasetName = getDefaultDatasetName(defaultDatasetUrl);
-      setDatasourceConfigStr(
-        JSON.stringify({ ...dataSourceJson, id: { name: defaultDatasetName, team: "" } }),
-      );
-      try {
-        await form.validateFields();
-      } catch (_e) {
-        console.warn(_e)
-      }
-      const allFieldsValid =
-        form.getFieldsError().filter(({ errors }) => errors.length).length === 0;
-      if (allFieldsValid) {
-        handleStoreDataset();
-      } else {
-        setShowLoadingOverlay(false);
-      }
-    };
+  const onSuccesfulExplore = async () => {
+    const dataSourceJsonString = form.getFieldValue("dataSourceJson");
+    if (defaultDatasetUrl == null || dataSourceJsonString == null) {
+      setShowLoadingOverlay(false);
+      return;
+    }
+    const dataSourceJson = JSON.parse(dataSourceJsonString);
+    const defaultDatasetName = getDefaultDatasetName(defaultDatasetUrl);
+    setDatasourceConfigStr(
+      JSON.stringify({ ...dataSourceJson, id: { name: defaultDatasetName, team: "" } }),
+    );
+    try {
+      await form.validateFields();
+    } catch (_e) {
+      console.warn(_e);
+      maybeOpenExistingDataset();
+      return;
+    }
+    const allFieldsValid = form.getFieldsError().filter(({ errors }) => errors.length).length === 0;
+    if (allFieldsValid) {
+      handleStoreDataset();
+    } else {
+      setShowLoadingOverlay(false);
+    }
+  };
 
   const setDatasourceConfigStr = (dataSourceJson: string) => {
     form.setFieldsValue({ dataSourceJson });
@@ -247,7 +258,11 @@ function DatasetAddRemoteView(props: Props) {
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
     try {
       await form.validateFields();
-    } catch (_e) { }
+    } catch (_e) {
+      console.warn(_e);
+      maybeOpenExistingDataset();
+      return;
+    } // todo_c
     if (hasFormAnyErrors(form)) {
       setShowLoadingOverlay(false);
       return;

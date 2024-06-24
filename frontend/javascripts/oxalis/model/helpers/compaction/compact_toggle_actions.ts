@@ -148,12 +148,11 @@ export default function compactToggleActions(
   const skeletonTracing = tracing;
 
   // Extract the toggleActions which we are interested in
-  const [_toggleActions, remainingActions] = _.partition(
+  const [toggleActions, remainingActions] = _.partition<UpdateAction>(
     updateActions,
     (ua) => ua.name === "updateTreeVisibility",
   );
 
-  const toggleActions = _toggleActions as any as UpdateTreeVisibilityUpdateAction[];
 
   if (toggleActions.length <= 1) {
     // Don't try to compact actons if there are no or only one toggleAction(s)
@@ -163,7 +162,7 @@ export default function compactToggleActions(
   // Build up some helper data structures
   const hashMap = buildTreeGroupHashMap(skeletonTracing);
   // Find the group id of the common ancestor of all toggled trees
-  const commonAncestor = findCommonAncestor(skeletonTracing.trees, hashMap, toggleActions);
+  const commonAncestor = findCommonAncestor(skeletonTracing.trees, hashMap, toggleActions as UpdateTreeVisibilityUpdateAction[]);
   // commonVisibility is the new visibility which should by applied to all ascendants
   // of the common ancestor. The exceptions array lists all trees which differ from
   // that common visibility. These will receive separate updateActions.
@@ -178,5 +177,5 @@ export default function compactToggleActions(
     ...exceptions.map((tree) => updateTreeVisibility(tree)),
   ];
   const finalToggleActions = shouldUseToggleGroup ? compactedToggleActions : toggleActions;
-  return [...remainingActions, ...finalToggleActions];
+  return remainingActions.concat(finalToggleActions); 
 }

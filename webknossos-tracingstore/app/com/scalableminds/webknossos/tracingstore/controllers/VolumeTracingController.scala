@@ -6,6 +6,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
+import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
@@ -479,8 +480,8 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def editableMappingAgglomerateIdsForSegments(token: Option[String], tracingId: String): Action[List[Long]] =
-    Action.async(validateJson[List[Long]]) { implicit request =>
+  def editableMappingAgglomerateIdsForSegments(token: Option[String], tracingId: String): Action[ListOfLong] =
+    Action.async(validateProto[ListOfLong]) { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
@@ -493,32 +494,14 @@ class VolumeTracingController @Inject()(
               remoteFallbackLayer = remoteFallbackLayer,
               userToken = urlOrHeaderToken(token, request))
             relevantMapping: Map[Long, Long] <- editableMappingService.generateCombinedMappingForSegmentIds(
-              request.body.toSet,
+              request.body.items,
               editableMappingInfo,
               editableMappingVersion,
               editableMappingId,
               remoteFallbackLayer,
               urlOrHeaderToken(token, request))
-          } yield Ok(Json.toJson(relevantMapping))
-        }
-      }
-    }
-
-  def editableMappingAgglomerateIdForSegmentId(token: Option[String],
-                                               tracingId: String,
-                                               segmentId: Long): Action[AnyContent] =
-    Action.async { implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-          for {
-            tracing <- tracingService.find(tracingId)
-            mappingName <- tracing.mappingName.toFox
-            remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            agglomerateId <- editableMappingService.agglomerateIdForSegmentId(mappingName,
-                                                                              segmentId,
-                                                                              remoteFallbackLayer,
-                                                                              urlOrHeaderToken(token, request))
-          } yield Ok(Json.obj("agglomerateId" -> agglomerateId))
+            agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)
+          } yield Ok(ListOfLong(agglomerateIdsSorted).toByteArray)
         }
       }
     }

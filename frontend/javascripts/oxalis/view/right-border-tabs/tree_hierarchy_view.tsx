@@ -180,8 +180,8 @@ function TreeHierarchyView(props: Props) {
       // Select two or more individual nodes
       props.onMultiSelectTree(selectedTreeId);
     } else if (evt.shiftKey && props.selectedTreeIds.length === 1) {
-      // SHIFT click to select a whole range of nodes
-      // Selection will only work for nodes within the same group/hierarchy level
+      // SHIFT click to select a whole range of nodes.
+      // Selection will only work for nodes within the same group/hierarchy level.
       const sourceNode = props.trees[props.selectedTreeIds[0]];
       const sourceNodeParent = findParentGroupNode(
         UITreeData,
@@ -208,7 +208,7 @@ function TreeHierarchyView(props: Props) {
         }
       }
     } else {
-      // regular click on a single node wihtout any multi-selection stuff
+      // Regular click on a single node without any multi-selection stuff.
       props.deselectAllTrees();
       props.onSingleSelectTree(selectedTreeId);
     }

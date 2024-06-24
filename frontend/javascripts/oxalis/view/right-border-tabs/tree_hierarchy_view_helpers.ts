@@ -252,8 +252,8 @@ export function deepFlatFilter(
   nodes: TreeNode[],
   predicate: (node: TreeNode) => boolean,
 ): TreeNode[] {
-  // apply a deep "filter" function to a Tree/Group hierarchy stucture traversing along their children
-  // the resulting items are flattened into a single array
+  // Apply a deep "filter" function to a Tree/Group hierarchy structure, traversing along their children.
+  // The resulting items are flattened into a single array.
   return nodes.reduce((acc: TreeNode[], node: TreeNode) => {
     if (predicate(node)) {
       acc.push(node);

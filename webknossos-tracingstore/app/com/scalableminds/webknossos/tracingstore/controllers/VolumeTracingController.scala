@@ -494,7 +494,7 @@ class VolumeTracingController @Inject()(
               remoteFallbackLayer = remoteFallbackLayer,
               userToken = urlOrHeaderToken(token, request))
             relevantMapping: Map[Long, Long] <- editableMappingService.generateCombinedMappingForSegmentIds(
-              request.body.items,
+              request.body.items.toSet,
               editableMappingInfo,
               editableMappingVersion,
               editableMappingId,

@@ -2090,18 +2090,21 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   tracingId: string,
   segmentIds: Array<T>,
 ): Promise<Mapping> {
-  const mappingObject: Record<string, number> | Record<string, bigint> = await doWithToken(
-    (token) =>
-      Request.sendJSONReceiveJSON(
-        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
-        {
-          data: segmentIds,
+  const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
+      {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: {
+          "Content-Type": "application/octet-stream",
         },
-      ),
+      },
+    ),
   );
-  // TODOp: parseInt cannot be used in the bigint case. Also, it would be great to avoid having to convert the
-  // object to a map in the first place, to avoid the parseInt. Maybe protobuf can be used here as well?
-  return new Map(Object.entries(mappingObject).map(([key, value]) => [parseInt(key, 10), value]));
+  // @ts-ignore
+  return new Map(_.zip(segmentIds, parseProtoListOfLong(listArrayBuffer)));
 }
 
 export function getEditableAgglomerateSkeleton(

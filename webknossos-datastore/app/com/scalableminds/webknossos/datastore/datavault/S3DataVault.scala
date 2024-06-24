@@ -1,26 +1,35 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.amazonaws.AmazonServiceException
-import com.amazonaws.auth.{AWSCredentialsProvider, AWSStaticCredentialsProvider, AnonymousAWSCredentials, BasicAWSCredentials, EnvironmentVariableCredentialsProvider}
+import com.amazonaws.auth.{
+  AWSCredentialsProvider,
+  AWSStaticCredentialsProvider,
+  AnonymousAWSCredentials,
+  BasicAWSCredentials,
+  EnvironmentVariableCredentialsProvider
+}
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
-import com.amazonaws.services.s3.model.{Bucket, GetObjectRequest, ListObjectsRequest, ListObjectsV2Request, S3Object, S3ObjectSummary}
+import com.amazonaws.services.s3.model.{GetObjectRequest, ListObjectsV2Request, S3Object}
 import com.amazonaws.util.AwsHostNameUtils
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.storage.{LegacyDataVaultCredential, RemoteSourceDescriptor, S3AccessKeyCredential}
+import com.scalableminds.webknossos.datastore.storage.{
+  LegacyDataVaultCredential,
+  RemoteSourceDescriptor,
+  S3AccessKeyCredential
+}
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.IOUtils
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import java.net.URI
-import java.util
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters._
 
 class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
-  val MAX_EXPLORED_ITEMS_PER_LEVEL = 100
+  val MAX_EXPLORED_ITEMS_PER_LEVEL = 10
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
@@ -75,11 +84,8 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       listObjectsRequest.setPrefix(keyPrefix)
       listObjectsRequest.setDelimiter("/")
       listObjectsRequest.setMaxKeys(MAX_EXPLORED_ITEMS_PER_LEVEL)
-      System.out.println(s"Trying to request $bucketName and $keyPrefix")
       val objectListing = client.listObjectsV2(listObjectsRequest)
-      System.out.println(s"Got listing $objectListing")
       val s3SubPrefixes = objectListing.getCommonPrefixes.asScala.toList
-      System.out.println(s"Got s3SubPrefixes $s3SubPrefixes")
       Fox.successful(s3SubPrefixes)
     } catch {
       case e: AmazonServiceException =>
@@ -110,7 +116,8 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     for {
       prefixKey <- Fox.box2Fox(S3DataVault.objectKeyFromUri(path.toUri))
       s3SubPrefixKeys <- performGetObjectSummariesRequest(bucketName, prefixKey)
-      vaultPaths <- Fox.successful(s3SubPrefixKeys.map(key => new VaultPath(new URI(s"$bucketName/$key"), this)))
+      vaultPaths <- Fox.successful(
+        s3SubPrefixKeys.map(key => new VaultPath(new URI(s"${uri.getScheme}://$bucketName/$key"), this)))
     } yield vaultPaths
 
   private def getUri = uri

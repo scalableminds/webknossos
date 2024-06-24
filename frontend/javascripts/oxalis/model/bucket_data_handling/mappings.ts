@@ -92,16 +92,19 @@ class Mappings {
 
     const cuckooTable = this.cuckooTable;
     for (const keyToDelete of onlyA) {
-      // @ts-ignore keyToDelete will be either number or bigint depending on the context
-      cuckooTable.utilUnset(keyToDelete);
+      cuckooTable.unsetNumberLike(keyToDelete);
     }
     for (const key of changed) {
-      // @ts-ignore key will be either number or bigint depending on the context
-      cuckooTable.utilSet(key, mapping.get(key));
+      // We know that the lookup of key in mapping has to succeed because
+      // the diffing wouldn't have returned the id otherwise.
+      const value = (mapping as Map<NumberLike, NumberLike>).get(key) as NumberLike;
+      cuckooTable.setNumberLike(key, value);
     }
     for (const key of onlyB) {
-      // @ts-ignore key will be either number or bigint depending on the context
-      cuckooTable.utilSet(key, mapping.get(key));
+      // We know that the lookup of key in mapping has to succeed because
+      // the diffing wouldn't have returned the id otherwise.
+      const value = (mapping as Map<NumberLike, NumberLike>).get(key) as NumberLike;
+      cuckooTable.setNumberLike(key, value);
     }
     this.previousMapping = mapping;
 

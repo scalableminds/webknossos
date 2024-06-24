@@ -180,7 +180,7 @@ class DataCube {
   }
 
   mapId(idToMap: number): number {
-    // todop: should this function be async since the mapping
+    // todop (difficult): should this function be async since the mapping
     // might be partially loaded?
     let mappedId: number | null | undefined = null;
     const mapping = this.getMapping();
@@ -403,9 +403,9 @@ class DataCube {
   getValueSetForAllBuckets(): Set<number> | Set<bigint> {
     this.lastRequestForValueSet = Date.now();
 
-    // todop (idea): can we avoid examining the value set of a bucket for which
-    // finer buckets were already loaded?
-    // maybe not necessary?
+    // Theoretically, we could ignore coarser buckets for which we know that
+    // finer buckets are already loaded. However, the current performance
+    // is acceptable which is why this optimization isn't implemented.
     const valueSets = this.buckets
       .filter((bucket) => bucket.state === "LOADED")
       .map((bucket) => bucket.getValueSet());

@@ -1,5 +1,6 @@
 import { convertNumberTo64BitTuple } from "libs/utils";
 import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
+import { NumberLike } from "oxalis/store";
 
 const EMPTY_KEY = [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE] as Value;
 const EMPTY_VALUE = [EMPTY_KEY_VALUE, EMPTY_KEY_VALUE] as Value;
@@ -66,15 +67,15 @@ export class CuckooTableUint64 extends AbstractCuckooTable<Key, Value, Entry> {
     return state % this.entryCapacity;
   }
 
-  utilUnset(key: bigint) {
-    const keyTuple = convertNumberTo64BitTuple(key);
-    this.unset(keyTuple);
-  }
-
-  utilSet(key: bigint, value: bigint) {
+  setNumberLike(key: NumberLike, value: NumberLike) {
     const keyTuple = convertNumberTo64BitTuple(key);
     const valueTuple = convertNumberTo64BitTuple(value);
 
     this.set(keyTuple, valueTuple);
+  }
+
+  unsetNumberLike(key: NumberLike) {
+    const keyTuple = convertNumberTo64BitTuple(key);
+    this.unset(keyTuple);
   }
 }

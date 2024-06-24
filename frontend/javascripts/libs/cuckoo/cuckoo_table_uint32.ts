@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { AbstractCuckooTable, EMPTY_KEY_VALUE } from "./abstract_cuckoo_table";
+import { NumberLike } from "oxalis/store";
 
 const EMPTY_KEY = EMPTY_KEY_VALUE;
 const EMPTY_VALUE = EMPTY_KEY_VALUE;
@@ -71,12 +72,17 @@ export class CuckooTableUint32 extends AbstractCuckooTable<Key, Value, Entry> {
     return state % this.entryCapacity;
   }
 
-  // todop: rename or add explanation?
-  utilSet(key: number, value: number) {
+  setNumberLike(key: NumberLike, value: NumberLike) {
+    if (typeof key !== "number" || typeof value !== "number") {
+      throw new Error("Key and Value must be Number.");
+    }
     this.set(key, value);
   }
 
-  utilUnset(key: number) {
+  unsetNumberLike(key: NumberLike) {
+    if (typeof key !== "number") {
+      throw new Error("Key must be Number.");
+    }
     this.unset(key);
   }
 }

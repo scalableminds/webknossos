@@ -2117,7 +2117,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
         },
       ),
   );
-  // TODO: parseInt cannot be used in the bigint case. Also, it would be great to avoid having to convert the
+  // TODOp: parseInt cannot be used in the bigint case. Also, it would be great to avoid having to convert the
   // object to a map in the first place, to avoid the parseInt. Maybe protobuf can be used here as well?
   return new Map(Object.entries(mappingObject).map(([key, value]) => [parseInt(key, 10), value]));
 }

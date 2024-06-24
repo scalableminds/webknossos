@@ -123,7 +123,10 @@ function* loadCoarseMesh(
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
-  if ((yield* select((state) => state.userConfiguration.autoRenderMeshInProofreading)) === false) {
+  const autoRenderMeshInProofreading = yield* select(
+    (state) => state.userConfiguration.autoRenderMeshInProofreading,
+  );
+  if (!autoRenderMeshInProofreading) {
     return;
   }
   const dataset = yield* select((state) => state.dataset);
@@ -999,7 +1002,7 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
       ? mappingToAccess.get(segmentId)
       : Number(mappingToAccess.get(BigInt(segmentId)));
     if (mappedId == null) {
-      // todop: this can throw when the current id wasn't loaded into the mapping yet. how can we await this?
+      // todop (difficult): this can throw when the current id wasn't loaded into the mapping yet. how can we await this?
       throw new Error(
         `Could not map id ${segmentId} at position. Is mapping up to date? maybe await updateHdf5Mapping somehow?`,
       );
@@ -1014,7 +1017,7 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
       : Number(mapping.get(BigInt(unmappedId)));
 
     if (agglomerateId == null) {
-      // todop: this can throw when the current id wasn't loaded into the mapping yet. how can we await this?
+      // todop (difficult): this can throw when the current id wasn't loaded into the mapping yet. how can we await this?
       throw new Error(
         `Could not map id ${unmappedId} at position. Is mapping up to date? maybe await updateHdf5Mapping somehow?`,
       );

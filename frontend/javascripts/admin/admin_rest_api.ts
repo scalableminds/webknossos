@@ -1603,24 +1603,6 @@ export function getEditableMappingInfo(
   );
 }
 
-// todop (easy): not used anymore?
-export function getAgglomerateIdForSegmentId(
-  tracingStoreUrl: string,
-  tracingId: string,
-  segmentId: number,
-): Promise<number> {
-  return doWithToken(async (token) => {
-    const urlParams = new URLSearchParams({
-      token,
-      segmentId: `${segmentId}`,
-    });
-    const { agglomerateId } = await Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateIdForSegmentId?${urlParams.toString()}`,
-    );
-    return agglomerateId;
-  });
-}
-
 export function getPositionForSegmentInAgglomerate(
   datastoreUrl: string,
   datasetId: APIDatasetId,

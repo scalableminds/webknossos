@@ -545,14 +545,11 @@ function* handleSetJsonMapping(
 
 function convertMappingObjectToEquivalenceClasses(existingMapping: Mapping) {
   const classesByRepresentative: Record<number, number[]> = {};
-  for (const unmapped of existingMapping.keys()) {
-    // @ts-ignore unmapped is guaranteed to exist in existingMapping as it was obtained using existingMapping.keys()
-    const mapped: number = existingMapping.get(unmapped);
+  for (let [unmapped, mapped] of existingMapping.entries()) {
+    // TODO: Proper 64 bit support (#6921)
+    unmapped = Number(unmapped);
+    mapped = Number(mapped);
     classesByRepresentative[mapped] = classesByRepresentative[mapped] || [];
-    if (typeof unmapped === "bigint") {
-      // todop
-      console.warn("Casting BigInt to Number for custom colors.");
-    }
     classesByRepresentative[mapped].push(Number(unmapped));
   }
   const classes = Object.values(classesByRepresentative);
@@ -577,10 +574,7 @@ function* setCustomColors(
 
     const hueValue = mappingProperties.mappingColors[classIdx];
     const color = jsHsv2rgb(360 * hueValue, 1, 1);
-    if (typeof representativeId === "bigint") {
-      // todop
-      console.warn("Casting BigInt to Number for custom colors.");
-    }
+    // TODO: Proper 64 bit support (#6921)
     yield* put(updateSegmentAction(Number(representativeId), { color }, layerName));
 
     classIdx++;

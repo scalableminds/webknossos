@@ -16,6 +16,7 @@ import type {
 import window, { document, location } from "libs/window";
 import { ArbitraryObject, Comparator } from "types/globals";
 import dayjs from "dayjs";
+import { number } from "@scalableminds/prop-types";
 
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
@@ -1221,14 +1222,17 @@ export function computeHash(str: string): string | undefined {
   return hashString;
 }
 
-function encodeToBase62(numberToEncode: number): string {
+export function encodeToBase62(numberToEncode: number): string {
   const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  if (numberToEncode === 0) return base62Chars[0];
+  if (numberToEncode === -1) return base62Chars[61];
   let encoded = "";
   let num = numberToEncode;
   while (num !== 0 && num !== -1) {
     // for positive numberToEncode, num will eventually be 0, for negative numberToEncode, num will eventually be -1
     const modulo = mod(num, 62);
     encoded = base62Chars[modulo < 0 ? 62 + modulo : modulo] + encoded;
+    console.log(encoded);
     num = Math.floor(num / 62);
   }
   return encoded;

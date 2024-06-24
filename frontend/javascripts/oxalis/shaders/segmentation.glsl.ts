@@ -284,6 +284,11 @@ export const getSegmentId: ShaderModule = {
     void getSegmentId_<%= segmentationName %>(vec3 worldPositionUVW, out vec4[2] segment_id, out vec4[2] mapped_id) {
       vec3 transformedCoordUVW = transDim((<%= segmentationName %>_transform * vec4(transDim(worldPositionUVW), 1.0)).xyz);
       if (isOutsideOfBoundingBox(transformedCoordUVW)) {
+        // Some GPUs don't null-initialize the variables.
+        segment_id[0] = vec4(0.);
+        segment_id[1] = vec4(0.);
+        mapped_id[0] = vec4(0.);
+        mapped_id[1] = vec4(0.);
         return;
       }
 

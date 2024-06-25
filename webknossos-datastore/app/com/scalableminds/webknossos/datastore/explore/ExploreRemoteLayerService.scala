@@ -85,10 +85,9 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       remoteSource = RemoteSourceDescriptor(uri, credentialOpt)
       remotePath <- dataVaultService.getVaultPath(remoteSource) ?~> "dataVault.setup.failed"
       exploreCount = 0
-      layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
-        remotePath,
+      layersWithVoxelSizes <- recursivelyExploreRemoteLayerAt(
+        List((remotePath, 0)),
         credentialId,
-        reportMutable,
         List(
           // Explorers are ordered to prioritize the explorer reading meta information over raw Zarr, N5, ... data.
           new NgffExplorer,
@@ -99,7 +98,8 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
           new N5ArrayExplorer,
           new PrecomputedExplorer,
           new NeuroglancerUriExplorer(dataVaultService)
-        )
+        ),
+        reportMutable,
       )
     } yield layersWithVoxelSizes
 
@@ -116,39 +116,50 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
   private def handleExploreResult(explorationResult: Box[List[(DataLayerWithMagLocators, Vec3Double)]],
                                   explorer: RemoteLayerExplorer,
                                   path: VaultPath)(
-      implicit remainingPaths: List[(VaultPath, Int)],
-      explorers: List[RemoteLayerExplorer],
-      credentialId: Option[String],
-      searchDepth: Int,
-      reportMutable: ListBuffer[String],
+      implicit reportMutable: ListBuffer[String],
       ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] = explorationResult match {
     case Full(layersWithVoxelSizes) =>
       reportMutable += s"Found ${layersWithVoxelSizes.length} ${explorer.name} layers at $path."
-      val sameParentRemainingPaths = remainingPaths.filter(_._1.parent == path.parent)
-      for {
-        layersWithVoxelSizesInSiblingPaths <- Fox
-          .sequenceOfFulls(sameParentRemainingPaths.map(path =>
-            recursivelyExploreRemoteLayerAt(List(path), explorers, credentialId, reportMutable)))
-          .toFox
-        allLayersWithVoxelSizes = layersWithVoxelSizes +: layersWithVoxelSizesInSiblingPaths
-      } yield allLayersWithVoxelSizes.flatten
+      Fox.successful(layersWithVoxelSizes)
     case f: Failure =>
       reportMutable += s"Error when reading $path as ${explorer.name}: ${Fox.failureChainAsString(f)}"
-      for {
-        extendedRemainingPaths <- path.listDirectory().map(dirs => remainingPaths ++ dirs.map((_, searchDepth + 1)))
-        foundLayers <- recursivelyExploreRemoteLayerAt(extendedRemainingPaths, explorers, credentialId, reportMutable)
-      } yield foundLayers
+      Fox.empty
     case Empty =>
       reportMutable += s"Error when reading $path as ${explorer.name}: Empty"
-      for {
-        extendedRemainingPaths <- path.listDirectory().map(dirs => remainingPaths ++ dirs.map((_, searchDepth + 1)))
-        foundLayers <- recursivelyExploreRemoteLayerAt(extendedRemainingPaths, explorers, credentialId, reportMutable)
-      } yield foundLayers
+      Fox.empty
+
   }
 
+  private def handleExplorationResultOfPath(explorationResultOfPath: Box[List[(DataLayerWithMagLocators, Vec3Double)]],
+                                            path: VaultPath,
+                                            searchDepth: Int,
+                                            remainingPaths: List[(VaultPath, Int)],
+                                            credentialId: Option[String],
+                                            explorers: List[RemoteLayerExplorer],
+                                            reportMutable: ListBuffer[String])(implicit ec: ExecutionContext) =
+    explorationResultOfPath match {
+      case Full(layersWithVoxelSizes) =>
+        val sameParentRemainingPaths = remainingPaths.filter(_._1.parent == path.parent)
+        // Try to look for additional layers in sibling directories.
+        // TODO: Problem! This runs in parallel with other sub dirs
+        for {
+          layersWithVoxelSizesInSiblingPaths <- Fox
+            .sequenceOfFulls(sameParentRemainingPaths.map(path =>
+              recursivelyExploreRemoteLayerAt(List(path), credentialId, explorers, reportMutable)))
+            .toFox
+          allLayersWithVoxelSizes = layersWithVoxelSizes +: layersWithVoxelSizesInSiblingPaths
+        } yield allLayersWithVoxelSizes.flatten
+
+      case Empty =>
+        for {
+          extendedRemainingPaths <- path.listDirectory().map(dirs => remainingPaths ++ dirs.map((_, searchDepth + 1)))
+          foundLayers <- recursivelyExploreRemoteLayerAt(extendedRemainingPaths, credentialId, explorers, reportMutable)
+        } yield foundLayers
+    }
+
   private def recursivelyExploreRemoteLayerAt(remotePathsWithDepth: List[(VaultPath, Int)],
-                                              explorers: List[RemoteLayerExplorer],
                                               credentialId: Option[String],
+                                              explorers: List[RemoteLayerExplorer],
                                               reportMutable: ListBuffer[String])(
       implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
     remotePathsWithDepth match {
@@ -158,62 +169,35 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         if (searchDepth > MAX_RECURSIVE_SEARCH_DEPTH) return Fox.empty
         exploreCount += 1
         implicit val implRemainingPaths: List[(VaultPath, Int)] = remainingPaths
-        implicit val implExplorers: List[RemoteLayerExplorer] = explorers
-        implicit val implCredentialId: Option[String] = credentialId
-        implicit val implSearchDepth: Int = searchDepth
         implicit val implReportMutable: ListBuffer[String] = reportMutable
-        System.out.println(s"Doing the $exploreCount 'th exploration")
-        val foxies = Fox
+
+        System.out.println(s"implRemainingPaths $implRemainingPaths")
+        Fox
           .sequence(explorers.map { explorer =>
-            explorer
-              .explore(path, credentialId)
-              .futureBox
-              .flatMap {
-                case Full(layersWithVoxelSizes) =>
-                  reportMutable += s"Found ${layersWithVoxelSizes.length} ${explorer.name} layers at $path."
-                  val sameParentRemainingPaths = remainingPaths.filter(_._1.parent == path.parent)
-                  for {
-                    layersWithVoxelSizesInSiblingPaths <- Fox
-                      .sequenceOfFulls(sameParentRemainingPaths.map(path =>
-                        recursivelyExploreRemoteLayerAt(List(path), explorers, credentialId, reportMutable)))
-                      .toFox
-                    allLayersWithVoxelSizes = layersWithVoxelSizes +: layersWithVoxelSizesInSiblingPaths
-                  } yield allLayersWithVoxelSizes.flatten
-                case f: Failure =>
-                  reportMutable += s"Error when reading $path as ${explorer.name}: ${Fox.failureChainAsString(f)}"
-                  for {
-                    extendedRemainingPaths <- path
-                      .listDirectory()
-                      .map(dirs => remainingPaths ++ dirs.map((_, searchDepth + 1)))
-                    foundLayers <- recursivelyExploreRemoteLayerAt(extendedRemainingPaths,
-                                                                   explorers,
-                                                                   credentialId,
-                                                                   reportMutable)
-                  } yield foundLayers
-                case Empty =>
-                  reportMutable += s"Error when reading $path as ${explorer.name}: Empty"
-                  for {
-                    extendedRemainingPaths <- path
-                      .listDirectory()
-                      .map(dirs => remainingPaths ++ dirs.map((_, searchDepth + 1)))
-                    foundLayers <- recursivelyExploreRemoteLayerAt(extendedRemainingPaths,
-                                                                   explorers,
-                                                                   credentialId,
-                                                                   reportMutable)
-                  } yield foundLayers
-              }
-              .toFox
+            {
+              System.out.println(s"running explorer ${explorer.name} on $path")
+              explorer
+                .explore(path, credentialId)
+                .futureBox
+                .flatMap {
+                  handleExploreResult(_, explorer, path)
+                }
+                .toFox
+            }
           })
           .map(explorationResults => Fox.firstSuccess(explorationResults.map(_.toFox)))
           .toFox
           .flatten
-        foxies
+          .futureBox
+          .flatMap(
+            explorationResultOfPath =>
+              handleExplorationResultOfPath(explorationResultOfPath,
+                                            path,
+                                            searchDepth,
+                                            remainingPaths,
+                                            credentialId,
+                                            explorers,
+                                            reportMutable))
     }
 
-  private def exploreRemoteLayersForRemotePath(remotePath: VaultPath,
-                                               credentialId: Option[String],
-                                               reportMutable: ListBuffer[String],
-                                               explorers: List[RemoteLayerExplorer])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
-    recursivelyExploreRemoteLayerAt(List((remotePath, 0)), explorers, credentialId, reportMutable)
 }

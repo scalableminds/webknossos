@@ -1632,8 +1632,8 @@ class SegmentsView extends React.Component<Props, State> {
                     currentMeshFile={this.props.currentMeshFile}
                     onRenameStart={this.onRenameStart}
                     onRenameEnd={this.onRenameEnd}
-                    // todop: this causes SegmentItems to always rerender if SegmentsView
-                    // rerenders
+                    // TODO #7895: The line below causes SegmentItems to always rerender
+                    // if SegmentsView rerenders.
                     multiSelectMenu={multiSelectMenu()}
                     activeVolumeTracing={this.props.activeVolumeTracing}
                   />

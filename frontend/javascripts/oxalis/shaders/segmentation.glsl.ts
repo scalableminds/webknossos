@@ -335,9 +335,9 @@ export const getSegmentId: ShaderModule = {
         if (mapped_entry.r != -1) {
           mapped_id[0] = uintToVec4(uint(mapped_entry[0]));
           mapped_id[1] = uintToVec4(uint(mapped_entry[1]));
-        } else if (hideUnmappedIds ||
-          isProofreading // todop: instead of isProofreading it should be, usesLocalHdf5Mapping or something like that
-        ) {
+        } else if (hideUnmappedIds || mappingIsPartial) {
+          // If the mapping is partially known to the front-end (this is the case for HDF5 mappings),
+          // we hide unmapped ids. As soon as they are loaded, the segments will appear.
           mapped_id[0] = vec4(0.0);
           mapped_id[1] = vec4(0.0);
         }

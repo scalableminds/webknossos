@@ -15,6 +15,7 @@ import {
   getActiveSegmentationTracing,
   getActiveSegmentPosition,
   getBucketRetrievalSourceFn,
+  needsLocalHdf5Mapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
 import {
@@ -161,6 +162,9 @@ class PlaneMaterialFactory {
         value: [0, 0],
       },
       shouldApplyMappingOnGPU: {
+        value: false,
+      },
+      mappingIsPartial: {
         value: false,
       },
       hideUnmappedIds: {
@@ -831,6 +835,22 @@ class PlaneMaterialFactory {
           },
         ),
       );
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          (storeState) => {
+            const layer = getSegmentationLayerWithMappingSupport(storeState);
+            if (!layer) {
+              return false;
+            }
+
+            return needsLocalHdf5Mapping(storeState, layer.name);
+          },
+          (mappingIsPartial) => {
+            this.uniforms.mappingIsPartial.value = mappingIsPartial;
+          },
+        ),
+      );
+
       this.storePropertyUnsubscribers.push(
         listenToStoreProperty(
           (storeState) => storeState.uiInformation.activeTool,

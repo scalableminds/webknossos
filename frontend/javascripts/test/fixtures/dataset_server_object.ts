@@ -1,5 +1,3 @@
-import { UnitLong } from "oxalis/constants";
-
 export default {
   name: "ROI2017_wkw",
   dataSource: {
@@ -57,7 +55,7 @@ export default {
         tracingId: null,
       },
     ],
-    scale: { factor: [11.239999771118164, 11.239999771118164, 28], unit: UnitLong.nm },
+    scale: [11.239999771118164, 11.239999771118164, 28],
   },
   dataStore: {
     name: "localhost",

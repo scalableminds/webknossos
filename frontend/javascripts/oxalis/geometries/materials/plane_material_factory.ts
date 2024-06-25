@@ -1020,7 +1020,7 @@ class PlaneMaterialFactory {
 
     const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();
-    const voxelSizeFactor = dataset.dataSource.scale.factor;
+    const datasetScale = dataset.dataSource.scale;
     const code = getMainFragmentShader({
       globalLayerCount,
       orderedColorLayerNames,
@@ -1028,7 +1028,7 @@ class PlaneMaterialFactory {
       segmentationLayerNames,
       textureLayerInfos,
       resolutionsCount: this.getTotalResolutionCount(),
-      voxelSizeFactor,
+      datasetScale,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });
@@ -1054,7 +1054,7 @@ class PlaneMaterialFactory {
 
     const textureLayerInfos = getTextureLayerInfos();
     const { dataset } = Store.getState();
-    const voxelSizeFactor = dataset.dataSource.scale.factor;
+    const datasetScale = dataset.dataSource.scale;
 
     return getMainVertexShader({
       globalLayerCount,
@@ -1063,7 +1063,7 @@ class PlaneMaterialFactory {
       segmentationLayerNames,
       textureLayerInfos,
       resolutionsCount: this.getTotalResolutionCount(),
-      voxelSizeFactor,
+      datasetScale,
       isOrthogonal: this.isOrthogonal,
       tpsTransformPerLayer: this.scaledTpsInvPerLayer,
     });

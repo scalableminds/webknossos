@@ -12,7 +12,7 @@ import {
   addUserBoundingBoxAction,
   changeUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
-import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { document } from "libs/window";
 import { V3 } from "libs/mjs";
@@ -167,7 +167,7 @@ export function getClosestHoveredBoundingBox(
 
   const { userBoundingBoxes } = getSomeTracing(state.tracing);
   const indices = Dimension.getIndices(plane);
-  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
   const thirdDim = indices[2];
   const zoomedMaxDistanceToSelection = MAX_DISTANCE_TO_SELECTION * state.flycam.zoomStep;
   let currentNearestDistance = zoomedMaxDistanceToSelection;

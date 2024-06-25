@@ -2,13 +2,13 @@ package models.dataset.explore
 
 import collections.SequenceUtils
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreLayerUtils,
   ExploreRemoteDatasetResponse,
   ExploreRemoteLayerParameters
 }
-import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
@@ -28,7 +28,7 @@ import scala.concurrent.ExecutionContext
 case class WKExploreRemoteLayerParameters(remoteUri: String,
                                           credentialIdentifier: Option[String],
                                           credentialSecret: Option[String],
-                                          preferredVoxelSize: Option[VoxelSize],
+                                          preferredVoxelSize: Option[Vec3Double],
                                           dataStoreName: Option[String])
 
 object WKExploreRemoteLayerParameters {

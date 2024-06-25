@@ -1365,7 +1365,7 @@ class SegmentsView extends React.Component<Props, State> {
     const relevantSegments =
       groupId != null ? this.getSegmentsOfGroupRecursively(groupId) : this.getSelectedSegments();
     if (relevantSegments == null) return [];
-    const segmentsWithoutPosition: number[] = relevantSegments
+    const segmentsWithoutPosition = relevantSegments
       .filter((segment) => segment.somePosition == null)
       .map((segment) => segment.id);
     return segmentsWithoutPosition.sort();

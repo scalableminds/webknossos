@@ -21,6 +21,7 @@ import type {
   LOG_LEVELS,
   Vector4,
   TreeType,
+  UnitLong,
 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { EmptyObject } from "./globals";
@@ -119,9 +120,13 @@ type MutableAPIDataSourceBase = {
 };
 type APIDataSourceBase = Readonly<MutableAPIDataSourceBase>;
 export type APIUnimportedDatasource = APIDataSourceBase;
+export type VoxelSize = {
+  factor: Vector3;
+  unit: UnitLong;
+};
 export type MutableAPIDataSource = MutableAPIDataSourceBase & {
   dataLayers: Array<APIDataLayer>;
-  scale: Vector3;
+  scale: VoxelSize;
 };
 export type APIDataSource = Readonly<MutableAPIDataSource>;
 export type APIDataStore = {

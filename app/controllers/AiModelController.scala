@@ -45,7 +45,8 @@ case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   boundingBox: String,
                                   newSegmentationLayerName: String,
                                   newDatasetName: String,
-                                  maskAnnotationLayerName: Option[String])
+                                  maskAnnotationLayerName: Option[String],
+                                  workflowYaml: Option[String])
 
 object RunInferenceParameters {
   implicit val jsonFormat: OFormat[RunInferenceParameters] = Json.format[RunInferenceParameters]
@@ -178,7 +179,8 @@ class AiModelController @Inject()(
           "bounding_box" -> boundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
           "new_segmentation_layer_name" -> request.body.newSegmentationLayerName,
-          "new_dataset_name" -> request.body.newDatasetName
+          "new_dataset_name" -> request.body.newDatasetName,
+          "workflow_yaml" -> request.body.workflowYaml
         )
         newInferenceJob <- jobService.submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunInferWithModel"
         newAiInference = AiInference(

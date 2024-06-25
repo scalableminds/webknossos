@@ -28,7 +28,7 @@ case class AdHocMeshRequest(dataSource: Option[DataSource],
                             dataLayer: SegmentationLayer,
                             cuboid: Cuboid,
                             segmentId: Long,
-                            voxelSizeFactor: Vec3Double, // assumed to be in dataset’s unit
+                            scale: Vec3Double,
                             mapping: Option[String] = None,
                             mappingType: Option[String] = None,
                             additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
@@ -179,7 +179,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
     val dataDimensions = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)
 
     val offset = Vec3Double(cuboid.topLeft.voxelXInMag, cuboid.topLeft.voxelYInMag, cuboid.topLeft.voxelZInMag)
-    val scale = Vec3Double(cuboid.topLeft.mag) * request.voxelSizeFactor
+    val scale = Vec3Double(cuboid.topLeft.mag) * request.scale
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
     val vertexBuffer = mutable.ArrayBuffer[Vec3Double]()

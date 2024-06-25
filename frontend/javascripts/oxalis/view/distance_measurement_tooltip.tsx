@@ -2,12 +2,7 @@ import { useDispatch, useSelector } from "react-redux";
 import _ from "lodash";
 import React, { useEffect, useRef } from "react";
 import type { OxalisState } from "oxalis/store";
-import {
-  AnnotationToolEnum,
-  MeasurementTools,
-  LongUnitToShortUnitMap,
-  Vector3,
-} from "oxalis/constants";
+import { AnnotationToolEnum, MeasurementTools } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -55,7 +50,7 @@ export default function DistanceMeasurementTooltip() {
   const flycam = useSelector((state: OxalisState) => state.flycam);
   const state = useSelector((state: OxalisState) => state);
   const activeTool = useSelector((state: OxalisState) => state.uiInformation.activeTool);
-  const voxelSize = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
+  const datasetScale = useSelector((state: OxalisState) => state.dataset.dataSource.scale);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const dispatch = useDispatch();
   const currentPosition = getPosition(flycam);
@@ -81,21 +76,14 @@ export default function DistanceMeasurementTooltip() {
   }
   let valueInVx = "";
   let valueInMetricUnit = "";
-  const notScalingFactor = [1, 1, 1] as Vector3;
   if (activeTool === AnnotationToolEnum.LINE_MEASUREMENT) {
     const { lineMeasurementGeometry } = getSceneController();
-    valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(notScalingFactor), 1);
-    valueInMetricUnit = formatNumberToLength(
-      lineMeasurementGeometry.getDistance(voxelSize.factor),
-      LongUnitToShortUnitMap[voxelSize.unit],
-    );
+    valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance([1, 1, 1]), 1);
+    valueInMetricUnit = formatNumberToLength(lineMeasurementGeometry.getDistance(datasetScale), 1);
   } else if (activeTool === AnnotationToolEnum.AREA_MEASUREMENT) {
     const { areaMeasurementGeometry } = getSceneController();
-    valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea(notScalingFactor), 1);
-    valueInMetricUnit = formatNumberToArea(
-      areaMeasurementGeometry.getArea(voxelSize.factor),
-      LongUnitToShortUnitMap[voxelSize.unit],
-    );
+    valueInVx = formatAreaAsVx(areaMeasurementGeometry.getArea([1, 1, 1]), 1);
+    valueInMetricUnit = formatNumberToArea(areaMeasurementGeometry.getArea(datasetScale), 1);
   }
   const {
     left: viewportLeft,

@@ -2,12 +2,9 @@
 // Types which were used for creating the datasource.schema.js
 // The `flow2schema` node module has been used for conversion.
 
-import { VoxelSize } from "types/api_flow_types";
-
 // Please note that some manual changes to the schema are required.
 type Vector2 = [number, number];
 type Vector3 = [number, number, number];
-
 type BoundingBox = {
   topLeft: Vector3;
   width: number;
@@ -88,5 +85,5 @@ export type DatasourceConfiguration = {
     team: string;
   };
   dataLayers: Array<DataLayer>;
-  scale: VoxelSize;
+  scale: Vector3;
 };

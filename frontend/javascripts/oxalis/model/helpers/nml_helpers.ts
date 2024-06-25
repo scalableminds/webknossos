@@ -256,10 +256,9 @@ function serializeParameters(
           wkUrl: `${location.protocol}//${location.host}`,
         }),
         serializeTag("scale", {
-          x: state.dataset.dataSource.scale.factor[0],
-          y: state.dataset.dataSource.scale.factor[1],
-          z: state.dataset.dataSource.scale.factor[2],
-          unit: state.dataset.dataSource.scale.unit,
+          x: state.dataset.dataSource.scale[0],
+          y: state.dataset.dataSource.scale[1],
+          z: state.dataset.dataSource.scale[2],
         }),
         serializeTag("offset", {
           x: 0,

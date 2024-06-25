@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import {
   getDatasetExtentAsString,
   getResolutionUnion,
@@ -120,6 +121,22 @@ const shortcuts = [
     action: "Rotate 3D View",
   },
 ];
+
+export function convertPixelsToNm(
+  lengthInPixel: number,
+  zoomValue: number,
+  dataset: APIDataset,
+): number {
+  return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
+}
+
+export function convertNmToPixels(
+  lengthInNm: number,
+  zoomValue: number,
+  dataset: APIDataset,
+): number {
+  return lengthInNm / (zoomValue * getBaseVoxel(dataset.dataSource.scale));
+}
 
 export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   const extentInVoxel = getDatasetExtentAsString(dataset, true);
@@ -278,6 +295,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     this.setState({
       owningOrganizationDisplayName: organization.displayName,
     });
+    console.log(this.state.owningOrganizationDisplayName);
   }
 
   getAnnotationStatistics() {

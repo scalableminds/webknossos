@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(117);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(116);
 COMMIT TRANSACTION;
 
 
@@ -101,7 +101,6 @@ CREATE TABLE webknossos.publications(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.LENGTH_UNIT AS ENUM ('yoctometer', 'zeptometer', 'attometer', 'femtometer', 'picometer', 'nanometer', 'micrometer', 'millimeter', 'centimeter', 'decimeter', 'meter', 'hectometer', 'kilometer', 'megameter', 'gigameter', 'terameter', 'petameter', 'exameter', 'zettameter', 'yottameter', 'angstrom', 'inch', 'foot', 'yard', 'mile', 'parsec');
 CREATE TABLE webknossos.datasets(
   _id CHAR(24) PRIMARY KEY,
   _dataStore VARCHAR(256) NOT NULL,
@@ -117,8 +116,7 @@ CREATE TABLE webknossos.datasets(
   isPublic BOOLEAN NOT NULL DEFAULT false,
   isUsable BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL,
-  voxelSizeFactor webknossos.VECTOR3,
-  voxelSizeUnit webknossos.LENGTH_UNIT,
+  scale webknossos.VECTOR3,
   status VARCHAR(1024) NOT NULL DEFAULT '',
   sharingToken CHAR(256),
   logoUrl VARCHAR(2048),

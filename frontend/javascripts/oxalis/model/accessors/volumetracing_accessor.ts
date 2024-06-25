@@ -162,10 +162,7 @@ const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
 export function getServerVolumeTracings(
   tracings: Array<ServerTracing> | null | undefined,
 ): Array<ServerVolumeTracing> {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'ServerTracing[]' is not assignable to type '... Remove this comment to see the full error message
-  const volumeTracings: Array<ServerVolumeTracing> = (tracings || []).filter(
-    (tracing) => tracing.typ === "Volume",
-  );
+  const volumeTracings = (tracings || []).filter((tracing) => tracing.typ === "Volume");
   return volumeTracings;
 }
 

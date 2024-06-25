@@ -42,7 +42,7 @@ import { getPlaneScalingFactor } from "oxalis/model/accessors/view_mode_accessor
 import { sceneControllerReadyAction } from "oxalis/model/actions/actions";
 import Dimensions from "oxalis/model/dimensions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { getVoxelPerUnit } from "oxalis/model/scaleinfo";
+import { getVoxelPerNM } from "oxalis/model/scaleinfo";
 import { Model } from "oxalis/singletons";
 import type { OxalisState, SkeletonTracing, UserBoundingBox } from "oxalis/store";
 import Store from "oxalis/store";
@@ -107,9 +107,7 @@ class SceneController {
     this.meshesRootGroup = new THREE.Group();
     this.highlightedBBoxId = null;
     // The dimension(s) with the highest resolution will not be distorted
-    this.rootGroup.scale.copy(
-      new THREE.Vector3(...Store.getState().dataset.dataSource.scale.factor),
-    );
+    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
     this.scene.add(this.segmentMeshController.meshesLODRootGroup);
@@ -398,7 +396,7 @@ class SceneController {
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
-    const voxelPerNMVector = getVoxelPerUnit(Store.getState().dataset.dataSource.scale);
+    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.dataSource.scale);
     V3.scale(voxelPerNMVector, value, this.planeShift);
     app.vent.emit("rerender");
   }

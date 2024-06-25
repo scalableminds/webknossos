@@ -34,10 +34,10 @@ const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: string)
     return;
   }
 
-  const stores = datastores
-    .map((datastore) => ({ ...datastore, path: "data" }))
-    // @ts-expect-error ts-migrate(2769) FIXME: No overload matches this call.
-    .concat({ ...tracingstore, path: "tracings" });
+  const stores = [
+    { ...tracingstore, path: "tracings" },
+    ...datastores.map((datastore) => ({ ...datastore, path: "data" })),
+  ];
 
   if (isInMaintenance) {
     Toast.warning(messages.planned_maintenance);

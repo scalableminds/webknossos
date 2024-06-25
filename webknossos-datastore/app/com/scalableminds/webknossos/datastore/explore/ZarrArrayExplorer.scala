@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer,
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.Category
 
 import scala.concurrent.ExecutionContext
@@ -16,7 +15,7 @@ class ZarrArrayExplorer(mag: Vec3Int = Vec3Int.ones)(implicit val ec: ExecutionC
 
   override def name: String = "Zarr Array"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(ZarrLayer, VoxelSize)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
     for {
       zarrayPath <- Fox.successful(remotePath / ZarrHeader.FILENAME_DOT_ZARRAY)
       name = guessNameFromPath(remotePath)
@@ -29,6 +28,6 @@ class ZarrArrayExplorer(mag: Vec3Int = Vec3Int.ones)(implicit val ec: ExecutionC
         ZarrSegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
       } else
         ZarrDataLayer(name, Category.color, boundingBox, elementClass, List(magLocator), additionalAxes = None)
-    } yield List((layer, VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)))
+    } yield List((layer, Vec3Double.ones))
 
 }

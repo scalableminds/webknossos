@@ -6,7 +6,7 @@ import { usePolling } from "libs/react_hooks";
 import {
   formatCountToDataAmountUnit,
   formatCPU,
-  formatTimeIntervalStrict,
+  formatDistanceStrict,
   formatDurationStrict,
   formatNumber,
 } from "libs/format_utils";
@@ -188,7 +188,7 @@ export default function StatisticsTab({
                     row.duration?.max != null && (
                       <>
                         <span className="stats-label">Sum</span>{" "}
-                        {formatTimeIntervalStrict(row.duration.max * 1000, 0)}
+                        {formatDistanceStrict(row.duration.max * 1000, 0)}
                       </>
                     )
                   ) : (
@@ -196,21 +196,21 @@ export default function StatisticsTab({
                       {row.duration?.max != null && (
                         <>
                           <span className="stats-label">Max</span>{" "}
-                          {formatTimeIntervalStrict(row.duration.max * 1000, 0)}
+                          {formatDistanceStrict(row.duration.max * 1000, 0)}
                         </>
                       )}
                       <br />
                       {row.duration?.median != null && (
                         <>
                           <span className="stats-label">Median</span>{" "}
-                          {formatTimeIntervalStrict(row.duration.median * 1000, 0)}
+                          {formatDistanceStrict(row.duration.median * 1000, 0)}
                         </>
                       )}
                       <br />{" "}
                       {row.duration?.sum != null && (
                         <>
                           <span className="stats-label">Sum</span>{" "}
-                          {formatTimeIntervalStrict(row.duration.sum * 1000, 0)}
+                          {formatDistanceStrict(row.duration.sum * 1000, 0)}
                         </>
                       )}
                     </>

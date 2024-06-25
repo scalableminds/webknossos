@@ -31,7 +31,7 @@ import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
 import { APIDataLayer, APIDataset, APIJobType } from "types/api_flow_types";
 import { useStartAndPollJob } from "admin/job/job_hooks";
-import { AllUnits, LongUnitToShortUnitMap, Vector3 } from "oxalis/constants";
+import { Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 
 const FormItem = Form.Item;
@@ -207,9 +207,9 @@ function SimpleDatasetForm({
               </Col>
               <Col span={24} xl={12}>
                 <FormItemWithInfo
-                  name={["dataSource", "scale", "factor"]}
+                  name={["dataSource", "scale"]}
                   label="Voxel Size"
-                  info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
+                  info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
                   rules={[
                     {
                       required: true,
@@ -228,30 +228,6 @@ function SimpleDatasetForm({
                       width: 400,
                     }}
                     allowDecimals
-                  />
-                </FormItemWithInfo>
-                <Space size="large" />
-                <FormItemWithInfo
-                  name={["dataSource", "scale", "unit"]}
-                  label="Unit"
-                  info="The unit in which the voxel size is defined."
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please provide a unit for the voxel scale of the dataset.",
-                    },
-                  ]}
-                >
-                  <Select
-                    style={{ width: 120 }}
-                    options={AllUnits.map((unit) => ({
-                      value: unit,
-                      label: (
-                        <span>
-                          <Tooltip title={unit}>{LongUnitToShortUnitMap[unit]}</Tooltip>
-                        </span>
-                      ),
-                    }))}
                   />
                 </FormItemWithInfo>
               </Col>

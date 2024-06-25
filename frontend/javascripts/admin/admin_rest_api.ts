@@ -63,7 +63,6 @@ import type {
   MaintenanceInfo,
   AdditionalCoordinate,
   LayerLink,
-  VoxelSize,
   APITimeTrackingPerUser,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
@@ -1238,7 +1237,7 @@ type DatasetCompositionArgs = {
   newDatasetName: string;
   targetFolderId: string;
   organizationName: string;
-  voxelSize: VoxelSize;
+  scale: Vector3;
   layers: LayerLink[];
 };
 
@@ -1976,7 +1975,7 @@ type MeshRequest = {
   segmentId: number; // Segment to build mesh for
   // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
-  scaleFactor: Vector3;
+  scale: Vector3;
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   findNeighbors: boolean;
@@ -1989,8 +1988,15 @@ export function computeAdHocMesh(
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
-  const { position, additionalCoordinates, cubeSize, mappingName, scaleFactor, mag, ...rest } =
-    meshRequest;
+  const {
+    position,
+    additionalCoordinates,
+    cubeSize,
+    mappingName,
+    mag,
+
+    ...rest
+  } = meshRequest;
 
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
@@ -2008,7 +2014,6 @@ export function computeAdHocMesh(
           cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
-          voxelSizeFactorInUnit: scaleFactor,
           mag,
           ...rest,
         },

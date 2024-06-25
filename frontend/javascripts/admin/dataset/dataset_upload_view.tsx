@@ -1,18 +1,4 @@
-import {
-  Popover,
-  Avatar,
-  Form,
-  Button,
-  Col,
-  Row,
-  Modal,
-  Progress,
-  Alert,
-  List,
-  Spin,
-  Select,
-  Tooltip,
-} from "antd";
+import { Popover, Avatar, Form, Button, Col, Row, Modal, Progress, Alert, List, Spin } from "antd";
 import { Location as HistoryLocation, Action as HistoryAction } from "history";
 import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
@@ -58,7 +44,7 @@ import { Vector3Input } from "libs/vector_input";
 import features from "features";
 import { syncValidator } from "types/validation";
 import { FormInstance } from "antd/lib/form";
-import { AllUnits, UnitLong, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { hasPricingPlanExceededStorage } from "admin/organization/pricing_plan_utils";
@@ -321,7 +307,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   formValues.name,
                   activeUser.organization,
                   formValues.scale,
-                  formValues.unit,
                 );
               } catch (error) {
                 maybeError = error;
@@ -677,7 +662,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               scale: [0, 0, 0],
               zipFile: [],
               targetFolderId: new URLSearchParams(location.search).get("to"),
-              unit: UnitLong.nm,
             }}
           >
             {features().isWkorgInstance && (
@@ -731,64 +715,39 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               hidden={hasOnlyOneDatastoreOrNone}
             />
             {this.isDatasetConversionEnabled() && needsConversion ? (
-              <Row gutter={8}>
-                <Col span={12}>
-                  <FormItemWithInfo
-                    name="scale"
-                    label="Voxel Size"
-                    info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
-                    // @ts-ignore
-                    disabled={this.state.needsConversion}
-                    help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
-                    rules={[
-                      {
-                        required: this.state.needsConversion,
-                        message: "Please provide a voxel size for the dataset.",
-                      },
-                      {
-                        validator: syncValidator(
-                          (value: Vector3) => value?.every((el) => el > 0),
-                          "Each component of the voxel size must be larger than 0.",
-                        ),
-                      },
-                    ]}
-                  >
-                    <Vector3Input
-                      allowDecimals
-                      onChange={(scale: Vector3) => {
-                        if (this.formRef.current == null) return;
-                        this.formRef.current.setFieldsValue({
-                          scale,
-                        });
-                      }}
-                    />
-                  </FormItemWithInfo>
-                </Col>
-                <Col span={12}>
-                  <FormItemWithInfo
-                    name={"unit"}
-                    label="Unit"
-                    info="The unit in which the voxel size is defined."
-                    rules={[
-                      {
-                        required: true,
-                        message: "Please provide a unit for the voxel scale of the dataset.",
-                      },
-                    ]}
-                  >
-                    <Select
-                      options={AllUnits.map((unit) => ({
-                        value: unit,
-                        label: (
-                          <span>
-                            <Tooltip title={unit}>{LongUnitToShortUnitMap[unit]}</Tooltip>
-                          </span>
-                        ),
-                      }))}
-                    />
-                  </FormItemWithInfo>
-                </Col>
-              </Row>
+              <FormItemWithInfo
+                name="scale"
+                label="Voxel Size"
+                info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
+                // @ts-ignore
+                disabled={this.state.needsConversion}
+                help="Your dataset is not yet in WKW Format. Therefore you need to define the voxel size."
+                rules={[
+                  {
+                    required: this.state.needsConversion,
+                    message: "Please provide a voxel size for the dataset.",
+                  },
+                  {
+                    validator: syncValidator(
+                      (value: Vector3) => value?.every((el) => el > 0),
+                      "Each component of the voxel size must be larger than 0.",
+                    ),
+                  },
+                ]}
+              >
+                <Vector3Input
+                  style={{
+                    width: 400,
+                  }}
+                  allowDecimals
+                  onChange={(scale: Vector3) => {
+                    if (this.formRef.current == null) return;
+                    this.formRef.current.setFieldsValue({
+                      scale,
+                    });
+                  }}
+                />
+              </FormItemWithInfo>
             ) : null}
 
             <FormItem

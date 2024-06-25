@@ -14,12 +14,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentStatisticsParameters
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
-import com.scalableminds.webknossos.datastore.models.{
-  LengthUnit,
-  VoxelSize,
-  WebknossosAdHocMeshRequest,
-  WebknossosDataRequest
-}
+import com.scalableminds.webknossos.datastore.models.{WebknossosAdHocMeshRequest, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{
   EditableMappingSegmentListResult,
@@ -149,24 +144,15 @@ class VolumeTracingController @Inject()(
                  tracingId: String,
                  volumeDataZipFormat: String,
                  version: Option[Long],
-                 voxelSizeFactor: Option[String],
-                 voxelSizeUnit: Option[String]): Action[AnyContent] =
+                 voxelSize: Option[String]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId, version) ?~> Messages("tracing.notFound")
             volumeDataZipFormatParsed <- VolumeDataZipFormat.fromString(volumeDataZipFormat).toFox
-            voxelSizeFactorParsedOpt <- Fox.runOptional(voxelSizeFactor)(Vec3Double.fromUriLiteral)
-            voxelSizeUnitParsedOpt <- Fox.runOptional(voxelSizeUnit)(LengthUnit.fromString)
-            voxelSize = voxelSizeFactorParsedOpt.map(voxelSizeParsed =>
-              VoxelSize.fromFactorAndUnitWithDefault(voxelSizeParsed, voxelSizeUnitParsedOpt))
-            data <- tracingService.allDataZip(
-              tracingId,
-              tracing,
-              volumeDataZipFormatParsed,
-              voxelSize
-            )
+            voxelSizeParsed <- Fox.runOptional(voxelSize)(vs => Vec3Double.fromUriLiteral(vs))
+            data <- tracingService.allDataZip(tracingId, tracing, volumeDataZipFormatParsed, voxelSizeParsed)
           } yield Ok.sendFile(data)
         }
       }

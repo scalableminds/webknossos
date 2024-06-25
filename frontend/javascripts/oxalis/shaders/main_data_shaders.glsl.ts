@@ -42,7 +42,7 @@ type Params = {
   segmentationLayerNames: string[];
   textureLayerInfos: Record<string, { packingDegree: number; dataTextureCount: number }>;
   resolutionsCount: number;
-  voxelSizeFactor: Vector3;
+  datasetScale: Vector3;
   isOrthogonal: boolean;
   tpsTransformPerLayer: Record<string, TPS3D>;
 };
@@ -125,7 +125,7 @@ uniform vec4 hoveredSegmentIdHigh;
 // For some reason, taking the dataset scale from the uniform results in imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
 // is directly inserted into the source via templating.
-const vec3 voxelSizeFactor = <%= formatVector3AsVec3(voxelSizeFactor) %>;
+const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
 
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 const float bucketWidth = <%= bucketWidth %>;
@@ -414,17 +414,17 @@ void main() {
   // d is the width/height of a bucket in the current resolution.
   vec2 d = transDim(vec3(bucketWidth) * representativeMagForVertexAlignment).xy;
 
-  vec3 voxelSizeFactorUVW = transDim(voxelSizeFactor);
+  vec3 datasetScaleUVW = transDim(datasetScale);
   vec3 transWorldCoord = transDim(worldCoord.xyz);
 
   if (index.x >= 1. && index.x <= PLANE_SUBDIVISION - 1.) {
     transWorldCoord.x =
       (
         // Left border of left-most bucket (probably outside of visible plane)
-        floor(worldCoordTopLeft.x / voxelSizeFactorUVW.x / d.x) * d.x
+        floor(worldCoordTopLeft.x / datasetScaleUVW.x / d.x) * d.x
         // Move by index.x buckets to the right.
         + index.x * d.x
-      ) * voxelSizeFactorUVW.x;
+      ) * datasetScaleUVW.x;
 
     transWorldCoord.x = clamp(transWorldCoord.x, worldCoordTopLeft.x, worldCoordBottomRight.x);
   }
@@ -433,10 +433,10 @@ void main() {
     transWorldCoord.y =
       (
         // Top border of top-most bucket (probably outside of visible plane)
-        floor(worldCoordTopLeft.y / voxelSizeFactorUVW.y / d.y) * d.y
+        floor(worldCoordTopLeft.y / datasetScaleUVW.y / d.y) * d.y
         // Move by index.y buckets to the bottom.
         + index.y * d.y
-      ) * voxelSizeFactorUVW.y;
+      ) * datasetScaleUVW.y;
     transWorldCoord.y = clamp(transWorldCoord.y, worldCoordTopLeft.y, worldCoordBottomRight.y);
   }
 

@@ -1,5 +1,5 @@
 import { presetPalettes } from "@ant-design/colors";
-import { UnitShort, type Vector3, type Vector6 } from "oxalis/constants";
+import { LongUnitToShortUnitMap, UnitShort, type Vector3, type Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -145,7 +145,7 @@ export function formatScale(scale: VoxelSize | null | undefined, roundTo: number
   }
   const scaleFactor = scale.factor;
   const smallestScaleFactor = Math.min(...scaleFactor);
-  const unitDimension = { unit: scale.unit, dimension: 1 };
+  const unitDimension = { unit: LongUnitToShortUnitMap[scale.unit], dimension: 1 };
   const [conversionFactor, newUnit] = findBestUnitForFormatting(
     smallestScaleFactor,
     unitDimension,

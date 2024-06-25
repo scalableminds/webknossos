@@ -173,7 +173,7 @@ function formatNumberInUnit(
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
 ): string {
-  let maybeAdjustedUnit = unitDimension.unit as string;
+  let maybeAdjustedUnit;
   let valueInUnit = number;
   if (number === 0) {
     maybeAdjustedUnit = adjustUnitToDimension(unitDimension.unit, unitDimension.dimension);
@@ -352,7 +352,7 @@ const getSortedFactorsAndUnits = _.memoize((unitMap: Map<number, string>) =>
 // This tuple represents the unit and the dimension the unit is in.
 type UnitDimension = { unit: UnitShort | ByteUnit; dimension: number };
 
-function adjustUnitToDimension(unit: string, dimension: number): string {
+function adjustUnitToDimension(unit: UnitShort | ByteUnit, dimension: number): string {
   return dimension === 1 ? unit : dimension === 2 ? `${unit}²` : `${unit}³`;
 }
 

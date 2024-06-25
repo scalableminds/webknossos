@@ -40,8 +40,8 @@ import {
 } from "types/api_flow_types";
 import {
   formatDateMedium,
-  formatTimeInterval,
-  formatTimeIntervalStrict,
+  formatDistance,
+  formatDistanceStrict,
   formatDurationStrict,
 } from "libs/format_utils";
 import DAGView, { colorHasher } from "./dag_view";
@@ -181,7 +181,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             timed out
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
+          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.CANCELLED:
@@ -191,7 +191,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <>
               End Time: {formatDateMedium(taskInfo.endTime)}
               <br />
-              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
             </>
           }
         >
@@ -199,7 +199,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             cancelled
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
+          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.FAILED:
@@ -209,7 +209,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <>
               End Time: {formatDateMedium(taskInfo.endTime)}
               <br />
-              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
             </>
           }
         >
@@ -217,7 +217,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             failed
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()}, after{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
+          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     case VoxelyticsRunState.COMPLETE:
@@ -227,7 +227,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             <>
               End Time: {formatDateMedium(taskInfo.endTime)}
               <br />
-              Duration: {formatTimeIntervalStrict(taskInfo.endTime, taskInfo.beginTime)}
+              Duration: {formatDistanceStrict(taskInfo.endTime, taskInfo.beginTime)}
             </>
           }
         >
@@ -235,7 +235,7 @@ function TaskStateTag({ taskInfo }: { taskInfo: VoxelyticsTaskInfo }) {
             completed
           </Tag>{" "}
           {dayjs(taskInfo.endTime).fromNow()},{" "}
-          {formatTimeInterval(taskInfo.endTime, taskInfo.beginTime)}
+          {formatDistance(taskInfo.endTime, taskInfo.beginTime)}
         </Tooltip>
       );
     default:

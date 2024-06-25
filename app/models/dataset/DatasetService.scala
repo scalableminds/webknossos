@@ -98,7 +98,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         isPublic = false,
         isUsable = dataSource.isUsable,
         name = dataSource.id.name,
-        voxelSize = dataSource.voxelSizeOpt,
+        scale = dataSource.scaleOpt,
         sharingToken = None,
         status = dataSource.statusOpt.getOrElse(""),
         logoUrl = None,
@@ -240,10 +240,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield {
       if (dataset.isUsable)
         for {
-          scale <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoScale"
+          scale <- dataset.scale.toFox ?~> "dataset.source.usableButNoScale"
         } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
       else
-        Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataset.status, dataset.voxelSize))
+        Fox.successful(UnusableDataSource[DataLayer](dataSourceId, dataset.status, dataset.scale))
     }).flatten
 
   private def logoUrlFor(dataset: Dataset, organization: Option[Organization]): Fox[String] =

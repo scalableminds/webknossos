@@ -15,6 +15,7 @@ import type {
   HybridTracing,
   LabelAction,
   OxalisState,
+  Segment,
   SegmentGroup,
   SegmentMap,
   Tracing,
@@ -620,6 +621,11 @@ export function getLabelActionFromPreviousSlice(
   return volumeTracing.lastLabelActions.find(
     (el) => Math.floor(adapt(el.centroid)[dim]) !== position[dim],
   );
+}
+
+export function getSegmentName(segment: Segment, fallbackToId: boolean = false): string {
+  const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
+  return segment.name || fallback;
 }
 
 // Output is in [0,1] for R, G, B, and A

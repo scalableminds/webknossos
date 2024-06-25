@@ -123,22 +123,6 @@ const takeLatestMappingChange = (
   });
 };
 
-// function runWhenSelectorChanged<T>(selector: (state: OxalisState) => T, saga: (t: T) => Saga<any>) {
-//   return fork(function* () {
-//     let previous = yield* select(selector);
-//     while (true) {
-//       yield* take();
-//       const next = yield* select(selector);
-//       if (next !== previous) {
-//         yield* call(saga, next);
-//         previous = next;
-//       }
-//     }
-//   });
-// }
-
-// function* handleChangeOfNeedsLocalHdf5Mapping(layerName: string, needsLocalHdf5Mapping: boolean) {}
-
 export default function* watchActivatedMappings(): Saga<void> {
   const oldActiveMappingByLayer = {
     value: yield* select((state) => state.temporaryConfiguration.activeMappingByLayer),
@@ -161,13 +145,6 @@ export default function* watchActivatedMappings(): Saga<void> {
   for (const tracing of volumeTracings) {
     // The following two sagas will fork internally.
     yield* takeLatestMappingChange(oldActiveMappingByLayer, tracing.tracingId);
-
-    // const selector = (state: OxalisState) => getNeedsLocalHdf5Mapping(state, layerName);
-
-    // yield* runWhenSelectorChanged(
-    //   selector,
-    //   handleChangeOfNeedsLocalHdf5Mapping.bind(null, layerName),
-    // );
   }
 }
 

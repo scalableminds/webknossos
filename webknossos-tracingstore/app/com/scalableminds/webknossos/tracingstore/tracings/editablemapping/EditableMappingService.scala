@@ -571,7 +571,7 @@ class EditableMappingService @Inject()(
         dataLayer = segmentationLayer,
         cuboid = request.cuboid(segmentationLayer),
         segmentId = request.segmentId,
-        scale = request.scale,
+        voxelSizeFactor = request.voxelSizeFactorInUnit,
         mapping = None,
         mappingType = None,
         findNeighbors = request.findNeighbors

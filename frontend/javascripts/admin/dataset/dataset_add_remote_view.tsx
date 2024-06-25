@@ -22,7 +22,7 @@ import { jsonStringify } from "libs/utils";
 import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
 import { AsyncButton } from "components/async_clickables";
 import Toast from "libs/toast";
-import _ from "lodash";
+import _, { set } from "lodash";
 import { Hint } from "oxalis/view/action-bar/download_modal_view";
 import { formatScale } from "libs/format_utils";
 import { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
@@ -200,11 +200,15 @@ function DatasetAddRemoteView(props: Props) {
   }, []);
 
   const getDefaultDatasetName = (url: string | null | undefined) => {
-    if (url == null) return "";
-    const indexOfLastSlash = url.lastIndexOf("/");
-    const subString = url.substring(indexOfLastSlash + 1);
+    if (url == null || url === "") return "";
+    let urlPathElements = url.split(/\W/);
+    let urlPathLastIndex = urlPathElements.length - 1;
+    while (urlPathElements[urlPathLastIndex] === "" && urlPathLastIndex > 0) {
+      urlPathLastIndex--;
+    }
+    const defaultName = urlPathElements[urlPathLastIndex];
     const urlHash = Utils.computeHash(url);
-    return subString + urlHash + new Date().getTime(); // TODO_c remove
+    return defaultName + "-" + urlHash + new Date().getTime(); // TODO_c remove
   };
 
   const maybeOpenExistingDataset = () => {
@@ -222,12 +226,16 @@ function DatasetAddRemoteView(props: Props) {
 
   const onSuccesfulExplore = async () => {
     const dataSourceJsonString = form.getFieldValue("dataSourceJson");
+    console.log(dataSourceJsonString); // todo_c
+    debugger;
     if (defaultDatasetUrl == null || dataSourceJsonString == null) {
       setShowLoadingOverlay(false);
       return;
     }
+    if (!showLoadingOverlay) setShowLoadingOverlay(true); // show overlay again, e.g. after credentials were passed
     const dataSourceJson = JSON.parse(dataSourceJsonString);
-    const defaultDatasetName = getDefaultDatasetName(defaultDatasetUrl);
+    console.log(form.getFieldValue("url")); // todo_c
+    const defaultDatasetName = getDefaultDatasetName(form.getFieldValue("url"));
     setDatasourceConfigStr(
       JSON.stringify({ ...dataSourceJson, id: { name: defaultDatasetName, team: "" } }),
     );
@@ -235,8 +243,10 @@ function DatasetAddRemoteView(props: Props) {
       await form.validateFields();
     } catch (_e) {
       console.warn(_e);
-      maybeOpenExistingDataset();
-      return;
+      if (defaultDatasetUrl != null) {
+        maybeOpenExistingDataset();
+        return;
+      }
     }
     const allFieldsValid = form.getFieldsError().filter(({ errors }) => errors.length).length === 0;
     if (allFieldsValid) {
@@ -260,8 +270,10 @@ function DatasetAddRemoteView(props: Props) {
       await form.validateFields();
     } catch (_e) {
       console.warn(_e);
-      maybeOpenExistingDataset();
-      return;
+      if (defaultDatasetUrl != null) {
+        maybeOpenExistingDataset();
+        return;
+      }
     } // todo_c
     if (hasFormAnyErrors(form)) {
       setShowLoadingOverlay(false);
@@ -455,13 +467,20 @@ function AddRemoteLayer({
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
   const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https" | "gs">("https");
   const [fileList, setFileList] = useState<FileList>([]);
+  const [defaultUrlHasBeenSet, setDefaultUrlHasBeenSet] = useState<boolean>(false);
 
   useEffect(() => {
+    // todo_c in the very end there is a rerender which sets the wrong url in the form
     if (defaultUrl != null) {
-      form.setFieldValue("url", defaultUrl);
-      if (datasourceUrl != null) handleExplore();
+      if (datasourceUrl == null && !defaultUrlHasBeenSet) {
+        form.setFieldValue("url", defaultUrl);
+        form.validateFields(["url"]);
+        setDefaultUrlHasBeenSet(true);
+      } else if (datasourceUrl != null) {
+        handleExplore();
+      }
     }
-  }, [defaultUrl, datasourceUrl, form.setFieldValue]);
+  }, [defaultUrl, datasourceUrl, form.setFieldValue, form.validateFields, defaultUrlHasBeenSet]);
 
   const handleChange = (info: UploadChangeParam<UploadFile<any>>) => {
     // Restrict the upload list to the latest file

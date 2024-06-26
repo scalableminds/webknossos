@@ -22,7 +22,7 @@ import { jsonStringify } from "libs/utils";
 import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
 import { AsyncButton } from "components/async_clickables";
 import Toast from "libs/toast";
-import _, { set } from "lodash";
+import _ from "lodash";
 import { Hint } from "oxalis/view/action-bar/download_modal_view";
 import { formatScale } from "libs/format_utils";
 import { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
@@ -224,18 +224,17 @@ function DatasetAddRemoteView(props: Props) {
   const hasFormAnyErrors = (form: FormInstance) =>
     form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
 
-  const onSuccesfulExplore = async () => {
+  const onSuccesfulExplore = async (url: string | undefined) => {
+    if (url == null) return;
     const dataSourceJsonString = form.getFieldValue("dataSourceJson");
-    console.log(dataSourceJsonString); // todo_c
-    debugger;
     if (defaultDatasetUrl == null || dataSourceJsonString == null) {
       setShowLoadingOverlay(false);
       return;
     }
     if (!showLoadingOverlay) setShowLoadingOverlay(true); // show overlay again, e.g. after credentials were passed
     const dataSourceJson = JSON.parse(dataSourceJsonString);
-    console.log(form.getFieldValue("url")); // todo_c
-    const defaultDatasetName = getDefaultDatasetName(form.getFieldValue("url"));
+    console.log("url from form", url); // todo_c
+    const defaultDatasetName = getDefaultDatasetName(url);
     setDatasourceConfigStr(
       JSON.stringify({ ...dataSourceJson, id: { name: defaultDatasetName, team: "" } }),
     );
@@ -349,7 +348,9 @@ function DatasetAddRemoteView(props: Props) {
               dataSourceEditMode={dataSourceEditMode}
               defaultUrl={defaultDatasetUrl}
               onError={() => setShowLoadingOverlay(false)}
-              onSuccess={onSuccesfulExplore}
+              onSuccess={(defaultDatasetUrl: string | undefined) =>
+                onSuccesfulExplore(defaultDatasetUrl)
+              }
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -454,7 +455,7 @@ function AddRemoteLayer({
   form: FormInstance;
   uploadableDatastores: APIDataStore[];
   setDatasourceConfigStr: (dataSourceJson: string) => void;
-  onSuccess?: () => void;
+  onSuccess?: (datasetUrl?: string) => Promise<void> | void;
   onError?: () => void;
   dataSourceEditMode: "simple" | "advanced";
   defaultUrl?: string | null | undefined;
@@ -467,20 +468,19 @@ function AddRemoteLayer({
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
   const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https" | "gs">("https");
   const [fileList, setFileList] = useState<FileList>([]);
-  const [defaultUrlHasBeenSet, setDefaultUrlHasBeenSet] = useState<boolean>(false);
 
   useEffect(() => {
     // todo_c in the very end there is a rerender which sets the wrong url in the form
     if (defaultUrl != null) {
-      if (datasourceUrl == null && !defaultUrlHasBeenSet) {
+      // only set datasourceUrl in the first render
+      if (datasourceUrl == null) {
         form.setFieldValue("url", defaultUrl);
         form.validateFields(["url"]);
-        setDefaultUrlHasBeenSet(true);
-      } else if (datasourceUrl != null) {
+      } else {
         handleExplore();
       }
     }
-  }, [defaultUrl, datasourceUrl, form.setFieldValue, form.validateFields, defaultUrlHasBeenSet]);
+  }, [defaultUrl, datasourceUrl, form.setFieldValue, form.validateFields]);
 
   const handleChange = (info: UploadChangeParam<UploadFile<any>>) => {
     // Restrict the upload list to the latest file
@@ -572,7 +572,7 @@ function AddRemoteLayer({
     if (!datasourceConfigStr) {
       setDatasourceConfigStr(jsonStringify(newDataSource));
       if (onSuccess) {
-        onSuccess();
+        onSuccess(datasourceUrl);
       }
       return;
     }
@@ -599,7 +599,7 @@ function AddRemoteLayer({
     }
     setDatasourceConfigStr(jsonStringify(mergeNewLayers(existingDatasource, newDataSource)));
     if (onSuccess) {
-      onSuccess();
+      onSuccess(datasourceUrl);
     }
   }
 

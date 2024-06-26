@@ -121,6 +121,7 @@ import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { DataNode } from "antd/lib/tree";
 import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
+import { ValueOf } from "types/globals";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -318,7 +319,9 @@ type State = {
   searchableTreeItemList: SegmentHierarchyNode[];
   prevProps: Props | null | undefined;
   groupToDelete: number | null | undefined;
-  areSegmentsInGroupVisible: { [groupId: number]: boolean };
+  groupsSegmentsVisibilityStateMap: {
+    [groupId: number]: { areSomeSegmentsVisible: boolean; areSomeSegmentsInvisible: boolean };
+  };
   activeStatisticsModalGroupId: number | null;
 };
 
@@ -397,7 +400,7 @@ class SegmentsView extends React.Component<Props, State> {
     searchableTreeItemList: [],
     prevProps: null,
     groupToDelete: null,
-    areSegmentsInGroupVisible: {},
+    groupsSegmentsVisibilityStateMap: {},
     activeStatisticsModalGroupId: null,
   };
   tree: React.RefObject<RcTree>;
@@ -582,28 +585,46 @@ class SegmentsView extends React.Component<Props, State> {
       };
     }
     if (prevState.prevProps?.meshes !== meshes) {
-      // Derive the areSegmentsInGroupVisible state so that we know per group
+      // Derive the groupsSegmentsVisibilityStateMap state so that we know per group
       // if it contains only visible elements. This is used to know whether "Show meshes" or
       // "Hide meshes" context item should be shown.
       // If any segment is invisible, set the visibility of the group to false, so that the preferred
       // action is to make all meshes visible.
-      const newVisibleMap: { [groupId: number]: boolean } = {};
-      const segmentGroupsWithRoot = [...segmentGroups, rootGroup];
-      segmentGroupsWithRoot.forEach((group) => {
+      const newVisibleMap: State["groupsSegmentsVisibilityStateMap"] = {};
+
+      const fillNewGroupsSegmentsVisibilityStateMap = (group: SegmentGroup) => {
+        group.children.forEach(fillNewGroupsSegmentsVisibilityStateMap);
+
+        const visibilityEntry = {
+          areSomeSegmentsVisible: group.children.some(
+            (childGroup) => newVisibleMap[childGroup.groupId].areSomeSegmentsVisible,
+          ),
+          areSomeSegmentsInvisible: group.children.some(
+            (childGroup) => newVisibleMap[childGroup.groupId].areSomeSegmentsInvisible,
+          ),
+        };
+
         const segmentsOfGroup = groupToSegmentsMap[group.groupId];
         if (segmentsOfGroup == null) return;
-        const isSomeSegmentLoadedAndInvisible = segmentsOfGroup.some((segment) => {
+        segmentsOfGroup.some((segment) => {
           const segmentMesh = meshes[segment.id];
           // Only regard loaded, but invisible meshes
-          return segmentMesh != null && !meshes[segment.id].isVisible;
+          if (segmentMesh != null) {
+            visibilityEntry.areSomeSegmentsVisible ||= segmentMesh.isVisible;
+            visibilityEntry.areSomeSegmentsInvisible ||= !segmentMesh.isVisible;
+            return (
+              visibilityEntry.areSomeSegmentsInvisible && visibilityEntry.areSomeSegmentsVisible
+            );
+          }
+          return false;
         });
-
-        newVisibleMap[group.groupId] = !isSomeSegmentLoadedAndInvisible;
-      });
+        newVisibleMap[group.groupId] = visibilityEntry;
+      };
+      fillNewGroupsSegmentsVisibilityStateMap(rootGroup);
       return {
         ...updateStateObject, //may be null
         prevProps: nextProps,
-        areSegmentsInGroupVisible: newVisibleMap,
+        groupsSegmentsVisibilityStateMap: newVisibleMap,
       };
     }
     return {
@@ -1243,50 +1264,57 @@ class SegmentsView extends React.Component<Props, State> {
       : null;
   };
 
-  areSelectedSegmentsMeshesVisible = () => {
+  visibilityStateOfSelectedMeshes = (): ValueOf<State["groupsSegmentsVisibilityStateMap"]> => {
     const selectedSegments = this.getSelectedSegments();
     const meshes = this.props.meshes;
-    const isSomeMeshLoadedAndInvisible = selectedSegments.some((segment) => {
+    const areSomeSegmentsInvisible = selectedSegments.some((segment) => {
+      const segmentMesh = meshes[segment.id];
+      return segmentMesh != null && !meshes[segment.id].isVisible;
+    });
+    const areSomeSegmentsVisible = selectedSegments.some((segment) => {
       const segmentMesh = meshes[segment.id];
       return segmentMesh != null && !meshes[segment.id].isVisible;
     });
     // show "Hide meshes" if no mesh is loaded and invisible
-    return !isSomeMeshLoadedAndInvisible;
+    return { areSomeSegmentsInvisible, areSomeSegmentsVisible };
   };
 
-  getShowMeshesMenuItem = (groupId: number | null): ItemType => {
-    const areGroupOrSelectedSegmentMeshesVisible: boolean =
+  maybeGetShowOrHideMeshesMenuItems = (groupId: number | null): ItemType[] => {
+    if (!this.doesGroupHaveAnyMeshes(groupId)) {
+      return [];
+    }
+    const { areSomeSegmentsInvisible, areSomeSegmentsVisible } =
       groupId == null
-        ? this.areSelectedSegmentsMeshesVisible()
-        : this.state.areSegmentsInGroupVisible[groupId]; //toggle between hide and show
-
-    const showHideMeshesLabel = areGroupOrSelectedSegmentMeshesVisible
-      ? { icon: <EyeInvisibleOutlined />, text: "Hide" }
-      : { icon: <EyeOutlined />, text: "Show" };
-    return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
-      ? {
-          key: "showMeshesOfGroup",
-          icon: showHideMeshesLabel.icon,
-          label: (
-            <div
-              onClick={() => {
-                if (this.props.visibleSegmentationLayer == null) {
-                  // Satisfy TS
-                  return;
-                }
-                this.handleChangeMeshVisibilityInGroup(
-                  this.props.visibleSegmentationLayer.name,
-                  groupId,
-                  !areGroupOrSelectedSegmentMeshesVisible,
-                );
-                this.closeSegmentOrGroupDropdown();
-              }}
-            >
-              {showHideMeshesLabel.text} Meshes
-            </div>
-          ),
-        }
-      : null;
+        ? this.visibilityStateOfSelectedMeshes()
+        : this.state.groupsSegmentsVisibilityStateMap[groupId]; //toggle between hide and show
+    const menuOptions: ItemType[] = [];
+    const changeVisibility = (isVisible: boolean) => {
+      if (this.props.visibleSegmentationLayer == null) {
+        // Satisfy TS
+        return;
+      }
+      this.handleChangeMeshVisibilityInGroup(
+        this.props.visibleSegmentationLayer.name,
+        groupId,
+        isVisible,
+      );
+      this.closeSegmentOrGroupDropdown();
+    };
+    if (areSomeSegmentsInvisible) {
+      menuOptions.push({
+        key: "showMeshes",
+        icon: <EyeOutlined />,
+        label: <div onClick={() => changeVisibility(true)}>Show Meshes</div>,
+      });
+    }
+    if (areSomeSegmentsVisible) {
+      menuOptions.push({
+        key: "hideMeshes",
+        icon: <EyeInvisibleOutlined />,
+        label: <div onClick={() => changeVisibility(false)}>Hide Meshes</div>,
+      });
+    }
+    return menuOptions;
   };
 
   setGroupColor(groupId: number | null, color: Vector3 | null) {
@@ -1587,17 +1615,19 @@ class SegmentsView extends React.Component<Props, State> {
             const doSelectedSegmentsHaveAnyMeshes = this.doesGroupHaveAnyMeshes(null);
             const multiSelectMenu = (): MenuProps => {
               return {
-                items: [
+                items: _.flatten([
                   this.getLoadMeshesFromFileMenuItem(null),
                   this.getComputeMeshesAdHocMenuItem(null),
-                  doSelectedSegmentsHaveAnyMeshes ? this.getShowMeshesMenuItem(null) : null,
+                  doSelectedSegmentsHaveAnyMeshes
+                    ? this.maybeGetShowOrHideMeshesMenuItems(null)
+                    : null,
                   doSelectedSegmentsHaveAnyMeshes ? this.getReloadMenuItem(null) : null,
                   doSelectedSegmentsHaveAnyMeshes ? this.getRemoveMeshesMenuItem(null) : null,
                   doSelectedSegmentsHaveAnyMeshes ? this.getDownLoadMeshesMenuItem(null) : null,
                   this.getSetGroupColorMenuItem(null),
                   this.getResetGroupColorMenuItem(null),
                   this.getRemoveFromSegmentListMenuItem(null),
-                ],
+                ]),
               };
             };
 
@@ -1640,7 +1670,7 @@ class SegmentsView extends React.Component<Props, State> {
                 const { id, name } = treeItem;
                 const isEditingDisabled = !this.props.allowUpdate;
                 const menu: MenuProps = {
-                  items: [
+                  items: _.flatten([
                     {
                       key: "create",
                       onClick: () => {
@@ -1673,9 +1703,9 @@ class SegmentsView extends React.Component<Props, State> {
                     this.getComputeMeshesAdHocMenuItem(id),
                     this.getReloadMenuItem(id),
                     this.getRemoveMeshesMenuItem(id),
-                    this.getShowMeshesMenuItem(id),
+                    this.maybeGetShowOrHideMeshesMenuItems(id),
                     this.getDownLoadMeshesMenuItem(id),
-                  ],
+                  ]),
                 };
 
                 // Make sure the displayed name is not empty

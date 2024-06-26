@@ -461,7 +461,10 @@ function* updateLocalHdf5Mapping(
           mappingName,
           Array.from(newSegmentIds),
         );
-  console.log("received mapped segment ids from server", newEntries);
+  console.log(
+    "received mapped segment ids from server",
+    newEntries.size < 1000 ? newEntries : "<omitted>",
+  );
 
   // It is safe to mutate mutableRemainingEntries to compute the merged,
   // new mapping. See the definition of mutableRemainingEntries.

@@ -606,9 +606,12 @@ function AddRemoteLayer({
   return (
     <>
       Please enter a URL that points to the Zarr, Neuroglancer Precomputed or N5 data you would like
-      to import. If necessary, specify the credentials for the dataset. For datasets with multiple
-      layers, e.g. raw microscopy and segmentation data, please add them separately with the ”Add
-      Layer” button below. Once you have approved of the resulting datasource you can import it.
+      to import. If necessary, specify the credentials for the dataset.{" "}
+      {defaultUrl == null
+        ? "For datasets with multiple \
+      layers, e.g. raw microscopy and segmentation data, please add them separately with the ”Add \
+      Layer” button below. Once you have approved of the resulting datasource you can import it."
+        : "If the provided URL is valid, the datasource will be imported and you will be redirected to the dataset."}
       <FormItem
         style={{ marginTop: 16, marginBottom: 16 }}
         name="url"
@@ -712,7 +715,7 @@ function AddRemoteLayer({
               style={{ width: "100%" }}
               onClick={handleExplore}
             >
-              Add Layer
+              {defaultUrl == null ? "Add Layer" : "Validate URL and Continue"}
             </AsyncButton>
           </Col>
         </Row>

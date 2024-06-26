@@ -201,14 +201,14 @@ function DatasetAddRemoteView(props: Props) {
 
   const getDefaultDatasetName = (url: string | null | undefined) => {
     if (url == null || url === "") return "";
-    let urlPathElements = url.split(/\W/);
+    let urlPathElements = url.split(/[^a-zA-Z\d_\-.~]/); // split by non url-safe characters
     let urlPathLastIndex = urlPathElements.length - 1;
     while (urlPathElements[urlPathLastIndex] === "" && urlPathLastIndex > 0) {
       urlPathLastIndex--;
     }
     const defaultName = urlPathElements[urlPathLastIndex];
     const urlHash = Utils.computeHash(url);
-    return defaultName + "-" + urlHash + new Date().getTime(); // TODO_c remove
+    return defaultName + "-" + urlHash; // TODO_c remove
   };
 
   const maybeOpenExistingDataset = () => {

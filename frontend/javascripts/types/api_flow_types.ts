@@ -163,7 +163,13 @@ export type MutableAPIDatasetId = {
   name: string;
 };
 export type APIDatasetId = Readonly<MutableAPIDatasetId>;
-export type APIDetails = Record<string, string | number | string[]>;
+export type APIDetail = {
+  type: "number" | "string" | "string[]";
+  key: string;
+  value: string | number | string[];
+  index: number;
+};
+export type APIDetails = APIDetail[];
 
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;

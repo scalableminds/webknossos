@@ -5,6 +5,7 @@ import {
   EditOutlined,
   LoadingOutlined,
   DeleteOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import { Typography, Input, Result, Spin, Table, Tag, Tooltip } from "antd";
 import { stringToColor, formatCountToDataAmountUnit } from "libs/format_utils";
@@ -16,7 +17,7 @@ import {
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect, useState } from "react";
-import { APIDatasetCompact, APIDetails, Folder } from "types/api_flow_types";
+import { APIDatasetCompact, APIDetail, APIDetails, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, TeamTags } from "../advanced_dataset/dataset_table";
 import {
   DatasetCollectionContextValue,
@@ -123,9 +124,9 @@ function MetadataTable({
   setIgnoreFetching: (value: boolean) => void;
 }) {
   const context = useDatasetCollectionContext();
-  const [details, setDetails] = useState<APIDetails>(selectedDatasetOrFolder.details || {});
-  const [error, setError] = useState<[string, string] | null>(null); // propName -> error message.
-  const [focusedRow, setFocusedRow] = useState<number | null>(null);
+  const [details, setDetails] = useState<APIDetails>(selectedDatasetOrFolder.details || []);
+  const [error, setError] = useState<[string, string] | null>(null); // [propName, error message]
+  const [focusedRow, setFocusedRow] = useState<string | null>(null);
 
   useEffectOnUpdate(() => {
     updateCachedDatasetOrFolderDebounced(
@@ -138,105 +139,204 @@ function MetadataTable({
 
   const updatePropName = (previousPropName: string, newPropName: string) => {
     setDetails((prev) => {
-      if (prev && newPropName in prev) {
+      const entry = prev.find((prop) => prop.key === previousPropName);
+      const maybeAlreadyExistingEntry = prev.find((prop) => prop.key === newPropName);
+      if (maybeAlreadyExistingEntry) {
         setError([previousPropName, `Property ${newPropName} already exists.`]);
         return prev;
       }
-      if (prev && previousPropName in prev) {
+      if (entry) {
         setError(null);
-        const { [previousPropName]: value, ...rest } = prev;
-        return { ...rest, [newPropName]: value };
+        const detailsWithoutEditedEntry = prev.filter((prop) => prop.key !== previousPropName);
+        return [
+          ...detailsWithoutEditedEntry,
+          {
+            ...entry,
+            key: newPropName,
+          },
+        ];
+      } else {
+        const highestIndex = prev.reduce((acc, curr) => Math.max(acc, curr.index), 0);
+        const newEntry: APIDetail = {
+          key: newPropName,
+          value: "",
+          type: "string",
+          index: highestIndex + 1,
+        };
+        return [...prev, newEntry];
       }
-      return { ...prev, [newPropName]: "" };
     });
   };
   const updateValue = (propName: string, newValue: string) => {
     setDetails((prev) => {
-      if (prev) {
-        return { ...prev, [propName]: newValue };
+      const entry = prev.find((prop) => prop.key === propName);
+      if (!entry) {
+        return prev;
       }
-      return { key: newValue };
+      const updatedEntry = { ...entry, value: newValue };
+      const detailsWithoutEditedEntry = prev.filter((prop) => prop.key !== propName);
+      return [...detailsWithoutEditedEntry, updatedEntry];
     });
   };
 
   const deleteKey = (propName: string) => {
     setDetails((prev) => {
-      if (prev) {
-        const { [propName]: _, ...rest } = prev;
-        return rest;
-      }
-      return prev;
+      return prev.filter((prop) => prop.key !== propName);
     });
   };
+  debugger;
 
-  const columnData =
-    // "": "" is added to always have a row for adding new metadata.
-    Object.entries({ ...details, "": "" }).map(([propName, value], index) => ({
-      propName,
-      value,
-      key: index,
-    }));
-  return (
-    <div style={{ marginBottom: 16 }}>
-      <div className="sidebar-label">Metadata</div>
-      <Table
-        dataSource={columnData}
-        className="metadata-table"
-        columns={[
-          {
-            title: "Property",
-            dataIndex: "propName",
-            render: (propName, record) => (
-              <>
+  const sortedDetails = details.sort((a, b) => a.index - b.index);
+
+  // Not using AntD Table to have more control over the styling.
+  const alternativeTable = (
+    <div style={{ borderRadius: 5, borderColor: "var(--ant-color-border)", borderWidth: 3 }}>
+      <table>
+        <thead>
+          <tr>
+            <th />
+            <th>
+              <Typography.Text strong>Property</Typography.Text>
+            </th>
+            <th />
+            <th>
+              <Typography.Text strong>Value</Typography.Text>
+            </th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {sortedDetails.map((record) => (
+            <tr key={record.key}>
+              <td />
+              <td>
                 <Input
                   onFocus={() => setFocusedRow(record.key)}
                   onBlur={() => setFocusedRow(null)}
                   variant={record.key === focusedRow ? "outlined" : "borderless"}
-                  value={propName}
-                  onChange={(evt) => updatePropName(propName, evt.target.value)}
+                  value={record.key}
+                  onChange={(evt) => updatePropName(record.key, evt.target.value)}
                   placeholder="New property"
                   size="small"
                 />
-                {error != null && error[0] === propName ? (
+                {error != null && error[0] === record.key ? (
                   <>
                     <br />
                     <Typography.Text type="warning">{error[1]}</Typography.Text>
                   </>
                 ) : null}
-              </>
-            ),
-          },
-          {
-            title: "Value",
-            dataIndex: "value",
-            className: "top-aligned-column", // Needed in case of an error in the propName column.
-            render: (value, record) => (
-              <Input
-                onFocus={() => setFocusedRow(record.key)}
-                onBlur={() => setFocusedRow(null)}
-                variant={record.key === focusedRow ? "outlined" : "borderless"}
-                value={value}
-                onChange={(evt) => updateValue(record.propName, evt.target.value)}
-                placeholder="Value"
-                size="small"
-              />
-            ),
-          },
-          {
-            title: "",
-            key: "del",
-            render: (_, record) =>
-              record.propName === "" ? null : (
+              </td>
+              <td>:</td>
+              <td>
+                <Input
+                  onFocus={() => setFocusedRow(record.key)}
+                  onBlur={() => setFocusedRow(null)}
+                  variant={record.key === focusedRow ? "outlined" : "borderless"}
+                  value={record.value}
+                  onChange={(evt) => updateValue(record.key, evt.target.value)}
+                  placeholder="Value"
+                  size="small"
+                />
+              </td>
+              <td>
                 <DeleteOutlined
-                  onClick={() => deleteKey(record.propName)}
-                  style={{ color: "var(--ant-table-header-icon-color)" }}
+                  onClick={() => deleteKey(record.key)}
+                  style={{
+                    color: "var(--ant-color-text-tertiary)",
+                    visibility: record.key === "" ? "hidden" : "visible",
+                  }}
+                  disabled={record.key === ""}
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="flex-center-child">
+        <div
+          style={{
+            border: "var(--ant-line-width) var(--ant-line-type) var(--ant-color-border)",
+            width: 18,
+            height: 18,
+          }}
+          className="flex-center-child"
+        >
+          <PlusOutlined
+            size={18}
+            style={{ color: "var(--ant-color-text-tertiary)" }}
+            onClick={() => updatePropName("", "")}
+          />
+        </div>
+      </div>
+    </div>
+  );
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div className="sidebar-label">Metadata</div>
+      {/*<div style={{ borderRadius: 5, borderColor: "var(--ant-color-border)", borderWidth: 3 }}>
+        <Table
+          dataSource={columnData}
+          className="metadata-table"
+          columns={[
+            {
+              title: "Property",
+              dataIndex: "propName",
+              render: (propName, record) => (
+                <>
+                  <Input
+                    onFocus={() => setFocusedRow(record.key)}
+                    onBlur={() => setFocusedRow(null)}
+                    variant={record.key === focusedRow ? "outlined" : "borderless"}
+                    value={propName}
+                    onChange={(evt) => updatePropName(propName, evt.target.value)}
+                    placeholder="New property"
+                    size="small"
+                  />
+                  {error != null && error[0] === propName ? (
+                    <>
+                      <br />
+                      <Typography.Text type="warning">{error[1]}</Typography.Text>
+                    </>
+                  ) : null}
+                </>
+              ),
+            },
+            {
+              title: "Value",
+              dataIndex: "value",
+              className: "top-aligned-column", // Needed in case of an error in the propName column.
+              render: (value, record) => (
+                <Input
+                  onFocus={() => setFocusedRow(record.key)}
+                  onBlur={() => setFocusedRow(null)}
+                  variant={record.key === focusedRow ? "outlined" : "borderless"}
+                  value={value}
+                  onChange={(evt) => updateValue(record.propName, evt.target.value)}
+                  placeholder="Value"
+                  size="small"
                 />
               ),
-          },
-        ]}
-        pagination={false}
-        size="small"
-      />
+            },
+            {
+              title: "",
+              key: "del",
+              render: (_, record) => (
+                <DeleteOutlined
+                  onClick={() => deleteKey(record.propName)}
+                  style={{
+                    color: "var(--ant-table-header-icon-color)",
+                    visibility: record.propName === "" ? "hidden" : "visible",
+                  }}
+                  disabled={record.propName === ""}
+                />
+              ),
+            },
+          ]}
+          pagination={false}
+          size="small"
+        />
+      </div>*/}
+      {alternativeTable}
     </div>
   );
 }

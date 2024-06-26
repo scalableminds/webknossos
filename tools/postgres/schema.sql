@@ -128,7 +128,7 @@ CREATE TABLE webknossos.datasets(
   UNIQUE (name, _organization),
   CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
   CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object'),
-  CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'object')
+  CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'array')
 );
 
 CREATE TYPE webknossos.DATASET_LAYER_CATEGORY AS ENUM ('color', 'mask', 'segmentation');
@@ -516,8 +516,8 @@ CREATE TABLE webknossos.folders(
     _id CHAR(24) PRIMARY KEY,
     name TEXT NOT NULL CHECK (name !~ '/'),
     isDeleted BOOLEAN NOT NULL DEFAULT false,
-    details JSONB DEFAULT '{}',
-    CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'object')
+    details JSONB DEFAULT '[]',
+    CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'array')
 );
 
 CREATE TABLE webknossos.folder_paths(

@@ -346,6 +346,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
   "dataset.does_not_exist": "Selected dataset doesn't exist!",
+  "dataset.name.already_taken":
+    "This name is already being used by a different dataset. Please choose a different name.",
   "dataset.no_data": "No data available! Something seems to be wrong with the dataset.",
   "dataset.not_imported": "Please double check if you have the dataset imported:",
   "dataset.changed_without_reload":

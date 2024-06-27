@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.models
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
 import play.api.libs.json._
@@ -25,13 +25,13 @@ package object datasource {
 
   case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId,
                                                     dataLayers: List[T],
-                                                    scale: Vec3Double,
+                                                    scale: VoxelSize,
                                                     defaultViewConfiguration: Option[DatasetViewConfiguration] = None)
       extends GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)
 
-    val scaleOpt: Option[Vec3Double] = Some(scale)
+    val voxelSizeOpt: Option[VoxelSize] = Some(scale)
 
     val statusOpt: Option[String] = None
 

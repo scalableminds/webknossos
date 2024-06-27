@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { V2, V3 } from "libs/mjs";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import {
@@ -389,7 +389,7 @@ class VolumeLayer {
     // Use the baseVoxelFactors to scale the rectangle, otherwise it'll become deformed
     const scale = this.get2DCoordinate(
       scaleGlobalPositionWithResolutionFloat(
-        getBaseVoxelFactors(state.dataset.dataSource.scale),
+        getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
         this.activeResolution,
       ),
     );
@@ -467,7 +467,7 @@ class VolumeLayer {
     const buffer2D = this.createVoxelBuffer2D(minCoord2d, width, height);
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
     const [scaleX, scaleY] = this.get2DCoordinate(
-      getBaseVoxelFactors(state.dataset.dataSource.scale),
+      getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale),
     );
 
     const setMap = (x: number, y: number) => {

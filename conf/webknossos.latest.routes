@@ -258,7 +258,7 @@ GET           /time/overview                                                    
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)
 GET           /jobs                                                                             controllers.JobController.list()
 GET           /jobs/status                                                                      controllers.JobController.status()
-POST          /jobs/run/convertToWkw/:organizationName/:datasetName                             controllers.JobController.runConvertToWkwJob(organizationName: String, datasetName: String, scale: String)
+POST          /jobs/run/convertToWkw/:organizationName/:datasetName                             controllers.JobController.runConvertToWkwJob(organizationName: String, datasetName: String, scale: String, unit: Option[String])
 POST          /jobs/run/computeMeshFile/:organizationName/:datasetName                          controllers.JobController.runComputeMeshFileJob(organizationName: String, datasetName: String, layerName: String, mag: String, agglomerateView: Option[String])
 POST          /jobs/run/computeSegmentIndexFile/:organizationName/:datasetName                  controllers.JobController.runComputeSegmentIndexFileJob(organizationName: String, datasetName: String, layerName: String)
 POST          /jobs/run/exportTiff/:organizationName/:datasetName                               controllers.JobController.runExportTiffJob(organizationName: String, datasetName: String, bbox: String, layerName: Option[String], mag: Option[String], annotationLayerName: Option[String], annotationId: Option[String], asOmeTiff: Boolean)

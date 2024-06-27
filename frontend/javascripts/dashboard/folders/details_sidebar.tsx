@@ -7,9 +7,19 @@ import {
   DeleteOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-import { Typography, Input, Result, Spin, Table, Tag, Tooltip } from "antd";
+import {
+  Typography,
+  Input,
+  Result,
+  Spin,
+  Tag,
+  Tooltip,
+  Dropdown,
+  MenuProps,
+  InputNumber,
+} from "antd";
 import { stringToColor, formatCountToDataAmountUnit } from "libs/format_utils";
-import { pluralize } from "libs/utils";
+import { parseFloatOrZero, pluralize } from "libs/utils";
 import _ from "lodash";
 import {
   DatasetExtentRow,
@@ -179,6 +189,34 @@ function MetadataTable({
     });
   };
 
+  const updateType = (index: number, newType: APIDetail["type"]) => {
+    setDetails((prev) => {
+      const entry = prev.find((prop) => prop.index === index);
+      if (!entry) {
+        return prev;
+      }
+      let updatedEntry = { ...entry, type: newType };
+      if (newType === "string[]" && entry.type !== "string[]") {
+        updatedEntry = { ...updatedEntry, value: [entry.value.toString()] };
+      } else if (newType === "number" && entry.type !== "number") {
+        updatedEntry = {
+          ...updatedEntry,
+          value: parseFloatOrZero(
+            Array.isArray(entry.value) ? entry.value.join(" ") : entry.value.toString(),
+          ),
+        };
+      } else if (newType === "string" && entry.type !== "string") {
+        updatedEntry = {
+          ...updatedEntry,
+          value: Array.isArray(entry.value) ? entry.value.join(" ") : entry.value.toString(),
+        };
+      }
+
+      const detailsWithoutEditedEntry = prev.filter((prop) => prop.index !== index);
+      return [...detailsWithoutEditedEntry, updatedEntry];
+    });
+  };
+
   const deleteKey = (propName: string) => {
     setDetails((prev) => {
       return prev.filter((prop) => prop.key !== propName);
@@ -200,6 +238,26 @@ function MetadataTable({
         return "[]";
     }
   };
+
+  const getTypeSelectDropdownMenu: (arg0: number) => MenuProps = (propertyIndex: number) => ({
+    items: [
+      {
+        key: 0,
+        label: <Tooltip title="String type">{renderType("string")}</Tooltip>,
+        onClick: () => updateType(propertyIndex, "string"),
+      },
+      {
+        key: 1,
+        label: <Tooltip title="Number type">{renderType("number")}</Tooltip>,
+        onClick: () => updateType(propertyIndex, "number"),
+      },
+      {
+        key: 2,
+        label: <Tooltip title="String Array type">{renderType("string[]")}</Tooltip>,
+        onClick: () => updateType(propertyIndex, "string[]"),
+      },
+    ],
+  });
 
   // Not using AntD Table to have more control over the styling.
   const alternativeTable = (
@@ -247,7 +305,9 @@ function MetadataTable({
           {sortedDetails.map((record) => (
             <tr key={record.index}>
               <td>
-                <Tag>{renderType(record.type)}</Tag>
+                <Dropdown menu={getTypeSelectDropdownMenu(record.index)}>
+                  <Tag style={{ margin: 0 }}>{renderType(record.type)}</Tag>
+                </Dropdown>
               </td>
               <td>
                 <Input
@@ -268,16 +328,27 @@ function MetadataTable({
               </td>
               <td>:</td>
               <td>
-                <Input
-                  className=".antd-app-theme.ant-input-css-var"
-                  onFocus={() => setFocusedRow(record.index)}
-                  onBlur={() => setFocusedRow(null)}
-                  variant={record.index === focusedRow ? "outlined" : "borderless"}
-                  value={record.value}
-                  onChange={(evt) => updateValue(record.key, evt.target.value)}
-                  placeholder="Value"
-                  size="small"
-                />
+                {record.type === "number" ? (
+                  <InputNumber
+                    onFocus={() => setFocusedRow(record.index)}
+                    onBlur={() => setFocusedRow(null)}
+                    variant={record.index === focusedRow ? "outlined" : "borderless"}
+                    value={record.value as number}
+                    onChange={(newNum) => updateValue(record.key, newNum?.toString() || "")}
+                    placeholder="Value"
+                    size="small"
+                  />
+                ) : (
+                  <Input
+                    onFocus={() => setFocusedRow(record.index)}
+                    onBlur={() => setFocusedRow(null)}
+                    variant={record.index === focusedRow ? "outlined" : "borderless"}
+                    value={record.value}
+                    onChange={(evt) => updateValue(record.key, evt.target.value)}
+                    placeholder="Value"
+                    size="small"
+                  />
+                )}
               </td>
               <td>
                 <DeleteOutlined

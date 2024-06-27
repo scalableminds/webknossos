@@ -398,8 +398,8 @@ class AnnotationController @Inject()(
     allItems.grouped(batchSize).toList
   }
 
-  private def percent(done: Int, todo: Int) = {
-    val value = done.toDouble / todo.toDouble * 100
+  private def percent(done: Int, pending: Int) = {
+    val value = done.toDouble / pending.toDouble * 100
     f"$value%1.1f %%"
   }
 

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Store from "oxalis/store";
@@ -50,7 +50,7 @@ class Plane {
     // dimension with the highest resolution. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
-    const baseVoxelFactors = getBaseVoxelFactors(Store.getState().dataset.dataSource.scale);
+    const baseVoxelFactors = getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale);
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.baseScaleVector = new THREE.Vector3(...scaleArray);
     this.createMeshes();

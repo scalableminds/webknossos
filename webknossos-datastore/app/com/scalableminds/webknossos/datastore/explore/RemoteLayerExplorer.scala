@@ -1,11 +1,12 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.geometry.BoundingBox
 import collections.SequenceUtils
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
 import com.scalableminds.util.tools.TextUtils.normalizeStrong
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayerWithMagLocators, ElementClass}
 import net.liftweb.common.Box
 import net.liftweb.common.Box.tryo
@@ -23,7 +24,7 @@ trait RemoteLayerExplorer extends FoxImplicits {
 
   implicit def ec: ExecutionContext
 
-  def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, Vec3Double)]]
+  def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]]
 
   def name: String
 

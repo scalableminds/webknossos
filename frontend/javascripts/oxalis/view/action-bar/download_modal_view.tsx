@@ -17,6 +17,7 @@ import React, { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
 import {
   APIJobType,
+  VoxelSize,
   type AdditionalAxis,
   type APIDataLayer,
   type APIDataset,
@@ -175,8 +176,10 @@ function estimateFileSize(
 }
 
 function formatSelectedScale(dataset: APIDataset, mag: Vector3) {
-  const scale = dataset.dataSource.scale;
-  return formatScale([scale[0] * mag[0], scale[1] * mag[1], scale[2] * mag[2]]);
+  const magAdaptedScale = dataset.dataSource.scale.factor.map((f, i) => f * mag[i]);
+  const unit = dataset.dataSource.scale.unit;
+  const scale = { factor: magAdaptedScale, unit } as VoxelSize;
+  return formatScale(scale);
 }
 
 export function Hint({

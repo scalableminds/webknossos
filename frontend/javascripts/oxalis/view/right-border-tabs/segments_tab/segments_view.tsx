@@ -605,19 +605,20 @@ class SegmentsView extends React.Component<Props, State> {
         };
 
         const segmentsOfGroup = groupToSegmentsMap[group.groupId];
-        if (segmentsOfGroup == null) return;
-        segmentsOfGroup.some((segment) => {
-          const segmentMesh = meshes[segment.id];
-          // Only regard loaded, but invisible meshes
-          if (segmentMesh != null) {
-            visibilityEntry.areSomeSegmentsVisible ||= segmentMesh.isVisible;
-            visibilityEntry.areSomeSegmentsInvisible ||= !segmentMesh.isVisible;
-            return (
-              visibilityEntry.areSomeSegmentsInvisible && visibilityEntry.areSomeSegmentsVisible
-            );
-          }
-          return false;
-        });
+        if (segmentsOfGroup != null) {
+          segmentsOfGroup.some((segment) => {
+            const segmentMesh = meshes[segment.id];
+            // Only regard loaded, but invisible meshes
+            if (segmentMesh != null) {
+              visibilityEntry.areSomeSegmentsVisible ||= segmentMesh.isVisible;
+              visibilityEntry.areSomeSegmentsInvisible ||= !segmentMesh.isVisible;
+              return (
+                visibilityEntry.areSomeSegmentsInvisible && visibilityEntry.areSomeSegmentsVisible
+              );
+            }
+            return false;
+          });
+        }
         newVisibleMap[group.groupId] = visibilityEntry;
       };
       fillNewGroupsSegmentsVisibilityStateMap(rootGroup);

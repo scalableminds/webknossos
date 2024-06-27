@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
-import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.layers.{
@@ -15,6 +14,7 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{
   ZarrDataLayer,
   ZarrSegmentationLayer
 }
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceRepository}
 import play.api.libs.json.{Json, OFormat}
@@ -28,7 +28,7 @@ case class ComposeRequest(
     newDatasetName: String,
     targetFolderId: String,
     organizationName: String,
-    scale: Vec3Double,
+    voxelSize: VoxelSize,
     layers: Seq[ComposeRequestLayer]
 )
 
@@ -142,7 +142,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       dataSource = GenericDataSource(
         DataSourceId(composeRequest.newDatasetName, organizationName),
         layers,
-        composeRequest.scale,
+        composeRequest.voxelSize,
         None
       )
 

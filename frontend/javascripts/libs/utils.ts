@@ -1205,7 +1205,7 @@ export function assertNever(value: never): never {
 }
 
 /**
- * Returns a URL safe, base 64 encoded hash code from a string
+ * Returns a URL safe, base 62 encoded hash code from a string
  * @param  {String} str The string to hash.
  * @return {string}    A 32bit integer hash code encoded in base 62.
  * @see https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript (original link is dead)

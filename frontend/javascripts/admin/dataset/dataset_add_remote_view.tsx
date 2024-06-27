@@ -175,9 +175,6 @@ export function GoogleAuthFormItem({
 }
 
 function DatasetAddRemoteView(props: Props) {
-  const datasetNameTakenWarningString =
-    "This name is already being used by a different dataset. Please choose a different name.";
-
   const { activeUser, onAdded, datastores, defaultDatasetUrl } = props;
 
   const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
@@ -188,8 +185,7 @@ function DatasetAddRemoteView(props: Props) {
   const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
   const [form] = Form.useForm();
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
-  const dataSourceJsonStr = Form.useWatch("dataSourceJson", form);
-  const isDatasourceConfigStrFalsy = dataSourceJsonStr == null;
+  const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) == null;
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
   const history = useHistory();
 
@@ -208,14 +204,14 @@ function DatasetAddRemoteView(props: Props) {
     }
     const defaultName = urlPathElements[urlPathLastIndex];
     const urlHash = Utils.computeHash(url);
-    return defaultName + "-" + urlHash; // TODO_c remove
+    return defaultName + "-" + urlHash;
   };
 
   const maybeOpenExistingDataset = () => {
     const maybeDSNameError = form
       .getFieldError("datasetName")
-      .filter((error) => error === datasetNameTakenWarningString);
-    if (maybeDSNameError == null) return; // maybe add isoutdated? todo_c
+      .filter((error) => error === messages["dataset.name.already_taken"]);
+    if (maybeDSNameError == null) return;
     history.push(
       `/datasets/${activeUser?.organization}/${form.getFieldValue(["dataSource", "id", "name"])}`,
     );
@@ -233,7 +229,6 @@ function DatasetAddRemoteView(props: Props) {
     }
     if (!showLoadingOverlay) setShowLoadingOverlay(true); // show overlay again, e.g. after credentials were passed
     const dataSourceJson = JSON.parse(dataSourceJsonString);
-    console.log("url from form", url); // todo_c
     const defaultDatasetName = getDefaultDatasetName(url);
     setDatasourceConfigStr(
       JSON.stringify({ ...dataSourceJson, id: { name: defaultDatasetName, team: "" } }),
@@ -247,8 +242,7 @@ function DatasetAddRemoteView(props: Props) {
         return;
       }
     }
-    const allFieldsValid = form.getFieldsError().filter(({ errors }) => errors.length).length === 0;
-    if (allFieldsValid) {
+    if (!hasFormAnyErrors(form)) {
       handleStoreDataset();
     } else {
       setShowLoadingOverlay(false);
@@ -262,6 +256,7 @@ function DatasetAddRemoteView(props: Props) {
     syncDataSourceFields(form, "simple");
     form.validateFields();
   };
+
   async function handleStoreDataset() {
     // Sync simple with advanced and get newest datasourceJson
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
@@ -273,7 +268,7 @@ function DatasetAddRemoteView(props: Props) {
         maybeOpenExistingDataset();
         return;
       }
-    } // todo_c
+    }
     if (hasFormAnyErrors(form)) {
       setShowLoadingOverlay(false);
       return;
@@ -470,7 +465,6 @@ function AddRemoteLayer({
   const [fileList, setFileList] = useState<FileList>([]);
 
   useEffect(() => {
-    // todo_c in the very end there is a rerender which sets the wrong url in the form
     if (defaultUrl != null) {
       // only set datasourceUrl in the first render
       if (datasourceUrl == null) {

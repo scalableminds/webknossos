@@ -126,7 +126,7 @@ function MetadataTable({
   const context = useDatasetCollectionContext();
   const [details, setDetails] = useState<APIDetails>(selectedDatasetOrFolder.details || []);
   const [error, setError] = useState<[string, string] | null>(null); // [propName, error message]
-  const [focusedRow, setFocusedRow] = useState<string | null>(null);
+  const [focusedRow, setFocusedRow] = useState<number | null>(null);
 
   useEffectOnUpdate(() => {
     updateCachedDatasetOrFolderDebounced(
@@ -184,36 +184,76 @@ function MetadataTable({
       return prev.filter((prop) => prop.key !== propName);
     });
   };
-  debugger;
 
-  const sortedDetails = details.sort((a, b) => a.index - b.index);
+  const sortedDetails =
+    details.length > 0
+      ? details.sort((a, b) => a.index - b.index)
+      : [{ key: "", value: "", index: 0, type: "string" as APIDetail["type"] }];
+
+  const renderType = (type: APIDetail["type"]) => {
+    switch (type) {
+      case "string":
+        return "str";
+      case "number":
+        return "012";
+      case "string[]":
+        return "[]";
+    }
+  };
 
   // Not using AntD Table to have more control over the styling.
   const alternativeTable = (
-    <div style={{ borderRadius: 5, borderColor: "var(--ant-color-border)", borderWidth: 3 }}>
-      <table>
+    <div>
+      <table
+        className="ant-tag antd-app-theme"
+        style={{
+          border: "var(--ant-line-width) var(--ant-line-type) var(--ant-color-border)",
+          color: "var(--ant-tag-default-color)",
+          background: "var(--ant-tag-default-bg)",
+          borderRadius: "var(--ant-border-radius-sm)",
+          borderCollapse: "separate",
+        }}
+      >
         <thead>
           <tr>
             <th />
             <th>
-              <Typography.Text strong>Property</Typography.Text>
+              <Typography.Text
+                strong
+                className="antd-app-theme ant-input-css-var"
+                style={{
+                  padding: "var(--ant-input-padding-block-sm) var(--ant-input-padding-inline-sm)",
+                }}
+              >
+                Property
+              </Typography.Text>
             </th>
             <th />
             <th>
-              <Typography.Text strong>Value</Typography.Text>
+              <Typography.Text
+                strong
+                className="antd-app-theme ant-input-css-var"
+                style={{
+                  padding: "var(--ant-input-padding-block-sm) var(--ant-input-padding-inline-sm)",
+                }}
+              >
+                Value
+              </Typography.Text>
             </th>
             <th />
           </tr>
         </thead>
         <tbody>
           {sortedDetails.map((record) => (
-            <tr key={record.key}>
-              <td />
+            <tr key={record.index}>
+              <td>
+                <Tag>{renderType(record.type)}</Tag>
+              </td>
               <td>
                 <Input
-                  onFocus={() => setFocusedRow(record.key)}
+                  onFocus={() => setFocusedRow(record.index)}
                   onBlur={() => setFocusedRow(null)}
-                  variant={record.key === focusedRow ? "outlined" : "borderless"}
+                  variant={record.index === focusedRow ? "outlined" : "borderless"}
                   value={record.key}
                   onChange={(evt) => updatePropName(record.key, evt.target.value)}
                   placeholder="New property"
@@ -229,9 +269,10 @@ function MetadataTable({
               <td>:</td>
               <td>
                 <Input
-                  onFocus={() => setFocusedRow(record.key)}
+                  className=".antd-app-theme.ant-input-css-var"
+                  onFocus={() => setFocusedRow(record.index)}
                   onBlur={() => setFocusedRow(null)}
-                  variant={record.key === focusedRow ? "outlined" : "borderless"}
+                  variant={record.index === focusedRow ? "outlined" : "borderless"}
                   value={record.value}
                   onChange={(evt) => updateValue(record.key, evt.target.value)}
                   placeholder="Value"

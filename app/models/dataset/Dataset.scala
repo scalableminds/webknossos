@@ -55,7 +55,7 @@ case class Dataset(_id: ObjectId,
                    status: String,
                    logoUrl: Option[String],
                    sortingKey: Instant = Instant.now,
-                   details: Option[JsObject] = None,
+                   details: Option[JsArray] = None,
                    tags: List[String] = List.empty,
                    created: Instant = Instant.now,
                    isDeleted: Boolean = false)
@@ -77,7 +77,7 @@ case class DatasetCompactInfo(
     lastUsedByUser: Instant,
     status: String,
     tags: List[String],
-    details: Option[JsObject],
+    details: Option[JsArray],
     isUnreported: Boolean,
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
@@ -120,7 +120,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
         JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
-      details <- Fox.runOptional(r.details)(JsonHelper.parseAndValidateJson[JsObject](_))
+      details <- Fox.runOptional(r.details)(JsonHelper.parseAndValidateJson[JsArray](_))
     } yield {
       Dataset(
         ObjectId(r._Id),
@@ -320,7 +320,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             lastUsedByUser = row._9,
             status = row._10,
             tags = parseArrayLiteral(row._11),
-            details = JsonHelper.parseAndValidateJson[JsObject](row._12),
+            details = JsonHelper.parseAndValidateJson[JsArray](row._12),
             isUnreported = unreportedStatusList.contains(row._10),
             colorLayerNames = parseArrayLiteral(row._13),
             segmentationLayerNames = parseArrayLiteral(row._14)
@@ -477,6 +477,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     } yield ()
 
   def updatePartial(datasetId: ObjectId, params: DatasetUpdateParameters)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    System.out.println(s"Trying to update a dataset with $DatasetUpdateParameters" )
     val setQueries = List(
       params.description.map(d => q"description = $d"),
       params.displayName.map(v => q"displayName = $v"),

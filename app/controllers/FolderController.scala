@@ -7,7 +7,7 @@ import models.folder.{Folder, FolderDAO, FolderParameters, FolderService}
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.UserService
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 import utils.ObjectId
@@ -104,7 +104,7 @@ class FolderController @Inject()(
     for {
       parentIdValidated <- ObjectId.fromString(parentId)
       _ <- folderService.assertValidFolderName(name)
-      newFolder = Folder(ObjectId.generate, name, JsObject.empty)
+      newFolder = Folder(ObjectId.generate, name, JsArray.empty)
       _ <- folderDAO.findOne(parentIdValidated) ?~> "folder.notFound"
       _ <- folderDAO.insertAsChild(parentIdValidated, newFolder) ?~> "folder.create.failed"
       organization <- organizationDAO.findOne(request.identity._organization) ?~> "folder.notFound"

@@ -519,7 +519,7 @@ CREATE TABLE webknossos.folders(
     name TEXT NOT NULL CHECK (name !~ '/'),
     isDeleted BOOLEAN NOT NULL DEFAULT false,
     details JSONB DEFAULT '[]',
-    CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'array')
+    CONSTRAINT detailsIsJsonArray CHECK(jsonb_typeof(details) = 'array')
 );
 
 CREATE TABLE webknossos.folder_paths(

@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.organization.{Organization, OrganizationDAO}
 import models.team.{TeamDAO, TeamService}
 import models.user.User
-import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import slick.sql.SqlAction
@@ -19,11 +19,11 @@ import javax.inject.Inject
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-case class Folder(_id: ObjectId, name: String, details: JsObject)
+case class Folder(_id: ObjectId, name: String, details: JsArray)
 
-case class FolderWithParent(_id: ObjectId, name: String, details: JsObject, _parent: Option[ObjectId])
+case class FolderWithParent(_id: ObjectId, name: String, details: JsArray, _parent: Option[ObjectId])
 
-case class FolderParameters(name: String, allowedTeams: List[ObjectId], details: JsObject)
+case class FolderParameters(name: String, allowedTeams: List[ObjectId], details: JsArray)
 object FolderParameters {
   implicit val jsonFormat: OFormat[FolderParameters] = Json.format[FolderParameters]
 }
@@ -121,7 +121,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     remainingPathNames match {
       case pathNamesHead :: pathNamesTail =>
         for {
-          newFolder <- Fox.successful(Folder(ObjectId.generate, pathNamesHead, JsObject.empty))
+          newFolder <- Fox.successful(Folder(ObjectId.generate, pathNamesHead, JsArray.empty))
           _ <- folderDAO.insertAsChild(parentFolderId, newFolder)
           folderId <- createMissingFoldersForPathNames(newFolder._id, pathNamesTail)
         } yield folderId
@@ -138,13 +138,13 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected def parse(r: FoldersRow): Fox[Folder] =
     for {
-      details <- JsonHelper.parseAndValidateJson[JsObject](r.details.getOrElse("{}")).toFox
+      details <- JsonHelper.parseAndValidateJson[JsArray](r.details.getOrElse("[]")).toFox
       folder <- Fox.successful(Folder(ObjectId(r._Id), r.name, details))
     } yield folder
 
   private def parseWithParent(t: (String, String, Option[String], Option[String])): Fox[FolderWithParent] =
     for {
-      details <- JsonHelper.parseAndValidateJson[JsObject](t._3.getOrElse("{}")).toFox
+      details <- JsonHelper.parseAndValidateJson[JsArray](t._3.getOrElse("[]")).toFox
       folderWithParent <- Fox.successful(FolderWithParent(ObjectId(t._1), t._2, details, t._4.map(ObjectId(_))))
     } yield folderWithParent
 
@@ -256,7 +256,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"UPDATE webknossos.folders SET name = $name WHERE _id = $folderId".asUpdate)
     } yield ()
 
-  def updateDetails(folderId: ObjectId, details: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateDetails(folderId: ObjectId, details: JsArray)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(folderId)
       _ <- run(q"UPDATE webknossos.folders SET details = $details WHERE _id = $folderId".asUpdate)

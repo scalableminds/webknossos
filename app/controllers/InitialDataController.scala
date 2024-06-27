@@ -13,7 +13,7 @@ import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
 import net.liftweb.common.{Box, Full}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsArray, JsObject, Json}
 import utils.{ObjectId, StoreModules, WkConf}
 
 import javax.inject.Inject
@@ -170,7 +170,7 @@ Samplecountry
     folderDAO.findOne(defaultOrganization._rootFolder).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
-        folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName, JsObject.empty))
+        folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName, JsArray.empty))
     }
 
   private def insertDefaultUser(userEmail: String,

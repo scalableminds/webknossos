@@ -463,7 +463,7 @@ function* updateLocalHdf5Mapping(
         );
   console.log(
     "received mapped segment ids from server",
-    newEntries.size < 1000 ? newEntries : "<omitted>",
+    newEntries.size < 1000 ? newEntries : `<omitted due to size=${newEntries.size}>`,
   );
 
   // It is safe to mutate mutableRemainingEntries to compute the merged,

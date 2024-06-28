@@ -13,6 +13,7 @@ import { CuckooTableUint32 } from "libs/cuckoo/cuckoo_table_uint32";
 import { message } from "antd";
 import { diffMaps } from "libs/utils";
 import memoizeOne from "memoize-one";
+import Toast from "libs/toast";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_MESSAGE_KEY = "mappings";
@@ -42,6 +43,15 @@ export const setCacheResultForDiffMappings = (
 ) => {
   cachedDiffMappings(mappingA, mappingB, cacheResult);
 };
+
+const throttledCapacityWarning = _.throttle(() => {
+  console.warn(
+    "The mapping is getting quite large. To avoid a significant performance drop, the rendered mapping will not be extended.",
+  );
+  Toast.warning(
+    "The mapping is becoming too large and will only be partially applied. Please zoom further in to avoid that too many segment ids are present. Also consider refreshing the page.",
+  );
+}, 10000);
 
 class Mappings {
   layerName: string;
@@ -90,21 +100,25 @@ class Mappings {
         ? cachedDiffMappings(this.previousMapping, mapping)
         : { changed: [], onlyA: [], onlyB: Array.from(mapping.keys() as Iterable<number>) };
 
-    const cuckooTable = this.cuckooTable;
     for (const keyToDelete of onlyA) {
-      cuckooTable.unsetNumberLike(keyToDelete);
+      this.cuckooTable.unsetNumberLike(keyToDelete);
     }
+
     for (const key of changed) {
       // We know that the lookup of key in mapping has to succeed because
       // the diffing wouldn't have returned the id otherwise.
       const value = (mapping as Map<NumberLike, NumberLike>).get(key) as NumberLike;
-      cuckooTable.setNumberLike(key, value);
+      this.cuckooTable.setNumberLike(key, value);
     }
-    for (const key of onlyB) {
-      // We know that the lookup of key in mapping has to succeed because
-      // the diffing wouldn't have returned the id otherwise.
-      const value = (mapping as Map<NumberLike, NumberLike>).get(key) as NumberLike;
-      cuckooTable.setNumberLike(key, value);
+    if (mapping.size > this.cuckooTable.getCriticalCapacity()) {
+      throttledCapacityWarning();
+    } else {
+      for (const key of onlyB) {
+        // We know that the lookup of key in mapping has to succeed because
+        // the diffing wouldn't have returned the id otherwise.
+        const value = (mapping as Map<NumberLike, NumberLike>).get(key) as NumberLike;
+        this.cuckooTable.setNumberLike(key, value);
+      }
     }
     this.previousMapping = mapping;
 

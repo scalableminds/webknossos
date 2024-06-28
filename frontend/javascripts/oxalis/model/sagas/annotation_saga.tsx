@@ -47,8 +47,9 @@ import { determineLayout } from "oxalis/view/layouting/default_layout_configs";
 import { getLastActiveLayout, getLayoutConfig } from "oxalis/view/layouting/layout_persistence";
 import { is3dViewportMaximized } from "oxalis/view/layouting/flex_layout_helper";
 
-/* Note that this must stay in sync with the back-end constant
-  compare https://github.com/scalableminds/webknossos/issues/5223 */
+/* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
+  compare https://github.com/scalableminds/webknossos/issues/5223.
+ */
 const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 
 export function* pushAnnotationUpdateAsync(action: Action) {

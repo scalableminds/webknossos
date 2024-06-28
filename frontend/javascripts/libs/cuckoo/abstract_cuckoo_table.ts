@@ -2,13 +2,18 @@ import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
 import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+import _ from "lodash";
 
-const DEFAULT_LOAD_FACTOR = 0.25;
+const DEFAULT_LOAD_FACTOR = 0.55; // 0.65 is working
 export const EMPTY_KEY_VALUE = 2 ** 32 - 1;
 
 export type SeedSubscriberFn = (seeds: number[]) => void;
 
 let cachedNullTexture: UpdatableTexture | undefined;
+
+const throttledCapacityWarning = _.throttle((currentSize: number) => {
+  if (currentSize) console.log("");
+});
 
 export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   entryCapacity: number;
@@ -70,6 +75,14 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     this.flushTableToTexture();
   }
 
+  getCriticalCapacity(): number {
+    /*
+     * Returns the capacity at which inserts can become very expensive due
+     * to increased likelihood of collisions.
+     */
+    return Math.ceil(this.entryCapacity * DEFAULT_LOAD_FACTOR);
+  }
+
   static computeTextureWidthFromCapacity(requestedCapacity: number): number {
     const capacity = requestedCapacity / DEFAULT_LOAD_FACTOR;
     const textureWidth = Math.ceil(
@@ -97,9 +110,9 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   }
 
   private initializeTableArray() {
-    this.table = new Uint32Array(
-      AbstractCuckooTable.getElementsPerEntry() * this.entryCapacity,
-    ).fill(EMPTY_KEY_VALUE);
+    this.table = new Uint32Array(this.getClass().getElementsPerEntry() * this.entryCapacity).fill(
+      EMPTY_KEY_VALUE,
+    );
 
     // The chance of colliding seeds is super low which is why
     // we ignore this case (a rehash would happen automatically, anyway).

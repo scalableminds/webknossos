@@ -18,7 +18,8 @@ import {
   getDatasetExtentAsString,
 } from "oxalis/model/accessors/dataset_accessor";
 import { compareBy } from "libs/utils";
-type ExtendedDatasetDetails = APIDetails & {
+type ExtendedDatasetDetails = {
+  details: APIDetails;
   name: string;
   scale: string;
   extent: string;
@@ -49,10 +50,10 @@ function getDisplayName(item: PublicationItem): string {
     : item.dataset.displayName;
 }
 
-function getDetails(item: PublicationItem): ExtendedDatasetDetails {
+function getExtendedDetails(item: PublicationItem): ExtendedDatasetDetails {
   const { dataSource, details } = item.dataset;
   return {
-    ...details,
+    details: details || [],
     scale: formatScale(dataSource.scale, 0),
     name: getDisplayName(item),
     extent: getDatasetExtentAsString(item.dataset, false),
@@ -65,28 +66,31 @@ function getUrl(item: PublicationItem): string {
     : `/datasets/${item.dataset.owningOrganization}/${item.dataset.name}`;
 }
 
-function ThumbnailOverlay({ details }: { details: ExtendedDatasetDetails }) {
+function ThumbnailOverlay({ extendedDetails }: { extendedDetails: ExtendedDatasetDetails }) {
+  const species = extendedDetails.details.find((d) => d.key === "species")?.value;
+  const brainRegion = extendedDetails.details.find((d) => d.key === "brain region")?.value;
+  const acquisition = extendedDetails.details.find((d) => d.key === "acquisition")?.value;
   return (
     <div className="dataset-thumbnail-overlay">
       <div>
-        {details.species && (
+        {species && (
           <div
             style={{
               fontWeight: 700,
               display: "inline",
             }}
           >
-            {details.species}
+            {species}
           </div>
         )}
-        {details.brainRegion && (
+        {brainRegion && (
           <div
             style={{
               display: "inline",
               marginLeft: 5,
             }}
           >
-            {details.brainRegion}
+            {brainRegion}
           </div>
         )}
       </div>
@@ -95,7 +99,7 @@ function ThumbnailOverlay({ details }: { details: ExtendedDatasetDetails }) {
           fontSize: 18,
         }}
       >
-        {details.name}
+        {extendedDetails.name}
       </div>
       <div
         style={{
@@ -106,11 +110,11 @@ function ThumbnailOverlay({ details }: { details: ExtendedDatasetDetails }) {
           color: "rgba(200,200,200,0.85)",
         }}
       >
-        <div>{details.acquisition}</div>
+        <div>{acquisition}</div>
         <div>
-          {details.scale}
+          {extendedDetails.scale}
           <br />
-          {details.extent}
+          {extendedDetails.extent}
         </div>
       </div>
     </div>
@@ -264,7 +268,7 @@ function PublicationThumbnail({
   const segmentationThumbnailURL = hasSegmentation(activeItem.dataset)
     ? getSegmentationThumbnailURL(activeItem.dataset)
     : null;
-  const details = getDetails(activeItem);
+  const extendedDetails = getExtendedDetails(activeItem);
 
   return (
     <div className="dataset-thumbnail">
@@ -293,7 +297,7 @@ function PublicationThumbnail({
             }}
           />
         )}
-        <ThumbnailOverlay details={details} />
+        <ThumbnailOverlay extendedDetails={extendedDetails} />
         {sortedItems.length > 1 && (
           <PublishedDatasetsOverlay
             items={sortedItems}

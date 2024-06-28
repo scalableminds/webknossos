@@ -232,3 +232,30 @@ pre.dataset-import-folder-structure-hint {
     padding: 4px 4px 4px 0px !important;
   }
 }
+
+.metadata-table {
+  border: var(--ant-line-width) var(--ant-line-type) var(--ant-color-border);
+  color: var(--ant-tag-default-color);
+  background: var(--ant-tag-default-bg);
+  border-radius: var(--ant-border-radius-sm);
+  border-collapse: separate;
+  table-layout: fixed;
+  thead tr th:first-child,
+  tbody tr td:first-child {
+    width: 35px;
+  }
+  thead tr th:nth-child(2),
+  thead tr th:nth-child(4),
+  tbody tr td:nth-child(2),
+  tbody tr td:nth-child(4) {
+    width: 103.5px;
+  }
+  thead tr th:nth-child(3),
+  tbody tr td:nth-child(3) {
+    width: 5;
+  }
+  thead tr th:nth-child(5),
+  tbody tr td:nth-child(5) {
+    width: 16;
+  }
+}

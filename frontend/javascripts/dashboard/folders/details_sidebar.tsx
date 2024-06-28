@@ -17,6 +17,7 @@ import {
   Dropdown,
   MenuProps,
   InputNumber,
+  Select,
 } from "antd";
 import { stringToColor, formatCountToDataAmountUnit } from "libs/format_utils";
 import { parseFloatOrZero, pluralize } from "libs/utils";
@@ -177,7 +178,7 @@ function MetadataTable({
       }
     });
   };
-  const updateValue = (propName: string, newValue: string) => {
+  const updateValue = (propName: string, newValue: string | string[]) => {
     setDetails((prev) => {
       const entry = prev.find((prop) => prop.key === propName);
       if (!entry) {
@@ -228,14 +229,18 @@ function MetadataTable({
       ? details.sort((a, b) => a.index - b.index)
       : [{ key: "", value: "", index: 0, type: "string" as APIDetail["type"] }];
 
-  const renderType = (type: APIDetail["type"]) => {
+  const availableStrArrayTagOptions = _.uniq(
+    sortedDetails.flatMap((detail) => (detail.type === "string[]" ? detail.value : [])),
+  ).map((tag) => ({ value: tag, label: tag }));
+
+  const renderTypeTag = (type: APIDetail["type"]) => {
     switch (type) {
       case "string":
-        return "str";
+        return <Tag style={{ margin: 0, width: 32, padding: "0px 8px" }}>str</Tag>;
       case "number":
-        return "012";
+        return <Tag style={{ margin: 0, width: 32, padding: "0px 4px" }}>012</Tag>;
       case "string[]":
-        return "[]";
+        return <Tag style={{ margin: 0, width: 32 }}>{`[""]`}</Tag>;
     }
   };
 
@@ -243,212 +248,172 @@ function MetadataTable({
     items: [
       {
         key: 0,
-        label: <Tooltip title="String type">{renderType("string")}</Tooltip>,
+        label: <Tooltip title="String type">str</Tooltip>,
         onClick: () => updateType(propertyIndex, "string"),
       },
       {
         key: 1,
-        label: <Tooltip title="Number type">{renderType("number")}</Tooltip>,
+        label: <Tooltip title="Number type">012</Tooltip>,
         onClick: () => updateType(propertyIndex, "number"),
       },
       {
         key: 2,
-        label: <Tooltip title="String Array type">{renderType("string[]")}</Tooltip>,
+        label: <Tooltip title="String Array type">{`[""]`}</Tooltip>,
         onClick: () => updateType(propertyIndex, "string[]"),
       },
     ],
   });
 
-  // Not using AntD Table to have more control over the styling.
-  const alternativeTable = (
-    <div>
-      <table
-        className="ant-tag antd-app-theme"
-        style={{
-          border: "var(--ant-line-width) var(--ant-line-type) var(--ant-color-border)",
-          color: "var(--ant-tag-default-color)",
-          background: "var(--ant-tag-default-bg)",
-          borderRadius: "var(--ant-border-radius-sm)",
-          borderCollapse: "separate",
-        }}
-      >
-        <thead>
-          <tr>
-            <th />
-            <th>
-              <Typography.Text
-                strong
-                className="antd-app-theme ant-input-css-var"
-                style={{
-                  padding: "var(--ant-input-padding-block-sm) var(--ant-input-padding-inline-sm)",
-                }}
-              >
-                Property
-              </Typography.Text>
-            </th>
-            <th />
-            <th>
-              <Typography.Text
-                strong
-                className="antd-app-theme ant-input-css-var"
-                style={{
-                  padding: "var(--ant-input-padding-block-sm) var(--ant-input-padding-inline-sm)",
-                }}
-              >
-                Value
-              </Typography.Text>
-            </th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {sortedDetails.map((record) => (
-            <tr key={record.index}>
-              <td>
-                <Dropdown menu={getTypeSelectDropdownMenu(record.index)}>
-                  <Tag style={{ margin: 0 }}>{renderType(record.type)}</Tag>
-                </Dropdown>
-              </td>
-              <td>
-                <Input
-                  onFocus={() => setFocusedRow(record.index)}
-                  onBlur={() => setFocusedRow(null)}
-                  variant={record.index === focusedRow ? "outlined" : "borderless"}
-                  value={record.key}
-                  onChange={(evt) => updatePropName(record.key, evt.target.value)}
-                  placeholder="New property"
-                  size="small"
-                />
-                {error != null && error[0] === record.key ? (
-                  <>
-                    <br />
-                    <Typography.Text type="warning">{error[1]}</Typography.Text>
-                  </>
-                ) : null}
-              </td>
-              <td>:</td>
-              <td>
-                {record.type === "number" ? (
-                  <InputNumber
-                    onFocus={() => setFocusedRow(record.index)}
-                    onBlur={() => setFocusedRow(null)}
-                    variant={record.index === focusedRow ? "outlined" : "borderless"}
-                    value={record.value as number}
-                    onChange={(newNum) => updateValue(record.key, newNum?.toString() || "")}
-                    placeholder="Value"
-                    size="small"
-                  />
-                ) : (
-                  <Input
-                    onFocus={() => setFocusedRow(record.index)}
-                    onBlur={() => setFocusedRow(null)}
-                    variant={record.index === focusedRow ? "outlined" : "borderless"}
-                    value={record.value}
-                    onChange={(evt) => updateValue(record.key, evt.target.value)}
-                    placeholder="Value"
-                    size="small"
-                  />
-                )}
-              </td>
-              <td>
-                <DeleteOutlined
-                  onClick={() => deleteKey(record.key)}
-                  style={{
-                    color: "var(--ant-color-text-tertiary)",
-                    visibility: record.key === "" ? "hidden" : "visible",
-                  }}
-                  disabled={record.key === ""}
-                />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="flex-center-child">
-        <div
-          style={{
-            border: "var(--ant-line-width) var(--ant-line-type) var(--ant-color-border)",
-            width: 18,
-            height: 18,
-          }}
-          className="flex-center-child"
-        >
-          <PlusOutlined
-            size={18}
-            style={{ color: "var(--ant-color-text-tertiary)" }}
-            onClick={() => updatePropName("", "")}
+  const getValueInput = (record: APIDetail) => {
+    switch (record.type) {
+      case "number":
+        return (
+          <InputNumber
+            onFocus={() => setFocusedRow(record.index)}
+            onBlur={() => setFocusedRow(null)}
+            variant={record.index === focusedRow ? "outlined" : "borderless"}
+            value={record.value as number}
+            onChange={(newNum) => updateValue(record.key, newNum?.toString() || "")}
+            placeholder="Value"
+            size="small"
           />
-        </div>
-      </div>
-    </div>
-  );
+        );
+      case "string":
+        return (
+          <Input
+            onFocus={() => setFocusedRow(record.index)}
+            onBlur={() => setFocusedRow(null)}
+            variant={record.index === focusedRow ? "outlined" : "borderless"}
+            value={record.value}
+            onChange={(evt) => updateValue(record.key, evt.target.value)}
+            placeholder="Value"
+            size="small"
+          />
+        );
+      case "string[]":
+        return (
+          <Select
+            onFocus={() => setFocusedRow(record.index)}
+            onBlur={() => setFocusedRow(null)}
+            variant={record.index === focusedRow ? "outlined" : "borderless"}
+            mode="tags"
+            style={{ width: "100%" }}
+            placeholder="Values"
+            value={record.value as string[]}
+            onChange={(values) => updateValue(record.key, values)}
+            options={availableStrArrayTagOptions}
+            size="small"
+            suffixIcon={null}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div style={{ marginBottom: 16 }}>
       <div className="sidebar-label">Metadata</div>
-      {/*<div style={{ borderRadius: 5, borderColor: "var(--ant-color-border)", borderWidth: 3 }}>
-        <Table
-          dataSource={columnData}
-          className="metadata-table"
-          columns={[
-            {
-              title: "Property",
-              dataIndex: "propName",
-              render: (propName, record) => (
-                <>
+      <div>
+        {/* Not using AntD Table to have more control over the styling. */}
+        <table className="ant-tag antd-app-theme metadata-table">
+          <thead>
+            <tr>
+              <th>
+                <Typography.Text
+                  strong
+                  className="antd-app-theme ant-input-css-var"
+                  style={{
+                    padding: "0px 0px 0px 2px",
+                  }}
+                >
+                  Type
+                </Typography.Text>
+              </th>
+              <th>
+                <Typography.Text
+                  strong
+                  className="antd-app-theme ant-input-css-var"
+                  style={{
+                    padding: "var(--ant-input-padding-block-sm) var(--ant-input-padding-inline-sm)",
+                  }}
+                >
+                  Property
+                </Typography.Text>
+              </th>
+              <th />
+              <th>
+                <Typography.Text
+                  strong
+                  className="antd-app-theme ant-input-css-var"
+                  style={{
+                    padding: "var(--ant-input-padding-block-sm) var(--ant-input-padding-inline-sm)",
+                  }}
+                >
+                  Value
+                </Typography.Text>
+              </th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {sortedDetails.map((record) => (
+              <tr key={record.index}>
+                <td>
+                  <Dropdown menu={getTypeSelectDropdownMenu(record.index)}>
+                    {renderTypeTag(record.type)}
+                  </Dropdown>
+                </td>
+                <td>
                   <Input
-                    onFocus={() => setFocusedRow(record.key)}
+                    onFocus={() => setFocusedRow(record.index)}
                     onBlur={() => setFocusedRow(null)}
-                    variant={record.key === focusedRow ? "outlined" : "borderless"}
-                    value={propName}
-                    onChange={(evt) => updatePropName(propName, evt.target.value)}
+                    variant={record.index === focusedRow ? "outlined" : "borderless"}
+                    value={record.key}
+                    onChange={(evt) => updatePropName(record.key, evt.target.value)}
                     placeholder="New property"
                     size="small"
                   />
-                  {error != null && error[0] === propName ? (
+                  {error != null && error[0] === record.key ? (
                     <>
                       <br />
                       <Typography.Text type="warning">{error[1]}</Typography.Text>
                     </>
                   ) : null}
-                </>
-              ),
-            },
-            {
-              title: "Value",
-              dataIndex: "value",
-              className: "top-aligned-column", // Needed in case of an error in the propName column.
-              render: (value, record) => (
-                <Input
-                  onFocus={() => setFocusedRow(record.key)}
-                  onBlur={() => setFocusedRow(null)}
-                  variant={record.key === focusedRow ? "outlined" : "borderless"}
-                  value={value}
-                  onChange={(evt) => updateValue(record.propName, evt.target.value)}
-                  placeholder="Value"
-                  size="small"
-                />
-              ),
-            },
-            {
-              title: "",
-              key: "del",
-              render: (_, record) => (
-                <DeleteOutlined
-                  onClick={() => deleteKey(record.propName)}
-                  style={{
-                    color: "var(--ant-table-header-icon-color)",
-                    visibility: record.propName === "" ? "hidden" : "visible",
-                  }}
-                  disabled={record.propName === ""}
-                />
-              ),
-            },
-          ]}
-          pagination={false}
-          size="small"
-        />
-      </div>*/}
-      {alternativeTable}
+                </td>
+                <td>:</td>
+                <td>{getValueInput(record)}</td>
+                <td>
+                  <DeleteOutlined
+                    onClick={() => deleteKey(record.key)}
+                    style={{
+                      color: "var(--ant-color-text-tertiary)",
+                      visibility: record.key === "" ? "hidden" : "visible",
+                    }}
+                    disabled={record.key === ""}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="flex-center-child" style={{ marginLeft: 12 }}>
+          <div
+            style={{
+              border: "var(--ant-line-width) var(--ant-line-type) var(--ant-color-border)",
+              width: 18,
+              height: 18,
+            }}
+            className="flex-center-child"
+          >
+            <PlusOutlined
+              size={18}
+              style={{ color: "var(--ant-color-text-tertiary)" }}
+              onClick={() => updatePropName("", "")}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

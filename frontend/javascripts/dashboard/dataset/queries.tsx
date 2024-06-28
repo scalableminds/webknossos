@@ -279,7 +279,7 @@ export function useCreateFolderMutation() {
       queryClient.setQueryData(
         mutationKey,
         transformHierarchy((oldItems: FlatFolderTreeItem[] | undefined) =>
-          (oldItems || []).concat([{ ...newFolder, parent: parentId, details: {} }]),
+          (oldItems || []).concat([{ ...newFolder, parent: parentId, details: [] }]),
         ),
       );
     },

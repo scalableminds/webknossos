@@ -611,8 +611,20 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     this.props.onSetActiveTree(treeId);
   };
 
+  onRangeSelectTrees = (ids: number[]) => {
+    // Use this method only for range selecting multiple trees (SHIFT + click)
+    const tracing = this.props.skeletonTracing;
+
+    if (!tracing) {
+      return;
+    }
+    this.setState({
+      selectedTrees: ids,
+    });
+  };
+
   onMultiSelectTree = (id: number) => {
-    // Use this method only for selecting individual trees for multi-select (CTRL/SHIFT + click)
+    // Use this method only for selecting individual trees for multi-select (CTRL + click)
     const tracing = this.props.skeletonTracing;
     const { selectedTrees } = this.state;
 
@@ -687,6 +699,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         selectedTreeIds={this.state.selectedTrees}
         onSingleSelectTree={this.onSingleSelectTree}
         onMultiSelectTree={this.onMultiSelectTree}
+        onRangeSelectTrees={this.onRangeSelectTrees}
         deselectAllTrees={this.deselectAllTrees}
         onDeleteGroup={this.showDeleteGroupModal}
       />

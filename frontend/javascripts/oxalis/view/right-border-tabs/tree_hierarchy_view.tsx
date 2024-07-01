@@ -79,17 +79,12 @@ type Props = {
   sortBy: string;
   trees: TreeMap;
   selectedTreeIds: number[];
-  onSingleSelectTree: (arg0: number) => void;
-  onMultiSelectTree: (arg0: number) => void;
+  onSingleSelectTree: (treeId: number) => void;
+  onMultiSelectTree: (treeId: number) => void;
+  onRangeSelectTrees: (treeIds: number[]) => void;
   deselectAllTrees: () => void;
   onDeleteGroup: (arg0: number) => void;
   allowUpdate: boolean;
-};
-
-export type GenerateNodePropsType = {
-  title?: JSX.Element;
-  className?: string;
-  style?: React.CSSProperties;
 };
 
 function TreeHierarchyView(props: Props) {
@@ -184,10 +179,10 @@ function TreeHierarchyView(props: Props) {
     if (evt.ctrlKey || evt.metaKey) {
       // Select two or more individual nodes
       props.onMultiSelectTree(selectedTreeId);
-    } else if (evt.shiftKey && props.selectedTreeIds.length === 1) {
+    } else if (evt.shiftKey && props.activeTreeId) {
       // SHIFT click to select a whole range of nodes.
       // Selection will only work for nodes within the same group/hierarchy level.
-      const sourceNode = props.trees[props.selectedTreeIds[0]];
+      const sourceNode = props.trees[props.activeTreeId];
       const sourceNodeParent = findParentGroupNode(
         UITreeData,
         sourceNode.groupId ?? MISSING_GROUP_ID,
@@ -204,12 +199,11 @@ function TreeHierarchyView(props: Props) {
         if (rangeIndex1 > 0 && rangeIndex2 > 0) {
           let selectedNodes: TreeNode[] = [];
           if (rangeIndex1 < rangeIndex2) {
-            // careful to not include/re-select the source node
-            selectedNodes = sourceNodeParent.children.slice(rangeIndex1 + 1, rangeIndex2 + 1);
+            selectedNodes = sourceNodeParent.children.slice(rangeIndex1, rangeIndex2 + 1);
           } else {
-            selectedNodes = sourceNodeParent.children.slice(rangeIndex2, rangeIndex1);
+            selectedNodes = sourceNodeParent.children.slice(rangeIndex2, rangeIndex1 + 1);
           }
-          selectedNodes.forEach((node) => props.onMultiSelectTree(node.id));
+          props.onRangeSelectTrees(selectedNodes.map((node) => node.id));
         }
       }
     } else {

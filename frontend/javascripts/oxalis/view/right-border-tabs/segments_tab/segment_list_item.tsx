@@ -29,7 +29,7 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
-import { getSegmentColorAsRGBA } from "oxalis/model/accessors/volumetracing_accessor";
+import { getSegmentColorAsRGBA, getSegmentName } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
 import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
@@ -743,11 +743,6 @@ function getComputeMeshAdHocTooltipInfo(
     disabled,
     title,
   };
-}
-
-function getSegmentName(segment: Segment, fallbackToId: boolean = false): string {
-  const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
-  return segment.name || fallback;
 }
 
 export default SegmentListItem;

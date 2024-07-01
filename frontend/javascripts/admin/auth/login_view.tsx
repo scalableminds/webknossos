@@ -30,7 +30,7 @@ function LoginView({ history, redirect }: Props) {
   return (
     <Row justify="center" align="middle" className="login-view">
       <Col xs={22} sm={20} md={16} lg={12} xl={8}>
-        <Card className="login-content">
+        <Card className="login-content" style={{ margin: "0 auto" }}>
           <h3>Login</h3>
           <LoginForm layout="horizontal" onLoggedIn={onLoggedIn} />
         </Card>

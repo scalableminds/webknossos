@@ -41,8 +41,7 @@ import { Comparator } from "types/globals";
 import { EventDataNode } from "antd/es/tree";
 import { AutoSizer } from "react-virtualized";
 import { useEffectOnlyOnce } from "libs/react_hooks";
-import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
-import { ColoredDotIconForSegment } from "../segments_tab/segment_list_item";
+import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { useLifecycle } from "beautiful-react-hooks";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 
@@ -362,8 +361,7 @@ function CommentTabView(props: Props) {
         key: tree.treeId.toString(),
         title: (
           <div style={{ wordBreak: "break-all" }}>
-            <ColoredDotIconForSegment segmentColorHSLA={[...jsRgb2hsl(tree.color), 1.0]} />{" "}
-            {tree.name}
+            <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} /> {tree.name}
           </div>
         ),
         expanded: true,

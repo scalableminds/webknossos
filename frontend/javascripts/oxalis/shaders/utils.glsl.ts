@@ -113,10 +113,12 @@ export function jsColormapJet(x: number): Vector3 {
 
   return [r, g, b];
 }
-export const hslaToCSS = (hsla: Vector4) => {
-  const [h, s, l, a] = hsla;
-  return `hsla(${360 * h}, ${100 * s}%, ${100 * l}%, ${a})`;
+
+export const rgbaToCSS = (rgba: Vector4) => {
+  const [r, g, b, a] = rgba;
+  return `rgba(${255 * r}, ${255 * g}, ${255 * b}, ${a})`;
 };
+
 export const aaStep: ShaderModule = {
   requirements: [],
   code: `

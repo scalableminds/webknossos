@@ -6,17 +6,6 @@ export const attemptMappingLookUp: ShaderModule = {
   code: `
     ivec2 attemptMappingLookUp32(uint value, uint seed) {
       highp uint h0 = hashCombine(seed, value);
-      h0 = hashCombine(h0, value);
-
-      // h0 ^= h0 >> 16;
-      // h0 *= 0x85ebca6bu;
-      // h0 ^= h0 >> 13;
-      // h0 *= 0xc2b2ae35u;
-      // h0 ^= h0 >> 16;
-
-      // uint k = 2654435769u;
-      // h0 = (h0 * k) >> 14u;
-
       h0 = h0 % MAPPING_CUCKOO_ENTRY_CAPACITY;
       h0 = uint(h0 * MAPPING_CUCKOO_ELEMENTS_PER_ENTRY / MAPPING_CUCKOO_ELEMENTS_PER_TEXEL);
 

@@ -4,16 +4,13 @@ import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import _ from "lodash";
 
-const DEFAULT_LOAD_FACTOR = 0.55; // 0.65 is working
+const DEFAULT_LOAD_FACTOR = 0.9;
 export const EMPTY_KEY_VALUE = 2 ** 32 - 1;
+const REHASH_THRESHOLD = 20;
 
 export type SeedSubscriberFn = (seeds: number[]) => void;
 
 let cachedNullTexture: UpdatableTexture | undefined;
-
-const throttledCapacityWarning = _.throttle((currentSize: number) => {
-  if (currentSize) console.log("");
-});
 
 export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   entryCapacity: number;
@@ -80,7 +77,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
      * Returns the capacity at which inserts can become very expensive due
      * to increased likelihood of collisions.
      */
-    return Math.ceil(this.entryCapacity * DEFAULT_LOAD_FACTOR);
+    return Math.floor(this.entryCapacity * DEFAULT_LOAD_FACTOR);
   }
 
   static computeTextureWidthFromCapacity(requestedCapacity: number): number {
@@ -162,32 +159,52 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
    */
   abstract checkValidKey(key: K): void;
 
-  set(pendingKey: K, pendingValue: V, rehashAttempt: number = 0) {
+  set(pendingKey: K, pendingValue: V) {
+    const newDisplacedEntry = this.internalSet(pendingKey, pendingValue, false);
+    if (newDisplacedEntry == null) {
+      // Success
+      return;
+    }
+    const oldTable = this.table;
+    for (let rehashAttempt = 1; rehashAttempt <= REHASH_THRESHOLD; rehashAttempt++) {
+      // todop: perf (only allocate new table once instead on every rehash)
+      if (this.rehash(oldTable, rehashAttempt)) {
+        if (this.internalSet(newDisplacedEntry[0], newDisplacedEntry[1], true) == null) {
+          // Since a rehash was performed, the incremental texture updates were
+          // skipped. Update the entire texture:
+          this.flushTableToTexture();
+          return;
+        }
+      }
+    }
+    throw new Error(
+      `Cannot rehash, since ${REHASH_THRESHOLD} attempts were exceeded. Is the capacity exceeded?`,
+    );
+  }
+
+  private internalSet(
+    pendingKey: K,
+    pendingValue: V,
+    skipTextureUpdate: boolean,
+  ): Entry | undefined | null {
+    // todop: could be skipped during rehashing (but not when inserting the newest key)
+    // todop: texture updates could be aggregated?
     this.checkValidKey(pendingKey);
     let displacedEntry;
     let currentAddress;
     let iterationCounter = 0;
-
-    const ITERATION_THRESHOLD = 40;
-    const REHASH_THRESHOLD = 100;
-
-    if (rehashAttempt >= REHASH_THRESHOLD) {
-      throw new Error(
-        `Cannot rehash, since this is already the ${rehashAttempt}th attempt. Is the capacity exceeded?`,
-      );
-    }
 
     const existingValueWithAddress = this.getWithAddress(pendingKey);
     if (existingValueWithAddress) {
       // The key already exists. We only have to overwrite
       // the corresponding value.
       const [, address] = existingValueWithAddress;
-      this.writeEntryAtAddress(pendingKey, pendingValue, address, rehashAttempt > 0);
-      return;
+      this.writeEntryAtAddress(pendingKey, pendingValue, address, skipTextureUpdate);
+      return null;
     }
 
     let seedIndex = Math.floor(Math.random() * this.seeds.length);
-    while (iterationCounter++ < ITERATION_THRESHOLD) {
+    while (iterationCounter++ < this.entryCapacity) {
       const seed = this.seeds[seedIndex];
       currentAddress = this._hashKeyToAddress(seed, pendingKey);
 
@@ -196,11 +213,11 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
         pendingKey,
         pendingValue,
         currentAddress,
-        rehashAttempt > 0,
+        skipTextureUpdate,
       );
 
       if (this.canDisplacedEntryBeIgnored(displacedEntry[0], pendingKey)) {
-        return;
+        return null;
       }
 
       [pendingKey, pendingValue] = displacedEntry;
@@ -209,12 +226,8 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       seedIndex =
         (seedIndex + Math.floor(Math.random() * (this.seeds.length - 1)) + 1) % this.seeds.length;
     }
-    this.rehash(rehashAttempt + 1);
-    this.set(pendingKey, pendingValue, rehashAttempt + 1);
 
-    // Since a rehash was performed, the incremental texture updates were
-    // skipped. Update the entire texture:
-    this.flushTableToTexture();
+    return displacedEntry;
   }
 
   unset(key: K) {
@@ -241,9 +254,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
    */
   abstract getEmptyValue(): V;
 
-  private rehash(rehashAttempt: number): void {
-    const oldTable = this.table;
-
+  private rehash(oldTable: Uint32Array, rehashAttempt: number): boolean {
     this.initializeTableArray();
 
     for (
@@ -258,8 +269,12 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
         offset / this.getClass().getElementsPerEntry(),
         oldTable,
       );
-      this.set(key, value, rehashAttempt);
+      if (this.internalSet(key, value, rehashAttempt > 0) != null) {
+        // Rehash did not work
+        return false;
+      }
     }
+    return true;
   }
 
   get(key: K): V | null {

@@ -68,7 +68,6 @@ export class CuckooTableUint32 extends AbstractCuckooTable<Key, Value, Entry> {
 
   _hashKeyToAddress(seed: number, key: Key): number {
     let state = this._hashCombine(seed, key);
-    state = this._hashCombine(state, key);
 
     return state % this.entryCapacity;
   }

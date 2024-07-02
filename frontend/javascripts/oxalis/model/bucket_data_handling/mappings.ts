@@ -1,3 +1,4 @@
+import _ from "lodash";
 import {
   getMappings,
   getMappingInfo,
@@ -59,6 +60,7 @@ class Mappings {
   mappingLookupTexture!: UpdatableTexture;
   cuckooTable: CuckooTableUint64 | CuckooTableUint32 | null = null;
   previousMapping: Mapping | null | undefined = null;
+  currentKeyCount: number = 0;
 
   constructor(layerName: string) {
     this.layerName = layerName;
@@ -102,6 +104,7 @@ class Mappings {
 
     for (const keyToDelete of onlyA) {
       this.cuckooTable.unsetNumberLike(keyToDelete);
+      this.currentKeyCount--;
     }
 
     for (const key of changed) {
@@ -110,15 +113,17 @@ class Mappings {
       const value = (mapping as Map<NumberLike, NumberLike>).get(key) as NumberLike;
       this.cuckooTable.setNumberLike(key, value);
     }
-    if (mapping.size > this.cuckooTable.getCriticalCapacity()) {
-      throttledCapacityWarning();
-    } else {
-      for (const key of onlyB) {
-        // We know that the lookup of key in mapping has to succeed because
-        // the diffing wouldn't have returned the id otherwise.
-        const value = (mapping as Map<NumberLike, NumberLike>).get(key) as NumberLike;
-        this.cuckooTable.setNumberLike(key, value);
+    for (const key of onlyB) {
+      // todop: with 512**2 textures, this doesnt work properly?
+      if (this.currentKeyCount > this.cuckooTable.getCriticalCapacity()) {
+        throttledCapacityWarning();
+        break;
       }
+      // We know that the lookup of key in mapping has to succeed because
+      // the diffing wouldn't have returned the id otherwise.
+      const value = (mapping as Map<NumberLike, NumberLike>).get(key) as NumberLike;
+      this.currentKeyCount++;
+      this.cuckooTable.setNumberLike(key, value);
     }
     this.previousMapping = mapping;
 

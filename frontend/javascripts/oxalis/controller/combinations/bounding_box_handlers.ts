@@ -1,4 +1,5 @@
 import {
+  calculateGlobalDelta,
   calculateGlobalPos,
   calculateMaybeGlobalPos,
 } from "oxalis/model/accessors/view_mode_accessor";
@@ -379,7 +380,7 @@ export function handleMovingBoundingBox(
   primaryEdge: SelectedEdge,
 ) {
   const state = Store.getState();
-  const dimensionIndices = Dimension.getIndices(planeId);
+  const globalDelta = calculateGlobalDelta(state, delta, planeId);
   const bboxToResize = getBoundingBoxOfPrimaryEdge(primaryEdge, state);
 
   if (!bboxToResize) {
@@ -387,13 +388,9 @@ export function handleMovingBoundingBox(
   }
 
   const updatedBounds = {
-    min: [...bboxToResize.boundingBox.min] as Vector3,
-    max: [...bboxToResize.boundingBox.max] as Vector3,
+    min: V3.toArray(V3.add(bboxToResize.boundingBox.min, globalDelta)),
+    max: V3.toArray(V3.add(bboxToResize.boundingBox.max, globalDelta)),
   };
-  updatedBounds.min[dimensionIndices[0]] += delta.x;
-  updatedBounds.max[dimensionIndices[0]] += delta.x;
-  updatedBounds.min[dimensionIndices[1]] += delta.y;
-  updatedBounds.max[dimensionIndices[1]] += delta.y;
 
   Store.dispatch(
     changeUserBoundingBoxAction(primaryEdge.boxId, {

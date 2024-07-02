@@ -13,7 +13,7 @@ import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
 import net.liftweb.common.{Box, Full}
-import play.api.libs.json.{JsArray, JsObject, Json}
+import play.api.libs.json.{JsArray, Json}
 import utils.{ObjectId, StoreModules, WkConf}
 
 import javax.inject.Inject

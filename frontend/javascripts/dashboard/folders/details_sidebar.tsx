@@ -145,6 +145,7 @@ function MetadataTable({
 
   console.log("datasetMeta", selectedDatasetOrFolder.metadata, "metadata state", metadata);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only update when the actual dataset / folder changes.
   useEffect(() => {
     // Flush pending updates:
     updateCachedDatasetOrFolderDebounced.flush();
@@ -154,7 +155,7 @@ function MetadataTable({
         ? selectedDatasetOrFolder.metadata
         : [{ key: "", value: "", index: 0, type: "string" as APIMetadata["type"] }],
     );
-  }, [selectedDatasetOrFolder]);
+  }, [selectedDatasetOrFolder.id || selectedDatasetOrFolder.name]);
 
   useEffectOnUpdate(() => {
     updateCachedDatasetOrFolderDebounced(

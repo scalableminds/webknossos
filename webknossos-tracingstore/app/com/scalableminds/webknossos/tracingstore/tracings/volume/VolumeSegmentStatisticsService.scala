@@ -109,7 +109,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       )
     }.toList
     for {
-      (data, _) <- if (tracing.mappingIsEditable.getOrElse(false))
+      (data, _) <- if (tracing.getHasEditableMapping)
         editableMappingService.volumeData(tracing, tracingId, dataRequests, userToken)
       else volumeTracingService.data(tracingId, tracing, dataRequests, includeFallbackDataIfAvailable = true, userToken)
     } yield data

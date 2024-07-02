@@ -2,6 +2,7 @@
 
 testBundlePath="public-test/test-bundle"
 jsPath="frontend/javascripts"
+proto_dir="webknossos-datastore/proto"
 FIND=find
 
 if [ -x "$(command -v gfind)" ]; then
@@ -17,8 +18,10 @@ mkdir -p "$testBundlePath"
 function prepare {
   rm -rf "$testBundlePath" && mkdir "$testBundlePath"
   # Webpack with the proto loader isn't used when running the tests, so the proto files need to be prepared manually
-  pbjs -t json "webknossos-datastore/proto/SkeletonTracing.proto" > "$testBundlePath/SkeletonTracing.proto.json"
-  pbjs -t json "webknossos-datastore/proto/VolumeTracing.proto" > "$testBundlePath/VolumeTracing.proto.json"
+  for proto_file in "$proto_dir"/*.proto; do
+      output_file="$testBundlePath/$(basename "$proto_file").json"
+      pbjs -t json "$proto_file" > "$output_file"
+  done
 
   # Beginning from target==node13, dynamic imports are not converted anymore by esbuild. Tests which use code
   # that relies on dynamic imports fails then because the module cannot be found for some reason.

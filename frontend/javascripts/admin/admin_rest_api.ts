@@ -77,13 +77,18 @@ import type {
   MappingType,
   VolumeTracing,
   UserConfiguration,
+  Mapping,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import {
+  parseProtoListOfLong,
+  parseProtoTracing,
+  serializeProtoListOfLong,
+} from "oxalis/model/helpers/proto_helpers";
 import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
@@ -886,7 +891,7 @@ export async function getTracingForAnnotationType(
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
   const version = extractVersion(versions, tracingId, typ);
-  const tracingType = typ.toLowerCase();
+  const tracingType = typ.toLowerCase() as "skeleton" | "volume";
   const possibleVersionString = version != null ? `&version=${version}` : "";
   const tracingArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
@@ -1599,23 +1604,6 @@ export function getEditableMappingInfo(
   );
 }
 
-export function getAgglomerateIdForSegmentId(
-  tracingStoreUrl: string,
-  tracingId: string,
-  segmentId: number,
-): Promise<number> {
-  return doWithToken(async (token) => {
-    const urlParams = new URLSearchParams({
-      token,
-      segmentId: `${segmentId}`,
-    });
-    const { agglomerateId } = await Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateIdForSegmentId?${urlParams.toString()}`,
-    );
-    return agglomerateId;
-  });
-}
-
 export function getPositionForSegmentInAgglomerate(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -2066,6 +2054,52 @@ export function getAgglomerateSkeleton(
       },
     ),
   );
+}
+
+export async function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingId: string,
+  segmentIds: Array<T>,
+): Promise<Mapping> {
+  const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
+      {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+      },
+    ),
+  );
+  // @ts-ignore
+  return new Map(_.zip(segmentIds, parseProtoListOfLong(listArrayBuffer)));
+}
+
+export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentIds: Array<T>,
+): Promise<Mapping> {
+  const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
+      {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+      },
+    ),
+  );
+  // @ts-ignore
+  return new Map(_.zip(segmentIds, parseProtoListOfLong(listArrayBuffer)));
 }
 
 export function getEditableAgglomerateSkeleton(

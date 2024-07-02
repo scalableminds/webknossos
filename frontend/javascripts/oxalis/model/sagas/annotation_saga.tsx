@@ -8,6 +8,7 @@ import {
   type SetOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { EditableAnnotation } from "admin/admin_rest_api";
+import { ActionPattern } from "redux-saga/effects";
 import {
   editAnnotation,
   updateAnnotationLayer,
@@ -46,8 +47,9 @@ import { determineLayout } from "oxalis/view/layouting/default_layout_configs";
 import { getLastActiveLayout, getLayoutConfig } from "oxalis/view/layouting/layout_persistence";
 import { is3dViewportMaximized } from "oxalis/view/layouting/flex_layout_helper";
 
-/* Note that this must stay in sync with the back-end constant
-  compare https://github.com/scalableminds/webknossos/issues/5223 */
+/* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
+  compare https://github.com/scalableminds/webknossos/issues/5223.
+ */
 const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
 
 export function* pushAnnotationUpdateAsync(action: Action) {
@@ -192,11 +194,12 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
       "SET_STORED_LAYOUTS",
       "SET_MAPPING",
       "SET_MAPPING_ENABLED",
+      "FINISH_MAPPING_INITIALIZATION",
       (action: Action) =>
         action.type === "UPDATE_LAYER_SETTING" &&
         action.layerName === segmentationLayerName &&
         action.propertyName === "alpha",
-    ]);
+    ] as ActionPattern);
     yield* warnMaybe();
   }
 }
@@ -210,8 +213,9 @@ export function* watchAnnotationAsync(): Saga<void> {
   yield* takeLatest("SET_ANNOTATION_VISIBILITY", pushAnnotationUpdateAsync);
   yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
   yield* takeLatest(
-    (action: Action) =>
-      action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
+    ((action: Action) =>
+      action.type === "UPDATE_LAYER_SETTING" &&
+      action.propertyName === "isDisabled") as ActionPattern,
     pushAnnotationUpdateAsync,
   );
   yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);

@@ -21,6 +21,7 @@ const test: TestInterface<{
     isSegmentation: boolean;
     pushQueue: any;
     pullQueue: any;
+    triggerBucketDataChanged: () => void;
   };
   manager: typeof TemporalBucketManager;
 }> = anyTest as any;
@@ -37,6 +38,7 @@ test.beforeEach((t) => {
     isSegmentation: true,
     pushQueue,
     pullQueue,
+    triggerBucketDataChanged: () => {},
   };
   const manager = new TemporalBucketManager(pullQueue, pushQueue);
   t.context.cube = mockedCube;

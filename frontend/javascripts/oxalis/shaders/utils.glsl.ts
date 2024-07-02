@@ -293,20 +293,6 @@ export const vec4ToFloat: ShaderModule = {
     }
   `,
 };
-export const greaterThanVec4: ShaderModule = {
-  code: `
-    bool greaterThanVec4(vec4 x, vec4 y) {
-      if (x.a > y.a) return true;
-      if (x.a < y.a) return false;
-      if (x.b > y.b) return true;
-      if (x.b < y.b) return false;
-      if (x.g > y.g) return true;
-      if (x.g < y.g) return false;
-      if (x.r > y.r) return true;
-      else return false;
-    }
-  `,
-};
 export const transDim: ShaderModule = {
   code: `
     // Similar to the transDim function in dimensions.js, this function transposes dimensions for the current plane.

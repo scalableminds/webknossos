@@ -27,6 +27,7 @@ const mockedCube = {
     [1, 1, 1],
     [2, 2, 2],
   ]),
+  triggerBucketDataChanged: () => {},
 };
 const StoreMock = {
   getState: () => ({
@@ -44,6 +45,7 @@ const StoreMock = {
         name: "localhost",
         url: "http://localhost:9000",
       },
+      volumes: [],
     },
     datasetConfiguration: {
       fourBit: _fourBit,

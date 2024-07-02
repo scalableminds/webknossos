@@ -13,7 +13,7 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import constants from "oxalis/constants";
 import window from "libs/window";
 import type { ElementClass } from "types/api_flow_types";
-import { CuckooTableVec5 } from "./cuckoo_table_vec5";
+import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import app from "app";
 
 // A TextureBucketManager instance is responsible for making buckets available

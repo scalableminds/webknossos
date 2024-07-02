@@ -124,7 +124,6 @@ const dummyActiveMapping: ActiveMappingInfo = {
   mappingColors: [],
   hideUnmappedIds: false,
   mappingStatus: "ENABLED",
-  mappingSize: 0,
   mappingType: "HDF5",
 };
 

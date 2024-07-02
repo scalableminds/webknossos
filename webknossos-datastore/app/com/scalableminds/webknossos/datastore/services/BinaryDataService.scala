@@ -27,8 +27,8 @@ class BinaryDataService(val dataBaseDir: Path,
     with DatasetDeleter
     with LazyLogging {
 
-  /* Note that this must stay in sync with the front-end constant
-    compare https://github.com/scalableminds/webknossos/issues/5223 */
+  /* Note that this must stay in sync with the front-end constant MAX_MAG_FOR_AGGLOMERATE_MAPPING
+     compare https://github.com/scalableminds/webknossos/issues/5223 */
   private val MaxMagForAgglomerateMapping = 16
 
   private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)

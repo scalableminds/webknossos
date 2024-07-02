@@ -1,11 +1,17 @@
 import _ from "lodash";
+import { createNanoEvents, Emitter } from "nanoevents";
 import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
-import { areBoundingBoxesOverlappingOrTouching, castForArrayType } from "libs/utils";
+import {
+  areBoundingBoxesOverlappingOrTouching,
+  castForArrayType,
+  isNumberMap,
+  union,
+} from "libs/utils";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
@@ -78,6 +84,8 @@ class DataCube {
   elementClass: ElementClass;
   resolutionInfo: ResolutionInfo;
   layerName: string;
+  emitter: Emitter;
+  lastRequestForValueSet: number | null = null;
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
@@ -108,6 +116,7 @@ class DataCube {
     this.resolutionInfo = resolutionInfo;
     this.layerName = layerName;
     this.additionalAxes = _.keyBy(additionalAxes, "name");
+    this.emitter = createNanoEvents();
 
     this.cubes = {};
     this.buckets = [];
@@ -171,11 +180,19 @@ class DataCube {
   }
 
   mapId(idToMap: number): number {
-    let mappedId = null;
+    // todop (difficult): should this function be async since the mapping
+    // might be partially loaded?
+    let mappedId: number | null | undefined = null;
     const mapping = this.getMapping();
 
     if (mapping != null && this.isMappingEnabled()) {
-      mappedId = mapping.get(idToMap);
+      mappedId = isNumberMap(mapping)
+        ? mapping.get(Number(idToMap))
+        : // TODO #6581: Uint64 Support
+          Number(mapping.get(BigInt(idToMap)));
+    }
+    if (mappedId == null || isNaN(mappedId)) {
+      mappedId = idToMap;
     }
 
     if (this.shouldHideUnmappedIds() && mappedId == null) {
@@ -371,6 +388,30 @@ class DataCube {
 
     this.buckets = notCollectedBuckets;
     this.bucketIterator = notCollectedBuckets.length;
+  }
+
+  triggerBucketDataChanged(): void {
+    this.emitter.emit("bucketDataChanged");
+  }
+
+  shouldEagerlyMaintainUsedValueSet() {
+    // The value set for all buckets in this cube should be maintained eagerly
+    // if the valueSet was used within the last 2 minutes.
+    return Date.now() - (this.lastRequestForValueSet || 0) < 2 * 60 * 1000;
+  }
+
+  getValueSetForAllBuckets(): Set<number> | Set<bigint> {
+    this.lastRequestForValueSet = Date.now();
+
+    // Theoretically, we could ignore coarser buckets for which we know that
+    // finer buckets are already loaded. However, the current performance
+    // is acceptable which is why this optimization isn't implemented.
+    const valueSets = this.buckets
+      .filter((bucket) => bucket.state === "LOADED")
+      .map((bucket) => bucket.getValueSet());
+    // @ts-ignore The buckets of a single layer all have the same element class, so they are all number or all bigint
+    const valueSet = union(valueSets);
+    return valueSet;
   }
 
   collectBucket(bucket: DataBucket): void {
@@ -838,17 +879,21 @@ class DataCube {
 
     if (bucket.hasData()) {
       const data = bucket.getData();
-      const dataValue = Number(data[voxelIndex]);
+      const dataValue = data[voxelIndex];
 
       if (mapping) {
-        const mappedValue = mapping.get(dataValue);
+        const mappedValue = isNumberMap(mapping)
+          ? mapping.get(Number(dataValue))
+          : mapping.get(BigInt(dataValue));
 
         if (mappedValue != null) {
-          return mappedValue;
+          // TODO #6581: Uint64 Support
+          return Number(mappedValue);
         }
       }
 
-      return dataValue;
+      // TODO #6581: Uint64 Support
+      return Number(dataValue);
     }
 
     return 0;

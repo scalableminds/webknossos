@@ -118,6 +118,18 @@ export function unique<T>(array: Array<T>): Array<T> {
   return [...new Set(array)];
 }
 
+export function union<T>(iterables: Array<Iterable<T>>): Set<T> {
+  const set: Set<T> = new Set();
+
+  for (const iterable of iterables) {
+    for (const item of iterable) {
+      set.add(item);
+    }
+  }
+
+  return set;
+}
+
 export function enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => B {
   return (nullableA: A | null | undefined) => {
     if (nullableA == null) {
@@ -625,6 +637,26 @@ export function diffArrays<T>(
   };
 }
 
+export function diffMaps<K, V>(
+  stateA: Map<K, V>,
+  stateB: Map<K, V>,
+): {
+  changed: Iterable<K>;
+  onlyA: Iterable<K>;
+  onlyB: Iterable<K>;
+} {
+  const keysOfA = Array.from(stateA.keys());
+  const keysOfB = Array.from(stateB.keys());
+  const changed = keysOfA.filter((x) => stateB.has(x) && stateB.get(x) !== stateA.get(x));
+  const onlyA = keysOfA.filter((x) => !stateB.has(x));
+  const onlyB = keysOfB.filter((x) => !stateA.has(x));
+  return {
+    changed,
+    onlyA,
+    onlyB,
+  };
+}
+
 export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
   // This set-based implementation avoids stackoverflow errors from which
   // _.without(arr, ...elements) suffers.
@@ -874,12 +906,18 @@ export function castForArrayType(uncastNumber: number, data: TypedArray): number
   return data instanceof BigUint64Array ? BigInt(uncastNumber) : uncastNumber;
 }
 
-export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
+export function convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {
+  const [bigNumHigh, bigNumLow] = convertNumberTo64BitTuple(num);
+
+  const low = convertDecToBase256(bigNumLow);
+  const high = convertDecToBase256(bigNumHigh);
+
+  return [high, low];
+}
+
+export function convertNumberTo64BitTuple(num: number | bigint | null): [number, number] {
   if (num == null || Number.isNaN(num)) {
-    return [
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-    ];
+    return [0, 0];
   }
   // Cast to BigInt as bit-wise operations only work with 32 bits,
   // even though Number uses 53 bits.
@@ -888,10 +926,7 @@ export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
   const bigNumLow = Number((2n ** 32n - 1n) & bigNum);
   const bigNumHigh = Number(bigNum >> 32n);
 
-  const low = convertDecToBase256(bigNumLow);
-  const high = convertDecToBase256(bigNumHigh);
-
-  return [high, low];
+  return [bigNumHigh, bigNumLow];
 }
 
 export async function promiseAllWithErrors<T>(promises: Array<Promise<T>>): Promise<{
@@ -1080,6 +1115,44 @@ export function diffObjects(
   return changes(object, base);
 }
 
+export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
+  /*
+   * This function was designed for a special use case within the mapping saga,
+   * where a Set of (potentially new) segment IDs is passed for setA and a known mapping from
+   * id->id is passed for mapB.
+   * The function computes:
+   * - aWithoutB: segment IDs that are in setA but not in mapB.keys()
+   * - bWithoutA: segment IDs that are in mapB.keys() but not in setA
+   * - intersection: a Map only contains keys that are in both setA and mapB.keys() (the values are used from mapB).
+   */
+  const aWithoutB = new Set<T>();
+  const bWithoutA = new Set<T>();
+  // This function assumes that the returned intersection is relatively large which is common
+  // for the use case it was designed for. Under this assumption, mapB is simply copied to
+  // initialize the intersection. Afterwards, items that are not within setA are removed from
+  // the intersection.
+  const intersection = new Map(mapB);
+
+  for (const item of setA) {
+    if (!mapB.has(item)) {
+      aWithoutB.add(item);
+    }
+  }
+
+  for (const item of mapB.keys()) {
+    if (!setA.has(item)) {
+      bWithoutA.add(item);
+      intersection.delete(item);
+    }
+  }
+
+  return {
+    aWithoutB: aWithoutB,
+    bWithoutA: bWithoutA,
+    intersection: intersection,
+  };
+}
+
 export function coalesce<T extends {}>(e: T, token: any): T[keyof T] | null {
   return Object.values(e).includes(token as T[keyof T]) ? token : null;
 }
@@ -1162,6 +1235,11 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
   // e.g. [1, 2, undefined].filter(notEmpty) => type should be number[]
   // Source https://github.com/microsoft/TypeScript/issues/45097#issuecomment-882526325
   return value !== null && value !== undefined;
+}
+
+export function isNumberMap(x: Map<any, any>): x is Map<number, number> {
+  const { value } = x.entries().next();
+  return value && typeof value[0] === "number";
 }
 
 export function assertNever(value: never): never {

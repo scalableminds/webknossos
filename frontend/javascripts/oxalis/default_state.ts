@@ -126,7 +126,7 @@ const defaultState: OxalisState = {
         team: "",
       },
     },
-    details: null,
+    metadata: null,
     tags: [],
     isPublic: false,
     isActive: true,

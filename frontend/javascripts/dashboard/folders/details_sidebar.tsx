@@ -4,25 +4,43 @@ import {
   SearchOutlined,
   EditOutlined,
   LoadingOutlined,
+  DeleteOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
-import { Result, Spin, Tag, Tooltip } from "antd";
+import {
+  Typography,
+  Input,
+  Result,
+  Spin,
+  Tag,
+  Tooltip,
+  Dropdown,
+  MenuProps,
+  InputNumber,
+  Select,
+} from "antd";
 import { stringToColor, formatCountToDataAmountUnit } from "libs/format_utils";
-import { pluralize } from "libs/utils";
+import { parseFloatOrZero, pluralize } from "libs/utils";
 import _ from "lodash";
 import {
   DatasetExtentRow,
   OwningOrganizationRow,
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
-import React, { useEffect } from "react";
-import { APIDatasetCompact, Folder } from "types/api_flow_types";
-import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
-import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
+import React, { useEffect, useState } from "react";
+import { APIDatasetCompact, APIMetadata, APIMetadataEntries, Folder } from "types/api_flow_types";
+import { DatasetLayerTags, TeamTags } from "../advanced_dataset/dataset_table";
+import {
+  DatasetCollectionContextValue,
+  useDatasetCollectionContext,
+} from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { getOrganization } from "admin/admin_rest_api";
 import { useQuery } from "@tanstack/react-query";
+import { useEffectOnUpdate } from "libs/react_hooks";
+import { useWillUnmount } from "beautiful-react-hooks";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -86,9 +104,344 @@ function getMaybeSelectMessage(datasetCount: number) {
   return datasetCount > 0 ? "Select one to see details." : "";
 }
 
-function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
+const updateCachedDatasetOrFolderDebounced = _.debounce(
+  async (
+    context: DatasetCollectionContextValue,
+    selectedDatasetOrFolder: APIDatasetCompact | Folder,
+    metadata: APIMetadataEntries,
+    setIgnoreFetching: (value: boolean) => void,
+  ) => {
+    // Explicitly ignoring fetching here to avoid unnecessary rendering of the loading spinner and thus hiding the metadata table.
+    setIgnoreFetching(true);
+    if ("status" in selectedDatasetOrFolder) {
+      await context.updateCachedDataset(selectedDatasetOrFolder, { metadata: metadata });
+    } else {
+      const folder = selectedDatasetOrFolder as Folder;
+      await context.queries.updateFolderMutation.mutateAsync({
+        ...folder,
+        allowedTeams: folder.allowedTeams.map((t) => t.id),
+        metadata,
+      });
+    }
+    setIgnoreFetching(false);
+  },
+  3000,
+);
+
+function MetadataTable({
+  selectedDatasetOrFolder,
+  setIgnoreFetching,
+}: {
+  selectedDatasetOrFolder: APIDatasetCompact | Folder;
+  setIgnoreFetching: (value: boolean) => void;
+}) {
   const context = useDatasetCollectionContext();
+  const [metadata, setMetadata] = useState<APIMetadataEntries>(
+    selectedDatasetOrFolder.metadata != null && selectedDatasetOrFolder.metadata.length > 0
+      ? selectedDatasetOrFolder.metadata
+      : [{ key: "", value: "", index: 0, type: "string" as APIMetadata["type"] }],
+  );
+  const [error, setError] = useState<[string, string] | null>(null); // [propName, error message]
+  const [focusedRow, setFocusedRow] = useState<number | null>(null);
+
+  console.log("datasetMeta", selectedDatasetOrFolder.metadata, "metadata state", metadata);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only update when the actual dataset / folder changes.
+  useEffect(() => {
+    // Flush pending updates:
+    updateCachedDatasetOrFolderDebounced.flush();
+    // Update state to newest metadata from selectedDatasetOrFolder.
+    setMetadata(
+      selectedDatasetOrFolder.metadata != null && selectedDatasetOrFolder.metadata.length > 0
+        ? selectedDatasetOrFolder.metadata
+        : [{ key: "", value: "", index: 0, type: "string" as APIMetadata["type"] }],
+    );
+  }, [selectedDatasetOrFolder.id || selectedDatasetOrFolder.name]);
+
+  useEffectOnUpdate(() => {
+    updateCachedDatasetOrFolderDebounced(
+      context,
+      selectedDatasetOrFolder,
+      metadata,
+      setIgnoreFetching,
+    );
+  }, [metadata]);
+
+  // On component unmount flush pending updates to avoid potential data loss.
+  useWillUnmount(() => {
+    updateCachedDatasetOrFolderDebounced.flush();
+  });
+
+  const updatePropName = (previousPropName: string, newPropName: string) => {
+    setMetadata((prev: APIMetadataEntries) => {
+      const entry = prev.find((prop) => prop.key === previousPropName);
+      const maybeAlreadyExistingEntry = prev.find((prop) => prop.key === newPropName);
+      if (maybeAlreadyExistingEntry) {
+        setError([previousPropName, `Property ${newPropName} already exists.`]);
+        return prev;
+      }
+      if (entry) {
+        setError(null);
+        const detailsWithoutEditedEntry = prev.filter((prop) => prop.key !== previousPropName);
+        return [
+          ...detailsWithoutEditedEntry,
+          {
+            ...entry,
+            key: newPropName,
+          },
+        ];
+      } else {
+        const highestIndex = prev.reduce((acc, curr) => Math.max(acc, curr.index), 0);
+        const newEntry: APIMetadata = {
+          key: newPropName,
+          value: "",
+          type: "string",
+          index: highestIndex + 1,
+        };
+        return [...prev, newEntry];
+      }
+    });
+  };
+  const updateValue = (propName: string, newValue: string | string[]) => {
+    setMetadata((prev) => {
+      const entry = prev.find((prop) => prop.key === propName);
+      if (!entry) {
+        return prev;
+      }
+      const updatedEntry = { ...entry, value: newValue };
+      const detailsWithoutEditedEntry = prev.filter((prop) => prop.key !== propName);
+      return [...detailsWithoutEditedEntry, updatedEntry];
+    });
+  };
+
+  const updateType = (index: number, newType: APIMetadata["type"]) => {
+    setMetadata((prev) => {
+      const entry = prev.find((prop) => prop.index === index);
+      if (!entry) {
+        return prev;
+      }
+      let updatedEntry = { ...entry, type: newType };
+      if (newType === "string[]" && entry.type !== "string[]") {
+        updatedEntry = { ...updatedEntry, value: [entry.value.toString()] };
+      } else if (newType === "number" && entry.type !== "number") {
+        updatedEntry = {
+          ...updatedEntry,
+          value: parseFloatOrZero(
+            Array.isArray(entry.value) ? entry.value.join(" ") : entry.value.toString(),
+          ),
+        };
+      } else if (newType === "string" && entry.type !== "string") {
+        updatedEntry = {
+          ...updatedEntry,
+          value: Array.isArray(entry.value) ? entry.value.join(" ") : entry.value.toString(),
+        };
+      }
+
+      const detailsWithoutEditedEntry = prev.filter((prop) => prop.index !== index);
+      return [...detailsWithoutEditedEntry, updatedEntry];
+    });
+  };
+
+  const deleteKey = (propName: string) => {
+    setMetadata((prev) => {
+      return prev.filter((prop) => prop.key !== propName);
+    });
+  };
+
+  const sortedDetails = metadata.sort((a, b) => a.index - b.index);
+
+  const availableStrArrayTagOptions = _.uniq(
+    sortedDetails.flatMap((detail) => (detail.type === "string[]" ? detail.value : [])),
+  ).map((tag) => ({ value: tag, label: tag }));
+
+  const renderTypeTag = (type: APIMetadata["type"]) => {
+    switch (type) {
+      case "string":
+        return <Tag style={{ margin: 0, width: 32, padding: "0px 8px" }}>str</Tag>;
+      case "number":
+        return <Tag style={{ margin: 0, width: 32, padding: "0px 4px" }}>012</Tag>;
+      case "string[]":
+        return <Tag style={{ margin: 0, width: 32 }}>{`[""]`}</Tag>;
+    }
+  };
+
+  const getTypeSelectDropdownMenu: (arg0: number) => MenuProps = (propertyIndex: number) => ({
+    items: [
+      {
+        key: 0,
+        label: <Tooltip title="String type">str</Tooltip>,
+        onClick: () => updateType(propertyIndex, "string"),
+      },
+      {
+        key: 1,
+        label: <Tooltip title="Number type">012</Tooltip>,
+        onClick: () => updateType(propertyIndex, "number"),
+      },
+      {
+        key: 2,
+        label: <Tooltip title="String Array type">{`[""]`}</Tooltip>,
+        onClick: () => updateType(propertyIndex, "string[]"),
+      },
+    ],
+  });
+
+  const getValueInput = (record: APIMetadata) => {
+    switch (record.type) {
+      case "number":
+        return (
+          <InputNumber
+            onFocus={() => setFocusedRow(record.index)}
+            onBlur={() => setFocusedRow(null)}
+            variant={record.index === focusedRow ? "outlined" : "borderless"}
+            value={record.value as number}
+            onChange={(newNum) => updateValue(record.key, newNum?.toString() || "")}
+            placeholder="Value"
+            size="small"
+          />
+        );
+      case "string":
+        return (
+          <Input
+            onFocus={() => setFocusedRow(record.index)}
+            onBlur={() => setFocusedRow(null)}
+            variant={record.index === focusedRow ? "outlined" : "borderless"}
+            value={record.value}
+            onChange={(evt) => updateValue(record.key, evt.target.value)}
+            placeholder="Value"
+            size="small"
+          />
+        );
+      case "string[]":
+        return (
+          <Select
+            onFocus={() => setFocusedRow(record.index)}
+            onBlur={() => setFocusedRow(null)}
+            variant={record.index === focusedRow ? "outlined" : "borderless"}
+            mode="tags"
+            style={{ width: "100%" }}
+            placeholder="Values"
+            value={record.value as string[]}
+            onChange={(values) => updateValue(record.key, values)}
+            options={availableStrArrayTagOptions}
+            size="small"
+            suffixIcon={null}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div className="sidebar-label">Metadata</div>
+      <div>
+        {/* Not using AntD Table to have more control over the styling. */}
+        <table className="ant-tag antd-app-theme metadata-table">
+          <thead>
+            <tr>
+              <th>
+                <Typography.Text
+                  strong
+                  className="antd-app-theme ant-input-css-var"
+                  style={{
+                    padding: "0px 0px 0px 2px",
+                  }}
+                >
+                  Type
+                </Typography.Text>
+              </th>
+              <th>
+                <Typography.Text
+                  strong
+                  className="antd-app-theme ant-input-css-var"
+                  style={{
+                    padding: "var(--ant-input-padding-block-sm) var(--ant-input-padding-inline-sm)",
+                  }}
+                >
+                  Property
+                </Typography.Text>
+              </th>
+              <th />
+              <th>
+                <Typography.Text
+                  strong
+                  className="antd-app-theme ant-input-css-var"
+                  style={{
+                    padding: "var(--ant-input-padding-block-sm) var(--ant-input-padding-inline-sm)",
+                  }}
+                >
+                  Value
+                </Typography.Text>
+              </th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {sortedDetails.map((record) => (
+              <tr key={record.index}>
+                <td>
+                  <Dropdown menu={getTypeSelectDropdownMenu(record.index)}>
+                    {renderTypeTag(record.type)}
+                  </Dropdown>
+                </td>
+                <td>
+                  <Input
+                    onFocus={() => setFocusedRow(record.index)}
+                    onBlur={() => setFocusedRow(null)}
+                    variant={record.index === focusedRow ? "outlined" : "borderless"}
+                    value={record.key}
+                    onChange={(evt) => updatePropName(record.key, evt.target.value)}
+                    placeholder="New property"
+                    size="small"
+                  />
+                  {error != null && error[0] === record.key ? (
+                    <>
+                      <br />
+                      <Typography.Text type="warning">{error[1]}</Typography.Text>
+                    </>
+                  ) : null}
+                </td>
+                <td>:</td>
+                <td>{getValueInput(record)}</td>
+                <td>
+                  <DeleteOutlined
+                    onClick={() => deleteKey(record.key)}
+                    style={{
+                      color: "var(--ant-color-text-tertiary)",
+                      visibility: record.key === "" ? "hidden" : "visible",
+                    }}
+                    disabled={record.key === ""}
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <div className="flex-center-child" style={{ marginLeft: 12 }}>
+          <div
+            style={{
+              border: "var(--ant-line-width) var(--ant-line-type) var(--ant-color-border)",
+              width: 18,
+              height: 18,
+            }}
+            className="flex-center-child"
+          >
+            <PlusOutlined
+              size={18}
+              style={{ color: "var(--ant-color-text-tertiary)" }}
+              onClick={() => updatePropName("", "")}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
   const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset);
+  const [ignoreFetching, setIgnoreFetching] = useState(false);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const { data: owningOrganization } = useQuery(
     ["organizations", selectedDataset.owningOrganization],
@@ -117,7 +470,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
   return (
     <>
       <h4 style={{ wordBreak: "break-all" }}>
-        {isFetching ? (
+        {isFetching && !ignoreFetching ? (
           <LoadingOutlined style={{ marginRight: 4 }} />
         ) : (
           <FileOutlined style={{ marginRight: 4 }} />
@@ -174,13 +527,6 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         </div>
       </Spin>
 
-      {selectedDataset.isActive ? (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Tags</div>
-          <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
-        </div>
-      ) : null}
-
       {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Used Storage</div>
@@ -188,6 +534,13 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
             <div>{formatCountToDataAmountUnit(fullDataset.usedStorageBytes, true)}</div>
           </Tooltip>
         </div>
+      ) : null}
+
+      {selectedDataset.isActive ? (
+        <MetadataTable
+          selectedDatasetOrFolder={selectedDataset}
+          setIgnoreFetching={setIgnoreFetching}
+        />
       ) : null}
     </>
   );
@@ -280,7 +633,10 @@ function FolderDetails({
             . {message}
           </p>
           <div className="sidebar-label">Access Permissions</div>
-          <FolderTeamTags folder={folder} />
+          <div style={{ marginBottom: 4 }}>
+            <FolderTeamTags folder={folder} />
+          </div>
+          <MetadataTable selectedDatasetOrFolder={folder} setIgnoreFetching={() => {}} />
         </div>
       ) : error ? (
         "Could not load folder."

@@ -168,11 +168,13 @@ export type MutableAPIDatasetId = {
   name: string;
 };
 export type APIDatasetId = Readonly<MutableAPIDatasetId>;
-export type APIDatasetDetails = {
-  readonly species?: string;
-  readonly brainRegion?: string;
-  readonly acquisition?: string;
+export type APIMetadata = {
+  type: "number" | "string" | "string[]";
+  key: string;
+  value: string | number | string[];
+  index: number;
 };
+export type APIMetadataEntries = APIMetadata[];
 
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
@@ -182,7 +184,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   created: number;
   dataStore: APIDataStore;
   description: string | null | undefined;
-  details: APIDatasetDetails | null | undefined;
+  metadata: APIMetadataEntries | null | undefined;
   isEditable: boolean;
   isPublic: boolean;
   displayName: string | null | undefined;
@@ -225,6 +227,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "lastUsedByUser"
   | "tags"
   | "isUnreported"
+  | "metadata"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id?: string;
@@ -250,6 +253,7 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     lastUsedByUser: dataset.lastUsedByUser,
     status: dataset.dataSource.status,
     tags: dataset.tags,
+    metadata: dataset.metadata,
     isUnreported: dataset.isUnreported,
     colorLayerNames: colorLayerNames,
     segmentationLayerNames: segmentationLayerNames,
@@ -1063,21 +1067,23 @@ export type VoxelyticsLogLine = {
   wk_url: string;
 };
 
-// Backend type
+// Backend type returned by the getFolderTree api method.
 export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent: string | null;
+  metadata: APIMetadataEntries;
   isEditable: boolean;
 };
 
-// Frontend type
+// Frontend type of FlatFolderTreeItem with inferred nested structure.
 export type FolderItem = {
   title: string;
   key: string;
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;
+  metadata: APIMetadataEntries;
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1088,6 +1094,7 @@ export type Folder = {
   id: string;
   allowedTeams: APITeam[];
   allowedTeamsCumulative: APITeam[];
+  metadata: APIMetadataEntries;
   isEditable: boolean;
 };
 
@@ -1095,6 +1102,7 @@ export type FolderUpdater = {
   id: string;
   name: string;
   allowedTeams: string[];
+  metadata: APIMetadataEntries;
 };
 
 export enum CAMERA_POSITIONS {

@@ -54,7 +54,7 @@ case class Dataset(_id: ObjectId,
                    status: String,
                    logoUrl: Option[String],
                    sortingKey: Instant = Instant.now,
-                   details: Option[JsObject] = None,
+                   metadata: Option[JsArray] = None,
                    tags: List[String] = List.empty,
                    created: Instant = Instant.now,
                    isDeleted: Boolean = false)
@@ -76,6 +76,7 @@ case class DatasetCompactInfo(
     lastUsedByUser: Instant,
     status: String,
     tags: List[String],
+    metadata: Option[JsArray],
     isUnreported: Boolean,
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
@@ -116,7 +117,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
         JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
-      details <- Fox.runOptional(r.details)(JsonHelper.parseAndValidateJson[JsObject](_))
+      metadata <- Fox.runOptional(r.metadata)(JsonHelper.parseAndValidateJson[JsArray](_))
     } yield {
       Dataset(
         ObjectId(r._Id),
@@ -138,7 +139,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         r.status,
         r.logourl,
         Instant.fromSql(r.sortingkey),
-        details,
+        metadata,
         parseArrayLiteral(r.tags).sorted,
         Instant.fromSql(r.created),
         r.isdeleted
@@ -269,6 +270,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}),
               d.status,
               d.tags,
+              d.metadata,
               cl.names AS colorLayerNames,
               sl.names AS segmentationLayerNames
             FROM
@@ -298,6 +300,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
            String,
            String,
            String,
+           String,
            String)])
     } yield
       rows.toList.map(
@@ -314,9 +317,10 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             lastUsedByUser = row._9,
             status = row._10,
             tags = parseArrayLiteral(row._11),
+            metadata = JsonHelper.parseAndValidateJson[JsArray](row._12),
             isUnreported = unreportedStatusList.contains(row._10),
-            colorLayerNames = parseArrayLiteral(row._12),
-            segmentationLayerNames = parseArrayLiteral(row._13)
+            colorLayerNames = parseArrayLiteral(row._13),
+            segmentationLayerNames = parseArrayLiteral(row._14)
         ))
 
   private def buildSelectionPredicates(isActiveOpt: Option[Boolean],
@@ -470,6 +474,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     } yield ()
 
   def updatePartial(datasetId: ObjectId, params: DatasetUpdateParameters)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    System.out.println(s"Trying to update a dataset with $DatasetUpdateParameters")
     val setQueries = List(
       params.description.map(d => q"description = $d"),
       params.displayName.map(v => q"displayName = $v"),
@@ -477,6 +482,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       params.isPublic.map(v => q"isPublic = $v"),
       params.tags.map(v => q"tags = $v"),
       params.folderId.map(v => q"_folder = $v"),
+      params.metadata.map(v => q"metadata = $v"),
     ).flatten
     if (setQueries.isEmpty) {
       Fox.successful(())
@@ -548,7 +554,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      inboxSourceHash, defaultViewConfiguration, adminViewConfiguration,
                      description, displayName, isPublic, isUsable,
                      name, voxelSizeFactor, voxelSizeUnit, status,
-                     sharingToken, sortingKey, details, tags,
+                     sharingToken, sortingKey, metadata, tags,
                      created, isDeleted
                    )
                    VALUES(
@@ -557,7 +563,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      ${d.inboxSourceHash}, $defaultViewConfiguration, $adminViewConfiguration,
                      ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
-                     ${d.sharingToken}, ${d.sortingKey}, ${d.details}, ${d.tags},
+                     ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags},
                      ${d.created}, ${d.isDeleted}
                    )""".asUpdate)
     } yield ()

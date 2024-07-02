@@ -279,7 +279,7 @@ export function useCreateFolderMutation() {
       queryClient.setQueryData(
         mutationKey,
         transformHierarchy((oldItems: FlatFolderTreeItem[] | undefined) =>
-          (oldItems || []).concat([{ ...newFolder, parent: parentId }]),
+          (oldItems || []).concat([{ ...newFolder, parent: parentId, metadata: [] }]),
         ),
       );
     },
@@ -324,6 +324,7 @@ export function useUpdateFolderMutation() {
               ? {
                   ...updatedFolder,
                   parent: oldFolder.parent,
+                  metadata: oldFolder.metadata,
                 }
               : oldFolder,
           ),
@@ -585,6 +586,7 @@ export function getFolderHierarchy(folderTree: FlatFolderTreeItem[]): FolderHier
       title: folderTreeItem.name,
       isEditable: folderTreeItem.isEditable,
       parent: folderTreeItem.parent,
+      metadata: folderTreeItem.metadata,
       children: [],
     };
     if (folderTreeItem.parent == null) {

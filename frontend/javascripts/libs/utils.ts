@@ -146,6 +146,10 @@ export function parseMaybe(str: string | null | undefined): unknown | null {
   }
 }
 
+export function parseFloatOrZero(str: string): number {
+  return Number.parseFloat(str) || 0;
+}
+
 export async function tryToAwaitPromise<T>(promise: Promise<T>): Promise<T | null | undefined> {
   try {
     return await promise;

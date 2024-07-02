@@ -1,6 +1,7 @@
 package backend
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.UserDefinedProperties.UserDefinedPropertyProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto, ColorProto, Vec3DoubleProto, Vec3IntProto}
@@ -10,15 +11,17 @@ object Dummies {
   val timestampLong = 123456789L
 
   def createDummyNode(id: Int): Node =
-    Node(id,
-         Vec3IntProto(id, id + 1, id + 2),
-         Vec3DoubleProto(id, id + 1, id + 2),
-         id.toFloat,
-         1,
-         10,
-         8,
-         id % 2 == 0,
-         timestamp)
+    Node(
+      id,
+      Vec3IntProto(id, id + 1, id + 2),
+      Vec3DoubleProto(id, id + 1, id + 2),
+      id.toFloat,
+      1,
+      10,
+      8,
+      id % 2 == 0,
+      timestamp
+    )
 
   val tree1: Tree = Tree(
     1,
@@ -30,7 +33,12 @@ object Dummies {
     "TestTree-1",
     timestamp,
     None,
-    Some(true)
+    Some(true),
+    userDefinedProperties = Seq(
+      UserDefinedPropertyProto("aKey", numberValue = Some(5.7)),
+      UserDefinedPropertyProto("anotherKey", boolValue = Some(true)),
+      UserDefinedPropertyProto("aThirdKey", stringListValue = Seq("multiple", "strings"))
+    )
   )
 
   val tree2: Tree = Tree(

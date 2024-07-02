@@ -65,7 +65,7 @@ type State = {
   isLoading: boolean;
   activeDataSourceEditMode: "simple" | "advanced";
   activeTabKey: TabKey;
-  dataSource: APIDataSource | null | undefined;
+  savedDataSourceOnServer: APIDataSource | null | undefined;
 };
 export type FormData = {
   dataSource: APIDataSource;
@@ -90,7 +90,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     messages: [],
     activeDataSourceEditMode: "simple",
     activeTabKey: "data",
-    dataSource: null,
+    savedDataSourceOnServer: null,
   };
 
   async componentDidMount() {
@@ -155,7 +155,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
 
       // Ensure that zarr layers (which aren't inferred by the back-end) are still
       // included in the inferred data source
-      this.setState({ dataSource });
+      this.setState({ savedDataSourceOnServer: dataSource });
 
       if (dataSource == null) {
         throw new Error("No datasource received from server.");
@@ -276,8 +276,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
   }
 
   didDatasourceChange(dataSource: Record<string, any>) {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Readonly<MutableAPIDataSource> |... Remove this comment to see the full error message
-    return _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer)) > 0;
+    return _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer || {})) > 0;
   }
 
   isOnlyDatasourceIncorrectAndNotEdited() {
@@ -366,7 +365,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     if (dataset != null && this.didDatasourceChange(dataSource)) {
       await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
       this.setState({
-        dataSource,
+        savedDataSourceOnServer: dataSource,
       });
     }
 

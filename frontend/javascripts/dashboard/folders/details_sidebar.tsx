@@ -40,6 +40,7 @@ import { OxalisState } from "oxalis/store";
 import { getOrganization } from "admin/admin_rest_api";
 import { useQuery } from "@tanstack/react-query";
 import { useEffectOnUpdate } from "libs/react_hooks";
+import { useWillUnmount } from "beautiful-react-hooks";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -124,7 +125,7 @@ const updateCachedDatasetOrFolderDebounced = _.debounce(
     }
     setIgnoreFetching(false);
   },
-  2000,
+  3000,
 );
 
 function MetadataTable({
@@ -165,6 +166,11 @@ function MetadataTable({
       setIgnoreFetching,
     );
   }, [metadata]);
+
+  // On component unmount flush pending updates to avoid potential data loss.
+  useWillUnmount(() => {
+    updateCachedDatasetOrFolderDebounced.flush();
+  });
 
   const updatePropName = (previousPropName: string, newPropName: string) => {
     setMetadata((prev: APIMetadataEntries) => {

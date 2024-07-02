@@ -191,12 +191,61 @@ function _calculateMaybePlaneScreenPos(
   return point;
 }
 
+function _calculateMaybeGlobalDelta(
+  state: OxalisState,
+  delta: Point2,
+  planeId?: OrthoView | null | undefined,
+): Vector3 | null | undefined {
+  let position: Vector3;
+  planeId = planeId || state.viewModeData.plane.activeViewport;
+  const planeRatio = getBaseVoxelFactorsInUnit(state.dataset.dataSource.scale);
+  const diffX = delta.x * state.flycam.zoomStep;
+  const diffY = delta.y * state.flycam.zoomStep;
+
+  switch (planeId) {
+    case OrthoViews.PLANE_XY: {
+      position = [Math.round(diffX * planeRatio[0]), Math.round(diffY * planeRatio[1]), 0];
+      break;
+    }
+
+    case OrthoViews.PLANE_YZ: {
+      position = [0, Math.round(diffY * planeRatio[1]), Math.round(diffX * planeRatio[2])];
+      break;
+    }
+
+    case OrthoViews.PLANE_XZ: {
+      position = [Math.round(diffX * planeRatio[0]), 0, Math.round(diffY * planeRatio[2])];
+      break;
+    }
+
+    default:
+      return null;
+  }
+
+  return position;
+}
+
 function _calculateGlobalPos(
   state: OxalisState,
   clickPos: Point2,
   planeId?: OrthoView | null | undefined,
 ): Vector3 {
   const position = _calculateMaybeGlobalPos(state, clickPos, planeId);
+
+  if (!position) {
+    console.error("Trying to calculate the global position, but no data viewport is active.");
+    return [0, 0, 0];
+  }
+
+  return position;
+}
+
+function _calculateGlobalDelta(
+  state: OxalisState,
+  delta: Point2,
+  planeId?: OrthoView | null | undefined,
+): Vector3 {
+  const position = _calculateMaybeGlobalDelta(state, delta, planeId);
 
   if (!position) {
     console.error("Trying to calculate the global position, but no data viewport is active.");
@@ -238,6 +287,7 @@ export function getDisplayedDataExtentInPlaneMode(state: OxalisState) {
 }
 export const calculateMaybeGlobalPos = reuseInstanceOnEquality(_calculateMaybeGlobalPos);
 export const calculateGlobalPos = reuseInstanceOnEquality(_calculateGlobalPos);
+export const calculateGlobalDelta = reuseInstanceOnEquality(_calculateGlobalDelta);
 export const calculateMaybePlaneScreenPos = reuseInstanceOnEquality(_calculateMaybePlaneScreenPos);
 export function getViewMode(state: OxalisState): ViewMode {
   return state.temporaryConfiguration.viewMode;

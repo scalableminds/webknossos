@@ -206,6 +206,13 @@ class BoundingBox {
     const size = this.getSize();
     return { topLeft: this.min, width: size[0], height: size[1], depth: size[2] };
   }
+
+  toBoundingBoxType(): BoundingBoxType {
+    return {
+      min: this.min,
+      max: this.max,
+    };
+  }
 }
 
 export default BoundingBox;

@@ -193,10 +193,12 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       // Ensure the new bounding box is within the dataset bounding box.
       const datasetBoundingBox = getDatasetBoundingBox(state.dataset);
       const newBoundingBox = new BoundingBox(newUserBoundingBox.boundingBox);
-      const newBoundingBoxWithinDataset = newBoundingBox
-        .intersectedWith(datasetBoundingBox)
-        .toBoundingBoxType();
-      newUserBoundingBox.boundingBox = newBoundingBoxWithinDataset;
+      const newBoundingBoxWithinDataset = newBoundingBox.intersectedWith(datasetBoundingBox);
+      // Only update the bounding box if the bounding box overlaps with the dataset bounds.
+      // Else the bounding box is completely outside the dataset bounds -> in that case just keep the bounding box and let the user cook.
+      if (newBoundingBoxWithinDataset.getVolume() > 0) {
+        newUserBoundingBox.boundingBox = newBoundingBoxWithinDataset.toBoundingBoxType();
+      }
 
       const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
       return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);

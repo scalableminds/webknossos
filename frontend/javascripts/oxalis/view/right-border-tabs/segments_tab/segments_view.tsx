@@ -12,6 +12,8 @@ import {
   EyeInvisibleOutlined,
   EyeOutlined,
   CloseOutlined,
+  ShrinkOutlined,
+  ExpandAltOutlined,
 } from "@ant-design/icons";
 import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
@@ -427,6 +429,7 @@ class SegmentsView extends React.Component<Props, State> {
     }
 
     Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
+    this.setState({ expandedKeys: this.getSubGroupsAsTreeNodes(MISSING_GROUP_ID) });
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -467,19 +470,14 @@ class SegmentsView extends React.Component<Props, State> {
     this.setState({ expandedKeys });
   };
 
-  // TODO_c
-  // icon
-  // right label
-  // default: all expanded
-  // recursively expand subgroups
-
-  getSubGroups = (groupId: number | undefined) => {
+  getSubGroupsAsTreeNodes = (groupId: number | undefined) => {
     if (groupId !== MISSING_GROUP_ID)
       return getGroupByIdWithSubgroups(this.props.segmentGroups, groupId);
     const recursiveSubGroups = this.props.segmentGroups.flatMap((group) =>
       getGroupByIdWithSubgroups(this.props.segmentGroups, group.groupId),
     );
-    return recursiveSubGroups.concat([MISSING_GROUP_ID]);
+    const recursiveGroupsWithRootGroup = recursiveSubGroups.concat([MISSING_GROUP_ID]);
+    return recursiveGroupsWithRootGroup.map((group) => `group-${group}`);
   };
 
   expandOrCollapseGroup = (groupId: number | undefined) => {
@@ -490,8 +488,7 @@ class SegmentsView extends React.Component<Props, State> {
         expandedKeys: this.state.expandedKeys?.filter((key) => key !== `group-${currentGroupId}`),
       });
     } else {
-      const groupWithChildren = this.getSubGroups(groupId);
-      const expandedNodes = groupWithChildren.map((group) => `group-${group}`);
+      const expandedNodes = this.getSubGroupsAsTreeNodes(groupId);
       this.setState({
         expandedKeys: this.state.expandedKeys?.concat(expandedNodes),
       });
@@ -1836,7 +1833,6 @@ class SegmentsView extends React.Component<Props, State> {
                             allowDrop={this.allowDrop}
                             onDrop={this.onDrop}
                             onSelect={this.onSelectTreeItem}
-                            defaultExpandAll
                             className="segments-tree"
                             blockNode
                             // Passing an explicit height here, makes the tree virtualized
@@ -1888,14 +1884,16 @@ class SegmentsView extends React.Component<Props, State> {
     );
   }
   expandOrCollapseChilden(groupId: number | undefined) {
+    const isExpanded = this.state.expandedKeys?.includes(`group-${groupId}`);
     return {
       key: "expandAll",
       disabled: !this.props.allowUpdate,
       onClick: () => {
         this.expandOrCollapseGroup(groupId);
+        this.closeSegmentOrGroupDropdown();
       },
-      icon: <DeleteOutlined />,
-      label: "Expand or collapse children",
+      icon: isExpanded ? <ShrinkOutlined /> : <ExpandAltOutlined />,
+      label: `${isExpanded ? "Collapse" : "Expand"} all subgroups`,
     };
   }
 

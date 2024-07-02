@@ -11,7 +11,7 @@ import com.amazonaws.auth.{
 import com.amazonaws.client.builder.AwsClientBuilder.EndpointConfiguration
 import com.amazonaws.regions.Regions
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
-import com.amazonaws.services.s3.model.{GetObjectRequest, S3Object}
+import com.amazonaws.services.s3.model.{GetObjectRequest, ListObjectsV2Request, S3Object}
 import com.amazonaws.util.AwsHostNameUtils
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.storage.{
@@ -26,8 +26,10 @@ import org.apache.commons.lang3.builder.HashCodeBuilder
 import java.net.URI
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters._
 
 class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
+  val MAX_EXPLORED_ITEMS_PER_LEVEL = 10
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
@@ -50,7 +52,8 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
 
   private def getRequest(bucketName: String, key: String): GetObjectRequest = new GetObjectRequest(bucketName, key)
 
-  private def performRequest(request: GetObjectRequest)(implicit ec: ExecutionContext): Fox[(Array[Byte], String)] = {
+  private def performGetObjectRequest(request: GetObjectRequest)(
+      implicit ec: ExecutionContext): Fox[(Array[Byte], String)] = {
     var s3objectRef: Option[S3Object] = None // Used for cleanup later (possession of a S3Object requires closing it)
     try {
       val s3object = client.getObject(request)
@@ -73,6 +76,26 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     }
   }
 
+  private def performGetObjectSummariesRequest(bucketName: String, keyPrefix: String)(
+      implicit ec: ExecutionContext): Fox[List[String]] =
+    try {
+      val listObjectsRequest = new ListObjectsV2Request
+      listObjectsRequest.setBucketName(bucketName)
+      listObjectsRequest.setPrefix(keyPrefix)
+      listObjectsRequest.setDelimiter("/")
+      listObjectsRequest.setMaxKeys(MAX_EXPLORED_ITEMS_PER_LEVEL)
+      val objectListing = client.listObjectsV2(listObjectsRequest)
+      val s3SubPrefixes = objectListing.getCommonPrefixes.asScala.toList
+      Fox.successful(s3SubPrefixes)
+    } catch {
+      case e: AmazonServiceException =>
+        e.getStatusCode match {
+          case 404 => Fox.empty
+          case _   => Fox.failure(e.getMessage)
+        }
+      case e: Exception => Fox.failure(e.getMessage)
+    }
+
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
     for {
@@ -82,9 +105,20 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
         case SuffixLength(l) => getSuffixRangeRequest(bucketName, objectKey, l)
         case Complete()      => getRequest(bucketName, objectKey)
       }
-      (bytes, encodingString) <- performRequest(request)
+      (bytes, encodingString) <- performGetObjectRequest(request)
       encoding <- Encoding.fromRfc7231String(encodingString)
     } yield (bytes, encoding)
+
+  override def listDirectory(path: VaultPath)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+    //val buckets: util.List[Bucket] = client.listBuckets
+    //System.out.println("Your {S3} buckets are:")
+    //buckets.forEach(b => System.out.println("* " + b.getName))
+    for {
+      prefixKey <- Fox.box2Fox(S3DataVault.objectKeyFromUri(path.toUri))
+      s3SubPrefixKeys <- performGetObjectSummariesRequest(bucketName, prefixKey)
+      vaultPaths <- Fox.successful(
+        s3SubPrefixKeys.map(key => new VaultPath(new URI(s"${uri.getScheme}://$bucketName/$key"), this)))
+    } yield vaultPaths
 
   private def getUri = uri
   private def getCredential = s3AccessKeyCredential

@@ -11,6 +11,7 @@ import java.io.ByteArrayInputStream
 import java.net.URI
 import java.nio.ByteBuffer
 import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters.IterableHasAsScala
 
 class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCredential]) extends DataVault {
 
@@ -70,6 +71,17 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       blobInfo <- tryo(BlobInfo.newBuilder(blobId).setContentType("text/plain").build)
       encoding <- Encoding.fromRfc7231String(Option(blobInfo.getContentEncoding).getOrElse(""))
     } yield (bytes, encoding)
+  }
+
+  override def listDirectory(path: VaultPath)(implicit ec: ExecutionContext): Fox[List[VaultPath]] = {
+    val objName = path.toUri.getPath.tail
+    val blobs = storage.list(bucket,
+                             Storage.BlobListOption.prefix(objName),
+                             Storage.BlobListOption.currentDirectory(),
+                             Storage.BlobListOption.pageSize(10))
+    val subDirectories = blobs.getValues.asScala.toList.filter(_.isDirectory)
+    val paths = subDirectories.map(dirBob => new VaultPath(new URI(s"${uri.getScheme}://$bucket/${dirBob.getBlobId.getName}"), this))
+    Fox.successful(paths)
   }
 
   private def getUri = uri

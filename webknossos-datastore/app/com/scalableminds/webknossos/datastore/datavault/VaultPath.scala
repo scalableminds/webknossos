@@ -38,6 +38,8 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
         }
     }
 
+  def listDirectory()(implicit ec: ExecutionContext): Fox[List[VaultPath]] = dataVault.listDirectory(this)
+
   private def decodeBrotli(bytes: Array[Byte]) = {
     Brotli4jLoader.ensureAvailability()
     val brotliInputStream = new BrotliInputStream(new ByteArrayInputStream(bytes))
@@ -65,6 +67,13 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
   }
 
   def /(key: String): VaultPath =
+    if (uri.toString.endsWith("/")) {
+      new VaultPath(uri.resolve(key), dataVault)
+    } else {
+      new VaultPath(new URI(s"${uri.toString}/").resolve(key), dataVault)
+    }
+
+  def append(key: String): VaultPath =
     if (uri.toString.endsWith("/")) {
       new VaultPath(uri.resolve(key), dataVault)
     } else {

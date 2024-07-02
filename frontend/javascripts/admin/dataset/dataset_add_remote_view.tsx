@@ -381,7 +381,7 @@ function AddRemoteLayer({
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
   const [usernameOrAccessKey, setUsernameOrAccessKey] = useState<string>("");
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
-  const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https" | "gs">("https");
+  const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https" | "gs" | "file">("https");
   const [fileList, setFileList] = useState<FileList>([]);
 
   const handleChange = (info: UploadChangeParam<UploadFile<any>>) => {
@@ -394,12 +394,14 @@ function AddRemoteLayer({
     if (userInput.startsWith("https://") || userInput.startsWith("http://")) {
       setSelectedProtocol("https");
     } else if (userInput.startsWith("s3://")) {
-      setSelectedProtocol("s3");
+      setSelectedProtocol("s3"); // Unused
     } else if (userInput.startsWith("gs://")) {
       setSelectedProtocol("gs");
+    } else if (userInput.startsWith("file://")) {
+      setSelectedProtocol("file"); // Unused
     } else {
       throw new Error(
-        "Dataset URL must employ one of the following protocols: https://, http://, s3:// or gs://",
+        "Dataset URL must employ one of the following protocols: https://, http://, s3://, gs:// or file://",
       );
     }
   }

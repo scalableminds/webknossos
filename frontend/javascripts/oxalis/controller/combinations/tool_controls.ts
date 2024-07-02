@@ -568,8 +568,7 @@ export class BoundingBoxTool {
           MoveHandlers.handleMovePlane(delta);
           return;
         }
-        if (event.altKey) {
-          // Consider using a different key -> e.g. control / meta
+        if (event.ctrlKey || event.metaKey) {
           handleMovingBoundingBox(delta, planeId, primarySelectedEdge);
         } else {
           handleResizingBoundingBox(pos, planeId, primarySelectedEdge, secondarySelectedEdge);

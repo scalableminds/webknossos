@@ -121,7 +121,7 @@ import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
-import { DataNode, EventDataNode } from "antd/lib/tree";
+import { DataNode } from "antd/lib/tree";
 import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { ValueOf } from "types/globals";
 
@@ -1882,17 +1882,6 @@ class SegmentsView extends React.Component<Props, State> {
         </DomVisibilityObserver>
       </div>
     );
-  }
-  expandOrCollapseChilden(groupId: number | null) {
-    return {
-      key: "expandAll",
-      disabled: !this.props.allowUpdate,
-      onClick: () => {
-        this.expandOrCollapseGroup(groupId)
-      },
-      icon: <DeleteOutlined />,
-      label: "Expand or collapse children",
-    }
   }
 
   getExpandSubgroupsItem(groupId: number) {

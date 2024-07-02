@@ -77,7 +77,7 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
+import { getHalfViewportExtentsInUnitFromState } from "oxalis/model/sagas/saga_selectors";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -1065,21 +1065,20 @@ class TracingApi {
       throw new Error(`Tree with id ${treeId} not found.`);
     }
 
-    const datasetScale = state.dataset.dataSource.scale;
+    const voxelSizeFactor = state.dataset.dataSource.scale.factor;
     // Pre-allocate vectors
-    let lengthNmAcc = 0;
-    let lengthVxAcc = 0;
+    let lengthInUnitAcc = 0;
+    let lengthInVxAcc = 0;
 
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
 
     for (const edge of tree.edges.all()) {
       const sourceNode = tree.nodes.getOrThrow(edge.source);
       const targetNode = tree.nodes.getOrThrow(edge.target);
-      lengthNmAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), datasetScale);
-      lengthVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
+      lengthInUnitAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), voxelSizeFactor);
+      lengthInVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
     }
-
-    return [lengthNmAcc, lengthVxAcc];
+    return [lengthInUnitAcc, lengthInVxAcc];
   }
 
   /**
@@ -1087,16 +1086,16 @@ class TracingApi {
    */
   measureAllTrees(): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    let totalLengthNm = 0;
-    let totalLengthVx = 0;
+    let totalLengthInUnit = 0;
+    let totalLengthInVx = 0;
 
     _.values(skeletonTracing.trees).forEach((currentTree) => {
-      const [lengthNm, lengthVx] = this.measureTreeLength(currentTree.treeId);
-      totalLengthNm += lengthNm;
-      totalLengthVx += lengthVx;
+      const [lengthInUnit, lengthInVx] = this.measureTreeLength(currentTree.treeId);
+      totalLengthInUnit += lengthInUnit;
+      totalLengthInVx += lengthInVx;
     });
 
-    return [totalLengthNm, totalLengthVx];
+    return [totalLengthInUnit, totalLengthInVx];
   }
 
   /**
@@ -1107,8 +1106,8 @@ class TracingApi {
     sourceNodeId: number,
     targetNodeId: number,
   ): {
-    lengthNm: number;
-    lengthVx: number;
+    lengthInUnit: number;
+    lengthInVx: number;
     shortestPath: number[];
   } {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
@@ -1129,7 +1128,7 @@ class TracingApi {
       throw new Error("The nodes are not within the same tree.");
     }
 
-    const datasetScale = Store.getState().dataset.dataSource.scale;
+    const voxelSizeFactor = Store.getState().dataset.dataSource.scale.factor;
     // We use the Dijkstra algorithm to get the shortest path between the nodes.
     const distanceMap: Record<number, number> = {};
     // The distance map is also maintained in voxel space. This information is only
@@ -1165,18 +1164,17 @@ class TracingApi {
         const neighbourNodeId = source === nextNodeId ? target : source;
         const neighbourPosition = getPos(sourceTree.nodes.getOrThrow(neighbourNodeId));
         const neighbourDistance =
-          distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScale);
+          distance + V3.scaledDist(nextNodePosition, neighbourPosition, voxelSizeFactor);
 
         if (neighbourDistance < getDistance(neighbourNodeId)) {
           distanceMap[neighbourNodeId] = neighbourDistance;
           parentMap[neighbourNodeId] = source === nextNodeId ? source : target;
           const neighbourDistanceVx = V3.length(V3.sub(nextNodePosition, neighbourPosition));
-          distanceMapVx[neighbourNodeId] = neighbourDistanceVx;
+          distanceMapVx[neighbourNodeId] = neighbourDistanceVx + distanceMapVx[nextNodeId];
           priorityQueue.queue([neighbourNodeId, neighbourDistance]);
         }
       }
     }
-
     // Retrace the shortest path from the target node.
     let nodeId = targetNodeId;
     const shortestPath = [targetNodeId];
@@ -1186,8 +1184,8 @@ class TracingApi {
     }
 
     return {
-      lengthNm: distanceMap[targetNodeId],
-      lengthVx: distanceMapVx[targetNodeId],
+      lengthInUnit: distanceMap[targetNodeId],
+      lengthInVx: distanceMapVx[targetNodeId],
       shortestPath,
     };
   }
@@ -1196,8 +1194,11 @@ class TracingApi {
    * Returns the length of the shortest path between two nodes in nanometer and in voxels.
    */
   measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): [number, number] {
-    const { lengthNm, lengthVx } = this.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
-    return [lengthNm, lengthVx];
+    const { lengthInUnit, lengthInVx } = this.findShortestPathBetweenNodes(
+      sourceNodeId,
+      targetNodeId,
+    );
+    return [lengthInUnit, lengthInVx];
   }
 
   /**
@@ -1761,7 +1762,7 @@ class DataApi {
       dimensions.roundCoordinate(getPosition(state.flycam)),
       viewport,
     );
-    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsFromState(
+    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsInUnitFromState(
       state,
       viewport,
     );
@@ -2177,7 +2178,6 @@ class DataApi {
 
     if (
       state.localSegmentationData[effectiveLayerName].availableMeshFiles == null ||
-      // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
       !state.localSegmentationData[effectiveLayerName].availableMeshFiles.find(
         (el) => el.meshFileName === meshFileName,
       )

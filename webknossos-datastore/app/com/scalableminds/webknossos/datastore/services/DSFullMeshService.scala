@@ -96,7 +96,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       segmentationLayer,
       Cuboid(topLeft, chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
       fullMeshRequest.segmentId,
-      dataSource.scale,
+      dataSource.scale.factor,
       fullMeshRequest.mappingName,
       fullMeshRequest.mappingType,
       fullMeshRequest.additionalCoordinates

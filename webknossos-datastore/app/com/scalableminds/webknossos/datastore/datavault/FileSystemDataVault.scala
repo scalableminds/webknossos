@@ -6,23 +6,31 @@ import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
+import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.file.{Files, Path, Paths}
+import java.util.stream.Collectors
 import scala.concurrent.ExecutionContext
+import scala.jdk.CollectionConverters._
 
 class FileSystemDataVault extends DataVault {
 
-  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = {
+  private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] = {
     val uri = path.toUri
     for {
       _ <- bool2Fox(uri.getScheme == DataVaultService.schemeFile) ?~> "trying to read from FileSystemDataVault, but uri scheme is not file"
       _ <- bool2Fox(uri.getHost == null || uri.getHost.isEmpty) ?~> s"trying to read from FileSystemDataVault, but hostname ${uri.getHost} is non-empty"
       localPath = Paths.get(uri.getPath)
       _ <- bool2Fox(localPath.isAbsolute) ?~> "trying to read from FileSystemDataVault, but hostname is non-empty"
+    } yield localPath
+  }
+
+  override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
+      implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
+    for {
+      localPath <- vaultPathToLocalPath(path)
       bytes <- readBytesLocal(localPath, range)
     } yield (bytes, Encoding.identity)
-  }
 
   private def readBytesLocal(localPath: Path, range: RangeSpecifier)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     if (Files.exists(localPath)) {
@@ -53,7 +61,17 @@ class FileSystemDataVault extends DataVault {
       }
     } else Fox.empty
 
-  override def listDirectory(path: VaultPath)(implicit ec: ExecutionContext): Fox[List[VaultPath]] = Fox.successful(List.empty)
+  override def listDirectory(path: VaultPath)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+    vaultPathToLocalPath(path).map(localPath => {
+      if (!Files.isDirectory(localPath)) return Fox.successful(List.empty)
+      Files
+        .list(localPath)
+        .filter(file => Files.isDirectory(file))
+        .collect(Collectors.toList())
+        .asScala
+        .toList
+        .map(dir => new VaultPath(dir.toUri, this))
+    })
 
   override def hashCode(): Int =
     new HashCodeBuilder(19, 31).toHashCode

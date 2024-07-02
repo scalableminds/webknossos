@@ -73,6 +73,13 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
       new VaultPath(new URI(s"${uri.toString}/").resolve(key), dataVault)
     }
 
+  def append(key: String): VaultPath =
+    if (uri.toString.endsWith("/")) {
+      new VaultPath(uri.resolve(key), dataVault)
+    } else {
+      new VaultPath(new URI(s"${uri.toString}/").resolve(key), dataVault)
+    }
+
   def toUri: URI =
     uri
 

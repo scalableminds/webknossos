@@ -107,10 +107,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localFolderWhitelist"
     } else Fox.successful(())
 
-  // TODO: Add max layer depth
-
   private val MAX_RECURSIVE_SEARCH_DEPTH = 8
-
   private def handleExploreResult(explorationResult: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
                                   explorer: RemoteLayerExplorer,
                                   path: VaultPath)(
@@ -153,8 +150,11 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
           extendedRemainingPaths <- path.listDirectory().map(dirs => remainingPaths ++ dirs.map((_, searchDepth + 1)))
           foundLayers <- recursivelyExploreRemoteLayerAt(extendedRemainingPaths, credentialId, explorers, reportMutable)
         } yield foundLayers
+      case _ =>
+        Fox.successful(List.empty)
     }
 
+  // TODO: Swallow exploration errors when using local file system to avoid leaking information about the local file system's contents to the user.
   private def recursivelyExploreRemoteLayerAt(remotePathsWithDepth: List[(VaultPath, Int)],
                                               credentialId: Option[String],
                                               explorers: List[RemoteLayerExplorer],

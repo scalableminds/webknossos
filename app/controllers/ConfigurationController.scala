@@ -81,7 +81,7 @@ class ConfigurationController @Inject()(
         dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName) ?~> "dataset.notFound" ~> NOT_FOUND
         _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> "notAllowed" ~> FORBIDDEN
         jsObject <- request.body.asOpt[JsObject].toFox ?~> "user.configuration.dataset.invalid"
-        _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, jsObject.fields.toMap)
+        p_ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, jsObject.fields.toMap)
       } yield JsonOk(Messages("user.configuration.dataset.updated"))
     }
 }

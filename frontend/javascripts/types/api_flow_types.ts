@@ -168,13 +168,13 @@ export type MutableAPIDatasetId = {
   name: string;
 };
 export type APIDatasetId = Readonly<MutableAPIDatasetId>;
-export type APIDetail = {
+export type APIMetadata = {
   type: "number" | "string" | "string[]";
   key: string;
   value: string | number | string[];
   index: number;
 };
-export type APIDetails = APIDetail[];
+export type APIMetadataEntries = APIMetadata[];
 
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
@@ -184,7 +184,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   created: number;
   dataStore: APIDataStore;
   description: string | null | undefined;
-  details: APIDetails | null | undefined;
+  metadata: APIMetadataEntries | null | undefined;
   isEditable: boolean;
   isPublic: boolean;
   displayName: string | null | undefined;
@@ -227,7 +227,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "lastUsedByUser"
   | "tags"
   | "isUnreported"
-  | "details"
+  | "metadata"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id?: string;
@@ -253,7 +253,7 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     lastUsedByUser: dataset.lastUsedByUser,
     status: dataset.dataSource.status,
     tags: dataset.tags,
-    details: dataset.details,
+    metadata: dataset.metadata,
     isUnreported: dataset.isUnreported,
     colorLayerNames: colorLayerNames,
     segmentationLayerNames: segmentationLayerNames,
@@ -1072,7 +1072,7 @@ export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent: string | null;
-  details: APIDetails;
+  metadata: APIMetadataEntries;
   isEditable: boolean;
 };
 
@@ -1083,7 +1083,7 @@ export type FolderItem = {
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;
-  details: APIDetails;
+  metadata: APIMetadataEntries;
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1094,7 +1094,7 @@ export type Folder = {
   id: string;
   allowedTeams: APITeam[];
   allowedTeamsCumulative: APITeam[];
-  details: APIDetails;
+  metadata: APIMetadataEntries;
   isEditable: boolean;
 };
 
@@ -1102,7 +1102,7 @@ export type FolderUpdater = {
   id: string;
   name: string;
   allowedTeams: string[];
-  details: APIDetails;
+  metadata: APIMetadataEntries;
 };
 
 export enum CAMERA_POSITIONS {

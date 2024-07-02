@@ -42,7 +42,7 @@ test("updateFolder", async (t) => {
     id: organizationXRootFolderId,
     allowedTeams: [],
     name: newName,
-    details: [],
+    metadata: [],
   });
   t.is(updatedFolder.name, newName);
 
@@ -70,7 +70,7 @@ test("addAllowedTeamToFolder", async (t) => {
     id: subFolderId,
     allowedTeams: [teamId],
     name: "A subfolder!",
-    details: [{ type: "string", key: "foo", value: "bar", index: 0 }],
+    metadata: [{ type: "string", key: "foo", value: "bar", index: 0 }],
   });
 
   t.snapshot(updatedFolderWithTeam, {

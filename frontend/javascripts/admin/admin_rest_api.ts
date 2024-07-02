@@ -1164,7 +1164,7 @@ export type DatasetUpdater = {
   isPublic?: boolean;
   tags?: string[];
   folderId?: string;
-  details?: APIDataset["details"];
+  metadata?: APIDataset["metadata"];
 };
 
 export function updateDatasetPartial(

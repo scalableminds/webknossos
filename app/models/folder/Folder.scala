@@ -19,11 +19,11 @@ import javax.inject.Inject
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-case class Folder(_id: ObjectId, name: String, details: JsArray)
+case class Folder(_id: ObjectId, name: String, metadata: JsArray)
 
-case class FolderWithParent(_id: ObjectId, name: String, details: JsArray, _parent: Option[ObjectId])
+case class FolderWithParent(_id: ObjectId, name: String, metadata: JsArray, _parent: Option[ObjectId])
 
-case class FolderParameters(name: String, allowedTeams: List[ObjectId], details: JsArray)
+case class FolderParameters(name: String, allowedTeams: List[ObjectId], metadata: JsArray)
 object FolderParameters {
   implicit val jsonFormat: OFormat[FolderParameters] = Json.format[FolderParameters]
 }
@@ -51,7 +51,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       Json.obj(
         "id" -> folder._id,
         "name" -> folder.name,
-        "details" -> folder.details,
+        "metadata" -> folder.metadata,
         "allowedTeams" -> teamsJs,
         "allowedTeamsCumulative" -> teamsCumulativeJs,
         "isEditable" -> isEditable
@@ -62,7 +62,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       "id" -> folderWithParent._id,
       "name" -> folderWithParent.name,
       "parent" -> folderWithParent._parent,
-      "details" -> folderWithParent.details,
+      "metadata" -> folderWithParent.metadata,
       "isEditable" -> allEditableIds.contains(folderWithParent._id)
     )
 
@@ -138,14 +138,14 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected def parse(r: FoldersRow): Fox[Folder] =
     for {
-      details <- JsonHelper.parseAndValidateJson[JsArray](r.details.getOrElse("[]")).toFox
-      folder <- Fox.successful(Folder(ObjectId(r._Id), r.name, details))
+      metadata <- JsonHelper.parseAndValidateJson[JsArray](r.metadata.getOrElse("[]")).toFox
+      folder <- Fox.successful(Folder(ObjectId(r._Id), r.name, metadata))
     } yield folder
 
   private def parseWithParent(t: (String, String, Option[String], Option[String])): Fox[FolderWithParent] =
     for {
-      details <- JsonHelper.parseAndValidateJson[JsArray](t._3.getOrElse("[]")).toFox
-      folderWithParent <- Fox.successful(FolderWithParent(ObjectId(t._1), t._2, details, t._4.map(ObjectId(_))))
+      metadata <- JsonHelper.parseAndValidateJson[JsArray](t._3.getOrElse("[]")).toFox
+      folderWithParent <- Fox.successful(FolderWithParent(ObjectId(t._1), t._2, metadata, t._4.map(ObjectId(_))))
     } yield folderWithParent
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
@@ -256,10 +256,10 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"UPDATE webknossos.folders SET name = $name WHERE _id = $folderId".asUpdate)
     } yield ()
 
-  def updateDetails(folderId: ObjectId, details: JsArray)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateMetadata(folderId: ObjectId, metadata: JsArray)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(folderId)
-      _ <- run(q"UPDATE webknossos.folders SET details = $details WHERE _id = $folderId".asUpdate)
+      _ <- run(q"UPDATE webknossos.folders SET metadata = $metadata WHERE _id = $folderId".asUpdate)
     } yield ()
 
   def findAllEditableIds(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
@@ -285,7 +285,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     for {
       accessQueryWithPrefix <- accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, prefix = q"f.")
       accessQuery <- readAccessQuery
-      rows <- run(q"""SELECT f._id, f.name, f.details, fp._ancestor
+      rows <- run(q"""SELECT f._id, f.name, f.metadata, fp._ancestor
               FROM webknossos.folders_ f
               JOIN webknossos.folder_paths fp -- join to find immediate parent, this will also kick out self
               ON f._id = fp._descendant
@@ -294,7 +294,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               FROM webknossos.folder_paths
               WHERE _ancestor = $folderId)
               AND $accessQueryWithPrefix
-              UNION ALL SELECT _id, name, details, NULL -- find self again, with no parent
+              UNION ALL SELECT _id, name, metadata, NULL -- find self again, with no parent
               FROM webknossos.folders_
               WHERE _id = $folderId
               AND $accessQuery

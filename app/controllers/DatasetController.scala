@@ -35,7 +35,7 @@ case class DatasetUpdateParameters(
     sortingKey: Option[Instant],
     isPublic: Option[Boolean],
     tags: Option[List[String]],
-    details: Option[JsObject],
+    metadata: Option[JsArray],
     folderId: Option[ObjectId]
 )
 

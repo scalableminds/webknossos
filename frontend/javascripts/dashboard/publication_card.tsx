@@ -4,12 +4,7 @@ import Markdown from "libs/markdown_adapter";
 import React, { useState } from "react";
 import classNames from "classnames";
 import { Link } from "react-router-dom";
-import type {
-  APIDataset,
-  APIDetails,
-  APIPublication,
-  APIPublicationAnnotation,
-} from "types/api_flow_types";
+import type { APIDataset, APIPublication, APIPublicationAnnotation } from "types/api_flow_types";
 import { formatScale } from "libs/format_utils";
 import {
   getThumbnailURL,
@@ -18,8 +13,14 @@ import {
   getDatasetExtentAsString,
 } from "oxalis/model/accessors/dataset_accessor";
 import { compareBy } from "libs/utils";
-type ExtendedDatasetDetails = {
-  details: APIDetails;
+
+type DatasetDetails = {
+  species?: string;
+  brainRegion?: string;
+  acquisition?: string;
+};
+
+type ExtendedDatasetDetails = DatasetDetails & {
   name: string;
   scale: string;
   extent: string;
@@ -50,10 +51,16 @@ function getDisplayName(item: PublicationItem): string {
     : item.dataset.displayName;
 }
 
-function getExtendedDetails(item: PublicationItem): ExtendedDatasetDetails {
-  const { dataSource, details } = item.dataset;
+function getDetails(item: PublicationItem): ExtendedDatasetDetails {
+  const { dataSource, metadata } = item.dataset;
+  const details = {} as DatasetDetails;
+  metadata?.forEach((entry) => {
+    if (entry.key === "species" || entry.key === "brainRegion" || entry.key === "acquisition") {
+      details[entry.key] = entry.value.toString();
+    }
+  });
   return {
-    details: details || [],
+    ...details,
     scale: formatScale(dataSource.scale, 0),
     name: getDisplayName(item),
     extent: getDatasetExtentAsString(item.dataset, false),
@@ -66,31 +73,28 @@ function getUrl(item: PublicationItem): string {
     : `/datasets/${item.dataset.owningOrganization}/${item.dataset.name}`;
 }
 
-function ThumbnailOverlay({ extendedDetails }: { extendedDetails: ExtendedDatasetDetails }) {
-  const species = extendedDetails.details.find((d) => d.key === "species")?.value;
-  const brainRegion = extendedDetails.details.find((d) => d.key === "brain region")?.value;
-  const acquisition = extendedDetails.details.find((d) => d.key === "acquisition")?.value;
+function ThumbnailOverlay({ details }: { details: ExtendedDatasetDetails }) {
   return (
     <div className="dataset-thumbnail-overlay">
       <div>
-        {species && (
+        {details.species && (
           <div
             style={{
               fontWeight: 700,
               display: "inline",
             }}
           >
-            {species}
+            {details.species}
           </div>
         )}
-        {brainRegion && (
+        {details.brainRegion && (
           <div
             style={{
               display: "inline",
               marginLeft: 5,
             }}
           >
-            {brainRegion}
+            {details.brainRegion}
           </div>
         )}
       </div>
@@ -99,7 +103,7 @@ function ThumbnailOverlay({ extendedDetails }: { extendedDetails: ExtendedDatase
           fontSize: 18,
         }}
       >
-        {extendedDetails.name}
+        {details.name}
       </div>
       <div
         style={{
@@ -110,11 +114,11 @@ function ThumbnailOverlay({ extendedDetails }: { extendedDetails: ExtendedDatase
           color: "rgba(200,200,200,0.85)",
         }}
       >
-        <div>{acquisition}</div>
+        <div>{details.acquisition}</div>
         <div>
-          {extendedDetails.scale}
+          {details.scale}
           <br />
-          {extendedDetails.extent}
+          {details.extent}
         </div>
       </div>
     </div>
@@ -268,7 +272,7 @@ function PublicationThumbnail({
   const segmentationThumbnailURL = hasSegmentation(activeItem.dataset)
     ? getSegmentationThumbnailURL(activeItem.dataset)
     : null;
-  const extendedDetails = getExtendedDetails(activeItem);
+  const extendedDetails = getDetails(activeItem);
 
   return (
     <div className="dataset-thumbnail">
@@ -297,7 +301,7 @@ function PublicationThumbnail({
             }}
           />
         )}
-        <ThumbnailOverlay extendedDetails={extendedDetails} />
+        <ThumbnailOverlay details={extendedDetails} />
         {sortedItems.length > 1 && (
           <PublishedDatasetsOverlay
             items={sortedItems}

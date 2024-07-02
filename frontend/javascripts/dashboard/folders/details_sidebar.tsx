@@ -28,7 +28,7 @@ import {
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect, useState } from "react";
-import { APIDatasetCompact, APIDetail, APIDetails, Folder } from "types/api_flow_types";
+import { APIDatasetCompact, APIMetadata, APIMetadataEntries, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, TeamTags } from "../advanced_dataset/dataset_table";
 import {
   DatasetCollectionContextValue,
@@ -107,19 +107,19 @@ const updateCachedDatasetOrFolderDebounced = _.debounce(
   async (
     context: DatasetCollectionContextValue,
     selectedDatasetOrFolder: APIDatasetCompact | Folder,
-    details: APIDetails,
+    metadata: APIMetadataEntries,
     setIgnoreFetching: (value: boolean) => void,
   ) => {
     // Explicitly ignoring fetching here to avoid unnecessary rendering of the loading spinner and thus hiding the metadata table.
     setIgnoreFetching(true);
     if ("status" in selectedDatasetOrFolder) {
-      await context.updateCachedDataset(selectedDatasetOrFolder, { details: details });
+      await context.updateCachedDataset(selectedDatasetOrFolder, { metadata: metadata });
     } else {
       const folder = selectedDatasetOrFolder as Folder;
       await context.queries.updateFolderMutation.mutateAsync({
         ...folder,
         allowedTeams: folder.allowedTeams.map((t) => t.id),
-        details,
+        metadata,
       });
     }
     setIgnoreFetching(false);
@@ -135,21 +135,38 @@ function MetadataTable({
   setIgnoreFetching: (value: boolean) => void;
 }) {
   const context = useDatasetCollectionContext();
-  const [details, setDetails] = useState<APIDetails>(selectedDatasetOrFolder.details || []);
+  const [metadata, setMetadata] = useState<APIMetadataEntries>(
+    selectedDatasetOrFolder.metadata != null && selectedDatasetOrFolder.metadata.length > 0
+      ? selectedDatasetOrFolder.metadata
+      : [{ key: "", value: "", index: 0, type: "string" as APIMetadata["type"] }],
+  );
   const [error, setError] = useState<[string, string] | null>(null); // [propName, error message]
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
+
+  console.log("datasetMeta", selectedDatasetOrFolder.metadata, "metadata state", metadata);
+
+  useEffect(() => {
+    // Flush pending updates:
+    updateCachedDatasetOrFolderDebounced.flush();
+    // Update state to newest metadata from selectedDatasetOrFolder.
+    setMetadata(
+      selectedDatasetOrFolder.metadata != null && selectedDatasetOrFolder.metadata.length > 0
+        ? selectedDatasetOrFolder.metadata
+        : [{ key: "", value: "", index: 0, type: "string" as APIMetadata["type"] }],
+    );
+  }, [selectedDatasetOrFolder]);
 
   useEffectOnUpdate(() => {
     updateCachedDatasetOrFolderDebounced(
       context,
       selectedDatasetOrFolder,
-      details,
+      metadata,
       setIgnoreFetching,
     );
-  }, [details]);
+  }, [metadata]);
 
   const updatePropName = (previousPropName: string, newPropName: string) => {
-    setDetails((prev) => {
+    setMetadata((prev: APIMetadataEntries) => {
       const entry = prev.find((prop) => prop.key === previousPropName);
       const maybeAlreadyExistingEntry = prev.find((prop) => prop.key === newPropName);
       if (maybeAlreadyExistingEntry) {
@@ -168,7 +185,7 @@ function MetadataTable({
         ];
       } else {
         const highestIndex = prev.reduce((acc, curr) => Math.max(acc, curr.index), 0);
-        const newEntry: APIDetail = {
+        const newEntry: APIMetadata = {
           key: newPropName,
           value: "",
           type: "string",
@@ -179,7 +196,7 @@ function MetadataTable({
     });
   };
   const updateValue = (propName: string, newValue: string | string[]) => {
-    setDetails((prev) => {
+    setMetadata((prev) => {
       const entry = prev.find((prop) => prop.key === propName);
       if (!entry) {
         return prev;
@@ -190,8 +207,8 @@ function MetadataTable({
     });
   };
 
-  const updateType = (index: number, newType: APIDetail["type"]) => {
-    setDetails((prev) => {
+  const updateType = (index: number, newType: APIMetadata["type"]) => {
+    setMetadata((prev) => {
       const entry = prev.find((prop) => prop.index === index);
       if (!entry) {
         return prev;
@@ -219,21 +236,18 @@ function MetadataTable({
   };
 
   const deleteKey = (propName: string) => {
-    setDetails((prev) => {
+    setMetadata((prev) => {
       return prev.filter((prop) => prop.key !== propName);
     });
   };
 
-  const sortedDetails =
-    details.length > 0
-      ? details.sort((a, b) => a.index - b.index)
-      : [{ key: "", value: "", index: 0, type: "string" as APIDetail["type"] }];
+  const sortedDetails = metadata.sort((a, b) => a.index - b.index);
 
   const availableStrArrayTagOptions = _.uniq(
     sortedDetails.flatMap((detail) => (detail.type === "string[]" ? detail.value : [])),
   ).map((tag) => ({ value: tag, label: tag }));
 
-  const renderTypeTag = (type: APIDetail["type"]) => {
+  const renderTypeTag = (type: APIMetadata["type"]) => {
     switch (type) {
       case "string":
         return <Tag style={{ margin: 0, width: 32, padding: "0px 8px" }}>str</Tag>;
@@ -264,7 +278,7 @@ function MetadataTable({
     ],
   });
 
-  const getValueInput = (record: APIDetail) => {
+  const getValueInput = (record: APIMetadata) => {
     switch (record.type) {
       case "number":
         return (

@@ -520,7 +520,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
       dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
     );
     const getNameAndMetaData = (datasetOrFolder: DatasetOrFolder) => {
-      return `${datasetOrFolder}${Object.entries(datasetOrFolder.details || {})
+      return `${datasetOrFolder}${Object.entries(datasetOrFolder.metadata || {})
         .map(([key, value]) => `${key}:${value}`)
         .join(",")}`;
     };

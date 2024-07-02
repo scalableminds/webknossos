@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(117);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(118);
 COMMIT TRANSACTION;
 
 
@@ -123,7 +123,7 @@ CREATE TABLE webknossos.datasets(
   sharingToken CHAR(256),
   logoUrl VARCHAR(2048),
   sortingKey TIMESTAMPTZ NOT NULL,
-  metadata JSONB,
+  metadata JSONB DEFAULT '[]',
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,

@@ -34,6 +34,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug where the warning to zoom in to see the agglomerate mapping was shown to the user even when the 3D viewport was maximized and no volume data was shown. [#7865](https://github.com/scalableminds/webknossos/issues/7865) 
 - Fixed a bug that prevented saving new dataset settings. [#7903](https://github.com/scalableminds/webknossos/pull/7903)
 - Fixed a bug that allowed the default newly created bounding box to appear outside the dataset. In case the whole bounding box would be outside it is created regardless. [#7892](https://github.com/scalableminds/webknossos/pull/7892)
+- Fixed that on large screens the login forms were not horizontally centered. [#7909](https://github.com/scalableminds/webknossos/pull/7909)
 - Fixed a bug where brushing on a fallback segmentation with active mapping and with segment index file would lead to failed saves. [#7833](https://github.com/scalableminds/webknossos/pull/7833)
 - Fixed a bug where the "Hide Meshes" / "Show Meshes" options of the context menu for segment groups were not available although at leas one mesh was set to visible / invisible. [#7890](https://github.com/scalableminds/webknossos/pull/7890)
 - Fixed a bug where sometimes old mismatching javascript code would be served after upgrades. [#7854](https://github.com/scalableminds/webknossos/pull/7854)

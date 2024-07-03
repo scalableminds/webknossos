@@ -69,7 +69,19 @@ export class CuckooTableUint32 extends AbstractCuckooTable<Key, Value, Entry> {
   _hashKeyToAddress(seed: number, key: Key): number {
     let state = this._hashCombine(seed, key);
 
-    return state % this.entryCapacity;
+    // Important: We pretend like the entryCapacity has one
+    // slot less than it actually has. This is a shortcut to
+    // avoid that a single _hashCombine call in combination with
+    // a power-of-two-modulo operation does not have good enough
+    // hash properties. Without this, filling the table up to 90%
+    // will not work. As an alternative, one could also use the fmix
+    // finalize step by Murmur3, but this requires more bit operations
+    // on CPU and GPU.
+    // The downside of this approach is that we waste one slot of the
+    // hash table.
+    // Other cuckootable implementations don't need this trick, because
+    // they call _hashCombine multiple times.
+    return state % (this.entryCapacity - 1);
   }
 
   setNumberLike(key: NumberLike, value: NumberLike) {

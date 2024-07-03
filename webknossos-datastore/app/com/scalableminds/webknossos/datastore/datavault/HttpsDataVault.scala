@@ -44,7 +44,8 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient) exte
 
   }
 
-  override def listDirectory(path: VaultPath)(implicit ec: ExecutionContext): Fox[List[VaultPath]] = Fox.successful(List.empty)
+  override def listDirectory(path: VaultPath)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+    Fox.successful(List.empty)
 
   private val headerInfoCache: AlfuCache[URI, (Boolean, Long)] = AlfuCache()
 

@@ -6,7 +6,6 @@ import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
-import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.file.{Files, Path, Paths}
 import java.util.stream.Collectors

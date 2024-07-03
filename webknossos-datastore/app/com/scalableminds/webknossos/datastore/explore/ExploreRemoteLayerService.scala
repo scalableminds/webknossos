@@ -165,14 +165,11 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         Fox.empty
       case (path, searchDepth) :: remainingPaths =>
         if (searchDepth > MAX_RECURSIVE_SEARCH_DEPTH) return Fox.empty
-        implicit val implRemainingPaths: List[(VaultPath, Int)] = remainingPaths
         implicit val implReportMutable: ListBuffer[String] = reportMutable
 
-        System.out.println(s"implRemainingPaths $implRemainingPaths")
         Fox
           .sequence(explorers.map { explorer =>
             {
-              System.out.println(s"running explorer ${explorer.name} on $path")
               explorer
                 .explore(path, credentialId)
                 .futureBox

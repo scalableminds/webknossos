@@ -110,9 +110,6 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     } yield (bytes, encoding)
 
   override def listDirectory(path: VaultPath)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
-    //val buckets: util.List[Bucket] = client.listBuckets
-    //System.out.println("Your {S3} buckets are:")
-    //buckets.forEach(b => System.out.println("* " + b.getName))
     for {
       prefixKey <- Fox.box2Fox(S3DataVault.objectKeyFromUri(path.toUri))
       s3SubPrefixKeys <- performGetObjectSummariesRequest(bucketName, prefixKey)

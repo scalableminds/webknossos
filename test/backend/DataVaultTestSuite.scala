@@ -134,6 +134,8 @@ class DataVaultTestSuite extends PlaySpec {
       class MockDataVault extends DataVault {
         override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
             implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] = ???
+
+        override def listDirectory(path: VaultPath)(implicit ec: ExecutionContext): Fox[List[VaultPath]] = ???
       }
 
       "Uri has no trailing slash" should {

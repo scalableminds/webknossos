@@ -76,6 +76,10 @@
   "scripts": {
     "start": "node tools/proxy/proxy.js",
     "build": "node --max-old-space-size=4096 node_modules/.bin/webpack --env production",
+    "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore",
+    "build-wk-backend": "sbt -no-colors -DfailOnWarning compile stage",
+    "build-wk-datastore": "sbt -no-colors -DfailOnWarning \"project webknossosDatastore\" copyMessages compile stage",
+    "build-wk-tracingstore": "sbt -no-colors -DfailOnWarning \"project webknossosTracingstore\" copyMessages compile stage",
     "build-dev": "node_modules/.bin/webpack",
     "build-watch": "node_modules/.bin/webpack -w",
     "listening": "lsof -i:5005,7155,9000,9001,9002",

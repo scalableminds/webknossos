@@ -148,16 +148,19 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       case Empty =>
         for {
           extendedRemainingPaths <- path.listDirectory().map(dirs => remainingPaths ++ dirs.map((_, searchDepth + 1)))
-          foundLayers <- recursivelyExploreRemoteLayerAtPaths(extendedRemainingPaths, credentialId, explorers, reportMutable)
+          foundLayers <- recursivelyExploreRemoteLayerAtPaths(extendedRemainingPaths,
+                                                              credentialId,
+                                                              explorers,
+                                                              reportMutable)
         } yield foundLayers
       case _ =>
         Fox.successful(List.empty)
     }
 
   private def recursivelyExploreRemoteLayerAtPaths(remotePathsWithDepth: List[(VaultPath, Int)],
-                                              credentialId: Option[String],
-                                              explorers: List[RemoteLayerExplorer],
-                                              reportMutable: ListBuffer[String])(
+                                                   credentialId: Option[String],
+                                                   explorers: List[RemoteLayerExplorer],
+                                                   reportMutable: ListBuffer[String])(
       implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     remotePathsWithDepth match {
       case Nil =>

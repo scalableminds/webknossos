@@ -78,10 +78,10 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     val blobs = storage.list(bucket,
                              Storage.BlobListOption.prefix(objName),
                              Storage.BlobListOption.currentDirectory(),
-                             Storage.BlobListOption.pageSize(10))
+                             Storage.BlobListOption.pageSize(MAX_EXPLORED_ITEMS_PER_LEVEL))
     val subDirectories = blobs.getValues.asScala.toList.filter(_.isDirectory)
-    val paths = subDirectories.map(dirBob =>
-      new VaultPath(new URI(s"${uri.getScheme}://$bucket/${dirBob.getBlobId.getName}"), this))
+    val paths = subDirectories.map(dirBlob =>
+      new VaultPath(new URI(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}"), this))
     Fox.successful(paths)
   }
 

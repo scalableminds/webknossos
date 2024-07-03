@@ -83,7 +83,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       credentialOpt: Option[DataVaultCredential] <- Fox.runOptional(credentialId)(remoteWebknossosClient.getCredential)
       remoteSource = RemoteSourceDescriptor(uri, credentialOpt)
       remotePath <- dataVaultService.getVaultPath(remoteSource) ?~> "dataVault.setup.failed"
-      layersWithVoxelSizes <- recursivelyExploreRemoteLayerAt(
+      layersWithVoxelSizes <- recursivelyExploreRemoteLayerAtPaths(
         List((remotePath, 0)),
         credentialId,
         List(
@@ -140,7 +140,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         for {
           layersWithVoxelSizesInSiblingPaths <- Fox
             .sequenceOfFulls(sameParentRemainingPaths.map(path =>
-              recursivelyExploreRemoteLayerAt(List(path), credentialId, explorers, reportMutable)))
+              recursivelyExploreRemoteLayerAtPaths(List(path), credentialId, explorers, reportMutable)))
             .toFox
           allLayersWithVoxelSizes = layersWithVoxelSizes +: layersWithVoxelSizesInSiblingPaths
         } yield allLayersWithVoxelSizes.flatten
@@ -148,14 +148,13 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       case Empty =>
         for {
           extendedRemainingPaths <- path.listDirectory().map(dirs => remainingPaths ++ dirs.map((_, searchDepth + 1)))
-          foundLayers <- recursivelyExploreRemoteLayerAt(extendedRemainingPaths, credentialId, explorers, reportMutable)
+          foundLayers <- recursivelyExploreRemoteLayerAtPaths(extendedRemainingPaths, credentialId, explorers, reportMutable)
         } yield foundLayers
       case _ =>
         Fox.successful(List.empty)
     }
 
-  // TODO: Swallow exploration errors when using local file system to avoid leaking information about the local file system's contents to the user.
-  private def recursivelyExploreRemoteLayerAt(remotePathsWithDepth: List[(VaultPath, Int)],
+  private def recursivelyExploreRemoteLayerAtPaths(remotePathsWithDepth: List[(VaultPath, Int)],
                                               credentialId: Option[String],
                                               explorers: List[RemoteLayerExplorer],
                                               reportMutable: ListBuffer[String])(

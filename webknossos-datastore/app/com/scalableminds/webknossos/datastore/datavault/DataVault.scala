@@ -5,6 +5,7 @@ import com.scalableminds.util.tools.Fox
 import scala.concurrent.ExecutionContext
 
 trait DataVault {
+  val MAX_EXPLORED_ITEMS_PER_LEVEL = 10
   def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)]
 

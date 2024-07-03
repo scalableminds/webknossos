@@ -70,6 +70,7 @@ class FileSystemDataVault extends DataVault {
         .asScala
         .toList
         .map(dir => new VaultPath(dir.toUri, this))
+        .take(MAX_EXPLORED_ITEMS_PER_LEVEL)
     })
 
   override def hashCode(): Int =

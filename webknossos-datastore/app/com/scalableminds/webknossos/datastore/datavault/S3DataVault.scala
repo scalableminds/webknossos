@@ -29,7 +29,6 @@ import scala.concurrent.ExecutionContext
 import scala.jdk.CollectionConverters._
 
 class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
-  val MAX_EXPLORED_ITEMS_PER_LEVEL = 10
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")

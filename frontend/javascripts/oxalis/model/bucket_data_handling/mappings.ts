@@ -113,6 +113,14 @@ class Mappings {
       const value = (mapping as Map<NumberLike, NumberLike>).get(key) as NumberLike;
       this.cuckooTable.setNumberLike(key, value);
     }
+
+    const sizeOfOnlyB = _.size(onlyB);
+    const doFullTextureUpdate = sizeOfOnlyB > 10000;
+    console.log("sizeOfOnlyB", sizeOfOnlyB);
+    console.time("cuckoo mapping update with full-update=" + doFullTextureUpdate);
+    if (doFullTextureUpdate) {
+      this.cuckooTable.disableAutoTextureUpdate();
+    }
     for (const key of onlyB) {
       // todop: with 512**2 textures, this doesnt work properly?
       if (this.currentKeyCount > this.cuckooTable.getCriticalCapacity()) {
@@ -125,6 +133,11 @@ class Mappings {
       this.currentKeyCount++;
       this.cuckooTable.setNumberLike(key, value);
     }
+    if (doFullTextureUpdate) {
+      this.cuckooTable.enableAutoTextureUpdateAndFlush();
+    }
+    console.timeEnd("cuckoo mapping update with full-update=" + doFullTextureUpdate);
+
     this.previousMapping = mapping;
 
     message.destroy(MAPPING_MESSAGE_KEY);

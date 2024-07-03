@@ -14,11 +14,12 @@ let cachedNullTexture: UpdatableTexture | undefined;
 
 export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   entryCapacity: number;
-  table!: Uint32Array;
-  seeds!: number[];
-  seedSubscribers: Array<SeedSubscriberFn> = [];
+  protected table!: Uint32Array;
+  protected seeds!: number[];
+  protected seedSubscribers: Array<SeedSubscriberFn> = [];
   _texture: UpdatableTexture;
-  textureWidth: number;
+  protected textureWidth: number;
+  protected autoTextureUpdate: boolean = true;
 
   static getTextureChannelCount() {
     return 4;
@@ -153,6 +154,15 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     this._texture.update(this.table, 0, 0, this.textureWidth, this.textureWidth);
   }
 
+  disableAutoTextureUpdate() {
+    this.autoTextureUpdate = false;
+  }
+
+  enableAutoTextureUpdateAndFlush() {
+    this.autoTextureUpdate = true;
+    this.flushTableToTexture();
+  }
+
   /*
     Should throw an error if the provided key is not valid (e.g., because it contains
     reserved values).
@@ -160,7 +170,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   abstract checkValidKey(key: K): void;
 
   set(pendingKey: K, pendingValue: V) {
-    const newDisplacedEntry = this.internalSet(pendingKey, pendingValue, false);
+    const newDisplacedEntry = this.internalSet(pendingKey, pendingValue, !this.autoTextureUpdate);
     if (newDisplacedEntry == null) {
       // Success
       return;
@@ -168,11 +178,13 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     const oldTable = this.table;
     for (let rehashAttempt = 1; rehashAttempt <= REHASH_THRESHOLD; rehashAttempt++) {
       // todop: perf (only allocate new table once instead on every rehash)
-      if (this.rehash(oldTable, rehashAttempt)) {
+      if (this.rehash(oldTable, true)) {
         if (this.internalSet(newDisplacedEntry[0], newDisplacedEntry[1], true) == null) {
           // Since a rehash was performed, the incremental texture updates were
-          // skipped. Update the entire texture:
-          this.flushTableToTexture();
+          // skipped. Update the entire texture if configured.
+          if (this.autoTextureUpdate) {
+            this.flushTableToTexture();
+          }
           return;
         }
       }
@@ -254,7 +266,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
    */
   abstract getEmptyValue(): V;
 
-  private rehash(oldTable: Uint32Array, rehashAttempt: number): boolean {
+  private rehash(oldTable: Uint32Array, skipTextureUpdate: boolean): boolean {
     this.initializeTableArray();
 
     for (
@@ -269,7 +281,7 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
         offset / this.getClass().getElementsPerEntry(),
         oldTable,
       );
-      if (this.internalSet(key, value, rehashAttempt > 0) != null) {
+      if (this.internalSet(key, value, skipTextureUpdate) != null) {
         // Rehash did not work
         return false;
       }

@@ -83,7 +83,7 @@ function RegistrationViewGeneric() {
     <Spin spinning={isLoading}>
       <Row justify="center" align="middle" className="login-view">
         <Col>
-          <Card className="login-content drawing-signup" style={{ width: 1000 }}>
+          <Card className="login-content drawing-signup" style={{ maxWidth: 1000 }}>
             <h3>Sign Up</h3>
             {content}
             <Link to="/auth/login">Already have an account? Login instead.</Link>
@@ -99,7 +99,7 @@ function RegistrationViewWkOrg() {
   return (
     <Row justify="center" align="middle" className="login-view">
       <Col>
-        <Card className="login-content drawing-signup" style={{ width: 1000 }}>
+        <Card className="login-content drawing-signup" style={{ maxWidth: 1000 }}>
           <h3>Sign Up</h3>
           <RegistrationFormWKOrg
             onRegistered={() => {

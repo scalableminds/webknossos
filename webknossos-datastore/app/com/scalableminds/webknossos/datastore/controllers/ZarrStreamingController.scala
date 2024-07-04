@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer,
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
-import com.scalableminds.webknossos.datastore.models.VoxelPosition
+import com.scalableminds.webknossos.datastore.models.{VoxelPosition, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
@@ -17,9 +17,9 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceRequestSettings
 }
 import com.scalableminds.webknossos.datastore.services._
-
+import net.liftweb.common.Box.tryo
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
@@ -56,7 +56,7 @@ class ZarrStreamingController @Inject()(
                                                                                   datasetName,
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
-        omeNgffHeader = NgffMetadata.fromNameScaleAndMags(dataLayerName, dataSource.scale, dataLayer.resolutions)
+        omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(dataLayerName, dataSource.scale, dataLayer.resolutions)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
   }
@@ -79,9 +79,9 @@ class ZarrStreamingController @Inject()(
                                                                                         annotationSource.datasetName,
                                                                                         dataLayerName) ?~> Messages(
                 "dataSource.notFound") ~> NOT_FOUND
-              dataSourceOmeNgffHeader = NgffMetadata.fromNameScaleAndMags(dataLayerName,
-                                                                          dataSource.scale,
-                                                                          dataLayer.resolutions)
+              dataSourceOmeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(dataLayerName,
+                                                                              dataSource.scale,
+                                                                              dataLayer.resolutions)
             } yield dataSourceOmeNgffHeader
         }
       } yield Ok(Json.toJson(omeNgffHeader))
@@ -103,7 +103,21 @@ class ZarrStreamingController @Inject()(
         dataLayers = dataSource.dataLayers
         zarrLayers = dataLayers.map(convertLayerToZarrLayer)
         zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
-      } yield Ok(Json.toJson(zarrSource))
+        zarrSourceJson <- replaceVoxelSizeByLegacyFormat(Json.toJson(zarrSource))
+      } yield Ok(Json.toJson(zarrSourceJson))
+    }
+  }
+
+  private def replaceVoxelSizeByLegacyFormat(jsValue: JsValue): Fox[JsValue] = {
+    val jsObject = jsValue.as[JsObject]
+    val voxelSizeOpt = (jsObject \ "scale").asOpt[VoxelSize]
+    voxelSizeOpt match {
+      case None => Fox.successful(jsObject)
+      case Some(voxelSize) =>
+        val inNanometer = voxelSize.toNanometer
+        for {
+          newDataSource <- tryo(jsObject - "scale" + ("scale" -> Json.toJson(inNanometer)))
+        } yield newDataSource
     }
   }
 
@@ -150,7 +164,8 @@ class ZarrStreamingController @Inject()(
               .getVolumeLayerAsZarrLayer(l.tracingId, Some(l.name), annotationSource.tracingStoreUrl, relevantToken))
         allLayer = dataSourceLayers ++ annotationLayers
         zarrSource = GenericDataSource[DataLayer](dataSource.id, allLayer, dataSource.scale)
-      } yield Ok(Json.toJson(zarrSource))
+        zarrSourceJson <- replaceVoxelSizeByLegacyFormat(Json.toJson(zarrSource))
+      } yield Ok(Json.toJson(zarrSourceJson))
     }
 
   def requestRawZarrCube(

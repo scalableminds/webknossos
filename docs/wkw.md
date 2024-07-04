@@ -79,4 +79,4 @@ volumetracing.zip # A ZIP file containing the volume annotation
 └─ volumetracing.nml # Annotation metadata NML file
 ```
 
-After unzipping the archives, the WKW files can be read or modified with the [WEBKNOSSOS Python library](http://localhost:8197/webknossos-py/examples/load_annotation_from_file.html).
+After unzipping the archives, the WKW files can be read or modified with the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/examples/load_annotation_from_file.html).

@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.{PrecomputedHeader, PrecomputedScale}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
 
 import scala.concurrent.ExecutionContext
@@ -18,7 +19,7 @@ import scala.concurrent.ExecutionContext
 class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
   override def name: String = "Neuroglancer Precomputed"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(PrecomputedLayer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(PrecomputedLayer, VoxelSize)]] =
     for {
       infoPath <- Fox.successful(remotePath / PrecomputedHeader.FILENAME_INFO)
       precomputedHeader <- parseJsonFromPath[PrecomputedHeader](infoPath) ?~> s"Failed to read neuroglancer precomputed metadata at $infoPath"
@@ -27,7 +28,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
 
   private def layerFromPrecomputedHeader(precomputedHeader: PrecomputedHeader,
                                          remotePath: VaultPath,
-                                         credentialId: Option[String]): Fox[(PrecomputedLayer, Vec3Double)] =
+                                         credentialId: Option[String]): Fox[(PrecomputedLayer, VoxelSize)] =
     for {
       name <- Fox.successful(guessNameFromPath(remotePath))
       firstScale <- precomputedHeader.scales.headOption.toFox
@@ -42,7 +43,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       layer = if (precomputedHeader.describesSegmentationLayer) {
         PrecomputedSegmentationLayer(name, boundingBox, elementClass, mags, None)
       } else PrecomputedDataLayer(name, boundingBox, Category.color, elementClass, mags)
-    } yield (layer, voxelSize)
+    } yield (layer, VoxelSize.fromFactorWithDefaultUnit(voxelSize))
 
   private def elementClassFromPrecomputedDataType(precomputedDataType: String): Fox[ElementClass.Value] =
     precomputedDataType.toLowerCase match {

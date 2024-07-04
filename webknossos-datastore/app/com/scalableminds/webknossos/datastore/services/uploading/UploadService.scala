@@ -5,7 +5,7 @@ import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormat.FILENAME_HEADER_WKW
+import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header.FILENAME_ATTRIBUTES_JSON
 import com.scalableminds.webknossos.datastore.datareaders.n5.{N5Header, N5Metadata}
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.PrecomputedHeader.FILENAME_INFO
@@ -83,6 +83,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     with DirectoryConstants
     with FoxImplicits
     with BoxImplicits
+    with WKWDataFormatHelper
     with LazyLogging {
 
   /* Redis stores different information for each upload, with different prefixes in the keys:

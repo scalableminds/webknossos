@@ -44,6 +44,7 @@ class DSMeshController @Inject()(
                                            the oversegmentation. Collect mesh chunks of all *unmapped* segment ids
                                            belonging to the supplied agglomerate id.
                                            If it is not set, use meshfile as is, assume passed id is present in meshfile
+                                  Note: in case of an editable mapping, targetMappingName is its baseMapping name.
                                 */
                                targetMappingName: Option[String],
                                editableMappingTracingId: Option[String]): Action[ListMeshChunksRequest] =

@@ -1,7 +1,7 @@
 package controllers
 
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService}
@@ -19,7 +19,7 @@ import java.util.Date
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import models.team.PricingPlan
 
 object MovieResolutionSetting extends ExtendedEnumeration {
@@ -109,11 +109,17 @@ class JobController @Inject()(
   }
 
   // Note that the dataset has to be registered by reserveUpload via the datastore first.
-  def runConvertToWkwJob(organizationId: String, datasetName: String, scale: String): Action[AnyContent] =
+  def runConvertToWkwJob(organizationId: String,
+                         datasetName: String,
+                         scale: String,
+                         unit: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId)
+          voxelSizeFactor <- Vec3Double.fromUriLiteral(scale).toFox
+          voxelSizeUnit <- Fox.runOptional(unit)(u => LengthUnit.fromString(u).toFox)
+          voxelSize = VoxelSize.fromFactorAndUnitWithDefault(voxelSizeFactor, voxelSizeUnit)
           _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
@@ -123,7 +129,7 @@ class JobController @Inject()(
             "organization_name" -> organizationId,
             "organization_display_name" -> organization.displayName,
             "dataset_name" -> datasetName,
-            "scale" -> scale
+            "scale" -> voxelSize.toNanometer.toUriLiteral
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)

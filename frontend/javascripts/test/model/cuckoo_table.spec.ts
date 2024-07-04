@@ -21,12 +21,14 @@ function generateRandomEntry(): [number, Vector3] {
   ];
 }
 
-function generateRandomEntrySet() {
-  const count = 1600;
+export function generateRandomCuckooEntrySet<K, V>(
+  generateEntry: () => [K, V],
+  count: number = 1600,
+) {
   const set = new Set();
   const entries = [];
   for (let i = 0; i < count; i++) {
-    const entry = generateRandomEntry();
+    const entry = generateEntry();
     const entryKey = entry[0];
     if (set.has(entryKey)) {
       i--;
@@ -49,8 +51,8 @@ function isValueEqual(t: ExecutionContext<any>, val1: Vector3, val2: Vector3) {
   t.true(val1[2] === val2[2]);
 }
 
-test.serial("CuckooTable: Basic", (t) => {
-  const entries = generateRandomEntrySet();
+test("CuckooTable: Basic", (t) => {
+  const entries = generateRandomCuckooEntrySet(generateRandomEntry);
   const ct = CuckooTable.fromCapacity(entries.length);
 
   for (const entry of entries) {
@@ -67,9 +69,9 @@ test.serial("CuckooTable: Basic", (t) => {
   }
 });
 
-test.serial("CuckooTable: Speed should be alright", (t) => {
+test("CuckooTable: Speed should be alright", (t) => {
   const RUNS = 100;
-  const hashSets = _.range(RUNS).map(() => generateRandomEntrySet());
+  const hashSets = _.range(RUNS).map(() => generateRandomCuckooEntrySet(generateRandomEntry));
   const tables = _.range(RUNS).map(() => CuckooTable.fromCapacity(hashSets[0].length));
 
   const durations = [];
@@ -87,7 +89,7 @@ test.serial("CuckooTable: Speed should be alright", (t) => {
   t.true(_.mean(durations) < 0.1);
 });
 
-test.serial("CuckooTable: Repeated sets should work", (t) => {
+test("CuckooTable: Repeated sets should work", (t) => {
   const ct = CuckooTable.fromCapacity(1);
 
   // This is a regression test for a bug which resulted in the
@@ -104,7 +106,7 @@ test.serial("CuckooTable: Repeated sets should work", (t) => {
   }
 });
 
-test.serial("CuckooTable: Should throw error when exceeding capacity", (t) => {
+test("CuckooTable: Should throw error when exceeding capacity", (t) => {
   const ct = CuckooTable.fromCapacity(1);
 
   t.throws(() => {
@@ -115,4 +117,25 @@ test.serial("CuckooTable: Should throw error when exceeding capacity", (t) => {
       isValueEqual(t, entry[1], readValue);
     }
   });
+});
+
+test("CuckooTable: Maxing out capacity", (t) => {
+  const base = 128;
+  const attemptCount = 10;
+  for (let attempt = 0; attempt < attemptCount; attempt++) {
+    let entries;
+    let ct;
+
+    ct = new CuckooTable(base);
+    entries = generateRandomCuckooEntrySet(generateRandomEntry, ct.getCriticalCapacity());
+    for (const entry of entries) {
+      ct.set(entry[0], entry[1]);
+    }
+
+    // Check that all previously set items are still
+    // intact.
+    for (const innerEntry of entries) {
+      isValueEqual(t, innerEntry[1], ct.get(innerEntry[0]));
+    }
+  }
 });

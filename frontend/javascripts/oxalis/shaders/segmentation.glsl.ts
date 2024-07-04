@@ -39,7 +39,9 @@ export const convertCellIdToRGB: ShaderModule = {
     }
 
     vec3 attemptCustomColorLookUp(uint integerValue, uint seed) {
-      highp uint h0 = hashCombine(seed, integerValue) % COLOR_CUCKOO_ENTRY_CAPACITY;
+      highp uint h0 = hashCombine(seed, integerValue);
+      // See getDiminishedEntryCapacity() for an explanation about the -1
+      h0 = h0 % (COLOR_CUCKOO_ENTRY_CAPACITY - 1u);
       h0 = uint(h0 * COLOR_CUCKOO_ELEMENTS_PER_ENTRY / COLOR_CUCKOO_ELEMENTS_PER_TEXEL);
       highp uint x = h0 % COLOR_CUCKOO_TWIDTH;
       highp uint y = h0 / COLOR_CUCKOO_TWIDTH;

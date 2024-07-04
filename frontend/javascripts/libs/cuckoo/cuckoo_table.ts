@@ -56,7 +56,6 @@ export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
 
   _hashKeyToAddress(seed: number, key: Key): number {
     const state = this._hashCombine(seed, key);
-
-    return state % this.entryCapacity;
+    return state % this.getDiminishedEntryCapacity();
   }
 }

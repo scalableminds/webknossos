@@ -371,4 +371,23 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   }
 
   abstract _hashKeyToAddress(seed: number, key: K): number;
+
+  getDiminishedEntryCapacity(): number {
+    // Important:
+    // This method is only needed for CuckooTable subclasses that
+    // use a single 32-bit key.
+    // We pretend that the entryCapacity has one
+    // slot less than it actually has. This is a shortcut to
+    // avoid that a single _hashCombine call in combination with
+    // a power-of-two-modulo operation does not have good enough
+    // hash properties. Without this, filling the table up to 90%
+    // will not work reliably (unit tests well, too). As an
+    // alternative, one could also use the fmix finalize step by Murmur3,
+    // but this requires more bit operations on CPU and GPU.
+    // The downside of this approach is that we waste one slot of the
+    // hash table.
+    // Other cuckootable implementations don't need this trick, because
+    // they call _hashCombine multiple times.
+    return this.entryCapacity - 1;
+  }
 }

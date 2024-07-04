@@ -66,6 +66,7 @@ export function useDatasetQuery(datasetId: APIDatasetId) {
     },
     {
       refetchOnWindowFocus: false,
+      keepPreviousData: true,
     },
   );
 }

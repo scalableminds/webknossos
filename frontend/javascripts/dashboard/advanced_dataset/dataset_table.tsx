@@ -519,11 +519,6 @@ class DatasetTable extends React.PureComponent<Props, State> {
     const datasetToRankMap: Map<DatasetOrFolder, number> = new Map(
       dataSourceSortedByRank.map((dataset, rank) => [dataset, rank]),
     );
-    const getNameAndMetaData = (datasetOrFolder: DatasetOrFolder) => {
-      return `${datasetOrFolder}${Object.entries(datasetOrFolder.metadata || {})
-        .map(([key, value]) => `${key}:${value}`)
-        .join(",")}`;
-    };
     const sortedDataSource =
       // Sort using the dice coefficient if the table is not sorted by another key
       // and if the query is at least 3 characters long to avoid sorting *all* datasets
@@ -531,8 +526,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         ? _.chain([...filteredDataSource, ...activeSubfolders])
             // TODO: Check whether this is dead code as columnKey never seems to be null.
             .map((datasetOrFolder) => {
-              const nameAndMetadata = getNameAndMetaData(datasetOrFolder);
-              const diceCoefficient = dice(nameAndMetadata, this.props.searchQuery);
+              const diceCoefficient = dice(datasetOrFolder.name, this.props.searchQuery);
               const rank = useLruRank ? datasetToRankMap.get(datasetOrFolder) || 0 : 0;
               const rankCoefficient = 1 - rank / filteredDataSource.length;
               const coefficient = (diceCoefficient + rankCoefficient) / 2;

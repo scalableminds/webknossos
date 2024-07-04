@@ -29,6 +29,7 @@ import {
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect, useState } from "react";
 import {
+  APIDataset,
   APIDatasetCompact,
   APIMetadata,
   APIMetadataEntries,
@@ -124,19 +125,19 @@ function getMaybeSelectMessage(datasetCount: number) {
 const updateCachedDatasetOrFolderDebounced = _.debounce(
   async (
     context: DatasetCollectionContextValue,
-    selectedDatasetOrFolder: APIDatasetCompact | Folder,
+    selectedDatasetOrFolder: APIDataset | Folder,
     metadata: APIMetadataEntries,
-    setIgnoreFetching: (value: boolean) => void,
+    setIgnoreFetching: (value: boolean) => void, // remove me
   ) => {
     // Explicitly ignoring fetching here to avoid unnecessary rendering of the loading spinner and thus hiding the metadata table.
     setIgnoreFetching(true);
-    if ("status" in selectedDatasetOrFolder) {
+    if ("folderId" in selectedDatasetOrFolder) {
       await context.updateCachedDataset(selectedDatasetOrFolder, { metadata: metadata });
     } else {
-      const folder = selectedDatasetOrFolder as Folder;
+      const folder = selectedDatasetOrFolder;
       await context.queries.updateFolderMutation.mutateAsync({
         ...folder,
-        allowedTeams: folder.allowedTeams.map((t) => t.id),
+        allowedTeams: folder.allowedTeams?.map((t) => t.id) || [],
         metadata,
       });
     }
@@ -149,7 +150,7 @@ function MetadataTable({
   selectedDatasetOrFolder,
   setIgnoreFetching,
 }: {
-  selectedDatasetOrFolder: APIDatasetCompact | Folder;
+  selectedDatasetOrFolder: APIDataset | Folder;
   setIgnoreFetching: (value: boolean) => void;
 }) {
   const context = useDatasetCollectionContext();
@@ -171,7 +172,7 @@ function MetadataTable({
         ? selectedDatasetOrFolder.metadata
         : [{ key: "", value: "", index: 0, type: "string" as APIMetadata["type"] }],
     );
-  }, [selectedDatasetOrFolder.id || selectedDatasetOrFolder.name]);
+  }, [selectedDatasetOrFolder.name]);
 
   useEffectOnUpdate(() => {
     updateCachedDatasetOrFolderDebounced(
@@ -506,6 +507,12 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
             </Tag>
           )}
         </div>
+        {fullDataset && (
+          <MetadataTable
+            selectedDatasetOrFolder={fullDataset}
+            setIgnoreFetching={setIgnoreFetching}
+          />
+        )}
       </Spin>
 
       {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
@@ -515,13 +522,6 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
             <div>{formatCountToDataAmountUnit(fullDataset.usedStorageBytes, true)}</div>
           </Tooltip>
         </div>
-      ) : null}
-
-      {selectedDataset.isActive ? (
-        <MetadataTable
-          selectedDatasetOrFolder={selectedDataset}
-          setIgnoreFetching={setIgnoreFetching}
-        />
       ) : null}
     </>
   );

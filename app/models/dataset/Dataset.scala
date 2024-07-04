@@ -76,7 +76,6 @@ case class DatasetCompactInfo(
     lastUsedByUser: Instant,
     status: String,
     tags: List[String],
-    metadata: Option[JsArray],
     isUnreported: Boolean,
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
@@ -270,7 +269,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
               COALESCE(lastUsedTimes.lastUsedTime, ${Instant.zero}),
               d.status,
               d.tags,
-              d.metadata,
               cl.names AS colorLayerNames,
               sl.names AS segmentationLayerNames
             FROM
@@ -300,7 +298,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
            String,
            String,
            String,
-           String,
            String)])
     } yield
       rows.toList.map(
@@ -317,10 +314,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             lastUsedByUser = row._9,
             status = row._10,
             tags = parseArrayLiteral(row._11),
-            metadata = JsonHelper.parseAndValidateJson[JsArray](row._12),
             isUnreported = unreportedStatusList.contains(row._10),
-            colorLayerNames = parseArrayLiteral(row._13),
-            segmentationLayerNames = parseArrayLiteral(row._14)
+            colorLayerNames = parseArrayLiteral(row._12),
+            segmentationLayerNames = parseArrayLiteral(row._13)
         ))
 
   private def buildSelectionPredicates(isActiveOpt: Option[Boolean],

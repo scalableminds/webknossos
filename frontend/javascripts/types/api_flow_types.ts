@@ -233,7 +233,6 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "lastUsedByUser"
   | "tags"
   | "isUnreported"
-  | "metadata"
 >;
 export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
   id?: string;
@@ -259,7 +258,6 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     lastUsedByUser: dataset.lastUsedByUser,
     status: dataset.dataSource.status,
     tags: dataset.tags,
-    metadata: dataset.metadata,
     isUnreported: dataset.isUnreported,
     colorLayerNames: colorLayerNames,
     segmentationLayerNames: segmentationLayerNames,

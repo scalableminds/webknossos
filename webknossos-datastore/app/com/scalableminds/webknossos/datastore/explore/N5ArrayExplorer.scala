@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{N5DataLayer, N
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.Category
 
 import scala.concurrent.ExecutionContext
@@ -15,7 +16,7 @@ class N5ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExpl
 
   override def name: String = "N5 Array"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(N5Layer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(N5Layer, VoxelSize)]] =
     for {
       headerPath <- Fox.successful(remotePath / N5Header.FILENAME_ATTRIBUTES_JSON)
       name = guessNameFromPath(remotePath)
@@ -32,6 +33,6 @@ class N5ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExpl
       layer: N5Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
         N5SegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
       } else N5DataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))
-    } yield List((layer, Vec3Double.ones))
+    } yield List((layer, VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)))
 
 }

@@ -126,9 +126,8 @@ The term "magnifications" is used synonymously for resolutions throughout the UI
 At the moment, WebKnossos guarantees correct rendering of data with non-uniform resolution factors only if the z-component between two resolutions changes by a factor of 1 or 2.
 
 Most users do not create these metadata files manually.
-WEBKNOSSOS can infer most of these properties automatically, except for `scale` and `largestSegmentId`.
-During the data import process, WEBKNOSSOS will ask for the necessary properties.
 When using the [WEBKNOSSOS CLI](http://docs.webknossos.org/cli), a metadata file is automatically generated. Alternatively, you can create and edit WEBKNOSSOS datasets using the [WEBKNOSSOS Python library](https://github.com/scalableminds/webknossos-libs/).
+During the data import process, WEBKNOSSOS will ask for the necessary properties.
 
 [See below for the full specification](#dataset-metadata-specification).
 
@@ -202,45 +201,18 @@ Groups can be freely nested inside each other.
 
 
 ### ID Mapping Files
-WEBKNOSSOS supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings-on-demand-agglomeration) allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These "mapping" files need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for WEBKNOSSOS to identify and read them (self-hosted instance only).
 
-WEBKNOSSOS supports two formats for these agglomerates:
+WEBKNOSSOS supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings-on-demand-agglomeration), allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These mapping files, also known as agglomerate files, need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for WEBKNOSSOS to identify and read them (self-hosted instance only).
 
-- JSON -> `mappings` directory
-- HDF5 -> `agglomerates` directory
+WEBKNOSSOS expects hdf5 agglomerate files in the `agglomerates` directory of the segmentation layer.
 
 E.g.:
 ```
 my_dataset                      # Dataset root
 ├─ segmentation                 # Dataset layer name (e.g., color, segmentation)
-│  ├─ mappings                  # parent directory for all mappings
-│  │  ├─ my_mapping_file.json   # one or more mapping files
-│  │  ├─ different_mapping.json # one mapping file per pre-computed mapping strategy
+│  ├─ agglomerates         # parent directory for all mappings
+│  │  ├─ my_mapping_file.hdf5   # one or more mapping files
+│  │  ├─ different_mapping.hdf5 # one mapping file per pre-computed mapping strategy
 ```
 
-
-
-#### JSON schema
-All segment IDs belonging to the same super-voxel need to be listed in an array:  
-```
-{
-  "name": "astrocytes",
-  "classes": [
-    [
-      69381,
-      69445,
-      138248
-    ],
-    [
-      138307,
-      343831
-    ],
-    [
-      348348,
-      132432,
-      387433,
-      338330
-    ]
-  ]
-}
-```
+Note that JSON mappings are deprecated and support will be removed in a future version.

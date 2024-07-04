@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{N5DataLayer, N
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.n5._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.Category
 import net.liftweb.common.Box.tryo
 
@@ -16,7 +17,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
 
   override def name: String = "N5 Multiscales"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(N5Layer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(N5Layer, VoxelSize)]] =
     for {
       metadataPath <- Fox.successful(remotePath / N5Metadata.FILENAME_ATTRIBUTES_JSON)
       n5Metadata <- parseJsonFromPath[N5Metadata](metadataPath) ?~> s"Failed to read N5 header at $metadataPath"
@@ -25,7 +26,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
 
   private def layerFromN5MultiscalesItem(multiscalesItem: N5MultiscalesItem,
                                          remotePath: VaultPath,
-                                         credentialId: Option[String]): Fox[(N5Layer, Vec3Double)] =
+                                         credentialId: Option[String]): Fox[(N5Layer, VoxelSize)] =
     for {
       voxelSizeNanometers <- extractVoxelSize(multiscalesItem.datasets.map(_.transform))
       magsWithAttributes <- Fox.serialCombined(multiscalesItem.datasets)(d =>
@@ -37,7 +38,7 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
       layer: N5Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
         N5SegmentationLayer(name, boundingBox, elementClass, magsWithAttributes.map(_.mag), largestSegmentId = None)
       } else N5DataLayer(name, Category.color, boundingBox, elementClass, magsWithAttributes.map(_.mag))
-    } yield (layer, voxelSizeNanometers)
+    } yield (layer, VoxelSize.fromFactorWithDefaultUnit(voxelSizeNanometers))
 
   private def extractAxisOrder(axes: List[String]): Fox[AxisOrder] = {
     val x = axes.indexWhere(_ == "x")

@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.explore
 
-import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{
@@ -12,6 +11,7 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerWithMagLocators,
   DataSource,
@@ -25,7 +25,7 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
   override def name: String = "WEBKNOSSOS-based Zarr"
 
   override def explore(remotePath: VaultPath,
-                       credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, Vec3Double)]] =
+                       credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {
       dataSourcePropertiesPath <- Fox.successful(remotePath / GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       dataSource <- parseJsonFromPath[DataSource](dataSourcePropertiesPath)

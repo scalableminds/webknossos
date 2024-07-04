@@ -7,6 +7,7 @@ import Constants, {
   FillModeEnum,
   TDViewDisplayModeEnum,
   InterpolationModeEnum,
+  UnitLong,
 } from "oxalis/constants";
 import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
 import constants from "oxalis/constants";
@@ -113,15 +114,15 @@ const defaultState: OxalisState = {
   },
   task: null,
   dataset: {
-    name: "Test Dataset",
+    name: "Loading",
     folderId: "dummy-folder-id",
     isUnreported: false,
     created: 123,
     dataSource: {
       dataLayers: [],
-      scale: [5, 5, 5],
+      scale: { factor: [5, 5, 5], unit: UnitLong.nm },
       id: {
-        name: "Test Dataset",
+        name: "Loading",
         team: "",
       },
     },
@@ -138,9 +139,9 @@ const defaultState: OxalisState = {
       jobsEnabled: false,
       jobsSupportedByAvailableWorkers: [],
     },
-    owningOrganization: "Connectomics department",
+    owningOrganization: "",
     description: null,
-    displayName: "Awesome Test Dataset",
+    displayName: "Loading",
     allowedTeams: [],
     allowedTeamsCumulative: [],
     logoUrl: null,

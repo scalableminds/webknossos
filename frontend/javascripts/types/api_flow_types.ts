@@ -168,8 +168,14 @@ export type MutableAPIDatasetId = {
   name: string;
 };
 export type APIDatasetId = Readonly<MutableAPIDatasetId>;
+
+export enum APIMetadataType {
+  STRING = "string",
+  NUMBER = "number",
+  STRING_ARRAY = "string[]",
+}
 export type APIMetadata = {
-  type: "number" | "string" | "string[]";
+  type: APIMetadataType;
   key: string;
   value: string | number | string[];
   index: number;

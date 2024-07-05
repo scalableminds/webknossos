@@ -165,9 +165,7 @@ function MetadataTable({
 }: { selectedDatasetOrFolder: APIDataset | Folder }) {
   const context = useDatasetCollectionContext();
   const [metadata, setMetadata] = useState<APIMetadataEntries>(
-    selectedDatasetOrFolder.metadata != null && selectedDatasetOrFolder.metadata.length > 0
-      ? selectedDatasetOrFolder.metadata
-      : [{ key: "", value: "", index: 0, type: "string" as APIMetadata["type"] }],
+    selectedDatasetOrFolder.metadata || [],
   );
   const [error, setError] = useState<[string, string] | null>(null); // [propName, error message]
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
@@ -175,11 +173,7 @@ function MetadataTable({
     // Flush pending updates:
     updateCachedDatasetOrFolderDebounced.flush();
     // Update state to newest metadata from selectedDatasetOrFolder.
-    setMetadata(
-      selectedDatasetOrFolder.metadata != null && selectedDatasetOrFolder.metadata.length > 0
-        ? selectedDatasetOrFolder.metadata
-        : [{ key: "", value: "", index: 0, type: "string" as APIMetadata["type"] }],
-    );
+    setMetadata(selectedDatasetOrFolder.metadata || []);
   }, [selectedDatasetOrFolder.metadata]);
 
   useEffectOnUpdate(() => {
@@ -376,7 +370,7 @@ function MetadataTable({
                       style={{ width: 100.5, borderColor: isFocused ? undefined : "transparent" }}
                       value={record.key}
                       onChange={(evt) => updatePropName(record.key, evt.target.value)}
-                      placeholder="New property"
+                      placeholder="Property"
                       size="small"
                     />
                     {error != null && error[0] === record.key ? (

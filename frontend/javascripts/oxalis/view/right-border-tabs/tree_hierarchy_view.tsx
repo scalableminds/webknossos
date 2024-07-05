@@ -682,7 +682,7 @@ function TreeHierarchyView(props: Props) {
             onCheck={onCheck}
             onExpand={onExpand}
             // @ts-expect-error isNodeDraggable has argument of base type DataNode but we use it's extended parent type TreeNode
-            draggable={isNodeDraggable}
+            draggable={{nodeDraggable: isNodeDraggable, icon: false}}
             checkedKeys={checkedKeys}
             expandedKeys={expandedNodeKeys}
             selectedKeys={selectedKeys}

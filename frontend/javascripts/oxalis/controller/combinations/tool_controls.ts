@@ -614,12 +614,12 @@ export class BoundingBoxTool {
     _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
-    _ctrlOrMetaKey: boolean,
+    ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
-      leftDrag: "Create/Resize Bounding Boxes",
+      leftDrag: ctrlOrMetaKey ? "Move Bounding Boxes" : "Create/Resize Bounding Boxes",
       rightClick: "Context Menu",
     };
   }

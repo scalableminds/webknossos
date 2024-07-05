@@ -56,6 +56,7 @@ message TreeGroup {
   required string name = 1;
   required int32 groupId = 2;
   repeated TreeGroup children = 3;
+  optional bool isCollapsed = 4;
 }
 
 message SkeletonTracing {

@@ -509,6 +509,8 @@ function TreeHierarchyView(props: Props) {
 
   function renderTreeNode(node: TreeNode): React.ReactNode {
     const tree = props.trees[node.id];
+    if (!tree) return null;
+
     const isEditingDisabled = !props.allowUpdate;
     const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
     const isDropdownVisible = activeTreeDropdownId === tree.treeId;
@@ -714,6 +716,7 @@ function TreeHierarchyView(props: Props) {
   }
 
   function deleteTree(treeId: number) {
+    props.deselectAllTrees();
     dispatch(deleteTreeAction(treeId));
   }
 

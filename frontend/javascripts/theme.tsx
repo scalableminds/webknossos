@@ -43,7 +43,7 @@ export function getAntdTheme(userTheme: Theme) {
       titleHeight: 20, // default is 24px
     },
   };
-  
+
   // Ant Design Customizations
   const globalDesignToken: Partial<AliasToken> = {
     colorPrimary: ColorWKBlue,
@@ -53,12 +53,16 @@ export function getAntdTheme(userTheme: Theme) {
     blue: ColorWKBlue,
     borderRadius: 4,
     fontFamily:
-    '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;',
+      '"Nunito", "Monospaced Number", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;',
   };
-  
+
   if (userTheme === "dark") {
     algorithm = theme.darkAlgorithm;
-    components.Tree = {...components.Tree, nodeSelectedBg: ColorWKBlue, nodeHoverBg: ColorWKDarkGrey}
+    components.Tree = {
+      ...components.Tree,
+      nodeSelectedBg: ColorWKBlue,
+      nodeHoverBg: ColorWKDarkGrey,
+    };
   }
   return { algorithm, token: globalDesignToken, components };
 }

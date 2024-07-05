@@ -345,6 +345,7 @@ type RunInferenceParameters = {
   boundingBox: Vector6;
   newSegmentationLayerName: string;
   newDatasetName: string;
+  workflowYaml?: string;
   // maskAnnotationLayerName?: string | null
 };
 

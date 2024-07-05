@@ -55,7 +55,7 @@ import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { TrainAiModelTab } from "../jobs/train_ai_model";
+import { TrainAiModelTab, CollapsableWorkflowYamlEditor } from "../jobs/train_ai_model";
 import { LayerSelectionFormItem } from "components/layer_selection";
 import { useGuardedFetch } from "libs/react_helpers";
 import _ from "lodash";
@@ -110,6 +110,7 @@ type StartJobFormProps = Props & {
   fixedSelectedLayer?: APIDataLayer | null | undefined;
   title: string;
   buttonLabel?: string | null;
+  showWorkflowYaml?: boolean;
 };
 
 type BoundingBoxSelectionProps = {
@@ -642,6 +643,9 @@ function StartJobForm(props: StartJobFormProps) {
         onChangeSelectedBoundingBox={(bBoxId) => form.setFieldsValue({ boundingBoxId: bBoxId })}
         value={form.getFieldValue("boundingBoxId")}
       />
+
+      {props.showWorkflowYaml ? <CollapsableWorkflowYamlEditor /> : null}
+
       <div style={{ textAlign: "center" }}>
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}
@@ -813,6 +817,7 @@ function CustomAiModelInferenceForm() {
       title="AI Inference"
       suggestedDatasetSuffix="with_custom_model"
       isBoundingBoxConfigurable
+      showWorkflowYaml
       jobApiCall={async (
         {
           newDatasetName,
@@ -832,6 +837,7 @@ function CustomAiModelInferenceForm() {
         return runInferenceJob({
           ...maybeAnnotationId,
           aiModelId: form.getFieldValue("aiModel"),
+          workflowYaml: form.getFieldValue("workflowYaml"),
           datasetName: dataset.name,
           colorLayerName: colorLayer.name,
           boundingBox,

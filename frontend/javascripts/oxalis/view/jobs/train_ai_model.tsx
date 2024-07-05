@@ -146,29 +146,7 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
           </FormItem>
         </Col>
       </Row>
-      <Collapse
-        style={{ marginBottom: 8 }}
-        items={[
-          {
-            key: "advanced",
-            label: "Advanced",
-            children: (
-              <FormItem name="workflowYaml" label="Workflow Description (yaml)">
-                <TextArea
-                  className="input-monospace"
-                  autoSize={{
-                    minRows: 6,
-                  }}
-                  style={{
-                    fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
-                  }}
-                />
-              </FormItem>
-            ),
-          },
-        ]}
-        defaultActiveKey={[]}
-      />
+      <CollapsableWorkflowYamlEditor />
 
       <FormItem hasFeedback name="dummy" label="Training Data">
         <div>
@@ -191,6 +169,34 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
         </Tooltip>
       </FormItem>
     </Form>
+  );
+}
+
+export function CollapsableWorkflowYamlEditor() {
+  return (
+    <Collapse
+      style={{ marginBottom: 8 }}
+      items={[
+        {
+          key: "advanced",
+          label: "Advanced",
+          children: (
+            <FormItem name="workflowYaml" label="Workflow Description (yaml)">
+              <TextArea
+                className="input-monospace"
+                autoSize={{
+                  minRows: 6,
+                }}
+                style={{
+                  fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+                }}
+              />
+            </FormItem>
+          ),
+        },
+      ]}
+      defaultActiveKey={[]}
+    />
   );
 }
 

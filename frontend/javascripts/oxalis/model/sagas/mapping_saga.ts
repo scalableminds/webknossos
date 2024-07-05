@@ -101,7 +101,7 @@ const takeLatestMappingChange = (
 
       // Changing between REQUESTED-WITH-MAPPING <> REQUESTED-WITHOUT-MAPPING
       if (lastBucketRetrievalSource[0] !== bucketRetrievalSource[0]) {
-        yield* call(maybeReloadData, oldActiveMappingByLayer, { layerName }, true);
+        yield* call(reloadData, oldActiveMappingByLayer, { layerName });
       }
 
       const needsLocalHdf5Mapping = yield* select((state) =>
@@ -152,33 +152,32 @@ const isAgglomerate = (mapping: ActiveMappingInfo) => {
   return mapping.mappingType === "HDF5";
 };
 
-function* maybeReloadData(
+function* reloadData(
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   action: { layerName: string },
-  forceReload: boolean = false,
 ): Saga<void> {
-  // todop: respect needsLocalHdf5Mapping?
+  // todop: doublecheck that this is not invoked too often
   const { layerName } = action;
-  const oldMapping = getMappingInfo(oldActiveMappingByLayer.value, layerName);
   const activeMappingByLayer = yield* select(
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
   const mapping = getMappingInfo(activeMappingByLayer, layerName);
-  const isAgglomerateMappingInvolved = isAgglomerate(oldMapping) || isAgglomerate(mapping);
-  const hasChanged = oldMapping !== mapping;
-  const shouldReload = isAgglomerateMappingInvolved && hasChanged;
 
-  if (forceReload || shouldReload) {
-    console.log("reload", forceReload, shouldReload);
-    yield* call([api.data, api.data.reloadBuckets], layerName);
-  } else {
-    console.log("don't reload");
-  }
+  console.log("reloadBuckets");
+  yield* call([api.data, api.data.reloadBuckets], layerName);
 
-  // If an agglomerate mapping is being activated, the data reload is the last step
-  // of the mapping activation. For JSON mappings, the last step of the mapping activation
-  // is the texture creation in mappings.js
-  if (isAgglomerate(mapping) && mapping.mappingStatus === MappingStatusEnum.ACTIVATING) {
+  const needsLocalHdf5Mapping = yield* select((state) =>
+    getNeedsLocalHdf5Mapping(state, layerName),
+  );
+
+  // If an agglomerate mapping is being activated (that is applied remotely), the data
+  // reload is the last step of the mapping activation. For JSON mappings or locally applied
+  // HDF5 mappings, the last step of the mapping activation is the texture creation in mappings.ts
+  if (
+    isAgglomerate(mapping) &&
+    !needsLocalHdf5Mapping &&
+    mapping.mappingStatus === MappingStatusEnum.ACTIVATING
+  ) {
     yield* put(finishMappingInitializationAction(layerName));
     message.destroy(MAPPING_MESSAGE_KEY);
   }
@@ -395,7 +394,8 @@ function* handleSetHdf5Mapping(
   if (yield* select((state) => getNeedsLocalHdf5Mapping(state, layerName))) {
     yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName, mappingType);
   } else {
-    yield* call(maybeReloadData, oldActiveMappingByLayer, action);
+    // A HDF5 mapping was set that is applied remotely. A reload is necessary.
+    yield* call(reloadData, oldActiveMappingByLayer, action);
   }
 }
 

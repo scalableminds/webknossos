@@ -122,15 +122,15 @@ function getMaybeSelectMessage(datasetCount: number) {
   return datasetCount > 0 ? "Select one to see details." : "";
 }
 
+let isDatasetUpdatePending = false;
 const updateCachedDatasetOrFolderDebounced = _.debounce(
   async (
     context: DatasetCollectionContextValue,
     selectedDatasetOrFolder: APIDataset | Folder,
     metadata: APIMetadataEntries,
-    setIgnoreFetching: (value: boolean) => void, // remove me
   ) => {
+    isDatasetUpdatePending = false;
     // Explicitly ignoring fetching here to avoid unnecessary rendering of the loading spinner and thus hiding the metadata table.
-    setIgnoreFetching(true);
     if ("folderId" in selectedDatasetOrFolder) {
       await context.updateCachedDataset(selectedDatasetOrFolder, { metadata: metadata });
     } else {
@@ -141,18 +141,28 @@ const updateCachedDatasetOrFolderDebounced = _.debounce(
         metadata,
       });
     }
-    setIgnoreFetching(false);
   },
   3000,
 );
+const originalFlush = updateCachedDatasetOrFolderDebounced.flush;
+updateCachedDatasetOrFolderDebounced.flush = async () => {
+  if (!isDatasetUpdatePending) return;
+  isDatasetUpdatePending = false;
+  originalFlush();
+};
+function updateCachedDatasetOrFolderDebouncedTracked(
+  context: DatasetCollectionContextValue,
+  selectedDatasetOrFolder: APIDataset | Folder,
+  metadata: APIMetadataEntries,
+) {
+  isDatasetUpdatePending = true;
+  updateCachedDatasetOrFolderDebounced(context, selectedDatasetOrFolder, metadata);
+  return updateCachedDatasetOrFolderDebounced;
+}
 
 function MetadataTable({
   selectedDatasetOrFolder,
-  setIgnoreFetching,
-}: {
-  selectedDatasetOrFolder: APIDataset | Folder;
-  setIgnoreFetching: (value: boolean) => void;
-}) {
+}: { selectedDatasetOrFolder: APIDataset | Folder }) {
   const context = useDatasetCollectionContext();
   const [metadata, setMetadata] = useState<APIMetadataEntries>(
     selectedDatasetOrFolder.metadata != null && selectedDatasetOrFolder.metadata.length > 0
@@ -161,8 +171,6 @@ function MetadataTable({
   );
   const [error, setError] = useState<[string, string] | null>(null); // [propName, error message]
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Only update when the actual dataset / folder changes.
   useEffect(() => {
     // Flush pending updates:
     updateCachedDatasetOrFolderDebounced.flush();
@@ -172,15 +180,10 @@ function MetadataTable({
         ? selectedDatasetOrFolder.metadata
         : [{ key: "", value: "", index: 0, type: "string" as APIMetadata["type"] }],
     );
-  }, [selectedDatasetOrFolder.name]);
+  }, [selectedDatasetOrFolder.metadata]);
 
   useEffectOnUpdate(() => {
-    updateCachedDatasetOrFolderDebounced(
-      context,
-      selectedDatasetOrFolder,
-      metadata,
-      setIgnoreFetching,
-    );
+    updateCachedDatasetOrFolderDebouncedTracked(context, selectedDatasetOrFolder, metadata);
   }, [metadata]);
 
   // On component unmount flush pending updates to avoid potential data loss.
@@ -422,8 +425,12 @@ function MetadataTable({
 }
 
 function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
-  const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset);
-  const [ignoreFetching, setIgnoreFetching] = useState(false);
+  // exactDatasetId is needed to prevent refetching when some dataset property of selectedDataset was changed.
+  const exactDatasetId = {
+    owningOrganization: selectedDataset.owningOrganization,
+    name: selectedDataset.name,
+  };
+  const { data: fullDataset, isFetching } = useDatasetQuery(exactDatasetId);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const { data: owningOrganization } = useQuery(
     ["organizations", selectedDataset.owningOrganization],
@@ -452,7 +459,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
   return (
     <>
       <h4 style={{ wordBreak: "break-all" }}>
-        {isFetching && !ignoreFetching ? (
+        {isFetching ? (
           <LoadingOutlined style={{ marginRight: 4 }} />
         ) : (
           <FileOutlined style={{ marginRight: 4 }} />
@@ -507,12 +514,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
             </Tag>
           )}
         </div>
-        {fullDataset && (
-          <MetadataTable
-            selectedDatasetOrFolder={fullDataset}
-            setIgnoreFetching={setIgnoreFetching}
-          />
-        )}
+        {fullDataset && <MetadataTable selectedDatasetOrFolder={fullDataset} />}
       </Spin>
 
       {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
@@ -617,7 +619,7 @@ function FolderDetails({
           <div style={{ marginBottom: 4 }}>
             <FolderTeamTags folder={folder} />
           </div>
-          <MetadataTable selectedDatasetOrFolder={folder} setIgnoreFetching={() => {}} />
+          <MetadataTable selectedDatasetOrFolder={folder} />
         </div>
       ) : error ? (
         "Could not load folder."

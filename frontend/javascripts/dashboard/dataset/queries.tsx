@@ -66,7 +66,6 @@ export function useDatasetQuery(datasetId: APIDatasetId) {
     },
     {
       refetchOnWindowFocus: false,
-      keepPreviousData: true,
     },
   );
 }
@@ -423,6 +422,11 @@ export function useUpdateDatasetMutation(folderId: string | null) {
             })
             .filter((dataset: APIDatasetCompact) => dataset.folderId === folderId),
         );
+        const updatedDatasetId = {
+          name: updatedDataset.name,
+          owningOrganization: updatedDataset.owningOrganization,
+        };
+        queryClient.setQueryData(["datasetById", updatedDatasetId], updatedDataset);
         const targetFolderId = updatedDataset.folderId;
         if (targetFolderId !== folderId) {
           // The dataset was moved to another folder. Add the dataset to that target folder

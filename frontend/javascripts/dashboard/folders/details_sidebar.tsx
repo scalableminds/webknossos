@@ -196,7 +196,9 @@ function MetadataTable({
       const entry = prev.find((prop) => prop.key === previousPropName);
       const maybeAlreadyExistingEntry = prev.find((prop) => prop.key === newPropName);
       if (maybeAlreadyExistingEntry) {
-        setError([previousPropName, `Property ${newPropName} already exists.`]);
+        if (newPropName !== "") {
+          setError([previousPropName, `Property ${newPropName} already exists.`]);
+        }
         return prev;
       }
       if (entry) {
@@ -293,7 +295,7 @@ function MetadataTable({
           <InputNumber
             onFocus={() => setFocusedRow(record.index)}
             onBlur={() => setFocusedRow(null)}
-            style={{ borderColor: isFocused ? undefined : "transparent" }}
+            style={{ width: 100.5, borderColor: isFocused ? undefined : "transparent" }}
             value={record.value as number}
             onChange={(newNum) => updateValue(record.key, newNum?.toString() || "")}
             placeholder="Value"
@@ -305,7 +307,7 @@ function MetadataTable({
           <Input
             onFocus={() => setFocusedRow(record.index)}
             onBlur={() => setFocusedRow(null)}
-            style={{ borderColor: isFocused ? undefined : "transparent" }}
+            style={{ width: 100.5, borderColor: isFocused ? undefined : "transparent" }}
             value={record.value}
             onChange={(evt) => updateValue(record.key, evt.target.value)}
             placeholder="Value"
@@ -317,7 +319,7 @@ function MetadataTable({
           <Select
             onFocus={() => setFocusedRow(record.index)}
             onBlur={() => setFocusedRow(null)}
-            style={{ width: "100%", borderColor: isFocused ? undefined : "transparent" }}
+            style={{ width: 100.5, borderColor: isFocused ? undefined : "transparent" }}
             mode="tags"
             placeholder="Values"
             value={record.value as string[]}
@@ -371,7 +373,7 @@ function MetadataTable({
                     <Input
                       onFocus={() => setFocusedRow(record.index)}
                       onBlur={() => setFocusedRow(null)}
-                      style={{ borderColor: isFocused ? undefined : "transparent" }}
+                      style={{ width: 100.5, borderColor: isFocused ? undefined : "transparent" }}
                       value={record.key}
                       onChange={(evt) => updatePropName(record.key, evt.target.value)}
                       placeholder="New property"
@@ -384,7 +386,9 @@ function MetadataTable({
                       </>
                     ) : null}
                   </td>
-                  <td>:</td>
+                  <td>
+                    <span style={{ width: 5 }}>:</span>
+                  </td>
                   <td>{getValueInput(record)}</td>
                   <td>
                     <DeleteOutlined
@@ -392,6 +396,7 @@ function MetadataTable({
                       style={{
                         color: "var(--ant-color-text-tertiary)",
                         visibility: record.key === "" ? "hidden" : "visible",
+                        width: 16,
                       }}
                       disabled={record.key === ""}
                     />
@@ -409,6 +414,7 @@ function MetadataTable({
               borderColor: "var(--ant-color-border)",
               width: 18,
               height: 18,
+              marginLeft: 22,
             }}
             className="flex-center-child"
           >

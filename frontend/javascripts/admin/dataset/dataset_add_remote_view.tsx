@@ -198,11 +198,7 @@ function DatasetAddRemoteView(props: Props) {
   const getDefaultDatasetName = (url: string | null | undefined) => {
     if (url == null || url === "") return "";
     let urlPathElements = url.split(/[^a-zA-Z\d_\-.~]/); // split by non url-safe characters
-    let urlPathLastIndex = urlPathElements.length - 1;
-    while (urlPathElements[urlPathLastIndex] === "" && urlPathLastIndex > 0) {
-      urlPathLastIndex--;
-    }
-    const defaultName = urlPathElements[urlPathLastIndex];
+    const defaultName = urlPathElements.filter((el) => el !== "").at(-1);
     const urlHash = Utils.computeHash(url);
     return defaultName + "-" + urlHash;
   };
@@ -422,7 +418,10 @@ function DatasetAddRemoteView(props: Props) {
                         type="primary"
                         style={{ width: "100%" }}
                         onClick={handleStoreDataset}
-                        disabled={isDatasourceConfigStrFalsy}
+                        disabled={
+                          isDatasourceConfigStrFalsy ||
+                          !!form.getFieldsError().filter(({ errors }) => errors.length).length
+                        }
                       >
                         Import
                       </Button>

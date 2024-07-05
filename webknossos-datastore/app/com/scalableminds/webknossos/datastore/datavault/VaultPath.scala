@@ -38,7 +38,8 @@ class VaultPath(uri: URI, dataVault: DataVault) extends LazyLogging {
         }
     }
 
-  def listDirectory()(implicit ec: ExecutionContext): Fox[List[VaultPath]] = dataVault.listDirectory(this)
+  def listDirectory(maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+    dataVault.listDirectory(this, maxItems)
 
   private def decodeBrotli(bytes: Array[Byte]) = {
     Brotli4jLoader.ensureAvailability()

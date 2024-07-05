@@ -75,26 +75,6 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     }
   }
 
-  private def performGetObjectSummariesRequest(bucketName: String, keyPrefix: String)(
-      implicit ec: ExecutionContext): Fox[List[String]] =
-    try {
-      val listObjectsRequest = new ListObjectsV2Request
-      listObjectsRequest.setBucketName(bucketName)
-      listObjectsRequest.setPrefix(keyPrefix)
-      listObjectsRequest.setDelimiter("/")
-      listObjectsRequest.setMaxKeys(MAX_EXPLORED_ITEMS_PER_LEVEL)
-      val objectListing = client.listObjectsV2(listObjectsRequest)
-      val s3SubPrefixes = objectListing.getCommonPrefixes.asScala.toList
-      Fox.successful(s3SubPrefixes)
-    } catch {
-      case e: AmazonServiceException =>
-        e.getStatusCode match {
-          case 404 => Fox.empty
-          case _   => Fox.failure(e.getMessage)
-        }
-      case e: Exception => Fox.failure(e.getMessage)
-    }
-
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
       implicit ec: ExecutionContext): Fox[(Array[Byte], Encoding.Value)] =
     for {
@@ -108,13 +88,33 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       encoding <- Encoding.fromRfc7231String(encodingString)
     } yield (bytes, encoding)
 
-  override def listDirectory(path: VaultPath)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {
       prefixKey <- Fox.box2Fox(S3DataVault.objectKeyFromUri(path.toUri))
-      s3SubPrefixKeys <- performGetObjectSummariesRequest(bucketName, prefixKey)
+      s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)
       vaultPaths <- Fox.successful(
         s3SubPrefixKeys.map(key => new VaultPath(new URI(s"${uri.getScheme}://$bucketName/$key"), this)))
     } yield vaultPaths
+
+  private def getObjectSummaries(bucketName: String, keyPrefix: String, maxItems: Int)(
+      implicit ec: ExecutionContext): Fox[List[String]] =
+    try {
+      val listObjectsRequest = new ListObjectsV2Request
+      listObjectsRequest.setBucketName(bucketName)
+      listObjectsRequest.setPrefix(keyPrefix)
+      listObjectsRequest.setDelimiter("/")
+      listObjectsRequest.setMaxKeys(maxItems)
+      val objectListing = client.listObjectsV2(listObjectsRequest)
+      val s3SubPrefixes = objectListing.getCommonPrefixes.asScala.toList
+      Fox.successful(s3SubPrefixes)
+    } catch {
+      case e: AmazonServiceException =>
+        e.getStatusCode match {
+          case 404 => Fox.empty
+          case _   => Fox.failure(e.getMessage)
+        }
+      case e: Exception => Fox.failure(e.getMessage)
+    }
 
   private def getUri = uri
   private def getCredential = s3AccessKeyCredential

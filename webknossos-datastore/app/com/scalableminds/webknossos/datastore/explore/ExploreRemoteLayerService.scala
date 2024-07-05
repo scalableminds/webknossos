@@ -110,9 +110,9 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
   private val MAX_RECURSIVE_SEARCH_DEPTH = 8
   private def handleExploreResult(explorationResult: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
                                   explorer: RemoteLayerExplorer,
-                                  path: VaultPath)(
-      implicit reportMutable: ListBuffer[String],
-      ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] = explorationResult match {
+                                  path: VaultPath,
+                                  reportMutable: ListBuffer[String])(
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] = explorationResult match {
     case Full(layersWithVoxelSizes) =>
       reportMutable += s"Found ${layersWithVoxelSizes.length} ${explorer.name} layers at $path."
       Fox.successful(layersWithVoxelSizes)
@@ -124,6 +124,8 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       Fox.empty
 
   }
+
+  private val MAX_EXPLORED_ITEMS_PER_LEVEL = 10
 
   private def handleExplorationResultOfPath(explorationResultOfPath: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
                                             path: VaultPath,
@@ -147,7 +149,9 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
 
       case Empty =>
         for {
-          extendedRemainingPaths <- path.listDirectory().map(dirs => remainingPaths ++ dirs.map((_, searchDepth + 1)))
+          extendedRemainingPaths <- path
+            .listDirectory(maxItems = MAX_EXPLORED_ITEMS_PER_LEVEL)
+            .map(dirs => remainingPaths ++ dirs.map((_, searchDepth + 1)))
           foundLayers <- recursivelyExploreRemoteLayerAtPaths(extendedRemainingPaths,
                                                               credentialId,
                                                               explorers,
@@ -166,34 +170,35 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       case Nil =>
         Fox.empty
       case (path, searchDepth) :: remainingPaths =>
-        if (searchDepth > MAX_RECURSIVE_SEARCH_DEPTH) return Fox.empty
-        implicit val implReportMutable: ListBuffer[String] = reportMutable
+        if (searchDepth > MAX_RECURSIVE_SEARCH_DEPTH) Fox.empty
+        else {
 
-        Fox
-          .sequence(explorers.map { explorer =>
-            {
-              explorer
-                .explore(path, credentialId)
-                .futureBox
-                .flatMap {
-                  handleExploreResult(_, explorer, path)
-                }
-                .toFox
-            }
-          })
-          .map(explorationResults => Fox.firstSuccess(explorationResults.map(_.toFox)))
-          .toFox
-          .flatten
-          .futureBox
-          .flatMap(
-            explorationResultOfPath =>
-              handleExplorationResultOfPath(explorationResultOfPath,
-                                            path,
-                                            searchDepth,
-                                            remainingPaths,
-                                            credentialId,
-                                            explorers,
-                                            reportMutable))
+          Fox
+            .sequence(explorers.map { explorer =>
+              {
+                explorer
+                  .explore(path, credentialId)
+                  .futureBox
+                  .flatMap {
+                    handleExploreResult(_, explorer, path, reportMutable)
+                  }
+                  .toFox
+              }
+            })
+            .map(explorationResults => Fox.firstSuccess(explorationResults.map(_.toFox)))
+            .toFox
+            .flatten
+            .futureBox
+            .flatMap(
+              explorationResultOfPath =>
+                handleExplorationResultOfPath(explorationResultOfPath,
+                                              path,
+                                              searchDepth,
+                                              remainingPaths,
+                                              credentialId,
+                                              explorers,
+                                              reportMutable))
+        }
     }
 
 }

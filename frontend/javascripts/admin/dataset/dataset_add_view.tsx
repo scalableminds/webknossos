@@ -262,7 +262,7 @@ const mapStateToProps = (state: OxalisState) => ({
 const connector = connect(mapStateToProps);
 export default connector(withRouter(DatasetAddView));
 
-export const getPostUploadModal = (
+const getPostUploadModal = (
   datasetNeedsConversion: boolean,
   datasetAddType: DatasetAddType,
   organization: string,

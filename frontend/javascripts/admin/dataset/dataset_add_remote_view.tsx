@@ -54,6 +54,10 @@ type OwnProps = {
     needsConversion?: boolean | null | undefined,
   ) => Promise<void>;
   datastores: APIDataStore[];
+  // This next prop has a high impact on the component's behavior.
+  // If it is set, the component will automatically explore the dataset
+  // and import it. If it is not set, the user has to manually trigger
+  // the exploration and import.
   defaultDatasetUrl?: string | null | undefined;
 };
 type StateProps = {
@@ -219,7 +223,7 @@ function DatasetAddRemoteView(props: Props) {
   const onSuccesfulExplore = async (url: string | undefined) => {
     if (url == null) return;
     const dataSourceJsonString = form.getFieldValue("dataSourceJson");
-    if (defaultDatasetUrl == null || dataSourceJsonString == null) {
+    if (defaultDatasetUrl == null) {
       setShowLoadingOverlay(false);
       return;
     }

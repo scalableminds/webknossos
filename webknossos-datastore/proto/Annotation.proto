@@ -17,9 +17,7 @@ message AnnotationProto {
 message AnnotationLayerProto {
   required string tracingId = 1;
   required string name = 2;
-  required int64 version = 3;
-  optional int64 editableMappingVersion = 4;
-  required AnnotationLayerTypeProto type = 5;
+  required AnnotationLayerTypeProto type = 4;
 }
 
 message AddLayerAnnotationUpdateAction {
@@ -30,16 +28,6 @@ message AddLayerAnnotationUpdateAction {
 
 message DeleteLayerAnnotationUpdateAction {
   required string tracingId = 1;
-}
-
-message UpdateLayerAnnotationUpdateAction {
-  required string tracingId = 1;
-  required int64 layerVersion = 2;
-}
-
-message UpdateLayerEditableMappingAnnotationUpdateAction {
-  required string tracingId = 1;
-  required int64 editableMappingVersion = 2;
 }
 
 message UpdateLayerMetadataAnnotationUpdateAction {

@@ -1277,7 +1277,6 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getMoveSegmentsHereMenuItem = (groupId: number): ItemType => {
-    console.log("rerender", groupId);
     return this.props.selectedIds != null
       ? {
           key: "moveHere",
@@ -1892,7 +1891,6 @@ class SegmentsView extends React.Component<Props, State> {
     const areAllChildrenExpanded =
       children.filter((childNode) => this.state.expandedKeys?.includes(childNode)).length ===
       children.length;
-    //console.log("getExpandSubgroupsItem", groupId, children, areAllChildrenExpanded) //todo_c
     if (areAllChildrenExpanded) {
       return null;
     }
@@ -1912,7 +1910,6 @@ class SegmentsView extends React.Component<Props, State> {
     const children = this.getSubGroupsAsTreeNodes(groupId);
     const areAllChildrenCollapsed =
       children.filter((childNode) => this.state.expandedKeys?.includes(childNode)).length === 0;
-    //console.log("getCollapseSubgroupsItem", groupId, children, areAllChildrenCollapsed) //todo_c
     if (areAllChildrenCollapsed) {
       return null;
     }

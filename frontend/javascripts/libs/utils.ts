@@ -1194,7 +1194,7 @@ export function encodeToBase62(numberToEncode: number): string {
   while (num !== 0 && num !== -1) {
     // for positive numberToEncode, num will eventually be 0, for negative numberToEncode, num will eventually be -1
     const modulo = mod(num, 62);
-    encoded = base62Chars[modulo < 0 ? 62 + modulo : modulo] + encoded;
+    encoded = base62Chars[modulo] + encoded;
     num = Math.floor(num / 62);
   }
   return encoded;

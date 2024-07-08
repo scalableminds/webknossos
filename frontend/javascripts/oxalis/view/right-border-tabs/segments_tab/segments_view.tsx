@@ -1277,7 +1277,6 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getMoveSegmentsHereMenuItem = (groupId: number): ItemType => {
-    console.log("rerender", groupId);
     return this.props.selectedIds != null
       ? {
         key: "moveHere",

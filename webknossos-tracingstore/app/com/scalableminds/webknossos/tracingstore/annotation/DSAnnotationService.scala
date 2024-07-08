@@ -6,8 +6,6 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   AnnotationLayerProto,
   AnnotationProto,
   DeleteLayerAnnotationUpdateAction,
-  UpdateLayerAnnotationUpdateAction,
-  UpdateLayerEditableMappingAnnotationUpdateAction,
   UpdateLayerMetadataAnnotationUpdateAction,
   UpdateMetadataAnnotationUpdateAction
 }
@@ -28,20 +26,9 @@ class DSAnnotationService @Inject()() {
       withAppliedChange <- updateAction match {
         case a: AddLayerAnnotationUpdateAction =>
           Fox.successful(
-            annotation.copy(
-              layers = annotation.layers :+ AnnotationLayerProto(a.tracingId,
-                                                                 a.name,
-                                                                 version = 0L,
-                                                                 editableMappingVersion = None,
-                                                                 `type` = a.`type`)))
+            annotation.copy(layers = annotation.layers :+ AnnotationLayerProto(a.tracingId, a.name, `type` = a.`type`)))
         case a: DeleteLayerAnnotationUpdateAction =>
           Fox.successful(annotation.copy(layers = annotation.layers.filter(_.tracingId != a.tracingId)))
-        case a: UpdateLayerAnnotationUpdateAction =>
-          Fox.successful(annotation.copy(layers = annotation.layers.map(l =>
-            if (l.tracingId == a.tracingId) l.copy(version = a.layerVersion) else l)))
-        case a: UpdateLayerEditableMappingAnnotationUpdateAction =>
-          Fox.successful(annotation.copy(layers = annotation.layers.map(l =>
-            if (l.tracingId == a.tracingId) l.copy(editableMappingVersion = Some(a.editableMappingVersion)) else l)))
         case a: UpdateLayerMetadataAnnotationUpdateAction =>
           Fox.successful(annotation.copy(layers = annotation.layers.map(l =>
             if (l.tracingId == a.tracingId) l.copy(name = a.name) else l)))

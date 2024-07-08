@@ -7,7 +7,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
-import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateProto
+import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateChunkProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
@@ -292,7 +292,6 @@ class EditableMappingService @Inject()(
             tracingDataStore,
             relyOnAgglomerateIds = pendingUpdates.length <= 1
           )
-
           updated <- updater.applyUpdatesAndSave(closestMaterializedWithVersion.value, pendingUpdates)
         } yield updated
     } yield updatedEditableMappingInfo
@@ -416,9 +415,9 @@ class EditableMappingService @Inject()(
                                            agglomerateId: Long,
                                            version: Option[Long]): Fox[Seq[(Long, Long)]] =
     for {
-      keyValuePair: VersionedKeyValuePair[SegmentToAgglomerateProto] <- tracingDataStore.editableMappingsSegmentToAgglomerate
+      keyValuePair: VersionedKeyValuePair[SegmentToAgglomerateChunkProto] <- tracingDataStore.editableMappingsSegmentToAgglomerate
         .get(segmentToAgglomerateKey(editableMappingId, agglomerateId), version, mayBeEmpty = Some(true))(
-          fromProtoBytes[SegmentToAgglomerateProto])
+          fromProtoBytes[SegmentToAgglomerateChunkProto])
       valueProto = keyValuePair.value
       asSequence = valueProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)
     } yield asSequence

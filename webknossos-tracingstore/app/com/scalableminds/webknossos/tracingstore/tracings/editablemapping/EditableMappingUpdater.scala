@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge,
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
   SegmentAgglomeratePair,
-  SegmentToAgglomerateProto
+  SegmentToAgglomerateChunkProto
 }
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.tracingstore.tracings.{
@@ -64,7 +64,7 @@ class EditableMappingUpdater(
 
   private def flushSegmentToAgglomerateChunk(key: String): Fox[Unit] = {
     val chunk = segmentToAgglomerateBuffer(key)
-    val proto = SegmentToAgglomerateProto(chunk.toVector.map { segmentAgglomerateTuple =>
+    val proto = SegmentToAgglomerateChunkProto(chunk.toVector.map { segmentAgglomerateTuple =>
       SegmentAgglomeratePair(segmentAgglomerateTuple._1, segmentAgglomerateTuple._2)
     })
     tracingDataStore.editableMappingsSegmentToAgglomerate.put(key, newVersion, proto.toByteArray)
@@ -387,6 +387,12 @@ class EditableMappingUpdater(
       )
     }
 
-  private def revertToVersion(mapping: EditableMappingInfo,
-                              revertAction: RevertToVersionUpdateAction): Fox[EditableMappingInfo] = {}
+  private def revertToVersion(mapping: EditableMappingInfo, revertAction: RevertToVersionUpdateAction)(
+      implicit ec: ExecutionContext): Fox[EditableMappingInfo] = {
+    val segmentToAgglomerateChunkStream = new VersionedSegmentToAgglomerateChunkIterator(
+      editableMappingId,
+      tracingDataStore.editableMappingsSegmentToAgglomerate)
+    Fox.failure("todo")
+  }
+
 }

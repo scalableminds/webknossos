@@ -7,6 +7,6 @@ message SegmentAgglomeratePair {
   required int64 agglomerateId = 2;
 }
 
-message SegmentToAgglomerateProto {
+message SegmentToAgglomerateChunkProto {
   repeated SegmentAgglomeratePair segmentToAgglomerate = 1;
 }

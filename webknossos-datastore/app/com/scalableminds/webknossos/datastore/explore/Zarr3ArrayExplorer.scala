@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{Zarr3DataLayer
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.Category
 
 import scala.concurrent.ExecutionContext
@@ -15,7 +16,7 @@ class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerE
 
   override def name: String = "Zarr v3 Array"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(Zarr3Layer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(Zarr3Layer, VoxelSize)]] =
     for {
       zarrayPath <- Fox.successful(remotePath / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
       name = guessNameFromPath(remotePath)
@@ -33,6 +34,6 @@ class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerE
       layer: Zarr3Layer = if (looksLikeSegmentationLayer(name, elementClass)) {
         Zarr3SegmentationLayer(name, boundingBox, elementClass, List(magLocator), largestSegmentId = None)
       } else Zarr3DataLayer(name, Category.color, boundingBox, elementClass, List(magLocator))
-    } yield List((layer, Vec3Double.ones))
+    } yield List((layer, VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)))
 
 }

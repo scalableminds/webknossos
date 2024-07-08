@@ -13,7 +13,7 @@ import { getDatasetBoundingBox, getResolutionInfo } from "oxalis/model/accessors
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { getHalfViewportExtents } from "oxalis/model/sagas/saga_selectors";
+import { getHalfViewportExtentsInVx } from "oxalis/model/sagas/saga_selectors";
 import { call } from "typed-redux-saga";
 import sampleVoxelMapToResolution, {
   applyVoxelMap,
@@ -43,7 +43,7 @@ export function* getBoundingBoxForViewport(
   currentViewport: OrthoView,
 ): Saga<BoundingBox> {
   const [halfViewportExtentX, halfViewportExtentY] = yield* call(
-    getHalfViewportExtents,
+    getHalfViewportExtentsInVx,
     currentViewport,
   );
 

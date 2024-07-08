@@ -652,45 +652,9 @@ export function filterNullValues<T>(arr: Array<T | null | undefined>): T[] {
   return arr.filter((el) => el != null);
 }
 
-// TODO: Remove this function as it's currently unused
-// Filters an array given a search string. Supports searching for several words as OR query.
-// Supports nested properties
-export function filterWithSearchQueryOR<
-  T extends Readonly<Record<string, unknown>>,
-  P extends keyof T,
->(
-  collection: Array<T>,
-  properties: Array<P | ((arg0: T) => P | Array<any> | string)>,
-  searchQuery: string,
-): Array<T> {
-  if (searchQuery === "") {
-    return collection;
-  } else {
-    const words = _.map(searchQuery.split(" "), (element) =>
-      element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"),
-    );
-
-    const uniques = _.filter(_.uniq(words), (element) => element !== "");
-
-    const pattern = `(${uniques.join("|")})`;
-    const regexp = new RegExp(pattern, "igm");
-    return collection.filter((model) =>
-      _.some(properties, (fieldName) => {
-        const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
-
-        if (value != null && (typeof value === "string" || value instanceof Object)) {
-          const recursiveValues = getRecursiveValues(value);
-          return _.some(recursiveValues, (v) => v?.toString().match(regexp));
-        } else {
-          return false;
-        }
-      }),
-    );
-  }
-}
-
 // Filters an array given a search string. Supports searching for several words as AND query.
-// Supports nested properties
+// Supports nested properties.
+// Its pendant was removed int #7783 as it was unused.
 export function filterWithSearchQueryAND<
   T extends Readonly<Record<string, unknown>>,
   P extends keyof T,

@@ -103,6 +103,8 @@ class EditableMappingUpdater(
         applySplitAction(mapping, splitAction) ?~> "Failed to apply split action"
       case mergeAction: MergeAgglomerateUpdateAction =>
         applyMergeAction(mapping, mergeAction) ?~> "Failed to apply merge action"
+      case revertAction: RevertToVersionUpdateAction =>
+        revertToVersion(mapping, revertAction) ?~> "Failed to apply revert action"
     }
 
   private def applySplitAction(editableMappingInfo: EditableMappingInfo, update: SplitAgglomerateUpdateAction)(
@@ -385,4 +387,6 @@ class EditableMappingUpdater(
       )
     }
 
+  private def revertToVersion(mapping: EditableMappingInfo,
+                              revertAction: RevertToVersionUpdateAction): Fox[EditableMappingInfo] = {}
 }

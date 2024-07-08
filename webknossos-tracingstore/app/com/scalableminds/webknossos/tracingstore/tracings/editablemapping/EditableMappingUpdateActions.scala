@@ -43,6 +43,11 @@ object MergeAgglomerateUpdateAction {
   implicit val jsonFormat: OFormat[MergeAgglomerateUpdateAction] = Json.format[MergeAgglomerateUpdateAction]
 }
 
+case class RevertToVersionUpdateAction(sourceVersion: Long, actionTimestamp: Option[Long] = None)
+    extends EditableMappingUpdateAction {
+  override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+}
+
 object EditableMappingUpdateAction {
 
   implicit object editableMappingUpdateActionFormat extends Format[EditableMappingUpdateAction] {

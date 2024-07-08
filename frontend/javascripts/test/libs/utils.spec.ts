@@ -195,4 +195,10 @@ test("encodeBase62", (t) => {
   t.is(encoded2, "1z");
   const encoded3 = Utils.encodeToBase62(123456);
   t.is(encoded3, "W7E");
+  const encoded4 = Utils.encodeToBase62(-1);
+  t.is(encoded4, "z");
+  const encoded5 = Utils.encodeToBase62(-2);
+  t.is(encoded5, "y");
+  const encoded6 = Utils.encodeToBase62(-123456);
+  t.is(encoded6, "Tsm");
 });

@@ -901,15 +901,16 @@ export default function ToolbarView() {
   // the tools via the w shortcut. In that case, the effect-hook is re-executed
   // and the tool is switched to MOVE.
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];
+  const isLastForcefulDisabledToolAvailable =
+    lastForcefulDisabledTool != null && !disabledInfosForTools[lastForcefulDisabledTool].isDisabled;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Adding disabledInfosForTools[lastForcefulDisabledTool].isDisabled as dependency requires another null-check which makes the dependency itself quite tedious.
   useEffect(() => {
     if (disabledInfoForCurrentTool.isDisabled) {
       setLastForcefulDisabledTool(activeTool);
       Store.dispatch(setToolAction(AnnotationToolEnum.MOVE));
     } else if (
       lastForcefulDisabledTool != null &&
-      !disabledInfosForTools[lastForcefulDisabledTool].isDisabled &&
+      isLastForcefulDisabledToolAvailable &&
       activeTool === AnnotationToolEnum.MOVE
     ) {
       // Re-enable the tool that was disabled before.
@@ -919,7 +920,12 @@ export default function ToolbarView() {
       // Forget the last disabled tool as another tool besides the move tool was selected.
       setLastForcefulDisabledTool(null);
     }
-  }, [activeTool, disabledInfoForCurrentTool, lastForcefulDisabledTool]);
+  }, [
+    activeTool,
+    disabledInfoForCurrentTool,
+    isLastForcefulDisabledToolAvailable,
+    lastForcefulDisabledTool,
+  ]);
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");

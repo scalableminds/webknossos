@@ -414,7 +414,7 @@ class EditableMappingUpdater(
   private def revertToVersion(revertAction: RevertToVersionUpdateAction)(
       implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
     for {
-      _ <- bool2Fox(revertAction.sourceVersion >= oldVersion) ?~> "trying to revert editable mapping to a version not yet present in the database"
+      _ <- bool2Fox(revertAction.sourceVersion <= oldVersion) ?~> "trying to revert editable mapping to a version not yet present in the database"
       oldInfo <- editableMappingService.getInfo(editableMappingId,
                                                 Some(revertAction.sourceVersion),
                                                 remoteFallbackLayer,

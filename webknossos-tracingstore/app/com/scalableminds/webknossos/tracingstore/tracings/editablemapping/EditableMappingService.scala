@@ -340,7 +340,7 @@ class EditableMappingService @Inject()(
               Some(batchFrom)
             )(fromJsonBytes[List[EditableMappingUpdateAction]])
         } yield res
-      }
+      } ?~> "Failed to fetch editable mapping update actions from fossilDB"
       flat = updateActionBatches.flatten
     } yield flat
   }

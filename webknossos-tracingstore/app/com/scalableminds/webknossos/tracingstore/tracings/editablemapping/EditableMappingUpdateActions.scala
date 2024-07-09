@@ -48,6 +48,10 @@ case class RevertToVersionUpdateAction(sourceVersion: Long, actionTimestamp: Opt
   override def addTimestamp(timestamp: Long): EditableMappingUpdateAction = this.copy(actionTimestamp = Some(timestamp))
 }
 
+object RevertToVersionUpdateAction {
+  implicit val jsonFormat: OFormat[RevertToVersionUpdateAction] = Json.format[RevertToVersionUpdateAction]
+}
+
 object EditableMappingUpdateAction {
 
   implicit object editableMappingUpdateActionFormat extends Format[EditableMappingUpdateAction] {
@@ -55,6 +59,7 @@ object EditableMappingUpdateAction {
       (json \ "name").validate[String].flatMap {
         case "mergeAgglomerate"    => (json \ "value").validate[MergeAgglomerateUpdateAction]
         case "splitAgglomerate"    => (json \ "value").validate[SplitAgglomerateUpdateAction]
+        case "revertToVersion"     => (json \ "value").validate[RevertToVersionUpdateAction]
         case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
       }
 
@@ -63,6 +68,8 @@ object EditableMappingUpdateAction {
         Json.obj("name" -> "splitAgglomerate", "value" -> Json.toJson(s)(SplitAgglomerateUpdateAction.jsonFormat))
       case s: MergeAgglomerateUpdateAction =>
         Json.obj("name" -> "mergeAgglomerate", "value" -> Json.toJson(s)(MergeAgglomerateUpdateAction.jsonFormat))
+      case s: RevertToVersionUpdateAction =>
+        Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionUpdateAction.jsonFormat))
     }
   }
 

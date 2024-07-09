@@ -98,6 +98,7 @@ class EditableMappingService @Inject()(
     with FallbackDataHelper
     with FoxImplicits
     with ReversionHelper
+    with EditableMappingElementKeys
     with LazyLogging
     with ProtoGeometryImplicits {
 
@@ -417,12 +418,10 @@ class EditableMappingService @Inject()(
                                            agglomerateId: Long,
                                            version: Option[Long]): Fox[Seq[(Long, Long)]] = {
     val chunkKey = segmentToAgglomerateKey(editableMappingId, agglomerateId)
-    getSegmentToAgglomerateChunk(editableMappingId, chunkKey, version)
+    getSegmentToAgglomerateChunk(chunkKey, version)
   }
 
-  def getSegmentToAgglomerateChunk(editableMappingId: String,
-                                   chunkKey: String,
-                                   version: Option[Long]): Fox[Seq[(Long, Long)]] =
+  def getSegmentToAgglomerateChunk(chunkKey: String, version: Option[Long]): Fox[Seq[(Long, Long)]] =
     for {
       keyValuePairBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsSegmentToAgglomerate
         .get(chunkKey, version, mayBeEmpty = Some(true))
@@ -586,16 +585,6 @@ class EditableMappingService @Inject()(
       )
       result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
-
-  def agglomerateGraphKey(mappingId: String, agglomerateId: Long): String =
-    s"$mappingId/$agglomerateId"
-
-  def segmentToAgglomerateKey(mappingId: String, chunkId: Long): String =
-    s"$mappingId/$chunkId"
-
-  private def chunkIdFromSegmentToAgglomerateKey(key: String): Box[Long] = tryo(key.split("/")(1).toLong)
-
-  private def agglomerateIdFromAgglomerateGraphKey(key: String): Box[Long] = tryo(key.split("/")(1).toLong)
 
   def getAgglomerateGraphForId(mappingId: String,
                                agglomerateId: Long,

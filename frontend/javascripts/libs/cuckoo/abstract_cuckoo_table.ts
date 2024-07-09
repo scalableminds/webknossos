@@ -177,7 +177,6 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     }
     const oldTable = this.table;
     for (let rehashAttempt = 1; rehashAttempt <= REHASH_THRESHOLD; rehashAttempt++) {
-      // todop: perf (only allocate new table once instead on every rehash)
       if (this.rehash(oldTable, true)) {
         if (this.internalSet(newDisplacedEntry[0], newDisplacedEntry[1], true) == null) {
           // Since a rehash was performed, the incremental texture updates were
@@ -199,8 +198,6 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     pendingValue: V,
     skipTextureUpdate: boolean,
   ): Entry | undefined | null {
-    // todop: could be skipped during rehashing (but not when inserting the newest key)
-    // todop: texture updates could be aggregated?
     this.checkValidKey(pendingKey);
     let displacedEntry;
     let currentAddress;
@@ -267,6 +264,8 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   abstract getEmptyValue(): V;
 
   private rehash(oldTable: Uint32Array, skipTextureUpdate: boolean): boolean {
+    // Theoretically, one could avoid allocating a new table on repeated rehashes,
+    // but these are likely not a bottleneck.
     this.initializeTableArray();
 
     for (

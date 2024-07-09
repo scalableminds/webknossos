@@ -33,8 +33,13 @@ export function parseProtoTracing(
 }
 
 export function serializeProtoListOfLong<T extends number | bigint>(
-  numbers: Array<T>,
+  numbersOrBigInts: Array<T>,
 ): ArrayBuffer {
+  const numbers =
+    numbersOrBigInts.length > 0 && typeof numbersOrBigInts[0] === "bigint"
+      ? numbersOrBigInts.map((val) => Number(val))
+      : numbersOrBigInts;
+
   const listOfLong = { items: numbers };
   const protoRoot = Root.fromJSON(ListOfLongProto);
   const messageType = protoRoot.lookupType(`${PROTO_PACKAGE}.ListOfLong`);

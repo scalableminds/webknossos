@@ -44,7 +44,7 @@ class DSAnnotationController @Inject()(
                                             urlOrHeaderToken(token, request)) {
             val updateGroups = request.body
             if (updateGroups.forall(_.transactionGroupCount == 1)) {
-              //commitUpdates(tracingId, updateGroups, urlOrHeaderToken(token, request)).map(_ => Ok)
+              commitUpdates(annotationId, updateGroups, urlOrHeaderToken(token, request)).map(_ => Ok)
               Fox.successful(Ok)
             } else {
               /*updateGroups
@@ -63,6 +63,14 @@ class DSAnnotationController @Inject()(
         }
       }
     }
+
+  private def commitUpdates(annotationId: String,
+                            updateGroups: List[GenericUpdateActionGroup],
+                            token: Option[String]): Fox[Unit] = {
+    val currentCommittedVersion: Fox[Long] =
+      tracingDataStore.annotationUpdates.getVersion(annotationId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
+    Fox.successful(())
+  }
 }
 
 // get version history

@@ -1904,7 +1904,7 @@ class SegmentsView extends React.Component<Props, State> {
     }
     const groupsToExpand = children;
     // It doesn't make sense to expand subgroups if the group itself is collapsed, so also expand the group.
-    groupsToExpand.push(this.getKeyForGroupId(groupId));
+    if (!isGroupItselfExpanded) groupsToExpand.push(this.getKeyForGroupId(groupId));
     return {
       key: "expandAll",
       disabled: !this.props.allowUpdate,

@@ -91,6 +91,11 @@ const takeLatestMappingChange = (
       lastBucketRetrievalSource = yield* select((state) => getBucketRetrievalSourceForLayer(state));
       const bucketRetrievalSource = yield* take(needsLocalMappingChangedChannel);
 
+      const activeMappingByLayer = yield* select(
+        (state) => state.temporaryConfiguration.activeMappingByLayer,
+      );
+      const mapping = getMappingInfo(activeMappingByLayer, layerName);
+
       console.log("changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
 
       if (lastWatcherTask) {
@@ -113,10 +118,13 @@ const takeLatestMappingChange = (
         lastWatcherTask = yield* fork(watchChangedBucketsForLayer, layerName);
       } else if (
         lastBucketRetrievalSource[0] === "REQUESTED-WITHOUT-MAPPING" &&
-        lastBucketRetrievalSource[1] === "LOCAL-MAPPING-APPLIED"
+        lastBucketRetrievalSource[1] === "LOCAL-MAPPING-APPLIED" &&
+        mapping.mappingType !== "JSON"
       ) {
         // needsLocalHdf5Mapping is false, but in the last iteration, a local mapping
-        // was applied. Therefore, we have to set the mapping to undefined
+        // was applied. In case of a HDF5 mapping, this means that the mapping should
+        // now be applied by the back-end. We have to clear the mapping so that
+        // the data from the back-end is not mapped again.
         yield* put(clearMappingAction(layerName));
       }
     }
@@ -226,8 +234,8 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
 
     // Addendum:
     // ¹ We don't use redux-saga's throttle, because that would
-    //   cause call `handler` in parallel if enough events are
-    //   consumed across over throttling duration.
+    //   call `handler` in parallel if enough events are
+    //   consumed over the throttling duration.
     //   However, running `handler` in parallel would be a waste
     //   of computation. Therefore, we invoke `handler` strictly
     //   sequentially.
@@ -271,6 +279,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
       isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
       console.log("isBusy", isBusy);
       if (isBusy) {
+        // Wait until WK is not busy anymore.
         yield* take(
           ((action: Action) =>
             action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
@@ -394,7 +403,7 @@ function* handleSetHdf5Mapping(
   if (yield* select((state) => getNeedsLocalHdf5Mapping(state, layerName))) {
     yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName, mappingType);
   } else {
-    // A HDF5 mapping was set that is applied remotely. A reload is necessary.
+    // An HDF5 mapping was set that is applied remotely. A reload is necessary.
     yield* call(reloadData, oldActiveMappingByLayer, action);
   }
 }

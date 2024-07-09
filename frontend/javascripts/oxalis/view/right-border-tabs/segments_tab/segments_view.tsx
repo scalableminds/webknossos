@@ -325,7 +325,7 @@ type State = {
     [groupId: number]: { areSomeSegmentsVisible: boolean; areSomeSegmentsInvisible: boolean };
   };
   activeStatisticsModalGroupId: number | null;
-  expandedKeys: Key[] | undefined;
+  expandedGroupKeys: Key[];
 };
 
 const formatMagWithLabel = (mag: Vector3, index: number) => {
@@ -405,7 +405,7 @@ class SegmentsView extends React.Component<Props, State> {
     groupToDelete: null,
     groupsSegmentsVisibilityStateMap: {},
     activeStatisticsModalGroupId: null,
-    expandedKeys: [],
+    expandedGroupKeys: [],
   };
   tree: React.RefObject<RcTree>;
 
@@ -429,9 +429,10 @@ class SegmentsView extends React.Component<Props, State> {
     }
 
     Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
+
     const allGroups = this.getSubGroupsAsTreeNodes(MISSING_GROUP_ID);
     allGroups.push(this.getKeyForGroupId(MISSING_GROUP_ID));
-    this.setState({ expandedKeys: allGroups });
+    this.setState({ expandedGroupKeys: allGroups });
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -469,7 +470,7 @@ class SegmentsView extends React.Component<Props, State> {
   }
 
   onExpandTree = (expandedKeys: Key[]) => {
-    this.setState({ expandedKeys });
+    this.setState({ expandedGroupKeys: expandedKeys });
   };
 
   getKeyForGroupId = (groupId: number) => `group-${groupId}`;
@@ -480,26 +481,22 @@ class SegmentsView extends React.Component<Props, State> {
         .filter((group) => group !== groupId)
         .map((group) => this.getKeyForGroupId(group));
     }
-    const recursiveSubGroups = this.props.segmentGroups.flatMap((group) =>
+    const allSegmentGroups = this.props.segmentGroups.flatMap((group) =>
       getGroupByIdWithSubgroups(this.props.segmentGroups, group.groupId),
     );
-    return recursiveSubGroups.map((group) => this.getKeyForGroupId(group));
+    return allSegmentGroups.map((group) => this.getKeyForGroupId(group));
   };
 
-  expandSubGroups = (groupId: number) => {
-    const expandedNodes = this.getSubGroupsAsTreeNodes(groupId);
-    // It doesn't make sense to expand subgroups if the group itself is collapsed, so also expand the group.
-    expandedNodes.push(this.getKeyForGroupId(groupId));
+  expandGroups = (groupsToExpand: Key[]) => {
     this.setState({
-      expandedKeys: this.state.expandedKeys?.concat(expandedNodes),
+      expandedGroupKeys: this.state.expandedGroupKeys?.concat(groupsToExpand),
     });
   };
 
-  collapseSubgroups = (groupId: number) => {
-    const nodesToCollapse = this.getSubGroupsAsTreeNodes(groupId);
+  collapseGroups = (groupsToCollapse: Key[]) => {
     this.setState({
-      expandedKeys: this.state.expandedKeys?.filter(
-        (key) => nodesToCollapse.indexOf(key.toString()) === -1,
+      expandedGroupKeys: this.state.expandedGroupKeys?.filter(
+        (key) => groupsToCollapse.indexOf(key.toString()) === -1,
       ),
     });
   };
@@ -1868,7 +1865,7 @@ class SegmentsView extends React.Component<Props, State> {
                             }}
                             ref={this.tree}
                             onExpand={this.onExpandTree}
-                            expandedKeys={this.state.expandedKeys}
+                            expandedKeys={this.state.expandedGroupKeys}
                           />
                         </div>
                       )}
@@ -1897,17 +1894,22 @@ class SegmentsView extends React.Component<Props, State> {
   getExpandSubgroupsItem(groupId: number) {
     const children = this.getSubGroupsAsTreeNodes(groupId);
     const areAllChildrenExpanded =
-      children.filter((childNode) => this.state.expandedKeys?.includes(childNode)).length ===
+      children.filter((childNode) => this.state.expandedGroupKeys?.includes(childNode)).length ===
       children.length;
-    const isGroupItselfExpanded = this.state.expandedKeys?.includes(this.getKeyForGroupId(groupId));
+    const isGroupItselfExpanded = this.state.expandedGroupKeys?.includes(
+      this.getKeyForGroupId(groupId),
+    );
     if (areAllChildrenExpanded && isGroupItselfExpanded) {
       return null;
     }
+    const groupsToExpand = children;
+    // It doesn't make sense to expand subgroups if the group itself is collapsed, so also expand the group.
+    groupsToExpand.push(this.getKeyForGroupId(groupId));
     return {
       key: "expandAll",
       disabled: !this.props.allowUpdate,
       onClick: () => {
-        this.expandSubGroups(groupId);
+        this.expandGroups(groupsToExpand);
         this.closeSegmentOrGroupDropdown();
       },
       icon: <ExpandAltOutlined />,
@@ -1918,8 +1920,9 @@ class SegmentsView extends React.Component<Props, State> {
   getCollapseSubgroupsItem(groupId: number) {
     const children = this.getSubGroupsAsTreeNodes(groupId);
     const areAllChildrenCollapsed =
-      children.filter((childNode) => this.state.expandedKeys?.includes(childNode)).length === 0;
-    const isGroupItselfCollapsed = !this.state.expandedKeys?.includes(
+      children.filter((childNode) => this.state.expandedGroupKeys?.includes(childNode)).length ===
+      0;
+    const isGroupItselfCollapsed = !this.state.expandedGroupKeys?.includes(
       this.getKeyForGroupId(groupId),
     );
     if (areAllChildrenCollapsed || isGroupItselfCollapsed) {
@@ -1929,7 +1932,7 @@ class SegmentsView extends React.Component<Props, State> {
       key: "collapseAll",
       disabled: !this.props.allowUpdate,
       onClick: () => {
-        this.collapseSubgroups(groupId);
+        this.collapseGroups(children);
         this.closeSegmentOrGroupDropdown();
       },
       icon: <ShrinkOutlined />,

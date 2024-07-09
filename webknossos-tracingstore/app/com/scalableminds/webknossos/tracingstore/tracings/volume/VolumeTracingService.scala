@@ -330,7 +330,7 @@ class VolumeTracingService @Inject()(
                 } yield ()
               case Empty =>
                 for {
-                  dataAfterRevert <- Fox.successful(Array[Byte](0))
+                  dataAfterRevert <- Fox.successful(revertedValue)
                   _ <- saveBucket(dataLayer, bucketPosition, dataAfterRevert, newVersion)
                   _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
                     updateSegmentIndex(

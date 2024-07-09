@@ -418,6 +418,7 @@ class EditableMappingService @Inject()(
       keyValuePair: VersionedKeyValuePair[SegmentToAgglomerateChunkProto] <- tracingDataStore.editableMappingsSegmentToAgglomerate
         .get(segmentToAgglomerateKey(editableMappingId, agglomerateId), version, mayBeEmpty = Some(true))(
           fromProtoBytes[SegmentToAgglomerateChunkProto])
+      // interpret zero-byte as Fox.empty
       valueProto = keyValuePair.value
       asSequence = valueProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)
     } yield asSequence

@@ -1,17 +1,26 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
+import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.{ExecutionContext, Future}
 
+case class GenericUpdateActionGroup(transactionGroupCount: Int)
+object GenericUpdateActionGroup {
+  implicit val jsonFormat: OFormat[GenericUpdateActionGroup] = Json.format[GenericUpdateActionGroup]
+}
+
 class DSAnnotationController @Inject()(
     accessTokenService: TracingStoreAccessTokenService,
+    slackNotificationService: TSSlackNotificationService,
     tracingDataStore: TracingDataStore)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreImplicits {
@@ -23,6 +32,34 @@ class DSAnnotationController @Inject()(
           for {
             _ <- tracingDataStore.annotations.put(annotationId, 0L, AnnotationProto(version = 0L))
           } yield Ok
+        }
+      }
+    }
+
+  def update(annotationId: String, token: Option[String]): Action[List[GenericUpdateActionGroup]] =
+    Action.async(validateJson[List[GenericUpdateActionGroup]]) { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccess(UserAccessRequest.writeAnnotation(annotationId),
+                                            urlOrHeaderToken(token, request)) {
+            val updateGroups = request.body
+            if (updateGroups.forall(_.transactionGroupCount == 1)) {
+              //commitUpdates(tracingId, updateGroups, urlOrHeaderToken(token, request)).map(_ => Ok)
+              Fox.successful(Ok)
+            } else {
+              /*updateGroups
+                .foldLeft(tracingService.currentVersion(tracingId)) { (currentCommittedVersionFox, updateGroup) =>
+                  handleUpdateGroupForTransaction(tracingId,
+                                                  currentCommittedVersionFox,
+                                                  updateGroup,
+                                                  urlOrHeaderToken(token, request))
+                }
+                .map(_ => Ok)
+
+               */
+              Fox.successful(Ok)
+            }
+          }
         }
       }
     }

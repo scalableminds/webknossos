@@ -199,8 +199,8 @@ function DatasetAddRemoteView(props: Props) {
     setTargetFolderId(targetFolderId);
   }, []);
 
-  const getDefaultDatasetName = (url: string | null | undefined) => {
-    if (url == null || url === "") return "";
+  const getDefaultDatasetName = (url: string) => {
+    if (url === "") return "";
     let urlPathElements = url.split(/[^a-zA-Z\d_\-.~]/); // split by non url-safe characters
     const defaultName = urlPathElements.filter((el) => el !== "").at(-1);
     const urlHash = Utils.computeHash(url);
@@ -220,8 +220,7 @@ function DatasetAddRemoteView(props: Props) {
   const hasFormAnyErrors = (form: FormInstance) =>
     form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
 
-  const onSuccesfulExplore = async (url: string | undefined) => {
-    if (url == null) return;
+  const onSuccesfulExplore = async (url: string) => {
     const dataSourceJsonString = form.getFieldValue("dataSourceJson");
     if (defaultDatasetUrl == null) {
       setShowLoadingOverlay(false);
@@ -343,9 +342,7 @@ function DatasetAddRemoteView(props: Props) {
               dataSourceEditMode={dataSourceEditMode}
               defaultUrl={defaultDatasetUrl}
               onError={() => setShowLoadingOverlay(false)}
-              onSuccess={(defaultDatasetUrl: string | undefined) =>
-                onSuccesfulExplore(defaultDatasetUrl)
-              }
+              onSuccess={(defaultDatasetUrl: string) => onSuccesfulExplore(defaultDatasetUrl)}
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -453,7 +450,7 @@ function AddRemoteLayer({
   form: FormInstance;
   uploadableDatastores: APIDataStore[];
   setDatasourceConfigStr: (dataSourceJson: string) => void;
-  onSuccess?: (datasetUrl?: string) => Promise<void> | void;
+  onSuccess?: (datasetUrl: string) => Promise<void> | void;
   onError?: () => void;
   dataSourceEditMode: "simple" | "advanced";
   defaultUrl?: string | null | undefined;

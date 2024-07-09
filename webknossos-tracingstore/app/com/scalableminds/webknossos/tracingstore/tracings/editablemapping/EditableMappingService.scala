@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.datastore.services.{
   AdHocMeshServiceHolder,
   BinaryDataService
 }
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
   KeyValueStoreImplicits,
@@ -96,6 +97,7 @@ class EditableMappingService @Inject()(
     extends KeyValueStoreImplicits
     with FallbackDataHelper
     with FoxImplicits
+    with ReversionHelper
     with LazyLogging
     with ProtoGeometryImplicits {
 
@@ -413,13 +415,19 @@ class EditableMappingService @Inject()(
 
   private def getSegmentToAgglomerateChunk(editableMappingId: String,
                                            agglomerateId: Long,
-                                           version: Option[Long]): Fox[Seq[(Long, Long)]] =
+                                           version: Option[Long]): Fox[Seq[(Long, Long)]] = {
+    val chunkKey = segmentToAgglomerateKey(editableMappingId, agglomerateId)
+    getSegmentToAgglomerateChunk(editableMappingId, chunkKey, version)
+  }
+
+  def getSegmentToAgglomerateChunk(editableMappingId: String,
+                                   chunkKey: String,
+                                   version: Option[Long]): Fox[Seq[(Long, Long)]] =
     for {
-      keyValuePair: VersionedKeyValuePair[SegmentToAgglomerateChunkProto] <- tracingDataStore.editableMappingsSegmentToAgglomerate
-        .get(segmentToAgglomerateKey(editableMappingId, agglomerateId), version, mayBeEmpty = Some(true))(
-          fromProtoBytes[SegmentToAgglomerateChunkProto])
-      // interpret zero-byte as Fox.empty
-      valueProto = keyValuePair.value
+      keyValuePairBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsSegmentToAgglomerate
+        .get(chunkKey, version, mayBeEmpty = Some(true))
+      valueProto <- if (isRevertedElement(keyValuePairBytes.value)) Fox.empty
+      else fromProtoBytes[SegmentToAgglomerateChunkProto](keyValuePairBytes.value).toFox
       asSequence = valueProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)
     } yield asSequence
 
@@ -600,10 +608,12 @@ class EditableMappingService @Inject()(
       agglomerateGraph <- agglomerateToGraphCache.getOrLoad(
         (mappingId, agglomerateId, version),
         _ =>
-          tracingDataStore.editableMappingsAgglomerateToGraph
-            .get(agglomerateGraphKey(mappingId, agglomerateId), Some(version), mayBeEmpty = Some(true))(
-              fromProtoBytes[AgglomerateGraph])
-            .map(_.value)
+          for {
+            graphBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsAgglomerateToGraph
+              .get(agglomerateGraphKey(mappingId, agglomerateId), Some(version), mayBeEmpty = Some(true))
+            graphParsed <- if (isRevertedElement(graphBytes.value)) Fox.empty
+            else fromProtoBytes[AgglomerateGraph](graphBytes.value).toFox
+          } yield graphParsed
       )
     } yield agglomerateGraph
 

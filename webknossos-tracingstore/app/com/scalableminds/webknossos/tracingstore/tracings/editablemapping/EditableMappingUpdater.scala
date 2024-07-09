@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
   SegmentToAgglomerateChunkProto
 }
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
   RemoteFallbackLayer,
@@ -40,6 +41,7 @@ class EditableMappingUpdater(
     tracingDataStore: TracingDataStore,
     relyOnAgglomerateIds: Boolean // False during merge and in case of multiple actions. Then, look up all agglomerate ids at positions
 ) extends KeyValueStoreImplicits
+    with ReversionHelper
     with FoxImplicits
     with LazyLogging {
 
@@ -66,17 +68,21 @@ class EditableMappingUpdater(
 
   private def flushSegmentToAgglomerateChunk(key: String): Fox[Unit] = {
     val (chunk, isToBeReverted) = segmentToAgglomerateBuffer(key)
-    // TODO respect isToBeReverted
-    val proto = SegmentToAgglomerateChunkProto(chunk.toVector.map { segmentAgglomerateTuple =>
-      SegmentAgglomeratePair(segmentAgglomerateTuple._1, segmentAgglomerateTuple._2)
-    })
-    tracingDataStore.editableMappingsSegmentToAgglomerate.put(key, newVersion, proto.toByteArray)
+    val valueToFlush: Array[Byte] =
+      if (isToBeReverted) revertedValue
+      else {
+        val proto = SegmentToAgglomerateChunkProto(chunk.toVector.map { segmentAgglomerateTuple =>
+          SegmentAgglomeratePair(segmentAgglomerateTuple._1, segmentAgglomerateTuple._2)
+        })
+        proto.toByteArray
+      }
+    tracingDataStore.editableMappingsSegmentToAgglomerate.put(key, newVersion, valueToFlush)
   }
 
   private def flushAgglomerateGraph(key: String): Fox[Unit] = {
     val (graph, isToBeReverted) = agglomerateToGraphBuffer(key)
-    // TODO respect isToBeReverted
-    tracingDataStore.editableMappingsAgglomerateToGraph.put(key, newVersion, graph)
+    val valueToFlush: Array[Byte] = if (isToBeReverted) revertedValue else graph
+    tracingDataStore.editableMappingsAgglomerateToGraph.put(key, newVersion, valueToFlush)
   }
 
   private def updateIter(mappingFox: Fox[EditableMappingInfo], remainingUpdates: List[EditableMappingUpdateAction])(
@@ -160,11 +166,22 @@ class EditableMappingUpdater(
       } yield (agglomerateId1, agglomerateId2)
     }
 
+  private def getFromSegmentToAgglomerateBuffer(chunkKey: String): Option[Map[Long, Long]] =
+    segmentToAgglomerateBuffer.get(chunkKey).flatMap {
+      case (chunkFromBuffer, isToBeReverted) =>
+        if (isToBeReverted) None else Some(chunkFromBuffer)
+    }
+
+  private def getFromAgglomerateToGraphBuffer(chunkKey: String): Option[AgglomerateGraph] =
+    agglomerateToGraphBuffer.get(chunkKey).flatMap {
+      case (graphFromBuffer, isToBeReverted) =>
+        if (isToBeReverted) None else Some(graphFromBuffer)
+    }
+
   private def agglomerateIdForSegmentId(segmentId: Long)(implicit ec: ExecutionContext): Fox[Long] = {
     val chunkId = segmentId / editableMappingService.defaultSegmentToAgglomerateChunkSize
     val chunkKey = editableMappingService.segmentToAgglomerateKey(editableMappingId, chunkId)
-    val chunkFromBufferOpt = segmentToAgglomerateBuffer.get(chunkKey)
-    // TODO isToBeReverted → None
+    val chunkFromBufferOpt = getFromSegmentToAgglomerateBuffer(chunkKey)
     for {
       chunk <- Fox.fillOption(chunkFromBufferOpt) {
         editableMappingService
@@ -203,8 +220,7 @@ class EditableMappingUpdater(
   private def getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId: String, chunkId: Long)(
       implicit ec: ExecutionContext): Fox[Map[Long, Long]] = {
     val key = editableMappingService.segmentToAgglomerateKey(editableMappingId, chunkId)
-    val fromBufferOpt = segmentToAgglomerateBuffer.get(key)
-    // TODO isToBeReverted → None
+    val fromBufferOpt = getFromSegmentToAgglomerateBuffer(key)
     Fox.fillOption(fromBufferOpt) {
       editableMappingService
         .getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId, version = oldVersion)
@@ -215,8 +231,7 @@ class EditableMappingUpdater(
   private def agglomerateGraphForIdWithFallback(mapping: EditableMappingInfo, agglomerateId: Long)(
       implicit ec: ExecutionContext): Fox[AgglomerateGraph] = {
     val key = editableMappingService.agglomerateGraphKey(editableMappingId, agglomerateId)
-    val fromBufferOpt = agglomerateToGraphBuffer.get(key)
-    // TODO isToBeReverted → None
+    val fromBufferOpt = getFromAgglomerateToGraphBuffer(key)
     fromBufferOpt.map(Fox.successful(_)).getOrElse {
       editableMappingService.getAgglomerateGraphForIdWithFallback(mapping,
                                                                   editableMappingId,
@@ -231,6 +246,8 @@ class EditableMappingUpdater(
     val key = editableMappingService.agglomerateGraphKey(editableMappingId, agglomerateId)
     agglomerateToGraphBuffer.put(key, (graph, false))
   }
+
+  private def emptyAgglomerateGraph = AgglomerateGraph(Seq(), Seq(), Seq(), Seq())
 
   private def splitGraph(agglomerateId: Long,
                          agglomerateGraph: AgglomerateGraph,
@@ -247,7 +264,7 @@ class EditableMappingUpdater(
         logger.warn(
           s"Split action for editable mapping $editableMappingId: Edge to remove ($segmentId1 at ${update.segmentPosition1} in mag ${update.mag} to $segmentId2 at ${update.segmentPosition2} in mag ${update.mag} in agglomerate $agglomerateId) already absent. This split becomes a no-op.")
       }
-      (agglomerateGraph, AgglomerateGraph(Seq(), Seq(), Seq(), Seq()))
+      (agglomerateGraph, emptyAgglomerateGraph)
     } else {
       val graph1Nodes: Set[Long] =
         computeConnectedComponent(startNode = segmentId1,
@@ -408,19 +425,41 @@ class EditableMappingUpdater(
         editableMappingId,
         tracingDataStore.editableMappingsSegmentToAgglomerate)
       _ <- Fox.serialCombined(segmentToAgglomerateChunkNewestStream) {
-        case (chunkKey, chunkDataBeforeRevert, version) =>
+        case (chunkKey, _, version) =>
           if (version > revertAction.sourceVersion) {
-            // TODO fetch old chunk, save to buffer. if empty, write zero-byte
-            case Empty => Fox.successful(()) // TODO save zero-byte
-            case Failure(msg, _, chain) =>
-              Fox.failure(msg, Empty, chain)
-              Fox.successful(())
+            editableMappingService
+              .getSegmentToAgglomerateChunk(editableMappingId, chunkKey, Some(revertAction.sourceVersion))
+              .futureBox
+              .map {
+                case Full(chunkData) => segmentToAgglomerateBuffer.put(chunkKey, (chunkData.toMap, false))
+                case Empty           => segmentToAgglomerateBuffer.put(chunkKey, (Map[Long, Long](), true))
+                case Failure(msg, _, chain) =>
+                  Fox.failure(msg, Empty, chain)
+              }
           } else Fox.successful(())
       }
       agglomerateToGraphNewestStream = new VersionedAgglomerateToGraphIterator(
         editableMappingId,
         tracingDataStore.editableMappingsAgglomerateToGraph)
-      // TODO do we need to iterate over old *and* new to get all additions + removals?
+      _ <- Fox.serialCombined(agglomerateToGraphNewestStream) {
+        case (graphKey, _, version) =>
+          if (version > revertAction.sourceVersion) {
+            // TODO agglomerate id from graph key
+            editableMappingService
+              .getAgglomerateGraphForId(editableMappingId,
+                                        0L,
+                                        remoteFallbackLayer,
+                                        userToken,
+                                        Some(revertAction.sourceVersion))
+              .futureBox
+              .map {
+                case Full(graphData) => agglomerateToGraphBuffer.put(graphKey, (graphData, false))
+                case Empty           => agglomerateToGraphBuffer.put(graphKey, (emptyAgglomerateGraph, true))
+                case Failure(msg, _, chain) =>
+                  Fox.failure(msg, Empty, chain)
+              }
+          } else Fox.successful(())
+      }
     } yield oldInfo
 
 }

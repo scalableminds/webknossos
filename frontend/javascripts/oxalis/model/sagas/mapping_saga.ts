@@ -460,7 +460,7 @@ function* updateLocalHdf5Mapping(
           getAgglomeratesForSegmentsFromTracingstore,
           annotation.tracingStore.url,
           editableMapping.tracingId,
-          Array.from(newSegmentIds),
+          Array.from(newSegmentIds).sort(<T extends NumberLike>(a: T, b: T) => a - b),
         )
       : yield* call(
           getAgglomeratesForSegmentsFromDatastore,

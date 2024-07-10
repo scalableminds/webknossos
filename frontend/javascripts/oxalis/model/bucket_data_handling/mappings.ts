@@ -16,6 +16,8 @@ import { diffMaps } from "libs/utils";
 import memoizeOne from "memoize-one";
 import Toast from "libs/toast";
 
+// With the default load factor of 0.9, this suffices for mapping
+// ~15M uint32 ids.
 export const MAPPING_TEXTURE_WIDTH = 4096;
 export const MAPPING_MESSAGE_KEY = "mappings";
 
@@ -46,12 +48,10 @@ export const setCacheResultForDiffMappings = (
 };
 
 const throttledCapacityWarning = _.throttle(() => {
-  console.warn(
-    "The mapping is getting quite large. To avoid a significant performance drop, the rendered mapping will not be extended.",
-  );
-  Toast.warning(
-    "The mapping is becoming too large and will only be partially applied. Please zoom further in to avoid that too many segment ids are present. Also consider refreshing the page.",
-  );
+  const msg =
+    "The mapping is becoming too large and will only be partially applied. Please zoom further in to avoid that too many segment ids are present. Also consider refreshing the page.";
+  console.warn(msg);
+  Toast.warning(msg);
 }, 10000);
 
 class Mappings {
@@ -122,7 +122,6 @@ class Mappings {
       this.cuckooTable.disableAutoTextureUpdate();
     }
     for (const key of onlyB) {
-      // todop: with 512**2 textures, this doesnt work properly?
       if (this.currentKeyCount > this.cuckooTable.getCriticalCapacity()) {
         throttledCapacityWarning();
         break;

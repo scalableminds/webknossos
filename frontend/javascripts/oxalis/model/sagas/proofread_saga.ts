@@ -1054,9 +1054,13 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
       ? mappingToAccess.get(segmentId)
       : Number(mappingToAccess.get(BigInt(segmentId)));
     if (mappedId == null) {
-      // todop (difficult): this can throw when the current id wasn't loaded into the mapping yet. how can we await this?
+      // It could happen that the user tries to perform a proofreading operation
+      // that involves an id for which the mapped id wasn't fetched yet.
+      // In that case, we currently just throw an error. A toast will appear
+      // that asks the user to retry. If we notice that this happens in production,
+      // we can think about a better way to handle this.
       throw new Error(
-        `Could not map id ${segmentId} at position. Is mapping up to date? maybe await updateHdf5Mapping somehow?`,
+        `Could not map id ${segmentId} at position. The mapped partner might not be known yet. Please retry.`,
       );
     }
     return mappedId;
@@ -1069,9 +1073,13 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
       : Number(mapping.get(BigInt(unmappedId)));
 
     if (agglomerateId == null) {
-      // todop (difficult): this can throw when the current id wasn't loaded into the mapping yet. how can we await this?
+      // It could happen that the user tries to perform a proofreading operation
+      // that involves an id for which the mapped id wasn't fetched yet.
+      // In that case, we currently just throw an error. A toast will appear
+      // that asks the user to retry. If we notice that this happens in production,
+      // we can think about a better way to handle this.
       throw new Error(
-        `Could not map id ${unmappedId} at position. Is mapping up to date? maybe await updateHdf5Mapping somehow?`,
+        `Could not map id ${unmappedId} at position. The mapped partner might not be known yet. Please retry.`,
       );
     }
     return { agglomerateId, unmappedId };
@@ -1116,7 +1124,7 @@ function* getAgglomerateInfos(
     }
     return idInfos;
   } catch (exception) {
-    Toast.error("Cannot do proofreading operation. Please retry. See console for details.");
+    Toast.error("Cannot perform proofreading operation. Please retry. See console for details.");
     console.error(exception);
     return null;
   }

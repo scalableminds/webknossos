@@ -180,8 +180,9 @@ class DataCube {
   }
 
   mapId(unmappedId: number): number {
-    // todop (difficult): should this function be async since the mapping
-    // might be partially loaded?
+    // Note that the return value can be an unmapped id even when
+    // a mapping is active, if it is a HDF5 mapping that is partially loaded
+    // and no entry exists yet for the input id.
     let mappedId: number | null | undefined = null;
     const mapping = this.getMapping();
 

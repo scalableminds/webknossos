@@ -824,12 +824,15 @@ function* updateHoveredSegmentId(): Saga<void> {
   }
 
   const globalMousePosition = yield* call(getGlobalMousePosition);
-  const hoveredCellInfo = yield* call(
+  const hoveredSegmentInfo = yield* call(
     { context: Model, fn: Model.getHoveredCellId },
     globalMousePosition,
   );
-  const id = hoveredCellInfo != null ? hoveredCellInfo.id : 0;
-  const unmappedId = hoveredCellInfo != null ? hoveredCellInfo.unmappedId : 0;
+  // Note that hoveredSegmentInfo.id can be an unmapped id even when
+  // a mapping is active, if it is a HDF5 mapping that is partially loaded
+  // and no entry exists yet for the input id.
+  const id = hoveredSegmentInfo != null ? hoveredSegmentInfo.id : 0;
+  const unmappedId = hoveredSegmentInfo != null ? hoveredSegmentInfo.unmappedId : 0;
   const oldHoveredSegmentId = yield* select(
     (store) => store.temporaryConfiguration.hoveredSegmentId,
   );

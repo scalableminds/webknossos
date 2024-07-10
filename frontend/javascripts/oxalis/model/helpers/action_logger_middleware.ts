@@ -9,8 +9,8 @@ let actionLog: string[] = [];
 let lastActionName: string | null = null;
 let lastActionCount: number = 0;
 
-// todop: set to false
-const DEBUG_OUTPUT_FOR_ACTIONS = true;
+// todop (easy): set to false
+const DEBUG_OUTPUT_FOR_ACTIONS = false;
 
 const actionBlacklist = [
   "ADD_TO_LAYER",

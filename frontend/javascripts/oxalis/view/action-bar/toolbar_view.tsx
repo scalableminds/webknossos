@@ -489,10 +489,14 @@ function AdditionalSkeletonModesButtons() {
 }
 
 const mapId = (volumeTracingId: string | null | undefined, id: number) => {
+  // Note that the return value can be an unmapped id even when
+  // a mapping is active, if it is a HDF5 mapping that is partially loaded
+  // and no entry exists yet for the input id.
   if (!volumeTracingId) {
     return null;
   }
   const { cube } = Model.getSegmentationTracingLayer(volumeTracingId);
+
   return cube.mapId(id);
 };
 

@@ -921,11 +921,14 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     mappingInfo,
     infoRows,
     allowUpdate,
+    segments,
   } = props;
 
   const state = Store.getState();
   const isAgglomerateMappingEnabled = hasAgglomerateMapping(state);
   const isConnectomeMappingEnabled = hasConnectomeFile(state);
+
+  //const segments = visibleSegmentationLayer == null ? [] : getSegmentsForLayer(state, visibleSegmentationLayer?.name);
 
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
 
@@ -1160,6 +1163,24 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   }
 
   const meshFileMappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
+
+  const getSegmentNameItem = (): MenuItemType | null => {
+    if (segments == null) return null;
+    const segmentName = segments.getNullable(segmentIdAtPosition)?.name;
+    if (segmentName == null) return null;
+    return {
+      key: "segment-name",
+      label: `Segment Name: ${segmentName}`,
+    };
+  };
+  const segmentIdItem: MenuItemType | null =
+    segments != null
+      ? {
+          key: "segment-id",
+          label: `Segment ID: ${segmentIdAtPosition}`,
+        }
+      : null;
+
   const focusInSegmentListItem: MenuItemType = {
     key: "focus-in-segment-list",
     onClick: maybeFocusSegment,
@@ -1185,6 +1206,8 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   const nonSkeletonActions: ItemType[] =
     volumeTracing != null && globalPosition != null
       ? [
+          segmentIdItem,
+          getSegmentNameItem(),
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
           segmentIdAtPosition > 0
@@ -1198,7 +1221,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 disabled: segmentIdAtPosition === getActiveCellId(volumeTracing),
                 label: (
                   <>
-                    Activate Segment ({segmentIdAtPosition}){" "}
+                    Activate Segment
                     {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
                   </>
                 ),

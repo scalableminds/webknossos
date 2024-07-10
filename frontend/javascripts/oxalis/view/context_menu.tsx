@@ -921,14 +921,11 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     mappingInfo,
     infoRows,
     allowUpdate,
-    segments,
   } = props;
 
   const state = Store.getState();
   const isAgglomerateMappingEnabled = hasAgglomerateMapping(state);
   const isConnectomeMappingEnabled = hasConnectomeFile(state);
-
-  //const segments = visibleSegmentationLayer == null ? [] : getSegmentsForLayer(state, visibleSegmentationLayer?.name);
 
   const isProofreadingActive = state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD;
 
@@ -1164,23 +1161,6 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
 
   const meshFileMappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
 
-  const getSegmentNameItem = (): MenuItemType | null => {
-    if (segments == null) return null;
-    const segmentName = segments.getNullable(segmentIdAtPosition)?.name;
-    if (segmentName == null) return null;
-    return {
-      key: "segment-name",
-      label: `Segment Name: ${segmentName}`,
-    };
-  };
-  const segmentIdItem: MenuItemType | null =
-    segments != null
-      ? {
-          key: "segment-id",
-          label: `Segment ID: ${segmentIdAtPosition}`,
-        }
-      : null;
-
   const focusInSegmentListItem: MenuItemType = {
     key: "focus-in-segment-list",
     onClick: maybeFocusSegment,
@@ -1206,8 +1186,6 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   const nonSkeletonActions: ItemType[] =
     volumeTracing != null && globalPosition != null
       ? [
-          segmentIdItem,
-          getSegmentNameItem(),
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
           segmentIdAtPosition > 0
@@ -1221,7 +1199,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 disabled: segmentIdAtPosition === getActiveCellId(volumeTracing),
                 label: (
                   <>
-                    Activate Segment
+                    Activate Segment ({segmentIdAtPosition}){" "}
                     {isVolumeBasedToolActive ? shortcutBuilder(["Shift", "leftMouse"]) : null}
                   </>
                 ),
@@ -1685,19 +1663,28 @@ function ContextMenuInner(propsWithInputRef: Props) {
       ),
     );
   }
-  if (segments != null && maybeClickedMeshId != null) {
-    const segmentName = segments.getNullable(maybeClickedMeshId)?.name;
+  if (segments != null) {
+    const segmentName = segments.getNullable(clickedSegmentOrMeshId)?.name;
+    const maxNameLengthFirstLine = 20;
+    const maxNameLengthSecondLine = 40;
     if (segmentName != null) {
-      const maxSegmentNameLength = 18;
       infoRows.push(
         getInfoMenuItem(
           "copy-cell",
           <>
-            <Tooltip title="Segment Name">
-              <i className="fas fa-tag" />{" "}
-            </Tooltip>
-            <Tooltip title={segmentName.length > maxSegmentNameLength ? segmentName : null}>
-              {truncateStringToLength(segmentName, maxSegmentNameLength)}
+            <i className="fas fa-tag segment-context-icon" />
+            <Tooltip title={segmentName.length > maxNameLengthSecondLine ? segmentName : null}>
+              Segment Name:{" "}
+              {segmentName.length < maxNameLengthFirstLine &&
+                truncateStringToLength(segmentName, maxNameLengthFirstLine)}
+              {segmentName.length < maxNameLengthFirstLine &&
+                copyIconWithTooltip(segmentName, "Copy Segment Name")}
+              <div style={{ marginLeft: 22, marginTop: -5 }}>
+                {segmentName.length > maxNameLengthFirstLine &&
+                  truncateStringToLength(segmentName, maxNameLengthSecondLine)}
+                {segmentName.length > maxNameLengthFirstLine &&
+                  copyIconWithTooltip(segmentName, "Copy Segment Name")}
+              </div>
             </Tooltip>
           </>,
         ),

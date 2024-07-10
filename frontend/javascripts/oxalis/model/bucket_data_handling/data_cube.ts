@@ -179,7 +179,7 @@ class DataCube {
       : false;
   }
 
-  mapId(idToMap: number): number {
+  mapId(unmappedId: number): number {
     // todop (difficult): should this function be async since the mapping
     // might be partially loaded?
     let mappedId: number | null | undefined = null;
@@ -187,19 +187,19 @@ class DataCube {
 
     if (mapping != null && this.isMappingEnabled()) {
       mappedId = isNumberMap(mapping)
-        ? mapping.get(Number(idToMap))
+        ? mapping.get(Number(unmappedId))
         : // TODO #6581: Uint64 Support
-          Number(mapping.get(BigInt(idToMap)));
+          Number(mapping.get(BigInt(unmappedId)));
     }
     if (mappedId == null || isNaN(mappedId)) {
-      mappedId = idToMap;
+      mappedId = unmappedId;
     }
 
-    if (this.shouldHideUnmappedIds() && mappedId == null) {
+    if (mappedId == null && this.shouldHideUnmappedIds()) {
       mappedId = 0;
     }
 
-    return mappedId != null ? mappedId : idToMap;
+    return mappedId != null ? mappedId : unmappedId;
   }
 
   private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {

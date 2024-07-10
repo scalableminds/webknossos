@@ -137,7 +137,6 @@ const segmentsTabId = "segment-list";
 type StateProps = {
   meshes: Record<number, MeshInformation>;
   dataset: APIDataset;
-  isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
   centeredSegmentId: number;
   hasVolumeTracing: boolean | undefined;
@@ -186,8 +185,6 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     activeCellId: activeVolumeTracing?.activeCellId,
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
     dataset: state.dataset,
-    isJSONMappingEnabled:
-      mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
     mappingInfo,
     centeredSegmentId: getSegmentIdForPosition(getPosition(state.flycam)),
     hasVolumeTracing: state.tracing.volumes.length > 0,
@@ -336,16 +333,6 @@ const formatMeshFile = (meshFile: APIMeshFile | null | undefined): string | null
   if (meshFile.mappingName == null) return meshFile.meshFileName;
   return `${meshFile.meshFileName} (${meshFile.mappingName})`;
 };
-
-function _getMapIdFn(visibleSegmentationLayer: APISegmentationLayer | null | undefined) {
-  const dataLayer =
-    visibleSegmentationLayer != null ? Model.getLayerByName(visibleSegmentationLayer.name) : null;
-
-  const mapId = dataLayer != null ? (id: number) => dataLayer.cube.mapId(id) : (id: number) => id;
-  return mapId;
-}
-
-const getMapIdFn = memoizeOne(_getMapIdFn);
 
 function renderEmptyMeshFileSelect() {
   return (
@@ -1573,7 +1560,6 @@ class SegmentsView extends React.Component<Props, State> {
             const isSegmentHierarchyEmpty = !(
               allSegments?.size() || this.props.segmentGroups.length
             );
-            const mapId = getMapIdFn(this.props.visibleSegmentationLayer);
 
             if (!this.props.visibleSegmentationLayer) {
               return (
@@ -1607,7 +1593,6 @@ class SegmentsView extends React.Component<Props, State> {
                 return (
                   <SegmentListItem
                     key={segment.id}
-                    mapId={mapId}
                     segment={segment}
                     isCentered={centeredSegmentId === segment.id}
                     selectedSegmentIds={this.props.selectedIds.segments}
@@ -1615,7 +1600,6 @@ class SegmentsView extends React.Component<Props, State> {
                     onSelectSegment={this.onSelectSegment}
                     handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
                     mesh={this.props.meshes[segment.id]}
-                    isJSONMappingEnabled={this.props.isJSONMappingEnabled}
                     mappingInfo={this.props.mappingInfo}
                     activeCellId={this.props.activeCellId}
                     setHoveredSegmentId={this.props.setHoveredSegmentId}

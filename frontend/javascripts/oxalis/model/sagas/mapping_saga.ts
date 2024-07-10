@@ -41,6 +41,7 @@ import {
 import {
   getLayerByName,
   getMappingInfo,
+  getSegmentationLayers,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import type {
@@ -85,11 +86,11 @@ const takeLatestMappingChange = (
     let lastWatcherTask;
     let lastBucketRetrievalSource;
 
-    const needsLocalMappingChangedChannel = createNeedsLocalMappingChangedChannel(layerName);
+    const bucketRetrievalSourceChannel = createBucketRetrievalSourceChannel(layerName);
     const getBucketRetrievalSourceForLayer = getBucketRetrievalSourceFn(layerName);
     while (true) {
       lastBucketRetrievalSource = yield* select((state) => getBucketRetrievalSourceForLayer(state));
-      const bucketRetrievalSource = yield* take(needsLocalMappingChangedChannel);
+      const bucketRetrievalSource = yield* take(bucketRetrievalSourceChannel);
 
       const activeMappingByLayer = yield* select(
         (state) => state.temporaryConfiguration.activeMappingByLayer,
@@ -149,10 +150,10 @@ export default function* watchActivatedMappings(): Saga<void> {
       }
     },
   );
-  const volumeTracings = yield* select((state) => getVolumeTracings(state.tracing));
-  for (const tracing of volumeTracings) {
+  const segmentationLayers = yield* select((state) => getSegmentationLayers(state.dataset));
+  for (const layer of segmentationLayers) {
     // The following two sagas will fork internally.
-    yield* takeLatestMappingChange(oldActiveMappingByLayer, tracing.tracingId);
+    yield* takeLatestMappingChange(oldActiveMappingByLayer, layer.name);
   }
 }
 
@@ -164,14 +165,12 @@ function* reloadData(
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   action: { layerName: string },
 ): Saga<void> {
-  // todop: doublecheck that this is not invoked too often
   const { layerName } = action;
   const activeMappingByLayer = yield* select(
     (state) => state.temporaryConfiguration.activeMappingByLayer,
   );
   const mapping = getMappingInfo(activeMappingByLayer, layerName);
 
-  console.log("reloadBuckets");
   yield* call([api.data, api.data.reloadBuckets], layerName);
 
   const needsLocalHdf5Mapping = yield* select((state) =>
@@ -204,7 +203,7 @@ function createBucketDataChangedChannel(dataCube: DataCube) {
   }, buffers.sliding<string>(1));
 }
 
-function createNeedsLocalMappingChangedChannel(layerName: string) {
+function createBucketRetrievalSourceChannel(layerName: string) {
   const getBucketRetrievalSourceForLayer = getBucketRetrievalSourceFn(layerName);
   return eventChannel((emit) => {
     const unbind = listenToStoreProperty(

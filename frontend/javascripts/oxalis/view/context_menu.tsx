@@ -1663,10 +1663,10 @@ function ContextMenuInner(propsWithInputRef: Props) {
       ),
     );
   }
-  if (segments != null) {
+  if (segments != null && wasSegmentOrMeshClicked) {
     const segmentName = segments.getNullable(clickedSegmentOrMeshId)?.name;
-    const maxNameLength = 20;
     if (segmentName != null) {
+      const maxNameLength = 20;
       infoRows.push(
         getInfoMenuItem(
           "copy-cell",

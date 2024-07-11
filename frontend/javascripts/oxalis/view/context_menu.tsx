@@ -1665,27 +1665,18 @@ function ContextMenuInner(propsWithInputRef: Props) {
   }
   if (segments != null) {
     const segmentName = segments.getNullable(clickedSegmentOrMeshId)?.name;
-    const maxNameLengthFirstLine = 20;
-    const maxNameLengthSecondLine = 40;
+    const maxNameLength = 20;
     if (segmentName != null) {
       infoRows.push(
         getInfoMenuItem(
           "copy-cell",
           <>
             <i className="fas fa-tag segment-context-icon" />
-            <Tooltip title={segmentName.length > maxNameLengthSecondLine ? segmentName : null}>
-              Segment Name:{" "}
-              {segmentName.length < maxNameLengthFirstLine &&
-                truncateStringToLength(segmentName, maxNameLengthFirstLine)}
-              {segmentName.length < maxNameLengthFirstLine &&
-                copyIconWithTooltip(segmentName, "Copy Segment Name")}
-              <div style={{ marginLeft: 22, marginTop: -5 }}>
-                {segmentName.length > maxNameLengthFirstLine &&
-                  truncateStringToLength(segmentName, maxNameLengthSecondLine)}
-                {segmentName.length > maxNameLengthFirstLine &&
-                  copyIconWithTooltip(segmentName, "Copy Segment Name")}
-              </div>
-            </Tooltip>
+            Segment Name:{" "}
+            {segmentName.length > maxNameLength
+              ? truncateStringToLength(segmentName, maxNameLength)
+              : segmentName}
+            {copyIconWithTooltip(segmentName, "Copy Segment Name")}
           </>,
         ),
       );

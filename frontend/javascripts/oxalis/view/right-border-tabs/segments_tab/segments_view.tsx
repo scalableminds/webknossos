@@ -625,11 +625,6 @@ class SegmentsView extends React.Component<Props, State> {
       };
     }
     if (prevState.prevProps?.meshes !== meshes) {
-      // Derive the groupsSegmentsVisibilityStateMap state so that we know per group
-      // if it contains only visible elements. This is used to know whether "Show meshes" or
-      // "Hide meshes" context item should be shown.
-      // If any segment is invisible, set the visibility of the group to false, so that the preferred
-      // action is to make all meshes visible.
       const newVisibleMap: State["groupsSegmentsVisibilityStateMap"] = {};
 
       const fillNewGroupsSegmentsVisibilityStateMap = (group: SegmentGroup) => {
@@ -1316,7 +1311,6 @@ class SegmentsView extends React.Component<Props, State> {
       const segmentMesh = meshes[segment.id];
       return segmentMesh != null && !meshes[segment.id].isVisible;
     });
-    // show "Hide meshes" if no mesh is loaded and invisible
     return { areSomeSegmentsInvisible, areSomeSegmentsVisible };
   };
 
@@ -1327,7 +1321,7 @@ class SegmentsView extends React.Component<Props, State> {
     const { areSomeSegmentsInvisible, areSomeSegmentsVisible } =
       groupId == null
         ? this.visibilityStateOfSelectedMeshes()
-        : this.state.groupsSegmentsVisibilityStateMap[groupId]; //toggle between hide and show
+        : this.state.groupsSegmentsVisibilityStateMap[groupId];
     const menuOptions: ItemType[] = [];
     const changeVisibility = (isVisible: boolean) => {
       if (this.props.visibleSegmentationLayer == null) {

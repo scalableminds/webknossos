@@ -309,6 +309,7 @@ function VolumeTracingReducer(
 
     case "SET_SEGMENT_GROUPS": {
       const { segmentGroups } = action;
+      console.log(segmentGroups);
       return setSegmentGroups(state, action.layerName, segmentGroups);
     }
 

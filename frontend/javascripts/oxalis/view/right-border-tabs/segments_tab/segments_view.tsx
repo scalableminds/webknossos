@@ -83,6 +83,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
   setSelectedSegmentsOrGroupAction,
+  setSegmentGroupsAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type {
@@ -124,6 +125,7 @@ import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { DataNode } from "antd/lib/tree";
 import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { ValueOf } from "types/globals";
+import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -432,10 +434,21 @@ class SegmentsView extends React.Component<Props, State> {
 
     const allGroups = this.getSubGroupsAsTreeNodes(MISSING_GROUP_ID);
     allGroups.push(this.getKeyForGroupId(MISSING_GROUP_ID));
-    this.setState({ expandedGroupKeys: allGroups });
+    this.setState({
+      expandedGroupKeys: this.getExpandedKeys(this.props.segmentGroups),
+    });
+  }
+
+  getExpandedKeys = (segmentGroups) => {
+    // recursive method to get all groups that are expanded
   }
 
   componentDidUpdate(prevProps: Props) {
+    if (this.props.segmentGroups[0] !== prevProps.segmentGroups[0])
+      this.setState({
+        expandedGroupKeys: this.getExpandedKeys(this.props.segmentGroups),
+      });
+
     if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
       Store.dispatch(
         maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
@@ -470,7 +483,7 @@ class SegmentsView extends React.Component<Props, State> {
   }
 
   onExpandTree = (expandedKeys: Key[]) => {
-    this.setState({ expandedGroupKeys: expandedKeys });
+    this.expandGroups(expandedKeys);
   };
 
   getKeyForGroupId = (groupId: number) => `group-${groupId}`;
@@ -488,17 +501,42 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   expandGroups = (groupsToExpand: Key[]) => {
-    this.setState({
-      expandedGroupKeys: this.state.expandedGroupKeys?.concat(groupsToExpand),
+    /*     this.setState({
+          expandedGroupKeys: this.state.expandedGroupKeys?.concat(groupsToExpand),
+        }); */
+    if (this.props.visibleSegmentationLayer == null) return;
+    const newGroups = mapGroups(this.props.segmentGroups, (group) => {
+      if (groupsToExpand.includes(this.getKeyForGroupId(group.groupId))) {
+        return {
+          ...group,
+          isExpanded: true,
+        };
+      } else {
+        return group;
+      }
     });
+    Store.dispatch(setSegmentGroupsAction(newGroups, this.props.visibleSegmentationLayer?.name));
   };
 
   collapseGroups = (groupsToCollapse: Key[]) => {
-    this.setState({
-      expandedGroupKeys: this.state.expandedGroupKeys?.filter(
-        (key) => groupsToCollapse.indexOf(key.toString()) === -1,
-      ),
+    /*     this.setState({
+          expandedGroupKeys: this.state.expandedGroupKeys?.filter(
+            (key) => groupsToCollapse.indexOf(key.toString()) === -1,
+          ),
+        }); */
+
+    if (this.props.visibleSegmentationLayer == null) return;
+    const newGroups = mapGroups(this.props.segmentGroups, (group) => {
+      if (groupsToCollapse.includes(this.getKeyForGroupId(group.groupId))) {
+        return {
+          ...group,
+          isExpanded: false,
+        };
+      } else {
+        return group;
+      }
     });
+    Store.dispatch(setSegmentGroupsAction(newGroups, this.props.visibleSegmentationLayer?.name));
   };
 
   onSelectTreeItem = (
@@ -591,6 +629,7 @@ class SegmentsView extends React.Component<Props, State> {
       groupId: MISSING_GROUP_ID,
       key: MISSING_GROUP_ID,
       children: segmentGroups,
+      isExpanded: true,
     };
     if (
       prevState.prevProps?.segments !== segments ||

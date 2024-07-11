@@ -1160,7 +1160,6 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   }
 
   const meshFileMappingName = currentMeshFile != null ? currentMeshFile.mappingName : undefined;
-
   const focusInSegmentListItem: MenuItemType = {
     key: "focus-in-segment-list",
     onClick: maybeFocusSegment,

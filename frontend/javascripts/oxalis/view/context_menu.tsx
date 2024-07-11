@@ -1652,16 +1652,16 @@ function ContextMenuInner(propsWithInputRef: Props) {
   }
 
   if (wasSegmentOrMeshClicked) {
-    /*     infoRows.push(
-          getInfoMenuItem(
-            "copy-cell",
-            <>
-              <div className="cell-context-icon" />
-              Segment ID: {`${clickedSegmentOrMeshId}`}{" "}
-              {copyIconWithTooltip(clickedSegmentOrMeshId, "Copy Segment ID")}
-            </>,
-          ),
-        ); */
+    infoRows.push(
+      getInfoMenuItem(
+        "copy-cell",
+        <>
+          <div className="cell-context-icon" />
+          Segment ID: {`${clickedSegmentOrMeshId}`}{" "}
+          {copyIconWithTooltip(clickedSegmentOrMeshId, "Copy Segment ID")}
+        </>,
+      ),
+    );
   }
   if (segments != null) {
     const segmentName = segments.getNullable(clickedSegmentOrMeshId)?.name;
@@ -1672,24 +1672,20 @@ function ContextMenuInner(propsWithInputRef: Props) {
         getInfoMenuItem(
           "copy-cell",
           <>
-            <div className="cell-context-icon" />
-            Segment ID: {`${clickedSegmentOrMeshId}`}{" "}
-            {copyIconWithTooltip(clickedSegmentOrMeshId, "Copy Segment ID")}
-            <div style={{ marginLeft: 22, marginTop: -5 }}>
-              <Tooltip title={segmentName.length > maxNameLengthSecondLine ? segmentName : null}>
-                Segment Name:{" "}
-                {segmentName.length < maxNameLengthFirstLine &&
-                  truncateStringToLength(segmentName, maxNameLengthFirstLine)}
-                {segmentName.length < maxNameLengthFirstLine &&
+            <i className="fas fa-tag segment-context-icon" />
+            <Tooltip title={segmentName.length > maxNameLengthSecondLine ? segmentName : null}>
+              Segment Name:{" "}
+              {segmentName.length < maxNameLengthFirstLine &&
+                truncateStringToLength(segmentName, maxNameLengthFirstLine)}
+              {segmentName.length < maxNameLengthFirstLine &&
+                copyIconWithTooltip(segmentName, "Copy Segment Name")}
+              <div style={{ marginLeft: 22, marginTop: -5 }}>
+                {segmentName.length > maxNameLengthFirstLine &&
+                  truncateStringToLength(segmentName, maxNameLengthSecondLine)}
+                {segmentName.length > maxNameLengthFirstLine &&
                   copyIconWithTooltip(segmentName, "Copy Segment Name")}
-                <div style={{ marginTop: -5 }}>
-                  {segmentName.length > maxNameLengthFirstLine &&
-                    truncateStringToLength(segmentName, maxNameLengthSecondLine)}
-                  {segmentName.length > maxNameLengthFirstLine &&
-                    copyIconWithTooltip(segmentName, "Copy Segment Name")}
-                </div>
-              </Tooltip>
-            </div>
+              </div>
+            </Tooltip>
           </>,
         ),
       );

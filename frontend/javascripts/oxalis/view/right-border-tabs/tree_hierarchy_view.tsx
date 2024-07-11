@@ -282,7 +282,14 @@ function TreeHierarchyView(props: Props) {
         : props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID;
 
     if (draggedNode.type === GroupTypeEnum.TREE) {
-      const allTreesToMove = [...props.selectedTreeIds, draggedNode.id];
+      let allTreesToMove = [draggedNode.id];
+      
+      // Dragged nodes are not considered clicked aka "properly selected"
+      // In the multi-select case, we want to move all selected trees
+      if (props.selectedTreeIds.length > 1) {
+        allTreesToMove = [...props.selectedTreeIds, draggedNode.id];
+      }
+      
       // Sets group of all selected + dragged trees (and the moved tree) to the new parent group
       const moveActions = allTreesToMove.map((treeId) =>
         setTreeGroupAction(parentGroupId === MISSING_GROUP_ID ? null : parentGroupId, treeId),

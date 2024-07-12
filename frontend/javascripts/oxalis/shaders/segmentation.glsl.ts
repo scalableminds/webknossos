@@ -116,8 +116,8 @@ export const convertCellIdToRGB: ShaderModule = {
       float zoomAdaption = ceil(zoomValue);
       vec3 worldCoordUVW = coordScaling * getWorldCoordUVW()  / zoomAdaption;
 
-      float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
-      vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;
+      float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
+      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
       worldCoordUVW.x = worldCoordUVW.x * anisotropyFactorUVW.x;
       worldCoordUVW.y = worldCoordUVW.y * anisotropyFactorUVW.y;
 
@@ -222,8 +222,8 @@ export const getBrushOverlay: ShaderModule = {
 
       // Compute the anisotropy of the dataset so that the brush looks the same in
       // each viewport
-      float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
-      vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;
+      float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
+      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
 
       float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * anisotropyFactorUVW.xy);
 
@@ -250,8 +250,8 @@ export const getCrossHairOverlay: ShaderModule = {
 
       // Compute the anisotropy of the dataset so that the cross hair looks the same in
       // each viewport
-      float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
-      vec3 anisotropyFactorUVW = transDim(datasetScale) / baseVoxelSize;
+      float baseVoxelSize = min(min(voxelSizeFactor.x, voxelSizeFactor.y), voxelSizeFactor.z);
+      vec3 anisotropyFactorUVW = transDim(voxelSizeFactor) / baseVoxelSize;
 
       // Compute the distance in screen coordinate space to show a zoom-independent cross hair
       vec2 distanceVector = (worldCoordUVW.xy - activeSegmentPosUVW.xy) * anisotropyFactorUVW.xy / zoomValue;

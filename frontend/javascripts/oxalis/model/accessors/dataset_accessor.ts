@@ -19,10 +19,16 @@ import type {
   ActiveMappingInfo,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import { IdentityTransform, Vector3, Vector4, ViewMode } from "oxalis/constants";
+import {
+  IdentityTransform,
+  LongUnitToShortUnitMap,
+  Vector3,
+  Vector4,
+  ViewMode,
+} from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import { aggregateBoundingBox, maxValue } from "libs/utils";
-import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
+import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
 import { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
@@ -299,15 +305,17 @@ export function getDatasetExtentInVoxel(dataset: APIDataset) {
   };
   return extent;
 }
-export function getDatasetExtentInLength(dataset: APIDataset): BoundingBoxObject {
+export function getDatasetExtentInUnit(dataset: APIDataset): BoundingBoxObject {
   const extentInVoxel = getDatasetExtentInVoxel(dataset);
-  const { scale } = dataset.dataSource;
-  const topLeft = extentInVoxel.topLeft.map((val, index) => val * scale[index]) as any as Vector3;
+  const scaleFactor = dataset.dataSource.scale.factor;
+  const topLeft = extentInVoxel.topLeft.map(
+    (val, index) => val * scaleFactor[index],
+  ) as any as Vector3;
   const extent = {
     topLeft,
-    width: extentInVoxel.width * scale[0],
-    height: extentInVoxel.height * scale[1],
-    depth: extentInVoxel.depth * scale[2],
+    width: extentInVoxel.width * scaleFactor[0],
+    height: extentInVoxel.height * scaleFactor[1],
+    depth: extentInVoxel.depth * scaleFactor[2],
   };
   return extent;
 }
@@ -321,11 +329,13 @@ export function getDatasetExtentAsString(
 
   if (inVoxel) {
     const extentInVoxel = getDatasetExtentInVoxel(dataset);
-    return `${formatExtentWithLength(extentInVoxel, (x) => `${x}`)} voxel`;
+    return `${formatExtentInUnitWithLength(extentInVoxel, (x) => `${x}`)} voxel`;
   }
 
-  const extent = getDatasetExtentInLength(dataset);
-  return formatExtentWithLength(extent, formatNumberToLength);
+  const extent = getDatasetExtentInUnit(dataset);
+  return formatExtentInUnitWithLength(extent, (length) =>
+    formatNumberToLength(length, LongUnitToShortUnitMap[dataset.dataSource.scale.unit]),
+  );
 }
 export function determineAllowedModes(settings?: Settings): {
   preferredMode: APIAllowedMode | null | undefined;
@@ -712,7 +722,7 @@ function _getOriginalTransformsForLayerOrNull(
   } else if (type === "thin_plate_spline") {
     const { source, target } = transformation.correspondences;
 
-    return createThinPlateSplineTransform(target, source, dataset.dataSource.scale);
+    return createThinPlateSplineTransform(target, source, dataset.dataSource.scale.factor);
   }
 
   console.error(

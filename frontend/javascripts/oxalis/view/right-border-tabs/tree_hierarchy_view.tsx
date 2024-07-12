@@ -612,28 +612,26 @@ function TreeHierarchyView(props: Props) {
       ) : null;
 
     return (
-      <div>
-        <Dropdown
-          // only render the menu items when the dropdown menu is visible. Maybe this helps performance
-          menu={isDropdownVisible ? createMenu() : { items: [] }} //
-          // AutoDestroy is used to remove the menu from DOM and keep up the performance.
-          // destroyPopupOnHide should also be an option according to the docs, but
-          // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
-          // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
-          autoDestroy
-          placement="bottom"
-          open={isDropdownVisible} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-          onOpenChange={(isVisible, info) => {
-            if (info.source === "trigger") handleTreeDropdownMenuVisibility(tree.treeId, isVisible);
-          }}
-          trigger={["contextMenu"]}
-        >
-          <div className="nowrap">
-            <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
-            {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
-          </div>
-        </Dropdown>
-      </div>
+      <Dropdown
+        // only render the menu items when the dropdown menu is visible. Maybe this helps performance
+        menu={isDropdownVisible ? createMenu() : { items: [] }} //
+        // AutoDestroy is used to remove the menu from DOM and keep up the performance.
+        // destroyPopupOnHide should also be an option according to the docs, but
+        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
+        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
+        autoDestroy
+        placement="bottom"
+        open={isDropdownVisible} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
+        onOpenChange={(isVisible, info) => {
+          if (info.source === "trigger") handleTreeDropdownMenuVisibility(tree.treeId, isVisible);
+        }}
+        trigger={["contextMenu"]}
+      >
+        <div className="nowrap">
+          <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
+          {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
+        </div>
+      </Dropdown>
     );
   }
 

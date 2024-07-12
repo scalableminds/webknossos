@@ -1,7 +1,7 @@
 import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, OrthoView, ContourMode, BucketAddress } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import type { Segment, SegmentGroup, SegmentMap } from "oxalis/store";
+import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "oxalis/store";
 import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
@@ -228,7 +228,7 @@ export const setSegmentsAction = (segments: SegmentMap, layerName: string) =>
   }) as const;
 
 export const updateSegmentAction = (
-  segmentId: number,
+  segmentId: NumberLike,
   segment: Partial<Segment>,
   layerName: string,
   timestamp: number = Date.now(),
@@ -236,7 +236,8 @@ export const updateSegmentAction = (
 ) =>
   ({
     type: "UPDATE_SEGMENT",
-    segmentId,
+    // TODO #6581: Uint64 Support
+    segmentId: Number(segmentId),
     segment,
     layerName,
     timestamp,
@@ -244,13 +245,14 @@ export const updateSegmentAction = (
   }) as const;
 
 export const removeSegmentAction = (
-  segmentId: number,
+  segmentId: NumberLike,
   layerName: string,
   timestamp: number = Date.now(),
 ) =>
   ({
     type: "REMOVE_SEGMENT",
-    segmentId,
+    // TODO #6581: Uint64 Support
+    segmentId: Number(segmentId),
     layerName,
     timestamp,
   }) as const;

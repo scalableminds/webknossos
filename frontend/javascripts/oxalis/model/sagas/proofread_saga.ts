@@ -71,7 +71,14 @@ import {
   refreshMeshAction,
   removeMeshAction,
 } from "oxalis/model/actions/annotation_actions";
-import { ActiveMappingInfo, Mapping, NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
+import {
+  ActiveMappingInfo,
+  Mapping,
+  NumberLike,
+  NumberLikeMap,
+  Tree,
+  VolumeTracing,
+} from "oxalis/store";
 import _ from "lodash";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
@@ -486,7 +493,11 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     yield* put(removeSegmentAction(targetAgglomerateId, volumeTracing.tracingId));
   }
 
-  const pack = (agglomerateId: number, newAgglomerateId: number, nodePosition: Vector3) => ({
+  const pack = (
+    agglomerateId: NumberLike,
+    newAgglomerateId: NumberLike,
+    nodePosition: Vector3,
+  ) => ({
     agglomerateId,
     newAgglomerateId,
     nodePosition,
@@ -499,10 +510,10 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
 }
 
 function* performMinCut(
-  sourceAgglomerateId: number,
-  targetAgglomerateId: number,
-  sourceSegmentId: number,
-  targetSegmentId: number,
+  sourceAgglomerateId: NumberLike,
+  targetAgglomerateId: NumberLike,
+  sourceSegmentId: NumberLike,
+  targetSegmentId: NumberLike,
   agglomerateFileMag: Vector3,
   editableMappingId: string,
   volumeTracingId: string,
@@ -566,8 +577,8 @@ function* performMinCut(
 }
 
 function* performCutFromNeighbors(
-  agglomerateId: number,
-  segmentId: number,
+  agglomerateId: NumberLike,
+  segmentId: NumberLike,
   segmentPosition: Vector3 | null,
   agglomerateFileMag: Vector3,
   editableMappingId: string,
@@ -596,14 +607,14 @@ function* performCutFromNeighbors(
     | {
         position1: Vector3;
         position2: Vector3;
-        segmentId1: number;
-        segmentId2: number;
+        segmentId1: NumberLike;
+        segmentId2: NumberLike;
       }
     | {
         position1: null;
         position2: Vector3;
-        segmentId1: number;
-        segmentId2: number;
+        segmentId1: NumberLike;
+        segmentId2: NumberLike;
       }
   > = neighborInfo.neighbors.map(
     (neighbor) =>
@@ -685,8 +696,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   const [sourceInfo, targetInfo] = idInfos;
   const sourceAgglomerateId = sourceInfo.agglomerateId;
   const targetAgglomerateId = targetInfo.agglomerateId;
-  const sourceAgglomerate = volumeTracing.segments.getNullable(sourceAgglomerateId);
-  const targetAgglomerate = volumeTracing.segments.getNullable(targetAgglomerateId);
+  const sourceAgglomerate = volumeTracing.segments.getNullable(Number(sourceAgglomerateId));
+  const targetAgglomerate = volumeTracing.segments.getNullable(Number(targetAgglomerateId));
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
@@ -828,7 +839,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     // Assign custom name to split-off target.
     yield* put(
       updateSegmentAction(
-        newTargetAgglomerateId,
+        Number(newTargetAgglomerateId),
         { name: sourceAgglomerate.name },
         volumeTracingId,
       ),
@@ -897,7 +908,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
 
   const editableMappingId = volumeTracing.mappingName;
 
-  const targetAgglomerate = volumeTracing.segments.getNullable(targetAgglomerateId);
+  const targetAgglomerate = volumeTracing.segments.getNullable(Number(targetAgglomerateId));
 
   /* Send the respective split/merge update action to the backend (by pushing to the save queue
      and saving immediately) */
@@ -949,7 +960,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     const updateNeighborNamesActions = newNeighborAgglomerateIds.map((newNeighborAgglomerateId) =>
       put(
         updateSegmentAction(
-          newNeighborAgglomerateId,
+          Number(newNeighborAgglomerateId),
           { name: targetAgglomerate.name },
           volumeTracingId,
         ),
@@ -979,11 +990,11 @@ function* handleProofreadCutFromNeighbors(action: Action) {
 
 type Preparation = {
   agglomerateFileMag: Vector3;
-  getDataValue: (position: Vector3, overrideMapping?: Mapping | null) => Promise<number>;
-  mapSegmentId: (segmentId: number, overrideMapping?: Mapping | null) => number;
+  getDataValue: (position: Vector3, overrideMapping?: Mapping | null) => Promise<NumberLike>;
+  mapSegmentId: (segmentId: NumberLike, overrideMapping?: Mapping | null) => NumberLike;
   getMappedAndUnmapped: (
     position: Vector3,
-  ) => Promise<{ agglomerateId: number; unmappedId: number }>;
+  ) => Promise<{ agglomerateId: NumberLike; unmappedId: NumberLike }>;
   activeMapping: ActiveMappingInfo;
   volumeTracing: VolumeTracing & { mappingName: string };
 };
@@ -1043,16 +1054,20 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
   const getDataValue = async (
     position: Vector3,
     overrideMapping: Mapping | null = null,
-  ): Promise<number> => {
+  ): Promise<NumberLike> => {
     const unmappedId = await getUnmappedDataValue(position);
     return mapSegmentId(unmappedId, overrideMapping);
   };
 
-  const mapSegmentId = (segmentId: number, overrideMapping: Mapping | null = null): number => {
+  const mapSegmentId = (
+    segmentId: NumberLike,
+    overrideMapping: Mapping | null = null,
+  ): NumberLike => {
     const mappingToAccess = overrideMapping ?? mapping;
     const mappedId = isNumberMap(mappingToAccess)
-      ? mappingToAccess.get(segmentId)
-      : Number(mappingToAccess.get(BigInt(segmentId)));
+      ? mappingToAccess.get(Number(segmentId))
+      : // TODO #6581: Uint64 Support
+        mappingToAccess.get(BigInt(segmentId));
     if (mappedId == null) {
       // It could happen that the user tries to perform a proofreading operation
       // that involves an id for which the mapped id wasn't fetched yet.
@@ -1070,7 +1085,8 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
     const unmappedId = await getUnmappedDataValue(position);
     const agglomerateId = isNumberMap(mapping)
       ? mapping.get(unmappedId)
-      : Number(mapping.get(BigInt(unmappedId)));
+      : // TODO #6581: Uint64 Support
+        mapping.get(BigInt(unmappedId));
 
     if (agglomerateId == null) {
       // It could happen that the user tries to perform a proofreading operation
@@ -1107,11 +1123,11 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
 function* getAgglomerateInfos(
   getMappedAndUnmapped: (
     position: Vector3,
-  ) => Promise<{ agglomerateId: number; unmappedId: number }>,
+  ) => Promise<{ agglomerateId: NumberLike; unmappedId: NumberLike }>,
   positions: Vector3[],
 ): Saga<Array<{
-  agglomerateId: number;
-  unmappedId: number;
+  agglomerateId: NumberLike;
+  unmappedId: NumberLike;
 }> | null> {
   try {
     const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
@@ -1133,8 +1149,8 @@ function* getAgglomerateInfos(
 function* refreshAffectedMeshes(
   layerName: string,
   items: Array<{
-    agglomerateId: number;
-    newAgglomerateId: number;
+    agglomerateId: NumberLike;
+    newAgglomerateId: NumberLike;
     nodePosition: Vector3;
   }>,
 ) {
@@ -1155,14 +1171,14 @@ function* refreshAffectedMeshes(
   for (const item of items) {
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
     if (!removedIds.has(item.agglomerateId)) {
-      yield* put(removeMeshAction(layerName, item.agglomerateId));
+      yield* put(removeMeshAction(layerName, Number(item.agglomerateId)));
       removedIds.add(item.agglomerateId);
     }
     if (!newlyLoadedIds.has(item.newAgglomerateId)) {
       yield* call(
         loadCoarseMesh,
         layerName,
-        item.newAgglomerateId,
+        Number(item.newAgglomerateId),
         item.nodePosition,
         additionalCoordinates,
       );
@@ -1173,7 +1189,7 @@ function* refreshAffectedMeshes(
 
 function getDeleteEdgeActionForEdgePositions(
   sourceTree: Tree,
-  edge: { position1: Vector3; position2: Vector3; segmentId1: number; segmentId2: number },
+  edge: { position1: Vector3; position2: Vector3 },
 ) {
   let firstNodeId;
   let secondNodeId;
@@ -1222,7 +1238,7 @@ function* getPositionForSegmentId(volumeTracing: VolumeTracing, segmentId: numbe
 
 function* splitAgglomerateInMapping(
   activeMapping: ActiveMappingInfo,
-  sourceAgglomerateId: number,
+  sourceAgglomerateId: NumberLike,
   volumeTracingId: string,
 ) {
   // Obtain all segment ids that map to sourceAgglomerateId
@@ -1259,8 +1275,8 @@ function* splitAgglomerateInMapping(
 
 function mergeAgglomeratesInMapping(
   activeMapping: ActiveMappingInfo,
-  targetAgglomerateId: number,
-  sourceAgglomerateId: number,
+  targetAgglomerateId: NumberLike,
+  sourceAgglomerateId: NumberLike,
 ): Mapping {
   return new Map(
     Array.from(activeMapping.mapping as NumberLikeMap, ([key, value]) =>
@@ -1273,8 +1289,8 @@ function* gatherInfoForOperation(
   action: ProofreadMergeAction | MinCutAgglomerateWithPositionAction,
   preparation: Preparation,
 ): Saga<Array<{
-  agglomerateId: number;
-  unmappedId: number;
+  agglomerateId: NumberLike;
+  unmappedId: NumberLike;
   position: Vector3;
 }> | null> {
   const { volumeTracing } = preparation;

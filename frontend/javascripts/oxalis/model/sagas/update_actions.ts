@@ -7,6 +7,7 @@ import type {
   TreeGroup,
   UserBoundingBox,
   SegmentGroup,
+  NumberLike,
 } from "oxalis/store";
 import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
 import { AdditionalCoordinate } from "types/api_flow_types";
@@ -433,9 +434,9 @@ export function updateMappingName(
   } as const;
 }
 export function splitAgglomerate(
-  agglomerateId: number,
-  segmentId1: number,
-  segmentId2: number,
+  agglomerateId: NumberLike,
+  segmentId1: NumberLike,
+  segmentId2: NumberLike,
   mag: Vector3,
 ): {
   name: "splitAgglomerate";
@@ -454,18 +455,19 @@ export function splitAgglomerate(
   return {
     name: "splitAgglomerate",
     value: {
-      agglomerateId,
-      segmentId1,
-      segmentId2,
+      // TODO #6581: Uint64 Support
+      agglomerateId: Number(agglomerateId),
+      segmentId1: Number(segmentId1),
+      segmentId2: Number(segmentId2),
       mag,
     },
   } as const;
 }
 export function mergeAgglomerate(
-  agglomerateId1: number,
-  agglomerateId2: number,
-  segmentId1: number,
-  segmentId2: number,
+  agglomerateId1: NumberLike,
+  agglomerateId2: NumberLike,
+  segmentId1: NumberLike,
+  segmentId2: NumberLike,
   mag: Vector3,
 ): {
   name: "mergeAgglomerate";
@@ -485,10 +487,11 @@ export function mergeAgglomerate(
   return {
     name: "mergeAgglomerate",
     value: {
-      agglomerateId1,
-      agglomerateId2,
-      segmentId1,
-      segmentId2,
+      // TODO #6581: Uint64 Support
+      agglomerateId1: Number(agglomerateId1),
+      agglomerateId2: Number(agglomerateId2),
+      segmentId1: Number(segmentId1),
+      segmentId2: Number(segmentId2),
       mag,
     },
   } as const;

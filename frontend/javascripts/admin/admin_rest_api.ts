@@ -78,6 +78,7 @@ import type {
   VolumeTracing,
   UserConfiguration,
   Mapping,
+  NumberLike,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
@@ -2262,10 +2263,10 @@ export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   segmentsInfo: {
-    segmentId1: number;
-    segmentId2: number;
+    segmentId1: NumberLike;
+    segmentId2: NumberLike;
     mag: Vector3;
-    agglomerateId: number;
+    agglomerateId: NumberLike;
     editableMappingId: string;
   },
 ): Promise<Array<MinCutTargetEdge>> {
@@ -2273,7 +2274,13 @@ export async function getEdgesForAgglomerateMinCut(
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
       {
-        data: segmentsInfo,
+        data: {
+          ...segmentsInfo,
+          // TODO #6581: Uint64 Support
+          segmentId1: Number(segmentsInfo.segmentId1),
+          segmentId2: Number(segmentsInfo.segmentId2),
+          agglomerateId: Number(segmentsInfo.agglomerateId),
+        },
       },
     ),
   );
@@ -2288,9 +2295,9 @@ export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
   segmentInfo: {
-    segmentId: number;
+    segmentId: NumberLike;
     mag: Vector3;
-    agglomerateId: number;
+    agglomerateId: NumberLike;
     editableMappingId: string;
   },
 ): Promise<NeighborInfo> {
@@ -2298,7 +2305,12 @@ export async function getNeighborsForAgglomerateNode(
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
       {
-        data: segmentInfo,
+        data: {
+          ...segmentInfo,
+          // TODO #6581: Uint64 Support
+          segmentId: Number(segmentInfo.segmentId),
+          agglomerateId: Number(segmentInfo.agglomerateId),
+        },
       },
     ),
   );

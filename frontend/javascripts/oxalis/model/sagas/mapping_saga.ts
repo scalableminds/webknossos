@@ -61,7 +61,6 @@ import {
   isMappingActivationAllowed,
   getEditableMappingForVolumeTracingId,
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
-  getVolumeTracings,
   getBucketRetrievalSourceFn,
   BucketRetrievalSource,
 } from "oxalis/model/accessors/volumetracing_accessor";

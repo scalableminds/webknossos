@@ -71,14 +71,7 @@ import {
   refreshMeshAction,
   removeMeshAction,
 } from "oxalis/model/actions/annotation_actions";
-import {
-  ActiveMappingInfo,
-  Mapping,
-  NumberLike,
-  NumberLikeMap,
-  Tree,
-  VolumeTracing,
-} from "oxalis/store";
+import { ActiveMappingInfo, Mapping, NumberLikeMap, Tree, VolumeTracing } from "oxalis/store";
 import _ from "lodash";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";

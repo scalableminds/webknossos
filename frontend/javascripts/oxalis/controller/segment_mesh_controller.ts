@@ -411,7 +411,7 @@ export default class SegmentMeshController {
         const newColor: readonly [number, number, number] = mesh.isHovered
           ? HOVERED_COLOR
           : ACTIVATED_COLOR;
-        material.color.setHSL(...newColor);
+        material.color = new THREE.Color().setHSL(...newColor);
         material.opacity = 1.0;
         material.emissive.setHSL(...HOVERED_COLOR);
       });

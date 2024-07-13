@@ -267,7 +267,12 @@ class PlaneView {
           if (segmentationTracing == null) {
             return null;
           }
-          return segmentationTracing.activeUnmappedSegmentId;
+          // If the proofreading tool is not active, pretend that
+          // activeUnmappedSegmentId is null so that no super-voxel
+          // is highlighted.
+          return storeState.uiInformation.activeTool === "PROOFREAD"
+            ? segmentationTracing.activeUnmappedSegmentId
+            : null;
         },
         (activeUnmappedSegmentId) =>
           segmentMeshController.highlightUnmappedSegmentId(activeUnmappedSegmentId),

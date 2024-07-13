@@ -46,6 +46,7 @@ import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
 import { determineLayout } from "oxalis/view/layouting/default_layout_configs";
 import { getLastActiveLayout, getLayoutConfig } from "oxalis/view/layouting/layout_persistence";
 import { is3dViewportMaximized } from "oxalis/view/layouting/flex_layout_helper";
+import { needsLocalHdf5Mapping } from "../accessors/volumetracing_accessor";
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
   compare https://github.com/scalableminds/webknossos/issues/5223.
@@ -148,18 +149,18 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
       return;
     }
 
-    const isAgglomerateMappingEnabled = yield* select((storeState) => {
+    const isRemoteAgglomerateMappingEnabled = yield* select((storeState) => {
       if (!segmentationLayer) {
         return false;
       }
-
       const mappingInfo = getMappingInfo(
         storeState.temporaryConfiguration.activeMappingByLayer,
         segmentationLayer.name,
       );
       return (
         mappingInfo.mappingStatus === MappingStatusEnum.ENABLED &&
-        mappingInfo.mappingType === "HDF5"
+        mappingInfo.mappingType === "HDF5" &&
+        !needsLocalHdf5Mapping(storeState, segmentationLayer.name)
       );
     });
     const isZoomThresholdExceeded = yield* select(
@@ -168,7 +169,11 @@ export function* warnAboutSegmentationZoom(): Saga<void> {
         Math.log2(MAX_MAG_FOR_AGGLOMERATE_MAPPING),
     );
 
-    if (shouldDisplaySegmentationData() && isAgglomerateMappingEnabled && isZoomThresholdExceeded) {
+    if (
+      shouldDisplaySegmentationData() &&
+      isRemoteAgglomerateMappingEnabled &&
+      isZoomThresholdExceeded
+    ) {
       Toast.error(messages["tracing.segmentation_zoom_warning_agglomerate"], {
         sticky: false,
         timeout: 3000,

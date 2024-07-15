@@ -40,7 +40,8 @@ export function getAntdTheme(userTheme: Theme) {
     Tree: {
       colorBgContainer: "transparent",
       directoryNodeSelectedBg: ColorWKBlue,
-      titleHeight: 20, // default is 24px
+      titleHeight: 20, // default is 24px,
+      marginXXS: 2, // default is 4px; adjust to match checkboxes because of smaller titleHeight
     },
   };
 

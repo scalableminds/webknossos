@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.{
   AddLayerAnnotationUpdateAction,
@@ -9,21 +10,36 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   UpdateLayerMetadataAnnotationUpdateAction,
   UpdateMetadataAnnotationUpdateAction
 }
-import com.scalableminds.webknossos.tracingstore.controllers.GenericUpdateActionGroup
-import com.scalableminds.webknossos.tracingstore.tracings.UpdateActionGroup
+import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingUpdatesReport}
 import scalapb.GeneratedMessage
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class DSAnnotationService @Inject()() {
+class DSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient) {
   def storeUpdate(updateAction: GeneratedMessage)(implicit ec: ExecutionContext): Fox[Unit] = Fox.successful(())
 
-  def commitUpdates(tracingId: String,
+  def reportUpdates(annotationId: String,
                     updateGroups: List[GenericUpdateActionGroup],
-                    userToken: Option[String]): Fox[Long] = ???
+                    userToken: Option[String]): Fox[Unit] =
+    for {
+      _ <- remoteWebknossosClient.reportTracingUpdates(
+        TracingUpdatesReport(
+          annotationId,
+          timestamps = updateGroups.map(g => Instant(g.timestamp)),
+          statistics = updateGroups.flatMap(_.stats).lastOption,
+          significantChangesCount = updateGroups.map(_.significantChangesCount).sum,
+          viewChangesCount = updateGroups.map(_.viewChangesCount).sum,
+          userToken
+        ))
+    } yield ()
 
-  def newestMaterializableVersion(annotationId: String): Fox[Long] = ???
+  def currentVersion(annotationId: String): Fox[Long] = ???
+
+  def handleUpdateGroup(annotationId: String,
+                        updateGroup: GenericUpdateActionGroup,
+                        previousVersion: Long,
+                        userToken: Option[String]): Fox[Unit] = ???
 
   def applyUpdate(annotation: AnnotationProto, updateAction: GeneratedMessage)(
       implicit ec: ExecutionContext): Fox[AnnotationProto] =

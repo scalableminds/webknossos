@@ -1,33 +1,21 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore, UpdateActionGroup}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
-import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, DSAnnotationService}
+import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, GenericUpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
-import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future}
-
-case class GenericUpdateActionGroup(transactionGroupCount: Int,
-                                    transactionGroupIndex: Int,
-                                    version: Long,
-                                    transactionId: String)
-object GenericUpdateActionGroup {
-  implicit val jsonFormat: OFormat[GenericUpdateActionGroup] = Json.format[GenericUpdateActionGroup]
-}
+import scala.concurrent.ExecutionContext
 
 class DSAnnotationController @Inject()(
     accessTokenService: TracingStoreAccessTokenService,
     slackNotificationService: TSSlackNotificationService,
-    annotationService: DSAnnotationService,
-    transactionService: AnnotationTransactionService,
+    annotationTransactionService: AnnotationTransactionService,
     tracingDataStore: TracingDataStore)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreImplicits {
@@ -49,36 +37,16 @@ class DSAnnotationController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccess(UserAccessRequest.writeAnnotation(annotationId),
                                             urlOrHeaderToken(token, request)) {
-            val updateGroups = request.body
-            if (updateGroups.forall(_.transactionGroupCount == 1)) {
-              commitUpdates(annotationId, updateGroups, urlOrHeaderToken(token, request)).map(_ => Ok)
-              Fox.successful(Ok)
-            } else {
-              updateGroups
-                .foldLeft(annotationService.newestMaterializableVersion(annotationId)) {
-                  (currentCommittedVersionFox, updateGroup) =>
-                    transactionService.handleUpdateGroupForTransaction(annotationId,
-                                                                       currentCommittedVersionFox,
-                                                                       updateGroup,
-                                                                       urlOrHeaderToken(token, request))
-                }
-                .map(_ => Ok)
-              Fox.successful(Ok)
-            }
+            for {
+              _ <- annotationTransactionService.handleUpdateGroups(annotationId,
+                                                                   request.body,
+                                                                   urlOrHeaderToken(token, request))
+            } yield Ok
           }
         }
       }
     }
 
-  private val transactionGroupExpiry: FiniteDuration = 24 hours
-
-  private def commitUpdates(annotationId: String,
-                            updateGroups: List[GenericUpdateActionGroup],
-                            token: Option[String]): Fox[Unit] = {
-    val currentCommittedVersion: Fox[Long] =
-      tracingDataStore.annotationUpdates.getVersion(annotationId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
-    Fox.successful(())
-  }
 }
 
 // get version history

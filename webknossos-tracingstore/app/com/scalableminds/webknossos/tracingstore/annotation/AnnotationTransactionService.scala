@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.tracingstore.annotation
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
-import com.scalableminds.webknossos.tracingstore.controllers.GenericUpdateActionGroup
 import play.api.http.Status.CONFLICT
 import play.api.libs.json.Json
 
@@ -51,10 +50,10 @@ class AnnotationTransactionService @Inject()(
         Some(expiry))
     } yield ()
 
-  def handleUpdateGroupForTransaction(annotationId: String,
-                                      previousVersionFox: Fox[Long],
-                                      updateGroup: GenericUpdateActionGroup,
-                                      userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] =
+  private def handleUpdateGroupForTransaction(annotationId: String,
+                                              previousVersionFox: Fox[Long],
+                                              updateGroup: GenericUpdateActionGroup,
+                                              userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] =
     for {
       previousCommittedVersion: Long <- previousVersionFox
       result <- if (previousCommittedVersion + 1 == updateGroup.version) {
@@ -90,7 +89,7 @@ class AnnotationTransactionService @Inject()(
         previousActionGroupsToCommit
           .exists(_.transactionGroupIndex == 0) || updateGroup.transactionGroupCount == 1) ?~> s"Trying to commit a transaction without a group that has transactionGroupIndex 0."
       concatenatedGroup = concatenateUpdateGroupsOfTransaction(previousActionGroupsToCommit, updateGroup)
-      commitResult <- annotationService.commitUpdates(annotationId, List(concatenatedGroup), userToken)
+      commitResult <- commitUpdates(annotationId, List(concatenatedGroup), userToken)
       _ <- removeAllUncommittedFor(annotationId, updateGroup.transactionId)
     } yield commitResult
 
@@ -136,6 +135,39 @@ class AnnotationTransactionService @Inject()(
         transactionGroupIndex = 0,
       )
     }
+
+  def handleUpdateGroups(annotationId: String, updateGroups: List[GenericUpdateActionGroup], userToken: Option[String])(
+      implicit ec: ExecutionContext): Fox[Long] =
+    if (updateGroups.forall(_.transactionGroupCount == 1)) {
+      commitUpdates(annotationId, updateGroups, userToken)
+    } else {
+      updateGroups.foldLeft(annotationService.currentVersion(annotationId)) {
+        (currentCommittedVersionFox, updateGroup) =>
+          handleUpdateGroupForTransaction(annotationId, currentCommittedVersionFox, updateGroup, userToken)
+      }
+    }
+
+  // Perform version check and commit the passed updates
+  private def commitUpdates(annotationId: String,
+                            updateGroups: List[GenericUpdateActionGroup],
+                            userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] =
+    for {
+      _ <- annotationService.reportUpdates(annotationId, updateGroups, userToken)
+      currentCommittedVersion: Fox[Long] = annotationService.currentVersion(annotationId)
+      newVersion <- updateGroups.foldLeft(currentCommittedVersion) { (previousVersion, updateGroup) =>
+        previousVersion.flatMap { prevVersion: Long =>
+          if (prevVersion + 1 == updateGroup.version) {
+            for {
+              _ <- annotationService.handleUpdateGroup(annotationId, updateGroup, prevVersion, userToken)
+              _ <- saveToHandledGroupIdStore(annotationId,
+                                             updateGroup.transactionId,
+                                             updateGroup.version,
+                                             updateGroup.transactionGroupIndex)
+            } yield updateGroup.version
+          } else failUnlessAlreadyHandled(updateGroup, annotationId, prevVersion)
+        }
+      }
+    } yield newVersion
 
   /* If this update group has already been “handled” (successfully saved as either committed or uncommitted),
    * ignore it silently. This is in case the frontend sends a retry if it believes a save to be unsuccessful

@@ -2,7 +2,15 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import play.api.libs.json.{JsObject, Json, OFormat}
 
-case class GenericUpdateAction(actionTimestamp: Option[Long] = None)
+trait GenericUpdateAction {
+  def actionTimestamp: Option[Long]
+
+  def addTimestamp(timestamp: Long): GenericUpdateAction
+
+  def addInfo(info: Option[String]): GenericUpdateAction
+
+  def addAuthorId(authorId: Option[String]): GenericUpdateAction
+}
 
 object GenericUpdateAction {
   implicit val jsonFormat: OFormat[GenericUpdateAction] = Json.format[GenericUpdateAction]

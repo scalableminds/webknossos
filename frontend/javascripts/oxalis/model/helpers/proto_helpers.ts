@@ -6,6 +6,7 @@ import SkeletonTracingProto from "SkeletonTracing.proto";
 import VolumeTracingProto from "VolumeTracing.proto";
 // @ts-expect-error ts-migrate(2307) FIXME: Cannot find module 'ListOfLong.proto' or its co... Remove this comment to see the full error message
 import ListOfLongProto from "ListOfLong.proto";
+import { isBigInt } from "libs/utils";
 
 const PROTO_FILES = {
   skeleton: SkeletonTracingProto,
@@ -37,7 +38,7 @@ export function serializeProtoListOfLong<T extends number | bigint>(
 ): ArrayBuffer {
   // TODO: Proper 64 bit support (#6921)
   const numbers =
-    numbersOrBigInts.length > 0 && typeof numbersOrBigInts[0] === "bigint"
+    numbersOrBigInts.length > 0 && isBigInt(numbersOrBigInts[0])
       ? numbersOrBigInts.map((val) => Number(val))
       : numbersOrBigInts;
 

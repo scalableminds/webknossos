@@ -3,7 +3,7 @@ import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'java... Remove this comment to see the full error message
 import naturalSort from "javascript-natural-sort";
 import type { APIDataset, APIUser } from "types/api_flow_types";
-import type { BoundingBoxObject } from "oxalis/store";
+import type { BoundingBoxObject, NumberLike } from "oxalis/store";
 import type {
   Vector3,
   Vector4,
@@ -1237,9 +1237,13 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
   return value !== null && value !== undefined;
 }
 
-export function isNumberMap(x: Map<any, any>): x is Map<number, number> {
+export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, number> {
   const { value } = x.entries().next();
   return value && typeof value[0] === "number";
+}
+
+export function isBigInt(x: NumberLike): x is bigint {
+  return typeof x === "bigint";
 }
 
 export function assertNever(value: never): never {

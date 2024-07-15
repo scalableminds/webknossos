@@ -76,7 +76,7 @@ import _ from "lodash";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
 import { Action } from "../actions/actions";
-import { isNumberMap } from "libs/utils";
+import { isBigInt, isNumberMap } from "libs/utils";
 
 export default function* proofreadRootSaga(): Saga<void> {
   yield* take("INITIALIZE_SKELETONTRACING");
@@ -1231,7 +1231,9 @@ function* splitAgglomerateInMapping(
   const mappingEntries = Array.from(activeMapping.mapping as NumberLikeMap);
 
   const adaptToType =
-    typeof mappingEntries[0] === "bigint" ? (el: number) => BigInt(el) : (el: number) => el;
+    mappingEntries.length > 0 && isBigInt(mappingEntries[0][0])
+      ? (el: number) => BigInt(el)
+      : (el: number) => el;
 
   // If the mapping contains BigInts, we need a BigInt for the filtering
   const comparableSourceAgglomerateId = adaptToType(sourceAgglomerateId);
@@ -1272,9 +1274,9 @@ function mergeAgglomeratesInMapping(
   sourceAgglomerateId: number,
 ): Mapping {
   const adaptToType =
-    typeof activeMapping.mapping?.keys().next().value === "bigint"
-      ? (el: number) => BigInt(el)
-      : (el: number) => el;
+    activeMapping.mapping && isNumberMap(activeMapping.mapping)
+      ? (el: number) => el
+      : (el: number) => BigInt(el);
 
   const typedTargetAgglomerateId = adaptToType(targetAgglomerateId);
   const typedSourceAgglomerateId = adaptToType(sourceAgglomerateId);

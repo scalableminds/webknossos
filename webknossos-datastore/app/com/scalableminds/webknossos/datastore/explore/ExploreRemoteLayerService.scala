@@ -108,6 +108,53 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
     } else Fox.successful(())
 
   private val MAX_RECURSIVE_SEARCH_DEPTH = 8
+
+  private val MAX_EXPLORED_ITEMS_PER_LEVEL = 10
+
+  private def recursivelyExploreRemoteLayerAtPaths(remotePathsWithDepth: List[(VaultPath, Int)],
+                                                   credentialId: Option[String],
+                                                   explorers: List[RemoteLayerExplorer],
+                                                   reportMutable: ListBuffer[String])(
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+    remotePathsWithDepth match {
+      case Nil =>
+        Fox.empty
+      case (path, searchDepth) :: remainingPaths =>
+        if (searchDepth > MAX_RECURSIVE_SEARCH_DEPTH) Fox.empty
+        else {
+          explorePathsWithAllExplorersAndGetFirstMatch(path, explorers, credentialId, reportMutable).futureBox.flatMap(
+            explorationResultOfPath =>
+              handleExploreResultOfPath(explorationResultOfPath,
+                                        path,
+                                        searchDepth,
+                                        remainingPaths,
+                                        credentialId,
+                                        explorers,
+                                        reportMutable))
+        }
+    }
+
+  private def explorePathsWithAllExplorersAndGetFirstMatch(path: VaultPath,
+                                                           explorers: List[RemoteLayerExplorer],
+                                                           credentialId: Option[String],
+                                                           reportMutable: ListBuffer[String])(
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+    Fox
+      .sequence(explorers.map { explorer =>
+        {
+          explorer
+            .explore(path, credentialId)
+            .futureBox
+            .flatMap {
+              handleExploreResult(_, explorer, path, reportMutable)
+            }
+            .toFox
+        }
+      })
+      .map(explorationResults => Fox.firstSuccess(explorationResults.map(_.toFox)))
+      .toFox
+      .flatten
+
   private def handleExploreResult(explorationResult: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
                                   explorer: RemoteLayerExplorer,
                                   path: VaultPath,
@@ -122,30 +169,22 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
     case Empty =>
       reportMutable += s"Error when reading $path as ${explorer.name}: Empty"
       Fox.empty
-
   }
 
-  private val MAX_EXPLORED_ITEMS_PER_LEVEL = 10
-
-  private def handleExplorationResultOfPath(explorationResultOfPath: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
-                                            path: VaultPath,
-                                            searchDepth: Int,
-                                            remainingPaths: List[(VaultPath, Int)],
-                                            credentialId: Option[String],
-                                            explorers: List[RemoteLayerExplorer],
-                                            reportMutable: ListBuffer[String])(implicit ec: ExecutionContext) =
+  // In case a data layers were found, explore sibling directories for more layers, else continue recursive exploration.
+  private def handleExploreResultOfPath(explorationResultOfPath: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
+                                        path: VaultPath,
+                                        searchDepth: Int,
+                                        remainingPaths: List[(VaultPath, Int)],
+                                        credentialId: Option[String],
+                                        explorers: List[RemoteLayerExplorer],
+                                        reportMutable: ListBuffer[String])(
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     explorationResultOfPath match {
       case Full(layersWithVoxelSizes) =>
-        val sameParentRemainingPaths = remainingPaths.filter(_._1.parent == path.parent)
         // Try to look for additional layers in sibling directories.
-        // TODO: Problem! This runs in parallel with other sub dirs
-        for {
-          layersWithVoxelSizesInSiblingPaths <- Fox
-            .sequenceOfFulls(sameParentRemainingPaths.map(path =>
-              recursivelyExploreRemoteLayerAtPaths(List(path), credentialId, explorers, reportMutable)))
-            .toFox
-          allLayersWithVoxelSizes = layersWithVoxelSizes +: layersWithVoxelSizesInSiblingPaths
-        } yield allLayersWithVoxelSizes.flatten
+        exploreSiblingDirectoriesOf(path, remainingPaths, credentialId, explorers, reportMutable).map(
+          foundLayersOfSiblingPaths => layersWithVoxelSizes ++ foundLayersOfSiblingPaths)
 
       case Empty =>
         for {
@@ -161,44 +200,20 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         Fox.successful(List.empty)
     }
 
-  private def recursivelyExploreRemoteLayerAtPaths(remotePathsWithDepth: List[(VaultPath, Int)],
-                                                   credentialId: Option[String],
-                                                   explorers: List[RemoteLayerExplorer],
-                                                   reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
-    remotePathsWithDepth match {
-      case Nil =>
-        Fox.empty
-      case (path, searchDepth) :: remainingPaths =>
-        if (searchDepth > MAX_RECURSIVE_SEARCH_DEPTH) Fox.empty
-        else {
-
-          Fox
-            .sequence(explorers.map { explorer =>
-              {
-                explorer
-                  .explore(path, credentialId)
-                  .futureBox
-                  .flatMap {
-                    handleExploreResult(_, explorer, path, reportMutable)
-                  }
-                  .toFox
-              }
-            })
-            .map(explorationResults => Fox.firstSuccess(explorationResults.map(_.toFox)))
-            .toFox
-            .flatten
-            .futureBox
-            .flatMap(
-              explorationResultOfPath =>
-                handleExplorationResultOfPath(explorationResultOfPath,
-                                              path,
-                                              searchDepth,
-                                              remainingPaths,
-                                              credentialId,
-                                              explorers,
-                                              reportMutable))
-        }
-    }
+  private def exploreSiblingDirectoriesOf(path: VaultPath,
+                                          remainingPaths: List[(VaultPath, Int)],
+                                          credentialId: Option[String],
+                                          explorers: List[RemoteLayerExplorer],
+                                          reportMutable: ListBuffer[String])(
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] = {
+    val sameParentRemainingPaths = remainingPaths.filter(_._1.parent == path.parent)
+    // Try to look for additional layers in sibling directories.
+    val layersWithVoxelSizesInSiblingPaths = Fox
+      .sequenceOfFulls(sameParentRemainingPaths.map(path =>
+        recursivelyExploreRemoteLayerAtPaths(List(path), credentialId, explorers, reportMutable)))
+      .map(listOfLayersWithVoxelSizes => listOfLayersWithVoxelSizes.flatten)
+      .toFox
+    layersWithVoxelSizesInSiblingPaths
+  }
 
 }

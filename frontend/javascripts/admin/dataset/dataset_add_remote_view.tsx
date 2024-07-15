@@ -394,7 +394,7 @@ function AddRemoteLayer({
     if (userInput.startsWith("https://") || userInput.startsWith("http://")) {
       setSelectedProtocol("https");
     } else if (userInput.startsWith("s3://")) {
-      setSelectedProtocol("s3"); // Unused
+      setSelectedProtocol("s3");
     } else if (userInput.startsWith("gs://")) {
       setSelectedProtocol("gs");
     } else if (userInput.startsWith("file://")) {

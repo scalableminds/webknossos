@@ -343,8 +343,8 @@ function JobListView() {
     } else if (job.type === APIJobType.TRAIN_MODEL) {
       return (
         <span>
-          The model may now be selected from the &quot;AI Analysis&quot; button when viewing a
-          dataset.
+          {job.state === "SUCCESS" &&
+            "The model may now be selected from the &quot;AI Analysis&quot; button when viewing a dataset."}
         </span>
       );
     } else {

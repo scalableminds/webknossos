@@ -4,7 +4,7 @@ import { AsyncButton } from "components/async_clickables";
 import { switchToOrganization } from "admin/admin_rest_api";
 import messages from "messages";
 import { Link } from "react-router-dom";
-import { Button, Col, Row } from "antd";
+import { Button, Card, Col, Row } from "antd";
 import LoginForm from "admin/auth/login_form";
 
 type Props = {
@@ -98,19 +98,13 @@ export function BrainSpinnerWithError({
 
 export function CoverWithLogin({ onLoggedIn }: { onLoggedIn: () => void }) {
   return (
-    <div className="cover-whole-screen">
-      <Row
-        justify="center"
-        style={{
-          padding: 50,
-        }}
-        align="middle"
-      >
-        <Col span={8}>
+    <Row justify="center" align="middle" className="login-view">
+      <Col xs={22} sm={20} md={16} lg={12} xl={8}>
+        <Card className="login-content">
           <h3>Try logging in to view the dataset.</h3>
           <LoginForm layout="horizontal" onLoggedIn={onLoggedIn} />
-        </Col>
-      </Row>
-    </div>
+        </Card>
+      </Col>
+    </Row>
   );
 }

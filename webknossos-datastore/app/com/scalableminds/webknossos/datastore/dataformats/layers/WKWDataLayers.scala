@@ -1,8 +1,8 @@
-package com.scalableminds.webknossos.datastore.dataformats.wkw
+package com.scalableminds.webknossos.datastore.dataformats.layers
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
-import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayBucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
@@ -22,9 +22,11 @@ trait WKWLayer extends DataLayer {
   override def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                               dataSourceId: DataSourceId,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
-    new WKWBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
+    new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 
   def wkwResolutions: List[WKWResolution]
+
+  def mags: List[MagLocator] = wkwResolutions.map(wkwResolution => MagLocator(wkwResolution.resolution))
 
   def resolutions: List[Vec3Int] = wkwResolutions.map(_.resolution)
 

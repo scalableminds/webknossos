@@ -17,6 +17,7 @@ import com.scalableminds.webknossos.datastore.geometry.{
   Vec3IntProto
 }
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
   AnnotationLayerStatistics,
@@ -67,7 +68,7 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               volumeTracingOpt: Option[VolumeTracing],
                               volumeDataOpt: Option[Array[Byte]],
                               name: String,
-                              scaleOpt: Option[Vec3Double],
+                              voxelSizeOpt: Option[VoxelSize],
                               annotation: Annotation,
                               user: User,
                               taskOpt: Option[Task],
@@ -325,7 +326,7 @@ class AnnotationService @Inject()(
                                                 None,
                                                 skipVolumeData = true,
                                                 volumeDataZipFormat = VolumeDataZipFormat.wkw,
-                                                dataset.scale)
+                                                dataset.voxelSize)
         } yield Some(oldPrecedenceLayerFetched)
 
     def extractPrecedenceProperties(oldPrecedenceLayer: FetchedAnnotationLayer): RedundantTracingProperties =
@@ -434,15 +435,6 @@ class AnnotationService @Inject()(
       _ = logger.info(
         s"Replacing volume tracing ${volumeAnnotationLayer.tracingId} by downsampled copy $newVolumeTracingId for annotation ${annotation._id}.")
       _ <- annotationLayersDAO.replaceTracingId(annotation._id, volumeAnnotationLayer.tracingId, newVolumeTracingId)
-    } yield ()
-
-  def addSegmentIndex(annotation: Annotation, volumeAnnotationLayer: AnnotationLayer)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
-      _ <- bool2Fox(volumeAnnotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.segmentIndex.volumeOnly"
-      rpcClient <- tracingStoreService.clientFor(dataset)
-      _ <- rpcClient.addSegmentIndex(volumeAnnotationLayer.tracingId, dryRun = false)
     } yield ()
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
@@ -668,7 +660,7 @@ class AnnotationService @Inject()(
                                 volumeTracingOpt,
                                 volumeDataOpt,
                                 name,
-                                scaleOpt,
+                                voxelSizeOpt,
                                 annotation,
                                 user,
                                 taskOpt,
@@ -683,7 +675,7 @@ class AnnotationService @Inject()(
               name,
               fetchedAnnotationLayersForAnnotation,
               Some(annotation),
-              scaleOpt,
+              voxelSizeOpt,
               Some(name + "_data.zip"),
               organizationName,
               conf.Http.uri,
@@ -703,7 +695,7 @@ class AnnotationService @Inject()(
       skipVolumeData: Boolean,
       volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext): Fox[List[List[DownloadAnnotation]]] = {
 
-    def getSingleDownloadAnnotation(annotation: Annotation, scaleOpt: Option[Vec3Double]) =
+    def getSingleDownloadAnnotation(annotation: Annotation, voxelSizeOpt: Option[VoxelSize]) =
       for {
         user <- userService.findOneCached(annotation._user) ?~> "user.notFound"
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"
@@ -719,7 +711,7 @@ class AnnotationService @Inject()(
                            None,
                            None,
                            name,
-                           scaleOpt,
+                           voxelSizeOpt,
                            annotation,
                            user,
                            taskOpt,
@@ -758,7 +750,7 @@ class AnnotationService @Inject()(
               .getVolumeData(tracingId,
                              version = None,
                              volumeDataZipFormat = volumeDataZipFormat,
-                             voxelSize = dataset.scale)
+                             voxelSize = dataset.voxelSize)
               .map(Some(_))
         }
       } yield tracingDataObjects
@@ -766,7 +758,7 @@ class AnnotationService @Inject()(
     def getDatasetScale(datasetId: ObjectId) =
       for {
         dataset <- datasetDAO.findOne(datasetId)
-      } yield dataset.scale
+      } yield dataset.voxelSize
 
     val annotationsGrouped: Map[ObjectId, List[Annotation]] = annotations.groupBy(_._dataset)
     val tracingsGrouped = annotationsGrouped.map {
@@ -908,6 +900,7 @@ class AnnotationService @Inject()(
       Json.obj(
         "modified" -> annotation.modified,
         "state" -> annotation.state,
+        "isLockedByOwner" -> annotation.isLockedByOwner,
         "id" -> annotation.id,
         "name" -> annotation.name,
         "description" -> annotation.description,
@@ -1010,6 +1003,7 @@ class AnnotationService @Inject()(
       "description" -> annotationInfo.description,
       "typ" -> annotationInfo.typ,
       "stats" -> Json.obj(), // included for legacy parsers
+      "isLockedByOwner" -> annotationInfo.isLockedByOwner,
       "annotationLayers" -> annotationLayerJson,
       "dataSetName" -> annotationInfo.dataSetName,
       "organization" -> annotationInfo.organizationName,

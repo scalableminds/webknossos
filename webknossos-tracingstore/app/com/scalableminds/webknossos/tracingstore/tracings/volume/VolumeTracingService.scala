@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.datastore.models.{
   BucketPosition,
   UnsignedInteger,
   UnsignedIntegerArray,
+  VoxelSize,
   WebknossosAdHocMeshRequest
 }
 import com.scalableminds.webknossos.datastore.services._
@@ -87,7 +88,7 @@ class VolumeTracingService @Inject()(
 
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
-  private val binaryDataService = new BinaryDataService(Paths.get(""), 100, None, None, None, None, None)
+  private val binaryDataService = new BinaryDataService(Paths.get(""), None, None, None, None, None)
 
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService
@@ -473,7 +474,7 @@ class VolumeTracingService @Inject()(
   def allDataZip(tracingId: String,
                  tracing: VolumeTracing,
                  volumeDataZipFormat: VolumeDataZipFormat,
-                 voxelSize: Option[Vec3Double])(implicit ec: ExecutionContext): Fox[Files.TemporaryFile] = {
+                 voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[Files.TemporaryFile] = {
     val zipped = temporaryFileCreator.create(tracingId, ".zip")
     val os = new BufferedOutputStream(new FileOutputStream(new File(zipped.path.toString)))
     allDataToOutputStream(tracingId, tracing, volumeDataZipFormat, voxelSize, os).map(_ => zipped)
@@ -482,7 +483,7 @@ class VolumeTracingService @Inject()(
   private def allDataToOutputStream(tracingId: String,
                                     tracing: VolumeTracing,
                                     volumeDataZipFormmat: VolumeDataZipFormat,
-                                    voxelSize: Option[Vec3Double],
+                                    voxelSize: Option[VoxelSize],
                                     os: OutputStream)(implicit ec: ExecutionContext): Fox[Unit] = {
     val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets: Iterator[NamedStream] = volumeDataZipFormmat match {
@@ -520,7 +521,7 @@ class VolumeTracingService @Inject()(
       isTemporaryTracing <- isTemporaryTracing(tracingId)
       dataLayer = volumeTracingLayer(tracingId, tracing, isTemporaryTracing, includeFallbackDataIfAvailable, userToken)
       requests = dataRequests.map(r =>
-        DataServiceDataRequest(null, dataLayer, None, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
+        DataServiceDataRequest(null, dataLayer, r.cuboid(dataLayer), r.settings.copy(appliedAgglomerate = None)))
       data <- binaryDataService.handleDataRequests(requests)
     } yield data
 
@@ -690,7 +691,7 @@ class VolumeTracingService @Inject()(
         segmentationLayer,
         request.cuboid(segmentationLayer),
         request.segmentId,
-        request.scale,
+        request.voxelSizeFactorInUnit,
         None,
         None,
         request.additionalCoordinates,

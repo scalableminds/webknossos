@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(113);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(117);
 COMMIT TRANSACTION;
 
 
@@ -39,6 +39,7 @@ CREATE TABLE webknossos.annotations(
   name VARCHAR(256) NOT NULL DEFAULT '',
   viewConfiguration JSONB,
   state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Active',
+  isLockedByOwner BOOLEAN NOT NULL DEFAULT FALSE,
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   tracingTime BIGINT,
   typ webknossos.ANNOTATION_TYPE NOT NULL,
@@ -100,6 +101,7 @@ CREATE TABLE webknossos.publications(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TYPE webknossos.LENGTH_UNIT AS ENUM ('yoctometer', 'zeptometer', 'attometer', 'femtometer', 'picometer', 'nanometer', 'micrometer', 'millimeter', 'centimeter', 'decimeter', 'meter', 'hectometer', 'kilometer', 'megameter', 'gigameter', 'terameter', 'petameter', 'exameter', 'zettameter', 'yottameter', 'angstrom', 'inch', 'foot', 'yard', 'mile', 'parsec');
 CREATE TABLE webknossos.datasets(
   _id CHAR(24) PRIMARY KEY,
   _dataStore VARCHAR(256) NOT NULL,
@@ -115,7 +117,8 @@ CREATE TABLE webknossos.datasets(
   isPublic BOOLEAN NOT NULL DEFAULT false,
   isUsable BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL,
-  scale webknossos.VECTOR3,
+  voxelSizeFactor webknossos.VECTOR3,
+  voxelSizeUnit webknossos.LENGTH_UNIT,
   status VARCHAR(1024) NOT NULL DEFAULT '',
   sharingToken CHAR(256),
   logoUrl VARCHAR(2048),
@@ -322,7 +325,6 @@ CREATE TABLE webknossos.organizations(
   displayName VARCHAR(1024) NOT NULL DEFAULT '',
   _rootFolder CHAR(24) NOT NULL UNIQUE,
   newUserMailingList VARCHAR(512) NOT NULL DEFAULT '',
-  overTimeMailingList VARCHAR(512) NOT NULL DEFAULT '',
   enableAutoVerify BOOLEAN NOT NULL DEFAULT false,
   pricingPlan webknossos.PRICING_PLANS NOT NULL DEFAULT 'Custom',
   paidUntil TIMESTAMPTZ DEFAULT NULL,
@@ -465,6 +467,7 @@ CREATE TABLE webknossos.jobs(
   state webknossos.JOB_STATE NOT NULL DEFAULT 'PENDING', -- always updated by the worker
   manualState webknossos.JOB_STATE, -- set by the user or admin
   _worker CHAR(24),
+  _voxelytics_workflowHash VARCHAR(512),
   latestRunId VARCHAR(1024),
   returnValue Text,
   started TIMESTAMPTZ,
@@ -537,6 +540,45 @@ CREATE TABLE webknossos.emailVerificationKeys(
   _multiUser CHAR(24) NOT NULL,
   validUntil TIMESTAMPTZ,
   isUsed BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei');
+
+CREATE TABLE webknossos.aiModels(
+   -- todo foreign keys
+  _id CHAR(24) PRIMARY KEY,
+  _organization CHAR(24) NOT NULL,
+  _dataStore VARCHAR(256) NOT NULL, -- redundant to job, but must be available for jobless models
+  _user CHAR(24) NOT NULL,
+  _trainingJob CHAR(24),
+  name VARCHAR(1024) NOT NULL,
+  comment VARCHAR(1024),
+  category webknossos.AI_MODEL_CATEGORY,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  UNIQUE (_organization, name)
+);
+
+CREATE TABLE webknossos.aiModel_trainingAnnotations(
+  _aiModel CHAR(24) NOT NULL,
+  _annotation CHAR(24) NOT NULL,
+  PRIMARY KEY(_aiModel,_annotation)
+);
+
+CREATE TABLE webknossos.aiInferences(
+  _id CHAR(24) PRIMARY KEY,
+  _organization CHAR(24) NOT NULL,
+  _aiModel CHAR(24) NOT NULL,
+  _newDataset CHAR(24),
+  _annotation CHAR(24),
+  _inferenceJob CHAR(24) NOT NULL,
+  boundingBox webknossos.BOUNDING_BOX NOT NULL,
+  newSegmentationLayerName VARCHAR(256) NOT NULL,
+  maskAnnotationLayerName VARCHAR(256),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 CREATE TYPE webknossos.VOXELYTICS_RUN_STATE AS ENUM ('PENDING', 'SKIPPED', 'RUNNING', 'COMPLETE', 'FAILED', 'CANCELLED', 'STALE');
@@ -650,6 +692,7 @@ CREATE TABLE webknossos.analyticsEvents(
   CONSTRAINT eventProperties CHECK(jsonb_typeof(eventProperties) = 'object')
 );
 
+
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 CREATE VIEW webknossos.meshes_ AS SELECT * FROM webknossos.meshes WHERE NOT isDeleted;
 CREATE VIEW webknossos.publications_ AS SELECT * FROM webknossos.publications WHERE NOT isDeleted;
@@ -674,6 +717,8 @@ CREATE VIEW webknossos.annotation_privateLinks_ as SELECT * FROM webknossos.anno
 CREATE VIEW webknossos.folders_ as SELECT * FROM webknossos.folders WHERE NOT isDeleted;
 CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHERE NOT isDeleted;
 CREATE VIEW webknossos.maintenances_ as SELECT * FROM webknossos.maintenances WHERE NOT isDeleted;
+CREATE VIEW webknossos.aiModels_ as SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
+CREATE VIEW webknossos.aiInferences_ as SELECT * FROM webknossos.aiInferences WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT
@@ -808,6 +853,20 @@ ALTER TABLE webknossos.voxelytics_chunkProfilingEvents
   ADD FOREIGN KEY (_chunk) REFERENCES webknossos.voxelytics_chunks(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_artifactFileChecksumEvents
   ADD FOREIGN KEY (_artifact) REFERENCES webknossos.voxelytics_artifacts(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.aiModels
+  ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
+  ADD FOREIGN KEY (_dataStore) REFERENCES webknossos.datastores(name) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
+  ADD FOREIGN KEY (_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
+  ADD FOREIGN KEY (_trainingJob) REFERENCES webknossos.jobs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.aiInferences
+  ADD FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
+  ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
+  ADD FOREIGN KEY (_newDataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
+  ADD FOREIGN KEY (_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
+  ADD FOREIGN KEY (_inferenceJob) REFERENCES webknossos.jobs(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.aiModel_trainingAnnotations
+  ADD FOREIGN KEY (_aiModel) REFERENCES webknossos.aiModels(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
+  ADD FOREIGN KEY (_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 
 CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$

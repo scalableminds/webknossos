@@ -35,6 +35,12 @@ mockRequire("libs/toast", {
   close: _.noop,
   success: _.noop,
 });
+mockRequire("libs/user_local_storage", {
+  getItem: _.noop,
+  setItem: _.noop,
+  removeItem: _.noop,
+  clear: _.noop,
+});
 const { wkReadyAction } = mockRequire.reRequire("oxalis/model/actions/actions");
 const { acquireAnnotationMutexMaybe } = mockRequire.reRequire("oxalis/model/sagas/annotation_saga");
 

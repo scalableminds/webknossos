@@ -96,7 +96,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       segmentationLayer,
       Cuboid(topLeft, chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
       fullMeshRequest.segmentId,
-      dataSource.scale,
+      dataSource.scale.factor,
       fullMeshRequest.mappingName,
       fullMeshRequest.mappingType,
       fullMeshRequest.additionalCoordinates
@@ -118,7 +118,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       organizationName: String,
       datasetName: String,
       layerName: String,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Array[Byte]] =
     for {
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "meshFileName.needed"
       before = Instant.now
@@ -134,6 +134,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         fullMeshRequest.editableMappingTracingId,
         fullMeshRequest.segmentId,
         mappingNameForMeshFile,
+        omitMissing = false,
         token
       )
       chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegments(organizationName,

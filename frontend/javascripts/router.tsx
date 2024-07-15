@@ -68,6 +68,8 @@ import VerifyEmailView from "admin/auth/verify_email_view";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
 import loadable from "libs/lazy_loader";
 import { EmptyObject } from "types/globals";
+import { DatasetURLImport } from "admin/dataset/dataset_url_import";
+import AiModelListView from "admin/voxelytics/ai_model_list_view";
 
 const { Content } = Layout;
 
@@ -300,6 +302,11 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
+                path="/import"
+                component={DatasetURLImport}
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
                 path="/teams"
                 component={TeamListView}
                 requiresAdminOrManagerRole
@@ -434,24 +441,6 @@ class ReactRouter extends React.Component<Props> {
                 path="/datasets/upload"
                 requiresAdminOrManagerRole
                 render={() => <DatasetAddView />}
-              />
-              <SecuredRouteWithErrorBoundary
-                isAuthenticated={isAuthenticated}
-                path="/datasets/:organizationName/:datasetName/import"
-                requiresAdminOrManagerRole
-                render={({ match }: ContextRouter) => (
-                  <DatasetSettingsView
-                    isEditingMode={false}
-                    datasetId={{
-                      name: match.params.datasetName || "",
-                      owningOrganization: match.params.organizationName || "",
-                    }}
-                    onComplete={() =>
-                      window.location.replace(`${window.location.origin}/dashboard/datasets`)
-                    }
-                    onCancel={() => window.history.back()}
-                  />
-                )}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}
@@ -709,6 +698,12 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/workflows"
                 component={AsyncWorkflowListView}
+                exact
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/aiModels"
+                component={AiModelListView}
                 exact
               />
               <SecuredRouteWithErrorBoundary

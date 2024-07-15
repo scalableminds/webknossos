@@ -652,45 +652,9 @@ export function filterNullValues<T>(arr: Array<T | null | undefined>): T[] {
   return arr.filter((el) => el != null);
 }
 
-// TODO: Remove this function as it's currently unused
-// Filters an array given a search string. Supports searching for several words as OR query.
-// Supports nested properties
-export function filterWithSearchQueryOR<
-  T extends Readonly<Record<string, unknown>>,
-  P extends keyof T,
->(
-  collection: Array<T>,
-  properties: Array<P | ((arg0: T) => P | Array<any> | string)>,
-  searchQuery: string,
-): Array<T> {
-  if (searchQuery === "") {
-    return collection;
-  } else {
-    const words = _.map(searchQuery.split(" "), (element) =>
-      element.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&"),
-    );
-
-    const uniques = _.filter(_.uniq(words), (element) => element !== "");
-
-    const pattern = `(${uniques.join("|")})`;
-    const regexp = new RegExp(pattern, "igm");
-    return collection.filter((model) =>
-      _.some(properties, (fieldName) => {
-        const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
-
-        if (value != null && (typeof value === "string" || value instanceof Object)) {
-          const recursiveValues = getRecursiveValues(value);
-          return _.some(recursiveValues, (v) => v?.toString().match(regexp));
-        } else {
-          return false;
-        }
-      }),
-    );
-  }
-}
-
 // Filters an array given a search string. Supports searching for several words as AND query.
-// Supports nested properties
+// Supports nested properties.
+// Its pendant was removed int #7783 as it was unused.
 export function filterWithSearchQueryAND<
   T extends Readonly<Record<string, unknown>>,
   P extends keyof T,
@@ -1198,4 +1162,40 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
   // e.g. [1, 2, undefined].filter(notEmpty) => type should be number[]
   // Source https://github.com/microsoft/TypeScript/issues/45097#issuecomment-882526325
   return value !== null && value !== undefined;
+}
+
+export function assertNever(value: never): never {
+  throw new Error(`Unexpected value that is not 'never': ${JSON.stringify(value)}`);
+}
+
+/**
+ * Returns a URL safe, base 62 encoded hash code from a string
+ * @param  {String} str The string to hash.
+ * @return {string}    A 32bit integer hash code encoded in base 62.
+ * @see https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript (original link is dead)
+ */
+export function computeHash(str: string): string | undefined {
+  let hash = 0;
+  for (let i = 0, len = str.length; i < len; i++) {
+    let chr = str.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  const hashString = encodeToBase62(hash);
+  return hashString;
+}
+
+export function encodeToBase62(numberToEncode: number): string {
+  const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  if (numberToEncode === 0) return base62Chars[0];
+  if (numberToEncode === -1) return base62Chars[61];
+  let encoded = "";
+  let num = numberToEncode;
+  while (num !== 0 && num !== -1) {
+    // for positive numberToEncode, num will eventually be 0, for negative numberToEncode, num will eventually be -1
+    const modulo = mod(num, 62);
+    encoded = base62Chars[modulo] + encoded;
+    num = Math.floor(num / 62);
+  }
+  return encoded;
 }

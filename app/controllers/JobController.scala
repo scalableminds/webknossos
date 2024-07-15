@@ -1,7 +1,7 @@
 package controllers
 
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.geometry.Vec3Int
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService}
@@ -19,7 +19,7 @@ import java.util.Date
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import models.team.PricingPlan
 
 object MovieResolutionSetting extends ExtendedEnumeration {
@@ -46,7 +46,7 @@ object AnimationJobOptions {
   implicit val jsonFormat: OFormat[AnimationJobOptions] = Json.format[AnimationJobOptions]
 }
 
-class JobsController @Inject()(
+class JobController @Inject()(
     jobDAO: JobDAO,
     sil: Silhouette[WkEnv],
     datasetDAO: DatasetDAO,
@@ -109,12 +109,18 @@ class JobsController @Inject()(
   }
 
   // Note that the dataset has to be registered by reserveUpload via the datastore first.
-  def runConvertToWkwJob(organizationName: String, datasetName: String, scale: String): Action[AnyContent] =
+  def runConvertToWkwJob(organizationName: String,
+                         datasetName: String,
+                         scale: String,
+                         unit: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
                                                                                        organizationName)
+          voxelSizeFactor <- Vec3Double.fromUriLiteral(scale).toFox
+          voxelSizeUnit <- Fox.runOptional(unit)(u => LengthUnit.fromString(u).toFox)
+          voxelSize = VoxelSize.fromFactorAndUnitWithDefault(voxelSizeFactor, voxelSizeUnit)
           _ <- bool2Fox(request.identity._organization == organization._id) ~> FORBIDDEN
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
@@ -124,7 +130,7 @@ class JobsController @Inject()(
             "organization_name" -> organizationName,
             "organization_display_name" -> organization.displayName,
             "dataset_name" -> datasetName,
-            "scale" -> scale
+            "scale" -> voxelSize.toNanometer.toUriLiteral
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)
@@ -278,6 +284,36 @@ class JobsController @Inject()(
             "bbox" -> bbox,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunInferMitochondria"
+          js <- jobService.publicWrites(job)
+        } yield Ok(js)
+      }
+    }
+
+  def runAlignSectionsJob(organizationName: String,
+                          datasetName: String,
+                          layerName: String,
+                          newDatasetName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          organization <- organizationDAO.findOneByName(organizationName) ?~> Messages("organization.notFound",
+                                                                                       organizationName)
+          _ <- bool2Fox(request.identity._organization == organization._id) ?~> "job.alignSections.notAllowed.organization" ~> FORBIDDEN
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
+            "dataset.notFound",
+            datasetName) ~> NOT_FOUND
+          _ <- datasetService.assertValidDatasetName(newDatasetName)
+          _ <- datasetService.assertValidLayerNameLax(layerName)
+          multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.alignSections.notAllowed.onlySuperUsers"
+          command = JobCommand.align_sections
+          commandArgs = Json.obj(
+            "organization_name" -> organizationName,
+            "dataset_name" -> datasetName,
+            "new_dataset_name" -> newDatasetName,
+            "layer_name" -> layerName,
+          )
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunAlignSections"
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }

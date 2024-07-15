@@ -17,6 +17,7 @@ import React, { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
 import {
   APIJobType,
+  VoxelSize,
   type AdditionalAxis,
   type APIDataLayer,
   type APIDataset,
@@ -32,14 +33,10 @@ import {
   getAuthToken,
   startExportTiffJob,
 } from "admin/admin_rest_api";
-import {
-  LayerSelection,
-  BoundingBoxSelection,
-  getReadableNameOfVolumeLayer,
-  MagSlider,
-} from "oxalis/view/action-bar/starting_job_modals";
+import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
+  getReadableNameOfVolumeLayer,
   getVolumeTracingById,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -59,6 +56,7 @@ import {
 import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
 import { BoundingBoxType, Vector3 } from "oxalis/constants";
 import { useStartAndPollJob } from "admin/job/job_hooks";
+import { LayerSelection } from "components/layer_selection";
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";
@@ -178,8 +176,10 @@ function estimateFileSize(
 }
 
 function formatSelectedScale(dataset: APIDataset, mag: Vector3) {
-  const scale = dataset.dataSource.scale;
-  return formatScale([scale[0] * mag[0], scale[1] * mag[1], scale[2] * mag[2]]);
+  const magAdaptedScale = dataset.dataSource.scale.factor.map((f, i) => f * mag[i]);
+  const unit = dataset.dataSource.scale.unit;
+  const scale = { factor: magAdaptedScale, unit } as VoxelSize;
+  return formatScale(scale);
 }
 
 export function Hint({

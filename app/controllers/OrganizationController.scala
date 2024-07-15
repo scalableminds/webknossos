@@ -202,6 +202,7 @@ class OrganizationController @Inject()(
       _ = Mailer ! Send(defaultMails.extendPricingPlanMail(request.identity, userEmail))
       _ = Mailer ! Send(
         defaultMails.upgradePricingPlanRequestMail(request.identity,
+                                                   userEmail,
                                                    organization.displayName,
                                                    "Extend WEBKNOSSOS plan by a year"))
     } yield Ok
@@ -223,6 +224,7 @@ class OrganizationController @Inject()(
         _ = Mailer ! Send(mail(request.identity, userEmail))
         _ = Mailer ! Send(
           defaultMails.upgradePricingPlanRequestMail(request.identity,
+                                                     userEmail,
                                                      organization.displayName,
                                                      s"Upgrade WEBKNOSSOS Plan to $requestedPlan"))
       } yield Ok
@@ -237,6 +239,7 @@ class OrganizationController @Inject()(
         _ = Mailer ! Send(defaultMails.upgradePricingPlanUsersMail(request.identity, userEmail, requestedUsers))
         _ = Mailer ! Send(
           defaultMails.upgradePricingPlanRequestMail(request.identity,
+                                                     userEmail,
                                                      organization.displayName,
                                                      s"Purchase $requestedUsers additional users"))
       } yield Ok
@@ -251,6 +254,7 @@ class OrganizationController @Inject()(
         _ = Mailer ! Send(defaultMails.upgradePricingPlanStorageMail(request.identity, userEmail, requestedStorage))
         _ = Mailer ! Send(
           defaultMails.upgradePricingPlanRequestMail(request.identity,
+                                                     userEmail,
                                                      organization.displayName,
                                                      s"Purchase $requestedStorage TB additional storage"))
       } yield Ok

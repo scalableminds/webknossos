@@ -2,6 +2,7 @@ import memoizeOne from "memoize-one";
 import type {
   APIAnnotation,
   APIAnnotationInfo,
+  APIDataLayer,
   APIDataset,
   APISegmentationLayer,
   AdditionalCoordinate,
@@ -14,6 +15,7 @@ import type {
   HybridTracing,
   LabelAction,
   OxalisState,
+  Segment,
   SegmentGroup,
   SegmentMap,
   Tracing,
@@ -159,10 +161,7 @@ const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
 export function getServerVolumeTracings(
   tracings: Array<ServerTracing> | null | undefined,
 ): Array<ServerVolumeTracing> {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'ServerTracing[]' is not assignable to type '... Remove this comment to see the full error message
-  const volumeTracings: Array<ServerVolumeTracing> = (tracings || []).filter(
-    (tracing) => tracing.typ === "Volume",
-  );
+  const volumeTracings = (tracings || []).filter((tracing) => tracing.typ === "Volume");
   return volumeTracings;
 }
 
@@ -620,6 +619,11 @@ export function getLabelActionFromPreviousSlice(
   );
 }
 
+export function getSegmentName(segment: Segment, fallbackToId: boolean = false): string {
+  const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
+  return segment.name || fallback;
+}
+
 // Output is in [0,1] for R, G, B, and A
 export function getSegmentColorAsRGBA(
   state: OxalisState,
@@ -777,4 +781,13 @@ export function getMeshInfoForSegment(
   );
   if (meshesForAddCoords == null) return null;
   return meshesForAddCoords[segmentId];
+}
+
+export function getReadableNameOfVolumeLayer(
+  layer: APIDataLayer,
+  tracing: HybridTracing,
+): string | null {
+  return "tracingId" in layer && layer.tracingId != null
+    ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+    : null;
 }

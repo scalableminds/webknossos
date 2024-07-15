@@ -197,6 +197,7 @@ export type Annotation = {
   readonly contributors: APIUserBase[];
   readonly othersMayEdit: boolean;
   readonly blockedByUser: APIUserCompact | null | undefined;
+  readonly isLockedByOwner: boolean;
 };
 type TracingBase = {
   readonly createdTimestamp: number;
@@ -294,6 +295,7 @@ export type DatasetLayerConfiguration = {
   readonly isInverted: boolean;
   readonly isInEditMode: boolean;
   readonly gammaCorrectionValue: number;
+  readonly mapping?: { name: string; type: MappingType } | null | undefined;
 };
 export type LoadingStrategy = "BEST_QUALITY_FIRST" | "PROGRESSIVE_QUALITY";
 

@@ -140,6 +140,7 @@ PATCH         /annotations/:typ/finish                                          
 PATCH         /annotations/:typ/:id/reopen                                                      controllers.AnnotationController.reopen(typ: String, id: String)
 PUT           /annotations/:typ/:id/reset                                                       controllers.AnnotationController.reset(typ: String, id: String)
 PATCH         /annotations/:typ/:id/transfer                                                    controllers.AnnotationController.transfer(typ: String, id: String)
+PATCH         /annotations/:typ/:id/editLockedState                                             controllers.AnnotationController.editLockedState(typ: String, id: String, isLockedByOwner: Boolean)
 
 GET           /annotations/:id/info                                                             controllers.AnnotationController.infoWithoutType(id: String, timestamp: Long)
 PATCH         /annotations/:id/makeHybrid                                                       controllers.AnnotationController.makeHybridWithoutType(id: String, fallbackLayerName: Option[String])
@@ -150,7 +151,6 @@ DELETE        /annotations/:id                                                  
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: String, mergedTyp: String, mergedId: String)
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: String, skeletonVersion: Option[Long], volumeVersion: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: String)
-PATCH         /annotations/:id/addSegmentIndex                                                  controllers.AnnotationController.addSegmentIndex(id: String, tracingId: String)
 PATCH         /annotations/addSegmentIndicesToAll                                               controllers.AnnotationController.addSegmentIndicesToAll(parallelBatchCount: Int, dryRun: Boolean, skipTracings: Option[String])
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: String, timestamp: Long)
@@ -256,22 +256,35 @@ GET           /time/overview                                                    
 
 # Long-Running Jobs
 GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)
-GET           /jobs                                                                             controllers.JobsController.list()
-GET           /jobs/status                                                                      controllers.JobsController.status()
-POST          /jobs/run/convertToWkw/:organizationName/:datasetName                             controllers.JobsController.runConvertToWkwJob(organizationName: String, datasetName: String, scale: String)
-POST          /jobs/run/computeMeshFile/:organizationName/:datasetName                          controllers.JobsController.runComputeMeshFileJob(organizationName: String, datasetName: String, layerName: String, mag: String, agglomerateView: Option[String])
-POST          /jobs/run/computeSegmentIndexFile/:organizationName/:datasetName                  controllers.JobsController.runComputeSegmentIndexFileJob(organizationName: String, datasetName: String, layerName: String)
-POST          /jobs/run/exportTiff/:organizationName/:datasetName                               controllers.JobsController.runExportTiffJob(organizationName: String, datasetName: String, bbox: String, layerName: Option[String], mag: Option[String], annotationLayerName: Option[String], annotationId: Option[String], asOmeTiff: Boolean)
-POST          /jobs/run/inferNuclei/:organizationName/:datasetName                              controllers.JobsController.runInferNucleiJob(organizationName: String, datasetName: String, layerName: String, newDatasetName: String)
-POST          /jobs/run/inferNeurons/:organizationName/:datasetName                             controllers.JobsController.runInferNeuronsJob(organizationName: String, datasetName: String, layerName: String, bbox: String, outputSegmentationLayerName: String, newDatasetName: String)
-POST          /jobs/run/inferMitochondria/:organizationName/:datasetName                        controllers.JobsController.runInferMitochondriaJob(organizationName: String, datasetName: String, layerName: String, bbox: String, outputSegmentationLayerName: String, newDatasetName: String)
-POST          /jobs/run/materializeVolumeAnnotation/:organizationName/:datasetName              controllers.JobsController.runMaterializeVolumeAnnotationJob(organizationName: String, datasetName: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, outputSegmentationLayerName: String, mergeSegments: Boolean, volumeLayerName: Option[String])
-POST          /jobs/run/findLargestSegmentId/:organizationName/:datasetName                     controllers.JobsController.runFindLargestSegmentIdJob(organizationName: String, datasetName: String, layerName: String)
-POST          /jobs/run/renderAnimation/:organizationName/:datasetName                          controllers.JobsController.runRenderAnimationJob(organizationName: String, datasetName: String)
-GET           /jobs/:id                                                                         controllers.JobsController.get(id: String)
-PATCH         /jobs/:id/cancel                                                                  controllers.JobsController.cancel(id: String)
+GET           /jobs                                                                             controllers.JobController.list()
+GET           /jobs/status                                                                      controllers.JobController.status()
+POST          /jobs/run/convertToWkw/:organizationName/:datasetName                             controllers.JobController.runConvertToWkwJob(organizationName: String, datasetName: String, scale: String, unit: Option[String])
+POST          /jobs/run/computeMeshFile/:organizationName/:datasetName                          controllers.JobController.runComputeMeshFileJob(organizationName: String, datasetName: String, layerName: String, mag: String, agglomerateView: Option[String])
+POST          /jobs/run/computeSegmentIndexFile/:organizationName/:datasetName                  controllers.JobController.runComputeSegmentIndexFileJob(organizationName: String, datasetName: String, layerName: String)
+POST          /jobs/run/exportTiff/:organizationName/:datasetName                               controllers.JobController.runExportTiffJob(organizationName: String, datasetName: String, bbox: String, layerName: Option[String], mag: Option[String], annotationLayerName: Option[String], annotationId: Option[String], asOmeTiff: Boolean)
+POST          /jobs/run/inferNuclei/:organizationName/:datasetName                              controllers.JobController.runInferNucleiJob(organizationName: String, datasetName: String, layerName: String, newDatasetName: String)
+POST          /jobs/run/inferNeurons/:organizationName/:datasetName                             controllers.JobController.runInferNeuronsJob(organizationName: String, datasetName: String, layerName: String, bbox: String, outputSegmentationLayerName: String, newDatasetName: String)
+POST          /jobs/run/inferMitochondria/:organizationName/:datasetName                        controllers.JobController.runInferMitochondriaJob(organizationName: String, datasetName: String, layerName: String, bbox: String, outputSegmentationLayerName: String, newDatasetName: String)
+POST          /jobs/run/alignSections/:organizationName/:datasetName                            controllers.JobController.runAlignSectionsJob(organizationName: String, datasetName: String, layerName: String, newDatasetName: String)
+POST          /jobs/run/materializeVolumeAnnotation/:organizationName/:datasetName              controllers.JobController.runMaterializeVolumeAnnotationJob(organizationName: String, datasetName: String, fallbackLayerName: String, annotationId: String, annotationType: String, newDatasetName: String, outputSegmentationLayerName: String, mergeSegments: Boolean, volumeLayerName: Option[String])
+POST          /jobs/run/findLargestSegmentId/:organizationName/:datasetName                     controllers.JobController.runFindLargestSegmentIdJob(organizationName: String, datasetName: String, layerName: String)
+POST          /jobs/run/renderAnimation/:organizationName/:datasetName                          controllers.JobController.runRenderAnimationJob(organizationName: String, datasetName: String)
+GET           /jobs/:id                                                                         controllers.JobController.get(id: String)
+PATCH         /jobs/:id/cancel                                                                  controllers.JobController.cancel(id: String)
 POST          /jobs/:id/status                                                                  controllers.WKRemoteWorkerController.updateJobStatus(key: String, id: String)
-GET           /jobs/:id/export                                                                  controllers.JobsController.redirectToExport(id: String)
+POST          /jobs/:id/attachVoxelyticsWorkflow                                                controllers.WKRemoteWorkerController.attachVoxelyticsWorkflow(key: String, id: String)
+POST          /jobs/:id/attachDatasetToInference                                                controllers.WKRemoteWorkerController.attachDatasetToInference(key: String, id: String)
+GET           /jobs/:id/export                                                                  controllers.JobController.redirectToExport(id: String)
+
+# AI Models
+POST          /aiModels/runTraining                                                             controllers.AiModelController.runTraining
+POST          /aiModels/inferences/runInference                                                 controllers.AiModelController.runInference
+GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: String)
+GET           /aiModels/inferences                                                              controllers.AiModelController.listAiInferences
+GET           /aiModels                                                                         controllers.AiModelController.listAiModels
+GET           /aiModels/:id                                                                     controllers.AiModelController.readAiModelInfo(id: String)
+PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: String)
+DELETE        /aiModels/:id                                                                     controllers.AiModelController.deleteAiModel(id: String)
 
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()

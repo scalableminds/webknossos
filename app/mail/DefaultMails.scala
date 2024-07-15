@@ -28,16 +28,12 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(recipient)
     )
 
-  def overLimitMail(user: User,
-                    projectName: String,
-                    taskId: String,
-                    annotationId: String,
-                    recipients: List[String]): Mail =
+  def overLimitMail(user: User, projectName: String, taskId: String, annotationId: String, projectOwner: String): Mail =
     Mail(
       from = defaultSender,
       subject = s"WEBKNOSSOS | Time limit reached. ${user.abbreviatedName} in $projectName",
       bodyHtml = html.mail.notifyAdminTimeLimit(user.name, projectName, taskId, annotationId, uri).body,
-      recipients = recipients
+      recipients = List(projectOwner)
     )
 
   def newUserMail(name: String, recipient: String, enableAutoVerify: Boolean): Mail =
@@ -134,11 +130,14 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
-  def upgradePricingPlanRequestMail(user: User, organizationDisplayName: String, messageBody: String): Mail =
+  def upgradePricingPlanRequestMail(user: User,
+                                    userEmail: String,
+                                    organizationDisplayName: String,
+                                    messageBody: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Request to upgrade WEBKNOSSOS plan",
-      bodyHtml = html.mail.upgradePricingPlanRequest(user.name, organizationDisplayName, messageBody).body,
+      bodyHtml = html.mail.upgradePricingPlanRequest(user.name, userEmail, organizationDisplayName, messageBody).body,
       recipients = List("hello@webknossos.org")
     )
 

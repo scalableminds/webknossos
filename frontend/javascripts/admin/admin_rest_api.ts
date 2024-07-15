@@ -2091,7 +2091,10 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   tracingId: string,
   segmentIds: Array<T>,
 ): Promise<Mapping> {
-  const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
+  const segmentIdBuffer = serializeProtoListOfLong<T>(
+    // The tracing store expects the ids to be sorted
+    segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
+  );
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
       `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,

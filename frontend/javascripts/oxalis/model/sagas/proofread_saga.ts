@@ -1255,10 +1255,8 @@ function* splitAgglomerateInMapping(
   // ids from splitSegmentIds are mapped to their new target agglomerate ids.
   const splitMapping = new Map(
     Array.from(activeMapping.mapping as NumberLikeMap, ([segmentId, agglomerateId]) => {
-      const mappedId = adaptToType(
-        // @ts-ignore get() is expected to accept the type that segmentId has
-        mappingAfterSplit.get(segmentId),
-      );
+      // @ts-ignore get() is expected to accept the type that segmentId has
+      const mappedId = mappingAfterSplit.get(segmentId);
       if (mappedId != null) {
         return [segmentId, mappedId];
       }

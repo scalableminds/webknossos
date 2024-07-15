@@ -2079,10 +2079,11 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   );
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = Utils.isBigInt(segmentIds[0])
-    ? (el: number) => BigInt(el)
-    : (el: number) => el;
+    ? (el: NumberLike) => BigInt(el)
+    : (el: NumberLike) => el;
+  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-ignore
-  return new Map(_.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType)));
+  return new Map(keyValues);
 }
 
 export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
@@ -2106,11 +2107,12 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
 
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = Utils.isBigInt(segmentIds[0])
-    ? (el: number) => BigInt(el)
-    : (el: number) => el;
+    ? (el: NumberLike) => BigInt(el)
+    : (el: NumberLike) => el;
 
+  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-ignore
-  return new Map(_.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType)));
+  return new Map(keyValues);
 }
 
 export function getEditableAgglomerateSkeleton(

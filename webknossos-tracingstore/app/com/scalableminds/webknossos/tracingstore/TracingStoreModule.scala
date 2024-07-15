@@ -4,6 +4,7 @@ import org.apache.pekko.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
 import com.scalableminds.webknossos.datastore.services.AdHocMeshServiceHolder
+import com.scalableminds.webknossos.tracingstore.annotation.AnnotationTransactionService
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.TracingDataStore
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -25,5 +26,7 @@ class TracingStoreModule extends AbstractModule {
     bind(classOf[EditableMappingService]).asEagerSingleton()
     bind(classOf[TSSlackNotificationService]).asEagerSingleton()
     bind(classOf[AdHocMeshServiceHolder]).asEagerSingleton()
+    bind(classOf[AnnotationTransactionService]).asEagerSingleton()
   }
+
 }

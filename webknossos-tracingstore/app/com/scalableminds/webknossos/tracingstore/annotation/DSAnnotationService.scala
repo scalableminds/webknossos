@@ -9,6 +9,8 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   UpdateLayerMetadataAnnotationUpdateAction,
   UpdateMetadataAnnotationUpdateAction
 }
+import com.scalableminds.webknossos.tracingstore.controllers.GenericUpdateActionGroup
+import com.scalableminds.webknossos.tracingstore.tracings.UpdateActionGroup
 import scalapb.GeneratedMessage
 
 import javax.inject.Inject
@@ -16,6 +18,10 @@ import scala.concurrent.ExecutionContext
 
 class DSAnnotationService @Inject()() {
   def storeUpdate(updateAction: GeneratedMessage)(implicit ec: ExecutionContext): Fox[Unit] = Fox.successful(())
+
+  def commitUpdates(tracingId: String,
+                    updateGroups: List[GenericUpdateActionGroup],
+                    userToken: Option[String]): Fox[Long] = ???
 
   def newestMaterializableVersion(annotationId: String): Fox[Long] = ???
 

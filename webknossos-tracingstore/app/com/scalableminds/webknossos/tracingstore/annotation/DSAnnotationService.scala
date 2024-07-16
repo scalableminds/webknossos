@@ -10,13 +10,17 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   UpdateLayerMetadataAnnotationUpdateAction,
   UpdateMetadataAnnotationUpdateAction
 }
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingUpdatesReport}
 import scalapb.GeneratedMessage
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class DSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient) {
+class DSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient,
+                                    tracingDataStore: TracingDataStore)
+    extends KeyValueStoreImplicits {
   def storeUpdate(updateAction: GeneratedMessage)(implicit ec: ExecutionContext): Fox[Unit] = Fox.successful(())
 
   def reportUpdates(annotationId: String,
@@ -37,9 +41,19 @@ class DSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
   def currentVersion(annotationId: String): Fox[Long] = ???
 
   def handleUpdateGroup(annotationId: String,
-                        updateGroup: GenericUpdateActionGroup,
+                        updateActionGroup: GenericUpdateActionGroup,
                         previousVersion: Long,
-                        userToken: Option[String]): Fox[Unit] = ???
+                        userToken: Option[String]): Fox[Unit] =
+    // TODO apply volume updates directly? transform to compact?
+    tracingDataStore.annotationUpdates.put(
+      annotationId,
+      updateActionGroup.version,
+      updateActionGroup.actions
+        .map(_.addTimestamp(updateActionGroup.timestamp).addAuthorId(updateActionGroup.authorId)) match { //to the first action in the group, attach the group's info
+        case Nil           => List[GenericUpdateAction]()
+        case first :: rest => first.addInfo(updateActionGroup.info) :: rest
+      }
+    )
 
   def applyUpdate(annotation: AnnotationProto, updateAction: GeneratedMessage)(
       implicit ec: ExecutionContext): Fox[AnnotationProto] =

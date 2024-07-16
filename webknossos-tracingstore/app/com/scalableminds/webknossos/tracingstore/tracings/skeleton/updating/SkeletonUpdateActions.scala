@@ -1,9 +1,8 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating
 
-import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
-import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits}
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.annotation.GenericUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
@@ -389,10 +388,10 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
     this.copy(actionAuthorId = authorId)
 }
 
-case class RevertToVersionAction(sourceVersion: Long,
-                                 actionTimestamp: Option[Long] = None,
-                                 actionAuthorId: Option[String] = None,
-                                 info: Option[String] = None)
+case class RevertToVersionSkeletonAction(sourceVersion: Long,
+                                         actionTimestamp: Option[Long] = None,
+                                         actionAuthorId: Option[String] = None,
+                                         info: Option[String] = None)
     extends SkeletonUpdateAction {
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     throw new Exception("RevertToVersionAction applied on unversioned tracing")*/
@@ -406,11 +405,11 @@ case class RevertToVersionAction(sourceVersion: Long,
     this.copy(actionAuthorId = authorId)
 }
 
-case class UpdateTreeVisibility(treeId: Int,
-                                isVisible: Boolean,
-                                actionTimestamp: Option[Long] = None,
-                                actionAuthorId: Option[String] = None,
-                                info: Option[String] = None)
+case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
+                                              isVisible: Boolean,
+                                              actionTimestamp: Option[Long] = None,
+                                              actionAuthorId: Option[String] = None,
+                                              info: Option[String] = None)
     extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -428,11 +427,11 @@ case class UpdateTreeVisibility(treeId: Int,
     this.copy(actionAuthorId = authorId)
 }
 
-case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
-                                     isVisible: Boolean,
-                                     actionTimestamp: Option[Long] = None,
-                                     actionAuthorId: Option[String] = None,
-                                     info: Option[String] = None)
+case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int],
+                                                   isVisible: Boolean,
+                                                   actionTimestamp: Option[Long] = None,
+                                                   actionAuthorId: Option[String] = None,
+                                                   info: Option[String] = None)
     extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -466,11 +465,11 @@ case class UpdateTreeGroupVisibility(treeGroupId: Option[Int],
     this.copy(actionAuthorId = authorId)
 }
 
-case class UpdateTreeEdgesVisibility(treeId: Int,
-                                     edgesAreVisible: Boolean,
-                                     actionTimestamp: Option[Long] = None,
-                                     actionAuthorId: Option[String] = None,
-                                     info: Option[String] = None)
+case class UpdateTreeEdgesVisibilitySkeletonAction(treeId: Int,
+                                                   edgesAreVisible: Boolean,
+                                                   actionTimestamp: Option[Long] = None,
+                                                   actionAuthorId: Option[String] = None,
+                                                   info: Option[String] = None)
     extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
 
@@ -489,10 +488,10 @@ case class UpdateTreeEdgesVisibility(treeId: Int,
     this.copy(actionAuthorId = authorId)
 }
 
-case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
-                                   actionTimestamp: Option[Long] = None,
-                                   actionAuthorId: Option[String] = None,
-                                   info: Option[String] = None)
+case class UpdateUserBoundingBoxesSkeletonAction(boundingBoxes: List[NamedBoundingBox],
+                                                 actionTimestamp: Option[Long] = None,
+                                                 actionAuthorId: Option[String] = None,
+                                                 info: Option[String] = None)
     extends SkeletonUpdateAction {
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.withUserBoundingBoxes(boundingBoxes.map(_.toProto))*/
@@ -506,11 +505,11 @@ case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
     this.copy(actionAuthorId = authorId)
 }
 
-case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
-                                           isVisible: Boolean,
-                                           actionTimestamp: Option[Long] = None,
-                                           actionAuthorId: Option[String] = None,
-                                           info: Option[String] = None)
+case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[Int],
+                                                         isVisible: Boolean,
+                                                         actionTimestamp: Option[Long] = None,
+                                                         actionAuthorId: Option[String] = None,
+                                                         info: Option[String] = None)
     extends SkeletonUpdateAction {
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
     def updateUserBoundingBoxes() =
@@ -533,9 +532,9 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
     this.copy(actionAuthorId = authorId)
 }
 
-case class UpdateTdCamera(actionTimestamp: Option[Long] = None,
-                          actionAuthorId: Option[String] = None,
-                          info: Option[String] = None)
+case class UpdateTdCameraSkeletonAction(actionTimestamp: Option[Long] = None,
+                                        actionAuthorId: Option[String] = None,
+                                        info: Option[String] = None)
     extends SkeletonUpdateAction {
 
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing = tracing*/
@@ -585,103 +584,28 @@ object UpdateTreeGroupsSkeletonAction {
 object UpdateTracingSkeletonAction {
   implicit val jsonFormat: OFormat[UpdateTracingSkeletonAction] = Json.format[UpdateTracingSkeletonAction]
 }
-object RevertToVersionAction {
-  implicit val jsonFormat: OFormat[RevertToVersionAction] = Json.format[RevertToVersionAction]
+object RevertToVersionSkeletonAction {
+  implicit val jsonFormat: OFormat[RevertToVersionSkeletonAction] = Json.format[RevertToVersionSkeletonAction]
 }
-object UpdateTreeVisibility {
-  implicit val jsonFormat: OFormat[UpdateTreeVisibility] = Json.format[UpdateTreeVisibility]
+object UpdateTreeVisibilitySkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateTreeVisibilitySkeletonAction] = Json.format[UpdateTreeVisibilitySkeletonAction]
 }
-object UpdateTreeGroupVisibility {
-  implicit val jsonFormat: OFormat[UpdateTreeGroupVisibility] = Json.format[UpdateTreeGroupVisibility]
+object UpdateTreeGroupVisibilitySkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateTreeGroupVisibilitySkeletonAction] =
+    Json.format[UpdateTreeGroupVisibilitySkeletonAction]
 }
-object UpdateTreeEdgesVisibility {
-  implicit val jsonFormat: OFormat[UpdateTreeEdgesVisibility] = Json.format[UpdateTreeEdgesVisibility]
+object UpdateTreeEdgesVisibilitySkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateTreeEdgesVisibilitySkeletonAction] =
+    Json.format[UpdateTreeEdgesVisibilitySkeletonAction]
 }
-object UpdateUserBoundingBoxes {
-  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxes] = Json.format[UpdateUserBoundingBoxes]
+object UpdateUserBoundingBoxesSkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxesSkeletonAction] =
+    Json.format[UpdateUserBoundingBoxesSkeletonAction]
 }
-object UpdateUserBoundingBoxVisibility {
-  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibility] = Json.format[UpdateUserBoundingBoxVisibility]
+object UpdateUserBoundingBoxVisibilitySkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilitySkeletonAction] =
+    Json.format[UpdateUserBoundingBoxVisibilitySkeletonAction]
 }
-object UpdateTdCamera { implicit val jsonFormat: OFormat[UpdateTdCamera] = Json.format[UpdateTdCamera] }
-
-object GenericUpdateAction {
-
-  implicit object genericUpdateActionFormat extends Format[GenericUpdateAction] {
-    override def reads(json: JsValue): JsResult[GenericUpdateAction] = {
-      val jsonValue = (json \ "value").as[JsObject]
-      (json \ "name").as[String] match {
-        case "createTree"                      => deserialize[CreateTreeSkeletonAction](jsonValue)
-        case "deleteTree"                      => deserialize[DeleteTreeSkeletonAction](jsonValue)
-        case "updateTree"                      => deserialize[UpdateTreeSkeletonAction](jsonValue)
-        case "mergeTree"                       => deserialize[MergeTreeSkeletonAction](jsonValue)
-        case "moveTreeComponent"               => deserialize[MoveTreeComponentSkeletonAction](jsonValue)
-        case "createNode"                      => deserialize[CreateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
-        case "deleteNode"                      => deserialize[DeleteNodeSkeletonAction](jsonValue)
-        case "updateNode"                      => deserialize[UpdateNodeSkeletonAction](jsonValue, shouldTransformPositions = true)
-        case "createEdge"                      => deserialize[CreateEdgeSkeletonAction](jsonValue)
-        case "deleteEdge"                      => deserialize[DeleteEdgeSkeletonAction](jsonValue)
-        case "updateTreeGroups"                => deserialize[UpdateTreeGroupsSkeletonAction](jsonValue)
-        case "updateTracing"                   => deserialize[UpdateTracingSkeletonAction](jsonValue)
-        case "revertToVersion"                 => deserialize[RevertToVersionAction](jsonValue)
-        case "updateTreeVisibility"            => deserialize[UpdateTreeVisibility](jsonValue)
-        case "updateTreeGroupVisibility"       => deserialize[UpdateTreeGroupVisibility](jsonValue)
-        case "updateTreeEdgesVisibility"       => deserialize[UpdateTreeEdgesVisibility](jsonValue)
-        case "updateUserBoundingBoxes"         => deserialize[UpdateUserBoundingBoxes](jsonValue)
-        case "updateUserBoundingBoxVisibility" => deserialize[UpdateUserBoundingBoxVisibility](jsonValue)
-        case "updateTdCamera"                  => deserialize[UpdateTdCamera](jsonValue)
-      }
-    }
-
-    def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(implicit tjs: Reads[T]): JsResult[T] =
-      if (shouldTransformPositions)
-        json.transform(positionTransform).get.validate[T]
-      else
-        json.validate[T]
-
-    private val positionTransform =
-      (JsPath \ "position").json.update(JsPath.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
-
-    override def writes(a: GenericUpdateAction): JsObject = a match {
-      case s: CreateTreeSkeletonAction =>
-        Json.obj("name" -> "createTree", "value" -> Json.toJson(s)(CreateTreeSkeletonAction.jsonFormat))
-      case s: DeleteTreeSkeletonAction =>
-        Json.obj("name" -> "deleteTree", "value" -> Json.toJson(s)(DeleteTreeSkeletonAction.jsonFormat))
-      case s: UpdateTreeSkeletonAction =>
-        Json.obj("name" -> "updateTree", "value" -> Json.toJson(s)(UpdateTreeSkeletonAction.jsonFormat))
-      case s: MergeTreeSkeletonAction =>
-        Json.obj("name" -> "mergeTree", "value" -> Json.toJson(s)(MergeTreeSkeletonAction.jsonFormat))
-      case s: MoveTreeComponentSkeletonAction =>
-        Json.obj("name" -> "moveTreeComponent", "value" -> Json.toJson(s)(MoveTreeComponentSkeletonAction.jsonFormat))
-      case s: CreateNodeSkeletonAction =>
-        Json.obj("name" -> "createNode", "value" -> Json.toJson(s)(CreateNodeSkeletonAction.jsonFormat))
-      case s: DeleteNodeSkeletonAction =>
-        Json.obj("name" -> "deleteNode", "value" -> Json.toJson(s)(DeleteNodeSkeletonAction.jsonFormat))
-      case s: UpdateNodeSkeletonAction =>
-        Json.obj("name" -> "updateNode", "value" -> Json.toJson(s)(UpdateNodeSkeletonAction.jsonFormat))
-      case s: CreateEdgeSkeletonAction =>
-        Json.obj("name" -> "createEdge", "value" -> Json.toJson(s)(CreateEdgeSkeletonAction.jsonFormat))
-      case s: DeleteEdgeSkeletonAction =>
-        Json.obj("name" -> "deleteEdge", "value" -> Json.toJson(s)(DeleteEdgeSkeletonAction.jsonFormat))
-      case s: UpdateTreeGroupsSkeletonAction =>
-        Json.obj("name" -> "updateTreeGroups", "value" -> Json.toJson(s)(UpdateTreeGroupsSkeletonAction.jsonFormat))
-      case s: UpdateTracingSkeletonAction =>
-        Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
-      case s: RevertToVersionAction =>
-        Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionAction.jsonFormat))
-      case s: UpdateTreeVisibility =>
-        Json.obj("name" -> "updateTreeVisibility", "value" -> Json.toJson(s)(UpdateTreeVisibility.jsonFormat))
-      case s: UpdateTreeGroupVisibility =>
-        Json.obj("name" -> "updateTreeGroupVisibility", "value" -> Json.toJson(s)(UpdateTreeGroupVisibility.jsonFormat))
-      case s: UpdateTreeEdgesVisibility =>
-        Json.obj("name" -> "updateTreeEdgesVisibility", "value" -> Json.toJson(s)(UpdateTreeEdgesVisibility.jsonFormat))
-      case s: UpdateUserBoundingBoxes =>
-        Json.obj("name" -> "updateUserBoundingBoxes", "value" -> Json.toJson(s)(UpdateUserBoundingBoxes.jsonFormat))
-      case s: UpdateUserBoundingBoxVisibility =>
-        Json.obj("name" -> "updateUserBoundingBoxVisibility",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibility.jsonFormat))
-      case s: UpdateTdCamera =>
-        Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s)(UpdateTdCamera.jsonFormat))
-    }
-  }
+object UpdateTdCameraSkeletonAction {
+  implicit val jsonFormat: OFormat[UpdateTdCameraSkeletonAction] = Json.format[UpdateTdCameraSkeletonAction]
 }

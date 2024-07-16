@@ -21,7 +21,23 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
   UpdateUserBoundingBoxVisibilitySkeletonAction,
   UpdateUserBoundingBoxesSkeletonAction
 }
-import play.api.libs.json.{Format, JsObject, JsPath, JsResult, JsValue, Json, OFormat, Reads}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  CreateSegmentVolumeAction,
+  DeleteSegmentDataVolumeAction,
+  DeleteSegmentVolumeAction,
+  ImportVolumeData,
+  RemoveFallbackLayer,
+  RevertToVersionVolumeAction,
+  UpdateBucketVolumeAction,
+  UpdateMappingNameVolumeAction,
+  UpdateSegmentGroupsVolumeAction,
+  UpdateSegmentVolumeAction,
+  UpdateTdCamera,
+  UpdateTracingVolumeAction,
+  UpdateUserBoundingBoxVisibility,
+  UpdateUserBoundingBoxes
+}
+import play.api.libs.json.{Format, JsError, JsObject, JsPath, JsResult, JsValue, Json, OFormat, Reads}
 
 trait GenericUpdateAction {
   def actionTimestamp: Option[Long]
@@ -31,6 +47,8 @@ trait GenericUpdateAction {
   def addInfo(info: Option[String]): GenericUpdateAction
 
   def addAuthorId(authorId: Option[String]): GenericUpdateAction
+
+  def isViewOnlyChange: Boolean = false
 }
 
 object GenericUpdateAction {
@@ -50,16 +68,28 @@ object GenericUpdateAction {
         case "createEdge"                => deserialize[CreateEdgeSkeletonAction](jsonValue)
         case "deleteEdge"                => deserialize[DeleteEdgeSkeletonAction](jsonValue)
         case "updateTreeGroups"          => deserialize[UpdateTreeGroupsSkeletonAction](jsonValue)
-        case "updateTracing"             => deserialize[UpdateTracingSkeletonAction](jsonValue)
-        case "revertToVersion"           => deserialize[RevertToVersionSkeletonAction](jsonValue)
+        case "updateSkeletonTracing"     => deserialize[UpdateTracingSkeletonAction](jsonValue)
         case "updateTreeVisibility"      => deserialize[UpdateTreeVisibilitySkeletonAction](jsonValue)
         case "updateTreeGroupVisibility" => deserialize[UpdateTreeGroupVisibilitySkeletonAction](jsonValue)
         case "updateTreeEdgesVisibility" => deserialize[UpdateTreeEdgesVisibilitySkeletonAction](jsonValue)
         case "updateUserBoundingBoxes"   => deserialize[UpdateUserBoundingBoxesSkeletonAction](jsonValue)
         case "updateUserBoundingBoxVisibility" =>
           deserialize[UpdateUserBoundingBoxVisibilitySkeletonAction](jsonValue)
-        case "updateTdCamera" => deserialize[UpdateTdCameraSkeletonAction](jsonValue)
-      }
+        case "updateBucket"                    => deserialize[UpdateBucketVolumeAction](jsonValue)
+        case "updateVolumeTracing"             => deserialize[UpdateTracingVolumeAction](jsonValue)
+        case "updateUserBoundingBoxes"         => deserialize[UpdateUserBoundingBoxes](jsonValue)
+        case "updateUserBoundingBoxVisibility" => deserialize[UpdateUserBoundingBoxVisibility](jsonValue)
+        case "removeFallbackLayer"             => deserialize[RemoveFallbackLayer](jsonValue)
+        case "importVolumeTracing"             => deserialize[ImportVolumeData](jsonValue)
+        case "updateTdCamera"                  => deserialize[UpdateTdCamera](jsonValue)
+        case "createSegment"                   => deserialize[CreateSegmentVolumeAction](jsonValue)
+        case "updateSegment"                   => deserialize[UpdateSegmentVolumeAction](jsonValue)
+        case "updateSegmentGroups"             => deserialize[UpdateSegmentGroupsVolumeAction](jsonValue)
+        case "deleteSegment"                   => deserialize[DeleteSegmentVolumeAction](jsonValue)
+        case "deleteSegmentData"               => deserialize[DeleteSegmentDataVolumeAction](jsonValue)
+        case "updateMappingName"               => deserialize[UpdateMappingNameVolumeAction](jsonValue)
+        case unknownAction: String             => JsError(s"Invalid update action s'$unknownAction'")
+      } // TODO revertToVersion
     }
 
     private def deserialize[T](json: JsValue, shouldTransformPositions: Boolean = false)(

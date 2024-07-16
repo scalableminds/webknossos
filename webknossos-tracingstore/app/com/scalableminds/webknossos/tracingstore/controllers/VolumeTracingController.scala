@@ -37,7 +37,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   MergedVolumeStats,
   ResolutionRestrictions,
   TSFullMeshService,
-  UpdateMappingNameAction,
+  UpdateMappingNameVolumeAction,
   VolumeDataZipFormat,
   VolumeSegmentIndexService,
   VolumeSegmentStatisticsService,
@@ -368,7 +368,7 @@ class VolumeTracingController @Inject()(
             _ <- bool2Fox(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
             (editableMappingId, editableMappingInfo) <- editableMappingService.create(
               baseMappingName = tracingMappingName)
-            volumeUpdate = UpdateMappingNameAction(Some(editableMappingId),
+            volumeUpdate = UpdateMappingNameVolumeAction(Some(editableMappingId),
                                                    isEditable = Some(true),
                                                    isLocked = Some(true),
                                                    actionTimestamp = Some(System.currentTimeMillis()))

@@ -26,11 +26,6 @@ trait UpdateAction[T <: GeneratedMessage] {
   def isViewOnlyChange: Boolean = false
 }
 
-object UpdateAction {
-  type SkeletonUpdateAction = UpdateAction[SkeletonTracing]
-  type VolumeUpdateAction = UpdateAction[VolumeTracing]
-}
-
 case class UpdateActionGroup[T <: GeneratedMessage](
     version: Long,
     timestamp: Long,

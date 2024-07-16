@@ -3,11 +3,10 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 import java.util.Base64
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
-import com.scalableminds.webknossos.datastore.geometry
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.VolumeUpdateAction
-import com.scalableminds.webknossos.tracingstore.tracings.{NamedBoundingBox, UpdateAction}
+import com.scalableminds.webknossos.tracingstore.annotation.GenericUpdateAction
+import com.scalableminds.webknossos.tracingstore.tracings.NamedBoundingBox
 import play.api.libs.json._
 
 trait VolumeUpdateActionHelper {
@@ -22,6 +21,8 @@ trait VolumeUpdateActionHelper {
     SegmentGroup(aSegmentGroup.name, aSegmentGroup.groupId, aSegmentGroup.children.map(convertSegmentGroup))
 
 }
+
+trait VolumeUpdateAction extends GenericUpdateAction
 
 trait ApplyableVolumeAction extends VolumeUpdateAction
 
@@ -39,8 +40,9 @@ case class UpdateBucketVolumeAction(position: Vec3Int,
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 
-  override def transformToCompact: CompactVolumeUpdateAction =
+  def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("updateBucket", actionTimestamp, actionAuthorId, Json.obj())
 }
 
@@ -62,9 +64,7 @@ case class UpdateTracingVolumeAction(
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-
-  override def transformToCompact: CompactVolumeUpdateAction =
-    CompactVolumeUpdateAction("updateTracing", actionTimestamp, actionAuthorId, Json.obj())
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 
   override def isViewOnlyChange: Boolean = true
 }
@@ -82,11 +82,7 @@ case class RevertToVersionVolumeAction(sourceVersion: Long,
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
 
-  override def transformToCompact: CompactVolumeUpdateAction =
-    CompactVolumeUpdateAction("revertToVersion",
-                              actionTimestamp,
-                              actionAuthorId,
-                              Json.obj("sourceVersion" -> sourceVersion))
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 }
 
 object RevertToVersionVolumeAction {
@@ -102,12 +98,10 @@ case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
     this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 
-  override def transformToCompact: CompactVolumeUpdateAction =
-    CompactVolumeUpdateAction("updateUserBoundingBoxes", actionTimestamp, actionAuthorId, Json.obj())
-
-  override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.withUserBoundingBoxes(boundingBoxes.map(_.toProto))
+  /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.withUserBoundingBoxes(boundingBoxes.map(_.toProto))*/
 }
 
 object UpdateUserBoundingBoxes {
@@ -123,15 +117,11 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 
-  override def transformToCompact: CompactVolumeUpdateAction =
-    CompactVolumeUpdateAction("updateUserBoundingBoxVisibility",
-                              actionTimestamp,
-                              actionAuthorId,
-                              Json.obj("boundingBoxId" -> boundingBoxId, "newVisibility" -> isVisible))
   override def isViewOnlyChange: Boolean = true
 
-  override def applyOn(tracing: VolumeTracing): VolumeTracing = {
+  /*override def applyOn(tracing: VolumeTracing): VolumeTracing = {
 
     def updateUserBoundingBoxes(): Seq[geometry.NamedBoundingBoxProto] =
       tracing.userBoundingBoxes.map { boundingBox =>
@@ -142,7 +132,7 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
       }
 
     tracing.withUserBoundingBoxes(updateUserBoundingBoxes())
-  }
+  }*/
 }
 
 object UpdateUserBoundingBoxVisibility {
@@ -156,12 +146,10 @@ case class RemoveFallbackLayer(actionTimestamp: Option[Long] = None,
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 
-  override def transformToCompact: CompactVolumeUpdateAction =
-    CompactVolumeUpdateAction("removeFallbackLayer", actionTimestamp, actionAuthorId, Json.obj())
-
-  override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.clearFallbackLayer
+  /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.clearFallbackLayer*/
 }
 
 object RemoveFallbackLayer {
@@ -176,15 +164,10 @@ case class ImportVolumeData(largestSegmentId: Option[Long],
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 
-  override def transformToCompact: CompactVolumeUpdateAction =
-    CompactVolumeUpdateAction("importVolumeTracing",
-                              actionTimestamp,
-                              actionAuthorId,
-                              Json.obj("largestSegmentId" -> largestSegmentId))
-
-  override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.copy(largestSegmentId = largestSegmentId)
+  /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.copy(largestSegmentId = largestSegmentId)*/
 }
 
 object ImportVolumeData {
@@ -196,15 +179,13 @@ case class AddSegmentIndex(actionTimestamp: Option[Long] = None,
                            info: Option[String] = None)
     extends ApplyableVolumeAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 
-  override def transformToCompact: CompactVolumeUpdateAction =
-    CompactVolumeUpdateAction("addSegmentIndex", actionTimestamp, actionAuthorId, Json.obj())
+  /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.copy(hasSegmentIndex = Some(true))*/
 
-  override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.copy(hasSegmentIndex = Some(true))
 }
 
 object AddSegmentIndex {
@@ -220,9 +201,7 @@ case class UpdateTdCamera(actionTimestamp: Option[Long] = None,
     this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-
-  override def transformToCompact: CompactVolumeUpdateAction =
-    CompactVolumeUpdateAction("updateTdCamera", actionTimestamp, actionAuthorId, Json.obj())
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 
   override def isViewOnlyChange: Boolean = true
 }
@@ -239,7 +218,8 @@ case class CreateSegmentVolumeAction(id: Long,
                                      creationTime: Option[Long],
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
-                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                     info: Option[String] = None)
     extends ApplyableVolumeAction
     with ProtoGeometryImplicits {
 
@@ -247,11 +227,9 @@ case class CreateSegmentVolumeAction(id: Long,
     this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 
-  override def transformToCompact: UpdateAction[VolumeTracing] =
-    CompactVolumeUpdateAction("createSegment", actionTimestamp, actionAuthorId, Json.obj("id" -> id))
-
-  override def applyOn(tracing: VolumeTracing): VolumeTracing = {
+  /*override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     val newSegment =
       Segment(id,
               anchorPosition.map(vec3IntToProto),
@@ -261,7 +239,7 @@ case class CreateSegmentVolumeAction(id: Long,
               groupId,
               AdditionalCoordinate.toProto(additionalCoordinates))
     tracing.addSegments(newSegment)
-  }
+  }*/
 }
 
 object CreateSegmentVolumeAction {
@@ -276,7 +254,8 @@ case class UpdateSegmentVolumeAction(id: Long,
                                      groupId: Option[Int],
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
-                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                     info: Option[String] = None)
     extends ApplyableVolumeAction
     with ProtoGeometryImplicits
     with VolumeUpdateActionHelper {
@@ -285,11 +264,9 @@ case class UpdateSegmentVolumeAction(id: Long,
     this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 
-  override def transformToCompact: UpdateAction[VolumeTracing] =
-    CompactVolumeUpdateAction("updateSegment", actionTimestamp, actionAuthorId, Json.obj("id" -> id))
-
-  override def applyOn(tracing: VolumeTracing): VolumeTracing = {
+  /*override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     def segmentTransform(segment: Segment): Segment =
       segment.copy(
         anchorPosition = anchorPosition.map(vec3IntToProto),
@@ -300,7 +277,7 @@ case class UpdateSegmentVolumeAction(id: Long,
         anchorPositionAdditionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates)
       )
     tracing.withSegments(mapSegments(tracing, id, segmentTransform))
-  }
+  }*/
 }
 
 object UpdateSegmentVolumeAction {
@@ -309,19 +286,18 @@ object UpdateSegmentVolumeAction {
 
 case class DeleteSegmentVolumeAction(id: Long,
                                      actionTimestamp: Option[Long] = None,
-                                     actionAuthorId: Option[String] = None)
-    extends ApplyableVolumeAction {
+                                     actionAuthorId: Option[String] = None,
+                                     info: Option[String] = None)
+    extends VolumeUpdateAction {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 
-  override def transformToCompact: UpdateAction[VolumeTracing] =
-    CompactVolumeUpdateAction("deleteSegment", actionTimestamp, actionAuthorId, Json.obj("id" -> id))
-
-  override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.withSegments(tracing.segments.filter(_.segmentId != id))
+  /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.withSegments(tracing.segments.filter(_.segmentId != id))*/
 
 }
 
@@ -331,53 +307,54 @@ object DeleteSegmentVolumeAction {
 
 case class DeleteSegmentDataVolumeAction(id: Long,
                                          actionTimestamp: Option[Long] = None,
-                                         actionAuthorId: Option[String] = None)
+                                         actionAuthorId: Option[String] = None,
+                                         info: Option[String] = None)
     extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-
-  override def transformToCompact: CompactVolumeUpdateAction =
-    CompactVolumeUpdateAction("deleteSegmentData", actionTimestamp, actionAuthorId, Json.obj())
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 }
 
 object DeleteSegmentDataVolumeAction {
   implicit val jsonFormat: OFormat[DeleteSegmentDataVolumeAction] = Json.format[DeleteSegmentDataVolumeAction]
 }
 
-case class UpdateMappingNameAction(mappingName: Option[String],
-                                   isEditable: Option[Boolean],
-                                   isLocked: Option[Boolean],
-                                   actionTimestamp: Option[Long],
-                                   actionAuthorId: Option[String] = None)
+case class UpdateMappingNameVolumeAction(mappingName: Option[String],
+                                         isEditable: Option[Boolean],
+                                         isLocked: Option[Boolean],
+                                         actionTimestamp: Option[Long],
+                                         actionAuthorId: Option[String] = None,
+                                         info: Option[String] = None)
     extends ApplyableVolumeAction {
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction =
-    this.copy(actionTimestamp = Some(timestamp))
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 
-  override def transformToCompact: UpdateAction[VolumeTracing] =
-    CompactVolumeUpdateAction("updateMappingName",
-                              actionTimestamp,
-                              actionAuthorId,
-                              Json.obj("mappingName" -> mappingName))
-
-  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+  /*  override def applyOn(tracing: VolumeTracing): VolumeTracing =
     if (tracing.mappingIsLocked.getOrElse(false)) tracing // cannot change mapping name if it is locked
     else
       tracing.copy(mappingName = mappingName,
                    mappingIsEditable = Some(isEditable.getOrElse(false)),
-                   mappingIsLocked = Some(isLocked.getOrElse(false)))
+                   mappingIsLocked = Some(isLocked.getOrElse(false)))*/
 }
 
-object UpdateMappingNameAction {
-  implicit val jsonFormat: OFormat[UpdateMappingNameAction] = Json.format[UpdateMappingNameAction]
+object UpdateMappingNameVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateMappingNameVolumeAction] = Json.format[UpdateMappingNameVolumeAction]
 }
 
 case class CompactVolumeUpdateAction(name: String,
                                      actionTimestamp: Option[Long],
                                      actionAuthorId: Option[String] = None,
-                                     value: JsObject)
-    extends VolumeUpdateAction
+                                     value: JsObject,
+                                     info: Option[String] = None)
+    extends VolumeUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+}
 
 object CompactVolumeUpdateAction {
   implicit object compactVolumeUpdateActionFormat extends Format[CompactVolumeUpdateAction] {
@@ -386,8 +363,11 @@ object CompactVolumeUpdateAction {
         name <- (json \ "name").validate[String]
         actionTimestamp <- (json \ "value" \ "actionTimestamp").validateOpt[Long]
         actionAuthorId <- (json \ "value" \ "actionAuthorId").validateOpt[String]
-        value <- (json \ "value").validate[JsObject].map(_ - "actionTimestamp")
-      } yield CompactVolumeUpdateAction(name, actionTimestamp, actionAuthorId, value)
+        info <- (json \ "value" \ "info").validateOpt[String]
+        value <- (json \ "value")
+          .validate[JsObject]
+          .map(_ - "actionTimestamp") // TODO also separate out info + actionAuthorId
+      } yield CompactVolumeUpdateAction(name, actionTimestamp, actionAuthorId, value, info)
 
     override def writes(o: CompactVolumeUpdateAction): JsValue =
       Json.obj("name" -> o.name, "value" -> (Json.obj("actionTimestamp" -> o.actionTimestamp) ++ o.value))
@@ -398,16 +378,15 @@ case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegme
                                            actionTimestamp: Option[Long] = None,
                                            actionAuthorId: Option[String] = None,
                                            info: Option[String] = None)
-    extends ApplyableVolumeAction
+    extends VolumeUpdateAction
     with VolumeUpdateActionHelper {
-  override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.withSegmentGroups(segmentGroups.map(convertSegmentGroup))
+  /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.withSegmentGroups(segmentGroups.map(convertSegmentGroup))*/
 
-  override def addTimestamp(timestamp: Long): UpdateAction[VolumeTracing] =
-    this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[String]): UpdateAction[VolumeTracing] =
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction[VolumeTracing] = this.copy(info = info)
+  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
 }
 
 object UpdateSegmentGroupsVolumeAction {
@@ -432,7 +411,7 @@ object VolumeUpdateAction {
         case "updateSegmentGroups"             => (json \ "value").validate[UpdateSegmentGroupsVolumeAction]
         case "deleteSegment"                   => (json \ "value").validate[DeleteSegmentVolumeAction]
         case "deleteSegmentData"               => (json \ "value").validate[DeleteSegmentDataVolumeAction]
-        case "updateMappingName"               => (json \ "value").validate[UpdateMappingNameAction]
+        case "updateMappingName"               => (json \ "value").validate[UpdateMappingNameVolumeAction]
         case unknownAction: String             => JsError(s"Invalid update action s'$unknownAction'")
       }
 

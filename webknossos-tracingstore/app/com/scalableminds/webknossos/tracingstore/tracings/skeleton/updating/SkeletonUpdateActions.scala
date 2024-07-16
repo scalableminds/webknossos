@@ -4,11 +4,11 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.tracingstore.annotation.GenericUpdateAction
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
 import play.api.libs.json._
 
-trait SkeletonUpdateAction extends GenericUpdateAction
+trait SkeletonUpdateAction extends UpdateAction
 
 case class CreateTreeSkeletonAction(id: Int,
                                     color: Option[com.scalableminds.util.image.Color],
@@ -43,10 +43,10 @@ case class CreateTreeSkeletonAction(id: Int,
     tracing.withTrees(newTree +: tracing.trees)
   }*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -58,12 +58,12 @@ case class DeleteTreeSkeletonAction(id: Int,
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.withTrees(tracing.trees.filter(_.treeId != id))*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -95,10 +95,10 @@ case class UpdateTreeSkeletonAction(id: Int,
     tracing.withTrees(mapTrees(tracing, id, treeTransform))
   }*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -124,12 +124,12 @@ case class MergeTreeSkeletonAction(sourceId: Int,
     tracing.withTrees(mapTrees(tracing, targetId, treeTransform).filter(_.treeId != sourceId))
   }*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -167,12 +167,12 @@ case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
   }
    */
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -189,12 +189,12 @@ case class CreateEdgeSkeletonAction(source: Int,
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -211,12 +211,12 @@ case class DeleteEdgeSkeletonAction(source: Int,
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -257,12 +257,12 @@ case class CreateNodeSkeletonAction(id: Int,
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -306,12 +306,12 @@ case class UpdateNodeSkeletonAction(id: Int,
   }
    */
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 
 }
@@ -331,12 +331,12 @@ case class DeleteNodeSkeletonAction(nodeId: Int,
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -349,12 +349,12 @@ case class UpdateTreeGroupsSkeletonAction(treeGroups: List[UpdateActionTreeGroup
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.withTreeGroups(treeGroups.map(convertTreeGroup))*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -379,12 +379,12 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
       editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates)
     )*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -396,12 +396,12 @@ case class RevertToVersionSkeletonAction(sourceVersion: Long,
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     throw new Exception("RevertToVersionAction applied on unversioned tracing")*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -418,12 +418,12 @@ case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -456,12 +456,12 @@ case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int],
     }
   }*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -479,12 +479,12 @@ case class UpdateTreeEdgesVisibilitySkeletonAction(treeId: Int,
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -496,12 +496,12 @@ case class UpdateUserBoundingBoxesSkeletonAction(boundingBoxes: List[NamedBoundi
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing =
     tracing.withUserBoundingBoxes(boundingBoxes.map(_.toProto))*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -523,12 +523,12 @@ case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[I
     tracing.withUserBoundingBoxes(updateUserBoundingBoxes())
   }*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 
@@ -539,12 +539,12 @@ case class UpdateTdCameraSkeletonAction(actionTimestamp: Option[Long] = None,
 
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing = tracing*/
 
-  override def addTimestamp(timestamp: Long): GenericUpdateAction =
+  override def addTimestamp(timestamp: Long): UpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  override def addAuthorId(authorId: Option[String]): GenericUpdateAction =
+  override def addAuthorId(authorId: Option[String]): UpdateAction =
     this.copy(actionAuthorId = authorId)
 }
 

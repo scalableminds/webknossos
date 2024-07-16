@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
-import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, GenericUpdateActionGroup}
+import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -31,8 +31,8 @@ class DSAnnotationController @Inject()(
       }
     }
 
-  def update(annotationId: String, token: Option[String]): Action[List[GenericUpdateActionGroup]] =
-    Action.async(validateJson[List[GenericUpdateActionGroup]]) { implicit request =>
+  def update(annotationId: String, token: Option[String]): Action[List[UpdateActionGroup]] =
+    Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccess(UserAccessRequest.writeAnnotation(annotationId),

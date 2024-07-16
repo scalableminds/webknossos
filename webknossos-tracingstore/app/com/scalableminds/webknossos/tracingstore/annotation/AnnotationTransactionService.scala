@@ -34,7 +34,7 @@ class AnnotationTransactionService @Inject()(
                       transactionId: String,
                       transactionGroupIndex: Int,
                       version: Long,
-                      updateGroup: GenericUpdateActionGroup,
+                      updateGroup: UpdateActionGroup,
                       expiry: FiniteDuration)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- Fox.runIf(transactionGroupIndex > 0)(
@@ -52,7 +52,7 @@ class AnnotationTransactionService @Inject()(
 
   private def handleUpdateGroupForTransaction(annotationId: String,
                                               previousVersionFox: Fox[Long],
-                                              updateGroup: GenericUpdateActionGroup,
+                                              updateGroup: UpdateActionGroup,
                                               userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] =
     for {
       previousCommittedVersion: Long <- previousVersionFox
@@ -81,7 +81,7 @@ class AnnotationTransactionService @Inject()(
 
   // For an update group (that is the last of a transaction), fetch all previous uncommitted for the same transaction
   // and commit them all.
-  private def commitWithPending(annotationId: String, updateGroup: GenericUpdateActionGroup, userToken: Option[String])(
+  private def commitWithPending(annotationId: String, updateGroup: UpdateActionGroup, userToken: Option[String])(
       implicit ec: ExecutionContext): Fox[Long] =
     for {
       previousActionGroupsToCommit <- getAllUncommittedFor(annotationId, updateGroup.transactionId)
@@ -96,11 +96,11 @@ class AnnotationTransactionService @Inject()(
   private def removeAllUncommittedFor(tracingId: String, transactionId: String): Fox[Unit] =
     uncommittedUpdatesStore.removeAllConditional(patternFor(tracingId, transactionId))
 
-  private def getAllUncommittedFor(annotationId: String, transactionId: String): Fox[List[GenericUpdateActionGroup]] =
+  private def getAllUncommittedFor(annotationId: String, transactionId: String): Fox[List[UpdateActionGroup]] =
     for {
       raw: Seq[String] <- uncommittedUpdatesStore.findAllConditional(patternFor(annotationId, transactionId))
-      parsed: Seq[GenericUpdateActionGroup] = raw.flatMap(itemAsString =>
-        JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[GenericUpdateActionGroup]))
+      parsed: Seq[UpdateActionGroup] = raw.flatMap(itemAsString =>
+        JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup]))
     } yield parsed.toList.sortBy(_.transactionGroupIndex)
 
   private def saveToHandledGroupIdStore(annotationId: String,
@@ -118,12 +118,12 @@ class AnnotationTransactionService @Inject()(
     handledGroupIdStore.contains(handledGroupKey(annotationId, transactionId, version, transactionGroupIndex))
 
   private def concatenateUpdateGroupsOfTransaction(
-      previousActionGroups: List[GenericUpdateActionGroup],
-      lastActionGroup: GenericUpdateActionGroup): GenericUpdateActionGroup =
+                                                    previousActionGroups: List[UpdateActionGroup],
+                                                    lastActionGroup: UpdateActionGroup): UpdateActionGroup =
     if (previousActionGroups.isEmpty) lastActionGroup
     else {
       val allActionGroups = previousActionGroups :+ lastActionGroup
-      GenericUpdateActionGroup(
+      UpdateActionGroup(
         version = lastActionGroup.version,
         timestamp = lastActionGroup.timestamp,
         authorId = lastActionGroup.authorId,
@@ -136,7 +136,7 @@ class AnnotationTransactionService @Inject()(
       )
     }
 
-  def handleUpdateGroups(annotationId: String, updateGroups: List[GenericUpdateActionGroup], userToken: Option[String])(
+  def handleUpdateGroups(annotationId: String, updateGroups: List[UpdateActionGroup], userToken: Option[String])(
       implicit ec: ExecutionContext): Fox[Long] =
     if (updateGroups.forall(_.transactionGroupCount == 1)) {
       commitUpdates(annotationId, updateGroups, userToken)
@@ -149,7 +149,7 @@ class AnnotationTransactionService @Inject()(
 
   // Perform version check and commit the passed updates
   private def commitUpdates(annotationId: String,
-                            updateGroups: List[GenericUpdateActionGroup],
+                            updateGroups: List[UpdateActionGroup],
                             userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] =
     for {
       _ <- annotationService.reportUpdates(annotationId, updateGroups, userToken)
@@ -173,7 +173,7 @@ class AnnotationTransactionService @Inject()(
    * ignore it silently. This is in case the frontend sends a retry if it believes a save to be unsuccessful
    * despite the backend receiving it just fine.
    */
-  private def failUnlessAlreadyHandled(updateGroup: GenericUpdateActionGroup, tracingId: String, previousVersion: Long)(
+  private def failUnlessAlreadyHandled(updateGroup: UpdateActionGroup, tracingId: String, previousVersion: Long)(
       implicit ec: ExecutionContext): Fox[Long] = {
     val errorMessage = s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}"
     for {

@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.tracingstore.annotation.GenericUpdateAction
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.NamedBoundingBox
 import play.api.libs.json._
 
@@ -22,7 +22,7 @@ trait VolumeUpdateActionHelper {
 
 }
 
-trait VolumeUpdateAction extends GenericUpdateAction
+trait VolumeUpdateAction extends UpdateAction
 
 trait ApplyableVolumeAction extends VolumeUpdateAction
 
@@ -40,7 +40,7 @@ case class UpdateBucketVolumeAction(position: Vec3Int,
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   def transformToCompact: CompactVolumeUpdateAction =
     CompactVolumeUpdateAction("updateBucket", actionTimestamp, actionAuthorId, Json.obj())
@@ -64,7 +64,7 @@ case class UpdateTracingVolumeAction(
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   override def isViewOnlyChange: Boolean = true
 }
@@ -82,7 +82,7 @@ case class RevertToVersionVolumeAction(sourceVersion: Long,
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
 
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 }
 
 object RevertToVersionVolumeAction {
@@ -98,7 +98,7 @@ case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
     this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withUserBoundingBoxes(boundingBoxes.map(_.toProto))*/
@@ -117,7 +117,7 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   override def isViewOnlyChange: Boolean = true
 
@@ -146,7 +146,7 @@ case class RemoveFallbackLayer(actionTimestamp: Option[Long] = None,
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.clearFallbackLayer*/
@@ -164,7 +164,7 @@ case class ImportVolumeData(largestSegmentId: Option[Long],
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.copy(largestSegmentId = largestSegmentId)*/
@@ -181,7 +181,7 @@ case class AddSegmentIndex(actionTimestamp: Option[Long] = None,
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.copy(hasSegmentIndex = Some(true))*/
@@ -201,7 +201,7 @@ case class UpdateTdCamera(actionTimestamp: Option[Long] = None,
     this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   override def isViewOnlyChange: Boolean = true
 }
@@ -227,7 +227,7 @@ case class CreateSegmentVolumeAction(id: Long,
     this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   /*override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     val newSegment =
@@ -264,7 +264,7 @@ case class UpdateSegmentVolumeAction(id: Long,
     this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   /*override def applyOn(tracing: VolumeTracing): VolumeTracing = {
     def segmentTransform(segment: Segment): Segment =
@@ -294,7 +294,7 @@ case class DeleteSegmentVolumeAction(id: Long,
     this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.withSegments(tracing.segments.filter(_.segmentId != id))*/
@@ -313,7 +313,7 @@ case class DeleteSegmentDataVolumeAction(id: Long,
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 }
 
 object DeleteSegmentDataVolumeAction {
@@ -330,7 +330,7 @@ case class UpdateMappingNameVolumeAction(mappingName: Option[String],
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   /*  override def applyOn(tracing: VolumeTracing): VolumeTracing =
     if (tracing.mappingIsLocked.getOrElse(false)) tracing // cannot change mapping name if it is locked
@@ -353,7 +353,7 @@ case class CompactVolumeUpdateAction(name: String,
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 }
 
 object CompactVolumeUpdateAction {
@@ -386,7 +386,7 @@ case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegme
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): GenericUpdateAction = this.copy(info = info)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 }
 
 object UpdateSegmentGroupsVolumeAction {

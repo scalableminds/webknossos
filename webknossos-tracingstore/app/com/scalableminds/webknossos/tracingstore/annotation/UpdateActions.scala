@@ -27,7 +27,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   DeleteSegmentVolumeAction,
   ImportVolumeData,
   RemoveFallbackLayer,
-  RevertToVersionVolumeAction,
   UpdateBucketVolumeAction,
   UpdateMappingNameVolumeAction,
   UpdateSegmentGroupsVolumeAction,
@@ -39,22 +38,22 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 }
 import play.api.libs.json.{Format, JsError, JsObject, JsPath, JsResult, JsValue, Json, OFormat, Reads}
 
-trait GenericUpdateAction {
+trait UpdateAction {
   def actionTimestamp: Option[Long]
 
-  def addTimestamp(timestamp: Long): GenericUpdateAction
+  def addTimestamp(timestamp: Long): UpdateAction
 
-  def addInfo(info: Option[String]): GenericUpdateAction
+  def addInfo(info: Option[String]): UpdateAction
 
-  def addAuthorId(authorId: Option[String]): GenericUpdateAction
+  def addAuthorId(authorId: Option[String]): UpdateAction
 
   def isViewOnlyChange: Boolean = false
 }
 
-object GenericUpdateAction {
+object UpdateAction {
 
-  implicit object genericUpdateActionFormat extends Format[GenericUpdateAction] {
-    override def reads(json: JsValue): JsResult[GenericUpdateAction] = {
+  implicit object updateActionFormat extends Format[UpdateAction] {
+    override def reads(json: JsValue): JsResult[UpdateAction] = {
       val jsonValue = (json \ "value").as[JsObject]
       (json \ "name").as[String] match {
         case "createTree"                => deserialize[CreateTreeSkeletonAction](jsonValue)
@@ -102,7 +101,7 @@ object GenericUpdateAction {
     private val positionTransform =
       (JsPath \ "position").json.update(JsPath.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
 
-    override def writes(a: GenericUpdateAction): JsObject = a match {
+    override def writes(a: UpdateAction): JsObject = a match {
       case s: CreateTreeSkeletonAction =>
         Json.obj("name" -> "createTree", "value" -> Json.toJson(s)(CreateTreeSkeletonAction.jsonFormat))
       case s: DeleteTreeSkeletonAction =>
@@ -150,21 +149,21 @@ object GenericUpdateAction {
   }
 }
 
-case class GenericUpdateActionGroup(version: Long,
-                                    timestamp: Long,
-                                    authorId: Option[String],
-                                    actions: List[GenericUpdateAction],
-                                    stats: Option[JsObject],
-                                    info: Option[String],
-                                    transactionId: String,
-                                    transactionGroupCount: Int,
-                                    transactionGroupIndex: Int) {
+case class UpdateActionGroup(version: Long,
+                             timestamp: Long,
+                             authorId: Option[String],
+                             actions: List[UpdateAction],
+                             stats: Option[JsObject],
+                             info: Option[String],
+                             transactionId: String,
+                             transactionGroupCount: Int,
+                             transactionGroupIndex: Int) {
 
   def significantChangesCount: Int = 1 // TODO
 
   def viewChangesCount: Int = 1 // TODO
 }
 
-object GenericUpdateActionGroup {
-  implicit val jsonFormat: OFormat[GenericUpdateActionGroup] = Json.format[GenericUpdateActionGroup]
+object UpdateActionGroup {
+  implicit val jsonFormat: OFormat[UpdateActionGroup] = Json.format[UpdateActionGroup]
 }

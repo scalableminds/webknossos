@@ -17,6 +17,8 @@ class N5MultiscalesExplorer(implicit val ec: ExecutionContext) extends RemoteLay
 
   override def name: String = "N5 Multiscales"
 
+  override def exploreSiblings: Boolean = false
+
   override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(N5Layer, VoxelSize)]] =
     for {
       metadataPath <- Fox.successful(remotePath / N5Metadata.FILENAME_ATTRIBUTES_JSON)

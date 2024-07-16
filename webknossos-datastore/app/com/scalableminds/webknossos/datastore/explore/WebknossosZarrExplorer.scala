@@ -24,6 +24,8 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
 
   override def name: String = "WEBKNOSSOS-based Zarr"
 
+  override def exploreSiblings: Boolean = false
+
   override def explore(remotePath: VaultPath,
                        credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     for {

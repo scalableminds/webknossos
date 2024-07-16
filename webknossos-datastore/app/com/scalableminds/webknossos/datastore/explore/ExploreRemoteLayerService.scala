@@ -107,7 +107,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localFolderWhitelist"
     } else Fox.successful(())
 
-  private val MAX_RECURSIVE_SEARCH_DEPTH = 8
+  private val MAX_RECURSIVE_SEARCH_DEPTH = 3
 
   private val MAX_EXPLORED_ITEMS_PER_LEVEL = 10
 
@@ -182,9 +182,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
     explorationResultOfPath match {
       case Full(layersWithVoxelSizes) =>
-        // Try to look for additional layers in sibling directories.
-        exploreSiblingDirectoriesOf(path, remainingPaths, credentialId, explorers, reportMutable).map(
-          foundLayersOfSiblingPaths => layersWithVoxelSizes ++ foundLayersOfSiblingPaths)
+        Fox.successful(layersWithVoxelSizes)
 
       case Empty =>
         for {
@@ -199,21 +197,5 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       case _ =>
         Fox.successful(List.empty)
     }
-
-  private def exploreSiblingDirectoriesOf(path: VaultPath,
-                                          remainingPaths: List[(VaultPath, Int)],
-                                          credentialId: Option[String],
-                                          explorers: List[RemoteLayerExplorer],
-                                          reportMutable: ListBuffer[String])(
-      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] = {
-    val sameParentRemainingPaths = remainingPaths.filter(_._1.parent == path.parent)
-    // Try to look for additional layers in sibling directories.
-    val layersWithVoxelSizesInSiblingPaths = Fox
-      .sequenceOfFulls(sameParentRemainingPaths.map(path =>
-        recursivelyExploreRemoteLayerAtPaths(List(path), credentialId, explorers, reportMutable)))
-      .map(listOfLayersWithVoxelSizes => listOfLayersWithVoxelSizes.flatten)
-      .toFox
-    layersWithVoxelSizesInSiblingPaths
-  }
 
 }

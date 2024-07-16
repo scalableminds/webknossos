@@ -25,6 +25,8 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
 
   override def name: String = "OME NGFF Zarr v0.4"
 
+  override def exploreSiblings: Boolean = false
+
   override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(ZarrLayer, VoxelSize)]] =
     for {
       zattrsPath <- Fox.successful(remotePath / NgffMetadata.FILENAME_DOT_ZATTRS)

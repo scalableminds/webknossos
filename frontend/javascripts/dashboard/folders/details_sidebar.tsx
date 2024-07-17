@@ -6,6 +6,9 @@ import {
   LoadingOutlined,
   DeleteOutlined,
   PlusOutlined,
+  TagsOutlined,
+  FieldNumberOutlined,
+  FieldStringOutlined,
 } from "@ant-design/icons";
 import {
   Typography,
@@ -53,11 +56,23 @@ import { useWillUnmount } from "beautiful-react-hooks";
 function metadataTypeToString(type: APIMetadata["type"]) {
   switch (type) {
     case "string":
-      return "Text";
+      return (
+        <span>
+          <FieldStringOutlined /> Text
+        </span>
+      );
     case "number":
-      return "Number";
+      return (
+        <span>
+          <FieldNumberOutlined /> Number
+        </span>
+      );
     case "string[]":
-      return "Multi-Item Text";
+      return (
+        <span>
+          <TagsOutlined /> Multi-Item Text
+        </span>
+      );
   }
 }
 
@@ -266,7 +281,6 @@ function MetadataTable({
             className={isFocused ? undefined : "transparent-input"}
             onFocus={() => setFocusedRow(record.index)}
             onBlur={() => setFocusedRow(null)}
-            style={{ width: 116.5, borderColor: isFocused ? undefined : "transparent" }}
             value={record.value as number}
             onChange={(newNum) => updateValue(record.index, newNum?.toString() || "")}
             placeholder="Value"
@@ -279,7 +293,6 @@ function MetadataTable({
             className={isFocused ? undefined : "transparent-input"}
             onFocus={() => setFocusedRow(record.index)}
             onBlur={() => setFocusedRow(null)}
-            style={{ width: 116.5, borderColor: isFocused ? undefined : "transparent" }}
             value={record.value}
             onChange={(evt) => updateValue(record.index, evt.target.value)}
             placeholder="Value"
@@ -292,7 +305,6 @@ function MetadataTable({
             onFocus={() => setFocusedRow(record.index)}
             onBlur={() => setFocusedRow(null)}
             className={isFocused ? undefined : "transparent-input"}
-            style={{ width: 116.5, borderColor: isFocused ? undefined : "transparent" }}
             mode="tags"
             placeholder="Values"
             value={record.value as string[]}
@@ -344,9 +356,7 @@ function MetadataTable({
                       </>
                     ) : null}
                   </td>
-                  <td>
-                    <span style={{ width: 5 }}>:</span>
-                  </td>
+                  <td>:</td>
                   <td>{getValueInput(record)}</td>
                   <td>
                     <DeleteOutlined
@@ -369,6 +379,7 @@ function MetadataTable({
                     menu={getTypeSelectDropdownMenu()}
                     placement="bottom"
                     trigger={["hover", "click"]}
+                    autoFocus
                   >
                     <Button ghost size="small" style={{ border: "none" }}>
                       <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />

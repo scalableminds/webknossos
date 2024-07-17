@@ -185,11 +185,16 @@ function MetadataTable({
   );
   const [error, setError] = useState<[number, string] | null>(null); // [index, error message]
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
+
   useEffect(() => {
-    // Flush pending updates:
-    updateCachedDatasetOrFolderDebounced.flush();
-    // Update state to newest metadata from selectedDatasetOrFolder.
-    setMetadata(selectedDatasetOrFolder.metadata || []);
+    if (isDatasetUpdatePending) {
+      // Flush pending updates and wait for the next update to update this components metadata.
+      // Otherwise, a cyclic update race between the selectedDatasetOrFolder.metadata and the flushed version might occur.
+      updateCachedDatasetOrFolderDebounced.flush();
+    } else {
+      // Update state to newest metadata from selectedDatasetOrFolder.
+      setMetadata(selectedDatasetOrFolder.metadata || []);
+    }
   }, [selectedDatasetOrFolder.metadata]);
 
   useEffectOnUpdate(() => {

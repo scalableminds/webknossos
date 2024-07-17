@@ -220,23 +220,14 @@
     "**/rc-tree": "^5.7.12"
   },
   "ava": {
-    "files": [
-      "./public-test/test-bundle/**/*.{js,jsx}"
-    ],
-    "ignoredByWatcher": [
-      "./binaryData/**/*.*"
-    ],
-    "require": [
-      "./frontend/javascripts/test/_ava_polyfill_provider.ts"
-    ],
+    "files": ["./public-test/test-bundle/**/*.{js,jsx}"],
+    "ignoredByWatcher": ["./binaryData/**/*.*"],
+    "require": ["./frontend/javascripts/test/_ava_polyfill_provider.ts"],
     "snapshotDir": "frontend/javascripts/test/snapshots",
     "concurrency": 8
   },
   "c8": {
-    "exclude": [
-      "public-test/test-bundle/test/**/*.*",
-      "frontend/javascripts/test/**/*.*"
-    ],
+    "exclude": ["public-test/test-bundle/test/**/*.*", "frontend/javascripts/test/**/*.*"],
     "reporter": "lcov"
   }
 }

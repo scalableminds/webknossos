@@ -11,6 +11,8 @@
   "devDependencies": {
     "@biomejs/biome": "^1.5.3",
     "@redux-saga/testing-utils": "^1.1.5",
+    "@rspack/cli": "^0.7.5",
+    "@rspack/core": "^0.7.5",
     "@shaderfrog/glsl-parser": "^0.3.0",
     "@types/color-hash": "^1.0.2",
     "@types/cwise": "^1.0.4",
@@ -75,9 +77,8 @@
   "optionalDependencies": {},
   "scripts": {
     "start": "node tools/proxy/proxy.js",
-    "build": "node --max-old-space-size=4096 node_modules/.bin/webpack --env production",
-    "build-dev": "node_modules/.bin/webpack",
-    "build-watch": "node_modules/.bin/webpack -w",
+    "build": "rspack build",
+    "build-dev": "rspack serve",
     "listening": "lsof -i:5005,7155,9000,9001,9002",
     "kill-listeners": "kill -9 $(lsof -t -i:5005,7155,9000,9001,9002)",
     "rm-fossil-lock": "rm fossildb/data/LOCK",

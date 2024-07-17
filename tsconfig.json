@@ -5,18 +5,20 @@
     "noImplicitAny": true,
     "removeComments": true,
     "sourceMap": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
+    "isolatedModules": true,
     "outDir": "build",
-    "jsx": "react",
+    "jsx": "react-jsx",
     "strict": true,
-    "target": "es2021",
+    "target": "ES2022",
     "types": [], //reconsider this later
     "skipLibCheck": true, //reconsider this later
     "allowSyntheticDefaultImports": true,
     "baseUrl": "./frontend/javascripts",
     "lib": [
-      "ES2021",
-      "dom",
+      "DOM",
+      "ES2022",
+      "WebWorker",
     ],
     "paths": {
       "oxalis/*": ["./oxalis/*"],

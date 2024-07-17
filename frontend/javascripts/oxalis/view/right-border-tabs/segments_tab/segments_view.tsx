@@ -452,8 +452,8 @@ class SegmentsView extends React.Component<Props, State> {
       if (node.type === "segment") return acc;
       if (node.isExpanded || node.isExpanded == null) {
         acc.push(node.key);
-        if (node.children.length > 0) acc.push(...this.getExpandedKeys(node.children));
       }
+      if (node.children.length > 0) acc.push(...this.getExpandedKeys(node.children));
       return acc;
     }, []);
   };
@@ -467,11 +467,12 @@ class SegmentsView extends React.Component<Props, State> {
     } */
 
   componentDidUpdate(prevProps: Props) {
-    if (this.props.segmentGroups[0] !== prevProps.segmentGroups[0])
+    if (this.props.segmentGroups[0] !== prevProps.segmentGroups[0]) {
       // TODO_c find correct way to determine if update is necessary
       this.setState({
         expandedGroupKeys: this.getExpandedKeys(this.state.groupTree),
       });
+    }
 
     if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
       Store.dispatch(

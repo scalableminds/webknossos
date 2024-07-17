@@ -93,6 +93,7 @@ import type {
   Segment,
   SegmentGroup,
   SegmentMap,
+  TreeGroup,
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
@@ -444,26 +445,32 @@ class SegmentsView extends React.Component<Props, State> {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
 
     this.setState({
-      expandedGroupKeys: this.getExpandedKeys(this.state.groupTree),
+      expandedGroupKeys: this.getExpandedKeysWithRoot(),
     });
   }
 
-  getExpandedKeys = (treeData: SegmentHierarchyNode[]) => {
+  getExpandedKeys = (treeData: TreeGroup[]) => {
     return treeData.reduce((expandedKeysAcc: string[], node) => {
-      if (node.type === "segment") return expandedKeysAcc;
       if (node.isExpanded || node.isExpanded == null) {
-        expandedKeysAcc.push(node.key);
+        expandedKeysAcc.push(this.getKeyForGroupId(node.groupId));
       }
       if (node.children.length > 0) expandedKeysAcc.push(...this.getExpandedKeys(node.children));
       return expandedKeysAcc;
     }, []);
   };
 
+  getExpandedKeysWithRoot = () => {
+    const expandedGroups = this.getExpandedKeys(this.props.segmentGroups);
+    return this.state.isRootGroupExpanded
+      ? [this.getKeyForGroupId(MISSING_GROUP_ID), ...expandedGroups]
+      : expandedGroups;
+  }
+
   componentDidUpdate(prevProps: Props) {
     if (this.props.segmentGroups[0] !== prevProps.segmentGroups[0]) {
       // TODO_c find faster way to determine if update is necessary!
       this.setState({
-        expandedGroupKeys: this.getExpandedKeys(this.state.groupTree),
+        expandedGroupKeys: this.getExpandedKeysWithRoot(),
       });
     }
 
@@ -540,8 +547,9 @@ class SegmentsView extends React.Component<Props, State> {
       } else {
         return {
           ...group,
-          isExpanded: false, // Close all groups that are not in the expanded list
-          // because this method is (a.o.) called for every update, e.g. when a group is collapsed.
+          isExpanded: false,
+          // Close all groups that are not in the expanded list because this method
+          // is (a.o.) called for every update, e.g. when a group is collapsed.
         };
       }
     });
@@ -616,7 +624,7 @@ class SegmentsView extends React.Component<Props, State> {
               ),
             );
           },
-          onCancel() {},
+          onCancel() { },
         });
       } else {
         // If only one segment is selected, select group without warning (and vice-versa) even though ctrl is pressed.
@@ -911,9 +919,9 @@ class SegmentsView extends React.Component<Props, State> {
 
       const maybeMappingName =
         !isEditableMapping &&
-        mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
-        mappingInfo.mappingType === "HDF5" &&
-        mappingInfo.mappingName != null
+          mappingInfo.mappingStatus !== MappingStatusEnum.DISABLED &&
+          mappingInfo.mappingType === "HDF5" &&
+          mappingInfo.mappingName != null
           ? mappingInfo.mappingName
           : undefined;
 
@@ -1283,81 +1291,81 @@ class SegmentsView extends React.Component<Props, State> {
   getReloadMenuItem = (groupId: number | null): ItemType => {
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
-          key: "reloadMeshes",
-          icon: <ReloadOutlined />,
-          label: (
-            <div
-              onClick={() => {
-                this.handleRefreshMeshes(groupId);
-                this.closeSegmentOrGroupDropdown();
-              }}
-            >
-              Refresh Meshes
-            </div>
-          ),
-        }
+        key: "reloadMeshes",
+        icon: <ReloadOutlined />,
+        label: (
+          <div
+            onClick={() => {
+              this.handleRefreshMeshes(groupId);
+              this.closeSegmentOrGroupDropdown();
+            }}
+          >
+            Refresh Meshes
+          </div>
+        ),
+      }
       : null;
   };
 
   getRemoveMeshesMenuItem = (groupId: number | null): ItemType => {
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
-          key: "removeMeshes",
-          icon: <DeleteOutlined />,
-          label: (
-            <div
-              onClick={() => {
-                this.handleRemoveMeshes(groupId);
-                this.closeSegmentOrGroupDropdown();
-              }}
-            >
-              Remove Meshes
-            </div>
-          ),
-        }
+        key: "removeMeshes",
+        icon: <DeleteOutlined />,
+        label: (
+          <div
+            onClick={() => {
+              this.handleRemoveMeshes(groupId);
+              this.closeSegmentOrGroupDropdown();
+            }}
+          >
+            Remove Meshes
+          </div>
+        ),
+      }
       : null;
   };
 
   getDownLoadMeshesMenuItem = (groupId: number | null): ItemType => {
     return this.state != null && this.doesGroupHaveAnyMeshes(groupId)
       ? {
-          key: "downloadAllMeshes",
-          icon: <DownloadOutlined />,
-          label: (
-            <div
-              onClick={() => {
-                this.downloadAllMeshesForGroup(groupId);
-                this.closeSegmentOrGroupDropdown();
-              }}
-            >
-              Download Meshes
-            </div>
-          ),
-        }
+        key: "downloadAllMeshes",
+        icon: <DownloadOutlined />,
+        label: (
+          <div
+            onClick={() => {
+              this.downloadAllMeshesForGroup(groupId);
+              this.closeSegmentOrGroupDropdown();
+            }}
+          >
+            Download Meshes
+          </div>
+        ),
+      }
       : null;
   };
 
   getMoveSegmentsHereMenuItem = (groupId: number): ItemType => {
     return this.props.selectedIds != null
       ? {
-          key: "moveHere",
-          onClick: () => {
-            if (this.props.visibleSegmentationLayer == null) {
-              // Satisfy TS
-              return;
-            }
-            this.props.updateSegments(
-              this.props.selectedIds.segments,
-              { groupId },
-              this.props.visibleSegmentationLayer.name,
-              true,
-            );
-            this.closeSegmentOrGroupDropdown();
-          },
-          disabled: !this.props.allowUpdate,
-          icon: <ArrowRightOutlined />,
-          label: `Move active ${pluralize("segment", this.props.selectedIds.segments.length)} here`,
-        }
+        key: "moveHere",
+        onClick: () => {
+          if (this.props.visibleSegmentationLayer == null) {
+            // Satisfy TS
+            return;
+          }
+          this.props.updateSegments(
+            this.props.selectedIds.segments,
+            { groupId },
+            this.props.visibleSegmentationLayer.name,
+            true,
+          );
+          this.closeSegmentOrGroupDropdown();
+        },
+        disabled: !this.props.allowUpdate,
+        icon: <ArrowRightOutlined />,
+        label: `Move active ${pluralize("segment", this.props.selectedIds.segments.length)} here`,
+      }
       : null;
   };
 
@@ -1874,11 +1882,10 @@ class SegmentsView extends React.Component<Props, State> {
                   {isSegmentHierarchyEmpty ? (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      description={`There are no segments yet. ${
-                        this.props.allowUpdate && this.props.hasVolumeTracing
-                          ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
-                          : "Select or click existing segments to add them to this list."
-                      }`}
+                      description={`There are no segments yet. ${this.props.allowUpdate && this.props.hasVolumeTracing
+                        ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
+                        : "Select or click existing segments to add them to this list."
+                        }`}
                     />
                   ) : (
                     /* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.

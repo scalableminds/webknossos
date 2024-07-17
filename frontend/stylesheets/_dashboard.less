@@ -225,38 +225,70 @@ pre.dataset-import-folder-structure-hint {
   vertical-align: top;
 }
 
-.metadata-table {
+.metadata-table-wrapper {
   border: var(--ant-line-width) var(--ant-line-type) var(--ant-color-border);
   color: var(--ant-tag-default-color);
   background: var(--ant-tag-default-bg);
   border-radius: var(--ant-border-radius-sm);
-  border-collapse: separate;
-  table-layout: fixed;
+  padding: 2px;
+  .metadata-table {
+    color: var(--ant-tag-default-color);
+    background: var(--ant-tag-default-bg);
+    border-collapse: collapse; /* Ensure border-collapse is set to separate */
+    table-layout: fixed;
 
-  th {
-    padding: 4px !important;
-    font-weight: normal;
-  }
-  .ant-table-cell {
-    padding: 4px 4px 4px 0px !important;
-  }
+    tr td {
+      padding-top: 4px;
+      padding-bottom: 4px;
+    }
+    tbody tr td:last-child {
+      padding: 0px;
+    }
+    /*tr {
+      border-bottom: var(--ant-line-width) var(--ant-line-type) var(--ant-color-border); /* Add bottom border to each row *
+    }*/
 
-  thead tr th:first-child,
-  tbody tr td:first-child {
-    width: 35px;
-  }
-  thead tr th:nth-child(2),
-  thead tr th:nth-child(4),
-  tbody tr td:nth-child(2),
-  tbody tr td:nth-child(4) {
-    width: 105px;
-  }
-  thead tr th:nth-child(3),
-  tbody tr td:nth-child(3) {
-    width: 5px;
-  }
-  thead tr th:nth-child(5),
-  tbody tr td:nth-child(5) {
-    width: 16px;
+    tr {
+      position: relative; /* Ensure the pseudo-element is positioned relative to the tr */
+      &:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        left: 8px; /* Margin on the left side */
+        right: 8px; /* Margin on the right side */
+        top: 0;
+        height: var(--ant-line-width); /* Height of the border line */
+        background-color: var(--ant-color-border); /* Color of the border line */
+      }
+    }
+
+    .transparent-input {
+      background: transparent;
+      .ant-select-selector {
+        border-color: transparent;
+      }
+    }
+
+    th {
+      padding: 4px !important;
+      font-weight: normal;
+    }
+    .ant-table-cell {
+      padding: 4px 4px 4px 0px !important;
+    }
+
+    thead tr th:first-child,
+    tbody tr td:first-child,
+    thead tr th:nth-child(2),
+    tbody tr td:nth-child(2) {
+      width: 116.5;
+    }
+    thead tr th:nth-child(2),
+    tbody tr td:nth-child(2) {
+      width: 5px;
+    }
+    thead tr th:nth-child(5),
+    tbody tr td:nth-child(5) {
+      width: 16px;
+    }
   }
 }

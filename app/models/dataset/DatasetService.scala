@@ -78,11 +78,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     implicit val ctx: DBAccessContext = GlobalAccessContext
     val newId = ObjectId.generate
     val metadata =
-      Json.arr(
-        Json.obj("type" -> "string", "key" -> "species", "value" -> "species name", "index" -> 0),
-        Json.obj("type" -> "string", "key" -> "brainRegion", "value" -> "brain region", "index" -> 1),
-        Json.obj("type" -> "string", "key" -> "acquisition", "value" -> "acquisition method", "index" -> 2)
-      )
+      if (publication.isDefined)
+        Json.arr(
+          Json.obj("type" -> "string", "key" -> "species", "value" -> "species name", "index" -> 0),
+          Json.obj("type" -> "string", "key" -> "brainRegion", "value" -> "brain region", "index" -> 1),
+          Json.obj("type" -> "string", "key" -> "acquisition", "value" -> "acquisition method", "index" -> 2)
+        )
+      else Json.arr()
 
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {

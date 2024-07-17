@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   UpdateLayerMetadataAnnotationUpdateAction,
   UpdateMetadataAnnotationUpdateAction
 }
+import com.scalableminds.webknossos.tracingstore.tracings.volume.UpdateBucketVolumeAction
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingUpdatesReport}
 import scalapb.GeneratedMessage
@@ -20,7 +21,6 @@ import scala.concurrent.ExecutionContext
 class DSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient,
                                     tracingDataStore: TracingDataStore)
     extends KeyValueStoreImplicits {
-  def storeUpdate(updateAction: GeneratedMessage)(implicit ec: ExecutionContext): Fox[Unit] = Fox.successful(())
 
   def reportUpdates(annotationId: String, updateGroups: List[UpdateActionGroup], userToken: Option[String]): Fox[Unit] =
     for {
@@ -42,15 +42,22 @@ class DSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
                         previousVersion: Long,
                         userToken: Option[String]): Fox[Unit] =
     // TODO apply some updates directly? transform to compact?
-    tracingDataStore.annotationUpdates.put(
-      annotationId,
-      updateActionGroup.version,
-      updateActionGroup.actions
-        .map(_.addTimestamp(updateActionGroup.timestamp).addAuthorId(updateActionGroup.authorId)) match { //to the first action in the group, attach the group's info
-        case Nil           => List[UpdateAction]()
-        case first :: rest => first.addInfo(updateActionGroup.info) :: rest
-      }
-    )
+    tracingDataStore.annotationUpdates.put(annotationId,
+                                           updateActionGroup.version,
+                                           preprocessActionsForStorage(updateActionGroup))
+
+  private def preprocessActionsForStorage(updateActionGroup: UpdateActionGroup): List[UpdateAction] = {
+    val actionsWithInfo = updateActionGroup.actions.map(
+      _.addTimestamp(updateActionGroup.timestamp).addAuthorId(updateActionGroup.authorId)) match {
+      case Nil => List[UpdateAction]()
+      //to the first action in the group, attach the group's info
+      case first :: rest => first.addInfo(updateActionGroup.info) :: rest
+    }
+    actionsWithInfo.map {
+      case a: UpdateBucketVolumeAction => a.transformToCompact // TODO or not?
+      case a                           => a
+    }
+  }
 
   def applyUpdate(annotation: AnnotationProto, updateAction: GeneratedMessage)(
       implicit ec: ExecutionContext): Fox[AnnotationProto] =

@@ -162,7 +162,7 @@ class VolumeTracingService @Inject()(
                   Fox.failure("Cannot delete segment data for annotations without segment index.")
                 } else
                   deleteSegmentData(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version, userToken) ?~> "Failed to delete segment data."
-              case _: UpdateTdCamera        => Fox.successful(tracing)
+              case _: UpdateTdCameraVolumeAction        => Fox.successful(tracing)
               case a: ApplyableVolumeAction => Fox.successful(a.applyOn(tracing))
               case _                        => Fox.failure("Unknown action.")
             }
@@ -909,7 +909,7 @@ class VolumeTracingService @Inject()(
         tracing.version + 1L,
         System.currentTimeMillis(),
         None,
-        List(AddSegmentIndex()),
+        List(AddSegmentIndexVolumeAction()),
         None,
         None,
         "dummyTransactionId",
@@ -996,7 +996,7 @@ class VolumeTracingService @Inject()(
             tracing.version + 1,
             System.currentTimeMillis(),
             None,
-            List(ImportVolumeData(Some(mergedVolume.largestSegmentId.toPositiveLong))),
+            List(ImportVolumeDataVolumeAction(Some(mergedVolume.largestSegmentId.toPositiveLong))),
             None,
             None,
             "dummyTransactionId",

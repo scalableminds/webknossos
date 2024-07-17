@@ -46,10 +46,6 @@ case class UpdateBucketVolumeAction(position: Vec3Int,
     CompactVolumeUpdateAction("updateBucket", actionTimestamp, actionAuthorId, Json.obj())
 }
 
-object UpdateBucketVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateBucketVolumeAction] = Json.format[UpdateBucketVolumeAction]
-}
-
 case class UpdateTracingVolumeAction(
     activeSegmentId: Long,
     editPosition: Vec3Int,
@@ -69,10 +65,6 @@ case class UpdateTracingVolumeAction(
   override def isViewOnlyChange: Boolean = true
 }
 
-object UpdateTracingVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateTracingVolumeAction] = Json.format[UpdateTracingVolumeAction]
-}
-
 case class RevertToVersionVolumeAction(sourceVersion: Long,
                                        actionTimestamp: Option[Long] = None,
                                        actionAuthorId: Option[String] = None,
@@ -85,14 +77,10 @@ case class RevertToVersionVolumeAction(sourceVersion: Long,
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 }
 
-object RevertToVersionVolumeAction {
-  implicit val jsonFormat: OFormat[RevertToVersionVolumeAction] = Json.format[RevertToVersionVolumeAction]
-}
-
-case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
-                                   actionTimestamp: Option[Long] = None,
-                                   actionAuthorId: Option[String] = None,
-                                   info: Option[String] = None)
+case class UpdateUserBoundingBoxesVolumeAction(boundingBoxes: List[NamedBoundingBox],
+                                               actionTimestamp: Option[Long] = None,
+                                               actionAuthorId: Option[String] = None,
+                                               info: Option[String] = None)
     extends ApplyableVolumeAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))
@@ -104,15 +92,11 @@ case class UpdateUserBoundingBoxes(boundingBoxes: List[NamedBoundingBox],
     tracing.withUserBoundingBoxes(boundingBoxes.map(_.toProto))*/
 }
 
-object UpdateUserBoundingBoxes {
-  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxes] = Json.format[UpdateUserBoundingBoxes]
-}
-
-case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
-                                           isVisible: Boolean,
-                                           actionTimestamp: Option[Long] = None,
-                                           actionAuthorId: Option[String] = None,
-                                           info: Option[String] = None)
+case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int],
+                                                       isVisible: Boolean,
+                                                       actionTimestamp: Option[Long] = None,
+                                                       actionAuthorId: Option[String] = None,
+                                                       info: Option[String] = None)
     extends ApplyableVolumeAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
@@ -135,13 +119,9 @@ case class UpdateUserBoundingBoxVisibility(boundingBoxId: Option[Int],
   }*/
 }
 
-object UpdateUserBoundingBoxVisibility {
-  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibility] = Json.format[UpdateUserBoundingBoxVisibility]
-}
-
-case class RemoveFallbackLayer(actionTimestamp: Option[Long] = None,
-                               actionAuthorId: Option[String] = None,
-                               info: Option[String] = None)
+case class RemoveFallbackLayerVolumeAction(actionTimestamp: Option[Long] = None,
+                                           actionAuthorId: Option[String] = None,
+                                           info: Option[String] = None)
     extends ApplyableVolumeAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
@@ -152,14 +132,10 @@ case class RemoveFallbackLayer(actionTimestamp: Option[Long] = None,
     tracing.clearFallbackLayer*/
 }
 
-object RemoveFallbackLayer {
-  implicit val jsonFormat: OFormat[RemoveFallbackLayer] = Json.format[RemoveFallbackLayer]
-}
-
-case class ImportVolumeData(largestSegmentId: Option[Long],
-                            actionTimestamp: Option[Long] = None,
-                            actionAuthorId: Option[String] = None,
-                            info: Option[String] = None)
+case class ImportVolumeDataVolumeAction(largestSegmentId: Option[Long],
+                                        actionTimestamp: Option[Long] = None,
+                                        actionAuthorId: Option[String] = None,
+                                        info: Option[String] = None)
     extends ApplyableVolumeAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
@@ -170,13 +146,9 @@ case class ImportVolumeData(largestSegmentId: Option[Long],
     tracing.copy(largestSegmentId = largestSegmentId)*/
 }
 
-object ImportVolumeData {
-  implicit val jsonFormat: OFormat[ImportVolumeData] = Json.format[ImportVolumeData]
-}
-
-case class AddSegmentIndex(actionTimestamp: Option[Long] = None,
-                           actionAuthorId: Option[String] = None,
-                           info: Option[String] = None)
+case class AddSegmentIndexVolumeAction(actionTimestamp: Option[Long] = None,
+                                       actionAuthorId: Option[String] = None,
+                                       info: Option[String] = None)
     extends ApplyableVolumeAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
@@ -188,13 +160,9 @@ case class AddSegmentIndex(actionTimestamp: Option[Long] = None,
 
 }
 
-object AddSegmentIndex {
-  implicit val jsonFormat: OFormat[AddSegmentIndex] = Json.format[AddSegmentIndex]
-}
-
-case class UpdateTdCamera(actionTimestamp: Option[Long] = None,
-                          actionAuthorId: Option[String] = None,
-                          info: Option[String] = None)
+case class UpdateTdCameraVolumeAction(actionTimestamp: Option[Long] = None,
+                                      actionAuthorId: Option[String] = None,
+                                      info: Option[String] = None)
     extends VolumeUpdateAction {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
@@ -204,10 +172,6 @@ case class UpdateTdCamera(actionTimestamp: Option[Long] = None,
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   override def isViewOnlyChange: Boolean = true
-}
-
-object UpdateTdCamera {
-  implicit val jsonFormat: OFormat[UpdateTdCamera] = Json.format[UpdateTdCamera]
 }
 
 case class CreateSegmentVolumeAction(id: Long,
@@ -240,10 +204,6 @@ case class CreateSegmentVolumeAction(id: Long,
               AdditionalCoordinate.toProto(additionalCoordinates))
     tracing.addSegments(newSegment)
   }*/
-}
-
-object CreateSegmentVolumeAction {
-  implicit val jsonFormat: OFormat[CreateSegmentVolumeAction] = Json.format[CreateSegmentVolumeAction]
 }
 
 case class UpdateSegmentVolumeAction(id: Long,
@@ -280,10 +240,6 @@ case class UpdateSegmentVolumeAction(id: Long,
   }*/
 }
 
-object UpdateSegmentVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateSegmentVolumeAction] = Json.format[UpdateSegmentVolumeAction]
-}
-
 case class DeleteSegmentVolumeAction(id: Long,
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
@@ -301,10 +257,6 @@ case class DeleteSegmentVolumeAction(id: Long,
 
 }
 
-object DeleteSegmentVolumeAction {
-  implicit val jsonFormat: OFormat[DeleteSegmentVolumeAction] = Json.format[DeleteSegmentVolumeAction]
-}
-
 case class DeleteSegmentDataVolumeAction(id: Long,
                                          actionTimestamp: Option[Long] = None,
                                          actionAuthorId: Option[String] = None,
@@ -314,10 +266,6 @@ case class DeleteSegmentDataVolumeAction(id: Long,
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
-}
-
-object DeleteSegmentDataVolumeAction {
-  implicit val jsonFormat: OFormat[DeleteSegmentDataVolumeAction] = Json.format[DeleteSegmentDataVolumeAction]
 }
 
 case class UpdateMappingNameVolumeAction(mappingName: Option[String],
@@ -340,8 +288,19 @@ case class UpdateMappingNameVolumeAction(mappingName: Option[String],
                    mappingIsLocked = Some(isLocked.getOrElse(false)))*/
 }
 
-object UpdateMappingNameVolumeAction {
-  implicit val jsonFormat: OFormat[UpdateMappingNameVolumeAction] = Json.format[UpdateMappingNameVolumeAction]
+case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegmentGroup],
+                                           actionTimestamp: Option[Long] = None,
+                                           actionAuthorId: Option[String] = None,
+                                           info: Option[String] = None)
+    extends VolumeUpdateAction
+    with VolumeUpdateActionHelper {
+  /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.withSegmentGroups(segmentGroups.map(convertSegmentGroup))*/
+
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 }
 
 case class CompactVolumeUpdateAction(name: String,
@@ -374,75 +333,50 @@ object CompactVolumeUpdateAction {
   }
 }
 
-case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegmentGroup],
-                                           actionTimestamp: Option[Long] = None,
-                                           actionAuthorId: Option[String] = None,
-                                           info: Option[String] = None)
-    extends VolumeUpdateAction
-    with VolumeUpdateActionHelper {
-  /*override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.withSegmentGroups(segmentGroups.map(convertSegmentGroup))*/
-
-  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
-  override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
-    this.copy(actionAuthorId = authorId)
-  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+object UpdateBucketVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateBucketVolumeAction] = Json.format[UpdateBucketVolumeAction]
 }
-
+object UpdateTracingVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateTracingVolumeAction] = Json.format[UpdateTracingVolumeAction]
+}
+object RevertToVersionVolumeAction {
+  implicit val jsonFormat: OFormat[RevertToVersionVolumeAction] = Json.format[RevertToVersionVolumeAction]
+}
+object UpdateUserBoundingBoxesVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxesVolumeAction] =
+    Json.format[UpdateUserBoundingBoxesVolumeAction]
+}
+object UpdateUserBoundingBoxVisibilityVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilityVolumeAction] =
+    Json.format[UpdateUserBoundingBoxVisibilityVolumeAction]
+}
+object RemoveFallbackLayerVolumeAction {
+  implicit val jsonFormat: OFormat[RemoveFallbackLayerVolumeAction] = Json.format[RemoveFallbackLayerVolumeAction]
+}
+object ImportVolumeDataVolumeAction {
+  implicit val jsonFormat: OFormat[ImportVolumeDataVolumeAction] = Json.format[ImportVolumeDataVolumeAction]
+}
+object AddSegmentIndexVolumeAction {
+  implicit val jsonFormat: OFormat[AddSegmentIndexVolumeAction] = Json.format[AddSegmentIndexVolumeAction]
+}
+object UpdateTdCameraVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateTdCameraVolumeAction] = Json.format[UpdateTdCameraVolumeAction]
+}
+object CreateSegmentVolumeAction {
+  implicit val jsonFormat: OFormat[CreateSegmentVolumeAction] = Json.format[CreateSegmentVolumeAction]
+}
+object UpdateSegmentVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateSegmentVolumeAction] = Json.format[UpdateSegmentVolumeAction]
+}
+object DeleteSegmentVolumeAction {
+  implicit val jsonFormat: OFormat[DeleteSegmentVolumeAction] = Json.format[DeleteSegmentVolumeAction]
+}
+object DeleteSegmentDataVolumeAction {
+  implicit val jsonFormat: OFormat[DeleteSegmentDataVolumeAction] = Json.format[DeleteSegmentDataVolumeAction]
+}
+object UpdateMappingNameVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateMappingNameVolumeAction] = Json.format[UpdateMappingNameVolumeAction]
+}
 object UpdateSegmentGroupsVolumeAction {
   implicit val jsonFormat: OFormat[UpdateSegmentGroupsVolumeAction] = Json.format[UpdateSegmentGroupsVolumeAction]
-}
-
-object VolumeUpdateAction {
-
-  implicit object volumeUpdateActionFormat extends Format[VolumeUpdateAction] {
-    override def reads(json: JsValue): JsResult[VolumeUpdateAction] =
-      (json \ "name").validate[String].flatMap {
-        case "updateBucket"                    => (json \ "value").validate[UpdateBucketVolumeAction]
-        case "updateTracing"                   => (json \ "value").validate[UpdateTracingVolumeAction]
-        case "revertToVersion"                 => (json \ "value").validate[RevertToVersionVolumeAction]
-        case "updateUserBoundingBoxes"         => (json \ "value").validate[UpdateUserBoundingBoxes]
-        case "updateUserBoundingBoxVisibility" => (json \ "value").validate[UpdateUserBoundingBoxVisibility]
-        case "removeFallbackLayer"             => (json \ "value").validate[RemoveFallbackLayer]
-        case "importVolumeTracing"             => (json \ "value").validate[ImportVolumeData]
-        case "updateTdCamera"                  => (json \ "value").validate[UpdateTdCamera]
-        case "createSegment"                   => (json \ "value").validate[CreateSegmentVolumeAction]
-        case "updateSegment"                   => (json \ "value").validate[UpdateSegmentVolumeAction]
-        case "updateSegmentGroups"             => (json \ "value").validate[UpdateSegmentGroupsVolumeAction]
-        case "deleteSegment"                   => (json \ "value").validate[DeleteSegmentVolumeAction]
-        case "deleteSegmentData"               => (json \ "value").validate[DeleteSegmentDataVolumeAction]
-        case "updateMappingName"               => (json \ "value").validate[UpdateMappingNameVolumeAction]
-        case unknownAction: String             => JsError(s"Invalid update action s'$unknownAction'")
-      }
-
-    override def writes(o: VolumeUpdateAction): JsValue = o match {
-      case s: UpdateBucketVolumeAction =>
-        Json.obj("name" -> "updateBucket", "value" -> Json.toJson(s)(UpdateBucketVolumeAction.jsonFormat))
-      case s: UpdateTracingVolumeAction =>
-        Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingVolumeAction.jsonFormat))
-      case s: RevertToVersionVolumeAction =>
-        Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionVolumeAction.jsonFormat))
-      case s: UpdateUserBoundingBoxes =>
-        Json.obj("name" -> "updateUserBoundingBoxes", "value" -> Json.toJson(s)(UpdateUserBoundingBoxes.jsonFormat))
-      case s: UpdateUserBoundingBoxVisibility =>
-        Json.obj("name" -> "updateUserBoundingBoxVisibility",
-                 "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibility.jsonFormat))
-      case s: RemoveFallbackLayer =>
-        Json.obj("name" -> "removeFallbackLayer", "value" -> Json.toJson(s)(RemoveFallbackLayer.jsonFormat))
-      case s: ImportVolumeData =>
-        Json.obj("name" -> "importVolumeTracing", "value" -> Json.toJson(s)(ImportVolumeData.jsonFormat))
-      case s: UpdateTdCamera =>
-        Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s)(UpdateTdCamera.jsonFormat))
-      case s: CreateSegmentVolumeAction =>
-        Json.obj("name" -> "createSegment", "value" -> Json.toJson(s)(CreateSegmentVolumeAction.jsonFormat))
-      case s: UpdateSegmentVolumeAction =>
-        Json.obj("name" -> "updateSegment", "value" -> Json.toJson(s)(UpdateSegmentVolumeAction.jsonFormat))
-      case s: DeleteSegmentVolumeAction =>
-        Json.obj("name" -> "deleteSegment", "value" -> Json.toJson(s)(DeleteSegmentVolumeAction.jsonFormat))
-      case s: UpdateSegmentGroupsVolumeAction =>
-        Json.obj("name" -> "updateSegmentGroups", "value" -> Json.toJson(s)(UpdateSegmentGroupsVolumeAction.jsonFormat))
-      case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
-    }
-  }
-
 }

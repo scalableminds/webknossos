@@ -21,7 +21,7 @@ import com.scalableminds.webknossos.datastore.services.{
   AdHocMeshServiceHolder,
   BinaryDataService
 }
-import com.scalableminds.webknossos.tracingstore.annotation.UpdateActionGroup
+import com.scalableminds.webknossos.tracingstore.annotation.{UpdateAction, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
@@ -36,7 +36,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
-import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
+import play.api.libs.json.{JsObject, Json, OFormat}
 
 import java.nio.file.Paths
 import java.util
@@ -182,9 +182,8 @@ class EditableMappingService @Inject()(
       _ <- duplicateSegmentToAgglomerate(editableMappingId, newId, newVersion)
       _ <- duplicateAgglomerateToGraph(editableMappingId, newId, newVersion)
       updateActionsWithVersions <- getUpdateActionsWithVersions(editableMappingId, editableMappingInfoAndVersion._2, 0L)
-      _ <- Fox.serialCombined(updateActionsWithVersions) {
-        updateActionsWithVersion: (Long, List[EditableMappingUpdateAction]) =>
-          tracingDataStore.editableMappingUpdates.put(newId, updateActionsWithVersion._1, updateActionsWithVersion._2)
+      _ <- Fox.serialCombined(updateActionsWithVersions) { updateActionsWithVersion: (Long, List[UpdateAction]) =>
+        tracingDataStore.editableMappingUpdates.put(newId, updateActionsWithVersion._1, updateActionsWithVersion._2)
       }
     } yield newId
 
@@ -220,20 +219,6 @@ class EditableMappingService @Inject()(
         } yield ()
       }.toList)
     } yield ()
-  }
-
-  def updateActionLog(editableMappingId: String): Fox[JsValue] = {
-    def versionedTupleToJson(tuple: (Long, List[EditableMappingUpdateAction])): JsObject =
-      Json.obj(
-        "version" -> tuple._1,
-        "value" -> Json.toJson(tuple._2)
-      )
-
-    for {
-      updates <- tracingDataStore.editableMappingUpdates.getMultipleVersionsAsVersionValueTuple(editableMappingId)(
-        fromJsonBytes[List[EditableMappingUpdateAction]])
-      updateActionGroupsJs = updates.map(versionedTupleToJson)
-    } yield Json.toJson(updateActionGroupsJs)
   }
 
   def getInfo(editableMappingId: String,
@@ -311,7 +296,7 @@ class EditableMappingService @Inject()(
 
   private def getPendingUpdates(editableMappingId: String,
                                 closestMaterializedVersion: Long,
-                                closestMaterializableVersion: Long): Fox[List[EditableMappingUpdateAction]] =
+                                closestMaterializableVersion: Long): Fox[List[UpdateAction]] =
     if (closestMaterializableVersion == closestMaterializedVersion) {
       Fox.successful(List.empty)
     } else {
@@ -322,22 +307,20 @@ class EditableMappingService @Inject()(
       } yield updates.map(_._2).reverse.flatten
     }
 
-  private def getUpdateActionsWithVersions(
-      editableMappingId: String,
-      newestVersion: Long,
-      oldestVersion: Long): Fox[List[(Long, List[EditableMappingUpdateAction])]] = {
+  private def getUpdateActionsWithVersions(editableMappingId: String,
+                                           newestVersion: Long,
+                                           oldestVersion: Long): Fox[List[(Long, List[UpdateAction])]] = {
     val batchRanges = batchRangeInclusive(oldestVersion, newestVersion, batchSize = 100)
     for {
       updateActionBatches <- Fox.serialCombined(batchRanges.toList) { batchRange =>
         val batchFrom = batchRange._1
         val batchTo = batchRange._2
         for {
-          res <- tracingDataStore.editableMappingUpdates
-            .getMultipleVersionsAsVersionValueTuple[List[EditableMappingUpdateAction]](
-              editableMappingId,
-              Some(batchTo),
-              Some(batchFrom)
-            )(fromJsonBytes[List[EditableMappingUpdateAction]])
+          res <- tracingDataStore.editableMappingUpdates.getMultipleVersionsAsVersionValueTuple[List[UpdateAction]](
+            editableMappingId,
+            Some(batchTo),
+            Some(batchFrom)
+          )(fromJsonBytes[List[UpdateAction]])
         } yield res
       } ?~> "Failed to fetch editable mapping update actions from fossilDB"
       flat = updateActionBatches.flatten

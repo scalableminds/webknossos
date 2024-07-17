@@ -98,6 +98,8 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
             handleTracingAccess(accessRequest.resourceId.name, accessRequest.mode, userBox, token)
+          case AccessResourceType.annotation =>
+            handleAnnotationAccess(accessRequest.resourceId.name, accessRequest.mode, userBox, token)
           case AccessResourceType.jobExport =>
             handleJobExportAccess(accessRequest.resourceId.name, accessRequest.mode, userBox)
           case _ =>
@@ -160,7 +162,19 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
   private def handleTracingAccess(tracingId: String,
                                   mode: AccessMode,
                                   userBox: Box[User],
-                                  token: Option[String]): Fox[UserAccessAnswer] = {
+                                  token: Option[String]): Fox[UserAccessAnswer] =
+    if (tracingId == TracingIds.dummyTracingId)
+      Fox.successful(UserAccessAnswer(granted = true))
+    else
+      for {
+        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
+        result <- handleAnnotationAccess(annotation._id.toString, mode, userBox, token)
+      } yield result
+
+  private def handleAnnotationAccess(annotationId: String,
+                                     mode: AccessMode,
+                                     userBox: Box[User],
+                                     token: Option[String]): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
     // Optionally, an accessToken can be provided which explicitly looks up the read right the private link table
 
@@ -171,25 +185,18 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         case _                => Fox.successful(false)
       }
 
-    if (tracingId == TracingIds.dummyTracingId)
-      Fox.successful(UserAccessAnswer(granted = true))
-    else {
-      for {
-        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
-        annotationAccessByToken <- token
-          .map(annotationPrivateLinkDAO.findOneByAccessToken)
-          .getOrElse(Fox.empty)
-          .futureBox
-
-        allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
-        restrictions <- annotationInformationProvider.restrictionsFor(
-          AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
-        allowedByUser <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
-        allowed = allowedByToken || allowedByUser
-      } yield {
-        if (allowed) UserAccessAnswer(granted = true)
-        else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
-      }
+    // TODO is a dummy annotation id needed?
+    for {
+      annotation <- annotationInformationProvider.provideAnnotation(annotationId, userBox)(GlobalAccessContext) ?~> "annotation.notFound"
+      annotationAccessByToken <- token.map(annotationPrivateLinkDAO.findOneByAccessToken).getOrElse(Fox.empty).futureBox
+      allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
+      restrictions <- annotationInformationProvider.restrictionsFor(
+        AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
+      allowedByUser <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
+      allowed = allowedByToken || allowedByUser
+    } yield {
+      if (allowed) UserAccessAnswer(granted = true)
+      else UserAccessAnswer(granted = false, Some(s"No ${mode.toString} access to tracing"))
     }
   }
 

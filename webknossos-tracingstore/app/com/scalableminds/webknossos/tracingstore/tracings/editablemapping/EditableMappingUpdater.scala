@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.{
   SegmentToAgglomerateChunkProto
 }
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
+import com.scalableminds.webknossos.tracingstore.annotation.{RevertToVersionUpdateAction, UpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   KeyValueStoreImplicits,
@@ -53,7 +54,7 @@ class EditableMappingUpdater(
   private val agglomerateToGraphBuffer: mutable.Map[String, (AgglomerateGraph, Boolean)] =
     new mutable.HashMap[String, (AgglomerateGraph, Boolean)]()
 
-  def applyUpdatesAndSave(existingEditabeMappingInfo: EditableMappingInfo, updates: List[EditableMappingUpdateAction])(
+  def applyUpdatesAndSave(existingEditabeMappingInfo: EditableMappingInfo, updates: List[UpdateAction])(
       implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
     for {
       updatedEditableMappingInfo <- updateIter(Some(existingEditabeMappingInfo), updates)
@@ -86,7 +87,7 @@ class EditableMappingUpdater(
     tracingDataStore.editableMappingsAgglomerateToGraph.put(key, newVersion, valueToFlush)
   }
 
-  private def updateIter(mappingFox: Fox[EditableMappingInfo], remainingUpdates: List[EditableMappingUpdateAction])(
+  private def updateIter(mappingFox: Fox[EditableMappingInfo], remainingUpdates: List[UpdateAction])(
       implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
     mappingFox.futureBox.flatMap {
       case Empty =>
@@ -107,7 +108,7 @@ class EditableMappingUpdater(
         mappingFox
     }
 
-  private def applyOneUpdate(mapping: EditableMappingInfo, update: EditableMappingUpdateAction)(
+  private def applyOneUpdate(mapping: EditableMappingInfo, update: UpdateAction)(
       implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
     update match {
       case splitAction: SplitAgglomerateUpdateAction =>
@@ -116,6 +117,7 @@ class EditableMappingUpdater(
         applyMergeAction(mapping, mergeAction) ?~> "Failed to apply merge action"
       case revertAction: RevertToVersionUpdateAction =>
         revertToVersion(revertAction) ?~> "Failed to apply revert action"
+      case _ => Fox.failure("this is not an editable mapping update action!")
     }
 
   private def applySplitAction(editableMappingInfo: EditableMappingInfo, update: SplitAgglomerateUpdateAction)(

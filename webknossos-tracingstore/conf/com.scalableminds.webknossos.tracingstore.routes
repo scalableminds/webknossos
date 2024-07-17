@@ -5,8 +5,10 @@
 # Health endpoint
 GET         /health                                             @com.scalableminds.webknossos.tracingstore.controllers.Application.health
 
-POST        /annotation/initialize                              @com.scalableminds.webknossos.tracingstore.controllers.DSAnnotationController.initialize(annotationId: String, token: Option[String])
-POST        /annotation/update                                  @com.scalableminds.webknossos.tracingstore.controllers.DSAnnotationController.update(annotationId: String, token: Option[String])
+POST        /annotation/initialize                              @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.initialize(token: Option[String], annotationId: String)
+POST        /annotation/update                                  @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.update(token: Option[String], annotationId: String)
+POST        /annotation/:annotationId/updateActionLog           @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.updateActionLog(token: Option[String], annotationId: String, newestVersion: Option[Long], oldestVersion: Option[Long])
+GET         /annotation/:annotationId/updateActionStatistics    @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.updateActionStatistics(token: Option[String], annotationId: String)
 
 # Volume tracings
 POST        /volume/save                                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save(token: Option[String])
@@ -18,7 +20,6 @@ POST        /volume/:tracingId/update                           @com.scalablemin
 GET         /volume/:tracingId/allDataZip                       @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.allDataZip(token: Option[String], tracingId: String, volumeDataZipFormat: String, version: Option[Long], voxelSize: Option[String], voxelSizeUnit: Option[String])
 POST        /volume/:tracingId/data                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.data(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/duplicate                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.duplicate(token: Option[String], tracingId: String, fromTask: Option[Boolean], minResolution: Option[Int], maxResolution: Option[Int], downsample: Option[Boolean], editPosition: Option[String], editRotation: Option[String], boundingBox: Option[String])
-GET         /volume/:tracingId/updateActionLog                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateActionLog(token: Option[String], tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long])
 POST        /volume/:tracingId/adHocMesh                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.requestAdHocMesh(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/fullMesh.stl                     @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.loadFullMeshStl(token: Option[String], tracingId: String)
 POST        /volume/:tracingId/segmentIndex/:segmentId          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.getSegmentIndex(token: Option[String], tracingId: String, segmentId: Long)
@@ -37,7 +38,6 @@ POST        /volume/mergedFromContents                          @com.scalablemin
 
 # Editable Mappings
 POST        /mapping/:tracingId/update                          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.updateEditableMapping(token: Option[String], tracingId: String)
-GET         /mapping/:tracingId/updateActionLog                 @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingUpdateActionLog(token: Option[String], tracingId: String)
 GET         /mapping/:tracingId/info                            @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingInfo(token: Option[String], tracingId: String, version: Option[Long])
 GET         /mapping/:tracingId/segmentsForAgglomerate          @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingSegmentIdsForAgglomerate(token: Option[String], tracingId: String, agglomerateId: Long)
 GET         /mapping/:tracingId/agglomerateIdForSegmentId       @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.editableMappingAgglomerateIdForSegmentId(token: Option[String], tracingId: String, segmentId: Long)
@@ -64,8 +64,6 @@ POST        /skeleton/mergedFromIds                             @com.scalablemin
 
 GET         /skeleton/:tracingId                                @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.get(token: Option[String], tracingId: String, version: Option[Long])
 GET         /skeleton/:tracingId/newestVersion                  @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.newestVersion(token: Option[String], tracingId: String)
-GET         /skeleton/:tracingId/updateActionStatistics         @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.updateActionStatistics(token: Option[String], tracingId: String)
-GET         /skeleton/:tracingId/updateActionLog                @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.updateActionLog(token: Option[String], tracingId: String, newestVersion: Option[Long], oldestVersion: Option[Long])
 POST        /skeleton/getMultiple                               @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.getMultiple(token: Option[String])
 
 POST        /skeleton/:tracingId/update                         @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.update(token: Option[String], tracingId: String)

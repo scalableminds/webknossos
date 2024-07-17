@@ -371,6 +371,7 @@ class VolumeTracingController @Inject()(
             volumeUpdate = UpdateMappingNameVolumeAction(Some(editableMappingId),
                                                          isEditable = Some(true),
                                                          isLocked = Some(true),
+                                                         actionTracingId = tracingId,
                                                          actionTimestamp = Some(System.currentTimeMillis()))
             _ <- tracingService.handleUpdateGroup(
               tracingId,
@@ -452,20 +453,6 @@ class VolumeTracingController @Inject()(
         } yield Ok
       }
     }
-
-  def editableMappingUpdateActionLog(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-          for {
-            tracing <- tracingService.find(tracingId)
-            mappingName <- tracing.mappingName.toFox
-            _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
-            updateLog <- editableMappingService.updateActionLog(mappingName)
-          } yield Ok(updateLog)
-        }
-      }
-  }
 
   def editableMappingInfo(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>

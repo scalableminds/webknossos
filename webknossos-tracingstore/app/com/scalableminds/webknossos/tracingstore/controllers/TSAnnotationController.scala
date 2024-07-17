@@ -6,21 +6,26 @@ import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
-import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransactionService, UpdateActionGroup}
+import com.scalableminds.webknossos.tracingstore.annotation.{
+  AnnotationTransactionService,
+  TSAnnotationService,
+  UpdateActionGroup
+}
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-class DSAnnotationController @Inject()(
+class TSAnnotationController @Inject()(
     accessTokenService: TracingStoreAccessTokenService,
     slackNotificationService: TSSlackNotificationService,
+    annotationService: TSAnnotationService,
     annotationTransactionService: AnnotationTransactionService,
     tracingDataStore: TracingDataStore)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with KeyValueStoreImplicits {
 
-  def initialize(annotationId: String, token: Option[String]): Action[AnyContent] =
+  def initialize(token: Option[String], annotationId: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
@@ -31,7 +36,7 @@ class DSAnnotationController @Inject()(
       }
     }
 
-  def update(annotationId: String, token: Option[String]): Action[List[UpdateActionGroup]] =
+  def update(token: Option[String], annotationId: String): Action[List[UpdateActionGroup]] =
     Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
@@ -46,6 +51,31 @@ class DSAnnotationController @Inject()(
         }
       }
     }
+
+  def updateActionLog(token: Option[String],
+                      annotationId: String,
+                      newestVersion: Option[Long] = None,
+                      oldestVersion: Option[Long] = None): Action[AnyContent] = Action.async { implicit request =>
+    log() {
+      accessTokenService.validateAccess(UserAccessRequest.readAnnotation(annotationId),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          updateLog <- annotationService.updateActionLog(annotationId, newestVersion, oldestVersion)
+        } yield Ok(updateLog)
+      }
+    }
+  }
+
+  def updateActionStatistics(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            statistics <- annotationService.updateActionStatistics(tracingId)
+          } yield Ok(statistics)
+        }
+      }
+  }
 
 }
 

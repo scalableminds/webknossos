@@ -46,6 +46,9 @@ object UserAccessRequest {
   def writeTracing(tracingId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId(tracingId, ""), AccessResourceType.tracing, AccessMode.write)
 
+  def readAnnotation(annotationId: String): UserAccessRequest =
+    UserAccessRequest(DataSourceId(annotationId, ""), AccessResourceType.annotation, AccessMode.read)
+
   def writeAnnotation(annotationId: String): UserAccessRequest =
     UserAccessRequest(DataSourceId(annotationId, ""), AccessResourceType.annotation, AccessMode.write)
 

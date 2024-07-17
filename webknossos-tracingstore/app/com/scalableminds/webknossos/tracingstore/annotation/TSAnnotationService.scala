@@ -10,15 +10,21 @@ import com.scalableminds.webknossos.datastore.Annotation.{
   UpdateLayerMetadataAnnotationUpdateAction,
   UpdateMetadataAnnotationUpdateAction
 }
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
+  CreateNodeSkeletonAction,
+  DeleteNodeSkeletonAction,
+  UpdateTracingSkeletonAction
+}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.UpdateBucketVolumeAction
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingUpdatesReport}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import scalapb.GeneratedMessage
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class DSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient,
+class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient,
                                     tracingDataStore: TracingDataStore)
     extends KeyValueStoreImplicits {
 
@@ -59,6 +65,18 @@ class DSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     }
   }
 
+  private def findPendingUpdates(annotationId: String, existingVersion: Long, desiredVersion: Long)(
+      implicit ec: ExecutionContext): Fox[List[UpdateAction]] =
+    if (desiredVersion == existingVersion) Fox.successful(List())
+    else {
+      for {
+        updateActionGroups <- tracingDataStore.annotationUpdates.getMultipleVersions(
+          annotationId,
+          Some(desiredVersion),
+          Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
+      } yield updateActionGroups.reverse.flatten
+    }
+
   def applyUpdate(annotation: AnnotationProto, updateAction: GeneratedMessage)(
       implicit ec: ExecutionContext): Fox[AnnotationProto] =
     for {
@@ -78,4 +96,41 @@ class DSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
       }
     } yield withAppliedChange.copy(version = withAppliedChange.version + 1L)
 
+  def updateActionLog(annotationId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
+    def versionedTupleToJson(tuple: (Long, List[UpdateAction])): JsObject =
+      Json.obj(
+        "version" -> tuple._1,
+        "value" -> Json.toJson(tuple._2)
+      )
+
+    for {
+      updateActionGroups <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
+        annotationId,
+        newestVersion,
+        oldestVersion)(fromJsonBytes[List[UpdateAction]])
+      updateActionGroupsJs = updateActionGroups.map(versionedTupleToJson)
+    } yield Json.toJson(updateActionGroupsJs)
+  }
+
+  def updateActionStatistics(tracingId: String): Fox[JsObject] =
+    for {
+      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(
+        fromJsonBytes[List[UpdateAction]])
+      updateActions = updateActionGroups.flatten
+    } yield {
+      Json.obj(
+        "updateTracingActionCount" -> updateActions.count {
+          case _: UpdateTracingSkeletonAction => true
+          case _                              => false
+        },
+        "createNodeActionCount" -> updateActions.count {
+          case _: CreateNodeSkeletonAction => true
+          case _                           => false
+        },
+        "deleteNodeActionCount" -> updateActions.count {
+          case _: DeleteNodeSkeletonAction => true
+          case _                           => false
+        }
+      )
+    }
 }

@@ -13,7 +13,7 @@ import scala.concurrent.duration._
 class AnnotationTransactionService @Inject()(
     handledGroupIdStore: TracingStoreRedisStore, // TODO: instantiate here rather than with injection, give fix namespace prefix?
     uncommittedUpdatesStore: TracingStoreRedisStore,
-    annotationService: DSAnnotationService) {
+    annotationService: TSAnnotationService) {
 
   private val transactionGroupExpiry: FiniteDuration = 24 hours
   private val handledGroupCacheExpiry: FiniteDuration = 24 hours

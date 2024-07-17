@@ -29,6 +29,8 @@ services:
       - VIRTUAL_HOST=${PUBLIC_HOST}
       - LETSENCRYPT_HOST=${PUBLIC_HOST}
     user: ${USER_UID:-1000}:${USER_GID:-1000}
+    networks:
+      - webknossos_default
 
   # Postgres
   postgres:
@@ -59,6 +61,7 @@ services:
   # FossilDB
   fossildb:
     image: scalableminds/fossildb:master__489
+    container_name: webknossos-fossildb-1
     command:
       - fossildb
       - -c
@@ -97,6 +100,7 @@ services:
     labels:
       - com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy
 
+  # Nginx-Lets-Encrypt
   nginx-letsencrypt:
     image: nginxproxy/acme-companion
     environment:
@@ -108,3 +112,30 @@ services:
       - ./persistent/nginx/certs:/etc/nginx/certs
       - ./persistent/nginx/vhost.d:/etc/nginx/vhost.d
       - ./persistent/nginx/html:/usr/share/nginx/html
+
+  # FossilDB Backup -- backup located to ../persistent/fossildb/backup/private after completion
+  # Example command: docker-compose run --rm fossil-db-backup
+  fossil-db-backup:
+    image: scalableminds/fossildb-client:master
+    depends_on:
+      fossildb:
+        condition: service_healthy
+    command: ["webknossos-fossildb-1", "backup"]
+    networks:
+      - webknossos_default
+
+  # FossilDB Restore
+  # Example command: docker-compose run --rm fossil-db-restore
+  fossil-db-restore:
+    image: scalableminds/fossildb-client:master
+    depends_on:
+      fossildb:
+        condition: service_healthy
+    command: [ "webknossos-fossildb-1", "restore" ]
+    networks:
+      - webknossos_default
+
+# Explicitly declare networks for fossil-db-backup connectivity
+networks:
+  webknossos_default:
+    external: true

@@ -15,7 +15,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Added the ability to change the unit of the dataset voxel size to any supported unit of the [ome/ngff standard](https://github.com/ome/ngff/blob/39605eec64ceff481bb3a98f0adeaa330ab1ef26/latest/index.bs#L192). This allows users to upload and work with low-resolution datasets with a different base unit than nanometer. [#7783](https://github.com/scalableminds/webknossos/pull/7783)
 
 ### Added
-- Added that proofreading merge actions reuse custom names of segments. A merge action now combines the potenial existing custom names of both segments and a split-action copies the custom name to the split-off segment. [#7877](https://github.com/scalableminds/webknossos/pull/7877)
+- Added that proofreading merge actions reuse custom names of segments. A merge action now combines the potential existing custom names of both segments and a split-action copies the custom name to the split-off segment. [#7877](https://github.com/scalableminds/webknossos/pull/7877)
 - Added the option to set a default mapping for a dataset in the dataset view configuration. The default mapping is loaded when the dataset is opened and the user / url does not configure something else. [#7858](https://github.com/scalableminds/webknossos/pull/7858)
 - Uploading an annotation into a dataset that it was not created for now also works if the dataset is in a different organization. [#7816](https://github.com/scalableminds/webknossos/pull/7816)
 - When downloading + reuploading an annotation that is based on a segmentation layer with active mapping, that mapping is now still selected after the reupload. [#7822](https://github.com/scalableminds/webknossos/pull/7822)
@@ -36,7 +36,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed a bug that prevented saving new dataset settings. [#7903](https://github.com/scalableminds/webknossos/pull/7903)
 - Fixed that on large screens the login forms were not horizontally centered. [#7909](https://github.com/scalableminds/webknossos/pull/7909)
 - Fixed a bug where brushing on a fallback segmentation with active mapping and with segment index file would lead to failed saves. [#7833](https://github.com/scalableminds/webknossos/pull/7833)
-- Fixed a bug where the "Hide Meshes" / "Show Meshes" options of the context menu for segment groups were not available although at leas one mesh was set to visible / invisible. [#7890](https://github.com/scalableminds/webknossos/pull/7890)
+- Fixed a bug where the "Hide Meshes" / "Show Meshes" options of the context menu for segment groups were not available although at least one mesh was set to visible / invisible. [#7890](https://github.com/scalableminds/webknossos/pull/7890)
 - Fixed a bug where sometimes old mismatching javascript code would be served after upgrades. [#7854](https://github.com/scalableminds/webknossos/pull/7854)
 - Fixed a bug where dataset uploads of zipped tiff data via the UI would be rejected. [#7856](https://github.com/scalableminds/webknossos/pull/7856)
 - Fixed a bug with incorrect validation of layer names in the animation modal. [#7882](https://github.com/scalableminds/webknossos/pull/7882)

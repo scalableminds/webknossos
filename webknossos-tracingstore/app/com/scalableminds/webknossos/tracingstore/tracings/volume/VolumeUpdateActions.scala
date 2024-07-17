@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
+import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.NamedBoundingBox
 import play.api.libs.json._
 
@@ -22,7 +22,7 @@ trait VolumeUpdateActionHelper {
 
 }
 
-trait VolumeUpdateAction extends UpdateAction
+trait VolumeUpdateAction extends LayerUpdateAction
 
 trait ApplyableVolumeAction extends VolumeUpdateAction
 
@@ -30,10 +30,11 @@ case class UpdateBucketVolumeAction(position: Vec3Int,
                                     cubeSize: Int,
                                     mag: Vec3Int,
                                     base64Data: String,
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                    actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None,
-                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+                                    info: Option[String] = None)
     extends VolumeUpdateAction {
   lazy val data: Array[Byte] = Base64.getDecoder.decode(base64Data)
 
@@ -43,7 +44,7 @@ case class UpdateBucketVolumeAction(position: Vec3Int,
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
   def transformToCompact: CompactVolumeUpdateAction =
-    CompactVolumeUpdateAction("updateBucket", actionTimestamp, actionAuthorId, Json.obj())
+    CompactVolumeUpdateAction("updateBucket", Json.obj(), actionTracingId, actionTimestamp, actionAuthorId, info)
 }
 
 case class UpdateTracingVolumeAction(
@@ -52,10 +53,11 @@ case class UpdateTracingVolumeAction(
     editRotation: Vec3Double,
     largestSegmentId: Option[Long],
     zoomLevel: Double,
+    editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+    actionTracingId: String,
     actionTimestamp: Option[Long] = None,
     actionAuthorId: Option[String] = None,
-    info: Option[String] = None,
-    editPositionAdditionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+    info: Option[String] = None
 ) extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
@@ -66,6 +68,7 @@ case class UpdateTracingVolumeAction(
 }
 
 case class RevertToVersionVolumeAction(sourceVersion: Long,
+                                       actionTracingId: String,
                                        actionTimestamp: Option[Long] = None,
                                        actionAuthorId: Option[String] = None,
                                        info: Option[String] = None)
@@ -78,6 +81,7 @@ case class RevertToVersionVolumeAction(sourceVersion: Long,
 }
 
 case class UpdateUserBoundingBoxesVolumeAction(boundingBoxes: List[NamedBoundingBox],
+                                               actionTracingId: String,
                                                actionTimestamp: Option[Long] = None,
                                                actionAuthorId: Option[String] = None,
                                                info: Option[String] = None)
@@ -94,6 +98,7 @@ case class UpdateUserBoundingBoxesVolumeAction(boundingBoxes: List[NamedBounding
 
 case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int],
                                                        isVisible: Boolean,
+                                                       actionTracingId: String,
                                                        actionTimestamp: Option[Long] = None,
                                                        actionAuthorId: Option[String] = None,
                                                        info: Option[String] = None)
@@ -119,7 +124,8 @@ case class UpdateUserBoundingBoxVisibilityVolumeAction(boundingBoxId: Option[Int
   }*/
 }
 
-case class RemoveFallbackLayerVolumeAction(actionTimestamp: Option[Long] = None,
+case class RemoveFallbackLayerVolumeAction(actionTracingId: String,
+                                           actionTimestamp: Option[Long] = None,
                                            actionAuthorId: Option[String] = None,
                                            info: Option[String] = None)
     extends ApplyableVolumeAction {
@@ -132,7 +138,8 @@ case class RemoveFallbackLayerVolumeAction(actionTimestamp: Option[Long] = None,
     tracing.clearFallbackLayer*/
 }
 
-case class ImportVolumeDataVolumeAction(largestSegmentId: Option[Long],
+case class ImportVolumeDataVolumeAction(actionTracingId: String,
+                                        largestSegmentId: Option[Long],
                                         actionTimestamp: Option[Long] = None,
                                         actionAuthorId: Option[String] = None,
                                         info: Option[String] = None)
@@ -146,7 +153,8 @@ case class ImportVolumeDataVolumeAction(largestSegmentId: Option[Long],
     tracing.copy(largestSegmentId = largestSegmentId)*/
 }
 
-case class AddSegmentIndexVolumeAction(actionTimestamp: Option[Long] = None,
+case class AddSegmentIndexVolumeAction(actionTracingId: String,
+                                       actionTimestamp: Option[Long] = None,
                                        actionAuthorId: Option[String] = None,
                                        info: Option[String] = None)
     extends ApplyableVolumeAction {
@@ -160,7 +168,8 @@ case class AddSegmentIndexVolumeAction(actionTimestamp: Option[Long] = None,
 
 }
 
-case class UpdateTdCameraVolumeAction(actionTimestamp: Option[Long] = None,
+case class UpdateTdCameraVolumeAction(actionTracingId: String,
+                                      actionTimestamp: Option[Long] = None,
                                       actionAuthorId: Option[String] = None,
                                       info: Option[String] = None)
     extends VolumeUpdateAction {
@@ -180,9 +189,10 @@ case class CreateSegmentVolumeAction(id: Long,
                                      color: Option[com.scalableminds.util.image.Color],
                                      groupId: Option[Int],
                                      creationTime: Option[Long],
+                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                     actionTracingId: String,
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
-                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
                                      info: Option[String] = None)
     extends ApplyableVolumeAction
     with ProtoGeometryImplicits {
@@ -212,9 +222,10 @@ case class UpdateSegmentVolumeAction(id: Long,
                                      color: Option[com.scalableminds.util.image.Color],
                                      creationTime: Option[Long],
                                      groupId: Option[Int],
+                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                     actionTracingId: String,
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
-                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
                                      info: Option[String] = None)
     extends ApplyableVolumeAction
     with ProtoGeometryImplicits
@@ -241,6 +252,7 @@ case class UpdateSegmentVolumeAction(id: Long,
 }
 
 case class DeleteSegmentVolumeAction(id: Long,
+                                     actionTracingId: String,
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
                                      info: Option[String] = None)
@@ -258,6 +270,7 @@ case class DeleteSegmentVolumeAction(id: Long,
 }
 
 case class DeleteSegmentDataVolumeAction(id: Long,
+                                         actionTracingId: String,
                                          actionTimestamp: Option[Long] = None,
                                          actionAuthorId: Option[String] = None,
                                          info: Option[String] = None)
@@ -271,6 +284,7 @@ case class DeleteSegmentDataVolumeAction(id: Long,
 case class UpdateMappingNameVolumeAction(mappingName: Option[String],
                                          isEditable: Option[Boolean],
                                          isLocked: Option[Boolean],
+                                         actionTracingId: String,
                                          actionTimestamp: Option[Long],
                                          actionAuthorId: Option[String] = None,
                                          info: Option[String] = None)
@@ -289,6 +303,7 @@ case class UpdateMappingNameVolumeAction(mappingName: Option[String],
 }
 
 case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegmentGroup],
+                                           actionTracingId: String,
                                            actionTimestamp: Option[Long] = None,
                                            actionAuthorId: Option[String] = None,
                                            info: Option[String] = None)
@@ -304,9 +319,10 @@ case class UpdateSegmentGroupsVolumeAction(segmentGroups: List[UpdateActionSegme
 }
 
 case class CompactVolumeUpdateAction(name: String,
+                                     value: JsObject,
+                                     actionTracingId: String,
                                      actionTimestamp: Option[Long],
                                      actionAuthorId: Option[String] = None,
-                                     value: JsObject,
                                      info: Option[String] = None)
     extends VolumeUpdateAction {
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
@@ -320,16 +336,23 @@ object CompactVolumeUpdateAction {
     override def reads(json: JsValue): JsResult[CompactVolumeUpdateAction] =
       for {
         name <- (json \ "name").validate[String]
+        actionTracingId <- (json \ "value" \ "actionTracingId").validate[String]
         actionTimestamp <- (json \ "value" \ "actionTimestamp").validateOpt[Long]
         actionAuthorId <- (json \ "value" \ "actionAuthorId").validateOpt[String]
         info <- (json \ "value" \ "info").validateOpt[String]
         value <- (json \ "value")
           .validate[JsObject]
-          .map(_ - "actionTimestamp") // TODO also separate out info + actionAuthorId
-      } yield CompactVolumeUpdateAction(name, actionTimestamp, actionAuthorId, value, info)
+          .map(_ - "actionTimestamp" - "actionTimestamp" - "actionAuthorId" - "info")
+      } yield CompactVolumeUpdateAction(name, value, actionTracingId, actionTimestamp, actionAuthorId, info)
 
     override def writes(o: CompactVolumeUpdateAction): JsValue =
-      Json.obj("name" -> o.name, "value" -> (Json.obj("actionTimestamp" -> o.actionTimestamp) ++ o.value))
+      Json.obj(
+        "name" -> o.name,
+        "value" -> (Json.obj("actionTracingId" -> o.actionTracingId,
+                             "actionTimestamp" -> o.actionTimestamp,
+                             "actionAuthorId" -> o.actionAuthorId,
+                             "info" -> o.info) ++ o.value)
+      )
   }
 }
 

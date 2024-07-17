@@ -21,6 +21,7 @@ import com.scalableminds.webknossos.datastore.services.{
   AdHocMeshServiceHolder,
   BinaryDataService
 }
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateActionGroup
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
@@ -264,9 +265,7 @@ class EditableMappingService @Inject()(
         _ => applyPendingUpdates(editableMappingId, desiredVersion, remoteFallbackLayer, userToken))
     } yield (materializedInfo, desiredVersion)
 
-  def update(editableMappingId: String,
-             updateActionGroup: EditableMappingUpdateActionGroup,
-             newVersion: Long): Fox[Unit] =
+  def update(editableMappingId: String, updateActionGroup: UpdateActionGroup, newVersion: Long): Fox[Unit] =
     for {
       actionsWithTimestamp <- Fox.successful(updateActionGroup.actions.map(_.addTimestamp(updateActionGroup.timestamp)))
       _ <- tracingDataStore.editableMappingUpdates.put(editableMappingId, newVersion, actionsWithTimestamp)

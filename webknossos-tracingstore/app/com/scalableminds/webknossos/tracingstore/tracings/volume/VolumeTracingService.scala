@@ -23,6 +23,7 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosAdHocMeshRequest
 }
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateActionGroup
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -77,9 +78,6 @@ class VolumeTracingService @Inject()(
 
   implicit val tracingCompanion: VolumeTracing.type = VolumeTracing
 
-  implicit val updateActionJsonFormat: VolumeUpdateAction.volumeUpdateActionFormat.type =
-    VolumeUpdateAction.volumeUpdateActionFormat
-
   val tracingType: TracingType = TracingType.volume
 
   val tracingStore: FossilDBClient = tracingDataStore.volumes
@@ -117,7 +115,7 @@ class VolumeTracingService @Inject()(
                                                editableMappingTracingId) ?~> "volumeSegmentIndex.update.failed"
 
   def handleUpdateGroup(tracingId: String,
-                        updateGroup: UpdateActionGroup[VolumeTracing],
+                        updateGroup: UpdateActionGroup,
                         previousVersion: Long,
                         userToken: Option[String]): Fox[Unit] =
     for {
@@ -162,9 +160,9 @@ class VolumeTracingService @Inject()(
                   Fox.failure("Cannot delete segment data for annotations without segment index.")
                 } else
                   deleteSegmentData(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version, userToken) ?~> "Failed to delete segment data."
-              case _: UpdateTdCameraVolumeAction        => Fox.successful(tracing)
-              case a: ApplyableVolumeAction => Fox.successful(a.applyOn(tracing))
-              case _                        => Fox.failure("Unknown action.")
+              case _: UpdateTdCameraVolumeAction => Fox.successful(tracing)
+              case a: ApplyableVolumeAction      => Fox.successful(a.applyOn(tracing))
+              case _                             => Fox.failure("Unknown action.")
             }
           case Empty =>
             Fox.empty
@@ -905,11 +903,11 @@ class VolumeTracingService @Inject()(
                              editableMappingTracingId(tracing, tracingId))
       }
       _ <- Fox.runIf(!dryRun)(segmentIndexBuffer.flush())
-      updateGroup = UpdateActionGroup[VolumeTracing](
+      updateGroup = UpdateActionGroup(
         tracing.version + 1L,
         System.currentTimeMillis(),
         None,
-        List(AddSegmentIndexVolumeAction()),
+        List(AddSegmentIndexVolumeAction(tracingId)),
         None,
         None,
         "dummyTransactionId",
@@ -992,11 +990,11 @@ class VolumeTracingService @Inject()(
             } yield ()
           }
           _ <- segmentIndexBuffer.flush()
-          updateGroup = UpdateActionGroup[VolumeTracing](
+          updateGroup = UpdateActionGroup(
             tracing.version + 1,
             System.currentTimeMillis(),
             None,
-            List(ImportVolumeDataVolumeAction(Some(mergedVolume.largestSegmentId.toPositiveLong))),
+            List(ImportVolumeDataVolumeAction(tracingId, Some(mergedVolume.largestSegmentId.toPositiveLong))),
             None,
             None,
             "dummyTransactionId",

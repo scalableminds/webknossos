@@ -4,11 +4,11 @@ import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
+import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
 import play.api.libs.json._
 
-trait SkeletonUpdateAction extends UpdateAction
+trait SkeletonUpdateAction extends LayerUpdateAction
 
 case class CreateTreeSkeletonAction(id: Int,
                                     color: Option[com.scalableminds.util.image.Color],
@@ -18,11 +18,12 @@ case class CreateTreeSkeletonAction(id: Int,
                                     comments: List[UpdateActionComment],
                                     groupId: Option[Int],
                                     isVisible: Option[Boolean],
+                                    `type`: Option[TreeType] = None,
+                                    edgesAreVisible: Option[Boolean],
+                                    actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None,
-                                    `type`: Option[TreeType] = None,
-                                    edgesAreVisible: Option[Boolean])
+                                    info: Option[String] = None)
     extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -51,6 +52,7 @@ case class CreateTreeSkeletonAction(id: Int,
 }
 
 case class DeleteTreeSkeletonAction(id: Int,
+                                    actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
@@ -74,10 +76,11 @@ case class UpdateTreeSkeletonAction(id: Int,
                                     branchPoints: List[UpdateActionBranchPoint],
                                     comments: List[UpdateActionComment],
                                     groupId: Option[Int],
+                                    `type`: Option[TreeType] = None,
+                                    actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None,
-                                    `type`: Option[TreeType] = None)
+                                    info: Option[String] = None)
     extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   /*override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -104,6 +107,7 @@ case class UpdateTreeSkeletonAction(id: Int,
 
 case class MergeTreeSkeletonAction(sourceId: Int,
                                    targetId: Int,
+                                   actionTracingId: String,
                                    actionTimestamp: Option[Long] = None,
                                    actionAuthorId: Option[String] = None,
                                    info: Option[String] = None)
@@ -136,6 +140,7 @@ case class MergeTreeSkeletonAction(sourceId: Int,
 case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
                                            sourceId: Int,
                                            targetId: Int,
+                                           actionTracingId: String,
                                            actionTimestamp: Option[Long] = None,
                                            actionAuthorId: Option[String] = None,
                                            info: Option[String] = None)
@@ -179,6 +184,7 @@ case class MoveTreeComponentSkeletonAction(nodeIds: List[Int],
 case class CreateEdgeSkeletonAction(source: Int,
                                     target: Int,
                                     treeId: Int,
+                                    actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
@@ -201,6 +207,7 @@ case class CreateEdgeSkeletonAction(source: Int,
 case class DeleteEdgeSkeletonAction(source: Int,
                                     target: Int,
                                     treeId: Int,
+                                    actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
@@ -230,10 +237,11 @@ case class CreateNodeSkeletonAction(id: Int,
                                     interpolation: Option[Boolean],
                                     treeId: Int,
                                     timestamp: Long,
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                    actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None,
-                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+                                    info: Option[String] = None)
     extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -276,10 +284,11 @@ case class UpdateNodeSkeletonAction(id: Int,
                                     interpolation: Option[Boolean],
                                     treeId: Int,
                                     timestamp: Long,
+                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+                                    actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
-                                    info: Option[String] = None,
-                                    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None)
+                                    info: Option[String] = None)
     extends SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -318,6 +327,7 @@ case class UpdateNodeSkeletonAction(id: Int,
 
 case class DeleteNodeSkeletonAction(nodeId: Int,
                                     treeId: Int,
+                                    actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
@@ -341,6 +351,7 @@ case class DeleteNodeSkeletonAction(nodeId: Int,
 }
 
 case class UpdateTreeGroupsSkeletonAction(treeGroups: List[UpdateActionTreeGroup],
+                                          actionTracingId: String,
                                           actionTimestamp: Option[Long] = None,
                                           actionAuthorId: Option[String] = None,
                                           info: Option[String] = None)
@@ -363,6 +374,7 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
                                        editRotation: com.scalableminds.util.geometry.Vec3Double,
                                        zoomLevel: Double,
                                        userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox],
+                                       actionTracingId: String,
                                        actionTimestamp: Option[Long] = None,
                                        actionAuthorId: Option[String] = None,
                                        info: Option[String] = None,
@@ -389,6 +401,7 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int],
 }
 
 case class RevertToVersionSkeletonAction(sourceVersion: Long,
+                                         actionTracingId: String,
                                          actionTimestamp: Option[Long] = None,
                                          actionAuthorId: Option[String] = None,
                                          info: Option[String] = None)
@@ -407,6 +420,7 @@ case class RevertToVersionSkeletonAction(sourceVersion: Long,
 
 case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
                                               isVisible: Boolean,
+                                              actionTracingId: String,
                                               actionTimestamp: Option[Long] = None,
                                               actionAuthorId: Option[String] = None,
                                               info: Option[String] = None)
@@ -429,6 +443,7 @@ case class UpdateTreeVisibilitySkeletonAction(treeId: Int,
 
 case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int],
                                                    isVisible: Boolean,
+                                                   actionTracingId: String,
                                                    actionTimestamp: Option[Long] = None,
                                                    actionAuthorId: Option[String] = None,
                                                    info: Option[String] = None)
@@ -467,6 +482,7 @@ case class UpdateTreeGroupVisibilitySkeletonAction(treeGroupId: Option[Int],
 
 case class UpdateTreeEdgesVisibilitySkeletonAction(treeId: Int,
                                                    edgesAreVisible: Boolean,
+                                                   actionTracingId: String,
                                                    actionTimestamp: Option[Long] = None,
                                                    actionAuthorId: Option[String] = None,
                                                    info: Option[String] = None)
@@ -489,6 +505,7 @@ case class UpdateTreeEdgesVisibilitySkeletonAction(treeId: Int,
 }
 
 case class UpdateUserBoundingBoxesSkeletonAction(boundingBoxes: List[NamedBoundingBox],
+                                                 actionTracingId: String,
                                                  actionTimestamp: Option[Long] = None,
                                                  actionAuthorId: Option[String] = None,
                                                  info: Option[String] = None)
@@ -507,6 +524,7 @@ case class UpdateUserBoundingBoxesSkeletonAction(boundingBoxes: List[NamedBoundi
 
 case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[Int],
                                                          isVisible: Boolean,
+                                                         actionTracingId: String,
                                                          actionTimestamp: Option[Long] = None,
                                                          actionAuthorId: Option[String] = None,
                                                          info: Option[String] = None)
@@ -534,6 +552,7 @@ case class UpdateUserBoundingBoxVisibilitySkeletonAction(boundingBoxId: Option[I
 
 case class UpdateTdCameraSkeletonAction(actionTimestamp: Option[Long] = None,
                                         actionAuthorId: Option[String] = None,
+                                        actionTracingId: String,
                                         info: Option[String] = None)
     extends SkeletonUpdateAction {
 

@@ -26,10 +26,10 @@ import com.scalableminds.webknossos.datastore.services.{
   FullMeshRequest,
   UserAccessRequest
 }
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateActionGroup
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingService,
-  EditableMappingUpdateActionGroup,
   MinCutParameters,
   NeighborsParameters
 }
@@ -43,7 +43,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   VolumeSegmentStatisticsService,
   VolumeTracingService
 }
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, UpdateActionGroup}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits}
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebknossosClient,
@@ -369,20 +369,20 @@ class VolumeTracingController @Inject()(
             (editableMappingId, editableMappingInfo) <- editableMappingService.create(
               baseMappingName = tracingMappingName)
             volumeUpdate = UpdateMappingNameVolumeAction(Some(editableMappingId),
-                                                   isEditable = Some(true),
-                                                   isLocked = Some(true),
-                                                   actionTimestamp = Some(System.currentTimeMillis()))
+                                                         isEditable = Some(true),
+                                                         isLocked = Some(true),
+                                                         actionTimestamp = Some(System.currentTimeMillis()))
             _ <- tracingService.handleUpdateGroup(
               tracingId,
-              UpdateActionGroup[VolumeTracing](tracing.version + 1,
-                                               System.currentTimeMillis(),
-                                               None,
-                                               List(volumeUpdate),
-                                               None,
-                                               None,
-                                               "dummyTransactionId",
-                                               1,
-                                               0),
+              UpdateActionGroup(tracing.version + 1,
+                                System.currentTimeMillis(),
+                                None,
+                                List(volumeUpdate),
+                                None,
+                                None,
+                                "dummyTransactionId",
+                                1,
+                                0),
               tracing.version,
               urlOrHeaderToken(token, request)
             )
@@ -428,8 +428,8 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def updateEditableMapping(token: Option[String], tracingId: String): Action[List[EditableMappingUpdateActionGroup]] =
-    Action.async(validateJson[List[EditableMappingUpdateActionGroup]]) { implicit request =>
+  def updateEditableMapping(token: Option[String], tracingId: String): Action[List[UpdateActionGroup]] =
+    Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId)

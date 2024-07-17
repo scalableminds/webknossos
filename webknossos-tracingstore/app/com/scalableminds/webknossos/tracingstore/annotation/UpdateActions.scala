@@ -55,13 +55,17 @@ trait UpdateAction {
   def isViewOnlyChange: Boolean = false
 }
 
+trait LayerUpdateAction extends UpdateAction {
+  def actionTracingId: String
+}
+
 object UpdateAction {
 
   implicit object updateActionFormat extends Format[UpdateAction] {
     override def reads(json: JsValue): JsResult[UpdateAction] = {
       val jsonValue = (json \ "value").as[JsObject]
       (json \ "name").as[String] match {
-        // Skeletons
+        // Skeleton
         case "createTree"                => deserialize[CreateTreeSkeletonAction](jsonValue)
         case "deleteTree"                => deserialize[DeleteTreeSkeletonAction](jsonValue)
         case "updateTree"                => deserialize[UpdateTreeSkeletonAction](jsonValue)
@@ -81,7 +85,7 @@ object UpdateAction {
         case "updateUserBoundingBoxVisibility" =>
           deserialize[UpdateUserBoundingBoxVisibilitySkeletonAction](jsonValue)
 
-        // Volumes
+        // Volume
         case "updateBucket"                    => deserialize[UpdateBucketVolumeAction](jsonValue)
         case "updateVolumeTracing"             => deserialize[UpdateTracingVolumeAction](jsonValue)
         case "updateUserBoundingBoxes"         => deserialize[UpdateUserBoundingBoxesVolumeAction](jsonValue)
@@ -96,11 +100,15 @@ object UpdateAction {
         case "deleteSegmentData"               => deserialize[DeleteSegmentDataVolumeAction](jsonValue)
         case "updateMappingName"               => deserialize[UpdateMappingNameVolumeAction](jsonValue)
 
-        // Editable Mappings
+        // Editable Mapping
         case "mergeAgglomerate" => deserialize[MergeAgglomerateUpdateAction](jsonValue)
         case "splitAgglomerate" => deserialize[SplitAgglomerateUpdateAction](jsonValue)
 
-        // TODO: Annotation, RevertToVersion
+        // Annotation
+        case "addLayerToAnnotation"       => deserialize[AddLayerAnnotationUpdateAction](jsonValue)
+        case "deleteLayerFromAnnotation"  => deserialize[DeleteLayerAnnotationUpdateAction](jsonValue)
+        case "updateLayerMetadata"        => deserialize[UpdateLayerMetadataAnnotationUpdateAction](jsonValue)
+        case "updateMetadataOfAnnotation" => deserialize[UpdateMetadataAnnotationUpdateAction](jsonValue)
 
         case unknownAction: String => JsError(s"Invalid update action s'$unknownAction'")
       }
@@ -117,6 +125,7 @@ object UpdateAction {
       (JsPath \ "position").json.update(JsPath.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
 
     override def writes(a: UpdateAction): JsValue = a match {
+      // Skeleton
       case s: CreateTreeSkeletonAction =>
         Json.obj("name" -> "createTree", "value" -> Json.toJson(s)(CreateTreeSkeletonAction.jsonFormat))
       case s: DeleteTreeSkeletonAction =>
@@ -161,6 +170,7 @@ object UpdateAction {
       case s: UpdateTdCameraSkeletonAction =>
         Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s)(UpdateTdCameraSkeletonAction.jsonFormat))
 
+      // Volume
       case s: UpdateBucketVolumeAction =>
         Json.obj("name" -> "updateBucket", "value" -> Json.toJson(s)(UpdateBucketVolumeAction.jsonFormat))
       case s: UpdateTracingVolumeAction =>
@@ -187,10 +197,24 @@ object UpdateAction {
         Json.obj("name" -> "updateSegmentGroups", "value" -> Json.toJson(s)(UpdateSegmentGroupsVolumeAction.jsonFormat))
       case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
 
+      // Editable Mapping
       case s: SplitAgglomerateUpdateAction =>
         Json.obj("name" -> "splitAgglomerate", "value" -> Json.toJson(s)(SplitAgglomerateUpdateAction.jsonFormat))
       case s: MergeAgglomerateUpdateAction =>
         Json.obj("name" -> "mergeAgglomerate", "value" -> Json.toJson(s)(MergeAgglomerateUpdateAction.jsonFormat))
+
+      // Annotation
+      case s: AddLayerAnnotationUpdateAction =>
+        Json.obj("name" -> "addLayerToAnnotation", "value" -> Json.toJson(s)(AddLayerAnnotationUpdateAction.jsonFormat))
+      case s: DeleteLayerAnnotationUpdateAction =>
+        Json.obj("name" -> "deleteLayerFromAnnotation",
+                 "value" -> Json.toJson(s)(DeleteLayerAnnotationUpdateAction.jsonFormat))
+      case s: UpdateLayerMetadataAnnotationUpdateAction =>
+        Json.obj("name" -> "updateLayerMetadata",
+                 "value" -> Json.toJson(s)(UpdateLayerMetadataAnnotationUpdateAction.jsonFormat))
+      case s: UpdateMetadataAnnotationUpdateAction =>
+        Json.obj("name" -> "updateMetadataOfAnnotation",
+                 "value" -> Json.toJson(s)(UpdateMetadataAnnotationUpdateAction.jsonFormat))
     }
   }
 }

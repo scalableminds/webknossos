@@ -8,6 +8,7 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateActionGroup
 import com.scalableminds.webknossos.tracingstore.tracings.UpdateAction.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
@@ -36,16 +37,13 @@ class SkeletonTracingService @Inject()(
 
   implicit val tracingCompanion: SkeletonTracing.type = SkeletonTracing
 
-  implicit val updateActionJsonFormat: SkeletonUpdateAction.skeletonUpdateActionFormat.type =
-    SkeletonUpdateAction.skeletonUpdateActionFormat
-
   def currentVersion(tracingId: String): Fox[Long] =
     tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
 
   def currentVersion(tracing: SkeletonTracing): Long = tracing.version
 
   def handleUpdateGroup(tracingId: String,
-                        updateActionGroup: UpdateActionGroup[SkeletonTracing],
+                        updateActionGroup: UpdateActionGroup,
                         previousVersion: Long,
                         userToken: Option[String]): Fox[_] =
     tracingDataStore.skeletonUpdates.put(
@@ -118,7 +116,7 @@ class SkeletonTracingService @Inject()(
         case Full(tracing) =>
           remainingUpdates match {
             case List() => Fox.successful(tracing)
-            case RevertToVersionSkeletonAction(sourceVersion, _, _, _) :: tail =>
+            case RevertToVersionSkeletonAction(tracingId, sourceVersion, _, _, _) :: tail =>
               val sourceTracing = find(tracingId, Some(sourceVersion), useCache = false, applyUpdates = true)
               updateIter(sourceTracing, tail)
             case update :: tail => updateIter(Full(update.applyOn(tracing)), tail)

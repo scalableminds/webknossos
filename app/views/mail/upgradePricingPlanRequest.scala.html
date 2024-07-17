@@ -1,9 +1,9 @@
-@(name: String, organizationDisplayName: String, messageBody: String)
+@(name: String, email: String, organizationDisplayName: String, messageBody: String)
 
 @emailBaseTemplate() {
 <p>Hi WEBKNOSSOS sales team</p>
 <p>There is a new request to upgrade a WEBKNOSSOS organization with additional plan/features.</p>
-<p>User: @{name}</p> 
+<p>User: @{name} (<a href="mailto:@{email}">@{email}</a>)</p>  
 <p>Organization: @{organizationDisplayName}</p>
 <p>Request: @{messageBody}</p>
 

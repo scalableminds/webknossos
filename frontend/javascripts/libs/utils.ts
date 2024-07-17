@@ -1084,6 +1084,10 @@ export function diffObjects(
   return changes(object, base);
 }
 
+export function areVec3AlmostEqual(a: Vector3, b: Vector3, epsilon: number = 1e-6): boolean {
+  return _.every(a.map((v, i) => Math.abs(v - b[i]) < epsilon));
+}
+
 export function coalesce<T extends {}>(e: T, token: any): T[keyof T] | null {
   return Object.values(e).includes(token as T[keyof T]) ? token : null;
 }
@@ -1170,4 +1174,36 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
 
 export function assertNever(value: never): never {
   throw new Error(`Unexpected value that is not 'never': ${JSON.stringify(value)}`);
+}
+
+/**
+ * Returns a URL safe, base 62 encoded hash code from a string
+ * @param  {String} str The string to hash.
+ * @return {string}    A 32bit integer hash code encoded in base 62.
+ * @see https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript (original link is dead)
+ */
+export function computeHash(str: string): string | undefined {
+  let hash = 0;
+  for (let i = 0, len = str.length; i < len; i++) {
+    let chr = str.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  const hashString = encodeToBase62(hash);
+  return hashString;
+}
+
+export function encodeToBase62(numberToEncode: number): string {
+  const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  if (numberToEncode === 0) return base62Chars[0];
+  if (numberToEncode === -1) return base62Chars[61];
+  let encoded = "";
+  let num = numberToEncode;
+  while (num !== 0 && num !== -1) {
+    // for positive numberToEncode, num will eventually be 0, for negative numberToEncode, num will eventually be -1
+    const modulo = mod(num, 62);
+    encoded = base62Chars[modulo] + encoded;
+    num = Math.floor(num / 62);
+  }
+  return encoded;
 }

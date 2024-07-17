@@ -20,7 +20,6 @@ import { exploreRemoteDataset, isDatasetNameValid, storeRemoteDataset } from "ad
 import messages from "messages";
 import { jsonStringify } from "libs/utils";
 import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
-import Password from "antd/lib/input/Password";
 import { AsyncButton } from "components/async_clickables";
 import Toast from "libs/toast";
 import _ from "lodash";
@@ -39,9 +38,12 @@ import { Unicode } from "oxalis/constants";
 import { readFileAsText } from "libs/read_file";
 import * as Utils from "libs/utils";
 import { ArbitraryObject } from "types/globals";
+import BrainSpinner from "components/brain_spinner";
+import { useHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
+const { Password } = Input;
 
 type FileList = UploadFile<any>[];
 
@@ -52,6 +54,11 @@ type OwnProps = {
     needsConversion?: boolean | null | undefined,
   ) => Promise<void>;
   datastores: APIDataStore[];
+  // This next prop has a high impact on the component's behavior.
+  // If it is set, the component will automatically explore the dataset
+  // and import it. If it is not set, the user has to manually trigger
+  // the exploration and import.
+  defaultDatasetUrl?: string | null | undefined;
 };
 type StateProps = {
   activeUser: APIUser | null | undefined;
@@ -73,14 +80,14 @@ function mergeNewLayers(
   existingDatasource: DatasourceConfiguration | null,
   newDatasource: DatasourceConfiguration,
 ): DatasourceConfiguration {
-  if (existingDatasource == null) {
+  if (existingDatasource?.dataLayers == null) {
     return newDatasource;
   }
   const allLayers = newDatasource.dataLayers.concat(existingDatasource.dataLayers);
-  const groupedLayers = _.groupBy(allLayers, (layer: DataLayer) => layer.name) as unknown as Record<
-    string,
-    DataLayer[]
-  >;
+  const groupedLayers: Record<string, DataLayer[]> = _.groupBy(
+    allLayers,
+    (layer: DataLayer) => layer.name,
+  );
   const uniqueLayers: DataLayer[] = [];
   for (const entry of _.entries(groupedLayers)) {
     const [name, layerGroup] = entry;
@@ -172,23 +179,74 @@ export function GoogleAuthFormItem({
 }
 
 function DatasetAddRemoteView(props: Props) {
-  const { activeUser, onAdded, datastores } = props;
+  const { activeUser, onAdded, datastores, defaultDatasetUrl } = props;
 
   const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
   const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
 
   const [showAddLayerModal, setShowAddLayerModal] = useState(false);
+  const [showLoadingOverlay, setShowLoadingOverlay] = useState(defaultDatasetUrl != null);
   const [dataSourceEditMode, setDataSourceEditMode] = useState<"simple" | "advanced">("simple");
   const [form] = Form.useForm();
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
-  const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
+  const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) == null;
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
+  const history = useHistory();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const targetFolderId = params.get("to");
     setTargetFolderId(targetFolderId);
   }, []);
+
+  const getDefaultDatasetName = (url: string) => {
+    if (url === "") return "";
+    let urlPathElements = url.split(/[^a-zA-Z\d_\-.~]/); // split by non url-safe characters
+    const defaultName = urlPathElements.filter((el) => el !== "").at(-1);
+    const urlHash = Utils.computeHash(url);
+    return defaultName + "-" + urlHash;
+  };
+
+  const maybeOpenExistingDataset = () => {
+    const maybeDSNameError = form
+      .getFieldError("datasetName")
+      .filter((error) => error === messages["dataset.name.already_taken"]);
+    if (maybeDSNameError == null) return;
+    history.push(
+      `/datasets/${activeUser?.organization}/${form.getFieldValue(["dataSource", "id", "name"])}`,
+    );
+  };
+
+  const hasFormAnyErrors = (form: FormInstance) =>
+    form.getFieldsError().filter(({ errors }) => errors.length).length > 0;
+
+  const onSuccesfulExplore = async (url: string) => {
+    const dataSourceJsonString = form.getFieldValue("dataSourceJson");
+    if (defaultDatasetUrl == null) {
+      setShowLoadingOverlay(false);
+      return;
+    }
+    if (!showLoadingOverlay) setShowLoadingOverlay(true); // show overlay again, e.g. after credentials were passed
+    const dataSourceJson = JSON.parse(dataSourceJsonString);
+    const defaultDatasetName = getDefaultDatasetName(url);
+    setDatasourceConfigStr(
+      JSON.stringify({ ...dataSourceJson, id: { name: defaultDatasetName, team: "" } }),
+    );
+    try {
+      await form.validateFields();
+    } catch (_e) {
+      console.warn(_e);
+      if (defaultDatasetUrl != null) {
+        maybeOpenExistingDataset();
+        return;
+      }
+    }
+    if (!hasFormAnyErrors(form)) {
+      handleStoreDataset();
+    } else {
+      setShowLoadingOverlay(false);
+    }
+  };
 
   const setDatasourceConfigStr = (dataSourceJson: string) => {
     form.setFieldsValue({ dataSourceJson });
@@ -201,21 +259,34 @@ function DatasetAddRemoteView(props: Props) {
   async function handleStoreDataset() {
     // Sync simple with advanced and get newest datasourceJson
     syncDataSourceFields(form, dataSourceEditMode === "simple" ? "advanced" : "simple");
-    await form.validateFields();
-    const datasourceConfigStr = form.getFieldValue("dataSourceJson");
+    try {
+      await form.validateFields();
+    } catch (_e) {
+      console.warn(_e);
+      if (defaultDatasetUrl != null) {
+        maybeOpenExistingDataset();
+        return;
+      }
+    }
+    if (hasFormAnyErrors(form)) {
+      setShowLoadingOverlay(false);
+      return;
+    }
 
     const datastoreToUse = uploadableDatastores.find(
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
     );
     if (!datastoreToUse) {
+      setShowLoadingOverlay(false);
       Toast.error("Could not find datastore that allows uploading.");
       return;
     }
 
-    if (datasourceConfigStr && activeUser) {
+    const dataSourceJsonStr = form.getFieldValue("dataSourceJson");
+    if (dataSourceJsonStr && activeUser) {
       let configJSON;
       try {
-        configJSON = JSON.parse(datasourceConfigStr);
+        configJSON = JSON.parse(dataSourceJsonStr);
         const nameValidationResult = await isDatasetNameValid({
           name: configJSON.id.name,
           owningOrganization: activeUser.organization,
@@ -227,10 +298,11 @@ function DatasetAddRemoteView(props: Props) {
           datastoreToUse.url,
           configJSON.id.name,
           activeUser.organization,
-          datasourceConfigStr,
+          dataSourceJsonStr,
           targetFolderId,
         );
       } catch (e) {
+        setShowLoadingOverlay(false);
         Toast.error(`The datasource config could not be stored. ${e}`);
         return;
       }
@@ -242,6 +314,7 @@ function DatasetAddRemoteView(props: Props) {
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
+      {showLoadingOverlay ? <BrainSpinner /> : null}
       <CardContainer title="Add Remote Zarr / Neuroglancer Precomputed / N5 Dataset">
         <Form form={form} layout="vertical">
           <DatastoreFormItem datastores={uploadableDatastores} hidden={hasOnlyOneDatastoreOrNone} />
@@ -267,6 +340,9 @@ function DatasetAddRemoteView(props: Props) {
               uploadableDatastores={uploadableDatastores}
               setDatasourceConfigStr={setDatasourceConfigStr}
               dataSourceEditMode={dataSourceEditMode}
+              defaultUrl={defaultDatasetUrl}
+              onError={() => setShowLoadingOverlay(false)}
+              onSuccess={(defaultDatasetUrl: string) => onSuccesfulExplore(defaultDatasetUrl)}
             />
           )}
           <Hideable hidden={hideDatasetUI}>
@@ -367,15 +443,19 @@ function AddRemoteLayer({
   uploadableDatastores,
   setDatasourceConfigStr,
   onSuccess,
+  onError,
   dataSourceEditMode,
+  defaultUrl,
 }: {
   form: FormInstance;
   uploadableDatastores: APIDataStore[];
   setDatasourceConfigStr: (dataSourceJson: string) => void;
-  onSuccess?: () => void;
+  onSuccess?: (datasetUrl: string) => Promise<void> | void;
+  onError?: () => void;
   dataSourceEditMode: "simple" | "advanced";
+  defaultUrl?: string | null | undefined;
 }) {
-  const isDatasourceConfigStrFalsy = !Form.useWatch("dataSourceJson", form);
+  const isDatasourceConfigStrFalsy = Form.useWatch("dataSourceJson", form) != null;
   const datasourceUrl: string | null = Form.useWatch("url", form);
   const [exploreLog, setExploreLog] = useState<string | null>(null);
   const [showCredentialsFields, setShowCredentialsFields] = useState<boolean>(false);
@@ -383,6 +463,18 @@ function AddRemoteLayer({
   const [passwordOrSecretKey, setPasswordOrSecretKey] = useState<string>("");
   const [selectedProtocol, setSelectedProtocol] = useState<"s3" | "https" | "gs">("https");
   const [fileList, setFileList] = useState<FileList>([]);
+
+  useEffect(() => {
+    if (defaultUrl != null) {
+      // only set datasourceUrl in the first render
+      if (datasourceUrl == null) {
+        form.setFieldValue("url", defaultUrl);
+        form.validateFields(["url"]);
+      } else {
+        handleExplore();
+      }
+    }
+  }, [defaultUrl, datasourceUrl, form.setFieldValue, form.validateFields]);
 
   const handleChange = (info: UploadChangeParam<UploadFile<any>>) => {
     // Restrict the upload list to the latest file
@@ -404,8 +496,13 @@ function AddRemoteLayer({
     }
   }
 
+  const handleFailure = () => {
+    if (onError) onError();
+  };
+
   async function handleExplore() {
     if (!datasourceUrl) {
+      handleFailure();
       Toast.error("Please provide a valid URL for exploration.");
       return;
     }
@@ -417,6 +514,7 @@ function AddRemoteLayer({
       (datastore) => form.getFieldValue("datastoreUrl") === datastore.url,
     );
     if (!datastoreToUse) {
+      handleFailure();
       Toast.error("Could not find datastore that allows uploading.");
       return;
     }
@@ -458,6 +556,7 @@ function AddRemoteLayer({
     })();
     setExploreLog(report);
     if (!newDataSource) {
+      handleFailure();
       Toast.error(
         "Exploring this remote dataset did not return a datasource. Please check the Log.",
       );
@@ -466,18 +565,25 @@ function AddRemoteLayer({
     ensureLargestSegmentIdsInPlace(newDataSource);
     if (!datasourceConfigStr) {
       setDatasourceConfigStr(jsonStringify(newDataSource));
+      if (onSuccess) {
+        onSuccess(datasourceUrl);
+      }
       return;
     }
-    let existingDatasource;
+    let existingDatasource: DatasourceConfiguration;
     try {
       existingDatasource = JSON.parse(datasourceConfigStr);
     } catch (_e) {
+      handleFailure();
       Toast.error(
         "The current datasource config contains invalid JSON. Cannot add the new Zarr/N5 data.",
       );
       return;
     }
-    if (existingDatasource != null && !_.isEqual(existingDatasource.scale, newDataSource.scale)) {
+    if (
+      existingDatasource?.scale != null &&
+      !_.isEqual(existingDatasource.scale, newDataSource.scale)
+    ) {
       Toast.warning(
         `${messages["dataset.add_zarr_different_scale_warning"]}\n${formatScale(
           newDataSource.scale,
@@ -487,16 +593,19 @@ function AddRemoteLayer({
     }
     setDatasourceConfigStr(jsonStringify(mergeNewLayers(existingDatasource, newDataSource)));
     if (onSuccess) {
-      onSuccess();
+      onSuccess(datasourceUrl);
     }
   }
 
   return (
     <>
       Please enter a URL that points to the Zarr, Neuroglancer Precomputed or N5 data you would like
-      to import. If necessary, specify the credentials for the dataset. For datasets with multiple
-      layers, e.g. raw microscopy and segmentation data, please add them separately with the ”Add
-      Layer” button below. Once you have approved of the resulting datasource you can import it.
+      to import. If necessary, specify the credentials for the dataset.{" "}
+      {defaultUrl == null
+        ? "For datasets with multiple \
+      layers, e.g. raw microscopy and segmentation data, please add them separately with the ”Add \
+      Layer” button below. Once you have approved of the resulting datasource you can import it."
+        : "If the provided URL is valid, the datasource will be imported and you will be redirected to the dataset."}
       <FormItem
         style={{ marginTop: 16, marginBottom: 16 }}
         name="url"
@@ -514,6 +623,7 @@ function AddRemoteLayer({
                 validateUrls(value);
                 return Promise.resolve();
               } catch (e) {
+                handleFailure();
                 return Promise.reject(e);
               }
             },
@@ -599,7 +709,7 @@ function AddRemoteLayer({
               style={{ width: "100%" }}
               onClick={handleExplore}
             >
-              Add Layer
+              {defaultUrl == null ? "Add Layer" : "Validate URL and Continue"}
             </AsyncButton>
           </Col>
         </Row>

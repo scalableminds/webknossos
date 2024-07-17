@@ -130,11 +130,14 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(userEmail)
     )
 
-  def upgradePricingPlanRequestMail(user: User, organizationDisplayName: String, messageBody: String): Mail =
+  def upgradePricingPlanRequestMail(user: User,
+                                    userEmail: String,
+                                    organizationDisplayName: String,
+                                    messageBody: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Request to upgrade WEBKNOSSOS plan",
-      bodyHtml = html.mail.upgradePricingPlanRequest(user.name, organizationDisplayName, messageBody).body,
+      bodyHtml = html.mail.upgradePricingPlanRequest(user.name, userEmail, organizationDisplayName, messageBody).body,
       recipients = List("hello@webknossos.org")
     )
 

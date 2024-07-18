@@ -8,6 +8,7 @@ import type {
   APIDataset,
   APIDataLayer,
   APIMeshFile,
+  VoxelSize,
 } from "types/api_flow_types";
 import type {
   ActiveMappingInfo,
@@ -27,6 +28,8 @@ import {
   VolumeTools,
   AltOrOptionKey,
   CtrlOrCmdKey,
+  LongUnitToShortUnitMap,
+  UnitLong,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
@@ -119,7 +122,7 @@ import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import { voxelToNm3 } from "oxalis/model/scaleinfo";
+import { voxelToVolumeInUnit } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import {
   ensureLayerMappingsAreLoadedAction,
@@ -146,7 +149,7 @@ type OwnProps = {
 
 type StateProps = {
   skeletonTracing: SkeletonTracing | null | undefined;
-  datasetScale: Vector3;
+  voxelSize: VoxelSize;
   visibleSegmentationLayer: APIDataLayer | null | undefined;
   dataset: APIDataset;
   currentMeshFile: APIMeshFile | null | undefined;
@@ -190,15 +193,20 @@ function copyIconWithTooltip(value: string | number, title: string) {
   );
 }
 
-function measureAndShowLengthBetweenNodes(sourceNodeId: number, targetNodeId: number) {
-  const [lengthNm, lengthVx] = api.tracing.measurePathLengthBetweenNodes(
+function measureAndShowLengthBetweenNodes(
+  sourceNodeId: number,
+  targetNodeId: number,
+  voxelSizeUnit: UnitLong,
+) {
+  const [lengthInUnit, lengthInVx] = api.tracing.measurePathLengthBetweenNodes(
     sourceNodeId,
     targetNodeId,
   );
   notification.open({
     message: `The shortest path length between the nodes is ${formatNumberToLength(
-      lengthNm,
-    )} (${formatLengthAsVx(lengthVx)}).`,
+      lengthInUnit,
+      LongUnitToShortUnitMap[voxelSizeUnit],
+    )} (${formatLengthAsVx(lengthInVx)}).`,
     icon: <i className="fas fa-ruler" />,
   });
 }
@@ -216,12 +224,12 @@ function extractShortestPathAsNewTree(
   }
 }
 
-function measureAndShowFullTreeLength(treeId: number, treeName: string) {
-  const [lengthInNm, lengthInVx] = api.tracing.measureTreeLength(treeId);
+function measureAndShowFullTreeLength(treeId: number, treeName: string, voxelSizeUnit: UnitLong) {
+  const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
   notification.open({
     message: messages["tracing.tree_length_notification"](
       treeName,
-      formatNumberToLength(lengthInNm),
+      formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[voxelSizeUnit]),
       formatLengthAsVx(lengthInVx),
     ),
     icon: <i className="fas fa-ruler" />,
@@ -368,7 +376,7 @@ function getMeshItems(
   meshIntersectionPosition: Vector3 | null | undefined,
   maybeUnmappedSegmentId: number | null | undefined,
   visibleSegmentationLayer: APIDataLayer | null | undefined,
-  datasetScale: Vector3,
+  voxelSizeFactor: Vector3,
 ): MenuItemType[] {
   if (
     clickedMeshId == null ||
@@ -524,7 +532,7 @@ function getMeshItems(
     {
       key: "jump-to-mesh",
       onClick: () => {
-        const unscaledPosition = V3.divide3(meshIntersectionPosition, datasetScale);
+        const unscaledPosition = V3.divide3(meshIntersectionPosition, voxelSizeFactor);
         Actions.setPosition(Store.dispatch, unscaledPosition);
       },
       label: "Jump to Position",
@@ -546,7 +554,7 @@ function getNodeContextMenuOptions({
   maybeMeshIntersectionPosition,
   maybeUnmappedSegmentId,
   visibleSegmentationLayer,
-  datasetScale,
+  voxelSize,
   useLegacyBindings,
   volumeTracing,
   infoRows,
@@ -591,7 +599,7 @@ function getNodeContextMenuOptions({
     maybeMeshIntersectionPosition,
     maybeUnmappedSegmentId,
     visibleSegmentationLayer,
-    datasetScale,
+    voxelSize.factor,
   );
 
   const menuItems: ItemType[] = [
@@ -723,13 +731,14 @@ function getNodeContextMenuOptions({
           disabled: activeNodeId == null || !areInSameTree || isTheSameNode,
           onClick: () =>
             activeNodeId != null
-              ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId)
+              ? measureAndShowLengthBetweenNodes(activeNodeId, clickedNodeId, voxelSize.unit)
               : null,
           label: "Path Length to this Node",
         },
     {
       key: "measure-whole-tree-length",
-      onClick: () => measureAndShowFullTreeLength(clickedTree.treeId, clickedTree.name),
+      onClick: () =>
+        measureAndShowFullTreeLength(clickedTree.treeId, clickedTree.name, voxelSize.unit),
       label: "Path Length of this Tree",
     },
     allowUpdate
@@ -906,7 +915,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     visibleSegmentationLayer,
     segmentIdAtPosition,
     dataset,
-    datasetScale,
+    voxelSize,
     currentMeshFile,
     currentConnectomeFile,
     mappingInfo,
@@ -1223,7 +1232,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     maybeMeshIntersectionPosition,
     maybeUnmappedSegmentId,
     visibleSegmentationLayer,
-    datasetScale,
+    voxelSize.factor,
   );
 
   if (isSkeletonToolActive) {
@@ -1334,7 +1343,7 @@ function WkContextMenu() {
     return {
       skeletonTracing: state.tracing.skeleton,
       volumeTracing: getActiveSegmentationTracing(state),
-      datasetScale: state.dataset.dataSource.scale,
+      voxelSize: state.dataset.dataSource.scale,
       activeTool: state.uiInformation.activeTool,
       dataset: state.dataset,
       allowUpdate: state.tracing.restrictions.allowUpdate,
@@ -1404,7 +1413,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     contextMenuPosition,
     segments,
     hideContextMenu,
-    datasetScale,
+    voxelSize,
     globalPosition,
     maybeViewport,
     visibleSegmentationLayer,
@@ -1448,7 +1457,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
       const requestUrl = getVolumeRequestUrl(dataset, tracing, tracingId, visibleSegmentationLayer);
       const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
       const layersFinestResolution = magInfo.getFinestResolution();
-      const datasetScale = dataset.dataSource.scale;
+      const voxelSize = dataset.dataSource.scale;
 
       try {
         const [segmentSize] = await getSegmentVolumes(
@@ -1471,9 +1480,9 @@ function ContextMenuInner(propsWithInputRef: Props) {
         );
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;
         const boundingBoxSizeString = `(${boundingBoxInMag1.width}, ${boundingBoxInMag1.height}, ${boundingBoxInMag1.depth})`;
-        const volumeInNm3 = voxelToNm3(datasetScale, layersFinestResolution, segmentSize);
+        const volumeInUnit3 = voxelToVolumeInUnit(voxelSize, layersFinestResolution, segmentSize);
         return [
-          formatNumberToVolume(volumeInNm3),
+          formatNumberToVolume(volumeInUnit3, LongUnitToShortUnitMap[voxelSize.unit]),
           `${boundingBoxTopLeftString}, ${boundingBoxSizeString}`,
         ];
       } catch (_error) {
@@ -1528,7 +1537,8 @@ function ContextMenuInner(propsWithInputRef: Props) {
     activeNode != null && positionToMeasureDistanceTo != null
       ? [
           formatNumberToLength(
-            V3.scaledDist(getActiveNodePosition(), positionToMeasureDistanceTo, datasetScale),
+            V3.scaledDist(getActiveNodePosition(), positionToMeasureDistanceTo, voxelSize.factor),
+            LongUnitToShortUnitMap[voxelSize.unit],
           ),
           formatLengthAsVx(V3.length(V3.sub(getActiveNodePosition(), positionToMeasureDistanceTo))),
         ]
@@ -1652,20 +1662,20 @@ function ContextMenuInner(propsWithInputRef: Props) {
       ),
     );
   }
-  if (segments != null && maybeClickedMeshId != null) {
-    const segmentName = segments.getNullable(maybeClickedMeshId)?.name;
+  if (segments != null && wasSegmentOrMeshClicked) {
+    const segmentName = segments.getNullable(clickedSegmentOrMeshId)?.name;
     if (segmentName != null) {
-      const maxSegmentNameLength = 18;
+      const maxNameLength = 20;
       infoRows.push(
         getInfoMenuItem(
           "copy-cell",
           <>
-            <Tooltip title="Segment Name">
-              <i className="fas fa-tag" />{" "}
-            </Tooltip>
-            <Tooltip title={segmentName.length > maxSegmentNameLength ? segmentName : null}>
-              {truncateStringToLength(segmentName, maxSegmentNameLength)}
-            </Tooltip>
+            <i className="fas fa-tag segment-context-icon" />
+            Segment Name:{" "}
+            {segmentName.length > maxNameLength
+              ? truncateStringToLength(segmentName, maxNameLength)
+              : segmentName}
+            {copyIconWithTooltip(segmentName, "Copy Segment Name")}
           </>,
         ),
       );

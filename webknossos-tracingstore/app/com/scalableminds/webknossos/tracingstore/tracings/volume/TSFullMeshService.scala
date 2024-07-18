@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, option2Fox}
@@ -8,7 +8,12 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
-import com.scalableminds.webknossos.datastore.models.{BucketPosition, VoxelPosition, WebknossosAdHocMeshRequest}
+import com.scalableminds.webknossos.datastore.models.{
+  BucketPosition,
+  VoxelPosition,
+  VoxelSize,
+  WebknossosAdHocMeshRequest
+}
 import com.scalableminds.webknossos.datastore.services.{FullMeshHelper, FullMeshRequest}
 import com.scalableminds.webknossos.tracingstore.tracings.FallbackDataHelper
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -83,7 +88,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       tracing: VolumeTracing,
       tracingId: String,
       mag: Vec3Int,
-      voxelSize: Vec3Double,
+      voxelSize: VoxelSize,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext): Fox[List[Array[Float]]] =
     for {
       fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId)
@@ -113,7 +118,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
             mag = mag,
             cubeSize = Vec3Int.full(DataLayer.bucketLength + 1),
             fullMeshRequest.segmentId,
-            voxelSize,
+            voxelSize.factor,
             fullMeshRequest.mappingName,
             fullMeshRequest.mappingType,
             fullMeshRequest.additionalCoordinates,
@@ -128,7 +133,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                                  tracing: VolumeTracing,
                                                  tracingId: String,
                                                  mag: Vec3Int,
-                                                 voxelSize: Vec3Double,
+                                                 voxelSize: VoxelSize,
                                                  fullMeshRequest: FullMeshRequest,
                                                  topLeftOpt: Option[VoxelPosition],
                                                  chunkSize: Vec3Int,
@@ -142,7 +147,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         mag = mag,
         cubeSize = Vec3Int(chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
         fullMeshRequest.segmentId,
-        voxelSize,
+        voxelSize.factor,
         fullMeshRequest.mappingName,
         fullMeshRequest.mappingType,
         fullMeshRequest.additionalCoordinates

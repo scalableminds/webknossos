@@ -1,7 +1,7 @@
 import { saveAs } from "file-saver";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
-import { chunkDynamically, sleep } from "libs/utils";
+import { areVec3AlmostEqual, chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeBufferGeometries } from "libs/BufferGeometryUtils";
@@ -461,7 +461,7 @@ function* maybeLoadMeshChunk(
 
   batchCounterPerSegment[segmentId]++;
   threeDMap.set(clippedPosition, true);
-  const scale = yield* select((state) => state.dataset.dataSource.scale);
+  const scaleFactor = yield* select((state) => state.dataset.dataSource.scale.factor);
   const dataStoreHost = yield* select((state) => state.dataset.dataStore.url);
   const owningOrganization = yield* select((state) => state.dataset.owningOrganization);
   const datasetName = yield* select((state) => state.dataset.name);
@@ -499,7 +499,7 @@ function* maybeLoadMeshChunk(
           mag,
           segmentId,
           cubeSize,
-          scale,
+          scaleFactor,
           findNeighbors,
           ...meshExtraInfo,
         },
@@ -1026,6 +1026,23 @@ function _getLoadChunksTasks(
 
                 // Compute vertex normals to achieve smooth shading
                 bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
+
+                // Check if the mesh scale is different to all supported resolutions of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
+                // This hint at the mesh file being computed when the dataset scale was different than currently configured.
+                const segmentationLayerResolutions = yield* select(
+                  (state) => getVisibleSegmentationLayer(state)?.resolutions,
+                );
+                const datasetScaleFactor = dataset.dataSource.scale.factor;
+                if (segmentationLayerResolutions && scale) {
+                  const doesSomeSegmResolutionMatchMeshScale = segmentationLayerResolutions.some(
+                    (res) => areVec3AlmostEqual(V3.scale3(datasetScaleFactor, res), scale),
+                  );
+                  if (!doesSomeSegmResolutionMatchMeshScale) {
+                    console.warn(
+                      `Scale of mesh ${id} is different to dataset scale. Mesh scale: ${scale}, Dataset scale: ${dataset.dataSource.scale.factor}. This might lead to unexpected rendering results.`,
+                    );
+                  }
+                }
 
                 yield* call(
                   {

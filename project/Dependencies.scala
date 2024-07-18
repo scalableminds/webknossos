@@ -2,14 +2,14 @@ import play.sbt.PlayImport.{filters, _}
 import sbt._
 
 object Dependencies {
-  private val silhouetteVersion = "10.0.0"
+  private val silhouetteVersion = "10.0.1"
   private val brotliVersion = "1.16.0"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
   val utilDependencies: Seq[ModuleID] = Seq(
     // Play Web Framework. import play
-    "org.playframework" %% "play" % "3.0.3",
+    "org.playframework" %% "play" % "3.0.4",
     // Play’s JSON serialization. import play.api.libs.json
     "com.typesafe.play" %% "play-json" % "2.10.5",
     // Sending emails. import org.apache.commons.mail
@@ -96,7 +96,7 @@ object Dependencies {
     // Makes txw2 write self-closing tags in xml (which we want). Not imported.
     "org.codehaus.woodstox" % "wstx-asl" % "4.0.6",
     // Json Web Tokens (used for OIDC Auth). import pdi.jwt
-    "com.github.jwt-scala" %% "jwt-play-json" % "10.0.0",
+    "com.github.jwt-scala" %% "jwt-play-json" % "10.0.1",
     // SQL Queries. import slick
     "com.typesafe.slick" %% "slick" % "3.5.0",
     // SQL Queries connection pool. not imported.

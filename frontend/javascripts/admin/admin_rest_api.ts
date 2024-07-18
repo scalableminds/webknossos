@@ -63,6 +63,7 @@ import type {
   MaintenanceInfo,
   AdditionalCoordinate,
   LayerLink,
+  VoxelSize,
   APITimeTrackingPerUser,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
@@ -1237,7 +1238,7 @@ type DatasetCompositionArgs = {
   newDatasetName: string;
   targetFolderId: string;
   organizationName: string;
-  scale: Vector3;
+  voxelSize: VoxelSize;
   layers: LayerLink[];
 };
 
@@ -1268,12 +1269,12 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
       new ResumableJS({
         testChunks: false,
         target: `${datastoreUrl}/data/datasets?token=${token}`,
-        chunkSize: 10 * 1024 * 1024,
-        // set chunk size to 10MB
+        chunkSize: 10 * 1024 * 1024, // 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
         simultaneousUploads: 3,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
+        xhrTimeout: 10 * 60 * 1000, // 10m
         // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
         generateUniqueIdentifier,
       }),
@@ -1975,7 +1976,7 @@ type MeshRequest = {
   segmentId: number; // Segment to build mesh for
   // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
-  scale: Vector3;
+  scaleFactor: Vector3;
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   findNeighbors: boolean;
@@ -1988,15 +1989,8 @@ export function computeAdHocMesh(
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
-  const {
-    position,
-    additionalCoordinates,
-    cubeSize,
-    mappingName,
-    mag,
-
-    ...rest
-  } = meshRequest;
+  const { position, additionalCoordinates, cubeSize, mappingName, scaleFactor, mag, ...rest } =
+    meshRequest;
 
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
@@ -2014,6 +2008,7 @@ export function computeAdHocMesh(
           cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
+          voxelSizeFactorInUnit: scaleFactor,
           mag,
           ...rest,
         },

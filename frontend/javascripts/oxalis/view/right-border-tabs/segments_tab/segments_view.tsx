@@ -1887,12 +1887,9 @@ class SegmentsView extends React.Component<Props, State> {
 
   getExpandSubgroupsItem(groupId: number) {
     const children = this.getSubGroupsAsTreeNodes(groupId);
-    const areAllChildrenExpanded =
-      children.filter((childNode) => this.state.expandedGroupKeys?.includes(childNode)).length ===
-      children.length;
-    const isGroupItselfExpanded = this.state.expandedGroupKeys?.includes(
-      this.getKeyForGroupId(groupId),
-    );
+    const expandedKeySet = new Set(this.state.expandedGroupKeys);
+    const areAllChildrenExpanded = children.every((childNode) => expandedKeySet.has(childNode));
+    const isGroupItselfExpanded = expandedKeySet.has(this.getKeyForGroupId(groupId));
     if (areAllChildrenExpanded && isGroupItselfExpanded) {
       return null;
     }
@@ -1901,7 +1898,6 @@ class SegmentsView extends React.Component<Props, State> {
     if (!isGroupItselfExpanded) groupsToExpand.push(this.getKeyForGroupId(groupId));
     return {
       key: "expandAll",
-      disabled: !this.props.allowUpdate,
       onClick: () => {
         this.expandGroups(groupsToExpand);
         this.closeSegmentOrGroupDropdown();
@@ -1913,18 +1909,15 @@ class SegmentsView extends React.Component<Props, State> {
 
   getCollapseSubgroupsItem(groupId: number) {
     const children = this.getSubGroupsAsTreeNodes(groupId);
+    const expandedKeySet = new Set(this.state.expandedGroupKeys);
     const areAllChildrenCollapsed =
-      children.filter((childNode) => this.state.expandedGroupKeys?.includes(childNode)).length ===
-      0;
-    const isGroupItselfCollapsed = !this.state.expandedGroupKeys?.includes(
-      this.getKeyForGroupId(groupId),
-    );
+      children.filter((childNode) => expandedKeySet.has(childNode)).length === 0;
+    const isGroupItselfCollapsed = !expandedKeySet.has(this.getKeyForGroupId(groupId));
     if (areAllChildrenCollapsed || isGroupItselfCollapsed) {
       return null;
     }
     return {
       key: "collapseAll",
-      disabled: !this.props.allowUpdate,
       onClick: () => {
         this.collapseGroups(children);
         this.closeSegmentOrGroupDropdown();

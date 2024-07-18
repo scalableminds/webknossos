@@ -43,7 +43,6 @@ case class RunInferenceParameters(annotationId: Option[ObjectId],
                                   datasetName: String,
                                   colorLayerName: String,
                                   boundingBox: String,
-                                  newSegmentationLayerName: String,
                                   newDatasetName: String,
                                   maskAnnotationLayerName: Option[String],
                                   workflowYaml: Option[String])
@@ -169,7 +168,6 @@ class AiModelController @Inject()(
         _ <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         _ <- datasetService.assertNewDatasetName(request.body.newDatasetName, organization._id)
-        _ <- datasetService.assertValidLayerNameLax(request.body.newSegmentationLayerName)
         jobCommand = JobCommand.infer_with_model
         boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
@@ -178,7 +176,6 @@ class AiModelController @Inject()(
           "color_layer_name" -> request.body.colorLayerName,
           "bounding_box" -> boundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
-          "new_segmentation_layer_name" -> request.body.newSegmentationLayerName,
           "new_dataset_name" -> request.body.newDatasetName,
           "workflow_yaml" -> request.body.workflowYaml
         )
@@ -191,7 +188,7 @@ class AiModelController @Inject()(
           _annotation = request.body.annotationId,
           boundingBox = boundingBox,
           _inferenceJob = newInferenceJob._id,
-          newSegmentationLayerName = request.body.newSegmentationLayerName,
+          newSegmentationLayerName = "segmentation",
           maskAnnotationLayerName = request.body.maskAnnotationLayerName
         )
         _ <- aiInferenceDAO.insertOne(newAiInference)

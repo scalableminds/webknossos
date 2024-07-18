@@ -18,6 +18,7 @@ const BLACKLISTED_ERROR_MESSAGES = [
   "Invariant Violation: Cannot call hover while not dragging.", // Errors from the sortable-tree when dragging an element onto itself
   "Uncaught Invariant Violation: Expected to find a valid target.",
   "Uncaught TypeError: Cannot read property 'path' of null",
+  "WebGLContextLost",
 ];
 type ErrorHandlingOptions = {
   throwAssertions: boolean;

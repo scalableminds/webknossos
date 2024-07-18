@@ -367,8 +367,8 @@ function renderEmptyMeshFileSelect() {
   );
 }
 
-const getExpandedKeys = (treeData: TreeGroup[]) => {
-  return treeData.reduce((expandedKeysAcc: string[], node) => {
+const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
+  return segmentGroups.reduce((expandedKeysAcc: string[], node) => {
     if (node.isExpanded || node.isExpanded == null) {
       expandedKeysAcc.push(getKeyForGroupId(node.groupId));
     }
@@ -464,7 +464,10 @@ class SegmentsView extends React.Component<Props, State> {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
 
     this.setState({
-      expandedGroupKeys: getExpandedKeysWithRoot(this.props.segmentGroups, this.state.isRootGroupExpanded),
+      expandedGroupKeys: getExpandedKeysWithRoot(
+        this.props.segmentGroups,
+        this.state.isRootGroupExpanded,
+      ),
     });
   }
 
@@ -541,8 +544,8 @@ class SegmentsView extends React.Component<Props, State> {
         return {
           ...group,
           isExpanded: false,
-          // Close all groups that are not in the expanded list because this method
-          // is (a.o.) called for every update, e.g. when a group is collapsed.
+          // Close all groups that are not in the expanded list so this method
+          // can be called for every update, e.g. when a group is collapsed.
         };
       }
     });
@@ -681,10 +684,13 @@ class SegmentsView extends React.Component<Props, State> {
         searchableTreeItemList.push(item);
       });
       updateStateObject = {
-        expandedGroupKeys: getExpandedKeysWithRoot(nextProps.segmentGroups, prevState.isRootGroupExpanded),
         groupTree: generatedGroupTree,
         searchableTreeItemList,
         prevProps: nextProps,
+        expandedGroupKeys: getExpandedKeysWithRoot(
+          nextProps.segmentGroups,
+          prevState.isRootGroupExpanded,
+        ),
       };
     }
     if (prevState.prevProps?.meshes !== meshes) {
@@ -1877,8 +1883,8 @@ class SegmentsView extends React.Component<Props, State> {
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
                       description={`There are no segments yet. ${this.props.allowUpdate && this.props.hasVolumeTracing
-                        ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
-                        : "Select or click existing segments to add them to this list."
+                          ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
+                          : "Select or click existing segments to add them to this list."
                         }`}
                     />
                   ) : (

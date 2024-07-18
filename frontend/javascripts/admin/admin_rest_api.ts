@@ -1274,7 +1274,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
         simultaneousUploads: 3,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
-        xhrTimeout: 10 * 60 * 1000, // 10s
+        xhrTimeout: 10 * 60 * 1000, // 10m
         // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
         generateUniqueIdentifier,
       }),

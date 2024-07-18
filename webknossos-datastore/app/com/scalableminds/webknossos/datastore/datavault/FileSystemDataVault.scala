@@ -51,17 +51,18 @@ class FileSystemDataVault extends DataVault {
     } else Fox.empty
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
-    vaultPathToLocalPath(path).map(localPath => {
-      if (!Files.isDirectory(localPath)) return Fox.successful(List.empty)
-      Files
-        .list(localPath)
-        .filter(file => Files.isDirectory(file))
-        .collect(Collectors.toList())
-        .asScala
-        .toList
-        .map(dir => new VaultPath(dir.toUri, this))
-        .take(maxItems)
-    })
+    vaultPathToLocalPath(path).map(
+      localPath =>
+        if (Files.isDirectory(localPath))
+          Files
+            .list(localPath)
+            .filter(file => Files.isDirectory(file))
+            .collect(Collectors.toList())
+            .asScala
+            .toList
+            .map(dir => new VaultPath(dir.toUri, this))
+            .take(maxItems)
+        else List.empty)
 
   private def vaultPathToLocalPath(path: VaultPath)(implicit ec: ExecutionContext): Fox[Path] = {
     val uri = path.toUri

@@ -19,8 +19,6 @@ import scala.concurrent.ExecutionContext
 class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer {
   override def name: String = "Neuroglancer Precomputed"
 
-  override def exploreSiblings: Boolean = false
-
   override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(PrecomputedLayer, VoxelSize)]] =
     for {
       infoPath <- Fox.successful(remotePath / PrecomputedHeader.FILENAME_INFO)

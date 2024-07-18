@@ -73,14 +73,16 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
     } yield (bytes, encoding)
   }
 
-  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] = {
-    val objName = path.toUri.getPath.tail
-    val blobs = storage.list(bucket, Storage.BlobListOption.prefix(objName), Storage.BlobListOption.currentDirectory())
-    val subDirectories = blobs.getValues.asScala.toList.filter(_.isDirectory).take(maxItems)
-    val paths = subDirectories.map(dirBlob =>
-      new VaultPath(new URI(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}"), this))
-    Fox.successful(paths)
-  }
+  override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
+    tryo({
+      val objName = path.toUri.getPath.tail
+      val blobs =
+        storage.list(bucket, Storage.BlobListOption.prefix(objName), Storage.BlobListOption.currentDirectory())
+      val subDirectories = blobs.getValues.asScala.toList.filter(_.isDirectory).take(maxItems)
+      val paths = subDirectories.map(dirBlob =>
+        new VaultPath(new URI(s"${uri.getScheme}://$bucket/${dirBlob.getBlobId.getName}"), this))
+      paths
+    })
 
   private def getUri = uri
   private def getCredential = credential

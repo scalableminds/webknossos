@@ -24,11 +24,6 @@ trait RemoteLayerExplorer extends FoxImplicits {
 
   implicit def ec: ExecutionContext
 
-  // This fields saves whether an explorer should look for more layers in sibling directories / sub keys.
-  // This is not the case for explorers of complex dataset formats that already have a metadata information file
-  // that list all layers like datasource-properties.json
-  def exploreSiblings: Boolean = true
-
   def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(DataLayerWithMagLocators, VoxelSize)]]
 
   def name: String

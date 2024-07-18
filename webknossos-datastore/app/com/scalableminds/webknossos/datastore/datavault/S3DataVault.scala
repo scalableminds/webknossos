@@ -14,11 +14,13 @@ import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.s3.model.{GetObjectRequest, ListObjectsV2Request, S3Object}
 import com.amazonaws.util.AwsHostNameUtils
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.box2Fox
 import com.scalableminds.webknossos.datastore.storage.{
   LegacyDataVaultCredential,
   RemoteSourceDescriptor,
   S3AccessKeyCredential
 }
+import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.IOUtils
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -92,8 +94,8 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     for {
       prefixKey <- Fox.box2Fox(S3DataVault.objectKeyFromUri(path.toUri))
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)
-      vaultPaths <- Fox.successful(
-        s3SubPrefixKeys.map(key => new VaultPath(new URI(s"${uri.getScheme}://$bucketName/$key"), this)))
+      vaultPaths <- tryo(
+        s3SubPrefixKeys.map(key => new VaultPath(new URI(s"${uri.getScheme}://$bucketName/$key"), this))).toFox
     } yield vaultPaths
 
   private def getObjectSummaries(bucketName: String, keyPrefix: String, maxItems: Int)(

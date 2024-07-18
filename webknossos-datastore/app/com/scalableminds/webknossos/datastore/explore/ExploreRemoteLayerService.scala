@@ -171,7 +171,6 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       Fox.empty
   }
 
-  // In case a data layers were found, explore sibling directories for more layers, else continue recursive exploration.
   private def handleExploreResultOfPath(explorationResultOfPath: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
                                         path: VaultPath,
                                         searchDepth: Int,
@@ -183,7 +182,6 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
     explorationResultOfPath match {
       case Full(layersWithVoxelSizes) =>
         Fox.successful(layersWithVoxelSizes)
-
       case Empty =>
         for {
           extendedRemainingPaths <- path

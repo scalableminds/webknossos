@@ -351,20 +351,18 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     }).flatMap(identity)
 
   /**
-    *
-    *  Awaits the future and opens the box. Do not use this in production code (therefore marked as Deprecated)!
+    *  Awaits the future and opens the box.
     */
-  @Deprecated
+  @deprecated(message = "Do not use this in production code", since = "forever")
   def get(justification: String, awaitTimeout: FiniteDuration = 10 seconds): A = {
     val box = await(justification, awaitTimeout)
     box.openOrThrowException(justification)
   }
 
   /**
-    *
-    * Awaits the future and returns the box. Should not be used in production code (therefore marked as Deprecated).
+    * Awaits the future and returns the box.
     */
-  @Deprecated
+  @deprecated(message = "Do not use this in production code", since = "forever")
   def await(justification: String, awaitTimeout: FiniteDuration = 10 seconds): Box[A] =
     Await.result(futureBox, awaitTimeout)
 

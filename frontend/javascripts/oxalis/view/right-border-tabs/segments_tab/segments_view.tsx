@@ -367,6 +367,25 @@ function renderEmptyMeshFileSelect() {
   );
 }
 
+const getExpandedKeys = (treeData: TreeGroup[]) => {
+  return treeData.reduce((expandedKeysAcc: string[], node) => {
+    if (node.isExpanded || node.isExpanded == null) {
+      expandedKeysAcc.push(getKeyForGroupId(node.groupId));
+    }
+    if (node.children.length > 0) expandedKeysAcc.push(...getExpandedKeys(node.children));
+    return expandedKeysAcc;
+  }, []);
+};
+
+const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[], isRootGroupExpanded: boolean) => {
+  const expandedGroups = getExpandedKeys(segmentGroups);
+  return isRootGroupExpanded
+    ? [getKeyForGroupId(MISSING_GROUP_ID), ...expandedGroups]
+    : expandedGroups;
+};
+
+const getKeyForGroupId = (groupId: number) => `group-${groupId}`;
+
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
   groupToSegmentsMap: Record<number, Segment[]>,
@@ -445,35 +464,11 @@ class SegmentsView extends React.Component<Props, State> {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
 
     this.setState({
-      expandedGroupKeys: this.getExpandedKeysWithRoot(),
+      expandedGroupKeys: getExpandedKeysWithRoot(this.props.segmentGroups, this.state.isRootGroupExpanded),
     });
   }
 
-  getExpandedKeys = (treeData: TreeGroup[]) => {
-    return treeData.reduce((expandedKeysAcc: string[], node) => {
-      if (node.isExpanded || node.isExpanded == null) {
-        expandedKeysAcc.push(this.getKeyForGroupId(node.groupId));
-      }
-      if (node.children.length > 0) expandedKeysAcc.push(...this.getExpandedKeys(node.children));
-      return expandedKeysAcc;
-    }, []);
-  };
-
-  getExpandedKeysWithRoot = () => {
-    const expandedGroups = this.getExpandedKeys(this.props.segmentGroups);
-    return this.state.isRootGroupExpanded
-      ? [this.getKeyForGroupId(MISSING_GROUP_ID), ...expandedGroups]
-      : expandedGroups;
-  };
-
   componentDidUpdate(prevProps: Props) {
-    if (this.props.segmentGroups[0] !== prevProps.segmentGroups[0]) {
-      // TODO_c find faster way to determine if update is necessary!
-      this.setState({
-        expandedGroupKeys: this.getExpandedKeysWithRoot(),
-      });
-    }
-
     if (prevProps.visibleSegmentationLayer !== this.props.visibleSegmentationLayer) {
       Store.dispatch(
         maybeFetchMeshFilesAction(this.props.visibleSegmentationLayer, this.props.dataset, false),
@@ -511,35 +506,33 @@ class SegmentsView extends React.Component<Props, State> {
     this.expandGroups(expandedKeys);
   };
 
-  getKeyForGroupId = (groupId: number) => `group-${groupId}`;
-
   getSubGroupsAsTreeNodes = (groupId: number) => {
     if (groupId !== MISSING_GROUP_ID) {
       return getGroupByIdWithSubgroups(this.props.segmentGroups, groupId)
         .filter((group) => group !== groupId)
-        .map((group) => this.getKeyForGroupId(group));
+        .map((group) => getKeyForGroupId(group));
     }
     const allSegmentGroups = this.props.segmentGroups.flatMap((group) =>
       getGroupByIdWithSubgroups(this.props.segmentGroups, group.groupId),
     );
-    return allSegmentGroups.map((group) => this.getKeyForGroupId(group));
+    return allSegmentGroups.map((group) => getKeyForGroupId(group));
   };
 
   expandGroups = (newExpandedGroups: Key[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
     if (
       this.state.isRootGroupExpanded &&
-      !newExpandedGroups.includes(this.getKeyForGroupId(MISSING_GROUP_ID))
+      !newExpandedGroups.includes(getKeyForGroupId(MISSING_GROUP_ID))
     ) {
       this.setState({ isRootGroupExpanded: false });
     } else if (
       !this.state.isRootGroupExpanded &&
-      newExpandedGroups.includes(this.getKeyForGroupId(MISSING_GROUP_ID))
+      newExpandedGroups.includes(getKeyForGroupId(MISSING_GROUP_ID))
     ) {
       this.setState({ isRootGroupExpanded: true });
     }
     const newGroups = mapGroups(this.props.segmentGroups, (group) => {
-      if (newExpandedGroups.includes(this.getKeyForGroupId(group.groupId))) {
+      if (newExpandedGroups.includes(getKeyForGroupId(group.groupId))) {
         return {
           ...group,
           isExpanded: true,
@@ -559,7 +552,7 @@ class SegmentsView extends React.Component<Props, State> {
   collapseGroups = (groupsToCollapse: Key[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
     const newGroups = mapGroups(this.props.segmentGroups, (group) => {
-      if (groupsToCollapse.includes(this.getKeyForGroupId(group.groupId))) {
+      if (groupsToCollapse.includes(getKeyForGroupId(group.groupId))) {
         return {
           ...group,
           isExpanded: false,
@@ -688,6 +681,7 @@ class SegmentsView extends React.Component<Props, State> {
         searchableTreeItemList.push(item);
       });
       updateStateObject = {
+        expandedGroupKeys: getExpandedKeysWithRoot(nextProps.segmentGroups, prevState.isRootGroupExpanded),
         groupTree: generatedGroupTree,
         searchableTreeItemList,
         prevProps: nextProps,
@@ -1514,7 +1508,7 @@ class SegmentsView extends React.Component<Props, State> {
       (segmentId) => `segment-${segmentId}`,
     );
     if (this.props.selectedIds.group != null) {
-      return mappedIdsToKeys.concat(this.getKeyForGroupId(this.props.selectedIds.group));
+      return mappedIdsToKeys.concat(getKeyForGroupId(this.props.selectedIds.group));
     }
     return mappedIdsToKeys;
   };
@@ -1883,8 +1877,8 @@ class SegmentsView extends React.Component<Props, State> {
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
                       description={`There are no segments yet. ${this.props.allowUpdate && this.props.hasVolumeTracing
-                          ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
-                          : "Select or click existing segments to add them to this list."
+                        ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
+                        : "Select or click existing segments to add them to this list."
                         }`}
                     />
                   ) : (
@@ -1957,13 +1951,12 @@ class SegmentsView extends React.Component<Props, State> {
     const children = this.getSubGroupsAsTreeNodes(groupId);
     const expandedKeySet = new Set(this.state.expandedGroupKeys);
     const areAllChildrenExpanded = children.every((childNode) => expandedKeySet.has(childNode));
-    const isGroupItselfExpanded = expandedKeySet.has(this.getKeyForGroupId(groupId));
+    const isGroupItselfExpanded = expandedKeySet.has(getKeyForGroupId(groupId));
     if (areAllChildrenExpanded && isGroupItselfExpanded) {
       return null;
     }
     const allExpandedGroups = children.concat(this.state.expandedGroupKeys ?? []);
-    // still not good TODO_c
-    if (!isGroupItselfExpanded) allExpandedGroups.push(this.getKeyForGroupId(groupId));
+    if (!isGroupItselfExpanded) allExpandedGroups.push(getKeyForGroupId(groupId));
     return {
       key: "expandAll",
       onClick: () => {
@@ -1980,7 +1973,7 @@ class SegmentsView extends React.Component<Props, State> {
     const expandedKeySet = new Set(this.state.expandedGroupKeys);
     const areAllChildrenCollapsed =
       children.filter((childNode) => expandedKeySet.has(childNode)).length === 0;
-    const isGroupItselfCollapsed = !expandedKeySet.has(this.getKeyForGroupId(groupId));
+    const isGroupItselfCollapsed = !expandedKeySet.has(getKeyForGroupId(groupId));
     if (areAllChildrenCollapsed || isGroupItselfCollapsed) {
       return null;
     }

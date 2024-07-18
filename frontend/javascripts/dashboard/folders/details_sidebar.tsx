@@ -198,8 +198,10 @@ function MetadataTable({
   }, [selectedDatasetOrFolder.metadata]);
 
   useEffectOnUpdate(() => {
-    updateCachedDatasetOrFolderDebouncedTracked(context, selectedDatasetOrFolder, metadata);
-  }, [metadata]);
+    if (error == null) {
+      updateCachedDatasetOrFolderDebouncedTracked(context, selectedDatasetOrFolder, metadata);
+    }
+  }, [metadata, error]);
 
   // On component unmount flush pending updates to avoid potential data loss.
   useWillUnmount(() => {
@@ -209,16 +211,15 @@ function MetadataTable({
   const updatePropName = (index: number, newPropName: string) => {
     setMetadata((prev: APIMetadataEntries) => {
       const entry = prev.find((prop) => prop.index === index);
-      const maybeAlreadyExistingEntry = prev.find((prop) => prop.key === newPropName);
-      if (maybeAlreadyExistingEntry) {
-        if (newPropName !== "") {
-          setError([entry?.index || -1, `Property ${newPropName} already exists.`]);
-        }
-      }
-      if (maybeAlreadyExistingEntry || !entry) {
+      if (!entry) {
         return prev;
       }
-      setError(null);
+      const maybeAlreadyExistingEntry = prev.find((prop) => prop.key === newPropName);
+      if (maybeAlreadyExistingEntry) {
+        setError([entry?.index || -1, `Property ${newPropName} already exists.`]);
+      } else {
+        setError(null);
+      }
       const detailsWithoutEditedEntry = prev.filter((prop) => prop.index !== index);
       return [
         ...detailsWithoutEditedEntry,
@@ -348,7 +349,6 @@ function MetadataTable({
                       className={isFocused ? undefined : "transparent-input"}
                       onFocus={() => setFocusedRow(record.index)}
                       onBlur={() => setFocusedRow(null)}
-                      style={{ width: 116.5, borderColor: isFocused ? undefined : "transparent" }}
                       value={record.key}
                       onChange={(evt) => updatePropName(record.index, evt.target.value)}
                       placeholder="Property"
@@ -368,10 +368,8 @@ function MetadataTable({
                       onClick={() => deleteKey(record.index)}
                       style={{
                         color: "var(--ant-color-text-tertiary)",
-                        visibility: record.key === "" ? "hidden" : "visible",
                         width: 16,
                       }}
-                      disabled={record.key === ""}
                     />
                   </td>
                 </tr>

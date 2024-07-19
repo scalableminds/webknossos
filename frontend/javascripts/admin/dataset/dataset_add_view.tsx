@@ -317,7 +317,6 @@ const getPostUploadModal = (
                 <Button type="primary" onClick={() => history.push("/jobs")}>
                   View the Jobs Queue
                 </Button>
-                import
                 <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
               </React.Fragment>
             ) : (

@@ -426,6 +426,7 @@ export function useUpdateDatasetMutation(folderId: string | null) {
           name: updatedDataset.name,
           owningOrganization: updatedDataset.owningOrganization,
         };
+        // Also update the cached dataset under the key "datasetById".
         queryClient.setQueryData(["datasetById", updatedDatasetId], updatedDataset);
         const targetFolderId = updatedDataset.folderId;
         if (targetFolderId !== folderId) {

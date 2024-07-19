@@ -19,7 +19,7 @@ SET metadata = CASE
         metadata || jsonb_build_array(
             jsonb_build_object(
                 'type', 'string',
-                'index', 2,
+                'index', 0,
                 'key', 'species',
                 'value', details->>'species'
             )
@@ -34,7 +34,7 @@ SET metadata = CASE
         metadata || jsonb_build_array(
             jsonb_build_object(
                 'type', 'string',
-                'index', 2,
+                'index', 1,
                 'key', 'brainRegion',
                 'value', details->>'brainRegion'
             )

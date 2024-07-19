@@ -51,7 +51,7 @@ function getDisplayName(item: PublicationItem): string {
     : item.dataset.displayName;
 }
 
-function getDetails(item: PublicationItem): ExtendedDatasetDetails {
+function getExtendedDetails(item: PublicationItem): ExtendedDatasetDetails {
   const { dataSource, metadata } = item.dataset;
   const details = {} as DatasetDetails;
   metadata?.forEach((entry) => {
@@ -272,7 +272,7 @@ function PublicationThumbnail({
   const segmentationThumbnailURL = hasSegmentation(activeItem.dataset)
     ? getSegmentationThumbnailURL(activeItem.dataset)
     : null;
-  const extendedDetails = getDetails(activeItem);
+  const extendedDetails = getExtendedDetails(activeItem);
 
   return (
     <div className="dataset-thumbnail">

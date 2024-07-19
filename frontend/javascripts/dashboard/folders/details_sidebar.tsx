@@ -22,6 +22,7 @@ import {
   InputNumber,
   Select,
   Button,
+  InputNumberProps,
 } from "antd";
 import { stringToColor, formatCountToDataAmountUnit } from "libs/format_utils";
 import { pluralize } from "libs/utils";
@@ -146,10 +147,11 @@ const updateCachedDatasetOrFolderDebounced = _.debounce(
     metadata: APIMetadataEntries,
   ) => {
     isDatasetUpdatePending = false;
-    // Explicitly ignoring fetching here to avoid unnecessary rendering of the loading spinner and thus hiding the metadata table.
     if ("folderId" in selectedDatasetOrFolder) {
+      // In case of a dataset, update the dataset's metadata.
       await context.updateCachedDataset(selectedDatasetOrFolder, { metadata: metadata });
     } else {
+      // Else update the folders metadata.
       const folder = selectedDatasetOrFolder;
       await context.queries.updateFolderMutation.mutateAsync({
         ...folder,
@@ -161,6 +163,7 @@ const updateCachedDatasetOrFolderDebounced = _.debounce(
   3000,
 );
 const originalFlush = updateCachedDatasetOrFolderDebounced.flush;
+// Overwrite the debounce flush function to avoid flushing when no update is pending.
 updateCachedDatasetOrFolderDebounced.flush = async () => {
   if (!isDatasetUpdatePending) return;
   isDatasetUpdatePending = false;
@@ -231,7 +234,7 @@ function MetadataTable({
     });
   };
 
-  const updateValue = (index: number, newValue: string | string[]) => {
+  const updateValue = (index: number, newValue: number | string | string[]) => {
     setMetadata((prev) => {
       const entry = prev.find((prop) => prop.index === index);
       if (!entry) {
@@ -248,7 +251,8 @@ function MetadataTable({
       const highestIndex = prev.reduce((acc, curr) => Math.max(acc, curr.index), 0);
       const newEntry: APIMetadata = {
         key: "",
-        value: type === APIMetadataType.STRING_ARRAY ? [] : "",
+        value:
+          type === APIMetadataType.STRING_ARRAY ? [] : type === APIMetadataType.NUMBER ? 0 : "",
         index: highestIndex + 1,
         type,
       };
@@ -280,49 +284,67 @@ function MetadataTable({
 
   const getValueInput = (record: APIMetadata) => {
     const isFocused = record.index === focusedRow;
+    const sharedProps = {
+      className: isFocused ? undefined : "transparent-input",
+      onFocus: () => setFocusedRow(record.index),
+      onBlur: () => setFocusedRow(null),
+      placeholder: "Value",
+      size: "small" as InputNumberProps<number>["size"],
+    };
     switch (record.type) {
       case "number":
         return (
           <InputNumber
-            className={isFocused ? undefined : "transparent-input"}
-            onFocus={() => setFocusedRow(record.index)}
-            onBlur={() => setFocusedRow(null)}
             value={record.value as number}
-            onChange={(newNum) => updateValue(record.index, newNum?.toString() || "")}
-            placeholder="Value"
-            size="small"
+            onChange={(newNum) => updateValue(record.index, newNum || 0)}
+            {...sharedProps}
           />
         );
       case "string":
         return (
           <Input
-            className={isFocused ? undefined : "transparent-input"}
-            onFocus={() => setFocusedRow(record.index)}
-            onBlur={() => setFocusedRow(null)}
             value={record.value}
             onChange={(evt) => updateValue(record.index, evt.target.value)}
-            placeholder="Value"
-            size="small"
+            {...sharedProps}
           />
         );
       case "string[]":
         return (
           <Select
-            onFocus={() => setFocusedRow(record.index)}
-            onBlur={() => setFocusedRow(null)}
-            className={isFocused ? undefined : "transparent-input"}
             mode="tags"
-            placeholder="Values"
             value={record.value as string[]}
             onChange={(values) => updateValue(record.index, values)}
             options={availableStrArrayTagOptions}
-            size="small"
             suffixIcon={null}
+            {...sharedProps}
           />
         );
       default:
         return null;
     }
+  };
+
+  const getKeyInput = (record: APIMetadata) => {
+    const isFocused = record.index === focusedRow;
+    return (
+      <>
+        <Input
+          className={isFocused ? undefined : "transparent-input"}
+          onFocus={() => setFocusedRow(record.index)}
+          onBlur={() => setFocusedRow(null)}
+          value={record.key}
+          onChange={(evt) => updatePropName(record.index, evt.target.value)}
+          placeholder="Property"
+          size="small"
+        />
+        {error != null && error[0] === record.index ? (
+          <>
+            <br />
+            <Typography.Text type="warning">{error[1]}</Typography.Text>
+          </>
+        ) : null}
+      </>
+    );
   };
 
   return (
@@ -341,26 +363,9 @@ function MetadataTable({
           </thead>
           <tbody>
             {sortedDetails.map((record) => {
-              const isFocused = record.index === focusedRow;
               return (
                 <tr key={record.index}>
-                  <td>
-                    <Input
-                      className={isFocused ? undefined : "transparent-input"}
-                      onFocus={() => setFocusedRow(record.index)}
-                      onBlur={() => setFocusedRow(null)}
-                      value={record.key}
-                      onChange={(evt) => updatePropName(record.index, evt.target.value)}
-                      placeholder="Property"
-                      size="small"
-                    />
-                    {error != null && error[0] === record.index ? (
-                      <>
-                        <br />
-                        <Typography.Text type="warning">{error[1]}</Typography.Text>
-                      </>
-                    ) : null}
-                  </td>
+                  <td>{getKeyInput(record)}</td>
                   <td>:</td>
                   <td>{getValueInput(record)}</td>
                   <td>

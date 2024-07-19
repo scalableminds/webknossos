@@ -59,6 +59,7 @@ import { TrainAiModelTab, CollapsableWorkflowYamlEditor } from "../jobs/train_ai
 import { LayerSelectionFormItem } from "components/layer_selection";
 import { useGuardedFetch } from "libs/react_helpers";
 import _ from "lodash";
+import DefaultPredictWorkflow from "./default-workflow";
 
 const { ThinSpace } = Unicode;
 
@@ -617,6 +618,7 @@ function StartJobForm(props: StartJobFormProps) {
         layerName: initialLayerName,
         boundingBoxId: null,
         outputSegmentationLayerName: initialOutputSegmentationLayerName,
+        workflowYaml: DefaultPredictWorkflow,
       }}
       form={form}
     >

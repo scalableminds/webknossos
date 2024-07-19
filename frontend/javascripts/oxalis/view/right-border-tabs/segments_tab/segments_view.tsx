@@ -523,19 +523,17 @@ class SegmentsView extends React.Component<Props, State> {
 
   expandGroups = (newExpandedGroups: Key[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
-    if (
-      this.state.isRootGroupExpanded &&
-      !newExpandedGroups.includes(getKeyForGroupId(MISSING_GROUP_ID))
-    ) {
+    const expandedKeySet = new Set(newExpandedGroups);
+    if (this.state.isRootGroupExpanded && !expandedKeySet.has(getKeyForGroupId(MISSING_GROUP_ID))) {
       this.setState({ isRootGroupExpanded: false });
     } else if (
       !this.state.isRootGroupExpanded &&
-      newExpandedGroups.includes(getKeyForGroupId(MISSING_GROUP_ID))
+      expandedKeySet.has(getKeyForGroupId(MISSING_GROUP_ID))
     ) {
       this.setState({ isRootGroupExpanded: true });
     }
     const newGroups = mapGroups(this.props.segmentGroups, (group) => {
-      if (newExpandedGroups.includes(getKeyForGroupId(group.groupId))) {
+      if (expandedKeySet.has(getKeyForGroupId(group.groupId))) {
         return {
           ...group,
           isExpanded: true,
@@ -554,8 +552,9 @@ class SegmentsView extends React.Component<Props, State> {
 
   collapseGroups = (groupsToCollapse: Key[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
+    const groupsToCollapseSet = new Set(groupsToCollapse);
     const newGroups = mapGroups(this.props.segmentGroups, (group) => {
-      if (groupsToCollapse.includes(getKeyForGroupId(group.groupId))) {
+      if (groupsToCollapseSet.has(getKeyForGroupId(group.groupId))) {
         return {
           ...group,
           isExpanded: false,
@@ -1883,8 +1882,8 @@ class SegmentsView extends React.Component<Props, State> {
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
                       description={`There are no segments yet. ${this.props.allowUpdate && this.props.hasVolumeTracing
-                          ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
-                          : "Select or click existing segments to add them to this list."
+                        ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
+                        : "Select or click existing segments to add them to this list."
                         }`}
                     />
                   ) : (
@@ -1954,7 +1953,7 @@ class SegmentsView extends React.Component<Props, State> {
   }
 
   getExpandSubgroupsItem(groupId: number) {
-    const children = this.getSubGroupsAsTreeNodes(groupId);
+    const children: Key[] = this.getSubGroupsAsTreeNodes(groupId);
     const expandedKeySet = new Set(this.state.expandedGroupKeys);
     const areAllChildrenExpanded = children.every((childNode) => expandedKeySet.has(childNode));
     const isGroupItselfExpanded = expandedKeySet.has(getKeyForGroupId(groupId));

@@ -470,7 +470,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     } yield ()
 
   def updatePartial(datasetId: ObjectId, params: DatasetUpdateParameters)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    System.out.println(s"Trying to update a dataset with $DatasetUpdateParameters")
     val setQueries = List(
       params.description.map(d => q"description = $d"),
       params.displayName.map(v => q"displayName = $v"),

@@ -27,6 +27,7 @@ WHERE EXISTS (
 );
 
 
+-- Add existing info on species of brainRegion to details
 UPDATE webknossos.datasets
 SET details = jsonb_set(details, '{brainRegion}', (
     SELECT to_jsonb(m.value)
@@ -41,6 +42,7 @@ WHERE EXISTS (
 );
 
 
+-- Add existing info on species of acquisition to details
 UPDATE webknossos.datasets
 SET details = jsonb_set(details, '{acquisition}', (
     SELECT to_jsonb(m.value)

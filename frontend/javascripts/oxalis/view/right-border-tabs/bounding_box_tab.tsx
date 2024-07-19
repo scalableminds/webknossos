@@ -1,4 +1,4 @@
-import { Tooltip, Typography } from "antd";
+import { Table, Tooltip, Typography } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useState } from "react";
@@ -26,6 +26,9 @@ export default function BoundingBoxTab() {
   const isLockedByOwner = tracing.isLockedByOwner;
   const isOwner = useSelector((state: OxalisState) => isAnnotationOwner(state));
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const activeBoundingBoxId = useSelector(
+    (state: OxalisState) => state.uiInformation.activeUserBoundingBoxId,
+  );
   const { userBoundingBoxes } = getSomeTracing(tracing);
   const dispatch = useDispatch();
 
@@ -99,6 +102,34 @@ export default function BoundingBoxTab() {
     APIJobType.EXPORT_TIFF,
   );
 
+  const boundingBoxWrapperTableColumns = [
+    {
+      title: "Bounding Boxes",
+      key: "id",
+      render: (_id: number, bb: UserBoundingBox) => (
+        <UserBoundingBoxInput
+          key={bb.id}
+          tooltipTitle="Format: minX, minY, minZ, width, height, depth"
+          value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
+          color={bb.color}
+          name={bb.name}
+          isExportEnabled={isExportEnabled}
+          isVisible={bb.isVisible}
+          onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
+          onDelete={_.partial(deleteBoundingBox, bb.id)}
+          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
+          onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
+          onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
+          onNameChange={_.partial(setBoundingBoxName, bb.id)}
+          onColorChange={_.partial(setBoundingBoxColor, bb.id)}
+          disabled={!allowUpdate}
+          isLockedByOwner={isLockedByOwner}
+          isOwner={isOwner}
+        />
+      ),
+    },
+  ];
+
   return (
     <div
       className="padded-tab-content"
@@ -110,27 +141,18 @@ export default function BoundingBoxTab() {
           an explanation below, anyway.
       */}
       {userBoundingBoxes.length > 0 || isViewMode ? (
-        userBoundingBoxes.map((bb) => (
-          <UserBoundingBoxInput
-            key={bb.id}
-            tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-            value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
-            color={bb.color}
-            name={bb.name}
-            isExportEnabled={isExportEnabled}
-            isVisible={bb.isVisible}
-            onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
-            onDelete={_.partial(deleteBoundingBox, bb.id)}
-            onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
-            onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
-            onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
-            onNameChange={_.partial(setBoundingBoxName, bb.id)}
-            onColorChange={_.partial(setBoundingBoxColor, bb.id)}
-            disabled={!allowUpdate}
-            isLockedByOwner={isLockedByOwner}
-            isOwner={isOwner}
-          />
-        ))
+        <Table
+          columns={boundingBoxWrapperTableColumns}
+          dataSource={userBoundingBoxes}
+          pagination={false}
+          rowKey="id"
+          showHeader={false}
+          className="bounding-box-table"
+          rowSelection={{
+            selectedRowKeys: activeBoundingBoxId != null ? [activeBoundingBoxId] : [],
+            getCheckboxProps: () => ({ disabled: true }),
+          }}
+        />
       ) : (
         <div>No Bounding Boxes created yet.</div>
       )}

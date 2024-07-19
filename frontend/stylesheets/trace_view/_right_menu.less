@@ -217,3 +217,22 @@
     height: 24px;
   }
 }
+
+.bounding-box-table {
+  table {
+    border-bottom: none;
+  }
+  td {
+    padding: 0px !important;
+  }
+  tr:last-child {
+    border-bottom: none;
+    td {
+      border-bottom: none;
+    }
+  }
+  tr td:first-child {
+    // Hiding the extra checkbox column rendered due to using rowSelection in the table wrapping the bounding boxes.
+    display: none;
+  }
+}

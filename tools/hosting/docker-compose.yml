@@ -135,6 +135,15 @@ services:
     networks:
       - webknossos_default
 
+  # Postgres backup
+  postgres-backup:
+    image: postgres
+    command: [ "/bin/bash", "-c", "PGPASSWORD=postgres pg_dump -Fc -h postgres -U postgres webknossos | gzip > /backups/backup_$(date +%Y-%m-%d_%H-%M).sql.gz" ]
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      - postgres
+
 # Explicitly declare networks for fossil-db-backup connectivity
 networks:
   webknossos_default:

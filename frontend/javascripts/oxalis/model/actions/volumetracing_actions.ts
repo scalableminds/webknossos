@@ -108,7 +108,7 @@ export const VolumeTracingSaveRelevantActions = [
   "REMOVE_SEGMENT",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
-  // Note that the following two actions are defined in settings_actions.ts
+  // Note that the following three actions are defined in settings_actions.ts
   "SET_MAPPING",
   "SET_MAPPING_ENABLED",
   "FINISH_MAPPING_INITIALIZATION_ACTION",

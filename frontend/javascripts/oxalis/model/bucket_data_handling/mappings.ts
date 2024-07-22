@@ -116,8 +116,6 @@ class Mappings {
 
     const sizeOfOnlyB = _.size(onlyB);
     const doFullTextureUpdate = sizeOfOnlyB > 10000;
-    console.log("sizeOfOnlyB", sizeOfOnlyB);
-    console.time("cuckoo mapping update with full-update=" + doFullTextureUpdate);
     if (doFullTextureUpdate) {
       this.cuckooTable.disableAutoTextureUpdate();
     }

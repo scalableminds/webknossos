@@ -378,6 +378,7 @@ type UserBoundingBoxInputProps = {
   disabled: boolean;
   isLockedByOwner: boolean;
   isOwner: boolean;
+  id?: string | undefined;
 };
 type State = {
   isEditing: boolean;
@@ -505,7 +506,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       isOwner,
     );
     return (
-      <React.Fragment>
+      <div id={this.props.id}>
         <Row
           style={{
             marginTop: 10,
@@ -601,7 +602,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
             </Tooltip>
           </Col>
         </Row>
-      </React.Fragment>
+      </div>
     );
   }
 }

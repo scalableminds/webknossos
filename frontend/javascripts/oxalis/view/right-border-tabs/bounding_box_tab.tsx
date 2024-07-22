@@ -1,7 +1,7 @@
 import { Table, Tooltip, Typography } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import _ from "lodash";
 import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
 import { Vector3, Vector6, BoundingBoxType, ControlModeEnum } from "oxalis/constants";
@@ -102,6 +102,23 @@ export default function BoundingBoxTab() {
     APIJobType.EXPORT_TIFF,
   );
 
+  const bboxInputId = (id: number) => `bounding-box-input-${id}`;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Always try to scroll the active bounding box into view.
+  useEffect(() => {
+    if (activeBoundingBoxId == null) {
+      return;
+    }
+    const activeBoundingBoxInput = document.getElementById(bboxInputId(activeBoundingBoxId));
+    if (activeBoundingBoxInput) {
+      activeBoundingBoxInput.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
+  }, [activeBoundingBoxId]);
+
   const boundingBoxWrapperTableColumns = [
     {
       title: "Bounding Boxes",
@@ -109,6 +126,7 @@ export default function BoundingBoxTab() {
       render: (_id: number, bb: UserBoundingBox) => (
         <UserBoundingBoxInput
           key={bb.id}
+          id={bboxInputId(bb.id)}
           tooltipTitle="Format: minX, minY, minZ, width, height, depth"
           value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
           color={bb.color}

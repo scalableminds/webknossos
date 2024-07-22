@@ -1275,12 +1275,12 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
       new ResumableJS({
         testChunks: false,
         target: `${datastoreUrl}/data/datasets?token=${token}`,
-        chunkSize: 10 * 1024 * 1024,
-        // set chunk size to 10MB
+        chunkSize: 10 * 1024 * 1024, // 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
         simultaneousUploads: 3,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
+        xhrTimeout: 10 * 60 * 1000, // 10m
         // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
         generateUniqueIdentifier,
       }),

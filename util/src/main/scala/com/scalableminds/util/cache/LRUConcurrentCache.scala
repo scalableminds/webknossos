@@ -7,7 +7,7 @@ trait LRUConcurrentCache[K, V] {
 
   private val cache = new java.util.LinkedHashMap[K, V]() {
     override def removeEldestEntry(eldest: java.util.Map.Entry[K, V]): Boolean =
-      if (size > maxEntries) {
+      if (this.size > maxEntries) {
         onElementRemoval(eldest.getKey, eldest.getValue)
         true
       } else {

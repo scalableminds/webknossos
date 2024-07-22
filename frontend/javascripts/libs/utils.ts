@@ -1153,6 +1153,10 @@ export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
   };
 }
 
+export function areVec3AlmostEqual(a: Vector3, b: Vector3, epsilon: number = 1e-6): boolean {
+  return _.every(a.map((v, i) => Math.abs(v - b[i]) < epsilon));
+}
+
 export function coalesce<T extends {}>(e: T, token: any): T[keyof T] | null {
   return Object.values(e).includes(token as T[keyof T]) ? token : null;
 }

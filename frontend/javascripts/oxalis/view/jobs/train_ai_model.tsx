@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Form, Row, Col, Input, Button, Select, Collapse, Tooltip } from "antd";
+import { Alert, Form, Row, Col, Input, Button, Select, Collapse, Tooltip, Checkbox } from "antd";
 import { useSelector } from "react-redux";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
@@ -30,6 +30,7 @@ enum AiModelCategory {
 export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
   const [form] = Form.useForm();
 
+  const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const onFinish = async (values: any) => {
@@ -49,7 +50,7 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
       ],
       name: values.modelName,
       aiModelCategory: values.modelCategory,
-      workflowYaml: values.workflowYaml,
+      workflowYaml: useCustomWorkflow ? values.workflowYaml : undefined,
       comment: values.comment,
     });
     Toast.success("The training has successfully started.");
@@ -146,7 +147,10 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
           </FormItem>
         </Col>
       </Row>
-      <CollapsableWorkflowYamlEditor />
+      <CollapsibleWorkflowYamlEditor
+        isActive={useCustomWorkflow}
+        setActive={setUseCustomWorkflow}
+      />
 
       <FormItem hasFeedback name="dummy" label="Training Data">
         <div>
@@ -172,10 +176,15 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
   );
 }
 
-export function CollapsableWorkflowYamlEditor() {
+export function CollapsibleWorkflowYamlEditor({
+  isActive = false,
+  setActive,
+}: { isActive: boolean; setActive: (active: boolean) => void }) {
   return (
     <Collapse
       style={{ marginBottom: 8 }}
+      onChange={() => setActive(!isActive)}
+      expandIcon={() => <Checkbox checked={isActive} onChange={() => setActive(!isActive)} />}
       items={[
         {
           key: "advanced",
@@ -195,7 +204,7 @@ export function CollapsableWorkflowYamlEditor() {
           ),
         },
       ]}
-      defaultActiveKey={[]}
+      activeKey={isActive ? "advanced" : []}
     />
   );
 }

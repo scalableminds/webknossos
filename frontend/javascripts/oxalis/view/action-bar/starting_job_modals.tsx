@@ -55,7 +55,7 @@ import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { TrainAiModelTab, CollapsableWorkflowYamlEditor } from "../jobs/train_ai_model";
+import { TrainAiModelTab, CollapsibleWorkflowYamlEditor } from "../jobs/train_ai_model";
 import { LayerSelectionFormItem } from "components/layer_selection";
 import { useGuardedFetch } from "libs/react_helpers";
 import _ from "lodash";
@@ -100,6 +100,7 @@ type JobApiCallArgsType = {
   selectedLayer: APIDataLayer;
   outputSegmentationLayerName?: string;
   selectedBoundingBox: UserBoundingBox | null | undefined;
+  useCustomWorkflow?: boolean;
 };
 type StartJobFormProps = Props & {
   jobApiCall: (arg0: JobApiCallArgsType, form: FormInstance<any>) => Promise<void | APIJob>;
@@ -518,6 +519,7 @@ function StartJobForm(props: StartJobFormProps) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : getColorLayers(dataset);
   const allLayers = getDataLayers(dataset);
+  const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
   const defaultBBForLayers: UserBoundingBox[] = layers.map((layer, index) => {
     return {
       id: -1 * index,
@@ -557,6 +559,7 @@ function StartJobForm(props: StartJobFormProps) {
         newDatasetName,
         selectedLayer,
         selectedBoundingBox,
+        useCustomWorkflow,
       };
       const apiJob = await jobApiCall(jobArgs, form);
 
@@ -646,7 +649,12 @@ function StartJobForm(props: StartJobFormProps) {
         value={form.getFieldValue("boundingBoxId")}
       />
 
-      {props.showWorkflowYaml ? <CollapsableWorkflowYamlEditor /> : null}
+      {props.showWorkflowYaml ? (
+        <CollapsibleWorkflowYamlEditor
+          isActive={useCustomWorkflow}
+          setActive={setUseCustomWorkflow}
+        />
+      ) : null}
 
       <div style={{ textAlign: "center" }}>
         <Button type="primary" size="large" htmlType="submit">
@@ -826,6 +834,7 @@ function CustomAiModelInferenceForm() {
           selectedLayer: colorLayer,
           selectedBoundingBox,
           outputSegmentationLayerName,
+          useCustomWorkflow,
         },
         form,
       ) => {
@@ -839,7 +848,7 @@ function CustomAiModelInferenceForm() {
         return runInferenceJob({
           ...maybeAnnotationId,
           aiModelId: form.getFieldValue("aiModel"),
-          workflowYaml: form.getFieldValue("workflowYaml"),
+          workflowYaml: useCustomWorkflow ? form.getFieldValue("workflowYaml") : undefined,
           datasetName: dataset.name,
           colorLayerName: colorLayer.name,
           boundingBox,

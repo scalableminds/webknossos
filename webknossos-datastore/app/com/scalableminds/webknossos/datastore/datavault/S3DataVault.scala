@@ -11,14 +11,23 @@ import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Failure, Full}
 import org.apache.commons.io.IOUtils
 import org.apache.commons.lang3.builder.HashCodeBuilder
-import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider
+import software.amazon.awssdk.auth.credentials.{
+  AnonymousCredentialsProvider,
+  AwsBasicCredentials,
+  AwsCredentialsProvider,
+  EnvironmentVariableCredentialsProvider,
+  StaticCredentialsProvider
+}
+import software.amazon.awssdk.awscore.util.AwsHostNameUtils
+import software.amazon.awssdk.endpoints.EndpointProvider
 import software.amazon.awssdk.services.s3.S3AsyncClient
-import software.amazon.awssdk.services.s3.model.ListObjectsV2Request
+import software.amazon.awssdk.services.s3.model.{CommonPrefix, ListObjectsV2Request, ListObjectsV2Response}
 
 import java.net.URI
 import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.CollectionHasAsScala
+import scala.jdk.FutureConverters._
 
 class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
@@ -93,9 +102,10 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     try {
       val listObjectsRequest =
         ListObjectsV2Request.builder().bucket(bucketName).prefix(keyPrefix).delimiter("/").maxKeys(maxItems).build()
-      val objectListing = client.listObjectsV2(listObjectsRequest)
-      val s3SubPrefixes = objectListing.getCommonPrefixes.asScala.toList
-      Fox.successful(s3SubPrefixes)
+      for {
+        objectListing: ListObjectsV2Response <- client.listObjectsV2(listObjectsRequest).asScala
+        s3SubPrefixes = objectListing.commonPrefixes().asScala.toList
+      } yield s3SubPrefixes.map(_.toString)
     } catch {
       case e: AmazonServiceException =>
         e.getStatusCode match {
@@ -162,42 +172,33 @@ object S3DataVault {
       Full(uri.getPath.tail)
     } else Failure(s"Not a valid s3 uri: $uri")
 
-  private def getCredentialsProvider(credentialOpt: Option[S3AccessKeyCredential]): AWSCredentialsProvider =
+  private def getCredentialsProvider(credentialOpt: Option[S3AccessKeyCredential]): AwsCredentialsProvider =
     credentialOpt match {
       case Some(s3AccessKeyCredential: S3AccessKeyCredential) =>
-        new AWSStaticCredentialsProvider(
-          new BasicAWSCredentials(s3AccessKeyCredential.accessKeyId, s3AccessKeyCredential.secretAccessKey))
+        new StaticCredentialsProvider(
+          new AwsBasicCredentials(s3AccessKeyCredential.accessKeyId, s3AccessKeyCredential.secretAccessKey))
       case None if sys.env.contains("AWS_ACCESS_KEY_ID") || sys.env.contains("AWS_ACCESS_KEY") =>
         new EnvironmentVariableCredentialsProvider
       case None =>
-        new AnonymousAWSCredentialsProvider
+        new AnonymousCredentialsProvider
     }
 
   private def isNonAmazonHost(uri: URI): Boolean =
     isPathStyle(uri) && !uri.getHost.endsWith(".amazonaws.com")
 
-  private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI): AmazonS3 = {
-    val basic = S3AsyncClient
-      .builder()
-      .withCredentials(getCredentialsProvider(credentialOpt))
-      .withForceGlobalBucketAccessEnabled(true)
+  private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI): S3AsyncClient = {
+    val basic = S3AsyncClient.builder().credentialsProvider(getCredentialsProvider(credentialOpt))
+    // TODO region =  .withForceGlobalBucketAccessEnabled(true)
     if (isNonAmazonHost(uri))
       basic
-        .withPathStyleAccessEnabled(true)
-        .withEndpointConfiguration(
-          new EndpointConfiguration(
-            s"http://${uri.getAuthority}",
-            AwsHostNameUtils.parseRegion(uri.getAuthority, "s3")
-          )
+        .forcePathStyle(true)
+        .endpointProvider(
+          new EndpointProvider( // TODO
+                               s"http://${uri.getAuthority}",
+                               AwsHostNameUtils.parseRegion(uri.getAuthority, "s3"))
         )
         .build()
-    else basic.withRegion(Regions.DEFAULT_REGION).build()
+    else basic.region(AwsRegions.DEFAULT_REGION).build()
   }
 
-}
-
-class AnonymousAWSCredentialsProvider extends AWSCredentialsProvider {
-  override def getCredentials = new AnonymousAWSCredentials
-
-  override def refresh(): Unit = {}
 }

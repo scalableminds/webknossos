@@ -15,7 +15,7 @@ GET           /datasets/:organizationName/:datasetName/layers/:dataLayerName/his
 # Knossos compatible routes
 GET           /datasets/:organizationName/:datasetName/layers/:dataLayerName/mag:resolution/x:x/y:y/z:z/bucket.raw                            @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.requestViaKnossos(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, resolution: Int, x: Int, y: Int, z: Int, cubeSize: Int)
 
-# Zarr compatible routes
+# Zarr2 compatible routes
 GET           /zarr/:organizationName/:datasetName                                                                                            @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataSourceFolderContents(token: Option[String], organizationName: String, datasetName: String)
 GET           /zarr/:organizationName/:datasetName/                                                                                           @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestDataSourceFolderContents(token: Option[String], organizationName: String, datasetName: String)
 GET           /zarr/:organizationName/:datasetName/.zgroup                                                                                    @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.requestZGroup(token: Option[String], organizationName: String, datasetName: String, dataLayerName="")
@@ -41,6 +41,11 @@ GET           /annotations/zarr/:accessTokenOrId/:dataLayerName/:mag            
 GET           /annotations/zarr/:accessTokenOrId/:dataLayerName/:mag/                                                                         @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.dataLayerMagFolderContentsPrivateLink(token: Option[String], accessTokenOrId: String,  dataLayerName: String, mag: String)
 GET           /annotations/zarr/:accessTokenOrId/:dataLayerName/:mag/.zarray                                                                  @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.zArrayPrivateLink(token: Option[String], accessTokenOrId: String, dataLayerName: String, mag: String)
 GET           /annotations/zarr/:accessTokenOrId/:dataLayerName/:mag/:cxyz                                                                    @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.rawZarrCubePrivateLink(token: Option[String], accessTokenOrId: String, dataLayerName: String, mag: String, cxyz: String)
+
+# Zarr3 compatible routes
+GET           /zarr3_experimental/:organizationName/:datasetName/:dataLayerName/:mag/zarr.json                                                @com.scalableminds.webknossos.datastore.controllers.Zarr3StreamingController.requestZarrJsonForMag(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, mag: String)
+GET           /zarr3_experimental/:organizationName/:datasetName/:dataLayerName/:mag/:coordinates                                             @com.scalableminds.webknossos.datastore.controllers.Zarr3StreamingController.requestRawZarr3Cube(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, mag: String, coordinates: String)
+
 
 # Segmentation mappings
 GET           /datasets/:organizationName/:datasetName/layers/:dataLayerName/mappings/:mappingName                                            @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.mappingJson(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, mappingName: String)

@@ -8,7 +8,7 @@ import "test/mocks/updatable_texture.mock";
 
 type Entry = [number, Vector3];
 
-const { CuckooTable } = mock.reRequire("libs/cuckoo/cuckoo_table");
+const { CuckooTableVec3 } = mock.reRequire("libs/cuckoo/cuckoo_table_vec3");
 
 function generateRandomEntry(): [number, Vector3] {
   return [
@@ -51,9 +51,9 @@ function isValueEqual(t: ExecutionContext<any>, val1: Vector3, val2: Vector3) {
   t.true(val1[2] === val2[2]);
 }
 
-test("CuckooTable: Basic", (t) => {
+test("CuckooTableVec3: Basic", (t) => {
   const entries = generateRandomCuckooEntrySet(generateRandomEntry);
-  const ct = CuckooTable.fromCapacity(entries.length);
+  const ct = CuckooTableVec3.fromCapacity(entries.length);
 
   for (const entry of entries) {
     ct.set(entry[0], entry[1]);
@@ -69,10 +69,10 @@ test("CuckooTable: Basic", (t) => {
   }
 });
 
-test("CuckooTable: Speed should be alright", (t) => {
+test("CuckooTableVec3: Speed should be alright", (t) => {
   const RUNS = 100;
   const hashSets = _.range(RUNS).map(() => generateRandomCuckooEntrySet(generateRandomEntry));
-  const tables = _.range(RUNS).map(() => CuckooTable.fromCapacity(hashSets[0].length));
+  const tables = _.range(RUNS).map(() => CuckooTableVec3.fromCapacity(hashSets[0].length));
 
   const durations = [];
   for (let idx = 0; idx < RUNS; idx++) {
@@ -89,8 +89,8 @@ test("CuckooTable: Speed should be alright", (t) => {
   t.true(_.mean(durations) < 0.1);
 });
 
-test("CuckooTable: Repeated sets should work", (t) => {
-  const ct = CuckooTable.fromCapacity(1);
+test("CuckooTableVec3: Repeated sets should work", (t) => {
+  const ct = CuckooTableVec3.fromCapacity(1);
 
   // This is a regression test for a bug which resulted in the
   // same key being multiple times in the table. Due to the random
@@ -106,8 +106,8 @@ test("CuckooTable: Repeated sets should work", (t) => {
   }
 });
 
-test("CuckooTable: Should throw error when exceeding capacity", (t) => {
-  const ct = CuckooTable.fromCapacity(1);
+test("CuckooTableVec3: Should throw error when exceeding capacity", (t) => {
+  const ct = CuckooTableVec3.fromCapacity(1);
 
   t.throws(() => {
     for (let _idx = 0; _idx < ct.entryCapacity + 1; _idx++) {
@@ -119,14 +119,14 @@ test("CuckooTable: Should throw error when exceeding capacity", (t) => {
   });
 });
 
-test("CuckooTable: Maxing out capacity", (t) => {
+test("CuckooTableVec3: Maxing out capacity", (t) => {
   const base = 128;
   const attemptCount = 10;
   for (let attempt = 0; attempt < attemptCount; attempt++) {
     let entries;
     let ct;
 
-    ct = new CuckooTable(base);
+    ct = new CuckooTableVec3(base);
     entries = generateRandomCuckooEntrySet(generateRandomEntry, ct.getCriticalCapacity());
     for (const entry of entries) {
       ct.set(entry[0], entry[1]);

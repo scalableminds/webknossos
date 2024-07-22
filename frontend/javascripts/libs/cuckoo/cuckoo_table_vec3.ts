@@ -8,9 +8,9 @@ type Key = number;
 type Value = Vector3;
 type Entry = [Key, Value];
 
-export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
-  static fromCapacity(requestedCapacity: number): CuckooTable {
-    return new CuckooTable(this.computeTextureWidthFromCapacity(requestedCapacity));
+export class CuckooTableVec3 extends AbstractCuckooTable<Key, Value, Entry> {
+  static fromCapacity(requestedCapacity: number): CuckooTableVec3 {
+    return new CuckooTableVec3(this.computeTextureWidthFromCapacity(requestedCapacity));
   }
 
   getEmptyKey(): Key {

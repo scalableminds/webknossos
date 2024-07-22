@@ -24,7 +24,7 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import type { ViewMode, Vector3, Vector4, BucketAddress } from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import DiffableMap from "libs/diffable_map";
-import { CuckooTable } from "libs/cuckoo/cuckoo_table";
+import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
 import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
@@ -127,7 +127,7 @@ export default class LayerRenderingManager {
   latestTaskExecutor: LatestTaskExecutor<ArrayBuffer> = new LatestTaskExecutor();
   additionalCoordinates: AdditionalCoordinate[] | null = null;
 
-  cuckooTable: CuckooTable | undefined;
+  cuckooTable: CuckooTableVec3 | undefined;
   storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(
@@ -295,7 +295,7 @@ export default class LayerRenderingManager {
         "getCustomColorCuckooTable should not be called for non-segmentation layers.",
       );
     }
-    this.cuckooTable = new CuckooTable(CUSTOM_COLORS_TEXTURE_WIDTH);
+    this.cuckooTable = new CuckooTableVec3(CUSTOM_COLORS_TEXTURE_WIDTH);
     return this.cuckooTable;
   }
 

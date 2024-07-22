@@ -49,7 +49,7 @@ import app from "app";
 import getMainFragmentShader, { getMainVertexShader } from "oxalis/shaders/main_data_shaders.glsl";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import type { ElementClass } from "types/api_flow_types";
-import { CuckooTable } from "libs/cuckoo/cuckoo_table";
+import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { V3 } from "libs/mjs";
 import TPS3D from "libs/thin_plate_spline";
@@ -349,7 +349,7 @@ class PlaneMaterialFactory {
     // It's important to set up the uniforms, since later additions to
     // `this.uniforms` won't be properly attached otherwise.
     this.uniforms.segmentation_mapping_texture = {
-      value: cuckoo?.getTexture() || CuckooTable.getNullTexture(),
+      value: cuckoo?.getTexture() || CuckooTableVec3.getNullTexture(),
     };
     this.uniforms.mapping_seeds = { value: [0, 0, 0] };
     this.uniforms.is_mapping_64bit = {
@@ -389,7 +389,7 @@ class PlaneMaterialFactory {
       this.uniforms.COLOR_CUCKOO_ELEMENTS_PER_ENTRY = { value: 0 };
       this.uniforms.COLOR_CUCKOO_ELEMENTS_PER_TEXEL = { value: 0 };
       this.uniforms.COLOR_CUCKOO_TWIDTH = { value: 0 };
-      this.uniforms.custom_color_texture = { value: CuckooTable.getNullTexture() };
+      this.uniforms.custom_color_texture = { value: CuckooTableVec3.getNullTexture() };
       return;
     }
     const cuckoo = segmentationLayer.layerRenderingManager.getCustomColorCuckooTable();

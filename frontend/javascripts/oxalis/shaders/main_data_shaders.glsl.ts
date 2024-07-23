@@ -307,7 +307,7 @@ void main() {
               // We are in proofreading mode, but the current voxel neither belongs
               // to the active segment nor is it hovered. When selective visibility
               // is enabled, lower the opacity.
-              : (selectiveVisibilityInProofreading ? -0.2 : 0.0)
+              : (selectiveVisibilityInProofreading ? -<%= segmentationName %>_alpha : 0.0)
           )
         ) : (isHoveredSegment ? 0.2 : 0.0);
       gl_FragColor = vec4(mix(

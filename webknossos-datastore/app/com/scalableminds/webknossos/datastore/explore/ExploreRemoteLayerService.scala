@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.{DataVaultCredential, DataVaultService, RemoteSourceDescriptor}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.json.{Json, OFormat}
 
 import java.net.URI
@@ -83,20 +83,21 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       credentialOpt: Option[DataVaultCredential] <- Fox.runOptional(credentialId)(remoteWebknossosClient.getCredential)
       remoteSource = RemoteSourceDescriptor(uri, credentialOpt)
       remotePath <- dataVaultService.getVaultPath(remoteSource) ?~> "dataVault.setup.failed"
-      layersWithVoxelSizes <- exploreRemoteLayersForRemotePath(
-        remotePath,
+      layersWithVoxelSizes <- recursivelyExploreRemoteLayerAtPaths(
+        List((remotePath, 0)),
         credentialId,
-        reportMutable,
         List(
-          new ZarrArrayExplorer(Vec3Int.ones),
+          // Explorers are ordered to prioritize the explorer reading meta information over raw Zarr, N5, ... data.
           new NgffExplorer,
           new WebknossosZarrExplorer,
-          new N5ArrayExplorer,
-          new N5MultiscalesExplorer,
-          new PrecomputedExplorer,
           new Zarr3ArrayExplorer,
+          new ZarrArrayExplorer(Vec3Int.ones),
+          new N5MultiscalesExplorer,
+          new N5ArrayExplorer,
+          new PrecomputedExplorer,
           new NeuroglancerUriExplorer(dataVaultService)
-        )
+        ),
+        reportMutable,
       )
     } yield layersWithVoxelSizes
 
@@ -106,26 +107,93 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         uri.getPath.startsWith(whitelistEntry))) ?~> s"Absolute path ${uri.getPath} in local file system is not in path whitelist. Consider adding it to datastore.localFolderWhitelist"
     } else Fox.successful(())
 
-  private def exploreRemoteLayersForRemotePath(remotePath: VaultPath,
-                                               credentialId: Option[String],
-                                               reportMutable: ListBuffer[String],
-                                               explorers: List[RemoteLayerExplorer])(
+  private val MAX_RECURSIVE_SEARCH_DEPTH = 3
+
+  private val MAX_EXPLORED_ITEMS_PER_LEVEL = 10
+
+  private def recursivelyExploreRemoteLayerAtPaths(remotePathsWithDepth: List[(VaultPath, Int)],
+                                                   credentialId: Option[String],
+                                                   explorers: List[RemoteLayerExplorer],
+                                                   reportMutable: ListBuffer[String])(
       implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
-    explorers match {
-      case Nil => Fox.empty
-      case currentExplorer :: remainingExplorers =>
-        reportMutable += s"\nTrying to explore $remotePath as ${currentExplorer.name}..."
-        currentExplorer.explore(remotePath, credentialId).futureBox.flatMap {
-          case Full(layersWithVoxelSizes) =>
-            reportMutable += s"Found ${layersWithVoxelSizes.length} ${currentExplorer.name} layers at $remotePath."
-            Fox.successful(layersWithVoxelSizes)
-          case f: Failure =>
-            reportMutable += s"Error when reading $remotePath as ${currentExplorer.name}: ${Fox.failureChainAsString(f)}"
-            exploreRemoteLayersForRemotePath(remotePath, credentialId, reportMutable, remainingExplorers)
-          case Empty =>
-            reportMutable += s"Error when reading $remotePath as ${currentExplorer.name}: Empty"
-            exploreRemoteLayersForRemotePath(remotePath, credentialId, reportMutable, remainingExplorers)
+    remotePathsWithDepth match {
+      case Nil =>
+        Fox.empty
+      case (path, searchDepth) :: remainingPaths =>
+        if (searchDepth > MAX_RECURSIVE_SEARCH_DEPTH) Fox.empty
+        else {
+          explorePathsWithAllExplorersAndGetFirstMatch(path, explorers, credentialId, reportMutable).futureBox.flatMap(
+            explorationResultOfPath =>
+              handleExploreResultOfPath(explorationResultOfPath,
+                                        path,
+                                        searchDepth,
+                                        remainingPaths,
+                                        credentialId,
+                                        explorers,
+                                        reportMutable))
         }
+    }
+
+  private def explorePathsWithAllExplorersAndGetFirstMatch(path: VaultPath,
+                                                           explorers: List[RemoteLayerExplorer],
+                                                           credentialId: Option[String],
+                                                           reportMutable: ListBuffer[String])(
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+    Fox
+      .sequence(explorers.map { explorer =>
+        {
+          explorer
+            .explore(path, credentialId)
+            .futureBox
+            .flatMap {
+              handleExploreResult(_, explorer, path, reportMutable)
+            }
+            .toFox
+        }
+      })
+      .map(explorationResults => Fox.firstSuccess(explorationResults.map(_.toFox)))
+      .toFox
+      .flatten
+
+  private def handleExploreResult(explorationResult: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
+                                  explorer: RemoteLayerExplorer,
+                                  path: VaultPath,
+                                  reportMutable: ListBuffer[String])(
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] = explorationResult match {
+    case Full(layersWithVoxelSizes) =>
+      reportMutable += s"Found ${layersWithVoxelSizes.length} ${explorer.name} layers at $path."
+      Fox.successful(layersWithVoxelSizes)
+    case f: Failure =>
+      reportMutable += s"Error when reading $path as ${explorer.name}: ${Fox.failureChainAsString(f)}"
+      Fox.empty
+    case Empty =>
+      reportMutable += s"Error when reading $path as ${explorer.name}: Empty"
+      Fox.empty
+  }
+
+  private def handleExploreResultOfPath(explorationResultOfPath: Box[List[(DataLayerWithMagLocators, VoxelSize)]],
+                                        path: VaultPath,
+                                        searchDepth: Int,
+                                        remainingPaths: List[(VaultPath, Int)],
+                                        credentialId: Option[String],
+                                        explorers: List[RemoteLayerExplorer],
+                                        reportMutable: ListBuffer[String])(
+      implicit ec: ExecutionContext): Fox[List[(DataLayerWithMagLocators, VoxelSize)]] =
+    explorationResultOfPath match {
+      case Full(layersWithVoxelSizes) =>
+        Fox.successful(layersWithVoxelSizes)
+      case Empty =>
+        for {
+          extendedRemainingPaths <- path
+            .listDirectory(maxItems = MAX_EXPLORED_ITEMS_PER_LEVEL)
+            .map(dirs => remainingPaths ++ dirs.map((_, searchDepth + 1)))
+          foundLayers <- recursivelyExploreRemoteLayerAtPaths(extendedRemainingPaths,
+                                                              credentialId,
+                                                              explorers,
+                                                              reportMutable)
+        } yield foundLayers
+      case _ =>
+        Fox.successful(List.empty)
     }
 
 }

@@ -77,6 +77,23 @@ class TSAnnotationController @Inject()(
       }
   }
 
+  def get(token: Option[String], annotationId: String, version: Option[Long]): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccess(UserAccessRequest.readAnnotation(annotationId),
+                                            urlOrHeaderToken(token, request)) {
+            for {
+              annotationProto <- annotationService.get(annotationId,
+                                                       version,
+                                                       applyUpdates = false,
+                                                       urlOrHeaderToken(token, request))
+            } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
+          }
+        }
+      }
+    }
+
 }
 
 // get version history

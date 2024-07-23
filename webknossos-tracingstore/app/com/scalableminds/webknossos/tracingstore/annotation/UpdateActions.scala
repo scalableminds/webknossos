@@ -86,9 +86,10 @@ object UpdateAction {
           deserialize[UpdateUserBoundingBoxVisibilitySkeletonAction](jsonValue)
 
         // Volume
-        case "updateBucket"                    => deserialize[UpdateBucketVolumeAction](jsonValue)
-        case "updateVolumeTracing"             => deserialize[UpdateTracingVolumeAction](jsonValue)
-        case "updateUserBoundingBoxes"         => deserialize[UpdateUserBoundingBoxesVolumeAction](jsonValue)
+        case "updateBucket"        => deserialize[UpdateBucketVolumeAction](jsonValue)
+        case "updateVolumeTracing" => deserialize[UpdateTracingVolumeAction](jsonValue)
+        case "updateUserBoundingBoxes" =>
+          deserialize[UpdateUserBoundingBoxesVolumeAction](jsonValue) // TODO: rename key (must be different from skeleton action)
         case "updateUserBoundingBoxVisibility" => deserialize[UpdateUserBoundingBoxVisibilityVolumeAction](jsonValue)
         case "removeFallbackLayer"             => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
         case "importVolumeTracing"             => deserialize[ImportVolumeDataVolumeAction](jsonValue)

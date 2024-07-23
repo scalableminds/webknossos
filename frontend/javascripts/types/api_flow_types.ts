@@ -178,7 +178,6 @@ export type APIMetadata = {
   type: APIMetadataType;
   key: string;
   value: string | number | string[];
-  index: number;
 };
 export type APIMetadataEntries = APIMetadata[];
 

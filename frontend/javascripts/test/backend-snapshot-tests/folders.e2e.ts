@@ -71,7 +71,7 @@ test("addAllowedTeamToFolder", async (t) => {
     id: subFolderId,
     allowedTeams: [teamId],
     name: "A subfolder!",
-    metadata: [{ type: APIMetadataType.STRING, key: "foo", value: "bar", index: 0 }],
+    metadata: [{ type: APIMetadataType.STRING, key: "foo", value: "bar" }],
   });
 
   t.snapshot(updatedFolderWithTeam, {

@@ -179,12 +179,15 @@ function updateCachedDatasetOrFolderDebouncedTracked(
   return updateCachedDatasetOrFolderDebounced;
 }
 
+type APIMetadataWithIndex = APIMetadata & { index: number };
+type IndexedMetadataEntries = APIMetadataWithIndex[];
+
 function MetadataTable({
   selectedDatasetOrFolder,
 }: { selectedDatasetOrFolder: APIDataset | Folder }) {
   const context = useDatasetCollectionContext();
-  const [metadata, setMetadata] = useState<APIMetadataEntries>(
-    selectedDatasetOrFolder.metadata || [],
+  const [metadata, setMetadata] = useState<IndexedMetadataEntries>(
+    selectedDatasetOrFolder?.metadata?.map((entry, index) => ({ ...entry, index })) || [],
   );
   const [error, setError] = useState<[number, string] | null>(null); // [index, error message]
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
@@ -196,13 +199,20 @@ function MetadataTable({
       updateCachedDatasetOrFolderDebounced.flush();
     } else {
       // Update state to newest metadata from selectedDatasetOrFolder.
-      setMetadata(selectedDatasetOrFolder.metadata || []);
+      setMetadata(
+        selectedDatasetOrFolder.metadata?.map((entry, index) => ({ ...entry, index })) || [],
+      );
     }
   }, [selectedDatasetOrFolder.metadata]);
 
   useEffectOnUpdate(() => {
     if (error == null) {
-      updateCachedDatasetOrFolderDebouncedTracked(context, selectedDatasetOrFolder, metadata);
+      const metadataWithoutIndex = metadata.map(({ index: _ignored, ...rest }) => rest);
+      updateCachedDatasetOrFolderDebouncedTracked(
+        context,
+        selectedDatasetOrFolder,
+        metadataWithoutIndex,
+      );
     }
   }, [metadata, error]);
 
@@ -212,7 +222,7 @@ function MetadataTable({
   });
 
   const updatePropName = (index: number, newPropName: string) => {
-    setMetadata((prev: APIMetadataEntries) => {
+    setMetadata((prev) => {
       const entry = prev.find((prop) => prop.index === index);
       if (!entry) {
         return prev;
@@ -249,7 +259,7 @@ function MetadataTable({
   const addType = (type: APIMetadata["type"]) => {
     setMetadata((prev) => {
       const highestIndex = prev.reduce((acc, curr) => Math.max(acc, curr.index), 0);
-      const newEntry: APIMetadata = {
+      const newEntry: APIMetadataWithIndex = {
         key: "",
         value:
           type === APIMetadataType.STRING_ARRAY ? [] : type === APIMetadataType.NUMBER ? 0 : "",
@@ -282,7 +292,7 @@ function MetadataTable({
     }),
   });
 
-  const getValueInput = (record: APIMetadata) => {
+  const getValueInput = (record: APIMetadataWithIndex) => {
     const isFocused = record.index === focusedRow;
     const sharedProps = {
       className: isFocused ? undefined : "transparent-input",
@@ -324,7 +334,7 @@ function MetadataTable({
     }
   };
 
-  const getKeyInput = (record: APIMetadata) => {
+  const getKeyInput = (record: APIMetadataWithIndex) => {
     const isFocused = record.index === focusedRow;
     return (
       <>

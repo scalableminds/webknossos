@@ -189,7 +189,7 @@ class DataCube {
     if (mapping != null && this.isMappingEnabled()) {
       mappedId = isNumberMap(mapping)
         ? mapping.get(Number(unmappedId))
-        : // TODO #6581: Uint64 Support
+        : // TODO: Proper 64 bit support (#6921)
           Number(mapping.get(BigInt(unmappedId)));
     }
     if (mappedId == null || isNaN(mappedId)) {
@@ -888,12 +888,12 @@ class DataCube {
           : mapping.get(BigInt(dataValue));
 
         if (mappedValue != null) {
-          // TODO #6581: Uint64 Support
+          // TODO: Proper 64 bit support (#6921)
           return Number(mappedValue);
         }
       }
 
-      // TODO #6581: Uint64 Support
+      // TODO: Proper 64 bit support (#6921)
       return Number(dataValue);
     }
 

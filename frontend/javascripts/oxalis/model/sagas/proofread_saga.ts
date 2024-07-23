@@ -1052,7 +1052,7 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
     const mappingToAccess = overrideMapping ?? mapping;
     const mappedId = isNumberMap(mappingToAccess)
       ? mappingToAccess.get(Number(segmentId))
-      : // TODO #6581: Uint64 Support
+      : // TODO: Proper 64 bit support (#6921)
         Number(mappingToAccess.get(BigInt(segmentId)));
     if (mappedId == null) {
       // It could happen that the user tries to perform a proofreading operation
@@ -1071,7 +1071,7 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
     const unmappedId = await getUnmappedDataValue(position);
     const agglomerateId = isNumberMap(mapping)
       ? mapping.get(unmappedId)
-      : // TODO #6581: Uint64 Support
+      : // TODO: Proper 64 bit support (#6921)
         Number(mapping.get(BigInt(unmappedId)));
 
     if (agglomerateId == null) {

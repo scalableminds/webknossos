@@ -236,7 +236,7 @@ export const updateSegmentAction = (
 ) =>
   ({
     type: "UPDATE_SEGMENT",
-    // TODO #6581: Uint64 Support
+    // TODO: Proper 64 bit support (#6921)
     segmentId: Number(segmentId),
     segment,
     layerName,
@@ -251,7 +251,7 @@ export const removeSegmentAction = (
 ) =>
   ({
     type: "REMOVE_SEGMENT",
-    // TODO #6581: Uint64 Support
+    // TODO: Proper 64 bit support (#6921)
     segmentId: Number(segmentId),
     layerName,
     timestamp,

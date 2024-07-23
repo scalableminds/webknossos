@@ -2291,7 +2291,7 @@ export async function getEdgesForAgglomerateMinCut(
       {
         data: {
           ...segmentsInfo,
-          // TODO #6581: Uint64 Support
+          // TODO: Proper 64 bit support (#6921)
           segmentId1: Number(segmentsInfo.segmentId1),
           segmentId2: Number(segmentsInfo.segmentId2),
           agglomerateId: Number(segmentsInfo.agglomerateId),
@@ -2322,7 +2322,7 @@ export async function getNeighborsForAgglomerateNode(
       {
         data: {
           ...segmentInfo,
-          // TODO #6581: Uint64 Support
+          // TODO: Proper 64 bit support (#6921)
           segmentId: Number(segmentInfo.segmentId),
           agglomerateId: Number(segmentInfo.agglomerateId),
         },

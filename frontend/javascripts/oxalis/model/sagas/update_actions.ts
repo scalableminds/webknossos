@@ -455,7 +455,7 @@ export function splitAgglomerate(
   return {
     name: "splitAgglomerate",
     value: {
-      // TODO #6581: Uint64 Support
+      // TODO: Proper 64 bit support (#6921)
       agglomerateId: Number(agglomerateId),
       segmentId1: Number(segmentId1),
       segmentId2: Number(segmentId2),
@@ -487,7 +487,7 @@ export function mergeAgglomerate(
   return {
     name: "mergeAgglomerate",
     value: {
-      // TODO #6581: Uint64 Support
+      // TODO: Proper 64 bit support (#6921)
       agglomerateId1: Number(agglomerateId1),
       agglomerateId2: Number(agglomerateId2),
       segmentId1: Number(segmentId1),

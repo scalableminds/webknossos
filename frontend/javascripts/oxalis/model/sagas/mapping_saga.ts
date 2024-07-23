@@ -170,6 +170,13 @@ function* reloadData(
   );
   const mapping = getMappingInfo(activeMappingByLayer, layerName);
 
+  // Especially, when switching between move tool and proofreading tool for the first time
+  // a latency is to be expected. Therefore, we want to notify the user about what's happening.
+  // After a proofreading action has been made, tool switching won't cause a layer reload.
+  message.loading({
+    content: "Reloading segmentation data...",
+    duration: 1,
+  });
   yield* call([api.data, api.data.reloadBuckets], layerName);
 
   const needsLocalHdf5Mapping = yield* select((state) =>

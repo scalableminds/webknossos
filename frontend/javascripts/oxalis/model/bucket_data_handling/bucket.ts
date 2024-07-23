@@ -581,10 +581,7 @@ export class DataBucket {
     }
   }
 
-  receiveData(
-    arrayBuffer: Uint8Array | null | undefined,
-    valueSet?: Set<number> | Set<bigint>,
-  ): void {
+  receiveData(arrayBuffer: Uint8Array | null | undefined, computeValueSet: boolean = false): void {
     const data = this.uint8ToTypedBuffer(arrayBuffer);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
@@ -611,18 +608,14 @@ export class DataBucket {
         const dataClone = new TypedArrayClass(data);
         this.trigger("unmergedBucketDataLoaded", dataClone);
 
-        let needsValueSetInvalidation = true;
         if (this.dirty) {
           this.merge(data);
         } else {
           this.data = data;
-          if (valueSet != null) {
-            this.cachedValueSet = valueSet;
-            needsValueSetInvalidation = false;
-          }
         }
-        if (needsValueSetInvalidation) {
-          this.invalidateValueSet();
+        this.invalidateValueSet();
+        if (computeValueSet) {
+          this.ensureValueSet();
         }
 
         this.state = BucketStateEnum.LOADED;

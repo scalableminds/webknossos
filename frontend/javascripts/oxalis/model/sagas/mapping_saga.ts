@@ -151,7 +151,7 @@ export default function* watchActivatedMappings(): Saga<void> {
   );
   const segmentationLayers = yield* select((state) => getSegmentationLayers(state.dataset));
   for (const layer of segmentationLayers) {
-    // The following two sagas will fork internally.
+    // The following saga will fork internally.
     yield* takeLatestMappingChange(oldActiveMappingByLayer, layer.name);
   }
 }

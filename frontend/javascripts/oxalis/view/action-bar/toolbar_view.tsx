@@ -871,9 +871,8 @@ export default function ToolbarView() {
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
 
-  const [lastForcefulDisabledTool, setLastForcefulDisabledTool] = useState<AnnotationTool | null>(
-    null,
-  );
+  const [lastForcefullyDisabledTool, setLastForcefullyDisabledTool] =
+    useState<AnnotationTool | null>(null);
   const isVolumeModificationAllowed = useSelector(
     (state: OxalisState) => !hasEditableMapping(state),
   );
@@ -905,30 +904,31 @@ export default function ToolbarView() {
   // the tools via the w shortcut. In that case, the effect-hook is re-executed
   // and the tool is switched to MOVE.
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];
-  const isLastForcefulDisabledToolAvailable =
-    lastForcefulDisabledTool != null && !disabledInfosForTools[lastForcefulDisabledTool].isDisabled;
+  const isLastForcefullyDisabledToolAvailable =
+    lastForcefullyDisabledTool != null &&
+    !disabledInfosForTools[lastForcefullyDisabledTool].isDisabled;
 
   useEffect(() => {
     if (disabledInfoForCurrentTool.isDisabled) {
-      setLastForcefulDisabledTool(activeTool);
+      setLastForcefullyDisabledTool(activeTool);
       Store.dispatch(setToolAction(AnnotationToolEnum.MOVE));
     } else if (
-      lastForcefulDisabledTool != null &&
-      isLastForcefulDisabledToolAvailable &&
+      lastForcefullyDisabledTool != null &&
+      isLastForcefullyDisabledToolAvailable &&
       activeTool === AnnotationToolEnum.MOVE
     ) {
       // Re-enable the tool that was disabled before.
-      setLastForcefulDisabledTool(null);
-      Store.dispatch(setToolAction(lastForcefulDisabledTool));
+      setLastForcefullyDisabledTool(null);
+      Store.dispatch(setToolAction(lastForcefullyDisabledTool));
     } else if (activeTool !== AnnotationToolEnum.MOVE) {
       // Forget the last disabled tool as another tool besides the move tool was selected.
-      setLastForcefulDisabledTool(null);
+      setLastForcefullyDisabledTool(null);
     }
   }, [
     activeTool,
     disabledInfoForCurrentTool,
-    isLastForcefulDisabledToolAvailable,
-    lastForcefulDisabledTool,
+    isLastForcefullyDisabledToolAvailable,
+    lastForcefullyDisabledTool,
   ]);
 
   const isShiftPressed = useKeyPress("Shift");

@@ -373,10 +373,10 @@ class PlaneMaterialFactory {
       this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_TEXEL = { value: CUCKOO_ELEMENTS_PER_TEXEL };
       this.uniforms.MAPPING_CUCKOO_TWIDTH = { value: CUCKOO_TWIDTH };
     } else {
-      this.uniforms.MAPPING_CUCKOO_ENTRY_CAPACITY = { value: null };
-      this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_ENTRY = { value: null };
-      this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_TEXEL = { value: null };
-      this.uniforms.MAPPING_CUCKOO_TWIDTH = { value: null };
+      this.uniforms.MAPPING_CUCKOO_ENTRY_CAPACITY = { value: 0 };
+      this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_ENTRY = { value: 0 };
+      this.uniforms.MAPPING_CUCKOO_ELEMENTS_PER_TEXEL = { value: 0 };
+      this.uniforms.MAPPING_CUCKOO_TWIDTH = { value: 0 };
     }
   }
 

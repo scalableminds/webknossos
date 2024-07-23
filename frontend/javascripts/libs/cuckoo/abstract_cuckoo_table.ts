@@ -245,7 +245,12 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
 
       const value = this.getValueAtAddress(key, hashedAddress);
       if (value != null) {
-        this.writeEntryAtAddress(this.getEmptyKey(), this.getEmptyValue(), hashedAddress, false);
+        this.writeEntryAtAddress(
+          this.getEmptyKey(),
+          this.getEmptyValue(),
+          hashedAddress,
+          !this.autoTextureUpdate,
+        );
         return;
       }
     }
@@ -323,11 +328,11 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
 
   abstract writeEntryToTable(key: K, value: V, hashedAddress: number): void;
 
-  writeEntryAtAddress(key: K, value: V, hashedAddress: number, isRehashing: boolean): Entry {
+  writeEntryAtAddress(key: K, value: V, hashedAddress: number, skipTextureUpdate: boolean): Entry {
     const displacedEntry: Entry = this.getEntryAtAddress(hashedAddress);
     this.writeEntryToTable(key, value, hashedAddress);
 
-    if (!isRehashing) {
+    if (!skipTextureUpdate) {
       // Only partially update if we are not rehashing. Otherwise, it makes more
       // sense to flush the entire texture content after the rehashing is done.
       const offset = hashedAddress * this.getClass().getElementsPerEntry();

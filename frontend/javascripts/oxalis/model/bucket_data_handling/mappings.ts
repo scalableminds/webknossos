@@ -102,6 +102,12 @@ class Mappings {
         ? cachedDiffMappings(this.previousMapping, mapping)
         : { changed: [], onlyA: [], onlyB: Array.from(mapping.keys() as Iterable<number>) };
 
+    const totalUpdateCount = _.size(changed) + _.size(onlyA) + _.size(onlyB);
+    const doFullTextureUpdate = totalUpdateCount > 10000;
+    if (doFullTextureUpdate) {
+      this.cuckooTable.disableAutoTextureUpdate();
+    }
+
     for (const keyToDelete of onlyA) {
       this.cuckooTable.unsetNumberLike(keyToDelete);
       this.currentKeyCount--;
@@ -114,11 +120,6 @@ class Mappings {
       this.cuckooTable.setNumberLike(key, value);
     }
 
-    const sizeOfOnlyB = _.size(onlyB);
-    const doFullTextureUpdate = sizeOfOnlyB > 10000;
-    if (doFullTextureUpdate) {
-      this.cuckooTable.disableAutoTextureUpdate();
-    }
     for (const key of onlyB) {
       if (this.currentKeyCount > this.cuckooTable.getCriticalCapacity()) {
         throttledCapacityWarning();

@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.storage.{
   S3AccessKeyCredential
 }
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.common.{Box, Full}
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import software.amazon.awssdk.auth.credentials.{
   AnonymousCredentialsProvider,
@@ -28,15 +28,18 @@ import software.amazon.awssdk.services.s3.model.{
   GetObjectResponse,
   ListObjectsV2Request,
   ListObjectsV2Response,
-  NoSuchBucketException
+  NoSuchBucketException,
+  NoSuchKeyException
 }
 
 import java.net.URI
+import java.util.concurrent.CompletionException
 import scala.collection.immutable.NumericRange
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.FutureConverters._
 import scala.jdk.OptionConverters.RichOptional
+import scala.util.{Failure, Success}
 
 class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
@@ -53,7 +56,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       .bucket(bucketName)
       .key(key)
       .range(s"${range.start}-${range.end}")
-      .build() // TODO check format
+      .build() // TODO check range format
 
   private def getSuffixRangeRequest(bucketName: String, key: String, length: Long): GetObjectRequest =
     GetObjectRequest.builder.bucket(bucketName).key(key).range(s"bytes=-$length").build()
@@ -62,19 +65,31 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     GetObjectRequest.builder.bucket(bucketName).key(key).build()
 
   private def performGetObjectRequest(request: GetObjectRequest)(
-      implicit ec: ExecutionContext): Fox[(Array[Byte], String)] =
-    try {
-      val transformer: AsyncResponseTransformer[GetObjectResponse, ResponseBytes[GetObjectResponse]] =
-        AsyncResponseTransformer.toBytes
-      for {
-        responseBytesObject <- client
-          .getObject(request, transformer)
-          .asScala // TODO properly catch NoSuchBucketException
-        bytes = responseBytesObject.asByteArray()
-      } yield (bytes, "")
-    } catch {
-      case _: NoSuchBucketException => Fox.empty
-      case e: Exception             => Fox.failure(e.getMessage)
+      implicit ec: ExecutionContext): Fox[(Array[Byte], String)] = {
+    val responseTransformer: AsyncResponseTransformer[GetObjectResponse, ResponseBytes[GetObjectResponse]] =
+      AsyncResponseTransformer.toBytes
+    for {
+      responseBytesObject <- notFoundToEmpty(client.getObject(request, responseTransformer).asScala)
+      bytes = responseBytesObject.asByteArray()
+    } yield (bytes, "") // TODO encoding?
+  }
+
+  private def notFoundToEmpty[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
+    resultFuture.transformWith {
+      case Success(value) => Fox.successful(value).futureBox
+      case Failure(exception) =>
+        val box = exception match {
+          case ce: CompletionException =>
+            ce.getCause match {
+              case _: NoSuchBucketException => net.liftweb.common.Empty
+              case _: NoSuchKeyException    => net.liftweb.common.Empty
+              case e: Exception =>
+                net.liftweb.common.Failure(e.getMessage, Full(e), net.liftweb.common.Empty)
+            }
+          case e: Exception =>
+            net.liftweb.common.Failure(e.getMessage, Full(e), net.liftweb.common.Empty)
+        }
+        Future.successful(box)
     }
 
   override def readBytesAndEncoding(path: VaultPath, range: RangeSpecifier)(
@@ -171,7 +186,7 @@ object S3DataVault {
       Full(uri.getPath.substring(1).split("/").tail.mkString("/"))
     } else if (isShortStyle(uri)) {
       Full(uri.getPath.tail)
-    } else Failure(s"Not a valid s3 uri: $uri")
+    } else net.liftweb.common.Failure(s"Not a valid s3 uri: $uri")
 
   private def getCredentialsProvider(credentialOpt: Option[S3AccessKeyCredential]): AwsCredentialsProvider =
     credentialOpt match {

@@ -516,9 +516,11 @@ class SegmentsView extends React.Component<Props, State> {
     return allSegmentGroups.map((group) => getKeyForGroupId(group));
   };
 
-  expandGroups = (newExpandedGroups: Key[]) => {
+  setExpandedGroups = (newExpandedGroups: Key[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
     const expandedKeySet = new Set(newExpandedGroups);
+    // Set the state of the root group according to the new expanded groups
+    // so that its expansion state is updated when the root group is expanded/collapsed.
     if (this.state.isRootGroupExpanded && !expandedKeySet.has(getKeyForGroupId(MISSING_GROUP_ID))) {
       this.setState({ isRootGroupExpanded: false });
     } else if (
@@ -1921,7 +1923,7 @@ class SegmentsView extends React.Component<Props, State> {
                               overflow: "auto", // use hidden when not using virtualization
                             }}
                             ref={this.tree}
-                            onExpand={this.expandGroups}
+                            onExpand={this.setExpandedGroups}
                             expandedKeys={this.state.expandedGroupKeys}
                           />
                         </div>
@@ -1961,7 +1963,7 @@ class SegmentsView extends React.Component<Props, State> {
       onClick: () => {
         const allExpandedGroups = children.concat(this.state.expandedGroupKeys);
         if (!isGroupItselfExpanded) allExpandedGroups.push(getKeyForGroupId(groupId));
-        this.expandGroups(allExpandedGroups);
+        this.setExpandedGroups(allExpandedGroups);
         this.closeSegmentOrGroupDropdown();
       },
       icon: <ExpandAltOutlined />,

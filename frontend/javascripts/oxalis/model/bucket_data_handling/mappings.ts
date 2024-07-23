@@ -133,7 +133,6 @@ class Mappings {
     if (doFullTextureUpdate) {
       this.cuckooTable.enableAutoTextureUpdateAndFlush();
     }
-    console.timeEnd("cuckoo mapping update with full-update=" + doFullTextureUpdate);
 
     this.previousMapping = mapping;
 

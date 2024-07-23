@@ -76,32 +76,49 @@ import _ from "lodash";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
 import { Action } from "../actions/actions";
-import { isBigInt, isNumberMap } from "libs/utils";
+import { isBigInt, isNumberMap, SoftError } from "libs/utils";
+
+function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
+  return function* (...args: any[]) {
+    try {
+      yield* call(saga, ...args);
+    } catch (exception) {
+      if (exception instanceof SoftError) {
+        yield* call([Toast, Toast.warning], exception.message);
+        return;
+      }
+      throw exception;
+    }
+  };
+}
 
 export default function* proofreadRootSaga(): Saga<void> {
   yield* take("INITIALIZE_SKELETONTRACING");
   yield* take("WK_READY");
   yield* takeEveryUnlessBusy(
     ["DELETE_EDGE", "MERGE_TREES", "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"],
-    handleSkeletonProofreadingAction,
+    runSagaAndCatchSoftError(handleSkeletonProofreadingAction),
     "Proofreading in progress",
   );
-  yield* takeEvery(["PROOFREAD_AT_POSITION"], proofreadAtPosition);
-  yield* takeEvery(["CLEAR_PROOFREADING_BY_PRODUCTS"], clearProofreadingByproducts);
+  yield* takeEvery(["PROOFREAD_AT_POSITION"], runSagaAndCatchSoftError(proofreadAtPosition));
+  yield* takeEvery(
+    ["CLEAR_PROOFREADING_BY_PRODUCTS"],
+    runSagaAndCatchSoftError(clearProofreadingByproducts),
+  );
   yield* takeEveryUnlessBusy(
     ["PROOFREAD_MERGE", "MIN_CUT_AGGLOMERATE"],
-    handleProofreadMergeOrMinCut,
+    runSagaAndCatchSoftError(handleProofreadMergeOrMinCut),
     "Proofreading in progress",
   );
   yield* takeEveryUnlessBusy(
     ["CUT_AGGLOMERATE_FROM_NEIGHBORS"],
-    handleProofreadCutFromNeighbors,
+    runSagaAndCatchSoftError(handleProofreadCutFromNeighbors),
     "Proofreading in progress",
   );
 
   yield* takeEvery(
     ["CREATE_NODE", "DELETE_NODE", "SET_NODE_POSITION"],
-    checkForAgglomerateSkeletonModification,
+    runSagaAndCatchSoftError(checkForAgglomerateSkeletonModification),
   );
 }
 
@@ -1060,8 +1077,8 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
       // In that case, we currently just throw an error. A toast will appear
       // that asks the user to retry. If we notice that this happens in production,
       // we can think about a better way to handle this.
-      throw new Error(
-        `Could not map id ${segmentId} at position. The mapped partner might not be known yet. Please retry.`,
+      throw new SoftError(
+        `Could not map id ${segmentId}. The mapped partner might not be known yet. Please retry.`,
       );
     }
     return mappedId;
@@ -1080,8 +1097,8 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
       // In that case, we currently just throw an error. A toast will appear
       // that asks the user to retry. If we notice that this happens in production,
       // we can think about a better way to handle this.
-      throw new Error(
-        `Could not map id ${unmappedId} at position. The mapped partner might not be known yet. Please retry.`,
+      throw new SoftError(
+        `Could not map id ${unmappedId} at position ${position}. The mapped partner might not be known yet. Please retry.`,
       );
     }
     return { agglomerateId, unmappedId };

@@ -96,7 +96,7 @@ const takeLatestMappingChange = (
       );
       const mapping = getMappingInfo(activeMappingByLayer, layerName);
 
-      console.log("changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
+      console.log("Changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
 
       if (lastWatcherTask) {
         console.log("Cancel old bucket watcher");
@@ -253,6 +253,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
       return;
     }
 
+    // todop (easy): remove
     console.log("starting updateHdf5 because a bucket changed");
 
     // Updating the HDF5 mapping is an async task which requires communication with
@@ -273,11 +274,10 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
         if (!cancel) {
           return;
         }
-        console.log("cancelled updateHdf5");
+        console.log("Cancelled updateHdf5");
       }
 
       isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
-      console.log("isBusy", isBusy);
       if (isBusy) {
         // Wait until WK is not busy anymore.
         yield* take(
@@ -287,7 +287,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
         );
       }
 
-      console.log("retrying updateHdf5");
+      console.log("Retrying updateHdf5...");
     }
   }
 }
@@ -444,6 +444,7 @@ function* updateLocalHdf5Mapping(
     intersection: mutableRemainingEntries,
   } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMapping);
 
+  // todop (easy): remove
   console.log(
     "New values",
     newSegmentIds.size,
@@ -469,6 +470,8 @@ function* updateLocalHdf5Mapping(
           mappingName,
           Array.from(newSegmentIds),
         );
+
+  // todop (easy): remove
   console.log(
     "received mapped segment ids from server",
     newEntries.size < 1000 ? newEntries : `<omitted due to size=${newEntries.size}>`,
@@ -488,6 +491,7 @@ function* updateLocalHdf5Mapping(
     onlyB: newSegmentIds,
   });
 
+  // todop (easy): remove
   console.log("dispatch setMappingAction in mapping saga");
   yield* put(setMappingAction(layerName, mappingName, mappingType, { mapping }));
 }

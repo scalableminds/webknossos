@@ -193,14 +193,11 @@ class DataCube {
           Number(mapping.get(BigInt(unmappedId)));
     }
     if (mappedId == null || isNaN(mappedId)) {
-      mappedId = unmappedId;
+      // The id couldn't be mapped.
+      return this.shouldHideUnmappedIds() ? 0 : unmappedId;
     }
 
-    if (mappedId == null && this.shouldHideUnmappedIds()) {
-      mappedId = 0;
-    }
-
-    return mappedId != null ? mappedId : unmappedId;
+    return mappedId;
   }
 
   private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {

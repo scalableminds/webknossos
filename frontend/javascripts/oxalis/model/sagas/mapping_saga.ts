@@ -179,13 +179,15 @@ function* reloadData(
   // If an agglomerate mapping is being activated (that is applied remotely), the data
   // reload is the last step of the mapping activation. For JSON mappings or locally applied
   // HDF5 mappings, the last step of the mapping activation is the texture creation in mappings.ts
-  if (
-    isAgglomerate(mapping) &&
-    !needsLocalHdf5Mapping &&
-    mapping.mappingStatus === MappingStatusEnum.ACTIVATING
-  ) {
-    yield* put(finishMappingInitializationAction(layerName));
-    message.destroy(MAPPING_MESSAGE_KEY);
+  if (isAgglomerate(mapping) && !needsLocalHdf5Mapping) {
+    if (mapping.mappingStatus === MappingStatusEnum.ACTIVATING) {
+      yield* put(finishMappingInitializationAction(layerName));
+      message.destroy(MAPPING_MESSAGE_KEY);
+    } else if (mapping.mappingStatus === MappingStatusEnum.ENABLED) {
+      // If the mapping is already enabled (happens when an annotation was loaded initially
+      // with a remotely applied hdf5 mapping), ensure that the message to the user is hidden, too.
+      message.destroy(MAPPING_MESSAGE_KEY);
+    }
   }
 
   oldActiveMappingByLayer.value = activeMappingByLayer;
@@ -353,13 +355,12 @@ function* handleSetMapping(
     }
     return;
   }
-  console.time("MappingActivation");
-  console.time("MappingSaga");
 
   if (showLoadingIndicator) {
     message.loading({
       content: "Activating Mapping",
       key: MAPPING_MESSAGE_KEY,
+      duration: 0,
     });
   }
 

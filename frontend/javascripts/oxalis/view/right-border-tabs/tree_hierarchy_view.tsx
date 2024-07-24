@@ -69,8 +69,8 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { api, Store } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
-import { useEffectOnlyOnce } from "libs/react_hooks";
 import { ColoredDotIcon } from "./segments_tab/segment_list_item";
+import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 
 type Props = {
   activeTreeId: number | null | undefined;
@@ -97,6 +97,7 @@ function TreeHierarchyView(props: Props) {
 
   const dispatch = useDispatch();
 
+  console.log("UITreeData", UITreeData);
   useEffect(() => {
     // equivalent of LifeCycle hook "getDerivedStateFromProps"
     // Insert the trees into the corresponding groups and create a
@@ -106,25 +107,36 @@ function TreeHierarchyView(props: Props) {
       name: "Root",
       groupId: MISSING_GROUP_ID,
       children: props.treeGroups,
+      isExpanded: true,
     };
 
     const generatedGroupTree = insertTreesAndTransform([rootGroup], groupToTreesMap, props.sortBy);
     setUITreeData(generatedGroupTree);
   }, [props.trees, props.sortBy, props.treeGroups]);
 
-  useEffectOnlyOnce(() => {
-    // set default expanded keys
-    // the defaults should include the root node and at the active tree's group if applicable
-    let defaultExpandedKeys: React.Key[] = [getNodeKey(GroupTypeEnum.GROUP, MISSING_GROUP_ID)];
-    if (props.activeTreeId) {
-      const activeTreesGroupId = props.trees[props.activeTreeId].groupId;
-      if (activeTreesGroupId) {
-        defaultExpandedKeys.push(getNodeKey(GroupTypeEnum.GROUP, activeTreesGroupId));
+  // TODO_c I think this isnt needed because we expand all groups with isExpanded: true
+  /*   useEffectOnlyOnce(() => {
+      // set default expanded keys
+      // the defaults should include the root node and at the active tree's group if applicable
+      let defaultExpandedKeys: React.Key[] = [getNodeKey(GroupTypeEnum.GROUP, MISSING_GROUP_ID)];
+      if (props.activeTreeId) {
+        const activeTreesGroupId = props.trees[props.activeTreeId].groupId;
+        if (activeTreesGroupId) {
+          defaultExpandedKeys.push(getNodeKey(GroupTypeEnum.GROUP, activeTreesGroupId));
+        }
+  
+        setExpandedNodeKeys(defaultExpandedKeys);
       }
+    }); */
 
-      setExpandedNodeKeys(defaultExpandedKeys);
-    }
-  });
+  useEffect(() => {
+    const expandedKeys = deepFlatFilter(
+      UITreeData,
+      (node) => node.type === GroupTypeEnum.GROUP && node.expanded,
+    ).map((node) => node.key);
+    console.log("expandedKeys", expandedKeys);
+    setExpandedNodeKeys(expandedKeys);
+  }, [UITreeData]);
 
   useEffect(() => {
     // scroll to active tree if it changes
@@ -157,8 +169,17 @@ function TreeHierarchyView(props: Props) {
       ).map((node) => node.key);
       expandedKeys = _.without(expandedKeys, ...subGroupKeys);
     }
+    const expandedKeySet = new Set(expandedKeys);
+    const newGroups = mapGroups(props.treeGroups, (group) => {
+      if (expandedKeySet.has(getNodeKey(GroupTypeEnum.GROUP, group.groupId))) {
+        return { ...group, isExpanded: true };
+      } else {
+        return { ...group, isExpanded: false };
+      }
+    });
 
-    setExpandedNodeKeys(expandedKeys);
+    setUpdateTreeGroups(newGroups);
+    console.log("newGroups", newGroups);
   };
 
   const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
@@ -238,6 +259,7 @@ function TreeHierarchyView(props: Props) {
     }
   }
 
+  // TODO_c
   function setExpansionOfAllSubgroupsTo(group: TreeNode, expanded: boolean) {
     const selectedGroupIdKey = getNodeKeyFromNode(group);
     const subGroupKeys = deepFlatFilter([group], (node) => node.type === GroupTypeEnum.GROUP).map(

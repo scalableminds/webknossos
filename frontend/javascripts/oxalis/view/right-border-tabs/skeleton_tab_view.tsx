@@ -346,10 +346,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   getTreeAndTreeGroupList = memoizeOne(
     (trees: TreeMap, treeGroups: Array<TreeGroup>, sortBy: string): Array<TreeOrTreeGroup> => {
       const groupToTreesMap = createGroupToTreesMap(trees);
-      const rootGroup = {
+      const rootGroup: TreeGroup = {
         name: "Root",
         groupId: MISSING_GROUP_ID,
         children: treeGroups,
+        isExpanded: true,
       };
 
       const makeTree = (tree: Tree) => ({
@@ -362,6 +363,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         name: group.name,
         type: GroupTypeEnum.GROUP,
         id: group.groupId,
+        expanded: group.isExpanded == null ? true : group.isExpanded, // TODO_c ? ok so?
       });
 
       function* mapGroupsAndTreesSorted(

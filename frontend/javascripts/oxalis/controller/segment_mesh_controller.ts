@@ -388,8 +388,10 @@ export default class SegmentMeshController {
         child.material.opacity = targetOpacity;
       }
     });
+    const isNotProofreadingMode = Store.getState().uiInformation.activeTool !== "PROOFREAD";
+
     const changeMaterial = (fn: (material: MeshMaterial) => void) => {
-      if (mesh.isMerged) {
+      if (mesh.isMerged || isNotProofreadingMode) {
         // Update the material for all meshes that belong to the current
         // segment ID.
         parent.traverse((child) => {

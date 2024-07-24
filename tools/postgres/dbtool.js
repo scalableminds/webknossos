@@ -382,6 +382,19 @@ program
   });
 
 program
+  .command("insert-local-datastore")
+  .description("Inserts local datastore (note that this is redundant to initialData on webknossos startup)")
+  .action(() => {
+    console.log("Inserting local datastore in the local data");
+    console.log(
+      callPsql(
+        `INSERT INTO webknossos.dataStores(name, url, publicUrl, key) VALUES('localhost', 'http://localhost:9000', 'http://localhost:9000', 'somethingSecure') ON CONFLICT DO NOTHING`,
+      ),
+    );
+    console.log("✨✨ Done");
+  });
+
+program
   .command("enable-jobs")
   .description("Activates jobs in WEBKNOSSOS by registering a worker")
   .action(() => {

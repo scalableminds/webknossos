@@ -28,7 +28,7 @@ class DataVaultTestSuite extends PlaySpec {
 
   "Data vault" when {
     "using Range requests" when {
-      val range: NumericRange[Long] = Range.Long(0, 1024, 1)
+      val range: NumericRange[Long] = Range.Long(0, 100, 1)
       val dataKey = "32_32_40/15360-15424_8384-8448_3520-3584" // when accessed via range request, the response body is 1024 bytes long, otherwise 124.8 KB
 
       "with HTTP Vault" should {
@@ -88,14 +88,15 @@ class DataVaultTestSuite extends PlaySpec {
       }
 
       "with S3 data vault" should {
-        val uri = new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/s0")
+        val uri = new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/")
         val vaultPath = new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None)))
         "return correct response" in {
 
-          val bytes = (vaultPath / dataKey).readBytes(Some(range))(globalExecutionContext).get(handleFoxJustification)
-
+          val bytes =
+            (vaultPath / "s0/5/5/5").readBytes(Some(range))(globalExecutionContext).get(handleFoxJustification)
+          println(bytes.take(10).mkString("Array(", ", ", ")"))
           assert(bytes.length == range.length)
-          assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
+          assert(bytes.take(10).sameElements(Array(0, 0, 0, 3, 0, 0, 0, 64, 0, 0)))
         }
 
         "return empty box" when {

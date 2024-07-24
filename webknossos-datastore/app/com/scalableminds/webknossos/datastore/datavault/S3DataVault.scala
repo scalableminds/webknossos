@@ -56,7 +56,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       .builder()
       .bucket(bucketName)
       .key(key)
-      .range(s"${range.start}-${range.end}")
+      .range(s"bytes=${range.start}-${range.end - 1}")
       .build() // TODO check range format
 
   private def getSuffixRangeRequest(bucketName: String, key: String, length: Long): GetObjectRequest =
@@ -69,7 +69,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       implicit ec: ExecutionContext): Fox[(Array[Byte], String)] = {
     val responseTransformer: AsyncResponseTransformer[GetObjectResponse, ResponseBytes[GetObjectResponse]] =
       AsyncResponseTransformer.toBytes
-    logger.info(f"requesting ${request.key} from ${request.bucket}")
+    logger.info(f"requesting ${request.key} from ${request.bucket} with range ${request.range()}")
     for {
       responseBytesObject <- notFoundToEmpty(client.getObject(request, responseTransformer).asScala)
       bytes = responseBytesObject.asByteArray()

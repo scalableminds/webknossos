@@ -107,6 +107,14 @@ class DataVaultTestSuite extends PlaySpec {
             val result = vaultPath.readBytes()(globalExecutionContext).await(handleFoxJustification)
             assertBoxEmpty(result)
           }
+
+          "requesting directory listing on nox-existent bucket" in {
+            val uri = new URI("s3://non-existing-bucket/non-existing-object/")
+            val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
+            val vaultPath = new VaultPath(uri, s3DataVault)
+            val result = vaultPath.listDirectory(maxItems = 5)(globalExecutionContext).await(handleFoxJustification)
+            assertBoxEmpty(result)
+          }
         }
       }
     }
@@ -200,7 +208,7 @@ class DataVaultTestSuite extends PlaySpec {
     }
   }
 
-  private def assertBoxEmpty(box: Box[Array[Byte]]): Unit = box match {
+  private def assertBoxEmpty(box: Box[_]): Unit = box match {
     case Full(_) => fail()
     case box: EmptyBox =>
       box match {
@@ -209,7 +217,7 @@ class DataVaultTestSuite extends PlaySpec {
       }
   }
 
-  private def assertBoxFailure(box: Box[Array[Byte]]): Unit = box match {
+  private def assertBoxFailure(box: Box[_]): Unit = box match {
     case Full(_) => fail()
     case box: EmptyBox =>
       box match {

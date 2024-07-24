@@ -116,22 +116,14 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     } yield vaultPaths
 
   private def getObjectSummaries(bucketName: String, keyPrefix: String, maxItems: Int)(
-      implicit ec: ExecutionContext): Fox[List[String]] =
-    try {
-      val listObjectsRequest =
-        ListObjectsV2Request.builder().bucket(bucketName).prefix(keyPrefix).delimiter("/").maxKeys(maxItems).build()
-      for {
-        objectListing: ListObjectsV2Response <- client.listObjectsV2(listObjectsRequest).asScala
-        s3SubPrefixes = objectListing.commonPrefixes().asScala.toList
-      } yield s3SubPrefixes.map(_.toString)
-    } catch {
-      case e: AwsServiceException => // TODO make sure exception is caught despite async
-        e.statusCode() match {
-          case 404 => Fox.empty
-          case _   => Fox.failure(e.getMessage)
-        }
-      case e: Exception => Fox.failure(e.getMessage)
-    }
+      implicit ec: ExecutionContext): Fox[List[String]] = {
+    val listObjectsRequest =
+      ListObjectsV2Request.builder().bucket(bucketName).prefix(keyPrefix).delimiter("/").maxKeys(maxItems).build()
+    for {
+      objectListing: ListObjectsV2Response <- notFoundToEmpty(client.listObjectsV2(listObjectsRequest).asScala)
+      s3SubPrefixes = objectListing.commonPrefixes().asScala.toList
+    } yield s3SubPrefixes.map(_.toString)
+  }
 
   private def getUri = uri
   private def getCredential = s3AccessKeyCredential

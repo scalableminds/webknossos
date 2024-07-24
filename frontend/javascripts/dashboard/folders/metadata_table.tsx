@@ -23,7 +23,7 @@ import {
 import { useEffectOnUpdate } from "libs/react_hooks";
 import _ from "lodash";
 import React, { memo } from "react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   APIDataset,
   Folder,
@@ -65,14 +65,14 @@ function EmptyTablePlaceholder({ isDataset }: { isDataset: boolean }) {
   );
 }
 
-let isDatasetUpdatePending = false;
+let isUpdatePending = false;
 const updateCachedDatasetOrFolderDebounced = _.debounce(
   async (
     context: DatasetCollectionContextValue,
     selectedDatasetOrFolder: APIDataset | Folder,
     metadata: APIMetadataEntries,
   ) => {
-    isDatasetUpdatePending = false;
+    isUpdatePending = false;
     if ("folderId" in selectedDatasetOrFolder) {
       // In case of a dataset, update the dataset's metadata.
       await context.updateCachedDataset(selectedDatasetOrFolder, { metadata: metadata });
@@ -91,8 +91,8 @@ const updateCachedDatasetOrFolderDebounced = _.debounce(
 const originalFlush = updateCachedDatasetOrFolderDebounced.flush;
 // Overwrite the debounce flush function to avoid flushing when no update is pending.
 updateCachedDatasetOrFolderDebounced.flush = async () => {
-  if (!isDatasetUpdatePending) return;
-  isDatasetUpdatePending = false;
+  if (!isUpdatePending) return;
+  isUpdatePending = false;
   originalFlush();
 };
 function updateCachedDatasetOrFolderDebouncedTracked(
@@ -100,7 +100,7 @@ function updateCachedDatasetOrFolderDebouncedTracked(
   selectedDatasetOrFolder: APIDataset | Folder,
   metadata: APIMetadataEntries,
 ) {
-  isDatasetUpdatePending = true;
+  isUpdatePending = true;
   updateCachedDatasetOrFolderDebounced(context, selectedDatasetOrFolder, metadata);
   return updateCachedDatasetOrFolderDebounced;
 }
@@ -108,39 +108,51 @@ function updateCachedDatasetOrFolderDebouncedTracked(
 type APIMetadataWithIndex = APIMetadata & { index: number };
 type IndexedMetadataEntries = APIMetadataWithIndex[];
 
+const isDataset = (datasetOrFolder: APIDataset | Folder): datasetOrFolder is APIDataset =>
+  "folderId" in datasetOrFolder;
+
 export default function MetadataTable({
-  selectedDatasetOrFolder,
-}: { selectedDatasetOrFolder: APIDataset | Folder }) {
+  datasetOrFolder,
+}: { datasetOrFolder: APIDataset | Folder }) {
   const context = useDatasetCollectionContext();
   const [metadata, setMetadata] = useState<IndexedMetadataEntries>(
-    selectedDatasetOrFolder?.metadata?.map((entry, index) => ({ ...entry, index })) || [],
+    datasetOrFolder?.metadata?.map((entry, index) => ({ ...entry, index })) || [],
   );
   const [error, setError] = useState<[number, string] | null>(null); // [index, error message]
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
+  // Save the current dataset or folder name and the type of it to be able to determine whether the passed datasetOrFolder to this component changed.
+  const [currentDatasetOrFolderName, setCurrentDatasetOrFolderName] = useState<string>(
+    datasetOrFolder.name,
+  );
+  const [isCurrentEntityADataset, setIsCurrentEntityADataset] = useState<boolean>(
+    isDataset(datasetOrFolder),
+  );
 
-  useEffect(() => {
-    if (isDatasetUpdatePending) {
-      // Flush pending updates and wait for the next update to update this components metadata.
-      // Otherwise, a cyclic update race between the selectedDatasetOrFolder.metadata and the flushed version might occur.
+  // Always update local state when folder / dataset changes or the result of the update request
+  // to the backend is resolved shown by a changed value in selectedDatasetOrFolder.metadata.
+  useEffectOnUpdate(() => {
+    const isSameName = datasetOrFolder.name === currentDatasetOrFolderName;
+    const isSameType = isDataset(datasetOrFolder) === isCurrentEntityADataset;
+    // In case an update is pending and the dataset or folder is the same as before, flush the pending update and ignore the changes to datasetOrFolder.metadata.
+    // Otherwise, a cyclic update between the version of the selectedDatasetOrFolder.metadata and the flushed version might occur.
+    const ignoreLocalMetadataUpdate = isUpdatePending && isSameName && isSameType;
+    if (isUpdatePending) {
       updateCachedDatasetOrFolderDebounced.flush();
-    } else {
-      // Update state to newest metadata from selectedDatasetOrFolder.
-      setMetadata(
-        selectedDatasetOrFolder.metadata?.map((entry, index) => ({ ...entry, index })) || [],
-      );
     }
-  }, [selectedDatasetOrFolder.metadata]);
+    if (!ignoreLocalMetadataUpdate) {
+      // Update state to newest metadata from selectedDatasetOrFolder.
+      setMetadata(datasetOrFolder.metadata?.map((entry, index) => ({ ...entry, index })) || []);
+    }
+    setCurrentDatasetOrFolderName(datasetOrFolder.name);
+    setIsCurrentEntityADataset(isDataset(datasetOrFolder));
+  }, [datasetOrFolder.name, datasetOrFolder.metadata]);
 
   useEffectOnUpdate(() => {
     if (error == null) {
       const metadataWithoutIndex = metadata.map(({ index: _ignored, ...rest }) => rest);
-      const didMetadataChange = !_.isEqual(metadataWithoutIndex, selectedDatasetOrFolder.metadata);
+      const didMetadataChange = !_.isEqual(metadataWithoutIndex, datasetOrFolder.metadata);
       if (didMetadataChange) {
-        updateCachedDatasetOrFolderDebouncedTracked(
-          context,
-          selectedDatasetOrFolder,
-          metadataWithoutIndex,
-        );
+        updateCachedDatasetOrFolderDebouncedTracked(context, datasetOrFolder, metadataWithoutIndex);
       }
     }
   }, [metadata, error]);
@@ -340,7 +352,7 @@ export default function MetadataTable({
   return (
     <div style={{ marginBottom: 16 }}>
       <div className="sidebar-label">
-        Name: <span style={{ color: "red" }}>{selectedDatasetOrFolder.name}</span>
+        Name: <span style={{ color: "red" }}>{datasetOrFolder.name}</span>
       </div>
       <div className="sidebar-label">Metadata</div>
       <div className="ant-tag antd-app-theme metadata-table-wrapper">
@@ -357,7 +369,7 @@ export default function MetadataTable({
           <tbody>
             {sortedDetails.map(renderMetadataRow)}
             {sortedDetails.length === 0 && (
-              <EmptyTablePlaceholder isDataset={"folderId" in selectedDatasetOrFolder} />
+              <EmptyTablePlaceholder isDataset={isDataset(datasetOrFolder)} />
             )}
             <AddNewMetadataEntryRow />
           </tbody>

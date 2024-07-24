@@ -177,7 +177,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
             </Tag>
           )}
         </div>
-        {fullDataset && <MetadataTable selectedDatasetOrFolder={fullDataset} />}
+        {fullDataset && <MetadataTable datasetOrFolder={fullDataset} />}
       </Spin>
 
       {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
@@ -282,7 +282,7 @@ function FolderDetails({
           <div style={{ marginBottom: 4 }}>
             <FolderTeamTags folder={folder} />
           </div>
-          <MetadataTable selectedDatasetOrFolder={folder} />
+          <MetadataTable datasetOrFolder={folder} />
         </div>
       ) : error ? (
         "Could not load folder."

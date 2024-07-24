@@ -243,21 +243,27 @@ function TreeHierarchyView(props: Props) {
   function setExpansionOfAllSubgroupsTo(parentGroup: TreeNode, expanded: boolean) {
     if (parentGroup.id === MISSING_GROUP_ID) {
       const newGroups = mapGroups(props.treeGroups, (group) => {
-        return { ...group, isExpanded: expanded };
+        if (group.isExpanded !== expanded) {
+          return { ...group, isExpanded: expanded };
+        }
+        return group;
       });
       setUpdateTreeGroups(newGroups);
       return;
     }
     const subGroups = getGroupByIdWithSubgroups(props.treeGroups, parentGroup.id);
     const subGroupsMap = new Set(subGroups);
+    // If the subgroups will should be collapsed, not collapse the group itself.
+    // Do expand the group if the subgroups are expanded though.
+    if (expanded === false) subGroupsMap.delete(parentGroup.id);
     const newGroups = mapGroups(props.treeGroups, (group) => {
-      const shouldBeExpanded = subGroupsMap.has(group.groupId);
-      if (shouldBeExpanded !== group.isExpanded) {
+      if (subGroupsMap.has(group.groupId) && expanded !== group.isExpanded) {
         return { ...group, isExpanded: expanded };
       } else {
         return group;
       }
     });
+    console.log(newGroups);
     setUpdateTreeGroups(newGroups);
   }
 

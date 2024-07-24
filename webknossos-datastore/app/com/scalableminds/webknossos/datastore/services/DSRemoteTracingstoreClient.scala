@@ -5,6 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, ZarrHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
@@ -29,6 +30,11 @@ class DSRemoteTracingstoreClient @Inject()(
       .addQueryStringOptional("token", token)
       .getWithJsonResponse[ZarrHeader]
 
+  def getZarrJson(tracingId: String, mag: String, tracingStoreUri: String, token: Option[String]): Fox[Zarr3ArrayHeader] =
+    rpc(s"$tracingStoreUri/tracings/volume/zarr3_experimental/$tracingId/$mag/zarr.json")
+      .addQueryStringOptional("token", token)
+      .getWithJsonResponse[Zarr3ArrayHeader]
+
   def getVolumeLayerAsZarrLayer(tracingId: String,
                                 tracingName: Option[String],
                                 tracingStoreUri: String,
@@ -49,6 +55,15 @@ class DSRemoteTracingstoreClient @Inject()(
                      tracingStoreUri: String,
                      token: Option[String]): Fox[Array[Byte]] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/$cxyz").silent
+      .addQueryStringOptional("token", token)
+      .getWithBytesResponse
+
+  def getRawZarr3Cube(tracingId: String,
+                      mag: String,
+                      coordinates: String,
+                      tracingStoreUri: String,
+                      token: Option[String]): Fox[Array[Byte]] =
+    rpc(s"$tracingStoreUri/tracings/volume/zarr3_experimental/$tracingId/$mag/$coordinates").silent
       .addQueryStringOptional("token", token)
       .getWithBytesResponse
 

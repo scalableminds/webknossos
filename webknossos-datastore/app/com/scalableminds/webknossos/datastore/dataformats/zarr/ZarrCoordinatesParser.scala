@@ -14,14 +14,9 @@ object ZarrCoordinatesParser {
   }
 
   def parseNDimensionalDotCoordinates(
-                           coordinates: String,
-                         ): Option[Array[Int]] = {
+      coordinates: String,
+  ): Option[Array[Int]] = {
     val ndCoordinatesRx = "\\s*([0-9]+).([0-9]+).([0-9]+)(.([0-9]+))+\\s*".r
-
-    coordinates match {
-      case ndCoordinatesRx(coordString) =>
-        Some(coordString.split('.').map(coord => Integer.parseInt(coord)))
-      case _ => None
-    }
+    ndCoordinatesRx.findFirstIn(coordinates).map(m => m.split('.').map(coord => Integer.parseInt(coord)))
   }
 }

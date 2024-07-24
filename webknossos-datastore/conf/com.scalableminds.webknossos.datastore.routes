@@ -46,6 +46,9 @@ GET           /annotations/zarr/:accessTokenOrId/:dataLayerName/:mag/:cxyz      
 GET           /zarr3_experimental/:organizationName/:datasetName/:dataLayerName/:mag/zarr.json                                                @com.scalableminds.webknossos.datastore.controllers.Zarr3StreamingController.requestZarrJsonForMag(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, mag: String)
 GET           /zarr3_experimental/:organizationName/:datasetName/:dataLayerName/:mag/:coordinates                                             @com.scalableminds.webknossos.datastore.controllers.Zarr3StreamingController.requestRawZarr3Cube(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, mag: String, coordinates: String)
 
+GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName/:mag/zarr.json                                                  @com.scalableminds.webknossos.datastore.controllers.Zarr3StreamingController.zArray3PrivateLink(token: Option[String], accessTokenOrId: String, dataLayerName: String, mag: String)
+GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName/:mag/:coordinates                                               @com.scalableminds.webknossos.datastore.controllers.Zarr3StreamingController.rawZarr3CubePrivateLink(token: Option[String], accessTokenOrId: String, dataLayerName: String, mag: String, coordinates: String)
+
 
 # Segmentation mappings
 GET           /datasets/:organizationName/:datasetName/layers/:dataLayerName/mappings/:mappingName                                            @com.scalableminds.webknossos.datastore.controllers.BinaryDataController.mappingJson(token: Option[String], organizationName: String, datasetName: String, dataLayerName: String, mappingName: String)

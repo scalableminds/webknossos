@@ -9,10 +9,20 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
+  BytesCodecConfiguration,
+  ChunkGridConfiguration,
+  ChunkGridSpecification,
+  ChunkKeyEncoding,
+  ChunkKeyEncodingConfiguration,
+  TransposeCodecConfiguration,
+  TransposeSetting,
+  Zarr3ArrayHeader
+}
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
-import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
@@ -133,6 +143,53 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
   }
 
+  def zarrJsonForMag(token: Option[String], tracingId: String, mag: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        for {
+          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+
+          existingMags = tracing.resolutions.map(vec3IntFromProto)
+          magParsed <- Vec3Int
+            .fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
+          _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
+
+          additionalAxes = AdditionalAxis.fromProtos(tracing.additionalAxes)
+          dimNames = Some(Array("c") ++ additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
+
+          zarrHeader = Zarr3ArrayHeader(
+            zarr_format = 3,
+            node_type = "array",
+            // channel, additional axes, XYZ
+            shape = Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ Array(
+              (tracing.boundingBox.width + tracing.boundingBox.topLeft.x) / magParsed.x,
+              (tracing.boundingBox.height + tracing.boundingBox.topLeft.y) / magParsed.y,
+              (tracing.boundingBox.depth + tracing.boundingBox.topLeft.z) / magParsed.z
+            ),
+            data_type = Left(tracing.elementClass.toString),
+            chunk_grid = Left(
+              ChunkGridSpecification(
+                "regular",
+                ChunkGridConfiguration(
+                  chunk_shape = Array.fill(1 + additionalAxes.length)(1) ++ Array(DataLayer.bucketLength,
+                                                                                  DataLayer.bucketLength,
+                                                                                  DataLayer.bucketLength))
+              )),
+            chunk_key_encoding =
+              ChunkKeyEncoding("default", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
+            fill_value = Right(0),
+            attributes = None,
+            codecs = Seq(
+              TransposeCodecConfiguration(TransposeSetting.fOrderFromRank(additionalAxes.length + 4)),
+              BytesCodecConfiguration(Some("little")),
+            ),
+            storage_transformers = None,
+            dimension_names = dimNames
+          )
+        } yield Ok(Json.toJson(zarrHeader))
+      }
+  }
+
   def zGroup(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
       Future(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
@@ -213,6 +270,58 @@ class VolumeTracingZarrStreamingController @Inject()(
                                                             magParsed,
                                                             Vec3Int(x, y, z),
                                                             cubeSize,
+                                                            None,
+                                                            urlOrHeaderToken(token, request)) ~> NOT_FOUND
+          } yield Ok(dataWithFallback)
+        }
+      }
+    }
+
+  def rawZarr3Cube(token: Option[String], tracingId: String, mag: String, coordinates: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+          for {
+            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+
+            existingMags = tracing.resolutions.map(vec3IntFromProto)
+            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
+            _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
+
+            parsedCoordinates <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(coordinates) ?~> Messages(
+              "zarr.invalidChunkCoordinates") ~> NOT_FOUND
+            (x, y, z) = (parsedCoordinates(parsedCoordinates.length - 3),
+                         parsedCoordinates(parsedCoordinates.length - 2),
+                         parsedCoordinates(parsedCoordinates.length - 1))
+            additionalCoordinates = Some(
+              parsedCoordinates
+                .slice(1, parsedCoordinates.length - 3)
+                .zipWithIndex
+                .map(coordWithIndex =>
+                  new AdditionalCoordinate(name = s"t${coordWithIndex._2}", value = coordWithIndex._1))
+                .toList)
+            _ <- bool2Fox(parsedCoordinates.head == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> NOT_FOUND
+            cubeSize = DataLayer.bucketLength
+            wkRequest = WebknossosDataRequest(
+              position = Vec3Int(x, y, z) * cubeSize * magParsed,
+              mag = magParsed,
+              cubeSize = cubeSize,
+              fourBit = Some(false),
+              applyAgglomerate = None,
+              version = None,
+              additionalCoordinates = additionalCoordinates
+            )
+            (data, missingBucketIndices) <- if (tracing.getMappingIsEditable)
+              editableMappingService.volumeData(tracing, tracingId, List(wkRequest), urlOrHeaderToken(token, request))
+            else tracingService.data(tracingId, tracing, List(wkRequest))
+            dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
+                                                            tracingId,
+                                                            data,
+                                                            missingBucketIndices,
+                                                            magParsed,
+                                                            Vec3Int(x, y, z),
+                                                            cubeSize,
+                                                            additionalCoordinates,
                                                             urlOrHeaderToken(token, request)) ~> NOT_FOUND
           } yield Ok(dataWithFallback)
         }
@@ -226,6 +335,7 @@ class VolumeTracingZarrStreamingController @Inject()(
                                           mag: Vec3Int,
                                           position: Vec3Int,
                                           cubeSize: Int,
+                                          additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                                           urlToken: Option[String]): Fox[Array[Byte]] =
     if (missingBucketIndices.nonEmpty) {
       for {
@@ -237,7 +347,7 @@ class VolumeTracingZarrStreamingController @Inject()(
           fourBit = Some(false),
           applyAgglomerate = tracing.mappingName,
           version = None,
-          additionalCoordinates = None
+          additionalCoordinates = additionalCoordinates
         )
         (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(remoteFallbackLayer,
                                                                                       List(request),

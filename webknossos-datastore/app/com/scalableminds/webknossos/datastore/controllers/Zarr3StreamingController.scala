@@ -193,11 +193,11 @@ class Zarr3StreamingController @Inject()(
     }
   }
 
-  def rawZarrCubePrivateLink(token: Option[String],
-                             accessToken: String,
-                             dataLayerName: String,
-                             mag: String,
-                             coordinates: String): Action[AnyContent] =
+  def rawZarr3CubePrivateLink(token: Option[String],
+                              accessToken: String,
+                              dataLayerName: String,
+                              mag: String,
+                              coordinates: String): Action[AnyContent] =
     Action.async { implicit request =>
       for {
         annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
@@ -209,11 +209,11 @@ class Zarr3StreamingController @Inject()(
         result <- layer match {
           case Some(annotationLayer) =>
             remoteTracingstoreClient
-              .getRawZarrCube(annotationLayer.tracingId,
-                              mag,
-                              coordinates,
-                              annotationSource.tracingStoreUrl,
-                              relevantToken)
+              .getRawZarr3Cube(annotationLayer.tracingId,
+                               mag,
+                               coordinates,
+                               annotationSource.tracingStoreUrl,
+                               relevantToken)
               .map(Ok(_))
           case None =>
             rawZarr3Cube(annotationSource.organizationName,
@@ -237,7 +237,7 @@ class Zarr3StreamingController @Inject()(
                                                                                 datasetName,
                                                                                 dataLayerName) ~> NOT_FOUND
       //  (c, x, y, z)
-      parsedCoordinates <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(coordinates) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
+      parsedCoordinates <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(coordinates) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND // TODO: change error message
       magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
       _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       _ <- bool2Fox(parsedCoordinates.head == 0) ~> "zarr.invalidFirstChunkCoord" ~> NOT_FOUND
@@ -316,10 +316,10 @@ class Zarr3StreamingController @Inject()(
       )
     } yield Ok(Json.toJson(zarrHeader))
 
-  def zArrayPrivateLink(token: Option[String],
-                        accessToken: String,
-                        dataLayerName: String,
-                        mag: String): Action[AnyContent] = Action.async { implicit request =>
+  def zArray3PrivateLink(token: Option[String],
+                         accessToken: String,
+                         dataLayerName: String,
+                         mag: String): Action[AnyContent] = Action.async { implicit request =>
     for {
       annotationSource <- remoteWebknossosClient
         .getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
@@ -328,7 +328,7 @@ class Zarr3StreamingController @Inject()(
       result <- layer match {
         case Some(annotationLayer) =>
           remoteTracingstoreClient
-            .getZArray(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, relevantToken)
+            .getZarrJson(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, relevantToken)
             .map(z => Ok(Json.toJson(z)))
         case None =>
           zarrJsonForMag(annotationSource.organizationName, annotationSource.datasetName, dataLayerName, mag)

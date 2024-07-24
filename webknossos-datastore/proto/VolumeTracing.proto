@@ -52,6 +52,7 @@ message SegmentGroup {
   required string name = 1;
   required int32 groupId = 2;
   repeated SegmentGroup children = 3;
+  optional bool isExpanded = 4;
 }
 
 message VolumeTracingOpt {

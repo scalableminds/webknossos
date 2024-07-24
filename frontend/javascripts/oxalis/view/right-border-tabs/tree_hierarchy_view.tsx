@@ -248,15 +248,21 @@ function TreeHierarchyView(props: Props) {
           selectGroupById(groupId);
         },
 
-        onCancel() {},
+        onCancel() { },
       });
     } else {
       selectGroupById(groupId);
     }
   }
 
-  // TODO_c
   function setExpansionOfAllSubgroupsTo(parentGroup: TreeNode, expanded: boolean) {
+    if (parentGroup.id === MISSING_GROUP_ID) {
+      const newGroups = mapGroups(props.treeGroups, (group) => {
+        return { ...group, isExpanded: expanded };
+      });
+      setUpdateTreeGroups(newGroups);
+      return;
+    }
     const subGroups = getGroupByIdWithSubgroups(props.treeGroups, parentGroup.id);
     const subGroupsMap = new Set(subGroups);
     const newGroups = mapGroups(props.treeGroups, (group) => {
@@ -430,15 +436,15 @@ function TreeHierarchyView(props: Props) {
         },
         labelForActiveItems != null
           ? {
-              key: "moveHere",
-              onClick: () => {
-                onMoveWithContextAction(node);
-                handleGroupDropdownMenuVisibility(id, false);
-              },
-              disabled: isEditingDisabled,
-              icon: <ArrowRightOutlined />,
-              label: `Move active ${labelForActiveItems} here`,
-            }
+            key: "moveHere",
+            onClick: () => {
+              onMoveWithContextAction(node);
+              handleGroupDropdownMenuVisibility(id, false);
+            },
+            disabled: isEditingDisabled,
+            icon: <ArrowRightOutlined />,
+            label: `Move active ${labelForActiveItems} here`,
+          }
           : null,
         {
           key: "delete",
@@ -449,25 +455,25 @@ function TreeHierarchyView(props: Props) {
         },
         hasSubgroup
           ? {
-              key: "collapseSubgroups",
-              onClick: () => {
-                setExpansionOfAllSubgroupsTo(node, false);
-                handleGroupDropdownMenuVisibility(id, false);
-              },
-              icon: <ShrinkOutlined />,
-              label: "Collapse all subgroups",
-            }
+            key: "collapseSubgroups",
+            onClick: () => {
+              setExpansionOfAllSubgroupsTo(node, false);
+              handleGroupDropdownMenuVisibility(id, false);
+            },
+            icon: <ShrinkOutlined />,
+            label: "Collapse all subgroups",
+          }
           : null,
         hasSubgroup
           ? {
-              key: "expandSubgroups",
-              onClick: () => {
-                setExpansionOfAllSubgroupsTo(node, true);
-                handleGroupDropdownMenuVisibility(id, false);
-              },
-              icon: <ExpandAltOutlined />,
-              label: "Expand all subgroups",
-            }
+            key: "expandSubgroups",
+            onClick: () => {
+              setExpansionOfAllSubgroupsTo(node, true);
+              handleGroupDropdownMenuVisibility(id, false);
+            },
+            icon: <ExpandAltOutlined />,
+            label: "Expand all subgroups",
+          }
           : null,
         {
           key: "hideTree",
@@ -608,15 +614,15 @@ function TreeHierarchyView(props: Props) {
           },
           isAgglomerateSkeleton
             ? {
-                key: "convertToNormalSkeleton",
-                onClick: () => {
-                  setTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
-                  handleTreeDropdownMenuVisibility(tree.treeId, false);
-                },
-                title: "Convert to Normal Tree",
-                icon: <span className="fas fa-clipboard-check" />,
-                label: "Convert to Normal Tree",
-              }
+              key: "convertToNormalSkeleton",
+              onClick: () => {
+                setTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
+                handleTreeDropdownMenuVisibility(tree.treeId, false);
+              },
+              title: "Convert to Normal Tree",
+              icon: <span className="fas fa-clipboard-check" />,
+              label: "Convert to Normal Tree",
+            }
             : null,
         ],
       };

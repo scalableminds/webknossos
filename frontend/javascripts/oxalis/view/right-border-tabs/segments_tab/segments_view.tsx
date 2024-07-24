@@ -530,7 +530,8 @@ class SegmentsView extends React.Component<Props, State> {
       this.setState({ isRootGroupExpanded: true });
     }
     const newGroups = mapGroups(this.props.segmentGroups, (group) => {
-      if (expandedKeySet.has(getKeyForGroupId(group.groupId))) {
+      const shouldBeExpanded = expandedKeySet.has(getKeyForGroupId(group.groupId));
+      if (shouldBeExpanded !== group.isExpanded) {
         return {
           ...group,
           isExpanded: true,
@@ -551,7 +552,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (this.props.visibleSegmentationLayer == null) return;
     const groupsToCollapseSet = new Set(groupsToCollapse);
     const newGroups = mapGroups(this.props.segmentGroups, (group) => {
-      if (groupsToCollapseSet.has(getKeyForGroupId(group.groupId))) {
+      if (groupsToCollapseSet.has(getKeyForGroupId(group.groupId)) && group.isExpanded) {
         return {
           ...group,
           isExpanded: false,

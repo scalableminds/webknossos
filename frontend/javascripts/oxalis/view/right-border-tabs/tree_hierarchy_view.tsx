@@ -42,7 +42,6 @@ import {
   GroupTypeEnum,
   deepFlatFilter,
   getNodeKey,
-  getNodeKeyFromNode,
   moveGroupsHelper,
   findParentGroupNode,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
@@ -134,7 +133,6 @@ function TreeHierarchyView(props: Props) {
       UITreeData,
       (node) => node.type === GroupTypeEnum.GROUP && node.expanded,
     ).map((node) => node.key);
-    console.log("expandedKeys", expandedKeys);
     setExpandedNodeKeys(expandedKeys);
   }, [UITreeData]);
 
@@ -177,9 +175,7 @@ function TreeHierarchyView(props: Props) {
         return { ...group, isExpanded: false };
       }
     });
-
     setUpdateTreeGroups(newGroups);
-    console.log("newGroups", newGroups);
   };
 
   const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
@@ -260,17 +256,17 @@ function TreeHierarchyView(props: Props) {
   }
 
   // TODO_c
-  function setExpansionOfAllSubgroupsTo(group: TreeNode, expanded: boolean) {
-    const selectedGroupIdKey = getNodeKeyFromNode(group);
-    const subGroupKeys = deepFlatFilter([group], (node) => node.type === GroupTypeEnum.GROUP).map(
-      (node) => node.key,
-    );
-
-    if (expanded) {
-      setExpandedNodeKeys(_.uniq([...expandedNodeKeys, ...subGroupKeys]));
-    } else {
-      setExpandedNodeKeys(_.without(expandedNodeKeys, selectedGroupIdKey, ...subGroupKeys));
-    }
+  function setExpansionOfAllSubgroupsTo(parentGroup: TreeNode, expanded: boolean) {
+    const subGroups = getGroupByIdWithSubgroups(props.treeGroups, parentGroup.id);
+    const subGroupsMap = new Set(subGroups);
+    const newGroups = mapGroups(props.treeGroups, (group) => {
+      if (group.groupId === parentGroup.id || subGroupsMap.has(group.groupId)) {
+        return { ...group, isExpanded: expanded };
+      } else {
+        return group;
+      }
+    });
+    setUpdateTreeGroups(newGroups);
   }
 
   function onMoveWithContextAction(targetParentNode: TreeNode) {

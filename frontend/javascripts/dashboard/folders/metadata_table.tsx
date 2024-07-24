@@ -22,7 +22,7 @@ import {
 } from "dashboard/dataset/dataset_collection_context";
 import { useEffectOnUpdate } from "libs/react_hooks";
 import _ from "lodash";
-import React from "react";
+import React, { memo } from "react";
 import { useState, useEffect } from "react";
 import {
   APIDataset,
@@ -53,6 +53,16 @@ function metadataTypeToString(type: APIMetadata["type"]) {
         </span>
       );
   }
+}
+
+function EmptyTablePlaceholder({ isDataset }: { isDataset: boolean }) {
+  return (
+    <tr>
+      <td colSpan={3} style={{ padding: 6 }}>
+        Add metadata properties to this {isDataset ? "dataset" : "folder"}.
+      </td>
+    </tr>
+  );
 }
 
 let isDatasetUpdatePending = false;
@@ -124,11 +134,14 @@ export default function MetadataTable({
   useEffectOnUpdate(() => {
     if (error == null) {
       const metadataWithoutIndex = metadata.map(({ index: _ignored, ...rest }) => rest);
-      updateCachedDatasetOrFolderDebouncedTracked(
-        context,
-        selectedDatasetOrFolder,
-        metadataWithoutIndex,
-      );
+      const didMetadataChange = !_.isEqual(metadataWithoutIndex, selectedDatasetOrFolder.metadata);
+      if (didMetadataChange) {
+        updateCachedDatasetOrFolderDebouncedTracked(
+          context,
+          selectedDatasetOrFolder,
+          metadataWithoutIndex,
+        );
+      }
     }
   }, [metadata, error]);
 
@@ -137,7 +150,7 @@ export default function MetadataTable({
     updateCachedDatasetOrFolderDebounced.flush();
   });
 
-  const updatePropName = (index: number, newPropName: string) => {
+  const updateMetadataKey = (index: number, newPropName: string) => {
     setMetadata((prev) => {
       const entry = prev.find((prop) => prop.index === index);
       if (!entry) {
@@ -160,7 +173,7 @@ export default function MetadataTable({
     });
   };
 
-  const updateValue = (index: number, newValue: number | string | string[]) => {
+  const updateMetadataValue = (index: number, newValue: number | string | string[]) => {
     setMetadata((prev) => {
       const entry = prev.find((prop) => prop.index === index);
       if (!entry) {
@@ -172,7 +185,7 @@ export default function MetadataTable({
     });
   };
 
-  const addType = (type: APIMetadata["type"]) => {
+  const addNewEntryWithType = (type: APIMetadata["type"]) => {
     setMetadata((prev) => {
       const highestIndex = prev.reduce((acc, curr) => Math.max(acc, curr.index), 0);
       const newEntry: APIMetadataWithIndex = {
@@ -182,6 +195,8 @@ export default function MetadataTable({
         index: highestIndex + 1,
         type,
       };
+      // Auto focus the key input of the new entry.
+      setTimeout(() => document.getElementById(getKeyInputId(newEntry))?.focus(), 50);
       return [...prev, newEntry];
     });
   };
@@ -203,10 +218,36 @@ export default function MetadataTable({
       return {
         key: type,
         label: metadataTypeToString(type as APIMetadata["type"]),
-        onClick: () => addType(type as APIMetadata["type"]),
+        onClick: () => addNewEntryWithType(type as APIMetadata["type"]),
       };
     }),
   });
+
+  const getKeyInputId = (record: APIMetadataWithIndex) => `metadata-key-input-id-${record.index}`;
+
+  const getKeyInput = (record: APIMetadataWithIndex) => {
+    const isFocused = record.index === focusedRow;
+    return (
+      <>
+        <Input
+          className={isFocused ? undefined : "transparent-input"}
+          onFocus={() => setFocusedRow(record.index)}
+          onBlur={() => setFocusedRow(null)}
+          value={record.key}
+          onChange={(evt) => updateMetadataKey(record.index, evt.target.value)}
+          placeholder="Property"
+          size="small"
+          id={getKeyInputId(record)}
+        />
+        {error != null && error[0] === record.index ? (
+          <>
+            <br />
+            <Typography.Text type="warning">{error[1]}</Typography.Text>
+          </>
+        ) : null}
+      </>
+    );
+  };
 
   const getValueInput = (record: APIMetadataWithIndex) => {
     const isFocused = record.index === focusedRow;
@@ -222,7 +263,7 @@ export default function MetadataTable({
         return (
           <InputNumber
             value={record.value as number}
-            onChange={(newNum) => updateValue(record.index, newNum || 0)}
+            onChange={(newNum) => updateMetadataValue(record.index, newNum || 0)}
             {...sharedProps}
           />
         );
@@ -230,7 +271,7 @@ export default function MetadataTable({
         return (
           <Input
             value={record.value}
-            onChange={(evt) => updateValue(record.index, evt.target.value)}
+            onChange={(evt) => updateMetadataValue(record.index, evt.target.value)}
             {...sharedProps}
           />
         );
@@ -239,7 +280,7 @@ export default function MetadataTable({
           <Select
             mode="tags"
             value={record.value as string[]}
-            onChange={(values) => updateValue(record.index, values)}
+            onChange={(values) => updateMetadataValue(record.index, values)}
             options={availableStrArrayTagOptions}
             suffixIcon={null}
             {...sharedProps}
@@ -250,31 +291,57 @@ export default function MetadataTable({
     }
   };
 
-  const getKeyInput = (record: APIMetadataWithIndex) => {
-    const isFocused = record.index === focusedRow;
-    return (
-      <>
-        <Input
-          className={isFocused ? undefined : "transparent-input"}
-          onFocus={() => setFocusedRow(record.index)}
-          onBlur={() => setFocusedRow(null)}
-          value={record.key}
-          onChange={(evt) => updatePropName(record.index, evt.target.value)}
-          placeholder="Property"
-          size="small"
+  const getDeleteEntryButton = (record: APIMetadataWithIndex) => (
+    <Button
+      type="text"
+      icon={
+        <DeleteOutlined
+          style={{
+            color: "var(--ant-color-text-tertiary)",
+            width: 16,
+          }}
         />
-        {error != null && error[0] === record.index ? (
-          <>
-            <br />
-            <Typography.Text type="warning">{error[1]}</Typography.Text>
-          </>
-        ) : null}
-      </>
+      }
+      style={{ width: 16 }}
+      onClick={() => deleteKey(record.index)}
+    />
+  );
+
+  const renderMetadataRow = (record: APIMetadataWithIndex) => (
+    <tr key={record.index}>
+      <td>{getKeyInput(record)}</td>
+      <td>:</td>
+      <td>{getValueInput(record)}</td>
+      <td>{getDeleteEntryButton(record)}</td>
+    </tr>
+  );
+
+  const AddNewMetadataEntryRow = memo(function AddNewMetadataEntryRow() {
+    return (
+      <tr>
+        <td colSpan={3}>
+          <div className="flex-center-child">
+            <Dropdown
+              menu={getTypeSelectDropdownMenu()}
+              placement="bottom"
+              trigger={["click"]}
+              autoFocus
+            >
+              <Button ghost size="small" style={{ border: "none" }}>
+                <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
+              </Button>
+            </Dropdown>
+          </div>
+        </td>
+      </tr>
     );
-  };
+  });
 
   return (
     <div style={{ marginBottom: 16 }}>
+      <div className="sidebar-label">
+        Name: <span style={{ color: "red" }}>{selectedDatasetOrFolder.name}</span>
+      </div>
       <div className="sidebar-label">Metadata</div>
       <div className="ant-tag antd-app-theme metadata-table-wrapper">
         {/* Not using AntD Table to have more control over the styling. */}
@@ -288,40 +355,11 @@ export default function MetadataTable({
             </tr>
           </thead>
           <tbody>
-            {sortedDetails.map((record) => {
-              return (
-                <tr key={record.index}>
-                  <td>{getKeyInput(record)}</td>
-                  <td>:</td>
-                  <td>{getValueInput(record)}</td>
-                  <td>
-                    <DeleteOutlined
-                      onClick={() => deleteKey(record.index)}
-                      style={{
-                        color: "var(--ant-color-text-tertiary)",
-                        width: 16,
-                      }}
-                    />
-                  </td>
-                </tr>
-              );
-            })}
-            <tr>
-              <td colSpan={3}>
-                <div className="flex-center-child">
-                  <Dropdown
-                    menu={getTypeSelectDropdownMenu()}
-                    placement="bottom"
-                    trigger={["hover", "click"]}
-                    autoFocus
-                  >
-                    <Button ghost size="small" style={{ border: "none" }}>
-                      <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
-                    </Button>
-                  </Dropdown>
-                </div>
-              </td>
-            </tr>
+            {sortedDetails.map(renderMetadataRow)}
+            {sortedDetails.length === 0 && (
+              <EmptyTablePlaceholder isDataset={"folderId" in selectedDatasetOrFolder} />
+            )}
+            <AddNewMetadataEntryRow />
           </tbody>
         </table>
       </div>

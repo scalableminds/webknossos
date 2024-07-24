@@ -532,17 +532,14 @@ class SegmentsView extends React.Component<Props, State> {
     const newGroups = mapGroups(this.props.segmentGroups, (group) => {
       const shouldBeExpanded = expandedKeySet.has(getKeyForGroupId(group.groupId));
       if (shouldBeExpanded !== group.isExpanded) {
+        // Close all groups that are not in the expanded list so this method
+        // can be called for every update, e.g. when a group is collapsed.
         return {
           ...group,
-          isExpanded: true,
+          isExpanded: shouldBeExpanded,
         };
       } else {
-        return {
-          ...group,
-          isExpanded: false,
-          // Close all groups that are not in the expanded list so this method
-          // can be called for every update, e.g. when a group is collapsed.
-        };
+        return group;
       }
     });
     Store.dispatch(setSegmentGroupsAction(newGroups, this.props.visibleSegmentationLayer?.name));

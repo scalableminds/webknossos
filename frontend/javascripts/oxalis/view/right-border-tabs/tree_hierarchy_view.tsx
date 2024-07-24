@@ -318,7 +318,7 @@ function TreeHierarchyView(props: Props) {
 
     // in either case expand the parent group
     const newGroups = mapGroups(props.treeGroups, (group) => {
-      if (group.groupId === parentGroupId) {
+      if (group.groupId === parentGroupId && !group.isExpanded) {
         return { ...group, isExpanded: true };
       } else {
         return group;

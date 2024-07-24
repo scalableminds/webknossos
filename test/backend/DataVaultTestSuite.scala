@@ -88,6 +88,16 @@ class DataVaultTestSuite extends PlaySpec {
       }
 
       "with S3 data vault" should {
+        val uri = new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/s0")
+        val vaultPath = new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None)))
+        "return correct response" in {
+
+          val bytes = (vaultPath / dataKey).readBytes(Some(range))(globalExecutionContext).get(handleFoxJustification)
+
+          assert(bytes.length == range.length)
+          assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
+        }
+
         "return empty box" when {
           "requesting a nox-existent object" in {
             val uri = new URI("s3://non-existing-bucket/non-existing-object")

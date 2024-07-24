@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.storage.{
   RemoteSourceDescriptor,
   S3AccessKeyCredential
 }
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Full}
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -41,7 +42,7 @@ import scala.jdk.FutureConverters._
 import scala.jdk.OptionConverters.RichOptional
 import scala.util.{Failure, Success}
 
-class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
+class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault with LazyLogging {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
@@ -68,6 +69,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       implicit ec: ExecutionContext): Fox[(Array[Byte], String)] = {
     val responseTransformer: AsyncResponseTransformer[GetObjectResponse, ResponseBytes[GetObjectResponse]] =
       AsyncResponseTransformer.toBytes
+    logger.info(f"requesting ${request.key} from ${request.bucket}")
     for {
       responseBytesObject <- notFoundToEmpty(client.getObject(request, responseTransformer).asScala)
       bytes = responseBytesObject.asByteArray()

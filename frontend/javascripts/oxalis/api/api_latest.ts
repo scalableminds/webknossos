@@ -690,6 +690,7 @@ class TracingApi {
       name: name || `Group ${newGroupId}`,
       groupId: newGroupId,
       children: [],
+      isExpanded: false,
     };
 
     if (parentGroupId === MISSING_GROUP_ID) {

@@ -90,7 +90,7 @@ export function insertTreesAndTransform(
       timestamp: 0,
       children: _.orderBy(treeNodeChildren, ["name"], ["asc"]),
       disableCheckbox: treeNodeChildren.length === 0,
-      expanded: group.isExpanded == null ? true : group.isExpanded,
+      expanded: group.isExpanded == null || group.isExpanded,
       isChecked: treeNodeChildren.every(
         // Groups that don't contain any trees should not influence the state of their parents
         (groupOrTree) => groupOrTree.isChecked || !groupOrTree.containsTrees,

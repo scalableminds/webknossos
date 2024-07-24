@@ -142,6 +142,7 @@ function TreeHierarchyView(props: Props) {
 
   const onExpand: TreeProps<TreeNode>["onExpand"] = (expandedKeys, info) => {
     const clickedNode = info.node;
+    const expandedKeySet = new Set(expandedKeys);
 
     if (clickedNode.type === GroupTypeEnum.GROUP && info.expanded === false) {
       // when collapsing a group, we need to collapse all its sub-gropus
@@ -149,14 +150,14 @@ function TreeHierarchyView(props: Props) {
         [clickedNode],
         (node) => node.type === GroupTypeEnum.GROUP,
       ).map((node) => node.key);
-      expandedKeys = _.without(expandedKeys, ...subGroupKeys);
+      subGroupKeys.forEach((key) => expandedKeySet.delete(key));
     }
-    const expandedKeySet = new Set(expandedKeys);
     const newGroups = mapGroups(props.treeGroups, (group) => {
-      if (expandedKeySet.has(getNodeKey(GroupTypeEnum.GROUP, group.groupId))) {
-        return { ...group, isExpanded: true };
+      const shouldBeExpanded = expandedKeySet.has(getNodeKey(GroupTypeEnum.GROUP, group.groupId));
+      if (shouldBeExpanded !== group.isExpanded) {
+        return { ...group, isExpanded: shouldBeExpanded };
       } else {
-        return { ...group, isExpanded: false };
+        return group;
       }
     });
     setUpdateTreeGroups(newGroups);
@@ -250,7 +251,8 @@ function TreeHierarchyView(props: Props) {
     const subGroups = getGroupByIdWithSubgroups(props.treeGroups, parentGroup.id);
     const subGroupsMap = new Set(subGroups);
     const newGroups = mapGroups(props.treeGroups, (group) => {
-      if (subGroupsMap.has(group.groupId)) {
+      const shouldBeExpanded = subGroupsMap.has(group.groupId);
+      if (shouldBeExpanded !== group.isExpanded) {
         return { ...group, isExpanded: expanded };
       } else {
         return group;

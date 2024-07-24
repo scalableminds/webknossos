@@ -19,6 +19,18 @@ import {
 import Date from "libs/date";
 import * as Utils from "libs/utils";
 
+// These update actions are not idempotent. Having them
+// twice in the save queue causes a corruption of the current annotation.
+// Therefore, we check this.
+const NOT_IDEMPOTENT_ACTIONS = [
+  "createEdge",
+  "deleteEdge",
+  "createTree",
+  "deleteTree",
+  "createNode",
+  "deleteNode",
+];
+
 type TracingDict<V> = {
   skeleton: V;
   volumes: Record<string, V>;
@@ -122,57 +134,77 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "PUSH_SAVE_QUEUE_TRANSACTION": {
+      const { items, transactionId } = action;
+      if (items.length === 0) {
+        return state;
+      }
       // Only report tracing statistics, if a "real" update to the tracing happened
       const stats = _.some(action.items, (ua) => ua.name !== "updateTracing")
         ? getStats(state.tracing, action.saveQueueType, action.tracingId)
         : null;
-      const { items, transactionId } = action;
-
-      if (items.length > 0) {
-        const { activeUser } = state;
-        if (activeUser == null) {
-          throw new Error("Tried to save something even though user is not logged in.");
-        }
-
-        const updateActionChunks = _.chunk(
-          items,
-          MAXIMUM_ACTION_COUNT_PER_BATCH[action.saveQueueType],
-        );
-
-        const transactionGroupCount = updateActionChunks.length;
-        const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
-        const oldQueue = selectQueue(state, action.saveQueueType, action.tracingId);
-        const newQueue = oldQueue.concat(
-          updateActionChunks.map((actions, transactionGroupIndex) => ({
-            // Placeholder, the version number will be updated before sending to the server
-            version: -1,
-            transactionId,
-            transactionGroupCount,
-            transactionGroupIndex,
-            timestamp: Date.now(),
-            authorId: activeUser.id,
-            actions,
-            stats,
-            // Redux Action Log context for debugging purposes.
-            info: actionLogInfo,
-          })),
-        );
-        const newQueueObj = updateTracingDict(action, state.save.queue, newQueue);
-        return update(state, {
-          save: {
-            queue: {
-              $set: newQueueObj,
-            },
-            progressInfo: {
-              totalActionCount: {
-                $apply: (count) => count + items.length,
-              },
-            },
-          },
-        });
+      const { activeUser } = state;
+      if (activeUser == null) {
+        throw new Error("Tried to save something even though user is not logged in.");
       }
 
-      return state;
+      const updateActionChunks = _.chunk(
+        items,
+        MAXIMUM_ACTION_COUNT_PER_BATCH[action.saveQueueType],
+      );
+
+      const transactionGroupCount = updateActionChunks.length;
+      const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
+      const oldQueue = selectQueue(state, action.saveQueueType, action.tracingId);
+      const newQueue = oldQueue.concat(
+        updateActionChunks.map((actions, transactionGroupIndex) => ({
+          // Placeholder, the version number will be updated before sending to the server
+          version: -1,
+          transactionId,
+          transactionGroupCount,
+          transactionGroupIndex,
+          timestamp: Date.now(),
+          authorId: activeUser.id,
+          actions,
+          stats,
+          // Redux Action Log context for debugging purposes.
+          info: actionLogInfo,
+        })),
+      );
+
+      // The following code checks that the update actions are not identical to the previously
+      // added ones. We have received a bug report that showed corrupted data that should be
+      // caught by the following check. If the bug appears again, we can investigate with more
+      // details thanks to airbrake.
+      if (
+        action.saveQueueType === "skeleton" &&
+        oldQueue.length > 0 &&
+        newQueue.length > 0 &&
+        newQueue.at(-1)?.actions.some((action) => NOT_IDEMPOTENT_ACTIONS.includes(action.name)) &&
+        _.isEqual(oldQueue.at(-1)?.actions, newQueue.at(-1)?.actions)
+      ) {
+        console.warn(
+          "Redundant saving was detected.",
+          oldQueue.at(-1)?.actions,
+          newQueue.at(-1)?.actions,
+        );
+        throw new Error(
+          "An internal error has occurred. To prevent data corruption, no saving was performed. Please reload the page and try the last action again.",
+        );
+      }
+
+      const newQueueObj = updateTracingDict(action, state.save.queue, newQueue);
+      return update(state, {
+        save: {
+          queue: {
+            $set: newQueueObj,
+          },
+          progressInfo: {
+            totalActionCount: {
+              $apply: (count) => count + items.length,
+            },
+          },
+        },
+      });
     }
 
     case "SHIFT_SAVE_QUEUE": {

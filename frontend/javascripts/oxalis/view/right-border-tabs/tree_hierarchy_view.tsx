@@ -96,7 +96,6 @@ function TreeHierarchyView(props: Props) {
 
   const dispatch = useDispatch();
 
-  console.log("UITreeData", UITreeData);
   useEffect(() => {
     // equivalent of LifeCycle hook "getDerivedStateFromProps"
     // Insert the trees into the corresponding groups and create a
@@ -112,21 +111,6 @@ function TreeHierarchyView(props: Props) {
     const generatedGroupTree = insertTreesAndTransform([rootGroup], groupToTreesMap, props.sortBy);
     setUITreeData(generatedGroupTree);
   }, [props.trees, props.sortBy, props.treeGroups]);
-
-  // TODO_c I think this isnt needed because we expand all groups with isExpanded: true
-  /*   useEffectOnlyOnce(() => {
-      // set default expanded keys
-      // the defaults should include the root node and at the active tree's group if applicable
-      let defaultExpandedKeys: React.Key[] = [getNodeKey(GroupTypeEnum.GROUP, MISSING_GROUP_ID)];
-      if (props.activeTreeId) {
-        const activeTreesGroupId = props.trees[props.activeTreeId].groupId;
-        if (activeTreesGroupId) {
-          defaultExpandedKeys.push(getNodeKey(GroupTypeEnum.GROUP, activeTreesGroupId));
-        }
-  
-        setExpandedNodeKeys(defaultExpandedKeys);
-      }
-    }); */
 
   useEffect(() => {
     const expandedKeys = deepFlatFilter(
@@ -248,7 +232,7 @@ function TreeHierarchyView(props: Props) {
           selectGroupById(groupId);
         },
 
-        onCancel() {},
+        onCancel() { },
       });
     } else {
       selectGroupById(groupId);
@@ -266,7 +250,7 @@ function TreeHierarchyView(props: Props) {
     const subGroups = getGroupByIdWithSubgroups(props.treeGroups, parentGroup.id);
     const subGroupsMap = new Set(subGroups);
     const newGroups = mapGroups(props.treeGroups, (group) => {
-      if (group.groupId === parentGroup.id || subGroupsMap.has(group.groupId)) {
+      if (subGroupsMap.has(group.groupId)) {
         return { ...group, isExpanded: expanded };
       } else {
         return group;
@@ -443,15 +427,15 @@ function TreeHierarchyView(props: Props) {
         },
         labelForActiveItems != null
           ? {
-              key: "moveHere",
-              onClick: () => {
-                onMoveWithContextAction(node);
-                handleGroupDropdownMenuVisibility(id, false);
-              },
-              disabled: isEditingDisabled,
-              icon: <ArrowRightOutlined />,
-              label: `Move active ${labelForActiveItems} here`,
-            }
+            key: "moveHere",
+            onClick: () => {
+              onMoveWithContextAction(node);
+              handleGroupDropdownMenuVisibility(id, false);
+            },
+            disabled: isEditingDisabled,
+            icon: <ArrowRightOutlined />,
+            label: `Move active ${labelForActiveItems} here`,
+          }
           : null,
         {
           key: "delete",
@@ -462,25 +446,25 @@ function TreeHierarchyView(props: Props) {
         },
         hasSubgroup
           ? {
-              key: "collapseSubgroups",
-              onClick: () => {
-                setExpansionOfAllSubgroupsTo(node, false);
-                handleGroupDropdownMenuVisibility(id, false);
-              },
-              icon: <ShrinkOutlined />,
-              label: "Collapse all subgroups",
-            }
+            key: "collapseSubgroups",
+            onClick: () => {
+              setExpansionOfAllSubgroupsTo(node, false);
+              handleGroupDropdownMenuVisibility(id, false);
+            },
+            icon: <ShrinkOutlined />,
+            label: "Collapse all subgroups",
+          }
           : null,
         hasSubgroup
           ? {
-              key: "expandSubgroups",
-              onClick: () => {
-                setExpansionOfAllSubgroupsTo(node, true);
-                handleGroupDropdownMenuVisibility(id, false);
-              },
-              icon: <ExpandAltOutlined />,
-              label: "Expand all subgroups",
-            }
+            key: "expandSubgroups",
+            onClick: () => {
+              setExpansionOfAllSubgroupsTo(node, true);
+              handleGroupDropdownMenuVisibility(id, false);
+            },
+            icon: <ExpandAltOutlined />,
+            label: "Expand all subgroups",
+          }
           : null,
         {
           key: "hideTree",
@@ -621,15 +605,15 @@ function TreeHierarchyView(props: Props) {
           },
           isAgglomerateSkeleton
             ? {
-                key: "convertToNormalSkeleton",
-                onClick: () => {
-                  setTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
-                  handleTreeDropdownMenuVisibility(tree.treeId, false);
-                },
-                title: "Convert to Normal Tree",
-                icon: <span className="fas fa-clipboard-check" />,
-                label: "Convert to Normal Tree",
-              }
+              key: "convertToNormalSkeleton",
+              onClick: () => {
+                setTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
+                handleTreeDropdownMenuVisibility(tree.treeId, false);
+              },
+              title: "Convert to Normal Tree",
+              icon: <span className="fas fa-clipboard-check" />,
+              label: "Convert to Normal Tree",
+            }
             : null,
         ],
       };

@@ -363,7 +363,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         name: group.name,
         type: GroupTypeEnum.GROUP,
         id: group.groupId,
-        expanded: group.isExpanded == null ? true : group.isExpanded, // TODO_c ? ok so?
       });
 
       function* mapGroupsAndTreesSorted(
@@ -595,7 +594,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       cancelText: "No",
       autoFocusButton: "cancel",
       icon: <WarningOutlined />,
-      onCancel: () => {},
+      onCancel: () => { },
       onOk: () => {
         onConfirm();
       },
@@ -759,12 +758,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         },
         this.props.isSkeletonLayerTransformed
           ? {
-              key: "handleNmlDownloadTransformed",
-              onClick: () => this.handleNmlDownload(true),
-              icon: <DownloadOutlined />,
-              label: "Download Visible Trees (Transformed)",
-              title: "The currently active transformation will be applied to each node.",
-            }
+            key: "handleNmlDownloadTransformed",
+            onClick: () => this.handleNmlDownload(true),
+            icon: <DownloadOutlined />,
+            label: "Download Visible Trees (Transformed)",
+            title: "The currently active transformation will be applied to each node.",
+          }
           : null,
         {
           key: "importNml",

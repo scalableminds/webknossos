@@ -378,8 +378,6 @@ export function performDiffTracing(
 
 export function* saveTracingAsync(): Saga<void> {
   yield* takeEvery("INITIALIZE_SKELETONTRACING", setupSavingForTracingType);
-  // todop: remove again
-  yield* takeEvery("INITIALIZE_SKELETONTRACING", setupSavingForTracingType);
   yield* takeEvery("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
   yield* takeEvery("INITIALIZE_EDITABLE_MAPPING", setupSavingForEditableMapping);
 }

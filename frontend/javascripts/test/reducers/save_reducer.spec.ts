@@ -52,9 +52,9 @@ test("Save should add update actions to the queue", (t) => {
   t.deepEqual(newState.save.queue.skeleton, saveQueue);
 });
 test("Save should add more update actions to the queue", (t) => {
-  const items = [createEdge(0, 1, 2), createEdge(1, 2, 3)];
-  const saveQueue = createSaveQueueFromUpdateActions([items, items], TIMESTAMP);
-  const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton");
+  const getItems = () => [createEdge(0, 1, 2), createEdge(1, 2, 3)];
+  const saveQueue = createSaveQueueFromUpdateActions([getItems(), getItems()], TIMESTAMP);
+  const pushAction = SaveActions.pushSaveQueueTransaction(getItems(), "skeleton");
   const testState = SaveReducer(initialState, pushAction);
   const newState = SaveReducer(testState, pushAction);
   t.deepEqual(newState.save.queue.skeleton, saveQueue);

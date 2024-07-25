@@ -241,7 +241,7 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
-  const [colorLayerNames, segmentationLayerNames] = _.partition(
+  const [segmentationLayerNames, colorLayerNames] = _.partition(
     dataset.dataSource.dataLayers,
     (layer) => layer.category === "segmentation",
   ).map((layers) => layers.map((layer) => layer.name).sort());

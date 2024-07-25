@@ -377,6 +377,7 @@ const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
 
 const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[]) => {
   const expandedGroups = getExpandedKeys(segmentGroups);
+  expandedGroups.unshift(getKeyForGroupId(MISSING_GROUP_ID));
   return expandedGroups;
 };
 
@@ -1903,7 +1904,6 @@ class SegmentsView extends React.Component<Props, State> {
                             ref={this.tree}
                             onExpand={this.setExpandedGroups}
                             expandedKeys={this.state.expandedGroupKeys}
-                            autoExpandParent
                           />
                         </div>
                       )}

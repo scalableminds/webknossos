@@ -55,58 +55,47 @@ function metadataTypeToString(type: APIMetadata["type"]) {
   }
 }
 
-function EmptyTablePlaceholder({ isDataset }: { isDataset: boolean }) {
-  return (
-    <tr>
-      <td colSpan={3} style={{ padding: 6 }}>
-        Add metadata properties to this {isDataset ? "dataset" : "folder"}.
-      </td>
-    </tr>
-  );
-}
-
-let isUpdatePending = false;
-const updateCachedDatasetOrFolderDebounced = _.debounce(
+const updateMetadataDebounced = _.debounce(
   async (
     context: DatasetCollectionContextValue,
     selectedDatasetOrFolder: APIDataset | Folder,
     metadata: APIMetadataEntries,
+    setIfUpdatePending: (value: boolean) => void,
+    setDidUpdateSucceed: (value: boolean) => void,
   ) => {
-    isUpdatePending = false;
+    setIfUpdatePending(false);
     if ("folderId" in selectedDatasetOrFolder) {
       // In case of a dataset, update the dataset's metadata.
-      await context.updateCachedDataset(selectedDatasetOrFolder, { metadata: metadata });
+      try {
+        const updatedDataset = await context.updateCachedDataset(selectedDatasetOrFolder, {
+          metadata: metadata,
+        });
+        setDidUpdateSucceed(_.isEqual(updatedDataset.metadata, metadata));
+      } catch (error) {
+        console.error(error);
+        setDidUpdateSucceed(false);
+      }
     } else {
       // Else update the folders metadata.
       const folder = selectedDatasetOrFolder;
-      await context.queries.updateFolderMutation.mutateAsync({
-        ...folder,
-        allowedTeams: folder.allowedTeams?.map((t) => t.id) || [],
-        metadata,
-      });
+      try {
+        const updatedFolder = await context.queries.updateFolderMutation.mutateAsync({
+          ...folder,
+          allowedTeams: folder.allowedTeams?.map((t) => t.id) || [],
+          metadata,
+        });
+        setDidUpdateSucceed(_.isEqual(updatedFolder.metadata, metadata));
+      } catch (error) {
+        console.error(error);
+        setDidUpdateSucceed(false);
+      }
     }
   },
   3000,
 );
-const originalFlush = updateCachedDatasetOrFolderDebounced.flush;
-// Overwrite the debounce flush function to avoid flushing when no update is pending.
-updateCachedDatasetOrFolderDebounced.flush = async () => {
-  if (!isUpdatePending) return;
-  isUpdatePending = false;
-  originalFlush();
-};
-function updateCachedDatasetOrFolderDebouncedTracked(
-  context: DatasetCollectionContextValue,
-  selectedDatasetOrFolder: APIDataset | Folder,
-  metadata: APIMetadataEntries,
-) {
-  isUpdatePending = true;
-  updateCachedDatasetOrFolderDebounced(context, selectedDatasetOrFolder, metadata);
-  return updateCachedDatasetOrFolderDebounced;
-}
 
-type APIMetadataWithIndex = APIMetadata & { index: number };
-type IndexedMetadataEntries = APIMetadataWithIndex[];
+type APIMetadataWithIndexAndError = APIMetadata & { index: number; error?: string | null };
+type IndexedMetadataEntries = APIMetadataWithIndexAndError[];
 
 const isDataset = (datasetOrFolder: APIDataset | Folder): datasetOrFolder is APIDataset =>
   "folderId" in datasetOrFolder;
@@ -116,9 +105,8 @@ export default function MetadataTable({
 }: { datasetOrFolder: APIDataset | Folder }) {
   const context = useDatasetCollectionContext();
   const [metadata, setMetadata] = useState<IndexedMetadataEntries>(
-    datasetOrFolder?.metadata?.map((entry, index) => ({ ...entry, index })) || [],
+    datasetOrFolder?.metadata?.map((entry, index) => ({ ...entry, index, error: null })) || [],
   );
-  const [error, setError] = useState<[number, string] | null>(null); // [index, error message]
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
   // Save the current dataset or folder name and the type of it to be able to determine whether the passed datasetOrFolder to this component changed.
   const [currentDatasetOrFolderName, setCurrentDatasetOrFolderName] = useState<string>(
@@ -128,17 +116,42 @@ export default function MetadataTable({
     isDataset(datasetOrFolder),
   );
 
+  const [isAddEntryDropdownOpen, setIsAddEntryDropdownOpen] = useState(false);
+
+  const [isUpdatePending, setIfUpdatePending] = useState(false);
+  const [didUpdateSucceed, setDidUpdateSucceed] = useState(true);
+  const flushPendingUpdates = async () => {
+    if (!isUpdatePending) return;
+    setIfUpdatePending(false);
+    updateMetadataDebounced.flush();
+  };
+  function updateMetadataDebouncedTracked(
+    context: DatasetCollectionContextValue,
+    selectedDatasetOrFolder: APIDataset | Folder,
+    metadata: APIMetadataEntries,
+  ) {
+    setIfUpdatePending(true);
+    updateMetadataDebounced(
+      context,
+      selectedDatasetOrFolder,
+      metadata,
+      setIfUpdatePending,
+      setDidUpdateSucceed,
+    );
+  }
+
   // Always update local state when folder / dataset changes or the result of the update request
   // to the backend is resolved shown by a changed value in selectedDatasetOrFolder.metadata.
   useEffectOnUpdate(() => {
     const isSameName = datasetOrFolder.name === currentDatasetOrFolderName;
     const isSameType = isDataset(datasetOrFolder) === isCurrentEntityADataset;
-    // In case an update is pending and the dataset or folder is the same as before, flush the pending update and ignore the changes to datasetOrFolder.metadata.
-    // Otherwise, a cyclic update between the version of the selectedDatasetOrFolder.metadata and the flushed version might occur.
-    const ignoreLocalMetadataUpdate = isUpdatePending && isSameName && isSameType;
-    if (isUpdatePending) {
-      updateCachedDatasetOrFolderDebounced.flush();
+    const isSameDatasetOrFolder = isSameName && isSameType;
+    if (isUpdatePending && !isSameDatasetOrFolder) {
+      // Flush pending updates as the dataset or folder changed and its metadata should be shown now.
+      flushPendingUpdates();
     }
+    // Ignore updates in case they weres successful and the dataset or folder is the same as before to avoid undoing changes made by the user during the debounce time.
+    const ignoreLocalMetadataUpdate = didUpdateSucceed && isSameDatasetOrFolder;
     if (!ignoreLocalMetadataUpdate) {
       // Update state to newest metadata from selectedDatasetOrFolder.
       setMetadata(datasetOrFolder.metadata?.map((entry, index) => ({ ...entry, index })) || []);
@@ -148,31 +161,37 @@ export default function MetadataTable({
   }, [datasetOrFolder.name, datasetOrFolder.metadata]);
 
   useEffectOnUpdate(() => {
-    if (error == null) {
-      const metadataWithoutIndex = metadata.map(({ index: _ignored, ...rest }) => rest);
-      const didMetadataChange = !_.isEqual(metadataWithoutIndex, datasetOrFolder.metadata);
-      if (didMetadataChange) {
-        updateCachedDatasetOrFolderDebouncedTracked(context, datasetOrFolder, metadataWithoutIndex);
-      }
+    const hasErrors = metadata.some((entry) => entry.error != null);
+    if (hasErrors) {
+      return;
     }
-  }, [metadata, error]);
+    const metadataWithoutIndexAndError = metadata.map(
+      ({ index: _ignored, error: _ignored2, ...rest }) => rest,
+    );
+    const didMetadataChange = !_.isEqual(metadataWithoutIndexAndError, datasetOrFolder.metadata);
+    if (didMetadataChange) {
+      updateMetadataDebouncedTracked(context, datasetOrFolder, metadataWithoutIndexAndError);
+    }
+  }, [metadata]);
 
   // On component unmount flush pending updates to avoid potential data loss.
   useWillUnmount(() => {
-    updateCachedDatasetOrFolderDebounced.flush();
+    flushPendingUpdates();
   });
 
   const updateMetadataKey = (index: number, newPropName: string) => {
     setMetadata((prev) => {
+      let error = null;
       const entry = prev.find((prop) => prop.index === index);
       if (!entry) {
         return prev;
       }
       const maybeAlreadyExistingEntry = prev.find((prop) => prop.key === newPropName);
       if (maybeAlreadyExistingEntry) {
-        setError([entry?.index || -1, `Property ${newPropName} already exists.`]);
-      } else {
-        setError(null);
+        error = `Property ${newPropName} already exists.`;
+      }
+      if (newPropName === "") {
+        error = "Property name cannot be empty.";
       }
       const detailsWithoutEditedEntry = prev.filter((prop) => prop.index !== index);
       return [
@@ -180,6 +199,7 @@ export default function MetadataTable({
         {
           ...entry,
           key: newPropName,
+          error,
         },
       ];
     });
@@ -200,12 +220,13 @@ export default function MetadataTable({
   const addNewEntryWithType = (type: APIMetadata["type"]) => {
     setMetadata((prev) => {
       const highestIndex = prev.reduce((acc, curr) => Math.max(acc, curr.index), 0);
-      const newEntry: APIMetadataWithIndex = {
+      const newEntry: APIMetadataWithIndexAndError = {
         key: "",
         value:
           type === APIMetadataType.STRING_ARRAY ? [] : type === APIMetadataType.NUMBER ? 0 : "",
         index: highestIndex + 1,
         type,
+        error: "Enter a property name.",
       };
       // Auto focus the key input of the new entry.
       setTimeout(() => document.getElementById(getKeyInputId(newEntry))?.focus(), 50);
@@ -230,14 +251,18 @@ export default function MetadataTable({
       return {
         key: type,
         label: metadataTypeToString(type as APIMetadata["type"]),
-        onClick: () => addNewEntryWithType(type as APIMetadata["type"]),
+        onClick: () => {
+          setIsAddEntryDropdownOpen(false);
+          addNewEntryWithType(type as APIMetadata["type"]);
+        },
       };
     }),
   });
 
-  const getKeyInputId = (record: APIMetadataWithIndex) => `metadata-key-input-id-${record.index}`;
+  const getKeyInputId = (record: APIMetadataWithIndexAndError) =>
+    `metadata-key-input-id-${record.index}`;
 
-  const getKeyInput = (record: APIMetadataWithIndex) => {
+  const getKeyInput = (record: APIMetadataWithIndexAndError) => {
     const isFocused = record.index === focusedRow;
     return (
       <>
@@ -251,17 +276,17 @@ export default function MetadataTable({
           size="small"
           id={getKeyInputId(record)}
         />
-        {error != null && error[0] === record.index ? (
+        {record.error != null ? (
           <>
             <br />
-            <Typography.Text type="warning">{error[1]}</Typography.Text>
+            <Typography.Text type="warning">{record.error}</Typography.Text>
           </>
         ) : null}
       </>
     );
   };
 
-  const getValueInput = (record: APIMetadataWithIndex) => {
+  const getValueInput = (record: APIMetadataWithIndexAndError) => {
     const isFocused = record.index === focusedRow;
     const sharedProps = {
       className: isFocused ? undefined : "transparent-input",
@@ -303,7 +328,7 @@ export default function MetadataTable({
     }
   };
 
-  const getDeleteEntryButton = (record: APIMetadataWithIndex) => (
+  const getDeleteEntryButton = (record: APIMetadataWithIndexAndError) => (
     <Button
       type="text"
       icon={
@@ -319,7 +344,7 @@ export default function MetadataTable({
     />
   );
 
-  const renderMetadataRow = (record: APIMetadataWithIndex) => (
+  const renderMetadataRow = (record: APIMetadataWithIndexAndError) => (
     <tr key={record.index}>
       <td>{getKeyInput(record)}</td>
       <td>:</td>
@@ -327,6 +352,21 @@ export default function MetadataTable({
       <td>{getDeleteEntryButton(record)}</td>
     </tr>
   );
+
+  function AddNewEntryDropdown({ children }: { children: React.ReactNode }) {
+    return (
+      <Dropdown
+        menu={getTypeSelectDropdownMenu()}
+        placement="bottom"
+        open={isAddEntryDropdownOpen}
+        onOpenChange={(open) => setIsAddEntryDropdownOpen(open)}
+        trigger={["click"]}
+        autoFocus
+      >
+        {children}
+      </Dropdown>
+    );
+  }
 
   const AddNewMetadataEntryRow = memo(function AddNewMetadataEntryRow() {
     return (
@@ -336,6 +376,8 @@ export default function MetadataTable({
             <Dropdown
               menu={getTypeSelectDropdownMenu()}
               placement="bottom"
+              open={isAddEntryDropdownOpen}
+              onOpenChange={(open) => setIsAddEntryDropdownOpen(open)}
               trigger={["click"]}
               autoFocus
             >
@@ -349,31 +391,48 @@ export default function MetadataTable({
     );
   });
 
+  function EmptyTablePlaceholder() {
+    return (
+      <div className="flex-center-child empty-metadata-placeholder">
+        <img
+          src="/assets/images/metadata-teaser.png"
+          alt="Metadata preview"
+          style={{ width: "60%", marginBottom: 16 }}
+        />
+        <span style={{ marginTop: 10 }}>
+          <AddNewEntryDropdown>
+            <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>
+              Add First Metadata Entry
+            </Button>
+          </AddNewEntryDropdown>
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div style={{ marginBottom: 16 }}>
-      <div className="sidebar-label">
-        Name: <span style={{ color: "red" }}>{datasetOrFolder.name}</span>
-      </div>
       <div className="sidebar-label">Metadata</div>
       <div className="ant-tag antd-app-theme metadata-table-wrapper">
         {/* Not using AntD Table to have more control over the styling. */}
-        <table className="ant-tag antd-app-theme metadata-table">
-          <thead>
-            <tr>
-              <th>Property</th>
-              <th />
-              <th>Value</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {sortedDetails.map(renderMetadataRow)}
-            {sortedDetails.length === 0 && (
-              <EmptyTablePlaceholder isDataset={isDataset(datasetOrFolder)} />
-            )}
-            <AddNewMetadataEntryRow />
-          </tbody>
-        </table>
+        {sortedDetails.length > 0 ? (
+          <table className="ant-tag antd-app-theme metadata-table">
+            <thead>
+              <tr>
+                <th>Property</th>
+                <th />
+                <th>Value</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {sortedDetails.map(renderMetadataRow)}
+              <AddNewMetadataEntryRow />
+            </tbody>
+          </table>
+        ) : (
+          <EmptyTablePlaceholder />
+        )}
       </div>
     </div>
   );

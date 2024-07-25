@@ -288,16 +288,24 @@ pre.dataset-import-folder-structure-hint {
       // Due to the border around the input elements, the width of the td has to be increased by 2px.
       width: 118.5px;
     }
+    tbody tr td:nth-child(3) {
+      display: flex;
+    }
     thead tr th:nth-child(2),
     tbody tr td:nth-child(2) {
       width: 5px;
       // Center the :
       text-align: center;
-      vertical-align: middle;
+      vertical-align: top;
     }
     thead tr th:nth-child(4),
     tbody tr td:nth-child(4) {
       width: 16px;
     }
+  }
+
+  .empty-metadata-placeholder {
+    padding: 16px;
+    text-align: center;
   }
 }

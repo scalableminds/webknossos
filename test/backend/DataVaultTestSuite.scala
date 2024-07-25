@@ -88,9 +88,9 @@ class DataVaultTestSuite extends PlaySpec {
       }
 
       "using S3 data vault" should {
-        val uri = new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/")
-        val vaultPath = new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None)))
         "return correct response" in {
+          val uri = new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/")
+          val vaultPath = new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None)))
           val bytes =
             (vaultPath / "s0/5/5/5").readBytes(Some(range))(globalExecutionContext).get(handleFoxJustification)
           assert(bytes.length == range.length)
@@ -129,13 +129,25 @@ class DataVaultTestSuite extends PlaySpec {
         }
       }
 
-      "return empty box" when {
-        "requesting a nox-existent object" in {
-          val uri = new URI("s3://non-existing-bucket/non-existing-object")
-          val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
-          val vaultPath = new VaultPath(uri, s3DataVault)
-          val result = vaultPath.readBytes()(globalExecutionContext).await(handleFoxJustification)
-          assertBoxEmpty(result)
+      "using s3 data vault" should {
+        "return correctly decoded brotli-compressed data" in {
+          val uri = new URI("s3://open-neurodata/bock11/image/4_4_40")
+          val vaultPath = new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None)))
+          val bytes =
+            (vaultPath / "33792-34304_29696-30208_3216-3232")
+              .readBytes()(globalExecutionContext)
+              .get(handleFoxJustification)
+          assert(bytes.take(10).sameElements(Array(-87, -95, -85, -94, -101, 124, 115, 100, 113, 111)))
+        }
+
+        "return empty box" when {
+          "requesting a nox-existent object" in {
+            val uri = new URI("s3://non-existing-bucket/non-existing-object")
+            val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
+            val vaultPath = new VaultPath(uri, s3DataVault)
+            val result = vaultPath.readBytes()(globalExecutionContext).await(handleFoxJustification)
+            assertBoxEmpty(result)
+          }
         }
       }
     }
@@ -163,7 +175,6 @@ class DataVaultTestSuite extends PlaySpec {
           }
         }
       }
-
     }
 
     "using vault path" when {

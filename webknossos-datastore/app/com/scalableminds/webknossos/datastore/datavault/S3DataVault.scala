@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.storage.{
   RemoteSourceDescriptor,
   S3AccessKeyCredential
 }
-import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Full}
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -42,7 +41,7 @@ import scala.jdk.FutureConverters._
 import scala.jdk.OptionConverters.RichOptional
 import scala.util.{Failure, Success}
 
-class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault with LazyLogging {
+class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
@@ -65,9 +64,10 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     val responseTransformer: AsyncResponseTransformer[GetObjectResponse, ResponseBytes[GetObjectResponse]] =
       AsyncResponseTransformer.toBytes
     for {
-      responseBytesObject <- notFoundToEmpty(client.getObject(request, responseTransformer).asScala)
-      bytes = responseBytesObject.asByteArray()
-    } yield (bytes, responseBytesObject.response().contentEncoding())
+      responseBytesObject: ResponseBytes[GetObjectResponse] <- notFoundToEmpty(
+        client.getObject(request, responseTransformer).asScala)
+      encoding = responseBytesObject.response().contentEncoding()
+    } yield (responseBytesObject.asByteArray(), if (encoding == null) "" else encoding)
   }
 
   private def notFoundToEmpty[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
@@ -76,7 +76,6 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       case Failure(exception) =>
         val box = exception match {
           case ce: CompletionException =>
-            logger.error(ce.getCause.getMessage)
             ce.getCause match {
               case _: NoSuchBucketException => net.liftweb.common.Empty
               case _: NoSuchKeyException    => net.liftweb.common.Empty

@@ -373,6 +373,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       Xml.withinElementSync("group") {
         writer.writeAttribute("name", t.name)
         writer.writeAttribute("id", t.groupId.toString)
+        writer.writeAttribute("isExpanded", t.isExpanded.toString)
         writeTreeGroupsAsXml(t.children)
       }
     }

@@ -165,7 +165,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       id <- idText.toIntOpt ?~ Messages("nml.treegroup.id.invalid", idText)
       children <- (node \ "group").map(parseTreeGroup).toList.toSingleBox("")
       name = getSingleAttribute(node, "name")
-    } yield TreeGroup(name, id, children)
+      isExpanded = getSingleAttribute(node, "isExpanded").toBooleanOpt.getOrElse(false)
+    } yield TreeGroup(name, id, children, isExpanded = Some(isExpanded))
   }
 
   private def extractVolumes(volumeNodes: NodeSeq)(implicit m: MessagesProvider): immutable.Seq[NmlVolumeTag] =

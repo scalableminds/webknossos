@@ -4,7 +4,7 @@ import _ from "lodash";
 import dayjs from "dayjs";
 import type { APIUpdateActionBatch } from "types/api_flow_types";
 import type { Versions } from "oxalis/view/version_view";
-import { chunkIntoTimeWindows, sleep } from "libs/utils";
+import { chunkIntoTimeWindows } from "libs/utils";
 import {
   getUpdateActionLog,
   downloadAnnotation,
@@ -206,10 +206,7 @@ function VersionList(props: Props) {
   const tracingStoreUrl = useSelector((state: OxalisState) => state.tracing.tracingStore.url);
 
   const newestVersion = useFetch(
-    () =>
-      sleep(100000).then(() =>
-        getNewestVersionForTracing(tracingStoreUrl, tracing.tracingId, props.versionedObjectType),
-      ),
+    () => getNewestVersionForTracing(tracingStoreUrl, tracing.tracingId, props.versionedObjectType),
     null,
     [tracing],
   );

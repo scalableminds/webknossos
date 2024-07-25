@@ -31,7 +31,7 @@ class DataVaultTestSuite extends PlaySpec {
       val range: NumericRange[Long] = Range.Long(0, 100, 1)
       val dataKey = "32_32_40/15360-15424_8384-8448_3520-3584" // when accessed via range request, the response body is 1024 bytes long, otherwise 124.8 KB
 
-      "with HTTP Vault" should {
+      "using HTTP Vault" should {
         "return correct response" in {
           WsTestClient.withClient { ws =>
             val uri = new URI("http://storage.googleapis.com/")
@@ -47,7 +47,7 @@ class DataVaultTestSuite extends PlaySpec {
         }
       }
 
-      "with Google Cloud Storage Vault" should {
+      "using Google Cloud Storage Vault" should {
         val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
         val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
         "return correct response" in {
@@ -65,7 +65,7 @@ class DataVaultTestSuite extends PlaySpec {
             assertBoxEmpty(result)
           }
         }
-        "returns failure" when {
+        "return failure" when {
           "requesting invalid range" in {
             val result = (vaultPath / dataKey)
               .readBytes(Some(Range.Long(-5, -10, 1)))(globalExecutionContext)
@@ -87,42 +87,23 @@ class DataVaultTestSuite extends PlaySpec {
         }
       }
 
-      "with S3 data vault" should {
+      "using S3 data vault" should {
         val uri = new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/")
         val vaultPath = new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None)))
         "return correct response" in {
-
           val bytes =
             (vaultPath / "s0/5/5/5").readBytes(Some(range))(globalExecutionContext).get(handleFoxJustification)
-          println(bytes.take(10).mkString("Array(", ", ", ")"))
           assert(bytes.length == range.length)
           assert(bytes.take(10).sameElements(Array(0, 0, 0, 3, 0, 0, 0, 64, 0, 0)))
         }
-
-        "return empty box" when {
-          "requesting a nox-existent object" in {
-            val uri = new URI("s3://non-existing-bucket/non-existing-object")
-            val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
-            val vaultPath = new VaultPath(uri, s3DataVault)
-            val result = vaultPath.readBytes()(globalExecutionContext).await(handleFoxJustification)
-            assertBoxEmpty(result)
-          }
-
-          "requesting directory listing on nox-existent bucket" in {
-            val uri = new URI("s3://non-existing-bucket/non-existing-object/")
-            val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
-            val vaultPath = new VaultPath(uri, s3DataVault)
-            val result = vaultPath.listDirectory(maxItems = 5)(globalExecutionContext).await(handleFoxJustification)
-            assertBoxEmpty(result)
-          }
-        }
       }
     }
-    "using regular requests" when {
+
+    "using regular readBytes requests" when {
       val dataKey = "32_32_40/15360-15424_8384-8448_3520-3584"
       val dataLength = 127808
 
-      "with HTTP Vault" should {
+      "using HTTP Vault" should {
         "return correct response" in {
           WsTestClient.withClient { ws =>
             val uri = new URI("http://storage.googleapis.com/")
@@ -137,7 +118,7 @@ class DataVaultTestSuite extends PlaySpec {
         }
       }
 
-      "with Google Cloud Storage Vault" should {
+      "using Google Cloud Storage Vault" should {
         "return correct response" in {
           val uri = new URI("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
           val vaultPath = new VaultPath(uri, GoogleCloudDataVault.create(RemoteSourceDescriptor(uri, None)))
@@ -147,6 +128,42 @@ class DataVaultTestSuite extends PlaySpec {
           assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
         }
       }
+
+      "return empty box" when {
+        "requesting a nox-existent object" in {
+          val uri = new URI("s3://non-existing-bucket/non-existing-object")
+          val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
+          val vaultPath = new VaultPath(uri, s3DataVault)
+          val result = vaultPath.readBytes()(globalExecutionContext).await(handleFoxJustification)
+          assertBoxEmpty(result)
+        }
+      }
+    }
+
+    "using directory list requests" when {
+      val uri = new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/")
+      val vaultPath = new VaultPath(uri, S3DataVault.create(RemoteSourceDescriptor(uri, None)))
+
+      "using s3 data vault" should {
+        "list available directories" in {
+          val result = vaultPath.listDirectory(maxItems = 3)(globalExecutionContext).get(handleFoxJustification)
+          assert(result.length == 3)
+          assert(
+            result.exists(
+              _.toUri == new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/s0/")))
+        }
+
+        "return empty box" when {
+          "requesting directory listing on nox-existent bucket" in {
+            val uri = new URI("s3://non-existing-bucket/non-existing-object/")
+            val s3DataVault = S3DataVault.create(RemoteSourceDescriptor(uri, None))
+            val vaultPath = new VaultPath(uri, s3DataVault)
+            val result = vaultPath.listDirectory(maxItems = 5)(globalExecutionContext).await(handleFoxJustification)
+            assertBoxEmpty(result)
+          }
+        }
+      }
+
     }
 
     "using vault path" when {

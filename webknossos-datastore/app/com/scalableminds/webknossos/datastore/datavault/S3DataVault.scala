@@ -7,7 +7,6 @@ import com.scalableminds.webknossos.datastore.storage.{
   RemoteSourceDescriptor,
   S3AccessKeyCredential
 }
-import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Full}
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -18,13 +17,13 @@ import software.amazon.awssdk.auth.credentials.{
   EnvironmentVariableCredentialsProvider,
   StaticCredentialsProvider
 }
-import software.amazon.awssdk.awscore.exception.AwsServiceException
 import software.amazon.awssdk.awscore.util.AwsHostNameUtils
 import software.amazon.awssdk.core.ResponseBytes
 import software.amazon.awssdk.core.async.AsyncResponseTransformer
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.model.{
+  CommonPrefix,
   GetObjectRequest,
   GetObjectResponse,
   ListObjectsV2Request,
@@ -42,7 +41,7 @@ import scala.jdk.FutureConverters._
 import scala.jdk.OptionConverters.RichOptional
 import scala.util.{Failure, Success}
 
-class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault with LazyLogging {
+class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
@@ -52,12 +51,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     S3DataVault.getAmazonS3Client(s3AccessKeyCredential, uri)
 
   private def getRangeRequest(bucketName: String, key: String, range: NumericRange[Long]): GetObjectRequest =
-    GetObjectRequest
-      .builder()
-      .bucket(bucketName)
-      .key(key)
-      .range(s"bytes=${range.start}-${range.end - 1}")
-      .build() // TODO check range format
+    GetObjectRequest.builder().bucket(bucketName).key(key).range(s"bytes=${range.start}-${range.end - 1}").build()
 
   private def getSuffixRangeRequest(bucketName: String, key: String, length: Long): GetObjectRequest =
     GetObjectRequest.builder.bucket(bucketName).key(key).range(s"bytes=-$length").build()
@@ -69,7 +63,6 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       implicit ec: ExecutionContext): Fox[(Array[Byte], String)] = {
     val responseTransformer: AsyncResponseTransformer[GetObjectResponse, ResponseBytes[GetObjectResponse]] =
       AsyncResponseTransformer.toBytes
-    logger.info(f"requesting ${request.key} from ${request.bucket} with range ${request.range()}")
     for {
       responseBytesObject <- notFoundToEmpty(client.getObject(request, responseTransformer).asScala)
       bytes = responseBytesObject.asByteArray()
@@ -117,12 +110,13 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
 
   private def getObjectSummaries(bucketName: String, keyPrefix: String, maxItems: Int)(
       implicit ec: ExecutionContext): Fox[List[String]] = {
+    val maxKeys = maxItems + 5 // since commonPrefixes will may out some results, we request a few more first
     val listObjectsRequest =
-      ListObjectsV2Request.builder().bucket(bucketName).prefix(keyPrefix).delimiter("/").maxKeys(maxItems).build()
+      ListObjectsV2Request.builder().bucket(bucketName).prefix(keyPrefix).delimiter("/").maxKeys(maxKeys).build()
     for {
       objectListing: ListObjectsV2Response <- notFoundToEmpty(client.listObjectsV2(listObjectsRequest).asScala)
-      s3SubPrefixes = objectListing.commonPrefixes().asScala.toList
-    } yield s3SubPrefixes.map(_.toString)
+      s3SubPrefixes: List[CommonPrefix] = objectListing.commonPrefixes().asScala.take(maxItems).toList
+    } yield s3SubPrefixes.map(_.prefix())
   }
 
   private def getUri = uri

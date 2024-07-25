@@ -67,7 +67,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
     for {
       responseBytesObject <- notFoundToEmpty(client.getObject(request, responseTransformer).asScala)
       bytes = responseBytesObject.asByteArray()
-    } yield (bytes, "") // TODO encoding?
+    } yield (bytes, responseBytesObject.response().contentEncoding())
   }
 
   private def notFoundToEmpty[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =

@@ -329,8 +329,6 @@ type State = {
   };
   activeStatisticsModalGroupId: number | null;
   expandedGroupKeys: Key[];
-  // This needs to be stored in the component because the root group does not exist outside of it.
-  isRootGroupExpanded: boolean;
 };
 
 const formatMagWithLabel = (mag: Vector3, index: number) => {
@@ -377,9 +375,8 @@ const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
   }, []);
 };
 
-const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[], isRootGroupExpanded: boolean) => {
+const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[]) => {
   const expandedGroups = getExpandedKeys(segmentGroups);
-  if (isRootGroupExpanded) expandedGroups.unshift(getKeyForGroupId(MISSING_GROUP_ID));
   return expandedGroups;
 };
 
@@ -437,7 +434,6 @@ class SegmentsView extends React.Component<Props, State> {
     groupsSegmentsVisibilityStateMap: {},
     activeStatisticsModalGroupId: null,
     expandedGroupKeys: [],
-    isRootGroupExpanded: true,
   };
   tree: React.RefObject<RcTree>;
 
@@ -463,10 +459,7 @@ class SegmentsView extends React.Component<Props, State> {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
 
     this.setState({
-      expandedGroupKeys: getExpandedKeysWithRoot(
-        this.props.segmentGroups,
-        this.state.isRootGroupExpanded,
-      ),
+      expandedGroupKeys: getExpandedKeysWithRoot(this.props.segmentGroups),
     });
   }
 
@@ -519,16 +512,6 @@ class SegmentsView extends React.Component<Props, State> {
   setExpandedGroups = (newExpandedGroups: Key[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
     const expandedKeySet = new Set(newExpandedGroups);
-    // Set the state of the root group according to the new expanded groups
-    // so that its expansion state is updated when the root group is expanded/collapsed.
-    if (this.state.isRootGroupExpanded && !expandedKeySet.has(getKeyForGroupId(MISSING_GROUP_ID))) {
-      this.setState({ isRootGroupExpanded: false });
-    } else if (
-      !this.state.isRootGroupExpanded &&
-      expandedKeySet.has(getKeyForGroupId(MISSING_GROUP_ID))
-    ) {
-      this.setState({ isRootGroupExpanded: true });
-    }
     const newGroups = mapGroups(this.props.segmentGroups, (group) => {
       const shouldBeExpanded = expandedKeySet.has(getKeyForGroupId(group.groupId));
       if (shouldBeExpanded !== group.isExpanded) {
@@ -649,7 +632,6 @@ class SegmentsView extends React.Component<Props, State> {
     const rootGroupWithChildren = {
       ...rootGroup,
       children: segmentGroups,
-      isExpanded: prevState.isRootGroupExpanded,
     };
     if (
       prevState.prevProps?.segments !== segments ||
@@ -681,10 +663,7 @@ class SegmentsView extends React.Component<Props, State> {
         groupTree: generatedGroupTree,
         searchableTreeItemList,
         prevProps: nextProps,
-        expandedGroupKeys: getExpandedKeysWithRoot(
-          nextProps.segmentGroups,
-          prevState.isRootGroupExpanded,
-        ),
+        expandedGroupKeys: getExpandedKeysWithRoot(nextProps.segmentGroups),
       };
     }
     if (prevState.prevProps?.meshes !== meshes) {
@@ -1923,6 +1902,7 @@ class SegmentsView extends React.Component<Props, State> {
                             ref={this.tree}
                             onExpand={this.setExpandedGroups}
                             expandedKeys={this.state.expandedGroupKeys}
+                            autoExpandParent
                           />
                         </div>
                       )}

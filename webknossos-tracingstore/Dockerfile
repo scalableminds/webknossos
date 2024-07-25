@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21
+FROM eclipse-temurin:21-jammy
 
 RUN apt-get update \
   && apt-get -y install libdraco4 \

@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.storage.{
   RemoteSourceDescriptor,
   S3AccessKeyCredential
 }
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Full}
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -41,7 +42,7 @@ import scala.jdk.FutureConverters._
 import scala.jdk.OptionConverters.RichOptional
 import scala.util.{Failure, Success}
 
-class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
+class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault with LazyLogging {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
     case Some(value) => value
     case None        => throw new Exception(s"Could not parse S3 bucket for ${uri.toString}")
@@ -75,6 +76,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
       case Failure(exception) =>
         val box = exception match {
           case ce: CompletionException =>
+            logger.error(ce.getCause.getMessage)
             ce.getCause match {
               case _: NoSuchBucketException => net.liftweb.common.Empty
               case _: NoSuchKeyException    => net.liftweb.common.Empty
@@ -191,7 +193,7 @@ object S3DataVault {
     }
 
   private def isNonAmazonHost(uri: URI): Boolean =
-    isPathStyle(uri) && !uri.getHost.endsWith(".amazonaws.com")
+    (isPathStyle(uri) && !uri.getHost.endsWith(".amazonaws.com")) || uri.getHost == "localhost"
 
   private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI): S3AsyncClient = {
     val basic =

@@ -3,6 +3,7 @@ import {
   FieldNumberOutlined,
   FieldStringOutlined,
   PlusOutlined,
+  SaveOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
 import {
@@ -14,23 +15,15 @@ import {
   Typography,
   Dropdown,
   Button,
+  Tooltip,
 } from "antd";
-import { useWillUnmount } from "beautiful-react-hooks";
-import {
-  DatasetCollectionContextValue,
-  useDatasetCollectionContext,
-} from "dashboard/dataset/dataset_collection_context";
-import { useEffectOnUpdate } from "libs/react_hooks";
+import { usePreviousValue, useWillUnmount } from "beautiful-react-hooks";
+import { useDatasetCollectionContext } from "dashboard/dataset/dataset_collection_context";
+import Toast from "libs/toast";
 import _ from "lodash";
-import React, { memo } from "react";
+import React, { useEffect } from "react";
 import { useState } from "react";
-import {
-  APIDataset,
-  Folder,
-  APIMetadataEntries,
-  APIMetadata,
-  APIMetadataType,
-} from "types/api_flow_types";
+import { APIDataset, Folder, APIMetadata, APIMetadataType } from "types/api_flow_types";
 
 function metadataTypeToString(type: APIMetadata["type"]) {
   switch (type) {
@@ -55,47 +48,9 @@ function metadataTypeToString(type: APIMetadata["type"]) {
   }
 }
 
-const updateMetadataDebounced = _.debounce(
-  async (
-    context: DatasetCollectionContextValue,
-    selectedDatasetOrFolder: APIDataset | Folder,
-    metadata: APIMetadataEntries,
-    setIfUpdatePending: (value: boolean) => void,
-    setDidUpdateSucceed: (value: boolean) => void,
-  ) => {
-    setIfUpdatePending(false);
-    if ("folderId" in selectedDatasetOrFolder) {
-      // In case of a dataset, update the dataset's metadata.
-      try {
-        const updatedDataset = await context.updateCachedDataset(selectedDatasetOrFolder, {
-          metadata: metadata,
-        });
-        setDidUpdateSucceed(_.isEqual(updatedDataset.metadata, metadata));
-      } catch (error) {
-        console.error(error);
-        setDidUpdateSucceed(false);
-      }
-    } else {
-      // Else update the folders metadata.
-      const folder = selectedDatasetOrFolder;
-      try {
-        const updatedFolder = await context.queries.updateFolderMutation.mutateAsync({
-          ...folder,
-          allowedTeams: folder.allowedTeams?.map((t) => t.id) || [],
-          metadata,
-        });
-        setDidUpdateSucceed(_.isEqual(updatedFolder.metadata, metadata));
-      } catch (error) {
-        console.error(error);
-        setDidUpdateSucceed(false);
-      }
-    }
-  },
-  3000,
-);
-
 type APIMetadataWithIndexAndError = APIMetadata & { index: number; error?: string | null };
 type IndexedMetadataEntries = APIMetadataWithIndexAndError[];
+type EffectCancelSignal = { dontUpdateState: boolean };
 
 const isDataset = (datasetOrFolder: APIDataset | Folder): datasetOrFolder is APIDataset =>
   "folderId" in datasetOrFolder;
@@ -104,79 +59,93 @@ export default function MetadataTable({
   datasetOrFolder,
 }: { datasetOrFolder: APIDataset | Folder }) {
   const context = useDatasetCollectionContext();
+  const previousDatasetOrFolder: APIDataset | Folder | undefined =
+    usePreviousValue(datasetOrFolder);
   const [metadata, setMetadata] = useState<IndexedMetadataEntries>(
     datasetOrFolder?.metadata?.map((entry, index) => ({ ...entry, index, error: null })) || [],
   );
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
-  // Save the current dataset or folder name and the type of it to be able to determine whether the passed datasetOrFolder to this component changed.
-  const [currentDatasetOrFolderName, setCurrentDatasetOrFolderName] = useState<string>(
-    datasetOrFolder.name,
-  );
-  const [isCurrentEntityADataset, setIsCurrentEntityADataset] = useState<boolean>(
-    isDataset(datasetOrFolder),
-  );
 
-  const [isAddEntryDropdownOpen, setIsAddEntryDropdownOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
-  const [isUpdatePending, setIfUpdatePending] = useState(false);
-  const [didUpdateSucceed, setDidUpdateSucceed] = useState(true);
-  const flushPendingUpdates = async () => {
-    if (!isUpdatePending) return;
-    setIfUpdatePending(false);
-    updateMetadataDebounced.flush();
-  };
-  function updateMetadataDebouncedTracked(
-    context: DatasetCollectionContextValue,
-    selectedDatasetOrFolder: APIDataset | Folder,
-    metadata: APIMetadataEntries,
-  ) {
-    setIfUpdatePending(true);
-    updateMetadataDebounced(
-      context,
-      selectedDatasetOrFolder,
-      metadata,
-      setIfUpdatePending,
-      setDidUpdateSucceed,
-    );
-  }
+  const hasAnyErrors = metadata.some((entry) => entry.error != null);
 
-  // Always update local state when folder / dataset changes or the result of the update request
-  // to the backend is resolved shown by a changed value in selectedDatasetOrFolder.metadata.
-  useEffectOnUpdate(() => {
-    const isSameName = datasetOrFolder.name === currentDatasetOrFolderName;
-    const isSameType = isDataset(datasetOrFolder) === isCurrentEntityADataset;
-    const isSameDatasetOrFolder = isSameName && isSameType;
-    if (isUpdatePending && !isSameDatasetOrFolder) {
-      // Flush pending updates as the dataset or folder changed and its metadata should be shown now.
-      flushPendingUpdates();
-    }
-    // Ignore updates in case they weres successful and the dataset or folder is the same as before to avoid undoing changes made by the user during the debounce time.
-    const ignoreLocalMetadataUpdate = didUpdateSucceed && isSameDatasetOrFolder;
-    if (!ignoreLocalMetadataUpdate) {
-      // Update state to newest metadata from selectedDatasetOrFolder.
-      setMetadata(datasetOrFolder.metadata?.map((entry, index) => ({ ...entry, index })) || []);
-    }
-    setCurrentDatasetOrFolderName(datasetOrFolder.name);
-    setIsCurrentEntityADataset(isDataset(datasetOrFolder));
-  }, [datasetOrFolder.name, datasetOrFolder.metadata]);
-
-  useEffectOnUpdate(() => {
-    const hasErrors = metadata.some((entry) => entry.error != null);
-    if (hasErrors) {
+  const saveCurrentMetadata = async (
+    datasetOrFolderToUpdate: APIDataset | Folder,
+    metadata: IndexedMetadataEntries,
+    { dontUpdateState }: EffectCancelSignal = { dontUpdateState: false },
+  ) => {
+    if (hasAnyErrors) {
       return;
     }
+    !dontUpdateState && setIsSaving(true);
     const metadataWithoutIndexAndError = metadata.map(
       ({ index: _ignored, error: _ignored2, ...rest }) => rest,
     );
-    const didMetadataChange = !_.isEqual(metadataWithoutIndexAndError, datasetOrFolder.metadata);
-    if (didMetadataChange) {
-      updateMetadataDebouncedTracked(context, datasetOrFolder, metadataWithoutIndexAndError);
+    let serverResponse: APIDataset | Folder;
+    const isADataset = isDataset(datasetOrFolderToUpdate);
+    const datasetOrFolderString = isADataset ? "dataset" : "folder";
+    try {
+      if (isADataset) {
+        // In case of a dataset, update the dataset's metadata.
+        serverResponse = await context.updateCachedDataset(datasetOrFolderToUpdate, {
+          metadata: metadataWithoutIndexAndError,
+        });
+      } else {
+        // Else update the folders metadata.
+        const folder: Folder = datasetOrFolderToUpdate;
+        serverResponse = await context.queries.updateFolderMutation.mutateAsync({
+          ...folder,
+          allowedTeams: folder.allowedTeams?.map((t) => t.id) || [],
+          metadata: metadataWithoutIndexAndError,
+        });
+      }
+      if (!_.isEqual(serverResponse.metadata, metadataWithoutIndexAndError)) {
+        Toast.error(
+          `Failed to save metadata changes for ${datasetOrFolderString} ${datasetOrFolder.name}.`,
+        );
+      } else {
+        !dontUpdateState && setHasUnsavedChanges(false);
+      }
+    } catch (error) {
+      Toast.error(
+        `Failed to save metadata changes for ${datasetOrFolderString} ${datasetOrFolder.name}. Please look in the console for more details.`,
+      );
+      console.error(error);
+    } finally {
+      !dontUpdateState && setIsSaving(false);
     }
-  }, [metadata]);
+  };
 
-  // On component unmount flush pending updates to avoid potential data loss.
+  // Always update local state when folder / dataset changes. Prior to that send pending updates.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only execute this hook when underlying datasetOrFolder changes.
+  useEffect(() => {
+    if (!previousDatasetOrFolder) {
+      // Skip first rendering cycle.
+      return;
+    }
+    const isSameName = datasetOrFolder.name === previousDatasetOrFolder.name;
+    const isSameType = isDataset(datasetOrFolder) === isDataset(previousDatasetOrFolder);
+    const isSameDatasetOrFolder = isSameName && isSameType;
+    const effectCancelSignal = { dontUpdateState: false };
+    if (!isSameDatasetOrFolder) {
+      if (hasUnsavedChanges) {
+        // Flush pending updates as the dataset or folder changed and its metadata should be shown now.
+        saveCurrentMetadata(previousDatasetOrFolder, metadata, effectCancelSignal);
+      }
+      setMetadata(
+        datasetOrFolder.metadata?.map((entry, index) => ({ ...entry, index, error: null })) || [],
+      );
+    }
+    return () => {
+      effectCancelSignal.dontUpdateState = true;
+    };
+  }, [datasetOrFolder.name, isDataset(datasetOrFolder)]);
+
+  // On component unmount update pending updates to avoid potential data loss.
   useWillUnmount(() => {
-    flushPendingUpdates();
+    saveCurrentMetadata(datasetOrFolder, metadata, { dontUpdateState: true });
   });
 
   const updateMetadataKey = (index: number, newPropName: string) => {
@@ -194,6 +163,7 @@ export default function MetadataTable({
         error = "Property name cannot be empty.";
       }
       const detailsWithoutEditedEntry = prev.filter((prop) => prop.index !== index);
+      setHasUnsavedChanges(true);
       return [
         ...detailsWithoutEditedEntry,
         {
@@ -213,6 +183,7 @@ export default function MetadataTable({
       }
       const updatedEntry = { ...entry, value: newValue };
       const detailsWithoutEditedEntry = prev.filter((prop) => prop.index !== index);
+      setHasUnsavedChanges(true);
       return [...detailsWithoutEditedEntry, updatedEntry];
     });
   };
@@ -230,12 +201,14 @@ export default function MetadataTable({
       };
       // Auto focus the key input of the new entry.
       setTimeout(() => document.getElementById(getKeyInputId(newEntry))?.focus(), 50);
+      setHasUnsavedChanges(true);
       return [...prev, newEntry];
     });
   };
 
   const deleteKey = (index: number) => {
     setMetadata((prev) => {
+      setHasUnsavedChanges(true);
       return prev.filter((prop) => prop.index !== index);
     });
   };
@@ -251,10 +224,7 @@ export default function MetadataTable({
       return {
         key: type,
         label: metadataTypeToString(type as APIMetadata["type"]),
-        onClick: () => {
-          setIsAddEntryDropdownOpen(false);
-          addNewEntryWithType(type as APIMetadata["type"]);
-        },
+        onClick: () => addNewEntryWithType(type as APIMetadata["type"]),
       };
     }),
   });
@@ -269,11 +239,11 @@ export default function MetadataTable({
         <Input
           className={isFocused ? undefined : "transparent-input"}
           onFocus={() => setFocusedRow(record.index)}
-          onBlur={() => setFocusedRow(null)}
           value={record.key}
           onChange={(evt) => updateMetadataKey(record.index, evt.target.value)}
           placeholder="Property"
           size="small"
+          disabled={isSaving}
           id={getKeyInputId(record)}
         />
         {record.error != null ? (
@@ -291,9 +261,10 @@ export default function MetadataTable({
     const sharedProps = {
       className: isFocused ? undefined : "transparent-input",
       onFocus: () => setFocusedRow(record.index),
-      onBlur: () => setFocusedRow(null),
+      // onBlur: () => setFocusedRow(null),
       placeholder: "Value",
       size: "small" as InputNumberProps<number>["size"],
+      disabled: isSaving,
     };
     switch (record.type) {
       case "number":
@@ -331,6 +302,7 @@ export default function MetadataTable({
   const getDeleteEntryButton = (record: APIMetadataWithIndexAndError) => (
     <Button
       type="text"
+      disabled={isSaving}
       icon={
         <DeleteOutlined
           style={{
@@ -355,41 +327,40 @@ export default function MetadataTable({
 
   function AddNewEntryDropdown({ children }: { children: React.ReactNode }) {
     return (
-      <Dropdown
-        menu={getTypeSelectDropdownMenu()}
-        placement="bottom"
-        open={isAddEntryDropdownOpen}
-        onOpenChange={(open) => setIsAddEntryDropdownOpen(open)}
-        trigger={["click"]}
-        autoFocus
-      >
+      <Dropdown menu={getTypeSelectDropdownMenu()} placement="bottom" trigger={["click"]} autoFocus>
         {children}
       </Dropdown>
     );
   }
 
-  const AddNewMetadataEntryRow = memo(function AddNewMetadataEntryRow() {
+  function AddNewMetadataEntryRow() {
     return (
       <tr>
         <td colSpan={3}>
           <div className="flex-center-child">
-            <Dropdown
-              menu={getTypeSelectDropdownMenu()}
-              placement="bottom"
-              open={isAddEntryDropdownOpen}
-              onOpenChange={(open) => setIsAddEntryDropdownOpen(open)}
-              trigger={["click"]}
-              autoFocus
-            >
+            <AddNewEntryDropdown>
               <Button ghost size="small" style={{ border: "none" }}>
                 <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
               </Button>
-            </Dropdown>
+            </AddNewEntryDropdown>
           </div>
+        </td>
+        <td>
+          {hasUnsavedChanges && (
+            <Tooltip title="Save metadata. Automatically done when switching folder / dataset.">
+              <Button
+                type="link"
+                icon={<SaveOutlined style={{ width: 16 }} />}
+                style={{ width: 16 }}
+                onClick={() => saveCurrentMetadata(datasetOrFolder, metadata)}
+                disabled={hasAnyErrors || isSaving}
+              />
+            </Tooltip>
+          )}
         </td>
       </tr>
     );
-  });
+  }
 
   function EmptyTablePlaceholder() {
     return (

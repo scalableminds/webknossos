@@ -1896,6 +1896,7 @@ class SegmentsView extends React.Component<Props, State> {
                             titleRender={titleRender}
                             style={{
                               marginTop: 12,
+                              marginLeft: -26, // hide switcherIcon for root group
                               flex: "1 1 auto",
                               overflow: "auto", // use hidden when not using virtualization
                             }}

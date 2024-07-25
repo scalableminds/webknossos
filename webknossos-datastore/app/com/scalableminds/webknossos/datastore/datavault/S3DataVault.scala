@@ -202,9 +202,9 @@ object S3DataVault {
       basic
         .forcePathStyle(true)
         .endpointOverride(new URI(s"http://${uri.getAuthority}"))
-        .region(AwsHostNameUtils.parseSigningRegion(uri.getAuthority, "s3").toScala.getOrElse(Region.EU_WEST_1))
+        .region(AwsHostNameUtils.parseSigningRegion(uri.getAuthority, "s3").toScala.getOrElse(Region.US_EAST_1))
         .build()
-    else basic.region(Region.EU_WEST_1).build() // TODO better default region?
+    else basic.region(Region.US_EAST_1).build()
   }
 
 }

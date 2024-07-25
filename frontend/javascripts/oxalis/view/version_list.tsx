@@ -193,9 +193,9 @@ async function getUpdateActionLogPage(
     });
   }
 
-  // next page contain older versions
+  // nextPage will contain older versions
   const nextPage = oldestVersionInPage > 1 ? relativePageNumber + 1 : undefined;
-  // previous page will contain newer versions
+  // previousPage will contain newer versions
   const previousPage = newestVersion > newestVersionInPage ? relativePageNumber - 1 : undefined;
 
   return { data: updateActionLog, nextPage, previousPage };

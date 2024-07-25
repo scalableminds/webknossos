@@ -395,7 +395,7 @@ export default function MetadataTable({
     return (
       <div className="flex-center-child empty-metadata-placeholder">
         <img
-          src="/assets/images/metadata-teaser.png"
+          src="/assets/images/metadata-teaser.svg"
           alt="Metadata preview"
           style={{ width: "60%", marginBottom: 16 }}
         />

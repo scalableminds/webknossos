@@ -207,6 +207,7 @@
     "react-router-dom": "^5.1.2",
     "react-sortable-hoc": "^2.0.0",
     "react-sortable-tree": "^2.8.0",
+    "react-tooltip": "^5.27.1",
     "react-virtualized": "^9.22.2",
     "redux": "^3.6.0",
     "redux-batched-actions": "^0.5.0",
@@ -226,14 +227,23 @@
     "**/rc-tree": "^5.7.12"
   },
   "ava": {
-    "files": ["./public-test/test-bundle/**/*.{js,jsx}"],
-    "ignoredByWatcher": ["./binaryData/**/*.*"],
-    "require": ["./frontend/javascripts/test/_ava_polyfill_provider.ts"],
+    "files": [
+      "./public-test/test-bundle/**/*.{js,jsx}"
+    ],
+    "ignoredByWatcher": [
+      "./binaryData/**/*.*"
+    ],
+    "require": [
+      "./frontend/javascripts/test/_ava_polyfill_provider.ts"
+    ],
     "snapshotDir": "frontend/javascripts/test/snapshots",
     "concurrency": 8
   },
   "c8": {
-    "exclude": ["public-test/test-bundle/test/**/*.*", "frontend/javascripts/test/**/*.*"],
+    "exclude": [
+      "public-test/test-bundle/test/**/*.*",
+      "frontend/javascripts/test/**/*.*"
+    ],
     "reporter": "lcov"
   }
 }

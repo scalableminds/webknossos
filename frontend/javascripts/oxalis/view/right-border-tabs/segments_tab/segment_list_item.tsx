@@ -41,6 +41,9 @@ import { MenuItemType } from "antd/lib/menu/hooks/useItems";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import FastTooltip from "components/fast_tooltip";
+
+// const FastTooltip = Tooltip;
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
@@ -104,7 +107,7 @@ const getLoadPrecomputedMeshMenuItem = (
       mappingInfo,
     ),
     label: (
-      <Tooltip
+      <FastTooltip
         key="tooltip"
         title={
           currentMeshFile != null
@@ -113,7 +116,7 @@ const getLoadPrecomputedMeshMenuItem = (
         }
       >
         Load Mesh (precomputed)
-      </Tooltip>
+      </FastTooltip>
     ),
   };
 };
@@ -150,7 +153,7 @@ const getComputeMeshAdHocMenuItem = (
       );
     },
     disabled,
-    label: <Tooltip title={title}>Compute Mesh (ad hoc)</Tooltip>,
+    label: <FastTooltip title={title}>Compute Mesh (ad hoc)</FastTooltip>,
   };
 };
 
@@ -177,9 +180,9 @@ const getMakeSegmentActiveMenuItem = (
       ),
     disabled: isActiveSegment || isEditingDisabled,
     label: (
-      <Tooltip title={title} trigger={isEditingDisabled ? undefined : "hover"}>
+      <FastTooltip title={title} trigger={isEditingDisabled ? undefined : "hover"}>
         Activate Segment ID
-      </Tooltip>
+      </FastTooltip>
     ),
   };
 };
@@ -280,7 +283,7 @@ function _MeshInfoItem(props: {
   const { seedPosition, seedAdditionalCoordinates, isLoading, isPrecomputed, isVisible } = mesh;
   const className = isVisible ? "" : "deemphasized italic";
   const downloadButton = (
-    <Tooltip title="Download Mesh">
+    <FastTooltip title="Download Mesh">
       <VerticalAlignBottomOutlined
         key="download-button"
         onClick={() => {
@@ -296,10 +299,10 @@ function _MeshInfoItem(props: {
           );
         }}
       />
-    </Tooltip>
+    </FastTooltip>
   );
   const deleteButton = (
-    <Tooltip title="Remove Mesh">
+    <FastTooltip title="Remove Mesh">
       <DeleteOutlined
         key="delete-button"
         onClick={() => {
@@ -310,10 +313,10 @@ function _MeshInfoItem(props: {
           Store.dispatch(removeMeshAction(props.visibleSegmentationLayer.name, segment.id));
         }}
       />
-    </Tooltip>
+    </FastTooltip>
   );
   const toggleVisibilityCheckbox = (
-    <Tooltip title="Change visibility">
+    <FastTooltip title="Change visibility">
       <Checkbox
         checked={isVisible}
         onChange={(event: CheckboxChangeEvent) => {
@@ -328,7 +331,7 @@ function _MeshInfoItem(props: {
           );
         }}
       />
-    </Tooltip>
+    </FastTooltip>
   );
   const actionVisibility = isLoading || isHovered ? "visible" : "hidden";
   return (
@@ -564,17 +567,17 @@ function _SegmentListItem({
   function getSegmentIdDetails() {
     if (isJSONMappingEnabled && segment.id !== mappedId)
       return (
-        <Tooltip title="Segment ID (Unmapped ID → Mapped ID)">
+        <FastTooltip title="Segment ID (Unmapped ID → Mapped ID)">
           <span className="deemphasized italic">
             {segment.id} → {mappedId}
           </span>
-        </Tooltip>
+        </FastTooltip>
       );
     // Only if segment.name is truthy, render additional info.
     return segment.name ? (
-      <Tooltip title="Segment ID">
+      <FastTooltip title="Segment ID">
         <span className="deemphasized italic">{segment.id}</span>
-      </Tooltip>
+      </FastTooltip>
     ) : null;
   }
 
@@ -714,7 +717,7 @@ function getRefreshButton(
     );
   } else {
     return (
-      <Tooltip title="Refresh Mesh">
+      <FastTooltip title="Refresh Mesh">
         <ReloadOutlined
           key="refresh-button"
           onClick={() => {
@@ -725,7 +728,7 @@ function getRefreshButton(
             Store.dispatch(refreshMeshAction(visibleSegmentationLayer.name, segment.id));
           }}
         />
-      </Tooltip>
+      </FastTooltip>
     );
   }
 }

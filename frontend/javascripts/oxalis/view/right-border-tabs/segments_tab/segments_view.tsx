@@ -118,7 +118,7 @@ import {
 } from "../tree_hierarchy_view_helpers";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { ItemType } from "antd/lib/menu/hooks/useItems";
-import { pluralize } from "libs/utils";
+import { pluralize, sleep } from "libs/utils";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
@@ -127,6 +127,8 @@ import { DataNode } from "antd/lib/tree";
 import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { ValueOf } from "types/globals";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
+import { ContextMenuContext, GenericContextMenuContainer } from "oxalis/view/context_menu";
+import Shortcut from "libs/shortcut_component";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -331,6 +333,7 @@ type State = {
   expandedGroupKeys: Key[];
   // This needs to be stored in the component because the root group does not exist outside of it.
   isRootGroupExpanded: boolean;
+  contextMenuPosition: [number, number] | null | undefined;
 };
 
 const formatMagWithLabel = (mag: Vector3, index: number) => {
@@ -496,6 +499,34 @@ class SegmentsView extends React.Component<Props, State> {
         this.tree.current.scrollTo({ key: `segment-${selectedId}` });
       }
     }, 100);
+  }
+
+  async perfTest() {
+    if (this.tree?.current == null || this.props.segments == null) {
+      return;
+    }
+    console.time("perfTest");
+    const start = performance.now();
+    let counter = 0;
+    const totalCount = 100;
+    for (const segment of this.props.segments.values()) {
+      this.tree.current.scrollTo({ key: `segment-${segment.id}` });
+      await sleep(0);
+      counter++;
+      if (counter % 10 === 0) {
+        console.log(
+          "counter:",
+          counter,
+          "| estimated total: ",
+          ((performance.now() - start) / counter) * totalCount,
+        );
+      }
+      if (counter >= totalCount) {
+        break;
+      }
+    }
+    console.timeEnd("perfTest");
+    console.log("scrolled to", counter, "elements");
   }
 
   componentWillUnmount() {

@@ -160,6 +160,7 @@ export type Tree = {
 export type TreeGroupTypeFlat = {
   readonly name: string;
   readonly groupId: number;
+  readonly isExpanded?: boolean;
 };
 export type TreeGroup = TreeGroupTypeFlat & {
   readonly children: Array<TreeGroup>;

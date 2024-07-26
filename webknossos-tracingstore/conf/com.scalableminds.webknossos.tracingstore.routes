@@ -52,6 +52,7 @@ GET         /volume/zarr/:tracingId/:mag/                       @com.scalablemin
 GET         /volume/zarr/:tracingId/:mag/.zarray                @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.zArray(token: Option[String], tracingId: String, mag: String)
 GET         /volume/zarr/:tracingId/:mag/:cxyz                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.rawZarrCube(token: Option[String], tracingId: String, mag: String, cxyz: String)
 
+GET         /volume/zarr3_experimental/:tracingId/zarr.json                   @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.zarrJson(token: Option[String], tracingId: String)
 GET         /volume/zarr3_experimental/:tracingId/:mag/zarr.json              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.zarrJsonForMag(token: Option[String], tracingId: String, mag: String)
 GET         /volume/zarr3_experimental/:tracingId/:mag/:coordinates           @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingZarrStreamingController.rawZarr3Cube(token: Option[String], tracingId: String, mag: String, coordinates: String)
 

@@ -59,7 +59,7 @@ class Zarr3StreamingController @Inject()(
     }
   }
 
-  def zAttrsWithAnnotationPrivateLink(token: Option[String],
+  def zarrJsonWithAnnotationPrivateLink(token: Option[String],
                                       accessToken: String,
                                       dataLayerName: String = ""): Action[AnyContent] =
     Action.async { implicit request =>
@@ -68,21 +68,22 @@ class Zarr3StreamingController @Inject()(
         relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)
         else urlOrHeaderToken(token, request)
         annotationLayer = annotationSource.getAnnotationLayer(dataLayerName)
-        omeNgffHeader <- annotationLayer match {
+        zarr3GroupHeader <- annotationLayer match {
           case Some(layer) =>
-            remoteTracingstoreClient.getOmeNgffHeader(layer.tracingId, annotationSource.tracingStoreUrl, relevantToken)
+            remoteTracingstoreClient.getZarrJsonGroupHeaderWithNgff(layer.tracingId, annotationSource.tracingStoreUrl, relevantToken)
           case None =>
             for {
               (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
                 annotationSource.organizationName,
                 annotationSource.datasetName,
                 dataLayerName) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
-              dataSourceOmeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(dataLayerName,
+              dataSourceOmeNgffHeader = NgffMetadataV2.fromNameVoxelSizeAndMags(dataLayerName,
                                                                               dataSource.scale,
                                                                               dataLayer.resolutions)
-            } yield dataSourceOmeNgffHeader
+              zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(dataSourceOmeNgffHeader))
+            } yield zarr3GroupHeader
         }
-      } yield Ok(Json.toJson(omeNgffHeader))
+      } yield Ok(Json.toJson(zarr3GroupHeader))
     }
 
   /**

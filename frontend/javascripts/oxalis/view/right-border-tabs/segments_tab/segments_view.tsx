@@ -129,6 +129,7 @@ import { ValueOf } from "types/globals";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import { ContextMenuContext, GenericContextMenuContainer } from "oxalis/view/context_menu";
 import Shortcut from "libs/shortcut_component";
+import FastTooltip from "components/fast_tooltip";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -1060,9 +1061,9 @@ class SegmentsView extends React.Component<Props, State> {
     } = this.props;
     return (
       <div>
-        <Tooltip title="The higher the quality, the more computational resources are required">
+        <FastTooltip title="The higher the quality, the more computational resources are required">
           <div>Quality for Ad-Hoc Mesh Computation:</div>
-        </Tooltip>
+        </FastTooltip>
         <Select
           size="small"
           style={{
@@ -1105,9 +1106,9 @@ class SegmentsView extends React.Component<Props, State> {
 
         <div>
           <div>
-            <Tooltip title="The higher the quality, the more computational resources are required">
+            <FastTooltip title="The higher the quality, the more computational resources are required">
               Quality for Mesh Precomputation:
-            </Tooltip>
+            </FastTooltip>
           </div>
 
           <Select
@@ -1135,7 +1136,7 @@ class SegmentsView extends React.Component<Props, State> {
             marginTop: 16,
           }}
         >
-          <Tooltip title={title}>
+          <FastTooltip title={title}>
             <Button
               size="large"
               loading={this.state.activeMeshJobId != null}
@@ -1145,7 +1146,7 @@ class SegmentsView extends React.Component<Props, State> {
             >
               Precompute Meshes
             </Button>
-          </Tooltip>
+          </FastTooltip>
         </div>
       </div>
     );
@@ -1153,7 +1154,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   getMeshesHeader = () => (
     <>
-      <Tooltip title="Select a mesh file from which precomputed meshes will be loaded.">
+      <FastTooltip title="Select a mesh file from which precomputed meshes will be loaded.">
         <ConfigProvider
           renderEmpty={renderEmptyMeshFileSelect}
           theme={{ cssVar: { key: "antd-app-theme" } }}
@@ -1185,8 +1186,8 @@ class SegmentsView extends React.Component<Props, State> {
             )}
           </Select>
         </ConfigProvider>
-      </Tooltip>
-      <Tooltip title="Refresh list of available Mesh files">
+      </FastTooltip>
+      <FastTooltip title="Refresh list of available Mesh files">
         <ReloadOutlined
           key="refresh"
           onClick={() =>
@@ -1205,22 +1206,22 @@ class SegmentsView extends React.Component<Props, State> {
         >
           Reload from Server
         </ReloadOutlined>
-      </Tooltip>
+      </FastTooltip>
       <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
-        <Tooltip title="Add a precomputed mesh file">
+        <FastTooltip title="Add a precomputed mesh file">
           <PlusOutlined className="icon-margin-right" />
-        </Tooltip>
+        </FastTooltip>
       </Popover>
       {this.state.activeMeshJobId != null ? (
-        <Tooltip title='A mesh file is currently being computed. See "Processing Jobs" for more information.'>
+        <FastTooltip title='A mesh file is currently being computed. See "Processing Jobs" for more information.'>
           <LoadingOutlined className="icon-margin-right" />
-        </Tooltip>
+        </FastTooltip>
       ) : null}
-      <Tooltip title="Configure ad-hoc mesh computation">
+      <FastTooltip title="Configure ad-hoc mesh computation">
         <Popover content={this.getAdHocMeshSettings} trigger="click" placement="bottom">
           <SettingOutlined />
         </Popover>
-      </Tooltip>
+      </FastTooltip>
     </>
   );
 
@@ -1757,22 +1758,29 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   getSegmentStatisticsModal = (groupId: number) => {
-    const segments = this.getSegmentsOfGroupRecursively(groupId);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
-    if (visibleSegmentationLayer != null && segments != null && segments.length > 0) {
-      return this.state.activeStatisticsModalGroupId === groupId ? (
-        <SegmentStatisticsModal
-          onCancel={() => {
-            this.setState({ activeStatisticsModalGroupId: null });
-          }}
-          visibleSegmentationLayer={visibleSegmentationLayer}
-          tracingId={this.props.activeVolumeTracing?.tracingId}
-          relevantSegments={segments}
-          parentGroup={groupId}
-          groupTree={this.state.searchableTreeItemList}
-        />
-      ) : null;
+    if (visibleSegmentationLayer == null) {
+      return null;
     }
+    if (this.state.activeStatisticsModalGroupId !== groupId) {
+      return null;
+    }
+    const segments = this.getSegmentsOfGroupRecursively(groupId);
+    if (segments == null || segments.length === 0) {
+      return null;
+    }
+    return (
+      <SegmentStatisticsModal
+        onCancel={() => {
+          this.setState({ activeStatisticsModalGroupId: null });
+        }}
+        visibleSegmentationLayer={visibleSegmentationLayer}
+        tracingId={this.props.activeVolumeTracing?.tracingId}
+        relevantSegments={segments}
+        parentGroup={groupId}
+        groupTree={this.state.searchableTreeItemList}
+      />
+    );
   };
 
   showContextMenuAt = (xPos: number, yPos: number, menu: MenuProps) => {
@@ -1881,85 +1889,95 @@ class SegmentsView extends React.Component<Props, State> {
               } else {
                 const { id, name } = treeItem;
                 const isEditingDisabled = !this.props.allowUpdate;
-                const menu: MenuProps = {
-                  items: _.flatten([
-                    {
-                      key: "create",
-                      onClick: () => {
-                        this.createGroup(id);
-                        this.closeSegmentOrGroupDropdown();
+                const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
+                  event.preventDefault();
+                  const getMenu = (): MenuProps => ({
+                    items: _.flatten([
+                      {
+                        key: "create",
+                        onClick: () => {
+                          this.createGroup(id);
+                          this.closeSegmentOrGroupDropdown();
+                        },
+                        disabled: isEditingDisabled,
+                        icon: <PlusOutlined />,
+                        label: "Create new group",
                       },
-                      disabled: isEditingDisabled,
-                      icon: <PlusOutlined />,
-                      label: "Create new group",
-                    },
-                    {
-                      key: "delete",
-                      disabled: isEditingDisabled,
-                      onClick: () => {
-                        this.handleDeleteGroup(id);
-                        this.closeSegmentOrGroupDropdown();
+                      {
+                        key: "delete",
+                        disabled: isEditingDisabled,
+                        onClick: () => {
+                          this.handleDeleteGroup(id);
+                          this.closeSegmentOrGroupDropdown();
+                        },
+                        icon: <DeleteOutlined />,
+                        label: "Delete group",
                       },
-                      icon: <DeleteOutlined />,
-                      label: "Delete group",
-                    },
-                    this.getExpandSubgroupsItem(id),
-                    this.getCollapseSubgroupsItem(id),
-                    this.getMoveSegmentsHereMenuItem(id),
-                    {
-                      key: "groupAndMeshActionDivider",
-                      label: <Divider style={{ marginBottom: 0, marginTop: 0 }} />,
-                      disabled: true,
-                    },
-                    this.getSetGroupColorMenuItem(id),
-                    this.getShowSegmentStatistics(id),
-                    this.getLoadMeshesFromFileMenuItem(id),
-                    this.getComputeMeshesAdHocMenuItem(id),
-                    this.getReloadMenuItem(id),
-                    this.getRemoveMeshesMenuItem(id),
-                    this.maybeGetShowOrHideMeshesMenuItems(id),
-                    this.getDownLoadMeshesMenuItem(id),
-                  ]),
+                      this.getExpandSubgroupsItem(id),
+                      this.getCollapseSubgroupsItem(id),
+                      this.getMoveSegmentsHereMenuItem(id),
+                      {
+                        key: "groupAndMeshActionDivider",
+                        label: <Divider style={{ marginBottom: 0, marginTop: 0 }} />,
+                        disabled: true,
+                      },
+                      this.getSetGroupColorMenuItem(id),
+                      this.getShowSegmentStatistics(id),
+                      this.getLoadMeshesFromFileMenuItem(id),
+                      this.getComputeMeshesAdHocMenuItem(id),
+                      this.getReloadMenuItem(id),
+                      this.getRemoveMeshesMenuItem(id),
+                      this.maybeGetShowOrHideMeshesMenuItems(id),
+                      this.getDownLoadMeshesMenuItem(id),
+                    ]),
+                  });
+
+                  const overlayDivs = document.getElementsByClassName(
+                    "segment-list-context-menu-overlay",
+                  );
+                  const referenceDiv = Array.from(overlayDivs)
+                    .map((p) => p.parentElement)
+                    .find((potentialParent) => {
+                      if (potentialParent == null) {
+                        return false;
+                      }
+                      const bounds = potentialParent.getBoundingClientRect();
+                      return bounds.width > 0;
+                    });
+
+                  if (referenceDiv == null) {
+                    return;
+                  }
+                  const bounds = referenceDiv.getBoundingClientRect();
+                  const x = event.clientX - bounds.left;
+                  const y = event.clientY - bounds.top;
+
+                  this.showContextMenuAt(x, y, getMenu());
                 };
 
                 // Make sure the displayed name is not empty
                 const displayableName = name?.trim() || "<Unnamed Group>";
+
                 return (
-                  <div>
-                    <Dropdown
-                      menu={menu}
-                      placement="bottom"
-                      // AutoDestroy is used to remove the menu from DOM and keep up the performance.
-                      // destroyPopupOnHide should also be an option according to the docs, but
-                      // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
-                      // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
-                      autoDestroy
-                      open={this.state.activeDropdownGroupId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Group color" is rendered/positioned incorrectly
-                      onOpenChange={(isVisible, info) => {
-                        if (info.source === "trigger")
-                          this.handleGroupDropdownMenuVisibility(isVisible, id);
+                  <div onContextMenu={onOpenContextMenu}>
+                    <EditableTextLabel
+                      value={displayableName}
+                      label="Group Name"
+                      onChange={(name) => {
+                        if (this.props.visibleSegmentationLayer != null) {
+                          api.tracing.renameSegmentGroup(
+                            id,
+                            name,
+                            this.props.visibleSegmentationLayer.name,
+                          );
+                        }
                       }}
-                      trigger={["contextMenu"]}
-                    >
-                      <EditableTextLabel
-                        value={displayableName}
-                        label="Group Name"
-                        onChange={(name) => {
-                          if (this.props.visibleSegmentationLayer != null) {
-                            api.tracing.renameSegmentGroup(
-                              id,
-                              name,
-                              this.props.visibleSegmentationLayer.name,
-                            );
-                          }
-                        }}
-                        margin="0 5px"
-                        // The root group must not be removed or renamed
-                        disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
-                        onRenameStart={this.onRenameStart}
-                        onRenameEnd={this.onRenameEnd}
-                      />
-                    </Dropdown>
+                      margin="0 5px"
+                      // The root group must not be removed or renamed
+                      disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
+                      onRenameStart={this.onRenameStart}
+                      onRenameEnd={this.onRenameEnd}
+                    />
                     {this.getSegmentStatisticsModal(id)}
                   </div>
                 );

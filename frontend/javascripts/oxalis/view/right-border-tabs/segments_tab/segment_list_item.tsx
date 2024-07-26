@@ -589,7 +589,6 @@ function _SegmentListItem({
   }
 
   const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
-    console.log("event", event);
     event.preventDefault();
 
     const overlayDivs = document.getElementsByClassName("segment-list-context-menu-overlay");

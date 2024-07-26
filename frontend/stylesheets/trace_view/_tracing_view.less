@@ -607,3 +607,9 @@ img.keyboard-mouse-icon:first-child {
      Otherwise the tab title covers the context menu. */
   z-index: 110;
 }
+
+.segment-list-context-menu-overlay {
+  // The parent has a padding of 10px on all sides which we need to subtract here.
+  width: calc(100% - 20px) !important;
+  height: calc(100% - 20px) !important;
+}

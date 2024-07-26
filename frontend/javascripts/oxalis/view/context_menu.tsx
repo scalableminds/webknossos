@@ -1262,6 +1262,7 @@ export function GenericContextMenuContainer(props: {
   hideContextMenu: () => void;
   children: React.ReactElement;
   positionAbsolute?: boolean;
+  className?: string;
 }) {
   /*
    * This container for the context menu is *always* rendered.
@@ -1287,7 +1288,7 @@ export function GenericContextMenuContainer(props: {
   return (
     <React.Fragment>
       <div
-        className="node-context-menu-overlay"
+        className={`node-context-menu-overlay ${props.className || ""}`}
         onClick={hideContextMenu}
         onContextMenu={(evt) => {
           evt.preventDefault();
@@ -1305,7 +1306,7 @@ export function GenericContextMenuContainer(props: {
          div.
         */}
       <div
-        className="node-context-menu-overlay"
+        className={`node-context-menu-overlay ${props.className || ""}`}
         style={{
           pointerEvents: "none",
           display: contextMenuPosition == null ? "none" : "inherit",
@@ -1317,6 +1318,7 @@ export function GenericContextMenuContainer(props: {
             left: contextMenuPosition != null ? contextMenuPosition[0] : 0,
             top: contextMenuPosition != null ? contextMenuPosition[1] : 0,
             width: "fit-content",
+            height: "fit-content",
             pointerEvents: "all",
           }}
           className="node-context-menu"

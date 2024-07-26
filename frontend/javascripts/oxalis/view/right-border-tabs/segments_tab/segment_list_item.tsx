@@ -235,6 +235,7 @@ type Props = {
   onRenameEnd: () => void;
   multiSelectMenu: MenuProps;
   activeVolumeTracing: VolumeTracing | null | undefined;
+  showContextMenuAt: (xPos: number, yPos: number, menu: MenuProps) => void;
 };
 
 function _MeshInfoItem(props: {
@@ -411,7 +412,25 @@ function _SegmentListItem({
   onRenameEnd,
   multiSelectMenu,
   activeVolumeTracing,
+  showContextMenuAt,
 }: Props) {
+  // return (
+  //   <List.Item
+  //     style={{
+  //       padding: "2px 5px",
+  //     }}
+  //     className="segment-list-item"
+  //     onMouseEnter={() => {
+  //       setHoveredSegmentId(segment.id);
+  //     }}
+  //     onMouseLeave={() => {
+  //       setHoveredSegmentId(null);
+  //     }}
+  //   >
+  //     {segment.id}
+  //   </List.Item>
+  // );
+
   const { modal } = App.useApp();
   const isEditingDisabled = !allowUpdate;
 
@@ -581,6 +600,45 @@ function _SegmentListItem({
     ) : null;
   }
 
+  const onOpenContextMenu = (event) => {
+    console.log("event", event);
+    event.preventDefault();
+
+    const overlayDivs = document.getElementsByClassName("segment-list-context-menu-overlay");
+    const referenceDiv = Array.from(overlayDivs)
+      .map((p) => p.parentElement)
+      .find((potentialParent) => {
+        if (potentialParent == null) {
+          return false;
+        }
+        const bounds = potentialParent.getBoundingClientRect();
+        return bounds.width > 0;
+      });
+
+    if (referenceDiv == null) {
+      return;
+    }
+    const bounds = referenceDiv.getBoundingClientRect();
+    const x = event.clientX - bounds.left;
+    const y = event.clientY - bounds.top;
+
+    showContextMenuAt(
+      x,
+      y,
+      (selectedSegmentIds || []).length > 1 && selectedSegmentIds?.includes(segment.id)
+        ? multiSelectMenu
+        : createSegmentContextMenu(),
+    );
+
+    // menu={
+    //   (selectedSegmentIds || []).length > 1 && selectedSegmentIds?.includes(segment.id)
+    //     ? multiSelectMenu
+    //     : createSegmentContextMenu()
+    // }
+    // open={activeDropdownSegmentId === segment.id}
+    //
+  };
+
   return (
     <List.Item
       style={{
@@ -593,8 +651,9 @@ function _SegmentListItem({
       onMouseLeave={() => {
         setHoveredSegmentId(null);
       }}
+      onContextMenu={onOpenContextMenu}
     >
-      <Dropdown
+      {/*<Dropdown
         menu={
           (selectedSegmentIds || []).length > 1 && selectedSegmentIds?.includes(segment.id)
             ? multiSelectMenu
@@ -617,80 +676,79 @@ function _SegmentListItem({
         // Remove this again once https://github.com/react-component/trigger/pull/447 has bubbled
         // through to antd.
         alignPoint={false}
-      >
-        <div>
-          <div style={{ display: "inline-flex", alignItems: "center" }}>
-            <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
-            <EditableTextLabel
-              value={getSegmentName(segment)}
-              label="Segment Name"
-              onClick={() => onSelectSegment(segment)}
-              onRenameStart={onRenameStart}
-              onRenameEnd={onRenameEnd}
-              onChange={(name) => {
-                if (visibleSegmentationLayer != null) {
-                  updateSegment(
-                    segment.id,
-                    {
-                      name,
-                    },
-                    visibleSegmentationLayer.name,
-                    true,
-                  );
-                }
-              }}
-              margin="0 5px"
-              disableEditing={!allowUpdate}
-            />
-            <Tooltip title="Open context menu (also available via right-click)">
-              <EllipsisOutlined
-                onClick={() => handleSegmentDropdownMenuVisibility(true, segment.id)}
-              />
-            </Tooltip>
-            {/* Show Default Segment Name if another one is already defined*/}
-            {getSegmentIdDetails()}
-            {segment.id === centeredSegmentId ? (
-              <Tooltip title="This segment is currently centered in the data viewports.">
-                <i
-                  className="fas fa-crosshairs deemphasized"
-                  style={{
-                    marginLeft: 4,
-                  }}
-                />
-              </Tooltip>
-            ) : null}
-            {segment.id === activeCellId ? (
-              <Tooltip title="The currently active segment id belongs to this segment.">
-                <i
-                  className="fas fa-paint-brush deemphasized"
-                  style={{
-                    marginLeft: 4,
-                  }}
-                />
-              </Tooltip>
-            ) : null}
-          </div>
-
-          <div
-            style={{
-              marginLeft: 16,
-            }}
-          >
-            <MeshInfoItem
-              segment={segment}
-              isSelectedInList={
-                selectedSegmentIds != null ? selectedSegmentIds?.includes(segment.id) : false
+      >*/}
+      <div>
+        <div style={{ display: "inline-flex", alignItems: "center" }}>
+          <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
+          <EditableTextLabel
+            value={getSegmentName(segment)}
+            label="Segment Name"
+            onClick={() => onSelectSegment(segment)}
+            onRenameStart={onRenameStart}
+            onRenameEnd={onRenameEnd}
+            onChange={(name) => {
+              if (visibleSegmentationLayer != null) {
+                updateSegment(
+                  segment.id,
+                  {
+                    name,
+                  },
+                  visibleSegmentationLayer.name,
+                  true,
+                );
               }
-              isHovered={isHoveredSegmentId}
-              mesh={mesh}
-              handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
-              visibleSegmentationLayer={visibleSegmentationLayer}
-              setPosition={setPosition}
-              setAdditionalCoordinates={setAdditionalCoordinates}
-            />
-          </div>
+            }}
+            margin="0 5px"
+            disableEditing={!allowUpdate}
+          />
+          <div>{segment.id}</div>
+          <FastTooltip title="Open context menu (also available via right-click)">
+            <EllipsisOutlined onClick={onOpenContextMenu} />
+          </FastTooltip>
+          {/* Show Default Segment Name if another one is already defined*/}
+          {getSegmentIdDetails()}
+          {segment.id === centeredSegmentId ? (
+            <FastTooltip title="This segment is currently centered in the data viewports.">
+              <i
+                className="fas fa-crosshairs deemphasized"
+                style={{
+                  marginLeft: 4,
+                }}
+              />
+            </FastTooltip>
+          ) : null}
+          {segment.id === activeCellId ? (
+            <FastTooltip title="The currently active segment id belongs to this segment.">
+              <i
+                className="fas fa-paint-brush deemphasized"
+                style={{
+                  marginLeft: 4,
+                }}
+              />
+            </FastTooltip>
+          ) : null}
         </div>
-      </Dropdown>
+
+        <div
+          style={{
+            marginLeft: 16,
+          }}
+        >
+          <MeshInfoItem
+            segment={segment}
+            isSelectedInList={
+              selectedSegmentIds != null ? selectedSegmentIds?.includes(segment.id) : false
+            }
+            isHovered={isHoveredSegmentId}
+            mesh={mesh}
+            handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
+            visibleSegmentationLayer={visibleSegmentationLayer}
+            setPosition={setPosition}
+            setAdditionalCoordinates={setAdditionalCoordinates}
+          />
+        </div>
+      </div>
+      {/*</Dropdown>*/}
     </List.Item>
   );
 }

@@ -334,6 +334,7 @@ type State = {
   // This needs to be stored in the component because the root group does not exist outside of it.
   isRootGroupExpanded: boolean;
   contextMenuPosition: [number, number] | null | undefined;
+  menu: MenuProps | null | undefined;
 };
 
 const formatMagWithLabel = (mag: Vector3, index: number) => {
@@ -426,6 +427,61 @@ const rootGroup = {
   isExpanded: true,
 };
 
+function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
+  const inputRef = React.useContext(ContextMenuContext);
+  const { contextMenuPosition, hideContextMenu } = propsWithInputRef;
+  let menu: MenuProps = { items: [] };
+
+  if (contextMenuPosition != null) {
+    menu = propsWithInputRef.menu || {
+      onClick: hideContextMenu,
+      style: {
+        borderRadius: 6,
+      },
+      mode: "vertical",
+      items: [
+        {
+          key: "view",
+          disabled: true,
+          label: "No actions available.",
+        },
+      ],
+    };
+  }
+
+  if (inputRef == null || inputRef.current == null) return null;
+  const refContent = inputRef.current;
+
+  return (
+    <React.Fragment>
+      <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
+      <Dropdown
+        menu={menu}
+        overlayClassName="dropdown-overlay-container-for-context-menu"
+        open={contextMenuPosition != null}
+        getPopupContainer={() => refContent}
+        destroyPopupOnHide
+      >
+        <div />
+      </Dropdown>
+    </React.Fragment>
+  );
+}
+
+type ContextMenuProps = {
+  contextMenuPosition: [number, number] | null | undefined;
+  hideContextMenu: () => void;
+  menu: MenuProps | null | undefined;
+};
+
+function ContextMenuContainer(props: ContextMenuProps) {
+  return (
+    <GenericContextMenuContainer {...props} className="segment-list-context-menu-overlay">
+      <ContextMenuInner {...props} />
+    </GenericContextMenuContainer>
+  );
+}
+
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
   state: State = {
@@ -441,6 +497,8 @@ class SegmentsView extends React.Component<Props, State> {
     activeStatisticsModalGroupId: null,
     expandedGroupKeys: [],
     isRootGroupExpanded: true,
+    contextMenuPosition: null,
+    menu: null,
   };
   tree: React.RefObject<RcTree>;
 
@@ -1717,11 +1775,36 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
+  showContextMenuAt = (xPos: number, yPos: number, menu: MenuProps) => {
+    // On Windows the right click to open the context menu is also triggered for the overlay
+    // of the context menu. This causes the context menu to instantly close after opening.
+    // Therefore delay the state update to delay that the context menu is rendered.
+    // Thus the context overlay does not get the right click as an event and therefore does not close.
+    setTimeout(
+      () =>
+        this.setState({
+          contextMenuPosition: [xPos, yPos],
+          menu,
+        }),
+      0,
+    );
+  };
+
+  hideContextMenu = () => {
+    this.setState({ contextMenuPosition: null, menu: null });
+  };
+
   render() {
     const { groupToDelete } = this.state;
 
     return (
       <div id={segmentsTabId} className="padded-tab-content">
+        <ContextMenuContainer
+          hideContextMenu={this.hideContextMenu}
+          contextMenuPosition={this.state.contextMenuPosition}
+          menu={this.state.menu}
+        />
+        <Button onClick={() => this.perfTest()}> Perftest </Button>
         <DomVisibilityObserver targetId={segmentsTabId}>
           {(isVisibleInDom) => {
             if (!isVisibleInDom) return null;
@@ -1765,6 +1848,7 @@ class SegmentsView extends React.Component<Props, State> {
                 const segment = treeItem;
                 return (
                   <SegmentListItem
+                    showContextMenuAt={this.showContextMenuAt}
                     key={segment.id}
                     mapId={mapId}
                     segment={segment}

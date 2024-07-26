@@ -1849,14 +1849,13 @@ class SegmentsView extends React.Component<Props, State> {
                 return (
                   <SegmentListItem
                     showContextMenuAt={this.showContextMenuAt}
+                    hideContextMenu={this.hideContextMenu}
                     key={segment.id}
                     mapId={mapId}
                     segment={segment}
                     centeredSegmentId={centeredSegmentId}
                     selectedSegmentIds={this.props.selectedIds.segments}
-                    activeDropdownSegmentId={this.state.activeDropdownSegmentId}
                     onSelectSegment={this.onSelectSegment}
-                    handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
                     mesh={this.props.meshes[segment.id]}
                     isJSONMappingEnabled={this.props.isJSONMappingEnabled}
                     mappingInfo={this.props.mappingInfo}

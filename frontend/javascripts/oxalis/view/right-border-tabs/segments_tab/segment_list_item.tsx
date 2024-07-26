@@ -5,7 +5,7 @@ import {
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
-import { List, Tooltip, Dropdown, MenuProps, App } from "antd";
+import { List, MenuProps, App } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
@@ -70,7 +70,7 @@ const getLoadPrecomputedMeshMenuItem = (
     seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
     meshFileName: string,
   ) => void,
-  andCloseContextMenu: (_ignore?: any) => void,
+  hideContextMenu: (_ignore?: any) => void,
   layerName: string | null | undefined,
   mappingInfo: ActiveMappingInfo,
 ) => {
@@ -89,10 +89,10 @@ const getLoadPrecomputedMeshMenuItem = (
               Cannot load a mesh for this segment, because its position is unknown.
             </React.Fragment>,
           );
-          andCloseContextMenu();
+          hideContextMenu();
           return;
         }
-        andCloseContextMenu(
+        hideContextMenu(
           loadPrecomputedMesh(
             segment.id,
             segment.somePosition,
@@ -129,7 +129,7 @@ const getComputeMeshAdHocMenuItem = (
     seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void,
   isSegmentationLayerVisible: boolean,
-  andCloseContextMenu: (_ignore?: any) => void,
+  hideContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
   const { disabled, title } = getComputeMeshAdHocTooltipInfo(false, isSegmentationLayerVisible);
   return {
@@ -141,10 +141,10 @@ const getComputeMeshAdHocMenuItem = (
             Cannot load a mesh for this segment, because its position is unknown.
           </React.Fragment>,
         );
-        andCloseContextMenu();
+        hideContextMenu();
         return;
       }
-      andCloseContextMenu(
+      hideContextMenu(
         loadAdHocMesh(
           segment.id,
           segment.somePosition,
@@ -166,7 +166,7 @@ const getMakeSegmentActiveMenuItem = (
   ) => void,
   activeCellId: number | null | undefined,
   isEditingDisabled: boolean,
-  andCloseContextMenu: (_ignore?: any) => void,
+  hideContextMenu: (_ignore?: any) => void,
 ): MenuItemType => {
   const isActiveSegment = segment.id === activeCellId;
   const title = isActiveSegment
@@ -175,12 +175,12 @@ const getMakeSegmentActiveMenuItem = (
   return {
     key: "setActiveCell",
     onClick: () =>
-      andCloseContextMenu(
+      hideContextMenu(
         setActiveCell(segment.id, segment.somePosition, segment.someAdditionalCoordinates),
       ),
     disabled: isActiveSegment || isEditingDisabled,
     label: (
-      <FastTooltip title={title} trigger={isEditingDisabled ? undefined : "hover"}>
+      <FastTooltip title={title} disabled={isEditingDisabled}>
         Activate Segment ID
       </FastTooltip>
     ),
@@ -196,8 +196,6 @@ type Props = {
   selectedSegmentIds: number[] | null | undefined;
   activeCellId: number | null | undefined;
   setHoveredSegmentId: (arg0: number | null | undefined) => void;
-  handleSegmentDropdownMenuVisibility: (arg0: boolean, arg1: number) => void;
-  activeDropdownSegmentId: number | null | undefined;
   allowUpdate: boolean;
   updateSegment: (
     arg0: number,
@@ -236,6 +234,7 @@ type Props = {
   multiSelectMenu: MenuProps;
   activeVolumeTracing: VolumeTracing | null | undefined;
   showContextMenuAt: (xPos: number, yPos: number, menu: MenuProps) => void;
+  hideContextMenu: () => void;
 };
 
 function _MeshInfoItem(props: {
@@ -243,7 +242,6 @@ function _MeshInfoItem(props: {
   isSelectedInList: boolean;
   isHovered: boolean;
   mesh: MeshInformation | null | undefined;
-  handleSegmentDropdownMenuVisibility: (arg0: boolean, arg1: number) => void;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   setPosition: (arg0: Vector3) => void;
   setAdditionalCoordinates: (additionalCoordinates: AdditionalCoordinate[] | undefined) => void;
@@ -265,14 +263,7 @@ function _MeshInfoItem(props: {
   ) {
     if (isSelectedInList) {
       return (
-        <div
-          className="deemphasized italic"
-          style={{ marginLeft: 8 }}
-          onContextMenu={(evt) => {
-            evt.preventDefault();
-            props.handleSegmentDropdownMenuVisibility(true, segment.id);
-          }}
-        >
+        <div className="deemphasized italic" style={{ marginLeft: 8 }}>
           No mesh loaded. Use right-click to add one.
         </div>
       );
@@ -393,8 +384,6 @@ function _SegmentListItem({
   selectedSegmentIds,
   activeCellId,
   setHoveredSegmentId,
-  handleSegmentDropdownMenuVisibility,
-  activeDropdownSegmentId,
   allowUpdate,
   updateSegment,
   removeSegment,
@@ -413,6 +402,7 @@ function _SegmentListItem({
   multiSelectMenu,
   activeVolumeTracing,
   showContextMenuAt,
+  hideContextMenu,
 }: Props) {
   // return (
   //   <List.Item
@@ -450,15 +440,13 @@ function _SegmentListItem({
     return null;
   }
 
-  const andCloseContextMenu = (_ignore?: any) => handleSegmentDropdownMenuVisibility(false, 0);
-
   const createSegmentContextMenu = (): MenuProps => ({
     items: [
       getLoadPrecomputedMeshMenuItem(
         segment,
         currentMeshFile,
         loadPrecomputedMesh,
-        andCloseContextMenu,
+        hideContextMenu,
         visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
         mappingInfo,
       ),
@@ -466,14 +454,14 @@ function _SegmentListItem({
         segment,
         loadAdHocMesh,
         visibleSegmentationLayer != null,
-        andCloseContextMenu,
+        hideContextMenu,
       ),
       getMakeSegmentActiveMenuItem(
         segment,
         setActiveCell,
         activeCellId,
         isEditingDisabled,
-        andCloseContextMenu,
+        hideContextMenu,
       ),
       {
         key: "changeSegmentColor",
@@ -530,7 +518,7 @@ function _SegmentListItem({
             return;
           }
           removeSegment(segment.id, visibleSegmentationLayer.name);
-          andCloseContextMenu();
+          hideContextMenu();
         },
         label: "Remove Segment From List",
       },
@@ -571,7 +559,7 @@ function _SegmentListItem({
             },
           });
 
-          andCloseContextMenu();
+          hideContextMenu();
         },
         disabled:
           activeVolumeTracing == null ||
@@ -600,7 +588,7 @@ function _SegmentListItem({
     ) : null;
   }
 
-  const onOpenContextMenu = (event) => {
+  const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
     console.log("event", event);
     event.preventDefault();
 
@@ -629,14 +617,6 @@ function _SegmentListItem({
         ? multiSelectMenu
         : createSegmentContextMenu(),
     );
-
-    // menu={
-    //   (selectedSegmentIds || []).length > 1 && selectedSegmentIds?.includes(segment.id)
-    //     ? multiSelectMenu
-    //     : createSegmentContextMenu()
-    // }
-    // open={activeDropdownSegmentId === segment.id}
-    //
   };
 
   return (
@@ -653,30 +633,6 @@ function _SegmentListItem({
       }}
       onContextMenu={onOpenContextMenu}
     >
-      {/*<Dropdown
-        menu={
-          (selectedSegmentIds || []).length > 1 && selectedSegmentIds?.includes(segment.id)
-            ? multiSelectMenu
-            : createSegmentContextMenu()
-        }
-        // The overlay is generated lazily. By default, this would make the overlay
-        // re-render on each parent's render() after it was shown for the first time.
-        // The reason for this is that it's not destroyed after closing.
-        // Therefore, autoDestroy is passed.
-        // destroyPopupOnHide should also be an option according to the docs, but
-        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
-        autoDestroy
-        placement="bottom"
-        open={activeDropdownSegmentId === segment.id}
-        onOpenChange={(isVisible, info) => {
-          if (info.source === "trigger") handleSegmentDropdownMenuVisibility(isVisible, segment.id);
-        }}
-        trigger={["contextMenu"]}
-        // Remove this again once https://github.com/react-component/trigger/pull/447 has bubbled
-        // through to antd.
-        alignPoint={false}
-      >*/}
       <div>
         <div style={{ display: "inline-flex", alignItems: "center" }}>
           <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
@@ -741,7 +697,6 @@ function _SegmentListItem({
             }
             isHovered={isHoveredSegmentId}
             mesh={mesh}
-            handleSegmentDropdownMenuVisibility={handleSegmentDropdownMenuVisibility}
             visibleSegmentationLayer={visibleSegmentationLayer}
             setPosition={setPosition}
             setAdditionalCoordinates={setAdditionalCoordinates}

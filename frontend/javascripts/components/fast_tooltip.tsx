@@ -18,10 +18,11 @@ export default function FastTooltip({
   title,
   children,
   placement,
-}: { title: string; children: React.ReactNode; placement?: Placement }) {
+  disabled,
+}: { title: string; children: React.ReactNode; placement?: Placement; disabled?: boolean }) {
   return (
     <span
-      data-tooltip-id="main-tooltip"
+      data-tooltip-id={disabled ? "" : "main-tooltip"}
       data-tooltip-content={title}
       data-tooltip-place={placement || "top"}
     >

@@ -57,6 +57,22 @@ object NgffMultiscalesItem {
   implicit val jsonFormat: OFormat[NgffMultiscalesItem] = Json.format[NgffMultiscalesItem]
 }
 
+case class NgffMultiscalesItemV2(
+    // Ngff V2 no longer has the version inside the multiscale field.
+    name: Option[String],
+    axes: List[NgffAxis] = List(
+      NgffAxis(name = "c", `type` = "channel"),
+      NgffAxis(name = "x", `type` = "space", unit = Some("nanometer")),
+      NgffAxis(name = "y", `type` = "space", unit = Some("nanometer")),
+      NgffAxis(name = "z", `type` = "space", unit = Some("nanometer")),
+    ),
+    datasets: List[NgffDataset]
+)
+
+object NgffMultiscalesItemV2 {
+  implicit val jsonFormat: OFormat[NgffMultiscalesItemV2] = Json.format[NgffMultiscalesItemV2]
+}
+
 case class NgffMetadata(multiscales: List[NgffMultiscalesItem], omero: Option[NgffOmeroMetadata])
 
 object NgffMetadata {
@@ -84,6 +100,36 @@ object NgffMetadata {
   implicit val jsonFormat: OFormat[NgffMetadata] = Json.format[NgffMetadata]
 
   val FILENAME_DOT_ZATTRS = ".zattrs"
+}
+
+case class NgffMetadataV2(version: String, multiscales: List[NgffMultiscalesItemV2], omero: Option[NgffOmeroMetadata])
+
+object NgffMetadataV2 {
+  def fromNameVoxelSizeAndMags(dataLayerName: String,
+                               dataSourceVoxelSize: VoxelSize,
+                               mags: List[Vec3Int],
+                               version: String = "0.5"): NgffMetadataV2 = {
+    val datasets = mags.map(
+      mag =>
+        NgffDataset(
+          path = mag.toMagLiteral(allowScalar = true),
+          List(NgffCoordinateTransformation(
+            scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList)))
+      ))
+    val lengthUnitStr = dataSourceVoxelSize.unit.toString
+    val axes = List(
+      NgffAxis(name = "c", `type` = "channel"),
+      NgffAxis(name = "x", `type` = "space", unit = Some(lengthUnitStr)),
+      NgffAxis(name = "y", `type` = "space", unit = Some(lengthUnitStr)),
+      NgffAxis(name = "z", `type` = "space", unit = Some(lengthUnitStr)),
+    )
+    NgffMetadataV2(version,
+                   multiscales =
+                     List(NgffMultiscalesItemV2(name = Some(dataLayerName), datasets = datasets, axes = axes)),
+                   None)
+  }
+
+  implicit val jsonFormat: OFormat[NgffMetadataV2] = Json.format[NgffMetadataV2]
 }
 
 case class NgffLabelsGroup(labels: List[String])

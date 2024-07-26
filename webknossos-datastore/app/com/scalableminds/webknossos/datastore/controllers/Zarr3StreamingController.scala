@@ -7,25 +7,11 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, BloscCompressor, StringCompressionSetting}
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, ZarrHeader}
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
-  BloscCodecConfiguration,
-  BytesCodecConfiguration,
-  ChunkGridConfiguration,
-  ChunkGridSpecification,
-  ChunkKeyEncoding,
-  ChunkKeyEncodingConfiguration,
-  TransposeCodecConfiguration,
-  TransposeSetting,
-  Zarr3ArrayHeader
-}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, NgffMetadataV2, ZarrHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{BloscCodecConfiguration, BytesCodecConfiguration, ChunkGridConfiguration, ChunkGridSpecification, ChunkKeyEncoding, ChunkKeyEncodingConfiguration, TransposeCodecConfiguration, TransposeSetting, Zarr3ArrayHeader, Zarr3GroupHeader}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.requests.{
-  Cuboid,
-  DataServiceDataRequest,
-  DataServiceRequestSettings
-}
+import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition, VoxelSize}
 import com.scalableminds.webknossos.datastore.services._
 import net.liftweb.common.Box.tryo
@@ -54,7 +40,7 @@ class Zarr3StreamingController @Inject()(
     * Serve .zattrs file for a dataset
     * Uses the OME-NGFF standard (see https://ngff.openmicroscopy.org/latest/)
     */
-  def requestZAttrs(
+  def requestZarrJson(
       token: Option[String],
       organizationName: String,
       datasetName: String,
@@ -67,8 +53,9 @@ class Zarr3StreamingController @Inject()(
                                                                                   datasetName,
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
-        omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(dataLayerName, dataSource.scale, dataLayer.resolutions)
-      } yield Ok(Json.toJson(omeNgffHeader))
+        omeNgffHeaderV2 = NgffMetadataV2.fromNameVoxelSizeAndMags(dataLayerName, dataSource.scale, dataLayer.resolutions)
+        zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeaderV2))
+      } yield Ok(Json.toJson(zarr3GroupHeader))
     }
   }
 
@@ -490,7 +477,8 @@ class Zarr3StreamingController @Inject()(
           ))
     }
 
-  def requestZGroup(token: Option[String],
+  // TODOM
+  def requestZarrJsonbla(token: Option[String],
                     organizationName: String,
                     datasetName: String,
                     dataLayerName: String = ""): Action[AnyContent] = Action.async { implicit request =>

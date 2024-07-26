@@ -33,7 +33,6 @@ import {
   Modal,
   Popover,
   Select,
-  Tooltip,
   Tree,
 } from "antd";
 import Toast from "libs/toast";
@@ -321,8 +320,6 @@ type Props = DispatchProps & StateProps;
 type State = {
   renamingCounter: number;
   activeMeshJobId: string | null | undefined;
-  activeDropdownSegmentId: number | null | undefined;
-  activeDropdownGroupId: number | null | undefined;
   groupTree: SegmentHierarchyNode[];
   searchableTreeItemList: SegmentHierarchyNode[];
   prevProps: Props | null | undefined;
@@ -488,8 +485,6 @@ class SegmentsView extends React.Component<Props, State> {
   state: State = {
     renamingCounter: 0,
     activeMeshJobId: null,
-    activeDropdownSegmentId: null,
-    activeDropdownGroupId: null,
     groupTree: [],
     searchableTreeItemList: [],
     prevProps: null,
@@ -962,21 +957,6 @@ class SegmentsView extends React.Component<Props, State> {
     }
   };
 
-  closeSegmentOrGroupDropdown = () => {
-    this.handleGroupDropdownMenuVisibility(false);
-    this.handleSegmentDropdownMenuVisibility(false);
-  };
-
-  handleSegmentDropdownMenuVisibility = (isVisible: boolean, segmentId: number | null = null) => {
-    const newActiveSegmentDropdown = isVisible ? segmentId : null;
-    this.setState({ activeDropdownSegmentId: newActiveSegmentDropdown });
-  };
-
-  handleGroupDropdownMenuVisibility = (isVisible: boolean, groupId: number | null = null) => {
-    const newActiveGroupDropdown = isVisible ? groupId : null;
-    this.setState({ activeDropdownGroupId: newActiveGroupDropdown });
-  };
-
   startComputingMeshfile = async () => {
     const {
       mappingInfo,
@@ -1271,7 +1251,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.setGroupColor(groupId, null);
-            this.closeSegmentOrGroupDropdown();
+            this.hideContextMenu();
           }}
         >
           Reset Segment Color
@@ -1291,7 +1271,7 @@ class SegmentsView extends React.Component<Props, State> {
               return;
             }
             this.handleRemoveSegmentsFromList(groupId);
-            this.closeSegmentOrGroupDropdown();
+            this.hideContextMenu();
           }}
         >
           Remove Segments From List
@@ -1321,7 +1301,7 @@ class SegmentsView extends React.Component<Props, State> {
             }
             this.handleLoadMeshesAdHoc(groupId);
             this.getToastForMissingPositions(groupId);
-            this.closeSegmentOrGroupDropdown();
+            this.hideContextMenu();
           }}
         >
           Compute Meshes (ad hoc)
@@ -1339,7 +1319,7 @@ class SegmentsView extends React.Component<Props, State> {
           <div
             onClick={() => {
               this.setState({ activeStatisticsModalGroupId: id });
-              this.handleGroupDropdownMenuVisibility(false);
+              this.hideContextMenu();
             }}
           >
             Show Segment Statistics
@@ -1363,7 +1343,7 @@ class SegmentsView extends React.Component<Props, State> {
             }
             this.handleLoadMeshesFromFile(groupId);
             this.getToastForMissingPositions(groupId);
-            this.closeSegmentOrGroupDropdown();
+            this.hideContextMenu();
           }}
         >
           Load Meshes (precomputed)
@@ -1381,7 +1361,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.handleRefreshMeshes(groupId);
-                this.closeSegmentOrGroupDropdown();
+                this.hideContextMenu();
               }}
             >
               Refresh Meshes
@@ -1400,7 +1380,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.handleRemoveMeshes(groupId);
-                this.closeSegmentOrGroupDropdown();
+                this.hideContextMenu();
               }}
             >
               Remove Meshes
@@ -1419,7 +1399,7 @@ class SegmentsView extends React.Component<Props, State> {
             <div
               onClick={() => {
                 this.downloadAllMeshesForGroup(groupId);
-                this.closeSegmentOrGroupDropdown();
+                this.hideContextMenu();
               }}
             >
               Download Meshes
@@ -1444,7 +1424,7 @@ class SegmentsView extends React.Component<Props, State> {
               this.props.visibleSegmentationLayer.name,
               true,
             );
-            this.closeSegmentOrGroupDropdown();
+            this.hideContextMenu();
           },
           disabled: !this.props.allowUpdate,
           icon: <ArrowRightOutlined />,
@@ -1486,7 +1466,7 @@ class SegmentsView extends React.Component<Props, State> {
         groupId,
         isVisible,
       );
-      this.closeSegmentOrGroupDropdown();
+      this.hideContextMenu();
     };
     if (areSomeSegmentsInvisible) {
       menuOptions.push({
@@ -1897,7 +1877,7 @@ class SegmentsView extends React.Component<Props, State> {
                         key: "create",
                         onClick: () => {
                           this.createGroup(id);
-                          this.closeSegmentOrGroupDropdown();
+                          this.hideContextMenu();
                         },
                         disabled: isEditingDisabled,
                         icon: <PlusOutlined />,
@@ -1908,7 +1888,7 @@ class SegmentsView extends React.Component<Props, State> {
                         disabled: isEditingDisabled,
                         onClick: () => {
                           this.handleDeleteGroup(id);
-                          this.closeSegmentOrGroupDropdown();
+                          this.hideContextMenu();
                         },
                         icon: <DeleteOutlined />,
                         label: "Delete group",
@@ -2094,7 +2074,7 @@ class SegmentsView extends React.Component<Props, State> {
         const allExpandedGroups = children.concat(this.state.expandedGroupKeys);
         if (!isGroupItselfExpanded) allExpandedGroups.push(getKeyForGroupId(groupId));
         this.setExpandedGroups(allExpandedGroups);
-        this.closeSegmentOrGroupDropdown();
+        this.hideContextMenu();
       },
       icon: <ExpandAltOutlined />,
       label: "Expand all subgroups",
@@ -2113,7 +2093,7 @@ class SegmentsView extends React.Component<Props, State> {
       key: "collapseAll",
       onClick: () => {
         this.collapseGroups(children);
-        this.closeSegmentOrGroupDropdown();
+        this.hideContextMenu();
       },
       icon: <ShrinkOutlined />,
       label: "Collapse all subgroups",

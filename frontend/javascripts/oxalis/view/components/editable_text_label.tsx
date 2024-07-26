@@ -1,4 +1,4 @@
-import { Input, InputProps, Tooltip } from "antd";
+import { Input, InputProps } from "antd";
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
 import * as React from "react";
 import Markdown from "libs/markdown_adapter";
@@ -6,8 +6,6 @@ import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import Toast from "libs/toast";
 import { ValidationResult } from "../left-border-tabs/modals/add_volume_layer_modal";
 import FastTooltip from "components/fast_tooltip";
-
-// const FastTooltip = Tooltip;
 
 type Rule = {
   message?: string;

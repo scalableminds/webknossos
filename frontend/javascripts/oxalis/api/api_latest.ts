@@ -40,7 +40,7 @@ import {
   moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
+import { disableSavingAction, discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
   finishAnnotation,
@@ -1363,6 +1363,14 @@ class TracingApi {
     await this.save();
     await downsampleSegmentation(annotationId, annotationType, volumeTracingId);
     await this.hardReload();
+  }
+
+  /**
+   * Disables the saving for the current annotation.
+   * WARNING: Cannot be undone. Only do this if you know what you are doing.
+   */
+  disableSaving() {
+    Store.dispatch(disableSavingAction());
   }
 }
 /**

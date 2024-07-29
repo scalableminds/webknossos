@@ -16,6 +16,7 @@ import type { ViewMode, Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import message from "messages";
 import { ShareButton } from "oxalis/view/action-bar/share_modal_view";
+import FastTooltip from "components/fast_tooltip";
 
 type Props = {
   flycam: Flycam;
@@ -122,7 +123,7 @@ class DatasetPositionView extends PureComponent<Props> {
             whiteSpace: "nowrap",
           }}
         >
-          <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
+          <FastTooltip title={message["tracing.copy_position"]} placement="bottom-start">
             <ButtonComponent
               onClick={this.copyPositionToClipboard}
               style={{ padding: "0 10px", ...iconColoringStyle }}
@@ -130,7 +131,7 @@ class DatasetPositionView extends PureComponent<Props> {
             >
               <PushpinOutlined style={positionIconStyle} />
             </ButtonComponent>
-          </Tooltip>
+          </FastTooltip>
           <Vector3Input
             value={position}
             onChange={this.handleChangePosition}
@@ -147,7 +148,7 @@ class DatasetPositionView extends PureComponent<Props> {
               marginLeft: 10,
             }}
           >
-            <Tooltip title={message["tracing.copy_rotation"]} placement="bottomLeft">
+            <FastTooltip title={message["tracing.copy_rotation"]} placement="bottom-start">
               <ButtonComponent
                 onClick={this.copyRotationToClipboard}
                 style={{
@@ -157,7 +158,7 @@ class DatasetPositionView extends PureComponent<Props> {
               >
                 <ReloadOutlined />
               </ButtonComponent>
-            </Tooltip>
+            </FastTooltip>
             <Vector3Input
               value={rotation}
               onChange={this.handleChangeRotation}
@@ -171,7 +172,11 @@ class DatasetPositionView extends PureComponent<Props> {
         ) : null}
       </div>
     );
-    return <Tooltip title={maybeErrorMessage || null}>{positionView}</Tooltip>;
+    return (
+      <FastTooltip title={maybeErrorMessage || null} wrapper="div">
+        {positionView}
+      </FastTooltip>
+    );
   }
 }
 

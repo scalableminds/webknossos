@@ -19,14 +19,30 @@ export default function FastTooltip({
   children,
   placement,
   disabled,
-}: { title: string; children: React.ReactNode; placement?: Placement; disabled?: boolean }) {
+  id,
+  onMouseEnter,
+  onMouseLeave,
+  wrapper,
+}: {
+  title: string | null | undefined;
+  children: React.ReactNode;
+  placement?: Placement;
+  disabled?: boolean;
+  id?: string;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  wrapper?: "div" | "span" | "p"; // Any valid HTML tag
+}) {
+  const Tag = wrapper || "span";
   return (
-    <span
-      data-tooltip-id={disabled ? "" : "main-tooltip"}
-      data-tooltip-content={title}
+    <Tag
+      data-tooltip-id={disabled || title == null ? "" : id || "main-tooltip"}
+      data-tooltip-content={title || ""}
       data-tooltip-place={placement || "top"}
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
     >
       {children}
-    </span>
+    </Tag>
   );
 }

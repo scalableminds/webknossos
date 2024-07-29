@@ -199,10 +199,9 @@ class ActionBarView extends React.PureComponent<Props, State> {
     location.href = `${location.origin}/annotations/${annotation.typ}/${annotation.id}${location.hash}`;
   };
 
-  renderStartAIJobButton(disabled: boolean): React.ReactNode {
-    const tooltipText = disabled
-      ? "The dataset needs to have a color layer to start AI processing jobs."
-      : "Start a processing job using AI";
+  renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
+    // TODO_c adjust text based on reason for disabled
+    const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
     return (
       <ButtonComponent
         key="ai-job-button"
@@ -251,7 +250,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const isAdminOrDatasetManager = activeUser && isUserAdminOrTeamManager(activeUser);
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const isArbitrarySupported = hasSkeleton || isViewMode;
-    const isAIAnalysisEnabled = () => {
+    const getIsAIAnalysisEnabled = () => {
       const jobsEnabled =
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_NEURONS) ||
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.INFER_MITOCHONDRIA) ||
@@ -259,6 +258,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.ALIGN_SECTIONS);
       return jobsEnabled;
     };
+    const hasAdditionalCoordinates = Store.getState().flycam.additionalCoordinates != null; // TODO is this a smell?
 
     const layoutMenu = getLayoutMenu({
       ...layoutProps,
@@ -273,6 +273,20 @@ class ActionBarView extends React.PureComponent<Props, State> {
     });
 
     const datasetHasColorLayer = getColorLayers(dataset).length > 0;
+    const is2DOrNDDataset = hasAdditionalCoordinates || is2dDataset(dataset);
+    const isAIAnalysisEnabled = getIsAIAnalysisEnabled();
+    const shouldDisableAIJobButton =
+      !isAIAnalysisEnabled || !datasetHasColorLayer || is2DOrNDDataset;
+    const aiIsDisabledTooltip = () => {
+      if (!isAIAnalysisEnabled) {
+        return "AI analysis is not enabled for this dataset.";
+      } else if (!datasetHasColorLayer) {
+        return "The dataset needs to have a color layer to start AI processing jobs.";
+      } else if (is2DOrNDDataset) {
+        return "AI Analysis is not supported for 2D or ND datasets.";
+      }
+      return "The dataset needs to have a color layer to start AI processing jobs.";
+    };
 
     return (
       <React.Fragment>
@@ -286,8 +300,8 @@ class ActionBarView extends React.PureComponent<Props, State> {
           <DatasetPositionView />
           <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
-          {isAIAnalysisEnabled() && isAdminOrDatasetManager
-            ? this.renderStartAIJobButton(!datasetHasColorLayer)
+          {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
+            ? this.renderStartAIJobButton(shouldDisableAIJobButton, aiIsDisabledTooltip())
             : null}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}

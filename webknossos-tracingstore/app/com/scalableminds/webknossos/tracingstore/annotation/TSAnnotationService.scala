@@ -3,13 +3,16 @@ package com.scalableminds.webknossos.tracingstore.annotation
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
   CreateNodeSkeletonAction,
   DeleteNodeSkeletonAction,
+  SkeletonUpdateAction,
   UpdateTracingSkeletonAction
 }
-import com.scalableminds.webknossos.tracingstore.tracings.volume.UpdateBucketVolumeAction
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{UpdateBucketVolumeAction, VolumeUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingUpdatesReport}
 import net.liftweb.common.{Empty, Full}
@@ -17,6 +20,8 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+
+case class TracingCollection(tracingsById: Map[String, Either[SkeletonTracing, VolumeTracing]]) {}
 
 class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient,
                                     tracingDataStore: TracingDataStore)
@@ -71,8 +76,9 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
       } yield updateActionGroups.reverse.flatten
     }
 
-  def applyUpdate(annotation: AnnotationProto, updateAction: UpdateAction)(
-      implicit ec: ExecutionContext): Fox[AnnotationProto] =
+  private def applyUpdate(annotationWithTracings: (AnnotationProto, TracingCollection), updateAction: UpdateAction)(
+      implicit ec: ExecutionContext): Fox[(AnnotationProto, TracingCollection)] = {
+    val annotation = annotationWithTracings._1
     for {
       updated <- updateAction match {
         case a: AddLayerAnnotationUpdateAction =>
@@ -90,7 +96,8 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
           Fox.successful(annotation.copy(name = a.name, description = a.description))
         case _ => Fox.failure("Received unsupported AnnotationUpdateAction action")
       }
-    } yield updated.copy(version = updated.version + 1L)
+    } yield (updated.copy(version = updated.version + 1L), annotationWithTracings._2)
+  }
 
   def updateActionLog(annotationId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[UpdateAction])): JsObject =
@@ -124,34 +131,64 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     for {
       targetVersion <- determineTargetVersion(annotation, annotationId, targetVersionOpt)
       updates <- findPendingUpdates(annotationId, annotation.version, targetVersion)
-      updated <- applyUpdates(annotation, annotationId, updates, targetVersion, userToken)
+      tracingCollection <- findTracingsForUpdates(annotation, updates)
+      updated <- applyUpdates(annotation, tracingCollection, annotationId, updates, targetVersion, userToken)
     } yield updated
 
+  private def findTracingsForUpdates(annotation: AnnotationProto, updates: List[UpdateAction])(
+      implicit ec: ExecutionContext): Fox[TracingCollection] = {
+    val skeletonTracingIds = updates.flatMap {
+      case u: SkeletonUpdateAction => Some(u.actionTracingId)
+      case _                       => None
+    }
+    val volumeTracingIds = updates.flatMap {
+      case u: VolumeUpdateAction => Some(u.actionTracingId)
+      case _                     => None
+    }
+    for {
+      skeletonTracings <- Fox.serialCombined(skeletonTracingIds)(
+        id =>
+          tracingDataStore.skeletons.get[SkeletonTracing](id, Some(annotation.version), mayBeEmpty = Some(true))(
+            fromProtoBytes[SkeletonTracing]))
+      volumeTracings <- Fox.serialCombined(volumeTracingIds)(
+        id =>
+          tracingDataStore.volumes
+            .get[VolumeTracing](id, Some(annotation.version), mayBeEmpty = Some(true))(fromProtoBytes[VolumeTracing]))
+      skeletonTracingsMap: Map[String, Either[SkeletonTracing, VolumeTracing]] = skeletonTracingIds
+        .zip(skeletonTracings.map(versioned => Left[SkeletonTracing, VolumeTracing](versioned.value)))
+        .toMap
+      volumeTracingsMap: Map[String, Either[SkeletonTracing, VolumeTracing]] = volumeTracingIds
+        .zip(volumeTracings.map(versioned => Right[SkeletonTracing, VolumeTracing](versioned.value)))
+        .toMap
+    } yield TracingCollection(skeletonTracingsMap ++ volumeTracingsMap)
+  }
+
   private def applyUpdates(annotation: AnnotationProto,
+                           tracingCollection: TracingCollection,
                            annotationId: String,
                            updates: List[UpdateAction],
                            targetVersion: Long,
                            userToken: Option[String])(implicit ec: ExecutionContext): Fox[AnnotationProto] = {
 
-    def updateIter(tracingFox: Fox[AnnotationProto], remainingUpdates: List[UpdateAction]): Fox[AnnotationProto] =
-      tracingFox.futureBox.flatMap {
+    def updateIter(annotationWithTracingsFox: Fox[(AnnotationProto, TracingCollection)],
+                   remainingUpdates: List[UpdateAction]): Fox[(AnnotationProto, TracingCollection)] =
+      annotationWithTracingsFox.futureBox.flatMap {
         case Empty => Fox.empty
-        case Full(annotation) =>
+        case Full(annotationWithTracings) =>
           remainingUpdates match {
-            case List() => Fox.successful(annotation)
+            case List() => Fox.successful(annotationWithTracings)
             case RevertToVersionUpdateAction(sourceVersion, _, _, _) :: tail =>
-              val sourceTracing = get(annotationId, Some(sourceVersion), applyUpdates = true, userToken)
-              updateIter(sourceTracing, tail)
-            case update :: tail => updateIter(applyUpdate(annotation, update), tail)
+              ???
+            case update :: tail => updateIter(applyUpdate(annotationWithTracings, update), tail)
           }
-        case _ => tracingFox
+        case _ => annotationWithTracingsFox
       }
 
     if (updates.isEmpty) Full(annotation)
     else {
       for {
-        updated <- updateIter(Some(annotation), updates)
-      } yield updated.withVersion(targetVersion)
+        updated <- updateIter(Some((annotation, tracingCollection)), updates)
+      } yield updated._1.withVersion(targetVersion)
     }
   }
 

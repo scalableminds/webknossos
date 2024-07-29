@@ -13,7 +13,11 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
   SkeletonUpdateAction,
   UpdateTracingSkeletonAction
 }
-import com.scalableminds.webknossos.tracingstore.tracings.volume.{UpdateBucketVolumeAction, VolumeUpdateAction}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  ApplyableVolumeUpdateAction,
+  UpdateBucketVolumeAction,
+  VolumeUpdateAction
+}
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingUpdatesReport}
 import net.liftweb.common.{Empty, Full}
@@ -51,7 +55,7 @@ case class AnnotationWithTracings(annotation: AnnotationProto,
     AnnotationWithTracings(annotation.copy(version = annotation.version + 1L), tracingsById)
 
   def withVersion(newVersion: Long): AnnotationWithTracings =
-    AnnotationWithTracings(annotation.copy(version = newVersion), tracingsById)
+    AnnotationWithTracings(annotation.copy(version = newVersion), tracingsById) // TODO also update version in tracings?
 
   def applySkeletonAction(a: SkeletonUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
@@ -62,6 +66,16 @@ case class AnnotationWithTracings(annotation: AnnotationProto,
       }
       updated = a.applyOn(skeletonTracing)
     } yield AnnotationWithTracings(annotation, tracingsById.updated(a.actionTracingId, Left(updated)))
+
+  def applyVolumeAction(a: ApplyableVolumeUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+    for {
+      volumeTracingEither <- tracingsById.get(a.actionTracingId).toFox
+      volumeTracing <- volumeTracingEither match {
+        case Right(vt: VolumeTracing) => Fox.successful(vt)
+        case _                        => Fox.failure("wrong tracing type")
+      }
+      updated = a.applyOn(volumeTracing)
+    } yield AnnotationWithTracings(annotation, tracingsById.updated(a.actionTracingId, Right(updated)))
 }
 
 class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient,
@@ -132,9 +146,13 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
           Fox.successful(annotationWithTracings.updateMetadata(a))
         case a: SkeletonUpdateAction =>
           annotationWithTracings.applySkeletonAction(a)
+        case a: ApplyableVolumeUpdateAction =>
+          annotationWithTracings.applyVolumeAction(a)
+        case a: VolumeUpdateAction =>
+          Fox.successful(annotationWithTracings) // TODO
         case _ => Fox.failure("Received unsupported AnnotationUpdateAction action")
       }
-    } yield updated.incrementVersion
+    } yield updated
 
   def updateActionLog(annotationId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[UpdateAction])): JsObject =

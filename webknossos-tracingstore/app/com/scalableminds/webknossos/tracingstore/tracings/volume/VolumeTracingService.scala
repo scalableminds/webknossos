@@ -114,7 +114,7 @@ class VolumeTracingService @Inject()(
                                                mappingName,
                                                editableMappingTracingId) ?~> "volumeSegmentIndex.update.failed"
 
-  private def applyUpdateOn(tracing: VolumeTracing, update: ApplyableVolumeAction): VolumeTracing = ???
+  private def applyUpdateOn(tracing: VolumeTracing, update: ApplyableVolumeUpdateAction): VolumeTracing = ???
 
   def handleUpdateGroup(tracingId: String,
                         updateGroup: UpdateActionGroup,
@@ -163,7 +163,7 @@ class VolumeTracingService @Inject()(
                 } else
                   deleteSegmentData(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version, userToken) ?~> "Failed to delete segment data."
               case _: UpdateTdCameraVolumeAction => Fox.successful(tracing)
-              case a: ApplyableVolumeAction      => Fox.successful(applyUpdateOn(tracing, a))
+              case a: ApplyableVolumeUpdateAction      => Fox.successful(applyUpdateOn(tracing, a))
               case _                             => Fox.failure("Unknown action.")
             }
           case Empty =>

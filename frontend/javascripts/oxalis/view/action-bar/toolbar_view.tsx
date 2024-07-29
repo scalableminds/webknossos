@@ -77,6 +77,7 @@ import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { APIJobType } from "types/api_flow_types";
 import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
+import FastTooltip from "components/fast_tooltip";
 
 const NARROW_BUTTON_STYLE = {
   paddingLeft: 10,
@@ -185,33 +186,45 @@ function RadioButtonWithTooltip({
   disabledTitle,
   disabled,
   onClick,
-  onOpenChange,
+  children,
+  onMouseEnter,
   ...props
 }: {
-  title: string | React.ReactNode;
+  title: string; // | React.ReactNode;
   disabledTitle?: string;
   disabled?: boolean;
   children: React.ReactNode;
   style: React.CSSProperties;
   value: string;
   onClick?: (event: React.MouseEvent) => void;
-  onOpenChange?: (open: boolean) => void;
+  onMouseEnter?: () => void;
 }) {
+  // FastTooltip adds data-* properties so that the centralized ReactTooltip
+  // is hooked up here. Unfortunately, FastTooltip would add another div or span
+  // which antd does not like within this toolbar.
+  // Therefore, we move the tooltip into the button which requires tweaking the padding
+  // a bit (otherwise, the tooltip would only occur when hovering exactly over the icon
+  // instead of everywhere within the button).
   return (
-    <Tooltip title={disabled ? disabledTitle : title} onOpenChange={onOpenChange}>
-      <Radio.Button
-        disabled={disabled}
-        onClick={(event: React.MouseEvent) => {
-          if (document.activeElement) {
-            (document.activeElement as HTMLElement).blur();
-          }
-          if (onClick) {
-            onClick(event);
-          }
-        }}
-        {...props}
-      />
-    </Tooltip>
+    <Radio.Button
+      disabled={disabled}
+      // Remove the padding here and add it within the tooltip.
+      className="no-padding"
+      onClick={(event: React.MouseEvent) => {
+        if (document.activeElement) {
+          (document.activeElement as HTMLElement).blur();
+        }
+        if (onClick) {
+          onClick(event);
+        }
+      }}
+      {...props}
+    >
+      <FastTooltip title={disabled ? disabledTitle : title} onMouseEnter={onMouseEnter}>
+        {/* See comments above. */}
+        <span style={{ padding: "0 10px", display: "block" }}>{children}</span>
+      </FastTooltip>
+    </Radio.Button>
   );
 }
 
@@ -219,7 +232,7 @@ function ToolRadioButton({
   name,
   description,
   disabledExplanation,
-  onOpenChange,
+  onMouseEnter,
   ...props
 }: {
   name: string;
@@ -230,13 +243,13 @@ function ToolRadioButton({
   style: React.CSSProperties;
   value: string;
   onClick?: (event: React.MouseEvent) => void;
-  onOpenChange?: (open: boolean) => void;
+  onMouseEnter?: () => void;
 }) {
   return (
     <RadioButtonWithTooltip
       title={`${name} – ${description}`}
       disabledTitle={`${name} – ${disabledExplanation}`}
-      onOpenChange={onOpenChange}
+      onMouseEnter={onMouseEnter}
       {...props}
     />
   );
@@ -369,11 +382,11 @@ function VolumeInterpolationButton() {
 
   const buttonsRender = useCallback(
     ([leftButton, rightButton]) => [
-      <Tooltip title={tooltipTitle} key="leftButton">
+      <FastTooltip title={tooltipTitle} key="leftButton">
         {React.cloneElement(leftButton as React.ReactElement<any, string>, {
           disabled: isDisabled,
         })}
-      </Tooltip>,
+      </FastTooltip>,
       rightButton,
     ],
     [tooltipTitle, isDisabled],
@@ -743,7 +756,7 @@ function ChangeBrushSizePopover() {
   ];
 
   return (
-    <Tooltip title="Change the brush size">
+    <FastTooltip title="Change the brush size">
       <Popover
         title="Brush Size"
         content={
@@ -833,7 +846,7 @@ function ChangeBrushSizePopover() {
           />
         </ButtonComponent>
       </Popover>
-    </Tooltip>
+    </FastTooltip>
   );
 }
 
@@ -881,14 +894,14 @@ export default function ToolbarView() {
     maybeResolutionWithZoomStep != null ? maybeResolutionWithZoomStep.resolution : null;
   const hasResolutionWithHigherDimension = (labeledResolution || []).some((val) => val > 1);
   const multiSliceAnnotationInfoIcon = hasResolutionWithHigherDimension ? (
-    <Tooltip title="You are annotating in a low resolution. Depending on the used viewport, you might be annotating multiple slices at once.">
+    <FastTooltip title="You are annotating in a low resolution. Depending on the used viewport, you might be annotating multiple slices at once.">
       <i
         className="fas fa-layer-group"
         style={{
           marginLeft: 4,
         }}
       />
-    </Tooltip>
+    </FastTooltip>
   ) : null;
 
   const disabledInfosForTools = useSelector(getDisabledInfoForTools);
@@ -964,21 +977,18 @@ export default function ToolbarView() {
             value={AnnotationToolEnum.SKELETON}
           >
             {/*
-           When visible changes to false, the tooltip fades out in an animation. However, skeletonToolHint
-           will be null, too, which means the tooltip text would immediately change to an empty string.
-           To avoid this, we fallback to previousSkeletonToolHint.
-          */}
-            <Tooltip
-              title={skeletonToolHint || previousSkeletonToolHint}
-              open={skeletonToolHint != null}
-            >
+               When visible changes to false, the tooltip fades out in an animation. However, skeletonToolHint
+               will be null, too, which means the tooltip text would immediately change to an empty string.
+               To avoid this, we fallback to previousSkeletonToolHint.
+              */}
+            <FastTooltip title={skeletonToolHint || previousSkeletonToolHint}>
               <i
                 style={{
                   opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled ? 0.5 : 1,
                 }}
                 className="fas fa-project-diagram"
               />
-            </Tooltip>
+            </FastTooltip>
           </ToolRadioButton>
         ) : null}
 
@@ -1164,10 +1174,8 @@ export default function ToolbarView() {
             }
             style={NARROW_BUTTON_STYLE}
             value={AnnotationToolEnum.PROOFREAD}
-            onOpenChange={(open: boolean) => {
-              if (open) {
-                dispatch(ensureLayerMappingsAreLoadedAction());
-              }
+            onMouseEnter={() => {
+              dispatch(ensureLayerMappingsAreLoadedAction());
             }}
           >
             <i
@@ -1428,11 +1436,7 @@ function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
       </RadioButtonWithTooltip>
       <RadioButtonWithTooltip
         title={
-          <>
-            Measure areas by using Left Drag.
-            <br />
-            Avoid self-crossing polygon structure for accurate results.
-          </>
+          "Measure areas by using Left Drag. Avoid self-crossing polygon structure for accurate results."
         }
         style={NARROW_BUTTON_STYLE}
         value={AnnotationToolEnum.AREA_MEASUREMENT}

@@ -51,6 +51,7 @@ import {
   setQuickSelectStateAction,
   setLastMeasuredPositionAction,
   setIsMeasuringAction,
+  setActiveUserBoundingBoxId,
 } from "oxalis/model/actions/ui_actions";
 import ArbitraryView from "oxalis/view/arbitrary_view";
 
@@ -602,6 +603,12 @@ export class BoundingBoxTool {
         if (primarySelectedEdge == null && planeId !== OrthoViews.TDView) {
           MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
           highlightAndSetCursorOnHoveredBoundingBox(position, planeId, event);
+        }
+      },
+      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        const currentlyHoveredEdge = getClosestHoveredBoundingBox(pos, planeId);
+        if (currentlyHoveredEdge) {
+          Store.dispatch(setActiveUserBoundingBoxId(currentlyHoveredEdge[0].boxId));
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {

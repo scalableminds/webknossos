@@ -148,7 +148,10 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
             }
           : bbox,
       );
-      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      return updateKey(updatedState, "uiInformation", {
+        activeUserBoundingBoxId: action.id,
+      });
     }
 
     case "ADD_NEW_USER_BOUNDING_BOX": {
@@ -201,7 +204,10 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       }
 
       const updatedUserBoundingBoxes = [...userBoundingBoxes, newUserBoundingBox];
-      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      return updateKey(updatedState, "uiInformation", {
+        activeUserBoundingBoxId: newUserBoundingBox.id,
+      });
     }
 
     case "ADD_USER_BOUNDING_BOXES": {
@@ -237,7 +243,13 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
       const updatedUserBoundingBoxes = tracing.userBoundingBoxes.filter(
         (bbox) => bbox.id !== action.id,
       );
-      return updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      const updatedState = updateUserBoundingBoxes(state, updatedUserBoundingBoxes);
+      if (action.id === state.uiInformation.activeUserBoundingBoxId) {
+        return updateKey(updatedState, "uiInformation", {
+          activeUserBoundingBoxId: null,
+        });
+      }
+      return updatedState;
     }
 
     case "UPDATE_MESH_VISIBILITY": {

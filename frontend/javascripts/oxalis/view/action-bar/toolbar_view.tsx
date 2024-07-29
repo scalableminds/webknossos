@@ -1,6 +1,5 @@
 import {
   Radio,
-  Tooltip,
   Badge,
   Space,
   Popover,

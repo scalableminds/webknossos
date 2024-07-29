@@ -1,4 +1,4 @@
-import { Space, Tooltip } from "antd";
+import { Space } from "antd";
 import { PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";

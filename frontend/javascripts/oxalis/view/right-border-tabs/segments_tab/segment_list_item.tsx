@@ -656,7 +656,6 @@ function _SegmentListItem({
             margin="0 5px"
             disableEditing={!allowUpdate}
           />
-          <div>{segment.id}</div>
           <FastTooltip title="Open context menu (also available via right-click)">
             <EllipsisOutlined onClick={onOpenContextMenu} />
           </FastTooltip>

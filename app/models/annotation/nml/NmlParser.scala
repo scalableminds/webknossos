@@ -165,7 +165,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       id <- idText.toIntOpt ?~ Messages("nml.treegroup.id.invalid", idText)
       children <- (node \ "group").map(parseTreeGroup).toList.toSingleBox("")
       name = getSingleAttribute(node, "name")
-      isExpanded = getSingleAttribute(node, "isExpanded").toBooleanOpt.getOrElse(false)
+      isExpanded = getSingleAttribute(node, "isExpanded").toBooleanOpt.getOrElse(true)
     } yield TreeGroup(name, id, children, isExpanded = Some(isExpanded))
   }
 

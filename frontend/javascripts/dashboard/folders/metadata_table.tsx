@@ -15,7 +15,7 @@ import {
   Dropdown,
   Button,
 } from "antd";
-import { usePreviousValue, useWillUnmount } from "beautiful-react-hooks";
+import { usePreviousValue } from "beautiful-react-hooks";
 import {
   DatasetCollectionContextValue,
   useDatasetCollectionContext,
@@ -26,7 +26,7 @@ import React, { useEffect } from "react";
 import { useState } from "react";
 import { APIDataset, Folder, APIMetadata, APIMetadataType } from "types/api_flow_types";
 
-function metadataTypeToString(type: APIMetadata["type"]) {
+function getMetadataTypeLabel(type: APIMetadata["type"]) {
   switch (type) {
     case "string":
       return (
@@ -53,7 +53,7 @@ const saveCurrentMetadata = async (
   datasetOrFolderToUpdate: APIDataset | Folder,
   metadata: IndexedMetadataEntries,
   context: DatasetCollectionContextValue,
-  { dontUpdateState }: EffectCancelSignal = { dontUpdateState: false },
+  { dontUpdateState }: EffectCancelSignal = { dontUpdateState: false }, // equals whether the component is unmounted
   setIsSaving: (isSaving: boolean) => void,
   setHasUnsavedChanges: (hasUnsavedChanges: boolean) => void,
 ) => {
@@ -102,6 +102,9 @@ const saveCurrentMetadata = async (
 
 const saveCurrentMetadataDebounced = _.debounce(saveCurrentMetadata, 3000);
 
+const getKeyInputId = (record: APIMetadataWithIndexAndError) =>
+  `metadata-key-input-id-${record.index}`;
+
 type APIMetadataWithIndexAndError = APIMetadata & { index: number; error?: string | null };
 type IndexedMetadataEntries = APIMetadataWithIndexAndError[];
 type EffectCancelSignal = { dontUpdateState: boolean };
@@ -119,7 +122,6 @@ export default function MetadataTable({
     datasetOrFolder?.metadata?.map((entry, index) => ({ ...entry, index, error: null })) || [],
   );
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
-
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
 
@@ -155,6 +157,7 @@ export default function MetadataTable({
     };
   }, [datasetOrFolder.name, isDataset(datasetOrFolder), datasetOrFolder.metadata]);
 
+  // Sent automatic debounced updates to the server when metadata changes.
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only update upon pending changes.
   useEffect(() => {
     const effectCancelSignal = { dontUpdateState: false };
@@ -173,20 +176,8 @@ export default function MetadataTable({
     };
   }, [metadata]);
 
-  // On component unmount update pending updates to avoid potential data loss.
-  useWillUnmount(() => {
-    saveCurrentMetadata(
-      datasetOrFolder,
-      metadata,
-      context,
-      { dontUpdateState: true },
-      setIsSaving,
-      setHasUnsavedChanges,
-    );
-  });
-
   const updateMetadataKey = (index: number, newPropName: string) => {
-    setMetadata((prev) => {
+    setMetadata((prev: IndexedMetadataEntries) => {
       let error = null;
       const entry = prev.find((prop) => prop.index === index);
       if (!entry) {
@@ -260,14 +251,11 @@ export default function MetadataTable({
     items: Object.values(APIMetadataType).map((type) => {
       return {
         key: type,
-        label: metadataTypeToString(type as APIMetadata["type"]),
+        label: getMetadataTypeLabel(type as APIMetadata["type"]),
         onClick: () => addNewEntryWithType(type as APIMetadata["type"]),
       };
     }),
   });
-
-  const getKeyInputId = (record: APIMetadataWithIndexAndError) =>
-    `metadata-key-input-id-${record.index}`;
 
   const getKeyInput = (record: APIMetadataWithIndexAndError) => {
     const isFocused = record.index === focusedRow;
@@ -354,60 +342,6 @@ export default function MetadataTable({
     />
   );
 
-  const renderMetadataRow = (record: APIMetadataWithIndexAndError) => (
-    <tr key={record.index}>
-      <td>{getKeyInput(record)}</td>
-      <td>:</td>
-      <td>{getValueInput(record)}</td>
-      <td>{getDeleteEntryButton(record)}</td>
-    </tr>
-  );
-
-  function getAddNewMetadataEntryRow() {
-    return (
-      <tr>
-        <td colSpan={3}>
-          <div className="flex-center-child">
-            <Dropdown
-              menu={getTypeSelectDropdownMenu()}
-              placement="bottom"
-              trigger={["click"]}
-              autoFocus
-            >
-              <Button ghost size="small" style={{ border: "none" }}>
-                <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
-              </Button>
-            </Dropdown>
-          </div>
-        </td>
-      </tr>
-    );
-  }
-
-  function getEmptyTablePlaceholder() {
-    return (
-      <div className="flex-center-child empty-metadata-placeholder">
-        <img
-          src="/assets/images/metadata-teaser.svg"
-          alt="Metadata preview"
-          style={{ width: "60%", marginBottom: 16 }}
-        />
-        <span style={{ marginTop: 10 }}>
-          <Dropdown
-            menu={getTypeSelectDropdownMenu()}
-            placement="bottom"
-            trigger={["click"]}
-            autoFocus
-          >
-            <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>
-              Add First Metadata Entry
-            </Button>
-          </Dropdown>
-        </span>
-      </div>
-    );
-  }
-
   return (
     <div style={{ marginBottom: 16 }}>
       <div className="sidebar-label">Metadata</div>
@@ -424,12 +358,55 @@ export default function MetadataTable({
               </tr>
             </thead>
             <tbody>
-              {sortedDetails.map(renderMetadataRow)}
-              {getAddNewMetadataEntryRow()}
+              {sortedDetails.map((record) => (
+                <tr key={record.index}>
+                  <td>{getKeyInput(record)}</td>
+                  <td>:</td>
+                  <td>{getValueInput(record)}</td>
+                  <td>{getDeleteEntryButton(record)}</td>
+                </tr>
+              ))}
+              <tr>
+                <td colSpan={3}>
+                  <div className="flex-center-child">
+                    <Dropdown
+                      menu={getTypeSelectDropdownMenu()}
+                      placement="bottom"
+                      trigger={["click"]}
+                      autoFocus
+                    >
+                      <Button ghost size="small" style={{ border: "none" }}>
+                        <PlusOutlined
+                          size={18}
+                          style={{ color: "var(--ant-color-text-tertiary)" }}
+                        />
+                      </Button>
+                    </Dropdown>
+                  </div>
+                </td>
+              </tr>
             </tbody>
           </table>
         ) : (
-          getEmptyTablePlaceholder()
+          <div className="flex-center-child empty-metadata-placeholder">
+            <img
+              src="/assets/images/metadata-teaser.svg"
+              alt="Metadata preview"
+              style={{ width: "60%", marginBottom: 16 }}
+            />
+            <span style={{ marginTop: 10 }}>
+              <Dropdown
+                menu={getTypeSelectDropdownMenu()}
+                placement="bottom"
+                trigger={["click"]}
+                autoFocus
+              >
+                <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>
+                  Add First Metadata Entry
+                </Button>
+              </Dropdown>
+            </span>
+          </div>
         )}
       </div>
     </div>

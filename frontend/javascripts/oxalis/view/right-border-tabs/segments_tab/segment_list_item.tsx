@@ -42,6 +42,7 @@ import { withMappingActivationConfirmation } from "./segments_view_helper";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import FastTooltip from "components/fast_tooltip";
+import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 
 // const FastTooltip = Tooltip;
 
@@ -404,23 +405,6 @@ function _SegmentListItem({
   showContextMenuAt,
   hideContextMenu,
 }: Props) {
-  // return (
-  //   <List.Item
-  //     style={{
-  //       padding: "2px 5px",
-  //     }}
-  //     className="segment-list-item"
-  //     onMouseEnter={() => {
-  //       setHoveredSegmentId(segment.id);
-  //     }}
-  //     onMouseLeave={() => {
-  //       setHoveredSegmentId(null);
-  //     }}
-  //   >
-  //     {segment.id}
-  //   </List.Item>
-  // );
-
   const { modal } = App.useApp();
   const isEditingDisabled = !allowUpdate;
 
@@ -591,23 +575,7 @@ function _SegmentListItem({
   const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
 
-    const overlayDivs = document.getElementsByClassName("segment-list-context-menu-overlay");
-    const referenceDiv = Array.from(overlayDivs)
-      .map((p) => p.parentElement)
-      .find((potentialParent) => {
-        if (potentialParent == null) {
-          return false;
-        }
-        const bounds = potentialParent.getBoundingClientRect();
-        return bounds.width > 0;
-      });
-
-    if (referenceDiv == null) {
-      return;
-    }
-    const bounds = referenceDiv.getBoundingClientRect();
-    const x = event.clientX - bounds.left;
-    const y = event.clientY - bounds.top;
+    const [x, y] = getContextMenuPositionFromEvent(event, "segment-list-context-menu-overlay");
 
     showContextMenuAt(
       x,
@@ -701,7 +669,6 @@ function _SegmentListItem({
           />
         </div>
       </div>
-      {/*</Dropdown>*/}
     </List.Item>
   );
 }

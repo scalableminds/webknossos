@@ -126,7 +126,11 @@ import { DataNode } from "antd/lib/tree";
 import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { ValueOf } from "types/globals";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
-import { ContextMenuContext, GenericContextMenuContainer } from "oxalis/view/context_menu";
+import {
+  ContextMenuContext,
+  GenericContextMenuContainer,
+  getContextMenuPositionFromEvent,
+} from "oxalis/view/context_menu";
 import Shortcut from "libs/shortcut_component";
 import FastTooltip from "components/fast_tooltip";
 
@@ -1912,26 +1916,10 @@ class SegmentsView extends React.Component<Props, State> {
                     ]),
                   });
 
-                  const overlayDivs = document.getElementsByClassName(
+                  const [x, y] = getContextMenuPositionFromEvent(
+                    event,
                     "segment-list-context-menu-overlay",
                   );
-                  const referenceDiv = Array.from(overlayDivs)
-                    .map((p) => p.parentElement)
-                    .find((potentialParent) => {
-                      if (potentialParent == null) {
-                        return false;
-                      }
-                      const bounds = potentialParent.getBoundingClientRect();
-                      return bounds.width > 0;
-                    });
-
-                  if (referenceDiv == null) {
-                    return;
-                  }
-                  const bounds = referenceDiv.getBoundingClientRect();
-                  const x = event.clientX - bounds.left;
-                  const y = event.clientY - bounds.top;
-
                   this.showContextMenuAt(x, y, getMenu());
                 };
 

@@ -1737,6 +1737,30 @@ function ContextMenuInner(propsWithInputRef: Props) {
   );
 }
 
+export function getContextMenuPositionFromEvent(
+  event: React.MouseEvent<HTMLDivElement>,
+  className: string,
+): [number, number] {
+  const overlayDivs = document.getElementsByClassName(className);
+  const referenceDiv = Array.from(overlayDivs)
+    .map((p) => p.parentElement)
+    .find((potentialParent) => {
+      if (potentialParent == null) {
+        return false;
+      }
+      const bounds = potentialParent.getBoundingClientRect();
+      return bounds.width > 0;
+    });
+
+  if (referenceDiv == null) {
+    return [0, 0];
+  }
+  const bounds = referenceDiv.getBoundingClientRect();
+  const x = event.clientX - bounds.left;
+  const y = event.clientY - bounds.top;
+  return [x, y];
+}
+
 const Actions = {
   deleteNode(dispatch: Dispatch<any>, nodeId: number, treeId: number) {
     dispatch(deleteNodeAsUserAction(Store.getState(), nodeId, treeId));

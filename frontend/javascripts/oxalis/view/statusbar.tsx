@@ -1,9 +1,9 @@
-import { Tooltip } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import React, { useCallback, useState } from "react";
 import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
 import { AltOrOptionKey, MappingStatusEnum, OrthoViews } from "oxalis/constants";
+import { Tooltip as ReactTooltip } from "react-tooltip";
 import {
   getMappingInfoOrNull,
   getVisibleSegmentationLayer,
@@ -38,7 +38,9 @@ import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { useInterval } from "libs/react_helpers";
 import _ from "lodash";
 import { AdditionalCoordinate } from "types/api_flow_types";
-import { EmptyObject } from "types/globals";
+import FastTooltip from "components/fast_tooltip";
+import { RenderToPortal } from "./layouting/portal_utils";
+import { Store } from "oxalis/singletons";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -57,6 +59,11 @@ function getPosString(
   const additionalCoordinates = (optAdditionalCoordinates || []).map((coord) => coord.value);
   return V3.floor(pos).concat(additionalCoordinates).join(",");
 }
+
+const TOOLTIP_CONTAINER_STYLE: React.CSSProperties = {
+  position: "absolute",
+  zIndex: 1000,
+};
 
 function ZoomShortcut() {
   return (
@@ -173,9 +180,9 @@ function ShortcutsInfo() {
       rel="noopener noreferrer"
       style={moreLinkStyle}
     >
-      <Tooltip title="More Shortcuts">
+      <FastTooltip title="More Shortcuts">
         <MoreOutlined rotate={90} style={moreIconStyle} />
-      </Tooltip>
+      </FastTooltip>
     </a>
   );
 
@@ -389,24 +396,46 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
   return isUint64SegmentationVisible ? (
     <React.Fragment>
       {label}{" "}
-      <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
+      <FastTooltip title={message["tracing.uint64_segmentation_warning"]}>
         <WarningOutlined
           style={{
             color: "var(--ant-color-warning)",
           }}
         />
-      </Tooltip>
+      </FastTooltip>
     </React.Fragment>
   ) : (
     label
   );
 }
 
+function renderMagTooltipContent() {
+  const state = Store.getState();
+  const { activeMagOfEnabledLayers } = getActiveResolutionInfo(state);
+  const dataset = state.dataset;
+  const tracing = state.tracing;
+  return (
+    <>
+      Rendered magnification per layer:
+      <ul>
+        {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+          const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
+
+          return (
+            <li key={layerName}>
+              {readableName}: {mag ? mag.join("-") : "none"}
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
 function Infos() {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
-  const { representativeResolution, activeMagOfEnabledLayers, isActiveResolutionGlobal } =
-    useSelector((state: OxalisState) => getActiveResolutionInfo(state));
+  const { representativeResolution, isActiveResolutionGlobal } = useSelector((state: OxalisState) =>
+    getActiveResolutionInfo(state),
+  );
 
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const activeVolumeTracing = useSelector((state: OxalisState) =>
@@ -428,6 +457,8 @@ function Infos() {
     state.tracing.skeleton ? state.tracing.skeleton.activeTreeId : null,
   );
   const dispatch = useDispatch();
+  const [isMagTooltipOpen, setIsMagTooltipOpen] = useState(false);
+  const [magTooltipContent, setMagTooltipContent] = useState<React.ReactElement | null>(null);
 
   const onChangeActiveCellId = useCallback(
     (id: number) => dispatch(setActiveCellAction(id)),
@@ -448,14 +479,14 @@ function Infos() {
     <React.Fragment>
       <SegmentAndMousePosition />
       <span className="info-element">
-        <Tooltip
+        <FastTooltip
           title={`Downloaded ${formatCountToDataAmountUnit(
             totalDownloadedByteCount,
           )} of Image Data (after decompression)`}
         >
           <DownloadOutlined className="icon-margin-right" />
           {formatCountToDataAmountUnit(currentBucketDownloadSpeed)}/s
-        </Tooltip>
+        </FastTooltip>
       </span>
       {activeVolumeTracing != null ? (
         <span className="info-element">
@@ -491,6 +522,13 @@ function Infos() {
           />
         </span>
       ) : null}
+      <RenderToPortal portalId="react-tooltip-portal">
+        <div style={TOOLTIP_CONTAINER_STYLE}>
+          <ReactTooltip id="mags-per-layer-tooltip" isOpen={isMagTooltipOpen}>
+            {magTooltipContent}
+          </ReactTooltip>
+        </div>
+      </RenderToPortal>
       {representativeResolution && (
         <span className="info-element">
           <img
@@ -498,27 +536,22 @@ function Infos() {
             className="resolution-status-bar-icon"
             alt="Resolution"
           />{" "}
-          <Tooltip
-            title={
-              <>
-                Rendered magnification per layer:
-                <ul>
-                  {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-                    const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
-
-                    return (
-                      <li key={layerName}>
-                        {readableName}: {mag ? mag.join("-") : "none"}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </>
-            }
+          <FastTooltip
+            title=""
+            id="mags-per-layer-tooltip"
+            placement="top"
+            onMouseEnter={() => {
+              setIsMagTooltipOpen(true);
+              setMagTooltipContent(renderMagTooltipContent());
+            }}
+            onMouseLeave={() => {
+              setIsMagTooltipOpen(false);
+              setMagTooltipContent(null);
+            }}
           >
             {representativeResolution.join("-")}
             {isActiveResolutionGlobal ? "" : "*"}{" "}
-          </Tooltip>
+          </FastTooltip>
         </span>
       )}
     </React.Fragment>
@@ -563,15 +596,13 @@ function SegmentAndMousePosition() {
   );
 }
 
-class Statusbar extends React.PureComponent<EmptyObject, EmptyObject> {
-  render() {
-    return (
-      <span className="statusbar">
-        <ShortcutsInfo />
-        <Infos />
-      </span>
-    );
-  }
+function Statusbar() {
+  return (
+    <span className="statusbar">
+      <ShortcutsInfo />
+      <Infos />
+    </span>
+  );
 }
 
 export default Statusbar;

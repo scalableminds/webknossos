@@ -28,7 +28,7 @@ import {
   setActiveLayout,
   storeLayoutConfig,
 } from "oxalis/view/layouting/layout_persistence";
-import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
+import { PortalTarget, RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import NmlUploadZoneContainer from "oxalis/view/nml_upload_zone_container";
 import PresentModernControls from "oxalis/view/novel_user_experiences/01-present-modern-controls";
 import WelcomeToast from "oxalis/view/novel_user_experiences/welcome_toast";
@@ -280,6 +280,13 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
     return (
       <React.Fragment>
         <ReactTooltip id="main-tooltip" className="max-z-index" />
+        <PortalTarget
+          portalId="react-tooltip-portal"
+          style={{
+            position: "absolute",
+            zIndex: 1000,
+          }}
+        />
         <PresentModernControls />
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 

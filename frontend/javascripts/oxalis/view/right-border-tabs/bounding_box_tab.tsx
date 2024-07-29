@@ -103,12 +103,11 @@ export default function BoundingBoxTab() {
     APIJobType.EXPORT_TIFF,
   );
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Always try to scroll the active bounding box into view.
   useEffect(() => {
     if (bboxTableRef.current != null && activeBoundingBoxId != null) {
       bboxTableRef.current.scrollTo({ key: activeBoundingBoxId });
     }
-  }, [activeBoundingBoxId, bboxTableRef.current]);
+  }, [activeBoundingBoxId]);
 
   const boundingBoxWrapperTableColumns = [
     {

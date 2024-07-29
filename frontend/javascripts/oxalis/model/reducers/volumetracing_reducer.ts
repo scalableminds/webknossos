@@ -198,7 +198,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   });
 }
 
-function handleFocusSegment(state: OxalisState, action: ClickSegmentAction) {
+function expandSegmentParents(state: OxalisState, action: ClickSegmentAction) {
   if (action.layerName == null) return state;
   const getNewGroups = () => {
     const { segments, segmentGroups } = getVisibleSegments(state);
@@ -344,7 +344,7 @@ function VolumeTracingReducer(
     }
 
     case "CLICK_SEGMENT": {
-      return handleFocusSegment(state, action);
+      return expandSegmentParents(state, action);
     }
 
     default: // pass

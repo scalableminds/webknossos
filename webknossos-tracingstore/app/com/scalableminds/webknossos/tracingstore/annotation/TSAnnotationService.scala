@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.Fox.option2Fox
 import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
@@ -51,9 +52,17 @@ case class AnnotationWithTracings(annotation: AnnotationProto,
 
   def withVersion(newVersion: Long): AnnotationWithTracings =
     AnnotationWithTracings(annotation.copy(version = newVersion), tracingsById)
-}
 
-case class TracingCollection(tracingsById: Map[String, Either[SkeletonTracing, VolumeTracing]]) {}
+  def applySkeletonAction(a: SkeletonUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+    for {
+      skeletonTracingEither <- tracingsById.get(a.actionTracingId).toFox
+      skeletonTracing <- skeletonTracingEither match {
+        case Left(st: SkeletonTracing) => Fox.successful(st)
+        case _                         => Fox.failure("wrong tracing type")
+      }
+      updated = a.applyOn(skeletonTracing)
+    } yield AnnotationWithTracings(annotation, tracingsById.updated(a.actionTracingId, Left(updated)))
+}
 
 class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient,
                                     tracingDataStore: TracingDataStore)
@@ -113,6 +122,7 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     for {
       updated <- updateAction match {
         case a: AddLayerAnnotationUpdateAction =>
+          // TODO create tracing object (ask wk for needed parameters e.g. fallback layer info?)
           Fox.successful(annotationWithTracings.addTracing(a))
         case a: DeleteLayerAnnotationUpdateAction =>
           Fox.successful(annotationWithTracings.deleteTracing(a))
@@ -120,6 +130,8 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
           Fox.successful(annotationWithTracings.updateLayerMetadata(a))
         case a: UpdateMetadataAnnotationUpdateAction =>
           Fox.successful(annotationWithTracings.updateMetadata(a))
+        case a: SkeletonUpdateAction =>
+          annotationWithTracings.applySkeletonAction(a)
         case _ => Fox.failure("Received unsupported AnnotationUpdateAction action")
       }
     } yield updated.incrementVersion

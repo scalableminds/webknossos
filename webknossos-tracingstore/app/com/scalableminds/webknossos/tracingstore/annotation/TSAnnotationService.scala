@@ -21,6 +21,38 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
+case class AnnotationWithTracings(annotation: AnnotationProto,
+                                  tracingsById: Map[String, Either[SkeletonTracing, VolumeTracing]]) {
+  def getSkeleton(tracingId: String): SkeletonTracing = ???
+
+  def version: Long = annotation.version
+
+  def addTracing(a: AddLayerAnnotationUpdateAction): AnnotationWithTracings =
+    AnnotationWithTracings(
+      annotation.copy(
+        layers = annotation.layers :+ AnnotationLayerProto(a.tracingId,
+                                                           a.layerName,
+                                                           `type` = AnnotationLayerType.toProto(a.`type`))),
+      tracingsById)
+
+  def deleteTracing(a: DeleteLayerAnnotationUpdateAction): AnnotationWithTracings =
+    AnnotationWithTracings(annotation.copy(layers = annotation.layers.filter(_.tracingId != a.tracingId)), tracingsById)
+
+  def updateLayerMetadata(a: UpdateLayerMetadataAnnotationUpdateAction): AnnotationWithTracings =
+    AnnotationWithTracings(annotation.copy(layers = annotation.layers.map(l =>
+                             if (l.tracingId == a.tracingId) l.copy(name = a.layerName) else l)),
+                           tracingsById)
+
+  def updateMetadata(a: UpdateMetadataAnnotationUpdateAction): AnnotationWithTracings =
+    AnnotationWithTracings(annotation.copy(name = a.name, description = a.description), tracingsById)
+
+  def incrementVersion: AnnotationWithTracings =
+    AnnotationWithTracings(annotation.copy(version = annotation.version + 1L), tracingsById)
+
+  def withVersion(newVersion: Long): AnnotationWithTracings =
+    AnnotationWithTracings(annotation.copy(version = newVersion), tracingsById)
+}
+
 case class TracingCollection(tracingsById: Map[String, Either[SkeletonTracing, VolumeTracing]]) {}
 
 class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient,
@@ -76,28 +108,21 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
       } yield updateActionGroups.reverse.flatten
     }
 
-  private def applyUpdate(annotationWithTracings: (AnnotationProto, TracingCollection), updateAction: UpdateAction)(
-      implicit ec: ExecutionContext): Fox[(AnnotationProto, TracingCollection)] = {
-    val annotation = annotationWithTracings._1
+  private def applyUpdate(annotationWithTracings: AnnotationWithTracings, updateAction: UpdateAction)(
+      implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       updated <- updateAction match {
         case a: AddLayerAnnotationUpdateAction =>
-          Fox.successful(
-            annotation.copy(
-              layers = annotation.layers :+ AnnotationLayerProto(a.tracingId,
-                                                                 a.layerName,
-                                                                 `type` = AnnotationLayerType.toProto(a.`type`))))
+          Fox.successful(annotationWithTracings.addTracing(a))
         case a: DeleteLayerAnnotationUpdateAction =>
-          Fox.successful(annotation.copy(layers = annotation.layers.filter(_.tracingId != a.tracingId)))
+          Fox.successful(annotationWithTracings.deleteTracing(a))
         case a: UpdateLayerMetadataAnnotationUpdateAction =>
-          Fox.successful(annotation.copy(layers = annotation.layers.map(l =>
-            if (l.tracingId == a.tracingId) l.copy(name = a.layerName) else l)))
+          Fox.successful(annotationWithTracings.updateLayerMetadata(a))
         case a: UpdateMetadataAnnotationUpdateAction =>
-          Fox.successful(annotation.copy(name = a.name, description = a.description))
+          Fox.successful(annotationWithTracings.updateMetadata(a))
         case _ => Fox.failure("Received unsupported AnnotationUpdateAction action")
       }
-    } yield (updated.copy(version = updated.version + 1L), annotationWithTracings._2)
-  }
+    } yield updated.incrementVersion
 
   def updateActionLog(annotationId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[UpdateAction])): JsObject =
@@ -131,12 +156,12 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     for {
       targetVersion <- determineTargetVersion(annotation, annotationId, targetVersionOpt)
       updates <- findPendingUpdates(annotationId, annotation.version, targetVersion)
-      tracingCollection <- findTracingsForUpdates(annotation, updates)
-      updated <- applyUpdates(annotation, tracingCollection, annotationId, updates, targetVersion, userToken)
-    } yield updated
+      annotationWithTracings <- findTracingsForUpdates(annotation, updates)
+      updated <- applyUpdates(annotationWithTracings, annotationId, updates, targetVersion, userToken)
+    } yield updated.annotation
 
   private def findTracingsForUpdates(annotation: AnnotationProto, updates: List[UpdateAction])(
-      implicit ec: ExecutionContext): Fox[TracingCollection] = {
+      implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
     val skeletonTracingIds = updates.flatMap {
       case u: SkeletonUpdateAction => Some(u.actionTracingId)
       case _                       => None
@@ -160,18 +185,17 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
       volumeTracingsMap: Map[String, Either[SkeletonTracing, VolumeTracing]] = volumeTracingIds
         .zip(volumeTracings.map(versioned => Right[SkeletonTracing, VolumeTracing](versioned.value)))
         .toMap
-    } yield TracingCollection(skeletonTracingsMap ++ volumeTracingsMap)
+    } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap)
   }
 
-  private def applyUpdates(annotation: AnnotationProto,
-                           tracingCollection: TracingCollection,
+  private def applyUpdates(annotation: AnnotationWithTracings,
                            annotationId: String,
                            updates: List[UpdateAction],
                            targetVersion: Long,
-                           userToken: Option[String])(implicit ec: ExecutionContext): Fox[AnnotationProto] = {
+                           userToken: Option[String])(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
 
-    def updateIter(annotationWithTracingsFox: Fox[(AnnotationProto, TracingCollection)],
-                   remainingUpdates: List[UpdateAction]): Fox[(AnnotationProto, TracingCollection)] =
+    def updateIter(annotationWithTracingsFox: Fox[AnnotationWithTracings],
+                   remainingUpdates: List[UpdateAction]): Fox[AnnotationWithTracings] =
       annotationWithTracingsFox.futureBox.flatMap {
         case Empty => Fox.empty
         case Full(annotationWithTracings) =>
@@ -187,8 +211,8 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     if (updates.isEmpty) Full(annotation)
     else {
       for {
-        updated <- updateIter(Some((annotation, tracingCollection)), updates)
-      } yield updated._1.withVersion(targetVersion)
+        updated <- updateIter(Some(annotation), updates)
+      } yield updated.withVersion(targetVersion)
     }
   }
 

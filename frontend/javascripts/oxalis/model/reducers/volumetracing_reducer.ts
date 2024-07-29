@@ -207,20 +207,16 @@ function handleFocusSegment(state: OxalisState, action: ClickSegmentAction) {
     const segmentForId = segments.getNullable(segmentId);
     if (segmentForId == null) return segmentGroups;
     // Expand recursive parents of group too, if necessary
-    let pathToRoot = [];
+    const pathToRoot = new Set([segmentForId.groupId]);
     if (segmentForId.groupId != null) {
       let currentParent = findParentIdForGroupId(segmentGroups, segmentForId.groupId);
       while (currentParent != null) {
-        pathToRoot.push(currentParent);
+        pathToRoot.add(currentParent);
         currentParent = findParentIdForGroupId(segmentGroups, currentParent);
       }
     }
-    const pathToRootSet = new Set(pathToRoot);
     return mapGroups(segmentGroups, (group) => {
-      if (
-        (pathToRootSet.has(group.groupId) || group.groupId === segmentForId.groupId) &&
-        !group.isExpanded
-      ) {
+      if (pathToRoot.has(group.groupId) && !group.isExpanded) {
         return { ...group, isExpanded: true };
       }
       return group;

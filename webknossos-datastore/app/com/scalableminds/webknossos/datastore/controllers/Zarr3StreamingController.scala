@@ -7,11 +7,31 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, BloscCompressor, StringCompressionSetting}
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, NgffMetadataV2, ZarrHeader}
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{BloscCodecConfiguration, BytesCodecConfiguration, ChunkGridConfiguration, ChunkGridSpecification, ChunkKeyEncoding, ChunkKeyEncodingConfiguration, TransposeCodecConfiguration, TransposeSetting, Zarr3ArrayHeader, Zarr3GroupHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{
+  NgffGroupHeader,
+  NgffMetadata,
+  NgffMetadataV2,
+  ZarrHeader
+}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
+  BloscCodecConfiguration,
+  BytesCodecConfiguration,
+  ChunkGridConfiguration,
+  ChunkGridSpecification,
+  ChunkKeyEncoding,
+  ChunkKeyEncodingConfiguration,
+  TransposeCodecConfiguration,
+  TransposeSetting,
+  Zarr3ArrayHeader,
+  Zarr3GroupHeader
+}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.models.requests.{
+  Cuboid,
+  DataServiceDataRequest,
+  DataServiceRequestSettings
+}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition, VoxelSize}
 import com.scalableminds.webknossos.datastore.services._
 import net.liftweb.common.Box.tryo
@@ -53,15 +73,17 @@ class Zarr3StreamingController @Inject()(
                                                                                   datasetName,
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
-        omeNgffHeaderV2 = NgffMetadataV2.fromNameVoxelSizeAndMags(dataLayerName, dataSource.scale, dataLayer.resolutions)
+        omeNgffHeaderV2 = NgffMetadataV2.fromNameVoxelSizeAndMags(dataLayerName,
+                                                                  dataSource.scale,
+                                                                  dataLayer.resolutions)
         zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeaderV2))
       } yield Ok(Json.toJson(zarr3GroupHeader))
     }
   }
 
   def zarrJsonWithAnnotationPrivateLink(token: Option[String],
-                                      accessToken: String,
-                                      dataLayerName: String = ""): Action[AnyContent] =
+                                        accessToken: String,
+                                        dataLayerName: String = ""): Action[AnyContent] =
     Action.async { implicit request =>
       for {
         annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
@@ -70,7 +92,9 @@ class Zarr3StreamingController @Inject()(
         annotationLayer = annotationSource.getAnnotationLayer(dataLayerName)
         zarr3GroupHeader <- annotationLayer match {
           case Some(layer) =>
-            remoteTracingstoreClient.getZarrJsonGroupHeaderWithNgff(layer.tracingId, annotationSource.tracingStoreUrl, relevantToken)
+            remoteTracingstoreClient.getZarrJsonGroupHeaderWithNgff(layer.tracingId,
+                                                                    annotationSource.tracingStoreUrl,
+                                                                    relevantToken)
           case None =>
             for {
               (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(
@@ -78,8 +102,8 @@ class Zarr3StreamingController @Inject()(
                 annotationSource.datasetName,
                 dataLayerName) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
               dataSourceOmeNgffHeader = NgffMetadataV2.fromNameVoxelSizeAndMags(dataLayerName,
-                                                                              dataSource.scale,
-                                                                              dataLayer.resolutions)
+                                                                                dataSource.scale,
+                                                                                dataLayer.resolutions)
               zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(dataSourceOmeNgffHeader))
             } yield zarr3GroupHeader
         }
@@ -277,31 +301,7 @@ class Zarr3StreamingController @Inject()(
       magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
       _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       additionalAxes = dataLayer.additionalAxes.getOrElse(Seq.empty)
-      zarrHeader = Zarr3ArrayHeader(
-        zarr_format = 3,
-        node_type = "array",
-        // channel, additional axes, XYZ
-        shape = Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ dataLayer.boundingBox.bottomRight.toArray,
-        data_type = Left(dataLayer.elementClass.toString),
-        chunk_grid = Left(
-          ChunkGridSpecification(
-            "regular",
-            ChunkGridConfiguration(
-              chunk_shape = Array.fill(1 + additionalAxes.length)(1) ++ Array(DataLayer.bucketLength,
-                                                                              DataLayer.bucketLength,
-                                                                              DataLayer.bucketLength))
-          )),
-        chunk_key_encoding =
-          ChunkKeyEncoding("default", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
-        fill_value = Right(0),
-        attributes = None,
-        codecs = Seq(
-          TransposeCodecConfiguration(TransposeSetting.fOrderFromRank(additionalAxes.length + 4)),
-          BytesCodecConfiguration(Some("little")),
-        ),
-        storage_transformers = None,
-        dimension_names = Some(Array("c") ++ additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
-      )
+      zarrHeader = Zarr3ArrayHeader.fromDataLayerToVersion3(dataLayer)
     } yield Ok(Json.toJson(zarrHeader))
 
   def zArray3PrivateLink(token: Option[String],
@@ -480,9 +480,9 @@ class Zarr3StreamingController @Inject()(
 
   // TODOM
   def requestZarrJsonbla(token: Option[String],
-                    organizationName: String,
-                    datasetName: String,
-                    dataLayerName: String = ""): Action[AnyContent] = Action.async { implicit request =>
+                         organizationName: String,
+                         datasetName: String,
+                         dataLayerName: String = ""): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(
       UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
       urlOrHeaderToken(token, request)) {

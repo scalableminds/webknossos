@@ -8,8 +8,23 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, NgffMetadataV2, ZarrHeader}
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{BytesCodecConfiguration, ChunkGridConfiguration, ChunkGridSpecification, ChunkKeyEncoding, ChunkKeyEncodingConfiguration, TransposeCodecConfiguration, TransposeSetting, Zarr3ArrayHeader, Zarr3GroupHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{
+  NgffGroupHeader,
+  NgffMetadata,
+  NgffMetadataV2,
+  ZarrHeader
+}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
+  BytesCodecConfiguration,
+  ChunkGridConfiguration,
+  ChunkGridSpecification,
+  ChunkKeyEncoding,
+  ChunkKeyEncodingConfiguration,
+  TransposeCodecConfiguration,
+  TransposeSetting,
+  Zarr3ArrayHeader,
+  Zarr3GroupHeader
+}
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
@@ -17,7 +32,11 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis,
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
-import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient, TracingStoreAccessTokenService}
+import com.scalableminds.webknossos.tracingstore.{
+  TSRemoteDatastoreClient,
+  TSRemoteWebknossosClient,
+  TracingStoreAccessTokenService
+}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
@@ -206,9 +225,9 @@ class VolumeTracingZarrStreamingController @Inject()(
   }
 
   def zarrJson(
-              token: Option[String],
-              tracingId: String,
-            ): Action[AnyContent] = Action.async { implicit request =>
+      token: Option[String],
+      tracingId: String,
+  ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
       for {
         tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
@@ -216,8 +235,9 @@ class VolumeTracingZarrStreamingController @Inject()(
         existingMags = tracing.resolutions.map(vec3IntFromProto)
         dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadataV2.fromNameVoxelSizeAndMags(tracingId,
-          dataSourceVoxelSize = dataSource.scale,
-          mags = existingMags.toList)
+                                                                dataSourceVoxelSize = dataSource.scale,
+                                                                mags = existingMags.toList,
+                                                                additionalAxes = dataSource.additionalAxesUnion)
         zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeader))
       } yield Ok(Json.toJson(zarr3GroupHeader))
     }
@@ -242,47 +262,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def rawZarrCube(token: Option[String], tracingId: String, mag: String, cxyz: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-          for {
-            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-
-            existingMags = tracing.resolutions.map(vec3IntFromProto)
-            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-            _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
-
-            (c, x, y, z) <- ZarrCoordinatesParser.parseDotCoordinates(cxyz) ?~> Messages("zarr.invalidChunkCoordinates") ~> NOT_FOUND
-            _ <- bool2Fox(c == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> NOT_FOUND
-            cubeSize = DataLayer.bucketLength
-            wkRequest = WebknossosDataRequest(
-              position = Vec3Int(x, y, z) * cubeSize * magParsed,
-              mag = magParsed,
-              cubeSize = cubeSize,
-              fourBit = Some(false),
-              applyAgglomerate = None,
-              version = None,
-              additionalCoordinates = None
-            )
-            (data, missingBucketIndices) <- if (tracing.getMappingIsEditable)
-              editableMappingService.volumeData(tracing, tracingId, List(wkRequest), urlOrHeaderToken(token, request))
-            else tracingService.data(tracingId, tracing, List(wkRequest))
-            dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
-                                                            tracingId,
-                                                            data,
-                                                            missingBucketIndices,
-                                                            magParsed,
-                                                            Vec3Int(x, y, z),
-                                                            cubeSize,
-                                                            None,
-                                                            urlOrHeaderToken(token, request)) ~> NOT_FOUND
-          } yield Ok(dataWithFallback)
-        }
-      }
-    }
-
-  def rawZarr3Cube(token: Option[String], tracingId: String, mag: String, coordinates: String): Action[AnyContent] =
+  def rawZarrCube(token: Option[String], tracingId: String, mag: String, coordinates: String): Action[AnyContent] =
     Action.async { implicit request =>
       {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {

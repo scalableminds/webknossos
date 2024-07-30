@@ -5,14 +5,9 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDat
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3DataType.{Zarr3DataType, raw}
-import com.scalableminds.webknossos.datastore.datareaders.{
-  ArrayOrder,
-  Compressor,
-  DatasetHeader,
-  DimensionSeparator,
-  NullCompressor
-}
+import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, Compressor, DatasetHeader, DimensionSeparator, NullCompressor}
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import net.liftweb.common.Box.tryo
 import net.liftweb.common.{Box, Full}
 import play.api.libs.json.{Format, JsArray, JsResult, JsString, JsSuccess, JsValue, Json, OFormat}
@@ -248,5 +243,41 @@ object Zarr3ArrayHeader extends JsonImplicits {
         "storage_transformers" -> zarrArrayHeader.storage_transformers,
         "dimension_names" -> zarrArrayHeader.dimension_names
       )
+
+  }
+  def fromDataLayerToVersion3(dataLayer: DataLayer): Zarr3ArrayHeader = {
+    val additionalAxes = reorderAdditionalAxes(dataLayer.additionalAxes.getOrElse(Seq.empty))
+    Zarr3ArrayHeader(
+      zarr_format = 3,
+      node_type = "array",
+      // channel, additional axes, XYZ
+      shape = Array(1) ++ additionalAxes.map(_.highestValue).toArray ++ dataLayer.boundingBox.bottomRight.toArray,
+      data_type = Left(dataLayer.elementClass.toString),
+      chunk_grid = Left(
+        ChunkGridSpecification(
+          "regular",
+          ChunkGridConfiguration(
+            chunk_shape = Array.fill(1 + additionalAxes.length)(1) ++ Array(DataLayer.bucketLength,
+                                                                            DataLayer.bucketLength,
+                                                                            DataLayer.bucketLength))
+        )),
+      chunk_key_encoding =
+        ChunkKeyEncoding("default", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
+      fill_value = Right(0),
+      attributes = None,
+      codecs = Seq(
+        TransposeCodecConfiguration(TransposeSetting.fOrderFromRank(additionalAxes.length + 4)),
+        BytesCodecConfiguration(Some("little")),
+      ),
+      storage_transformers = None,
+      dimension_names = Some(Array("c") ++ additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
+    )
+  }
+  private def reorderAdditionalAxes(additionalAxes: Seq[AdditionalAxis]): Seq[AdditionalAxis] = {
+    val additionalAxesStartIndex = 1 // channel comes first
+    val sorted = additionalAxes.sortBy(_.index)
+    sorted.zipWithIndex.map {
+      case (axis, index) => axis.copy(index = index + additionalAxesStartIndex)
+    }
   }
 }

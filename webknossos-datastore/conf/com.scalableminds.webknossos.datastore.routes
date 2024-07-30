@@ -49,7 +49,7 @@ GET           /zarr3_experimental/:organizationName/:datasetName/:dataLayerName/
 
 
 GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName/zarr.json                                                       @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.zarrJsonWithAnnotationPrivateLink(token: Option[String], accessTokenOrId: String, dataLayerName: String)
-GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName/:mag/zarr.json                                                  @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.zArray3PrivateLink(token: Option[String], accessTokenOrId: String, dataLayerName: String, mag: String)
+GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName/:mag/zarr.json                                                  @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.zarrJsonPrivateLink(token: Option[String], accessTokenOrId: String, dataLayerName: String, mag: String)
 GET           /annotations/zarr3_experimental/:accessTokenOrId/:dataLayerName/:mag/:coordinates                                               @com.scalableminds.webknossos.datastore.controllers.ZarrStreamingController.rawZarrCubePrivateLink(token: Option[String], accessTokenOrId: String, dataLayerName: String, mag: String, coordinates: String)
 
 

@@ -15,7 +15,9 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ApplyableVolumeUpdateAction,
+  BucketMutatingVolumeUpdateAction,
   UpdateBucketVolumeAction,
+  VolumeTracingService,
   VolumeUpdateAction
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
@@ -88,7 +90,8 @@ case class AnnotationWithTracings(annotation: AnnotationProto,
 }
 
 class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient,
-                                    tracingDataStore: TracingDataStore)
+                                    tracingDataStore: TracingDataStore,
+                                    volumeTracingService: VolumeTracingService)
     extends KeyValueStoreImplicits {
 
   def reportUpdates(annotationId: String, updateGroups: List[UpdateActionGroup], userToken: Option[String]): Fox[Unit] =
@@ -109,11 +112,22 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
   def handleUpdateGroup(annotationId: String,
                         updateActionGroup: UpdateActionGroup,
                         previousVersion: Long,
-                        userToken: Option[String]): Fox[Unit] =
-    // TODO apply some updates directly? transform to compact?
-    tracingDataStore.annotationUpdates.put(annotationId,
-                                           updateActionGroup.version,
-                                           preprocessActionsForStorage(updateActionGroup))
+                        userToken: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- tracingDataStore.annotationUpdates.put(annotationId,
+                                                  updateActionGroup.version,
+                                                  preprocessActionsForStorage(updateActionGroup))
+      bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
+      _ <- Fox.runIf(bucketMutatingActions.nonEmpty)(
+        volumeTracingService
+          .applyBucketMutatingActions(bucketMutatingActions, previousVersion, updateActionGroup.version, userToken))
+    } yield ()
+
+  private def findBucketMutatingActions(updateActionGroup: UpdateActionGroup): List[BucketMutatingVolumeUpdateAction] =
+    updateActionGroup.actions.flatMap {
+      case a: BucketMutatingVolumeUpdateAction => Some(a)
+      case _                                   => None
+    }
 
   private def preprocessActionsForStorage(updateActionGroup: UpdateActionGroup): List[UpdateAction] = {
     val actionsWithInfo = updateActionGroup.actions.map(

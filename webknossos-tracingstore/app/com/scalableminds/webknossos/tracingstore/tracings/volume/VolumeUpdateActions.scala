@@ -32,6 +32,8 @@ trait ApplyableVolumeUpdateAction extends VolumeUpdateAction {
   def applyOn(tracing: VolumeTracing): VolumeTracing
 }
 
+trait BucketMutatingVolumeUpdateAction extends VolumeUpdateAction
+
 case class UpdateBucketVolumeAction(position: Vec3Int,
                                     cubeSize: Int,
                                     mag: Vec3Int,
@@ -41,7 +43,7 @@ case class UpdateBucketVolumeAction(position: Vec3Int,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
-    extends VolumeUpdateAction {
+    extends BucketMutatingVolumeUpdateAction {
   lazy val data: Array[Byte] = Base64.getDecoder.decode(base64Data)
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
@@ -263,7 +265,7 @@ case class DeleteSegmentVolumeAction(id: Long,
                                      actionTimestamp: Option[Long] = None,
                                      actionAuthorId: Option[String] = None,
                                      info: Option[String] = None)
-    extends ApplyableVolumeUpdateAction {
+    extends BucketMutatingVolumeUpdateAction {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))

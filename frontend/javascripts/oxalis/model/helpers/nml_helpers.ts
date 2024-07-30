@@ -499,16 +499,14 @@ function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): 
   const nonEmptyTreeGroups = treeGroups.filter(deepFindTree);
   return _.flatten(
     nonEmptyTreeGroups.map((treeGroup) => {
-      const propertyObject = {
-        id: treeGroup.groupId,
-        name: treeGroup.name,
-      };
-      const expandedPropertyObject = { isExpanded: treeGroup.isExpanded };
       return serializeTagWithChildren(
         "group",
         {
-          ...propertyObject,
-          ...(treeGroup.isExpanded === false && expandedPropertyObject),
+          ...{
+            id: treeGroup.groupId,
+            name: treeGroup.name,
+          },
+          ...(treeGroup.isExpanded === false && { isExpanded: treeGroup.isExpanded }),
         },
         serializeTreeGroups(treeGroup.children, trees),
       );

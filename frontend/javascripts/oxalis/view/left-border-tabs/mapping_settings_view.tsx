@@ -1,4 +1,4 @@
-import { Select, Tooltip } from "antd";
+import { Select } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import debounceRender from "react-debounce-render";
@@ -29,6 +29,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import messages from "messages";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
+import FastTooltip from "components/fast_tooltip";
 
 const { Option, OptGroup } = Select;
 
@@ -203,7 +204,7 @@ class MappingSettingsView extends React.Component<Props, State> {
          to avoid conflicts in the logic of the UI. */
           !this.props.isMergerModeEnabled ? (
             <React.Fragment>
-              <Tooltip title={isDisabled ? disabledMessage : null}>
+              <FastTooltip title={isDisabled ? disabledMessage : null}>
                 <div
                   style={{
                     marginBottom: 6,
@@ -218,7 +219,7 @@ class MappingSettingsView extends React.Component<Props, State> {
                     disabled={isDisabled}
                   />
                 </div>
-              </Tooltip>
+              </FastTooltip>
 
               {/*
                 Show mapping-select even when the mapping is disabled but the UI was used before

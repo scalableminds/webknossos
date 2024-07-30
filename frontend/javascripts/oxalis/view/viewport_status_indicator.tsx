@@ -1,10 +1,10 @@
 import * as React from "react";
 import _ from "lodash";
 import { WarningOutlined } from "@ant-design/icons";
-import { Tooltip } from "antd";
 import { getUnrenderableLayerInfosForCurrentZoom } from "oxalis/model/accessors/flycam_accessor";
 import { usePolledState } from "libs/react_helpers";
 import { SmallerOrHigherInfo } from "oxalis/model/helpers/resolution_info";
+import FastTooltip from "components/fast_tooltip";
 
 const { useState } = React;
 type UnrenderableLayerNamesInfo = {
@@ -71,7 +71,7 @@ export default function ViewportStatusIndicator() {
     .filter((message) => message != null)
     .join(" ");
   return (
-    <Tooltip title={<div>{sentencesString}</div>}>
+    <FastTooltip title={sentencesString}>
       <div
         style={{
           position: "absolute",
@@ -89,6 +89,6 @@ export default function ViewportStatusIndicator() {
           }}
         />
       </div>
-    </Tooltip>
+    </FastTooltip>
   );
 }

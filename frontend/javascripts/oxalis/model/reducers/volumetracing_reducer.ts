@@ -13,6 +13,7 @@ import type {
   UpdateSegmentAction,
   SetSegmentsAction,
   RemoveSegmentAction,
+  ClickSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   convertServerAdditionalAxesToFrontEnd,
@@ -22,6 +23,7 @@ import {
 import {
   getRequestedOrVisibleSegmentationLayer,
   getSegmentationLayerForTracing,
+  getVisibleSegments,
   getVolumeTracingById,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
@@ -50,6 +52,8 @@ import {
   getMappingInfo,
   getMaximumSegmentIdForLayer,
 } from "oxalis/model/accessors/dataset_accessor";
+import { mapGroups } from "../accessors/skeletontracing_accessor";
+import { findParentIdForGroupId } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";
@@ -194,6 +198,33 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
   });
 }
 
+function expandSegmentParents(state: OxalisState, action: ClickSegmentAction) {
+  if (action.layerName == null) return state;
+  const getNewGroups = () => {
+    const { segments, segmentGroups } = getVisibleSegments(state);
+    if (action.layerName == null || segments == null) return segmentGroups;
+    const { segmentId } = action;
+    const segmentForId = segments.getNullable(segmentId);
+    if (segmentForId == null) return segmentGroups;
+    // Expand recursive parents of group too, if necessary
+    const pathToRoot = new Set([segmentForId.groupId]);
+    if (segmentForId.groupId != null) {
+      let currentParent = findParentIdForGroupId(segmentGroups, segmentForId.groupId);
+      while (currentParent != null) {
+        pathToRoot.add(currentParent);
+        currentParent = findParentIdForGroupId(segmentGroups, currentParent);
+      }
+    }
+    return mapGroups(segmentGroups, (group) => {
+      if (pathToRoot.has(group.groupId) && !group.isExpanded) {
+        return { ...group, isExpanded: true };
+      }
+      return group;
+    });
+  };
+  return setSegmentGroups(state, action.layerName, getNewGroups());
+}
+
 export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing): VolumeTracing {
   // As the frontend doesn't know all cells, we have to keep track of the highest id
   // and cannot compute it
@@ -310,6 +341,10 @@ function VolumeTracingReducer(
     case "SET_SEGMENT_GROUPS": {
       const { segmentGroups } = action;
       return setSegmentGroups(state, action.layerName, segmentGroups);
+    }
+
+    case "CLICK_SEGMENT": {
+      return expandSegmentParents(state, action);
     }
 
     default: // pass

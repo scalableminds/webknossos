@@ -258,7 +258,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.ALIGN_SECTIONS);
       return jobsEnabled;
     };
-    const hasAdditionalCoordinates = Store.getState().flycam.additionalCoordinates != null; // TODO is this a smell?
 
     const layoutMenu = getLayoutMenu({
       ...layoutProps,
@@ -272,8 +271,11 @@ class ActionBarView extends React.PureComponent<Props, State> {
       onDeleteLayout: this.handleLayoutDeleted,
     });
 
-    const datasetHasColorLayer = getColorLayers(dataset).length > 0;
-    const is2DOrNDDataset = hasAdditionalCoordinates || is2dDataset(dataset);
+    const colorLayers = getColorLayers(dataset);
+    const datasetHasColorLayer = colorLayers.length > 0;
+    // TODO_c get currently active color layer, if possible. others are doing it similarly like here
+    const isNd = (colorLayers[0].additionalAxes ?? []).length > 0;
+    const is2DOrNDDataset = isNd || is2d;
     const isAIAnalysisEnabled = getIsAIAnalysisEnabled();
     const shouldDisableAIJobButton =
       !isAIAnalysisEnabled || !datasetHasColorLayer || is2DOrNDDataset;
@@ -283,7 +285,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
       } else if (!datasetHasColorLayer) {
         return "The dataset needs to have a color layer to start AI processing jobs.";
       } else if (is2DOrNDDataset) {
-        return "AI Analysis is not supported for 2D or ND datasets.";
+        return `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;
       }
       return "The dataset needs to have a color layer to start AI processing jobs.";
     };

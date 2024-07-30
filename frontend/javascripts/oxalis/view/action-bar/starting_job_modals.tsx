@@ -514,7 +514,7 @@ function StartJobForm(props: StartJobFormProps) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const colorLayers = getColorLayers(dataset);
+  const colorLayers = getColorLayers(dataset).filter((layer) => layer.elementClass !== "uint24");
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
   const allLayers = getDataLayers(dataset);
   const defaultBBForLayers: UserBoundingBox[] = layers.map((layer, index) => {
@@ -527,7 +527,6 @@ function StartJobForm(props: StartJobFormProps) {
     };
   });
   const userBoundingBoxes = defaultBBForLayers.concat(rawUserBoundingBoxes);
-  const isDTypeSupported = colorLayers[0].elementClass !== "uint24";
 
   const startJob = async ({
     layerName,
@@ -581,21 +580,6 @@ function StartJobForm(props: StartJobFormProps) {
       console.error(error);
       handleClose();
     }
-  };
-
-  const getButton = () => {
-    const isAIAnalysisDisabled = !isDTypeSupported;
-    return (
-      <>
-        <Button type="primary" size="large" htmlType="submit" disabled={isAIAnalysisDisabled}>
-          {props.buttonLabel ? props.buttonLabel : title}
-        </Button>
-        <br />
-        {isAIAnalysisDisabled ? (
-          <div style={{ color: "red" }}>AI Jobs are not supported for for uInt24 color layers.</div>
-        ) : null}
-      </>
-    );
   };
 
   let initialLayerName = layers.length === 1 ? layers[0].name : null;
@@ -659,7 +643,11 @@ function StartJobForm(props: StartJobFormProps) {
         onChangeSelectedBoundingBox={(bBoxId) => form.setFieldsValue({ boundingBoxId: bBoxId })}
         value={form.getFieldValue("boundingBoxId")}
       />
-      <div style={{ textAlign: "center" }}>{getButton()}</div>
+      <div style={{ textAlign: "center" }}>
+        <Button type="primary" size="large" htmlType="submit">
+          {props.buttonLabel ? props.buttonLabel : title}
+        </Button>
+      </div>
     </Form>
   );
 }

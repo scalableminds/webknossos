@@ -200,7 +200,6 @@ class ActionBarView extends React.PureComponent<Props, State> {
   };
 
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
-    // TODO_c adjust text based on reason for disabled
     const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
     return (
       <ButtonComponent
@@ -272,22 +271,32 @@ class ActionBarView extends React.PureComponent<Props, State> {
     });
 
     const colorLayers = getColorLayers(dataset);
+    const colorLayersRightDataFormat = colorLayers.filter(
+      (layer) => layer.elementClass !== "uint24",
+    );
     const datasetHasColorLayer = colorLayers.length > 0;
+    const datasetHasColorLayerNotUint24 = colorLayersRightDataFormat.length > 0;
     // TODO_c get currently active color layer, if possible. others are doing it similarly like here
     const isNd = (colorLayers[0].additionalAxes ?? []).length > 0;
     const is2DOrNDDataset = isNd || is2d;
     const isAIAnalysisEnabled = getIsAIAnalysisEnabled();
     const shouldDisableAIJobButton =
-      !isAIAnalysisEnabled || !datasetHasColorLayer || is2DOrNDDataset;
-    const aiIsDisabledTooltip = () => {
+      !isAIAnalysisEnabled ||
+      !datasetHasColorLayer ||
+      is2DOrNDDataset ||
+      !datasetHasColorLayerNotUint24;
+    const getAIIsDisabledTooltip = () => {
+      const genericStatement = "AI analysis is not enabled for this dataset.";
       if (!isAIAnalysisEnabled) {
-        return "AI analysis is not enabled for this dataset.";
+        return genericStatement;
       } else if (!datasetHasColorLayer) {
         return "The dataset needs to have a color layer to start AI processing jobs.";
+      } else if (!datasetHasColorLayerNotUint24) {
+        return "The dataset needs to have a color layer that is not in data format uInt24 to start AI processing jobs.";
       } else if (is2DOrNDDataset) {
         return `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;
       }
-      return "The dataset needs to have a color layer to start AI processing jobs.";
+      return genericStatement;
     };
 
     return (
@@ -303,7 +312,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
           {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
-            ? this.renderStartAIJobButton(shouldDisableAIJobButton, aiIsDisabledTooltip())
+            ? this.renderStartAIJobButton(shouldDisableAIJobButton, getAIIsDisabledTooltip())
             : null}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}

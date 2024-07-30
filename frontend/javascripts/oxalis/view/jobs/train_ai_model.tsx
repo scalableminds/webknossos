@@ -130,7 +130,12 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
           },
         ]}
       >
-        <LayerSelection layers={colorLayers} tracing={tracing} style={{ width: "100%" }} />
+        <LayerSelection
+          layers={colorLayers.filter((layer) => layer.elementClass !== "uint24")}
+          tracing={tracing}
+          style={{ width: "100%" }}
+        />{" "}
+        {/* TODO_c maybe remove */}
       </FormItem>
       <LayerSelectionFormItem
         chooseSegmentationLayer

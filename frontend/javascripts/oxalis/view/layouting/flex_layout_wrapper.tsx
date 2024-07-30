@@ -1,5 +1,5 @@
 import type { Dispatch } from "redux";
-import { Layout, Tooltip } from "antd";
+import { Layout } from "antd";
 import { connect } from "react-redux";
 import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
 import * as React from "react";
@@ -42,6 +42,7 @@ import {
 } from "./flex_layout_helper";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import BorderToggleButton from "../components/border_toggle_button";
+import FastTooltip from "components/fast_tooltip";
 
 const { Footer } = Layout;
 
@@ -374,9 +375,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
         titleFactory={(renderedNode) => (
-          <Tooltip title={BorderTabs[renderedNode.getId()].description}>
+          <FastTooltip title={BorderTabs[renderedNode.getId()].description}>
             {renderedNode.getName()}{" "}
-          </Tooltip>
+          </FastTooltip>
         )}
         onModelChange={() => {
           // Update / inform parent layout about the changes.

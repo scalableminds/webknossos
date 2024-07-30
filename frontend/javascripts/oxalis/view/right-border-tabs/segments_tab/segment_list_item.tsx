@@ -44,8 +44,6 @@ import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_
 import FastTooltip from "components/fast_tooltip";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 
-// const FastTooltip = Tooltip;
-
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
 export function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {

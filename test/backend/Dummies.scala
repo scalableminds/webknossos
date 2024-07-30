@@ -46,7 +46,11 @@ object Dummies {
     Some(true)
   )
 
-  val treeGroup1: TreeGroup = TreeGroup("Axon 1", 1, Seq(TreeGroup("Blah", 3), TreeGroup("Blah 2", 4)))
+  val treeGroup1: TreeGroup = TreeGroup(
+    "Axon 1",
+    1,
+    Seq(TreeGroup("Blah", 3, Seq.empty, Some(false)), TreeGroup("Blah 2", 4, Seq.empty, Some(false))),
+    Some(true))
   val treeGroup2: TreeGroup = TreeGroup("Axon 2", 2, Seq.empty, Some(true))
 
   val skeletonTracing: SkeletonTracing = SkeletonTracing(

@@ -5,7 +5,13 @@ import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDat
 import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
 import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3DataType.{Zarr3DataType, raw}
-import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, Compressor, DatasetHeader, DimensionSeparator, NullCompressor}
+import com.scalableminds.webknossos.datastore.datareaders.{
+  ArrayOrder,
+  Compressor,
+  DatasetHeader,
+  DimensionSeparator,
+  NullCompressor
+}
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import net.liftweb.common.Box.tryo

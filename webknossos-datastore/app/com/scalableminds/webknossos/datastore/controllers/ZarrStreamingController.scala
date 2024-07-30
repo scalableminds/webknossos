@@ -13,17 +13,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffMetadataV2,
   ZarrHeader
 }
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
-  BytesCodecConfiguration,
-  ChunkGridConfiguration,
-  ChunkGridSpecification,
-  ChunkKeyEncoding,
-  ChunkKeyEncodingConfiguration,
-  TransposeCodecConfiguration,
-  TransposeSetting,
-  Zarr3ArrayHeader,
-  Zarr3GroupHeader
-}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3ArrayHeader, Zarr3GroupHeader}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType, AnnotationSource}
 import com.scalableminds.webknossos.datastore.models.datasource._

@@ -1,19 +1,9 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
-import com.scalableminds.util.tools.BoxImplicits
-import com.scalableminds.webknossos.datastore.datareaders.ArrayDataType.ArrayDataType
-import com.scalableminds.webknossos.datastore.datareaders.ArrayOrder.ArrayOrder
-import com.scalableminds.webknossos.datastore.datareaders.DimensionSeparator.DimensionSeparator
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3DataType.{Zarr3DataType, raw}
-import com.scalableminds.webknossos.datastore.datareaders._
 import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadataV2.jsonFormat
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, NgffMetadataV2}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadataV2
 import com.scalableminds.webknossos.datastore.helpers.JsonImplicits
-import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
 import play.api.libs.json._
-
-import java.nio.ByteOrder
 
 case class Zarr3GroupHeader(
     zarr_format: Int, // must be 3

@@ -502,8 +502,11 @@ function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): 
       serializeTagWithChildren(
         "group",
         {
-          id: treeGroup.groupId,
-          name: treeGroup.name,
+          ...{
+            id: treeGroup.groupId,
+            name: treeGroup.name,
+          },
+          ...(treeGroup.isExpanded === false && { isExpanded: treeGroup.isExpanded }),
         },
         serializeTreeGroups(treeGroup.children, trees),
       ),
@@ -931,6 +934,7 @@ export function parseNml(nmlString: string): Promise<{
             const newGroup = {
               groupId: _parseInt(attr, "id"),
               name: _parseEntities(attr, "name"),
+              isExpanded: _parseBool(attr, "isExpanded", true),
               children: [],
             };
             if (existingTreeGroupIds.has(newGroup.groupId)) {

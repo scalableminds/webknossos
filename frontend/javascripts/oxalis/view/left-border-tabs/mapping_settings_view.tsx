@@ -2,11 +2,9 @@ import { Select } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import debounceRender from "react-debounce-render";
-import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
+import type { APISegmentationLayer } from "types/api_flow_types";
 import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType, EditableMapping } from "oxalis/store";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getSegmentationLayerByName,
   getMappingInfo,
@@ -37,15 +35,12 @@ type OwnProps = {
   layerName: string;
 };
 type StateProps = {
-  dataset: APIDataset;
   segmentationLayer: APISegmentationLayer | null | undefined;
-  position: Vector3;
   isMappingEnabled: boolean;
   mapping: Mapping | null | undefined;
   mappingName: string | null | undefined;
   hideUnmappedIds: boolean | null | undefined;
   mappingType: MappingType;
-  mappingColors: Array<number> | null | undefined;
   editableMapping: EditableMapping | null | undefined;
   isMappingLocked: boolean;
   isMergerModeEnabled: boolean;
@@ -275,14 +270,11 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
   const editableMapping = getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId);
 
   return {
-    dataset: state.dataset,
-    position: getPosition(state.flycam),
     hideUnmappedIds: activeMappingInfo.hideUnmappedIds,
     isMappingEnabled: activeMappingInfo.mappingStatus === MappingStatusEnum.ENABLED,
     mapping: activeMappingInfo.mapping,
     mappingName: activeMappingInfo.mappingName,
     mappingType: activeMappingInfo.mappingType,
-    mappingColors: activeMappingInfo.mappingColors,
     segmentationLayer,
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
     allowUpdate: state.tracing.restrictions.allowUpdate,

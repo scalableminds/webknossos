@@ -26,6 +26,7 @@ import {
   setTreeGroupAction,
   setTreeGroupsAction,
   setTreeEdgeVisibilityAction,
+  createTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   bucketPositionToGlobalAddress,
@@ -318,6 +319,14 @@ class TracingApi {
   centerActiveNode() {
     assertSkeleton(Store.getState().tracing);
     Store.dispatch(centerActiveNodeAction());
+  }
+
+  /**
+   * Creates a new and empty tree
+   */
+  createTree() {
+    assertSkeleton(Store.getState().tracing);
+    Store.dispatch(createTreeAction());
   }
 
   /**

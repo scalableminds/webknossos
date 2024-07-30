@@ -498,8 +498,8 @@ function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): 
   // Only serialize treeGroups that contain at least one tree at some level in their child hierarchy
   const nonEmptyTreeGroups = treeGroups.filter(deepFindTree);
   return _.flatten(
-    nonEmptyTreeGroups.map((treeGroup) => {
-      return serializeTagWithChildren(
+    nonEmptyTreeGroups.map((treeGroup) =>
+      serializeTagWithChildren(
         "group",
         {
           ...{
@@ -509,8 +509,8 @@ function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): 
           ...(treeGroup.isExpanded === false && { isExpanded: treeGroup.isExpanded }),
         },
         serializeTreeGroups(treeGroup.children, trees),
-      );
-    }),
+      ),
+    ),
   );
 }
 

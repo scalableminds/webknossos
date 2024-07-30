@@ -41,6 +41,7 @@ import { AdditionalCoordinate } from "types/api_flow_types";
 import FastTooltip from "components/fast_tooltip";
 import { RenderToPortal } from "./layouting/portal_utils";
 import { Store } from "oxalis/singletons";
+import ReactDOMServer from "react-dom/server";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -409,46 +410,11 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
   );
 }
 
-function renderMagTooltipContent() {
-  const state = Store.getState();
-  const { activeMagOfEnabledLayers } = getActiveResolutionInfo(state);
-  const dataset = state.dataset;
-  const tracing = state.tracing;
-  return (
-    <>
-      Rendered magnification per layer:
-      <ul>
-        {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-          const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
-
-          return (
-            <li key={layerName}>
-              {readableName}: {mag ? mag.join("-") : "none"}
-            </li>
-          );
-        })}
-      </ul>
-    </>
-  );
-}
-
 function Infos() {
-  const { representativeResolution, isActiveResolutionGlobal } = useSelector((state: OxalisState) =>
-    getActiveResolutionInfo(state),
-  );
-
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const activeVolumeTracing = useSelector((state: OxalisState) =>
     getActiveSegmentationTracing(state),
   );
-  const [currentBucketDownloadSpeed, setCurrentBucketDownloadSpeed] = useState<number>(0);
-  const [totalDownloadedByteCount, setTotalDownloadedByteCount] = useState<number>(0);
-  useInterval(() => {
-    const { avgDownloadSpeedInBytesPerS, accumulatedDownloadedBytes } =
-      getGlobalDataConnectionInfo().getStatistics();
-    setCurrentBucketDownloadSpeed(avgDownloadSpeedInBytesPerS);
-    setTotalDownloadedByteCount(accumulatedDownloadedBytes);
-  }, 1500);
   const activeCellId = activeVolumeTracing?.activeCellId;
   const activeNodeId = useSelector((state: OxalisState) =>
     state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
@@ -457,8 +423,6 @@ function Infos() {
     state.tracing.skeleton ? state.tracing.skeleton.activeTreeId : null,
   );
   const dispatch = useDispatch();
-  const [isMagTooltipOpen, setIsMagTooltipOpen] = useState(false);
-  const [magTooltipContent, setMagTooltipContent] = useState<React.ReactElement | null>(null);
 
   const onChangeActiveCellId = useCallback(
     (id: number) => dispatch(setActiveCellAction(id)),
@@ -479,14 +443,7 @@ function Infos() {
     <React.Fragment>
       <SegmentAndMousePosition />
       <span className="info-element">
-        <FastTooltip
-          title={`Downloaded ${formatCountToDataAmountUnit(
-            totalDownloadedByteCount,
-          )} of Image Data (after decompression)`}
-        >
-          <DownloadOutlined className="icon-margin-right" />
-          {formatCountToDataAmountUnit(currentBucketDownloadSpeed)}/s
-        </FastTooltip>
+        <DownloadSpeedometer />
       </span>
       {activeVolumeTracing != null ? (
         <span className="info-element">
@@ -522,39 +479,86 @@ function Infos() {
           />
         </span>
       ) : null}
-      <RenderToPortal portalId="react-tooltip-portal">
-        <div style={TOOLTIP_CONTAINER_STYLE}>
-          <ReactTooltip id="mags-per-layer-tooltip" isOpen={isMagTooltipOpen}>
-            {magTooltipContent}
-          </ReactTooltip>
-        </div>
-      </RenderToPortal>
-      {representativeResolution && (
-        <span className="info-element">
-          <img
-            src="/assets/images/icon-statusbar-downsampling.svg"
-            className="resolution-status-bar-icon"
-            alt="Resolution"
-          />{" "}
-          <FastTooltip
-            title=""
-            id="mags-per-layer-tooltip"
-            placement="top"
-            onMouseEnter={() => {
-              setIsMagTooltipOpen(true);
-              setMagTooltipContent(renderMagTooltipContent());
-            }}
-            onMouseLeave={() => {
-              setIsMagTooltipOpen(false);
-              setMagTooltipContent(null);
-            }}
-          >
-            {representativeResolution.join("-")}
-            {isActiveResolutionGlobal ? "" : "*"}{" "}
-          </FastTooltip>
-        </span>
-      )}
+      <ResolutionInfo />
     </React.Fragment>
+  );
+}
+
+function DownloadSpeedometer() {
+  const [currentBucketDownloadSpeed, setCurrentBucketDownloadSpeed] = useState<number>(0);
+  const [totalDownloadedByteCount, setTotalDownloadedByteCount] = useState<number>(0);
+  useInterval(() => {
+    const { avgDownloadSpeedInBytesPerS, accumulatedDownloadedBytes } =
+      getGlobalDataConnectionInfo().getStatistics();
+    setCurrentBucketDownloadSpeed(avgDownloadSpeedInBytesPerS);
+    setTotalDownloadedByteCount(accumulatedDownloadedBytes);
+  }, 1500);
+
+  return (
+    <FastTooltip
+      title={`Downloaded ${formatCountToDataAmountUnit(
+        totalDownloadedByteCount,
+      )} of Image Data (after decompression)`}
+    >
+      <DownloadOutlined className="icon-margin-right" />
+      {formatCountToDataAmountUnit(currentBucketDownloadSpeed)}/s
+    </FastTooltip>
+  );
+}
+
+function ResolutionInfo() {
+  const { representativeResolution, isActiveResolutionGlobal } =
+    useSelector(getActiveResolutionInfo);
+  const [magTooltipContent, setMagTooltipContent] = useState<string | null>(null);
+
+  const renderMagTooltipContent = useCallback(() => {
+    const state = Store.getState();
+    const { activeMagOfEnabledLayers } = getActiveResolutionInfo(state);
+    const dataset = state.dataset;
+    const tracing = state.tracing;
+    return ReactDOMServer.renderToStaticMarkup(
+      <>
+        Rendered magnification per layer:
+        <ul>
+          {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+            const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
+
+            return (
+              <li key={layerName}>
+                {readableName}: {mag ? mag.join("-") : "none"}
+              </li>
+            );
+          })}
+        </ul>
+      </>,
+    );
+  }, []);
+
+  if (representativeResolution == null) {
+    return null;
+  }
+
+  return (
+    <span className="info-element">
+      <img
+        src="/assets/images/icon-statusbar-downsampling.svg"
+        className="resolution-status-bar-icon"
+        alt="Resolution"
+      />{" "}
+      <FastTooltip
+        html={magTooltipContent || ""}
+        placement="top"
+        onMouseEnter={() => {
+          setMagTooltipContent(renderMagTooltipContent());
+        }}
+        onMouseLeave={() => {
+          setMagTooltipContent(null);
+        }}
+      >
+        {representativeResolution.join("-")}
+        {isActiveResolutionGlobal ? "" : "*"}{" "}
+      </FastTooltip>
+    </span>
   );
 }
 

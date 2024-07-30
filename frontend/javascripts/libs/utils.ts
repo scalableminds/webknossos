@@ -1203,3 +1203,10 @@ export function encodeToBase62(numberToEncode: number): string {
   }
   return encoded;
 }
+
+export function safeNumberToStr(num: number): string {
+  if (typeof num === "number") {
+    return `${num}`;
+  }
+  return "NaN";
+}

@@ -1,6 +1,6 @@
 import React from "react";
 
-type Placement =
+export type FastTooltipPlacement =
   | "top"
   | "top-start"
   | "top-end"
@@ -23,22 +23,25 @@ export default function FastTooltip({
   onMouseEnter,
   onMouseLeave,
   wrapper,
+  html,
 }: {
-  title: string | null | undefined;
-  children: React.ReactNode;
-  placement?: Placement;
+  title?: string | null | undefined;
+  children?: React.ReactNode;
+  placement?: FastTooltipPlacement;
   disabled?: boolean;
   id?: string;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
-  wrapper?: "div" | "span" | "p"; // Any valid HTML tag
+  wrapper?: "div" | "span" | "p" | "tr"; // Any valid HTML tag, span by default.
+  html?: string | null | undefined;
 }) {
   const Tag = wrapper || "span";
   return (
     <Tag
-      data-tooltip-id={disabled || title == null ? "" : id || "main-tooltip"}
-      data-tooltip-content={title || ""}
+      data-tooltip-id={disabled || (title == null && html == null) ? "" : id || "main-tooltip"}
+      data-tooltip-content={title}
       data-tooltip-place={placement || "top"}
+      data-tooltip-html={html}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

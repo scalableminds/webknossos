@@ -17,6 +17,7 @@ const actionBlacklist = [
   "SET_TD_CAMERA",
   "SET_VIEWPORT",
   "ZOOM_TD_VIEW",
+  "UPDATE_TEMPORARY_SETTING",
 ];
 export function getActionLog(): Array<string> {
   return actionLog;

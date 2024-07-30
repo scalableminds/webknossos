@@ -144,27 +144,14 @@ class VolumeTracingService @Inject()(
                   Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
                 } else
                   updateBucket(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version) ?~> "Failed to save volume data."
-              case a: UpdateTracingVolumeAction =>
-                Fox.successful(
-                  tracing.copy(
-                    activeSegmentId = Some(a.activeSegmentId),
-                    editPosition = a.editPosition,
-                    editRotation = a.editRotation,
-                    largestSegmentId = a.largestSegmentId,
-                    zoomLevel = a.zoomLevel,
-                    editPositionAdditionalCoordinates =
-                      AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates)
-                  ))
-              case a: RevertToVersionVolumeAction =>
-                revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing, userToken)
+              //case a: RevertToVersionVolumeAction => revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing, userToken)
               case a: DeleteSegmentDataVolumeAction =>
                 if (!tracing.getHasSegmentIndex) {
                   Fox.failure("Cannot delete segment data for annotations without segment index.")
                 } else
                   deleteSegmentData(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version, userToken) ?~> "Failed to delete segment data."
-              case _: UpdateTdCameraVolumeAction => Fox.successful(tracing)
-              case a: ApplyableVolumeUpdateAction      => Fox.successful(applyUpdateOn(tracing, a))
-              case _                             => Fox.failure("Unknown action.")
+              case a: ApplyableVolumeUpdateAction => Fox.successful(applyUpdateOn(tracing, a))
+              case _                              => Fox.failure("Unknown action.")
             }
           case Empty =>
             Fox.empty

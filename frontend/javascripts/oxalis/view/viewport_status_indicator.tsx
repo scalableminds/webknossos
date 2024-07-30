@@ -71,15 +71,15 @@ export default function ViewportStatusIndicator() {
     .filter((message) => message != null)
     .join(" ");
   return (
-    <FastTooltip title={sentencesString}>
-      <div
-        style={{
-          position: "absolute",
-          bottom: "1%",
-          left: "1%",
-          color: "white",
-        }}
-      >
+    <div
+      style={{
+        position: "absolute",
+        bottom: "1%",
+        left: "1%",
+        color: "white",
+      }}
+    >
+      <FastTooltip title={sentencesString}>
         <WarningOutlined
           style={{
             fontSize: 16,
@@ -88,7 +88,7 @@ export default function ViewportStatusIndicator() {
             borderRadius: 2,
           }}
         />
-      </div>
-    </FastTooltip>
+      </FastTooltip>
+    </div>
   );
 }

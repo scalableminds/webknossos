@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.datareaders.zarr;
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.models
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import net.liftweb.common.{Box, Failure, Full}
 import play.api.libs.json.{Json, OFormat}
@@ -108,6 +109,7 @@ object NgffMetadataV2 {
   def fromNameVoxelSizeAndMags(dataLayerName: String,
                                dataSourceVoxelSize: VoxelSize,
                                mags: List[Vec3Int],
+                               additionalAxes: Option[Seq[AdditionalAxis]],
                                version: String = "0.5"): NgffMetadataV2 = {
     val datasets = mags.map(
       mag =>
@@ -117,8 +119,10 @@ object NgffMetadataV2 {
             scale = Some(List[Double](1.0) ++ (dataSourceVoxelSize.factor * Vec3Double(mag)).toList)))
       ))
     val lengthUnitStr = dataSourceVoxelSize.unit.toString
-    val axes = List(
-      NgffAxis(name = "c", `type` = "channel"),
+    val axes = List(NgffAxis(name = "c", `type` = "channel")) ++ additionalAxes
+      .getOrElse(List.empty)
+      .zipWithIndex
+      .map(axisAndIndex => NgffAxis(name = s"t${axisAndIndex._2}", `type` = "space", unit = Some(lengthUnitStr))) ++ List(
       NgffAxis(name = "x", `type` = "space", unit = Some(lengthUnitStr)),
       NgffAxis(name = "y", `type` = "space", unit = Some(lengthUnitStr)),
       NgffAxis(name = "z", `type` = "space", unit = Some(lengthUnitStr)),

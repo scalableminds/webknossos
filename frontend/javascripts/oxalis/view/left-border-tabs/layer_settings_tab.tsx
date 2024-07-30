@@ -616,7 +616,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isColorLayer: boolean,
     isInEditMode: boolean,
     layerName: string,
-    elementClass: string,
     layerSettings: DatasetLayerConfiguration,
     hasLessThanTwoColorLayers: boolean = true,
   ) => {
@@ -957,7 +956,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           isColorLayer,
           isInEditMode,
           layerName,
-          elementClass,
           layerConfiguration,
           hasLessThanTwoColorLayers,
         )}

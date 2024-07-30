@@ -498,16 +498,21 @@ function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): 
   // Only serialize treeGroups that contain at least one tree at some level in their child hierarchy
   const nonEmptyTreeGroups = treeGroups.filter(deepFindTree);
   return _.flatten(
-    nonEmptyTreeGroups.map((treeGroup) =>
-      serializeTagWithChildren(
+    nonEmptyTreeGroups.map((treeGroup) => {
+      const propertyObject = {
+        id: treeGroup.groupId,
+        name: treeGroup.name,
+      };
+      const expandedPropertyObject = { isExpanded: treeGroup.isExpanded };
+      return serializeTagWithChildren(
         "group",
         {
-          id: treeGroup.groupId,
-          name: treeGroup.name,
+          ...propertyObject,
+          ...(treeGroup.isExpanded === false && expandedPropertyObject),
         },
         serializeTreeGroups(treeGroup.children, trees),
-      ),
-    ),
+      );
+    }),
   );
 }
 
@@ -931,6 +936,7 @@ export function parseNml(nmlString: string): Promise<{
             const newGroup = {
               groupId: _parseInt(attr, "id"),
               name: _parseEntities(attr, "name"),
+              isExpanded: _parseBool(attr, "isExpanded", true),
               children: [],
             };
             if (existingTreeGroupIds.has(newGroup.groupId)) {

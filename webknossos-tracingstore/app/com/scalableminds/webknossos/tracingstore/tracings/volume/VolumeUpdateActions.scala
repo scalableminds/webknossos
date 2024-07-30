@@ -266,7 +266,7 @@ case class DeleteSegmentVolumeAction(id: Long,
                                      actionAuthorId: Option[String] = None,
                                      info: Option[String] = None)
     extends BucketMutatingVolumeUpdateAction
-    with ApplyableVolumeUpdateAction { // TODO double-check that it is matched against both traits
+    with ApplyableVolumeUpdateAction {
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction =
     this.copy(actionTimestamp = Some(timestamp))

@@ -584,21 +584,17 @@ function StartJobForm(props: StartJobFormProps) {
   };
 
   const getButton = () => {
-    if (!isDTypeSupported) {
-      return (
-        <Button type="primary" size="large" htmlType="submit">
-          {props.buttonLabel ? props.buttonLabel : title}
-        </Button>
-      );
-    }
+    const isAIAnalysisDisabled = !isDTypeSupported;
     return (
-      <div>
-        AI Jobs are not supported for for uInt24 color layers.
-        <br />
-        <Button type="primary" size="large" htmlType="submit" disabled>
+      <>
+        <Button type="primary" size="large" htmlType="submit" disabled={isAIAnalysisDisabled}>
           {props.buttonLabel ? props.buttonLabel : title}
         </Button>
-      </div>
+        <br />
+        {isAIAnalysisDisabled ? (
+          <div style={{ color: "red" }}>AI Jobs are not supported for for uInt24 color layers.</div>
+        ) : null}
+      </>
     );
   };
 

@@ -117,9 +117,8 @@ class AnnotationTransactionService @Inject()(
                                           transactionGroupIndex: Int): Fox[Boolean] =
     handledGroupIdStore.contains(handledGroupKey(annotationId, transactionId, version, transactionGroupIndex))
 
-  private def concatenateUpdateGroupsOfTransaction(
-                                                    previousActionGroups: List[UpdateActionGroup],
-                                                    lastActionGroup: UpdateActionGroup): UpdateActionGroup =
+  private def concatenateUpdateGroupsOfTransaction(previousActionGroups: List[UpdateActionGroup],
+                                                   lastActionGroup: UpdateActionGroup): UpdateActionGroup =
     if (previousActionGroups.isEmpty) lastActionGroup
     else {
       val allActionGroups = previousActionGroups :+ lastActionGroup
@@ -148,9 +147,8 @@ class AnnotationTransactionService @Inject()(
     }
 
   // Perform version check and commit the passed updates
-  private def commitUpdates(annotationId: String,
-                            updateGroups: List[UpdateActionGroup],
-                            userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] =
+  private def commitUpdates(annotationId: String, updateGroups: List[UpdateActionGroup], userToken: Option[String])(
+      implicit ec: ExecutionContext): Fox[Long] =
     for {
       _ <- annotationService.reportUpdates(annotationId, updateGroups, userToken)
       currentCommittedVersion: Fox[Long] = annotationService.currentVersion(annotationId)
@@ -158,7 +156,7 @@ class AnnotationTransactionService @Inject()(
         previousVersion.flatMap { prevVersion: Long =>
           if (prevVersion + 1 == updateGroup.version) {
             for {
-              _ <- annotationService.handleUpdateGroup(annotationId, updateGroup, prevVersion, userToken)
+              _ <- annotationService.handleUpdateGroup(annotationId, updateGroup, userToken)
               _ <- saveToHandledGroupIdStore(annotationId,
                                              updateGroup.transactionId,
                                              updateGroup.version,

@@ -109,18 +109,15 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
 
   def currentVersion(annotationId: String): Fox[Long] = ???
 
-  def handleUpdateGroup(annotationId: String,
-                        updateActionGroup: UpdateActionGroup,
-                        previousVersion: Long,
-                        userToken: Option[String])(implicit ec: ExecutionContext): Fox[Unit] =
+  def handleUpdateGroup(annotationId: String, updateActionGroup: UpdateActionGroup, userToken: Option[String])(
+      implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- tracingDataStore.annotationUpdates.put(annotationId,
                                                   updateActionGroup.version,
                                                   preprocessActionsForStorage(updateActionGroup))
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
       _ <- Fox.runIf(bucketMutatingActions.nonEmpty)(
-        volumeTracingService
-          .applyBucketMutatingActions(bucketMutatingActions, previousVersion, updateActionGroup.version, userToken))
+        volumeTracingService.applyBucketMutatingActions(bucketMutatingActions, updateActionGroup.version, userToken))
     } yield ()
 
   private def findBucketMutatingActions(updateActionGroup: UpdateActionGroup): List[BucketMutatingVolumeUpdateAction] =

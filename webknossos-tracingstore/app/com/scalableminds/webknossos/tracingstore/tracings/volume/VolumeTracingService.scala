@@ -15,7 +15,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis,
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{
-  AdditionalCoordinate,
   BucketPosition,
   UnsignedInteger,
   UnsignedIntegerArray,
@@ -114,10 +113,7 @@ class VolumeTracingService @Inject()(
                                                mappingName,
                                                editableMappingTracingId) ?~> "volumeSegmentIndex.update.failed"
 
-  private def applyUpdateOn(tracing: VolumeTracing, update: ApplyableVolumeUpdateAction): VolumeTracing = ???
-
   def applyBucketMutatingActions(updateActions: List[BucketMutatingVolumeUpdateAction],
-                                 previousVersion: Long,
                                  newVersion: Long,
                                  userToken: Option[String]): Fox[Unit] =
     for {
@@ -888,7 +884,7 @@ class VolumeTracingService @Inject()(
         1,
         0
       )
-      _ <- Fox.runIf(!dryRun)(handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken))
+      // TODO _ <- Fox.runIf(!dryRun)(handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken))
     } yield Some(processedBucketCount)
   }
 
@@ -975,7 +971,7 @@ class VolumeTracingService @Inject()(
             1,
             0
           )
-          _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
+          // TODO: _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
         } yield mergedVolume.largestSegmentId.toPositiveLong
       }
     }

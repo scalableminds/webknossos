@@ -373,7 +373,7 @@ class VolumeTracingController @Inject()(
                                                          isLocked = Some(true),
                                                          actionTracingId = tracingId,
                                                          actionTimestamp = Some(System.currentTimeMillis()))
-            _ <- tracingService.handleUpdateGroup(
+            /*_ <- tracingService.handleUpdateGroup( // TODO
               tracingId,
               UpdateActionGroup(tracing.version + 1,
                                 System.currentTimeMillis(),
@@ -386,7 +386,7 @@ class VolumeTracingController @Inject()(
                                 0),
               tracing.version,
               urlOrHeaderToken(token, request)
-            )
+            )*/
             infoJson <- editableMappingService.infoJson(tracingId = tracingId,
                                                         editableMappingId = editableMappingId,
                                                         editableMappingInfo = editableMappingInfo,

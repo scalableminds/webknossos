@@ -27,7 +27,7 @@ import scala.concurrent.ExecutionContext
 
 trait VolumeDataZipHelper
     extends WKWDataFormatHelper
-    with VolumeBucketReversionHelper
+    with ReversionHelper
     with BoxImplicits
     with LazyLogging {
 
@@ -61,7 +61,7 @@ trait VolumeDataZipHelper
                   parseWKWFilePath(fileName.toString).map { bucketPosition: BucketPosition =>
                     if (buckets.hasNext) {
                       val data = buckets.next()
-                      if (!isRevertedBucket(data)) {
+                      if (!isRevertedElement(data)) {
                         block(bucketPosition, data)
                       } else Fox.successful(())
                     } else Fox.successful(())

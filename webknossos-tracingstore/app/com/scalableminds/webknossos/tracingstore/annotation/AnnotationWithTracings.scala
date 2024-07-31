@@ -1,0 +1,73 @@
+package com.scalableminds.webknossos.tracingstore.annotation
+
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
+import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ApplyableVolumeUpdateAction
+import net.liftweb.common.{Box, Failure, Full}
+
+import scala.concurrent.ExecutionContext
+
+case class AnnotationWithTracings(annotation: AnnotationProto,
+                                  tracingsById: Map[String, Either[SkeletonTracing, VolumeTracing]]) {
+
+  def getSkeleton(tracingId: String): Box[SkeletonTracing] =
+    for {
+      tracingEither <- tracingsById.get(tracingId)
+      skeletonTracing <- tracingEither match {
+        case Left(st: SkeletonTracing) => Full(st)
+        case _                         => Failure(f"Tried to access tracing $tracingId as skeleton, but is volume")
+      }
+    } yield skeletonTracing
+
+  def getVolume(tracingId: String): Box[VolumeTracing] =
+    for {
+      tracingEither <- tracingsById.get(tracingId)
+      volumeTracing <- tracingEither match {
+        case Right(vt: VolumeTracing) => Full(vt)
+        case _                        => Failure(f"Tried to access tracing $tracingId as volume, but is skeleton")
+      }
+    } yield volumeTracing
+
+  def version: Long = annotation.version
+
+  def addTracing(a: AddLayerAnnotationUpdateAction): AnnotationWithTracings =
+    AnnotationWithTracings(
+      annotation.copy(
+        layers = annotation.layers :+ AnnotationLayerProto(a.tracingId,
+                                                           a.layerName,
+                                                           `type` = AnnotationLayerType.toProto(a.`type`))),
+      tracingsById)
+
+  def deleteTracing(a: DeleteLayerAnnotationUpdateAction): AnnotationWithTracings =
+    AnnotationWithTracings(annotation.copy(layers = annotation.layers.filter(_.tracingId != a.tracingId)), tracingsById)
+
+  def updateLayerMetadata(a: UpdateLayerMetadataAnnotationUpdateAction): AnnotationWithTracings =
+    AnnotationWithTracings(annotation.copy(layers = annotation.layers.map(l =>
+                             if (l.tracingId == a.tracingId) l.copy(name = a.layerName) else l)),
+                           tracingsById)
+
+  def updateMetadata(a: UpdateMetadataAnnotationUpdateAction): AnnotationWithTracings =
+    AnnotationWithTracings(annotation.copy(name = a.name, description = a.description), tracingsById)
+
+  def incrementVersion: AnnotationWithTracings =
+    AnnotationWithTracings(annotation.copy(version = annotation.version + 1L), tracingsById)
+
+  def withVersion(newVersion: Long): AnnotationWithTracings =
+    AnnotationWithTracings(annotation.copy(version = newVersion), tracingsById) // TODO also update version in tracings?
+
+  def applySkeletonAction(a: SkeletonUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+    for {
+      skeletonTracing <- getSkeleton(a.actionTracingId)
+      updated = a.applyOn(skeletonTracing)
+    } yield AnnotationWithTracings(annotation, tracingsById.updated(a.actionTracingId, Left(updated)))
+
+  def applyVolumeAction(a: ApplyableVolumeUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+    for {
+      volumeTracing <- getVolume(a.actionTracingId)
+      updated = a.applyOn(volumeTracing)
+    } yield AnnotationWithTracings(annotation, tracingsById.updated(a.actionTracingId, Right(updated)))
+}

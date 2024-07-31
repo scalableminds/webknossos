@@ -7,7 +7,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
-import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateProto
+import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateChunkProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
@@ -21,6 +21,8 @@ import com.scalableminds.webknossos.datastore.services.{
   AdHocMeshServiceHolder,
   BinaryDataService
 }
+import com.scalableminds.webknossos.tracingstore.annotation.{UpdateAction, UpdateActionGroup}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
   KeyValueStoreImplicits,
@@ -34,7 +36,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.common.Box.tryo
 import org.jgrapht.alg.flow.PushRelabelMFImpl
 import org.jgrapht.graph.{DefaultWeightedEdge, SimpleWeightedGraph}
-import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
+import play.api.libs.json.{JsObject, Json, OFormat}
 
 import java.nio.file.Paths
 import java.util
@@ -96,6 +98,8 @@ class EditableMappingService @Inject()(
     extends KeyValueStoreImplicits
     with FallbackDataHelper
     with FoxImplicits
+    with ReversionHelper
+    with EditableMappingElementKeys
     with LazyLogging
     with ProtoGeometryImplicits {
 
@@ -178,9 +182,8 @@ class EditableMappingService @Inject()(
       _ <- duplicateSegmentToAgglomerate(editableMappingId, newId, newVersion)
       _ <- duplicateAgglomerateToGraph(editableMappingId, newId, newVersion)
       updateActionsWithVersions <- getUpdateActionsWithVersions(editableMappingId, editableMappingInfoAndVersion._2, 0L)
-      _ <- Fox.serialCombined(updateActionsWithVersions) {
-        updateActionsWithVersion: (Long, List[EditableMappingUpdateAction]) =>
-          tracingDataStore.editableMappingUpdates.put(newId, updateActionsWithVersion._1, updateActionsWithVersion._2)
+      _ <- Fox.serialCombined(updateActionsWithVersions) { updateActionsWithVersion: (Long, List[UpdateAction]) =>
+        tracingDataStore.editableMappingUpdates.put(newId, updateActionsWithVersion._1, updateActionsWithVersion._2)
       }
     } yield newId
 
@@ -218,20 +221,6 @@ class EditableMappingService @Inject()(
     } yield ()
   }
 
-  def updateActionLog(editableMappingId: String): Fox[JsValue] = {
-    def versionedTupleToJson(tuple: (Long, List[EditableMappingUpdateAction])): JsObject =
-      Json.obj(
-        "version" -> tuple._1,
-        "value" -> Json.toJson(tuple._2)
-      )
-
-    for {
-      updates <- tracingDataStore.editableMappingUpdates.getMultipleVersionsAsVersionValueTuple(editableMappingId)(
-        fromJsonBytes[List[EditableMappingUpdateAction]])
-      updateActionGroupsJs = updates.map(versionedTupleToJson)
-    } yield Json.toJson(updateActionGroupsJs)
-  }
-
   def getInfo(editableMappingId: String,
               version: Option[Long] = None,
               remoteFallbackLayer: RemoteFallbackLayer,
@@ -261,9 +250,7 @@ class EditableMappingService @Inject()(
         _ => applyPendingUpdates(editableMappingId, desiredVersion, remoteFallbackLayer, userToken))
     } yield (materializedInfo, desiredVersion)
 
-  def update(editableMappingId: String,
-             updateActionGroup: EditableMappingUpdateActionGroup,
-             newVersion: Long): Fox[Unit] =
+  def update(editableMappingId: String, updateActionGroup: UpdateActionGroup, newVersion: Long): Fox[Unit] =
     for {
       actionsWithTimestamp <- Fox.successful(updateActionGroup.actions.map(_.addTimestamp(updateActionGroup.timestamp)))
       _ <- tracingDataStore.editableMappingUpdates.put(editableMappingId, newVersion, actionsWithTimestamp)
@@ -292,7 +279,6 @@ class EditableMappingService @Inject()(
             tracingDataStore,
             relyOnAgglomerateIds = pendingUpdates.length <= 1
           )
-
           updated <- updater.applyUpdatesAndSave(closestMaterializedWithVersion.value, pendingUpdates)
         } yield updated
     } yield updatedEditableMappingInfo
@@ -310,7 +296,7 @@ class EditableMappingService @Inject()(
 
   private def getPendingUpdates(editableMappingId: String,
                                 closestMaterializedVersion: Long,
-                                closestMaterializableVersion: Long): Fox[List[EditableMappingUpdateAction]] =
+                                closestMaterializableVersion: Long): Fox[List[UpdateAction]] =
     if (closestMaterializableVersion == closestMaterializedVersion) {
       Fox.successful(List.empty)
     } else {
@@ -321,24 +307,22 @@ class EditableMappingService @Inject()(
       } yield updates.map(_._2).reverse.flatten
     }
 
-  private def getUpdateActionsWithVersions(
-      editableMappingId: String,
-      newestVersion: Long,
-      oldestVersion: Long): Fox[List[(Long, List[EditableMappingUpdateAction])]] = {
+  private def getUpdateActionsWithVersions(editableMappingId: String,
+                                           newestVersion: Long,
+                                           oldestVersion: Long): Fox[List[(Long, List[UpdateAction])]] = {
     val batchRanges = batchRangeInclusive(oldestVersion, newestVersion, batchSize = 100)
     for {
       updateActionBatches <- Fox.serialCombined(batchRanges.toList) { batchRange =>
         val batchFrom = batchRange._1
         val batchTo = batchRange._2
         for {
-          res <- tracingDataStore.editableMappingUpdates
-            .getMultipleVersionsAsVersionValueTuple[List[EditableMappingUpdateAction]](
-              editableMappingId,
-              Some(batchTo),
-              Some(batchFrom)
-            )(fromJsonBytes[List[EditableMappingUpdateAction]])
+          res <- tracingDataStore.editableMappingUpdates.getMultipleVersionsAsVersionValueTuple[List[UpdateAction]](
+            editableMappingId,
+            Some(batchTo),
+            Some(batchFrom)
+          )(fromJsonBytes[List[UpdateAction]])
         } yield res
-      }
+      } ?~> "Failed to fetch editable mapping update actions from fossilDB"
       flat = updateActionBatches.flatten
     } yield flat
   }
@@ -414,12 +398,17 @@ class EditableMappingService @Inject()(
 
   private def getSegmentToAgglomerateChunk(editableMappingId: String,
                                            agglomerateId: Long,
-                                           version: Option[Long]): Fox[Seq[(Long, Long)]] =
+                                           version: Option[Long]): Fox[Seq[(Long, Long)]] = {
+    val chunkKey = segmentToAgglomerateKey(editableMappingId, agglomerateId)
+    getSegmentToAgglomerateChunk(chunkKey, version)
+  }
+
+  def getSegmentToAgglomerateChunk(chunkKey: String, version: Option[Long]): Fox[Seq[(Long, Long)]] =
     for {
-      keyValuePair: VersionedKeyValuePair[SegmentToAgglomerateProto] <- tracingDataStore.editableMappingsSegmentToAgglomerate
-        .get(segmentToAgglomerateKey(editableMappingId, agglomerateId), version, mayBeEmpty = Some(true))(
-          fromProtoBytes[SegmentToAgglomerateProto])
-      valueProto = keyValuePair.value
+      keyValuePairBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsSegmentToAgglomerate
+        .get(chunkKey, version, mayBeEmpty = Some(true))
+      valueProto <- if (isRevertedElement(keyValuePairBytes.value)) Fox.empty
+      else fromProtoBytes[SegmentToAgglomerateChunkProto](keyValuePairBytes.value).toFox
       asSequence = valueProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)
     } yield asSequence
 
@@ -579,16 +568,6 @@ class EditableMappingService @Inject()(
       result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result
 
-  def agglomerateGraphKey(mappingId: String, agglomerateId: Long): String =
-    s"$mappingId/$agglomerateId"
-
-  def segmentToAgglomerateKey(mappingId: String, chunkId: Long): String =
-    s"$mappingId/$chunkId"
-
-  private def chunkIdFromSegmentToAgglomerateKey(key: String): Box[Long] = tryo(key.split("/")(1).toLong)
-
-  private def agglomerateIdFromAgglomerateGraphKey(key: String): Box[Long] = tryo(key.split("/")(1).toLong)
-
   def getAgglomerateGraphForId(mappingId: String,
                                agglomerateId: Long,
                                remoteFallbackLayer: RemoteFallbackLayer,
@@ -600,10 +579,12 @@ class EditableMappingService @Inject()(
       agglomerateGraph <- agglomerateToGraphCache.getOrLoad(
         (mappingId, agglomerateId, version),
         _ =>
-          tracingDataStore.editableMappingsAgglomerateToGraph
-            .get(agglomerateGraphKey(mappingId, agglomerateId), Some(version), mayBeEmpty = Some(true))(
-              fromProtoBytes[AgglomerateGraph])
-            .map(_.value)
+          for {
+            graphBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsAgglomerateToGraph
+              .get(agglomerateGraphKey(mappingId, agglomerateId), Some(version), mayBeEmpty = Some(true))
+            graphParsed <- if (isRevertedElement(graphBytes.value)) Fox.empty
+            else fromProtoBytes[AgglomerateGraph](graphBytes.value).toFox
+          } yield graphParsed
       )
     } yield agglomerateGraph
 

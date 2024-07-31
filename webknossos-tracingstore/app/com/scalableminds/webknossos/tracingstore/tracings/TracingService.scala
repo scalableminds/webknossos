@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateActionGroup
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import com.typesafe.scalalogging.LazyLogging
@@ -46,8 +47,6 @@ trait TracingService[T <: GeneratedMessage]
 
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
-  implicit val updateActionJsonFormat: Format[UpdateAction[T]]
-
   // this should be longer than maxCacheTime in webknossos/AnnotationStore
   // so that the references saved there remain valid throughout their life
   private val temporaryStoreTimeout = 70 minutes
@@ -75,7 +74,7 @@ trait TracingService[T <: GeneratedMessage]
                       transactionId: String,
                       transactionGroupIndex: Int,
                       version: Long,
-                      updateGroup: UpdateActionGroup[T],
+                      updateGroup: UpdateActionGroup,
                       expiry: FiniteDuration): Fox[Unit] =
     for {
       _ <- Fox.runIf(transactionGroupIndex > 0)(
@@ -90,11 +89,11 @@ trait TracingService[T <: GeneratedMessage]
                                           Some(expiry))
     } yield ()
 
-  def getAllUncommittedFor(tracingId: String, transactionId: String): Fox[List[UpdateActionGroup[T]]] =
+  def getAllUncommittedFor(tracingId: String, transactionId: String): Fox[List[UpdateActionGroup]] =
     for {
       raw: Seq[String] <- uncommittedUpdatesStore.findAllConditional(patternFor(tracingId, transactionId))
-      parsed: Seq[UpdateActionGroup[T]] = raw.flatMap(itemAsString =>
-        JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup[T]]))
+      parsed: Seq[UpdateActionGroup] = raw.flatMap(itemAsString =>
+        JsonHelper.jsResultToOpt(Json.parse(itemAsString).validate[UpdateActionGroup]))
     } yield parsed.toList.sortBy(_.transactionGroupIndex)
 
   def removeAllUncommittedFor(tracingId: String, transactionId: String): Fox[Unit] =
@@ -108,11 +107,6 @@ trait TracingService[T <: GeneratedMessage]
         else
           Fox.successful(tracing)
     }
-
-  def handleUpdateGroup(tracingId: String,
-                        updateGroup: UpdateActionGroup[T],
-                        previousVersion: Long,
-                        userToken: Option[String]): Fox[_]
 
   def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] = Fox.successful(tracing)
 

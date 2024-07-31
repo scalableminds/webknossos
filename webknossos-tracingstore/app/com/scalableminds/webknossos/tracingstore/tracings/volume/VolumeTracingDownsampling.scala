@@ -52,6 +52,7 @@ trait VolumeTracingDownsampling
     with ProtoGeometryImplicits
     with VolumeBucketCompression
     with KeyValueStoreImplicits
+    with ReversionHelper
     with FoxImplicits {
 
   val tracingDataStore: TracingDataStore
@@ -89,7 +90,7 @@ trait VolumeTracingDownsampling
       sourceMag = getSourceMag(tracing)
       magsToCreate <- getMagsToCreate(tracing, oldTracingId)
       elementClass = elementClassFromProto(tracing.elementClass)
-      bucketDataMapMutable = new mutable.HashMap[BucketPosition, Array[Byte]]().withDefault(_ => Array[Byte](0))
+      bucketDataMapMutable = new mutable.HashMap[BucketPosition, Array[Byte]]().withDefault(_ => revertedValue)
       _ = fillMapWithSourceBucketsInplace(bucketDataMapMutable, tracingId, dataLayer, sourceMag)
       originalBucketPositions = bucketDataMapMutable.keys.toList
       updatedBucketsMutable = new mutable.ListBuffer[BucketPosition]()
@@ -167,8 +168,8 @@ trait VolumeTracingDownsampling
         sourceBucketPositionsFor(downsampledBucketPosition, downScaleFactor, previousMag)
       val sourceData: Seq[Array[Byte]] = sourceBuckets.map(bucketDataMapMutable(_))
       val downsampledData: Array[Byte] =
-        if (sourceData.forall(_.sameElements(Array[Byte](0))))
-          Array[Byte](0)
+        if (sourceData.forall(_.sameElements(revertedValue)))
+          revertedValue
         else {
           val sourceDataFilled = fillZeroedIfNeeded(sourceData, bucketVolume, dataLayer.bytesPerElement)
           val sourceDataTyped = UnsignedIntegerArray.fromByteArray(sourceDataFilled.toArray.flatten, elementClass)
@@ -216,7 +217,7 @@ trait VolumeTracingDownsampling
     // Reverted buckets and missing buckets are represented by a single zero-byte.
     // For downsampling, those need to be replaced with the full bucket volume of zero-bytes.
     sourceData.map { sourceBucketData =>
-      if (sourceBucketData.sameElements(Array[Byte](0))) {
+      if (isRevertedElement(sourceBucketData)) {
         Array.fill[Byte](bucketVolume * bytesPerElement)(0)
       } else sourceBucketData
     }

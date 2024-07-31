@@ -15,7 +15,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis,
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.models.requests.DataServiceDataRequest
 import com.scalableminds.webknossos.datastore.models.{
-  AdditionalCoordinate,
   BucketPosition,
   UnsignedInteger,
   UnsignedIntegerArray,
@@ -23,6 +22,7 @@ import com.scalableminds.webknossos.datastore.models.{
   WebknossosAdHocMeshRequest
 }
 import com.scalableminds.webknossos.datastore.services._
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateActionGroup
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -77,9 +77,6 @@ class VolumeTracingService @Inject()(
 
   implicit val tracingCompanion: VolumeTracing.type = VolumeTracing
 
-  implicit val updateActionJsonFormat: VolumeUpdateAction.volumeUpdateActionFormat.type =
-    VolumeUpdateAction.volumeUpdateActionFormat
-
   val tracingType: TracingType = TracingType.volume
 
   val tracingStore: FossilDBClient = tracingDataStore.volumes
@@ -116,69 +113,40 @@ class VolumeTracingService @Inject()(
                                                mappingName,
                                                editableMappingTracingId) ?~> "volumeSegmentIndex.update.failed"
 
-  def handleUpdateGroup(tracingId: String,
-                        updateGroup: UpdateActionGroup[VolumeTracing],
-                        previousVersion: Long,
-                        userToken: Option[String]): Fox[Unit] =
+  def applyBucketMutatingActions(updateActions: List[BucketMutatingVolumeUpdateAction],
+                                 newVersion: Long,
+                                 userToken: Option[String]): Fox[Unit] =
     for {
       // warning, may be called multiple times with the same version number (due to transaction management).
       // frontend ensures that each bucket is only updated once per transaction
-      fallbackLayer <- getFallbackLayer(tracingId)
+      tracingId <- updateActions.headOption.map(_.actionTracingId).toFox
+      fallbackLayerOpt <- getFallbackLayer(tracingId)
       tracing <- find(tracingId) ?~> "tracing.notFound"
-      segmentIndexBuffer <- Fox.successful(
-        new VolumeSegmentIndexBuffer(
-          tracingId,
-          volumeSegmentIndexClient,
-          updateGroup.version,
-          remoteDatastoreClient,
-          fallbackLayer,
-          AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
-          userToken
-        ))
-      updatedTracing: VolumeTracing <- updateGroup.actions.foldLeft(find(tracingId)) { (tracingFox, action) =>
-        tracingFox.futureBox.flatMap {
-          case Full(tracing) =>
-            action match {
-              case a: UpdateBucketVolumeAction =>
-                if (tracing.getMappingIsEditable) {
-                  Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
-                } else
-                  updateBucket(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version) ?~> "Failed to save volume data."
-              case a: UpdateTracingVolumeAction =>
-                Fox.successful(
-                  tracing.copy(
-                    activeSegmentId = Some(a.activeSegmentId),
-                    editPosition = a.editPosition,
-                    editRotation = a.editRotation,
-                    largestSegmentId = a.largestSegmentId,
-                    zoomLevel = a.zoomLevel,
-                    editPositionAdditionalCoordinates =
-                      AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates)
-                  ))
-              case a: RevertToVersionVolumeAction =>
-                revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing, userToken)
-              case a: DeleteSegmentDataVolumeAction =>
-                if (!tracing.getHasSegmentIndex) {
-                  Fox.failure("Cannot delete segment data for annotations without segment index.")
-                } else
-                  deleteSegmentData(tracingId, tracing, a, segmentIndexBuffer, updateGroup.version, userToken) ?~> "Failed to delete segment data."
-              case _: UpdateTdCamera        => Fox.successful(tracing)
-              case a: ApplyableVolumeAction => Fox.successful(a.applyOn(tracing))
-              case _                        => Fox.failure("Unknown action.")
-            }
-          case Empty =>
-            Fox.empty
-          case f: Failure =>
-            f.toFox
-        }
+      segmentIndexBuffer = new VolumeSegmentIndexBuffer(
+        tracingId,
+        volumeSegmentIndexClient,
+        newVersion,
+        remoteDatastoreClient,
+        fallbackLayerOpt,
+        AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),
+        userToken
+      )
+      _ <- Fox.serialCombined(updateActions) {
+        case a: UpdateBucketVolumeAction =>
+          if (tracing.getMappingIsEditable) {
+            Fox.failure("Cannot mutate volume data in annotation with editable mapping.")
+          } else
+            updateBucket(tracingId, tracing, a, segmentIndexBuffer, newVersion) ?~> "Failed to save volume data."
+        //case a: RevertToVersionVolumeAction => revertToVolumeVersion(tracingId, a.sourceVersion, updateGroup.version, tracing, userToken)
+        case a: DeleteSegmentDataVolumeAction =>
+          if (!tracing.getHasSegmentIndex) {
+            Fox.failure("Cannot delete segment data for annotations without segment index.")
+          } else
+            deleteSegmentData(tracingId, tracing, a, segmentIndexBuffer, newVersion, userToken) ?~> "Failed to delete segment data."
+        case _ => Fox.failure("Unknown bucket-mutating action.")
       }
       _ <- segmentIndexBuffer.flush()
-      _ <- save(updatedTracing.copy(version = updateGroup.version), Some(tracingId), updateGroup.version)
-      _ <- tracingDataStore.volumeUpdates.put(
-        tracingId,
-        updateGroup.version,
-        updateGroup.actions.map(_.addTimestamp(updateGroup.timestamp)).map(_.transformToCompact))
-    } yield Fox.successful(())
+    } yield ()
 
   private def updateBucket(tracingId: String,
                            volumeTracing: VolumeTracing,
@@ -330,7 +298,7 @@ class VolumeTracingService @Inject()(
                 } yield ()
               case Empty =>
                 for {
-                  dataAfterRevert <- Fox.successful(Array[Byte](0))
+                  dataAfterRevert <- Fox.successful(revertedValue)
                   _ <- saveBucket(dataLayer, bucketPosition, dataAfterRevert, newVersion)
                   _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
                     updateSegmentIndex(
@@ -905,18 +873,18 @@ class VolumeTracingService @Inject()(
                              editableMappingTracingId(tracing, tracingId))
       }
       _ <- Fox.runIf(!dryRun)(segmentIndexBuffer.flush())
-      updateGroup = UpdateActionGroup[VolumeTracing](
+      updateGroup = UpdateActionGroup(
         tracing.version + 1L,
         System.currentTimeMillis(),
         None,
-        List(AddSegmentIndex()),
+        List(AddSegmentIndexVolumeAction(tracingId)),
         None,
         None,
         "dummyTransactionId",
         1,
         0
       )
-      _ <- Fox.runIf(!dryRun)(handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken))
+      // TODO _ <- Fox.runIf(!dryRun)(handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken))
     } yield Some(processedBucketCount)
   }
 
@@ -992,18 +960,18 @@ class VolumeTracingService @Inject()(
             } yield ()
           }
           _ <- segmentIndexBuffer.flush()
-          updateGroup = UpdateActionGroup[VolumeTracing](
+          updateGroup = UpdateActionGroup(
             tracing.version + 1,
             System.currentTimeMillis(),
             None,
-            List(ImportVolumeData(Some(mergedVolume.largestSegmentId.toPositiveLong))),
+            List(ImportVolumeDataVolumeAction(tracingId, Some(mergedVolume.largestSegmentId.toPositiveLong))),
             None,
             None,
             "dummyTransactionId",
             1,
             0
           )
-          _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
+          // TODO: _ <- handleUpdateGroup(tracingId, updateGroup, tracing.version, userToken)
         } yield mergedVolume.largestSegmentId.toPositiveLong
       }
     }

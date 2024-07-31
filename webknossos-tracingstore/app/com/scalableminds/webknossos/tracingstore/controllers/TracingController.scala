@@ -1,25 +1,16 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
+import com.scalableminds.webknossos.tracingstore.annotation.UpdateActionGroup
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
-import com.scalableminds.webknossos.tracingstore.tracings.{
-  TracingSelector,
-  TracingService,
-  UpdateAction,
-  UpdateActionGroup
-}
-import com.scalableminds.webknossos.tracingstore.{
-  TSRemoteWebknossosClient,
-  TracingStoreAccessTokenService,
-  TracingUpdatesReport
-}
+import com.scalableminds.webknossos.tracingstore.tracings.{TracingSelector, TracingService}
+import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.i18n.Messages
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
@@ -45,8 +36,6 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
   implicit def packMultiple(tracings: List[T]): Ts
 
   implicit def packMultipleOpt(tracings: List[Option[T]]): Ts
-
-  implicit val updateActionJsonFormat: Format[UpdateAction[T]] = tracingService.updateActionJsonFormat
 
   implicit val ec: ExecutionContext
 
@@ -121,8 +110,8 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     }
   }
 
-  def update(token: Option[String], tracingId: String): Action[List[UpdateActionGroup[T]]] =
-    Action.async(validateJson[List[UpdateActionGroup[T]]]) { implicit request =>
+  def update(token: Option[String], tracingId: String): Action[List[UpdateActionGroup]] =
+    Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {
@@ -148,7 +137,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
 
   private def handleUpdateGroupForTransaction(tracingId: String,
                                               previousVersionFox: Fox[Long],
-                                              updateGroup: UpdateActionGroup[T],
+                                              updateGroup: UpdateActionGroup,
                                               userToken: Option[String]): Fox[Long] =
     for {
       previousCommittedVersion: Long <- previousVersionFox
@@ -180,7 +169,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
   // For an update group (that is the last of a transaction), fetch all previous uncommitted for the same transaction
   // and commit them all.
   private def commitWithPending(tracingId: String,
-                                updateGroup: UpdateActionGroup[T],
+                                updateGroup: UpdateActionGroup,
                                 userToken: Option[String]): Fox[Long] =
     for {
       previousActionGroupsToCommit <- tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId)
@@ -192,12 +181,12 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       _ <- tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
     } yield commitResult
 
-  private def concatenateUpdateGroupsOfTransaction(previousActionGroups: List[UpdateActionGroup[T]],
-                                                   lastActionGroup: UpdateActionGroup[T]): UpdateActionGroup[T] =
+  private def concatenateUpdateGroupsOfTransaction(previousActionGroups: List[UpdateActionGroup],
+                                                   lastActionGroup: UpdateActionGroup): UpdateActionGroup =
     if (previousActionGroups.isEmpty) lastActionGroup
     else {
       val allActionGroups = previousActionGroups :+ lastActionGroup
-      UpdateActionGroup[T](
+      UpdateActionGroup(
         version = lastActionGroup.version,
         timestamp = lastActionGroup.timestamp,
         authorId = lastActionGroup.authorId,
@@ -212,41 +201,14 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
 
   // Perform version check and commit the passed updates
   private def commitUpdates(tracingId: String,
-                            updateGroups: List[UpdateActionGroup[T]],
-                            userToken: Option[String]): Fox[Long] = {
-    val currentCommittedVersion: Fox[Long] = tracingService.currentVersion(tracingId)
-    val report = TracingUpdatesReport(
-      tracingId,
-      timestamps = updateGroups.map(g => Instant(g.timestamp)),
-      statistics = updateGroups.flatMap(_.stats).lastOption,
-      significantChangesCount = updateGroups.map(_.significantChangesCount).sum,
-      viewChangesCount = updateGroups.map(_.viewChangesCount).sum,
-      userToken
-    )
-    remoteWebknossosClient.reportTracingUpdates(report).flatMap { _ =>
-      updateGroups.foldLeft(currentCommittedVersion) { (previousVersion, updateGroup) =>
-        previousVersion.flatMap { prevVersion: Long =>
-          if (prevVersion + 1 == updateGroup.version) {
-            tracingService
-              .handleUpdateGroup(tracingId, updateGroup, prevVersion, userToken)
-              .flatMap(
-                _ =>
-                  tracingService.saveToHandledGroupIdStore(tracingId,
-                                                           updateGroup.transactionId,
-                                                           updateGroup.version,
-                                                           updateGroup.transactionGroupIndex))
-              .map(_ => updateGroup.version)
-          } else failUnlessAlreadyHandled(updateGroup, tracingId, prevVersion)
-        }
-      }
-    }
-  }
+                            updateGroups: List[UpdateActionGroup],
+                            userToken: Option[String]): Fox[Long] = ???
 
   /* If this update group has already been “handled” (successfully saved as either committed or uncommitted),
    * ignore it silently. This is in case the frontend sends a retry if it believes a save to be unsuccessful
    * despite the backend receiving it just fine.
    */
-  private def failUnlessAlreadyHandled(updateGroup: UpdateActionGroup[T],
+  private def failUnlessAlreadyHandled(updateGroup: UpdateActionGroup,
                                        tracingId: String,
                                        previousVersion: Long): Fox[Long] = {
     val errorMessage = s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}"

@@ -179,6 +179,11 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
         unmappedSegmentId: null,
       });
     }
+    case "SET_ACTIVE_USER_BOUNDING_BOX_ID": {
+      return updateKey(state, "uiInformation", {
+        activeUserBoundingBoxId: action.id,
+      });
+    }
 
     default:
       return state;

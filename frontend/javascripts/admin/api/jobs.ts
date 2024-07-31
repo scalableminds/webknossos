@@ -301,15 +301,18 @@ export function startAlignSectionsJob(
   datasetName: string,
   layerName: string,
   newDatasetName: string,
+  annotationId?: string,
 ): Promise<APIJob> {
-  const urlParams = new URLSearchParams({
+  let params = {
     layerName,
     newDatasetName,
-  });
-  return Request.receiveJSON(
-    `/api/jobs/run/alignSections/${organizationName}/${datasetName}?${urlParams.toString()}`,
+    annotationId,
+  };
+  return Request.sendJSONReceiveJSON(
+    `/api/jobs/run/alignSections/${organizationName}/${datasetName}`,
     {
       method: "POST",
+      data: JSON.stringify(params),
     },
   );
 }

@@ -16,6 +16,7 @@ import {
   Tabs,
   Switch,
   FormInstance,
+  Checkbox,
 } from "antd";
 import {
   startNucleiInferralJob,
@@ -66,7 +67,6 @@ export type StartAIJobModalState =
   | "neuron_inferral"
   | "nuclei_inferral"
   | "mitochondria_inferral"
-  | "align_sections"
   | "invisible";
 
 // "materialize_volume_annotation" is only used in this module
@@ -74,7 +74,7 @@ const jobNameToImagePath = {
   neuron_inferral: "neuron_inferral_example.jpg",
   nuclei_inferral: "nuclei_inferral_example.jpg",
   mitochondria_inferral: "mito_inferral_example.jpg",
-  align_sections: "align_example.jpg",
+  align_sections: "align_example.png",
   materialize_volume_annotation: "materialize_volume_annotation_example.jpg",
   invisible: "",
   inference: "",
@@ -99,6 +99,7 @@ type JobApiCallArgsType = {
   selectedLayer: APIDataLayer;
   outputSegmentationLayerName?: string;
   selectedBoundingBox: UserBoundingBox | null | undefined;
+  annotationId?: string;
 };
 type StartJobFormProps = Props & {
   jobApiCall: (arg0: JobApiCallArgsType, form: FormInstance<any>) => Promise<void | APIJob>;
@@ -110,6 +111,7 @@ type StartJobFormProps = Props & {
   fixedSelectedLayer?: APIDataLayer | null | undefined;
   title: string;
   buttonLabel?: string | null;
+  isSkeletonSelectable?: boolean;
 };
 
 type BoundingBoxSelectionProps = {
@@ -341,6 +343,13 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
           children: <TrainAiModelTab onClose={onClose} />,
         }
       : null,
+    isSuperUser
+      ? {
+          label: "Alignment",
+          key: "alignment",
+          children: <AlignmentTab />,
+        }
+      : null,
   ]);
   return aIJobModalState !== "invisible" ? (
     <Modal
@@ -453,27 +462,6 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
             <Tooltip title="Coming soon">
               <Radio.Button
                 className="aIJobSelection"
-                checked={aIJobModalState === "align_sections"}
-                disabled={!isSuperUser}
-                onClick={() => dispatch(setAIJobModalStateAction("align_sections"))}
-              >
-                <Card bordered={false}>
-                  <Space direction="vertical" size="small">
-                    <Row className="ai-job-title">Align Sections</Row>
-                    <Row>
-                      <img
-                        src={`/assets/images/${jobNameToImagePath.align_sections}`}
-                        alt={"Example of improved alignment of slices"}
-                        style={centerImageStyle}
-                      />
-                    </Row>
-                  </Space>
-                </Card>
-              </Radio.Button>
-            </Tooltip>
-            <Tooltip title="Coming soon">
-              <Radio.Button
-                className="aIJobSelection"
                 disabled
                 checked={aIJobModalState === "nuclei_inferral"}
                 onClick={() => dispatch(setAIJobModalStateAction("nuclei_inferral"))}
@@ -503,8 +491,78 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
   );
 }
 
+function AlignmentTab() {
+  const centerImageStyle = {
+    margin: "auto",
+    width: 150,
+  };
+  return (
+    <div>
+      <Space align="center">
+        <Radio.Button className="aIJobSelection" checked={true}>
+          <Card bordered={false}>
+            <Space direction="vertical" size="small">
+              <Row className="ai-job-title">Align Sections</Row>
+              <Row>
+                <img
+                  src={`/assets/images/${jobNameToImagePath.align_sections}`}
+                  alt={"Example of improved alignment of slices"}
+                  style={centerImageStyle}
+                />
+              </Row>
+            </Space>
+          </Card>
+        </Radio.Button>
+      </Space>
+      <AlignSectionsForm />
+    </div>
+  );
+}
+
+function UseSkeletonFormItem() {
+  const tracing = useSelector((state: OxalisState) => state.tracing);
+  return (
+    <div>
+      <Form.Item
+        name="useAnnotation"
+        label={
+          <Space>
+            <div style={{}}>
+              Manual Matches
+              <Tooltip title="Please select whether the alignment should take connected skeleton nodes between adjacent sections as alignment guideline whenever available.">
+                <InfoCircleOutlined />
+              </Tooltip>
+            </div>
+          </Space>
+        }
+        valuePropName="checked"
+        rules={[
+          {
+            validator: (_rule, checked) => {
+              if (checked) {
+                if (tracing.annotationId === "") {
+                  return Promise.reject(
+                    "No annotation was found. Please create an annotation first.",
+                  );
+                }
+                if (tracing.skeleton == null) {
+                  return Promise.reject("No skeleton was found. Please create a skeleton first.");
+                }
+              }
+              return Promise.resolve();
+            },
+          },
+        ]}
+      >
+        <Checkbox> Use manual matches from skeleton. </Checkbox>
+      </Form.Item>
+    </div>
+  );
+}
+
 function StartJobForm(props: StartJobFormProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
+  const isSkeletonSelectable = props.isSkeletonSelectable || false;
   const chooseSegmentationLayer = props.chooseSegmentationLayer || false;
   const { handleClose, jobName, jobApiCall, fixedSelectedLayer, title, description } = props;
   const [form] = Form.useForm();
@@ -532,11 +590,13 @@ function StartJobForm(props: StartJobFormProps) {
     boundingBoxId,
     name: newDatasetName,
     outputSegmentationLayerName,
+    useAnnotation,
   }: {
     layerName: string;
     boundingBoxId: number;
     name: string;
     outputSegmentationLayerName: string;
+    useAnnotation: boolean;
   }) => {
     const selectedLayer = layers.find((layer) => layer.name === layerName);
     const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === boundingBoxId);
@@ -555,6 +615,7 @@ function StartJobForm(props: StartJobFormProps) {
         newDatasetName,
         selectedLayer,
         selectedBoundingBox,
+        annotationId: useAnnotation ? tracing.annotationId : undefined,
       };
       const apiJob = await jobApiCall(jobArgs, form);
 
@@ -642,7 +703,8 @@ function StartJobForm(props: StartJobFormProps) {
         onChangeSelectedBoundingBox={(bBoxId) => form.setFieldsValue({ boundingBoxId: bBoxId })}
         value={form.getFieldValue("boundingBoxId")}
       />
-      <div style={{ textAlign: "center" }}>
+      {isSkeletonSelectable && <UseSkeletonFormItem />}
+      <div style={{ textAlign: "left" }}>
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}
         </Button>
@@ -875,12 +937,14 @@ export function AlignSectionsForm() {
       title="Section Alignment"
       suggestedDatasetSuffix="aligned"
       isBoundingBoxConfigurable={false}
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
+      isSkeletonSelectable={true}
+      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, annotationId }) =>
         startAlignSectionsJob(
           dataset.owningOrganization,
           dataset.name,
           colorLayer.name,
           newDatasetName,
+          annotationId,
         )
       }
       description={

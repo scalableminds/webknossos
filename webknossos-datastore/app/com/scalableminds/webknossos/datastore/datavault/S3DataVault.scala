@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.storage.{
   S3AccessKeyCredential
 }
 import net.liftweb.common.Box.tryo
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, Empty, Full, Failure => BoxFailure}
 import org.apache.commons.lang3.builder.HashCodeBuilder
 import software.amazon.awssdk.auth.credentials.{
   AnonymousCredentialsProvider,
@@ -39,7 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.FutureConverters._
 import scala.jdk.OptionConverters.RichOptional
-import scala.util.{Failure, Success}
+import scala.util.{Failure => TryFailure, Success => TrySuccess}
 
 class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI) extends DataVault {
   private lazy val bucketName = S3DataVault.hostBucketFromUri(uri) match {
@@ -72,18 +72,18 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential], uri: URI
 
   private def notFoundToEmpty[T](resultFuture: Future[T])(implicit ec: ExecutionContext): Fox[T] =
     resultFuture.transformWith {
-      case Success(value) => Fox.successful(value).futureBox
-      case Failure(exception) =>
+      case TrySuccess(value) => Fox.successful(value).futureBox
+      case TryFailure(exception) =>
         val box = exception match {
           case ce: CompletionException =>
             ce.getCause match {
-              case _: NoSuchBucketException => net.liftweb.common.Empty
-              case _: NoSuchKeyException    => net.liftweb.common.Empty
+              case _: NoSuchBucketException => Empty
+              case _: NoSuchKeyException    => Empty
               case e: Exception =>
-                net.liftweb.common.Failure(e.getMessage, Full(e), net.liftweb.common.Empty)
+                BoxFailure(e.getMessage, Full(e), Empty)
             }
           case e: Exception =>
-            net.liftweb.common.Failure(e.getMessage, Full(e), net.liftweb.common.Empty)
+            BoxFailure(e.getMessage, Full(e), Empty)
         }
         Future.successful(box)
     }
@@ -175,7 +175,7 @@ object S3DataVault {
       Full(uri.getPath.substring(1).split("/").tail.mkString("/"))
     } else if (isShortStyle(uri)) {
       Full(uri.getPath.tail)
-    } else net.liftweb.common.Failure(s"Not a valid s3 uri: $uri")
+    } else BoxFailure(s"Not a valid s3 uri: $uri")
 
   private def getCredentialsProvider(credentialOpt: Option[S3AccessKeyCredential]): AwsCredentialsProvider =
     credentialOpt match {

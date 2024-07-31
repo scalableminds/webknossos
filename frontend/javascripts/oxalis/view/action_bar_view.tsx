@@ -272,10 +272,10 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
     const colorLayers = getColorLayers(dataset);
     const colorLayersRightDataFormat = colorLayers.filter(
-      (layer) => layer.elementClass === "uint8", // TODO_c?
+      (layer) => layer.elementClass !== "uint24",
     );
     const datasetHasColorLayer = colorLayers.length > 0;
-    const datasetHasColorLayerNotUint24 = colorLayersRightDataFormat.length > 0;
+    const datasetHasColorLayerNotUInt24 = colorLayersRightDataFormat.length > 0;
     // TODO_c get currently active color layer, if possible. others are doing it similarly like here
     const isNd = (colorLayers[0].additionalAxes ?? []).length > 0;
     const is2DOrNDDataset = isNd || is2d;
@@ -284,15 +284,15 @@ class ActionBarView extends React.PureComponent<Props, State> {
       !isAIAnalysisEnabled ||
       !datasetHasColorLayer ||
       is2DOrNDDataset ||
-      !datasetHasColorLayerNotUint24;
+      !datasetHasColorLayerNotUInt24;
     const getAIIsDisabledTooltip = () => {
       const genericStatement = "AI analysis is not enabled for this dataset.";
       if (!isAIAnalysisEnabled) {
         return genericStatement;
       } else if (!datasetHasColorLayer) {
         return "The dataset needs to have a color layer to start AI processing jobs.";
-      } else if (!datasetHasColorLayerNotUint24) {
-        return "The dataset needs to have a color layer that is in data format uInt8 to start AI processing jobs.";
+      } else if (!datasetHasColorLayerNotUInt24) {
+        return "The dataset needs to have a color layer whose data type is not uInt24 to start AI processing jobs.";
       } else if (is2DOrNDDataset) {
         return `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;
       }

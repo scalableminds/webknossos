@@ -540,9 +540,9 @@ function StartJobForm(props: StartJobFormProps) {
     outputSegmentationLayerName: string;
   }) => {
     const selectedLayer = layers.find((layer) => layer.name === layerName);
-    if (selectedLayer?.elementClass !== "uint8") {
+    if (selectedLayer?.elementClass === "uint24") {
       Toast.error(
-        "AI Analysis jobs can only be started for color layers with the data format uInt8.",
+        "AI Analysis jobs can not be started for color layers with the data type uInt24. Please select a color layer with another data type.",
       );
       return;
     }

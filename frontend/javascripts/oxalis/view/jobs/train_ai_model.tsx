@@ -37,9 +37,12 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
     await Model.ensureSavedState();
     const readableVolumeName = getReadableNameForLayerName(dataset, tracing, values.layerName);
     const segmentationLayer = getSegmentationLayerByName(dataset, values.layerName);
-    if (segmentationLayer.elementClass !== "uint8") {
+    const colorLayer = getColorLayers(dataset).find(
+      (layer) => layer.name === values.imageDataLayer,
+    );
+    if (colorLayer?.elementClass === "uint24") {
       Toast.error(
-        "AI Analysis jobs can only be started for color layers with the data format uInt8.",
+        "AI training jobs can not be started for color layers with the data type uInt24. Please select a color layer with another data type.",
       );
       return;
     }
@@ -136,12 +139,7 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
           },
         ]}
       >
-        <LayerSelection
-          layers={colorLayers.filter((layer) => layer.elementClass !== "uint24")}
-          tracing={tracing}
-          style={{ width: "100%" }}
-        />{" "}
-        {/* TODO_c maybe remove */}
+        <LayerSelection layers={colorLayers} tracing={tracing} style={{ width: "100%" }} />
       </FormItem>
       <LayerSelectionFormItem
         chooseSegmentationLayer

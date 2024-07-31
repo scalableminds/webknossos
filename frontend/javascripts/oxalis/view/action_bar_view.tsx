@@ -274,24 +274,24 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const colorLayersRightDataFormat = colorLayers.filter(
       (layer) => layer.elementClass !== "uint24",
     );
-    const datasetHasColorLayer = colorLayers.length > 0;
-    const datasetHasColorLayerNotUInt24 = colorLayersRightDataFormat.length > 0;
-    // TODO_c get currently active color layer, if possible. others are doing it similarly like here
+    const datasetHasNoColorLayer = colorLayers.length === 0;
+    const datasetHasOnlyUInt24ColorLayers = colorLayersRightDataFormat.length === 0;
     const isNd = (colorLayers[0].additionalAxes ?? []).length > 0;
     const is2DOrNDDataset = isNd || is2d;
-    const isAIAnalysisEnabled = getIsAIAnalysisEnabled();
+    const isAIAnalysisDisabled = !getIsAIAnalysisEnabled();
     const shouldDisableAIJobButton =
-      !isAIAnalysisEnabled ||
-      !datasetHasColorLayer ||
+      isAIAnalysisDisabled ||
+      datasetHasNoColorLayer ||
       is2DOrNDDataset ||
-      !datasetHasColorLayerNotUInt24;
+      datasetHasOnlyUInt24ColorLayers;
     const getAIIsDisabledTooltip = () => {
+      if (!shouldDisableAIJobButton) return "";
       const genericStatement = "AI analysis is not enabled for this dataset.";
-      if (!isAIAnalysisEnabled) {
+      if (isAIAnalysisDisabled) {
         return genericStatement;
-      } else if (!datasetHasColorLayer) {
+      } else if (datasetHasNoColorLayer) {
         return "The dataset needs to have a color layer to start AI processing jobs.";
-      } else if (!datasetHasColorLayerNotUInt24) {
+      } else if (datasetHasOnlyUInt24ColorLayers) {
         return "The dataset needs to have a color layer whose data type is not uInt24 to start AI processing jobs.";
       } else if (is2DOrNDDataset) {
         return `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;

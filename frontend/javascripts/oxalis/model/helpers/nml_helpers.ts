@@ -502,11 +502,9 @@ function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): 
       serializeTagWithChildren(
         "group",
         {
-          ...{
-            id: treeGroup.groupId,
-            name: treeGroup.name,
-          },
-          ...(treeGroup.isExpanded === false && { isExpanded: treeGroup.isExpanded }),
+          id: treeGroup.groupId,
+          name: treeGroup.name,
+          ...(treeGroup.isExpanded ? {} : { isExpanded: treeGroup.isExpanded }),
         },
         serializeTreeGroups(treeGroup.children, trees),
       ),

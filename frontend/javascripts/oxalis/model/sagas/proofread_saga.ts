@@ -77,6 +77,7 @@ import { type AdditionalCoordinate } from "types/api_flow_types";
 import { takeEveryUnlessBusy } from "./saga_helpers";
 import { Action } from "../actions/actions";
 import { isBigInt, isNumberMap, SoftError } from "libs/utils";
+import { getCurrentResolution } from "../accessors/flycam_accessor";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -353,7 +354,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  const preparation = yield* call(prepareSplitOrMerge);
+  const preparation = yield* call(prepareSplitOrMerge, true);
   if (!preparation) {
     return;
   }
@@ -688,7 +689,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
-  const preparation = yield* call(prepareSplitOrMerge);
+  const preparation = yield* call(prepareSplitOrMerge, false);
   if (!preparation) {
     return;
   }
@@ -881,7 +882,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
   if (!allowUpdate) return;
 
-  const preparation = yield* call(prepareSplitOrMerge);
+  const preparation = yield* call(prepareSplitOrMerge, false);
   if (!preparation) {
     return;
   }
@@ -1005,7 +1006,7 @@ type Preparation = {
   volumeTracing: VolumeTracing & { mappingName: string };
 };
 
-function* prepareSplitOrMerge(): Saga<Preparation | null> {
+function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation | null> {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracingLayer == null || volumeTracing == null) {
@@ -1031,9 +1032,17 @@ function* prepareSplitOrMerge(): Saga<Preparation | null> {
   }
 
   const resolutionInfo = getResolutionInfo(volumeTracingLayer.resolutions);
-  // The mag the agglomerate skeleton corresponds to should be the finest available mag of the volume tracing layer
-  const agglomerateFileMag = resolutionInfo.getFinestResolution();
-  const agglomerateFileZoomstep = resolutionInfo.getFinestResolutionIndex();
+  const currentMag = yield* select((state) => getCurrentResolution(state, volumeTracingLayer.name));
+
+  const agglomerateFileMag = isSkeletonProofreading
+    ? // In case of skeleton proofreading, the finest resolution should be used.
+      resolutionInfo.getFinestResolution()
+    : // For non-skeleton proofreading, the active resolution suffices
+      currentMag;
+  if (agglomerateFileMag == null) {
+    return null;
+  }
+  const agglomerateFileZoomstep = resolutionInfo.getIndexByResolution(agglomerateFileMag);
 
   const getUnmappedDataValue = (position: Vector3): Promise<number> => {
     const { additionalCoordinates } = Store.getState().flycam;

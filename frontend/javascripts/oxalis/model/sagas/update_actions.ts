@@ -442,14 +442,14 @@ export function splitAgglomerate(
   name: "splitAgglomerate";
   value: {
     agglomerateId: number;
-    mag: Vector3;
-    // For backwards compatibility reasons,
-    // older segments are defined using their positions
-    // instead of their unmapped ids.
     segmentId1: number | undefined;
     segmentId2: number | undefined;
+    // For backwards compatibility reasons,
+    // older segments are defined using their positions (and mag)
+    // instead of their unmapped ids.
     segmentPosition1?: Vector3 | undefined;
     segmentPosition2?: Vector3 | undefined;
+    mag: Vector3;
   };
 } {
   return {
@@ -474,14 +474,14 @@ export function mergeAgglomerate(
   value: {
     agglomerateId1: number;
     agglomerateId2: number;
-    mag: Vector3;
-    // For backwards compatibility reasons,
-    // older segments are defined using their positions
-    // instead of their unmapped ids.
     segmentId1: number | undefined;
     segmentId2: number | undefined;
+    // For backwards compatibility reasons,
+    // older segments are defined using their positions (and mag)
+    // instead of their unmapped ids.
     segmentPosition1?: Vector3 | undefined;
     segmentPosition2?: Vector3 | undefined;
+    mag: Vector3;
   };
 } {
   return {

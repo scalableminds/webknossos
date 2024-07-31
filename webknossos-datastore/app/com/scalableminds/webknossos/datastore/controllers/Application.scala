@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.datastore.controllers
 
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.ApplicationHealthService
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore

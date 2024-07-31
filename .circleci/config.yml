@@ -2,7 +2,7 @@ version: 2
 jobs:
   build_test_deploy:
     machine:
-      image: ubuntu-2004:202111-02
+      image: cimg/base:2021.04
       docker_layer_caching: true
     resource_class: large
     environment:

@@ -44,6 +44,7 @@ import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
 import {
+  FinishMappingInitializationAction,
   SetMappingAction,
   SetMappingEnabledAction,
   SetMappingNameAction,
@@ -259,7 +260,7 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
     fallbackLayer: tracing.fallbackLayer,
     userBoundingBoxes,
     mappingName: tracing.mappingName,
-    mappingIsEditable: tracing.mappingIsEditable,
+    hasEditableMapping: tracing.hasEditableMapping,
     mappingIsLocked: tracing.mappingIsLocked,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
@@ -269,7 +270,12 @@ export function serverVolumeToClientVolumeTracing(tracing: ServerVolumeTracing):
 
 function VolumeTracingReducer(
   state: OxalisState,
-  action: VolumeTracingAction | SetMappingAction | SetMappingEnabledAction | SetMappingNameAction,
+  action:
+    | VolumeTracingAction
+    | SetMappingAction
+    | FinishMappingInitializationAction
+    | SetMappingEnabledAction
+    | SetMappingNameAction,
 ): OxalisState {
   switch (action.type) {
     case "INITIALIZE_VOLUMETRACING": {
@@ -418,7 +424,16 @@ function VolumeTracingReducer(
     }
 
     case "SET_MAPPING": {
+      // We only need to store the name of the mapping here. Also see the settings_reducer where
+      // SET_MAPPING is also handled.
       return setMappingNameReducer(state, volumeTracing, action.mappingName, action.mappingType);
+    }
+    case "FINISH_MAPPING_INITIALIZATION": {
+      const { mappingName, mappingType } = getMappingInfo(
+        state.temporaryConfiguration.activeMappingByLayer,
+        action.layerName,
+      );
+      return setMappingNameReducer(state, volumeTracing, mappingName, mappingType, true);
     }
 
     case "SET_MAPPING_ENABLED": {
@@ -437,19 +452,19 @@ function VolumeTracingReducer(
 
     case "SET_MAPPING_NAME": {
       // Editable mappings cannot be disabled or switched for now
-      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) return state;
+      if (volumeTracing.hasEditableMapping || volumeTracing.mappingIsLocked) return state;
 
       const { mappingName, mappingType } = action;
       return setMappingNameReducer(state, volumeTracing, mappingName, mappingType);
     }
 
-    case "SET_MAPPING_IS_EDITABLE": {
+    case "SET_HAS_EDITABLE_MAPPING": {
       // Editable mappings cannot be disabled or switched for now.
-      if (volumeTracing.mappingIsEditable || volumeTracing.mappingIsLocked) return state;
+      if (volumeTracing.hasEditableMapping || volumeTracing.mappingIsLocked) return state;
 
       // An editable mapping is always locked.
       return updateVolumeTracing(state, volumeTracing.tracingId, {
-        mappingIsEditable: true,
+        hasEditableMapping: true,
         mappingIsLocked: true,
       });
     }

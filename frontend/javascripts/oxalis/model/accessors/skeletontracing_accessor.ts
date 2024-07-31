@@ -16,6 +16,7 @@ import type {
   TreeGroupTypeFlat,
   Node,
   OxalisState,
+  NumberLike,
 } from "oxalis/store";
 import {
   findGroup,
@@ -283,7 +284,7 @@ export function getTreeGroupsMap(
 }
 // This is the pattern for the automatically assigned names for agglomerate skeletons
 export const getTreeNameForAgglomerateSkeleton = (
-  agglomerateId: number,
+  agglomerateId: NumberLike,
   mappingName: string,
 ): string => `agglomerate ${agglomerateId} (${mappingName})`;
 

@@ -3,7 +3,7 @@ import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'java... Remove this comment to see the full error message
 import naturalSort from "javascript-natural-sort";
 import type { APIDataset, APIUser } from "types/api_flow_types";
-import type { BoundingBoxObject } from "oxalis/store";
+import type { BoundingBoxObject, NumberLike } from "oxalis/store";
 import type {
   Vector3,
   Vector4,
@@ -116,6 +116,18 @@ function cheapSort<T extends string | number>(valueA: T, valueB: T): -1 | 0 | 1 
 
 export function unique<T>(array: Array<T>): Array<T> {
   return [...new Set(array)];
+}
+
+export function union<T>(iterables: Array<Iterable<T>>): Set<T> {
+  const set: Set<T> = new Set();
+
+  for (const iterable of iterables) {
+    for (const item of iterable) {
+      set.add(item);
+    }
+  }
+
+  return set;
 }
 
 export function enforce<A, B>(fn: (arg0: A) => B): (arg0: A | null | undefined) => B {
@@ -625,6 +637,26 @@ export function diffArrays<T>(
   };
 }
 
+export function diffMaps<K, V>(
+  stateA: Map<K, V>,
+  stateB: Map<K, V>,
+): {
+  changed: Iterable<K>;
+  onlyA: Iterable<K>;
+  onlyB: Iterable<K>;
+} {
+  const keysOfA = Array.from(stateA.keys());
+  const keysOfB = Array.from(stateB.keys());
+  const changed = keysOfA.filter((x) => stateB.has(x) && stateB.get(x) !== stateA.get(x));
+  const onlyA = keysOfA.filter((x) => !stateB.has(x));
+  const onlyB = keysOfB.filter((x) => !stateA.has(x));
+  return {
+    changed,
+    onlyA,
+    onlyB,
+  };
+}
+
 export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
   // This set-based implementation avoids stackoverflow errors from which
   // _.without(arr, ...elements) suffers.
@@ -874,12 +906,18 @@ export function castForArrayType(uncastNumber: number, data: TypedArray): number
   return data instanceof BigUint64Array ? BigInt(uncastNumber) : uncastNumber;
 }
 
-export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
+export function convertNumberTo64Bit(num: number | bigint | null): [Vector4, Vector4] {
+  const [bigNumHigh, bigNumLow] = convertNumberTo64BitTuple(num);
+
+  const low = convertDecToBase256(bigNumLow);
+  const high = convertDecToBase256(bigNumHigh);
+
+  return [high, low];
+}
+
+export function convertNumberTo64BitTuple(num: number | bigint | null): [number, number] {
   if (num == null || Number.isNaN(num)) {
-    return [
-      [0, 0, 0, 0],
-      [0, 0, 0, 0],
-    ];
+    return [0, 0];
   }
   // Cast to BigInt as bit-wise operations only work with 32 bits,
   // even though Number uses 53 bits.
@@ -888,10 +926,7 @@ export function convertNumberTo64Bit(num: number | null): [Vector4, Vector4] {
   const bigNumLow = Number((2n ** 32n - 1n) & bigNum);
   const bigNumHigh = Number(bigNum >> 32n);
 
-  const low = convertDecToBase256(bigNumLow);
-  const high = convertDecToBase256(bigNumHigh);
-
-  return [high, low];
+  return [bigNumHigh, bigNumLow];
 }
 
 export async function promiseAllWithErrors<T>(promises: Array<Promise<T>>): Promise<{
@@ -1080,6 +1115,48 @@ export function diffObjects(
   return changes(object, base);
 }
 
+export function fastDiffSetAndMap<T>(setA: Set<T>, mapB: Map<T, T>) {
+  /*
+   * This function was designed for a special use case within the mapping saga,
+   * where a Set of (potentially new) segment IDs is passed for setA and a known mapping from
+   * id->id is passed for mapB.
+   * The function computes:
+   * - aWithoutB: segment IDs that are in setA but not in mapB.keys()
+   * - bWithoutA: segment IDs that are in mapB.keys() but not in setA
+   * - intersection: a Map only contains keys that are in both setA and mapB.keys() (the values are used from mapB).
+   */
+  const aWithoutB = new Set<T>();
+  const bWithoutA = new Set<T>();
+  // This function assumes that the returned intersection is relatively large which is common
+  // for the use case it was designed for. Under this assumption, mapB is simply copied to
+  // initialize the intersection. Afterwards, items that are not within setA are removed from
+  // the intersection.
+  const intersection = new Map(mapB);
+
+  for (const item of setA) {
+    if (!mapB.has(item)) {
+      aWithoutB.add(item);
+    }
+  }
+
+  for (const item of mapB.keys()) {
+    if (!setA.has(item)) {
+      bWithoutA.add(item);
+      intersection.delete(item);
+    }
+  }
+
+  return {
+    aWithoutB: aWithoutB,
+    bWithoutA: bWithoutA,
+    intersection: intersection,
+  };
+}
+
+export function areVec3AlmostEqual(a: Vector3, b: Vector3, epsilon: number = 1e-6): boolean {
+  return _.every(a.map((v, i) => Math.abs(v - b[i]) < epsilon));
+}
+
 export function coalesce<T extends {}>(e: T, token: any): T[keyof T] | null {
   return Object.values(e).includes(token as T[keyof T]) ? token : null;
 }
@@ -1164,6 +1241,47 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
   return value !== null && value !== undefined;
 }
 
+export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, number> {
+  const { value } = x.entries().next();
+  return value && typeof value[0] === "number";
+}
+
+export function isBigInt(x: NumberLike): x is bigint {
+  return typeof x === "bigint";
+}
+
 export function assertNever(value: never): never {
   throw new Error(`Unexpected value that is not 'never': ${JSON.stringify(value)}`);
+}
+
+/**
+ * Returns a URL safe, base 62 encoded hash code from a string
+ * @param  {String} str The string to hash.
+ * @return {string}    A 32bit integer hash code encoded in base 62.
+ * @see https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript (original link is dead)
+ */
+export function computeHash(str: string): string | undefined {
+  let hash = 0;
+  for (let i = 0, len = str.length; i < len; i++) {
+    let chr = str.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  const hashString = encodeToBase62(hash);
+  return hashString;
+}
+
+export function encodeToBase62(numberToEncode: number): string {
+  const base62Chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  if (numberToEncode === 0) return base62Chars[0];
+  if (numberToEncode === -1) return base62Chars[61];
+  let encoded = "";
+  let num = numberToEncode;
+  while (num !== 0 && num !== -1) {
+    // for positive numberToEncode, num will eventually be 0, for negative numberToEncode, num will eventually be -1
+    const modulo = mod(num, 62);
+    encoded = base62Chars[modulo] + encoded;
+    num = Math.floor(num / 62);
+  }
+  return encoded;
 }

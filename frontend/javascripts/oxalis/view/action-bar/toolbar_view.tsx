@@ -149,6 +149,10 @@ const handleToggleAutomaticMeshRendering = (value: boolean) => {
   Store.dispatch(updateUserSettingAction("autoRenderMeshInProofreading", value));
 };
 
+const handleToggleSelectiveVisibilityInProofreading = (value: boolean) => {
+  Store.dispatch(updateUserSettingAction("selectiveVisibilityInProofreading", value));
+};
+
 const handleSetTool = (event: RadioChangeEvent) => {
   const value = event.target.value as AnnotationTool;
   Store.dispatch(setToolAction(value));
@@ -413,7 +417,7 @@ function AdditionalSkeletonModesButtons() {
     getActiveSegmentationTracing(state),
   );
   const isEditableMappingActive =
-    segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsEditable;
+    segmentationTracingLayer != null && !!segmentationTracingLayer.hasEditableMapping;
   const isMappingLocked =
     segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsLocked;
   const isMergerModeDisabled = isEditableMappingActive || isMappingLocked;
@@ -485,10 +489,14 @@ function AdditionalSkeletonModesButtons() {
 }
 
 const mapId = (volumeTracingId: string | null | undefined, id: number) => {
+  // Note that the return value can be an unmapped id even when
+  // a mapping is active, if it is a HDF5 mapping that is partially loaded
+  // and no entry exists yet for the input id.
   if (!volumeTracingId) {
     return null;
   }
   const { cube } = Model.getSegmentationTracingLayer(volumeTracingId);
+
   return cube.mapId(id);
 };
 
@@ -863,9 +871,8 @@ export default function ToolbarView() {
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const isAgglomerateMappingEnabled = useSelector(hasAgglomerateMapping);
 
-  const [lastForcefulDisabledTool, setLastForcefulDisabledTool] = useState<AnnotationTool | null>(
-    null,
-  );
+  const [lastForcefullyDisabledTool, setLastForcefullyDisabledTool] =
+    useState<AnnotationTool | null>(null);
   const isVolumeModificationAllowed = useSelector(
     (state: OxalisState) => !hasEditableMapping(state),
   );
@@ -897,25 +904,32 @@ export default function ToolbarView() {
   // the tools via the w shortcut. In that case, the effect-hook is re-executed
   // and the tool is switched to MOVE.
   const disabledInfoForCurrentTool = disabledInfosForTools[activeTool];
+  const isLastForcefullyDisabledToolAvailable =
+    lastForcefullyDisabledTool != null &&
+    !disabledInfosForTools[lastForcefullyDisabledTool].isDisabled;
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Adding disabledInfosForTools[lastForcefulDisabledTool].isDisabled as dependency requires another null-check which makes the dependency itself quite tedious.
   useEffect(() => {
     if (disabledInfoForCurrentTool.isDisabled) {
-      setLastForcefulDisabledTool(activeTool);
+      setLastForcefullyDisabledTool(activeTool);
       Store.dispatch(setToolAction(AnnotationToolEnum.MOVE));
     } else if (
-      lastForcefulDisabledTool != null &&
-      !disabledInfosForTools[lastForcefulDisabledTool].isDisabled &&
+      lastForcefullyDisabledTool != null &&
+      isLastForcefullyDisabledToolAvailable &&
       activeTool === AnnotationToolEnum.MOVE
     ) {
       // Re-enable the tool that was disabled before.
-      setLastForcefulDisabledTool(null);
-      Store.dispatch(setToolAction(lastForcefulDisabledTool));
+      setLastForcefullyDisabledTool(null);
+      Store.dispatch(setToolAction(lastForcefullyDisabledTool));
     } else if (activeTool !== AnnotationToolEnum.MOVE) {
       // Forget the last disabled tool as another tool besides the move tool was selected.
-      setLastForcefulDisabledTool(null);
+      setLastForcefullyDisabledTool(null);
     }
-  }, [activeTool, disabledInfoForCurrentTool, lastForcefulDisabledTool]);
+  }, [
+    activeTool,
+    disabledInfoForCurrentTool,
+    isLastForcefullyDisabledToolAvailable,
+    lastForcefullyDisabledTool,
+  ]);
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -1383,9 +1397,16 @@ function ProofReadingComponents() {
   const autoRenderMeshes = useSelector(
     (state: OxalisState) => state.userConfiguration.autoRenderMeshInProofreading,
   );
-  const buttonStyle = autoRenderMeshes ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE;
+  const selectiveVisibilityInProofreading = useSelector(
+    (state: OxalisState) => state.userConfiguration.selectiveVisibilityInProofreading,
+  );
+
   return (
-    <>
+    <Space.Compact
+      style={{
+        marginLeft: 10,
+      }}
+    >
       <ButtonComponent
         title="Clear auxiliary meshes that were loaded while proofreading segments. Use this if you are done with correcting mergers or splits in a segment pair."
         onClick={handleClearProofreading}
@@ -1396,12 +1417,29 @@ function ProofReadingComponents() {
       </ButtonComponent>
       <ButtonComponent
         title={`${autoRenderMeshes ? "Disable" : "Enable"} automatic loading of meshes`}
-        style={{ ...buttonStyle, opacity: autoRenderMeshes ? 1 : 0.5 }}
+        style={{
+          ...(autoRenderMeshes ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE),
+          opacity: autoRenderMeshes ? 1 : 0.5,
+        }}
         onClick={() => handleToggleAutomaticMeshRendering(!autoRenderMeshes)}
       >
         <i className="fas fa-dice-d20" />
       </ButtonComponent>
-    </>
+      <ButtonComponent
+        title={`${
+          selectiveVisibilityInProofreading ? "Disable" : "Enable"
+        } selective segment visibility. When enabled, only hovered or active segments will be shown.`}
+        style={{
+          ...(selectiveVisibilityInProofreading ? ACTIVE_BUTTON_STYLE : NARROW_BUTTON_STYLE),
+          opacity: selectiveVisibilityInProofreading ? 1 : 0.5,
+        }}
+        onClick={() =>
+          handleToggleSelectiveVisibilityInProofreading(!selectiveVisibilityInProofreading)
+        }
+      >
+        <i className="fas fa-highlighter" />
+      </ButtonComponent>
+    </Space.Compact>
   );
 }
 

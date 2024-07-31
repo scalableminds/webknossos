@@ -72,7 +72,11 @@ class SecuredRoute extends React.PureComponent<SecuredRouteProps, State> {
         {...rest}
         render={(props) => {
           if (!isCompletelyAuthenticated) {
-            return <LoginView redirect={this.props.location.pathname} />;
+            return (
+              <LoginView
+                redirect={this.props.location.pathname.concat(this.props.location.search)}
+              />
+            );
           }
 
           if (

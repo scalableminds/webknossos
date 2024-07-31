@@ -34,10 +34,11 @@ import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 
 import java.io.File
-import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.Files
 
+import java.net.URI
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
@@ -351,6 +352,31 @@ class DataSourceController @Inject()(
           )
           .toFox
       } yield Ok(ListOfLong(agglomerateIds).toByteArray)
+    }
+  }
+
+  def agglomerateIdsForAllSegmentIds(
+      token: Option[String],
+      organizationName: String,
+      datasetName: String,
+      dataLayerName: String,
+      mappingName: String
+  ): Action[ListOfLong] = Action.async(validateProto[ListOfLong]) { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
+                                      urlOrHeaderToken(token, request)) {
+      for {
+        agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+        agglomerateIds: Array[Long] <- agglomerateService
+          .agglomerateIdsForAllSegmentIds(
+            AgglomerateFileKey(
+              organizationName,
+              datasetName,
+              dataLayerName,
+              mappingName
+            )
+          )
+          .toFox
+      } yield Ok(Json.toJson(agglomerateIds))
     }
   }
 
@@ -721,10 +747,14 @@ class DataSourceController @Inject()(
     Action.async(validateJson[ExploreRemoteDatasetRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organizationName), token) {
         val reportMutable = ListBuffer[String]()
+        val hasLocalFilesystemRequest = request.body.layerParameters.exists(param =>
+          new URI(param.remoteUri).getScheme == DataVaultService.schemeFile)
         for {
           dataSourceBox: Box[GenericDataSource[DataLayer]] <- exploreRemoteLayerService
             .exploreRemoteDatasource(request.body.layerParameters, reportMutable)
             .futureBox
+          // Remove report of recursive exploration in case of exploring the local file system to avoid information exposure.
+          _ <- Fox.runIf(hasLocalFilesystemRequest)(Fox.successful(reportMutable.clear()))
           dataSourceOpt = dataSourceBox match {
             case Full(dataSource) if dataSource.dataLayers.nonEmpty =>
               reportMutable += s"Resulted in dataSource with ${dataSource.dataLayers.length} layers."

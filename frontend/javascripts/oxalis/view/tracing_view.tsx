@@ -23,7 +23,7 @@ const registerWebGlCrashHandler = (canvas) => {
         key: WEBGL_CONTEXT_LOST_KEY,
       });
       console.error("Webgl context lost", e);
-      ErrorHandling.notify(e);
+      ErrorHandling.notify(new Error("WebGLContextLost"));
     },
     false,
   );

@@ -1382,7 +1382,7 @@ function WkContextMenu() {
       hideContextMenu={hideContextMenu}
       contextMenuPosition={props.contextMenuPosition}
     >
-      <ContextMenuInner {...props} />
+      {props.contextMenuPosition != null ? <ContextMenuInner {...props} /> : <div />}
     </GenericContextMenuContainer>
   );
 }
@@ -1495,10 +1495,6 @@ function ContextMenuInner(propsWithInputRef: Props) {
     // Of course the info should also be updated when the menu is opened for another segment, or after the refresh button was pressed.
     [contextMenuPosition, clickedSegmentOrMeshId, lastTimeSegmentInfoShouldBeFetched],
   );
-
-  if (contextMenuPosition == null || maybeViewport == null) {
-    return <></>;
-  }
 
   const activeTreeId = skeletonTracing != null ? skeletonTracing.activeTreeId : null;
   const activeNodeId = skeletonTracing?.activeNodeId;
@@ -1662,20 +1658,20 @@ function ContextMenuInner(propsWithInputRef: Props) {
       ),
     );
   }
-  if (segments != null && maybeClickedMeshId != null) {
-    const segmentName = segments.getNullable(maybeClickedMeshId)?.name;
+  if (segments != null && wasSegmentOrMeshClicked) {
+    const segmentName = segments.getNullable(clickedSegmentOrMeshId)?.name;
     if (segmentName != null) {
-      const maxSegmentNameLength = 18;
+      const maxNameLength = 20;
       infoRows.push(
         getInfoMenuItem(
           "copy-cell",
           <>
-            <Tooltip title="Segment Name">
-              <i className="fas fa-tag" />{" "}
-            </Tooltip>
-            <Tooltip title={segmentName.length > maxSegmentNameLength ? segmentName : null}>
-              {truncateStringToLength(segmentName, maxSegmentNameLength)}
-            </Tooltip>
+            <i className="fas fa-tag segment-context-icon" />
+            Segment Name:{" "}
+            {segmentName.length > maxNameLength
+              ? truncateStringToLength(segmentName, maxNameLength)
+              : segmentName}
+            {copyIconWithTooltip(segmentName, "Copy Segment Name")}
           </>,
         ),
       );
@@ -1700,19 +1696,21 @@ function ContextMenuInner(propsWithInputRef: Props) {
     },
     mode: "vertical",
     items:
-      maybeClickedNodeId != null
-        ? getNodeContextMenuOptions({
-            clickedNodeId: maybeClickedNodeId,
-            infoRows,
-            viewport: maybeViewport,
-            ...props,
-          })
-        : getNoNodeContextMenuOptions({
-            segmentIdAtPosition,
-            infoRows,
-            viewport: maybeViewport,
-            ...props,
-          }),
+      maybeViewport == null
+        ? []
+        : maybeClickedNodeId != null
+          ? getNodeContextMenuOptions({
+              clickedNodeId: maybeClickedNodeId,
+              infoRows,
+              viewport: maybeViewport,
+              ...props,
+            })
+          : getNoNodeContextMenuOptions({
+              segmentIdAtPosition,
+              infoRows,
+              viewport: maybeViewport,
+              ...props,
+            }),
   };
 
   if (inputRef == null || inputRef.current == null) return null;
@@ -1721,12 +1719,12 @@ function ContextMenuInner(propsWithInputRef: Props) {
   return (
     <React.Fragment>
       <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
+
       <Dropdown
         menu={menu}
         overlayClassName="dropdown-overlay-container-for-context-menu"
         open={contextMenuPosition != null}
         getPopupContainer={() => refContent}
-        // @ts-ignore
         destroyPopupOnHide
       >
         <div />

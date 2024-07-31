@@ -50,7 +50,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     for {
       remoteFallbackLayer <- remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
       baseMappingName <- volumeTracingService.baseMappingName(tracing)
-      fullMeshRequestAdapted = if (tracing.mappingIsEditable.getOrElse(false))
+      fullMeshRequestAdapted = if (tracing.getHasEditableMapping)
         fullMeshRequest.copy(mappingName = baseMappingName,
                              editableMappingTracingId = Some(tracingId),
                              mappingType = Some("HDF5"))
@@ -174,7 +174,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                      tracing: VolumeTracing,
                                      adHocMeshRequest: WebknossosAdHocMeshRequest,
                                      tracingId: String): Fox[(Array[Float], List[Int])] =
-    if (tracing.mappingIsEditable.getOrElse(false))
+    if (tracing.getHasEditableMapping)
       editableMappingService.createAdHocMesh(tracing, tracingId, adHocMeshRequest, token)
     else volumeTracingService.createAdHocMesh(tracingId, adHocMeshRequest, token)
 }

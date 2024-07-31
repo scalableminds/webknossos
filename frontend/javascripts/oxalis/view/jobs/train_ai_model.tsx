@@ -41,10 +41,9 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
       (layer) => layer.name === values.imageDataLayer,
     );
     if (colorLayer?.elementClass === "uint24") {
-      const errorMessage = "AI training jobs can not be started for color layers with the data type uInt24. Please select a color layer with another data type.";
-      Toast.error(
-        errorMessage
-      );
+      const errorMessage =
+        "AI training jobs can not be started for color layers with the data type uInt24. Please select a color layer with another data type.";
+      Toast.error(errorMessage);
       console.error(errorMessage);
       return;
     }

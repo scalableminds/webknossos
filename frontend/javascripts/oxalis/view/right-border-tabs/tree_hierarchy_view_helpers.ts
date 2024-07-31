@@ -74,25 +74,29 @@ export function insertTreesAndTransform(
   // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
   return groups.map((group) => {
     const { groupId } = group;
-    const treeNode = makeTreeNodeFromGroup(group, {
-      // Ensure that groups are always at the top when sorting by timestamp
-      timestamp: 0,
-      children: insertTreesAndTransform(group.children, groupToTreesMap, sortBy),
-    });
 
     // Groups are always sorted by name and appear before the trees, trees are sorted according to the sortBy prop
     const trees = _.orderBy(groupToTreesMap[groupId] || [], [sortBy], ["asc"]).map(
       makeTreeNodeFromTree,
     );
 
-    treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(trees);
-    treeNode.isChecked = _.every(
-      treeNode.children, // Groups that don't contain any trees should not influence the state of their parents
-      (groupOrTree) => groupOrTree.isChecked || !groupOrTree.containsTrees,
-    );
-
-    treeNode.containsTrees =
-      trees.length > 0 || _.some(treeNode.children, (groupOrTree) => groupOrTree.containsTrees);
+    const treeNodeChildren = insertTreesAndTransform(
+      group.children,
+      groupToTreesMap,
+      sortBy,
+    ).concat(trees);
+    const treeNode = makeTreeNodeFromGroup(group, {
+      // Ensure that groups are always at the top when sorting by timestamp
+      timestamp: 0,
+      children: _.orderBy(treeNodeChildren, ["name"], ["asc"]),
+      disableCheckbox: treeNodeChildren.length === 0,
+      isChecked: treeNodeChildren.every(
+        // Groups that don't contain any trees should not influence the state of their parents
+        (groupOrTree) => groupOrTree.isChecked || !groupOrTree.containsTrees,
+      ),
+      containsTrees:
+        trees.length > 0 || treeNodeChildren.some((groupOrTree) => groupOrTree.containsTrees),
+    });
     return treeNode;
   });
 }

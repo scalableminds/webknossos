@@ -357,7 +357,7 @@ function CreateAnimationModal(props: Props) {
             >
               <Space direction="vertical">
                 <Radio.Button value={MOVIE_RESOLUTIONS.SD}>
-                  Standard Definition (640 × 480)
+                  Standard Definition (640 × 360)
                 </Radio.Button>
                 <Radio.Button value={MOVIE_RESOLUTIONS.HD} disabled={!arePaidFeaturesAllowed}>
                   <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>

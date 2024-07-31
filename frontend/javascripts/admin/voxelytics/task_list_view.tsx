@@ -590,7 +590,7 @@ export default function TaskListView({
         <h4 style={{ color: "#51686e" }}>
           {formatDateMedium(new Date(runBeginTimeString))}{" "}
           <Tooltip title={formatDurationStrict(totalRuntime)}>
-            <FieldTimeOutlined style={{ marginLeft: 20 }} />
+            <FieldTimeOutlined style={{ marginLeft: 20 }} className="icon-margin-right" />
             {totalRuntime.humanize()}
           </Tooltip>
         </h4>

@@ -1,0 +1,36 @@
+package com.scalableminds.webknossos.tracingstore.tracings
+
+import com.scalableminds.webknossos.datastore.UserDefinedProperties.UserDefinedPropertyProto
+import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.Json.WithDefaultValues
+
+case class UserDefinedProperty(key: String,
+                               stringValue: Option[String] = None,
+                               boolValue: Option[Boolean] = None,
+                               numberValue: Option[Double] = None,
+                               stringListValue: Option[Seq[String]] = None) {
+  def toProto: UserDefinedPropertyProto = UserDefinedPropertyProto(
+    key,
+    stringValue,
+    boolValue,
+    numberValue,
+    stringListValue.getOrElse(Seq.empty)
+  )
+}
+
+object UserDefinedProperty {
+  def fromProto(propertyProto: UserDefinedPropertyProto): UserDefinedProperty =
+    UserDefinedProperty(
+      propertyProto.key,
+      propertyProto.stringValue,
+      propertyProto.boolValue,
+      propertyProto.numberValue,
+      if (propertyProto.stringListValue.isEmpty) None else Some(propertyProto.stringListValue)
+    )
+
+  def toProtoMultiple(propertiesOpt: Option[Seq[UserDefinedProperty]]): Seq[UserDefinedPropertyProto] =
+    propertiesOpt.map(_.map(_.toProto)).getOrElse(Seq.empty)
+
+  implicit val jsonFormat: OFormat[UserDefinedProperty] =
+    Json.using[WithDefaultValues].format[UserDefinedProperty]
+}

@@ -16,6 +16,7 @@ const compress = createWorker(CompressWorker);
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
 export type RequestOptionsBase<T> = {
+  body?: ReadableStream | Blob | BufferSource | FormData | URLSearchParams | string;
   compress?: boolean;
   doNotInvestigate?: boolean;
   extractHeaders?: boolean;

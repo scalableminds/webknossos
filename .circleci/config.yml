@@ -11,8 +11,7 @@ jobs:
       USER_GID: 1000
       TZ: Europe/Berlin
     steps:
-      steps:
-        - run: git clone --depth 5 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH"
+      - run: git clone --depth 5 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH"
       - run:
           name: "Custom environment variables"
           command: |

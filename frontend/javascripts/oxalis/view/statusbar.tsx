@@ -371,9 +371,6 @@ function SegmentInfo() {
   const hoveredSegmentId = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId,
   );
-  const hoveredUnmappedSegmentId = useSelector(
-    (state: OxalisState) => state.temporaryConfiguration.hoveredUnmappedSegmentId,
-  );
 
   if (hasVisibleSegmentation == null) {
     return null;

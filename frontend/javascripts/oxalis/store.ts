@@ -160,6 +160,7 @@ export type Tree = {
 export type TreeGroupTypeFlat = {
   readonly name: string;
   readonly groupId: number;
+  readonly isExpanded?: boolean;
 };
 export type TreeGroup = TreeGroupTypeFlat & {
   readonly children: Array<TreeGroup>;
@@ -528,6 +529,7 @@ type UiInformation = {
   readonly aIJobModalState: StartAIJobModalState;
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
+  readonly activeUserBoundingBoxId: number | null | undefined;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;
   readonly isInAnnotationView: boolean;

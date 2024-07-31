@@ -19,7 +19,10 @@ trait VolumeUpdateActionHelper {
       if (segment.segmentId == segmentId) transformSegment(segment) else segment)
 
   protected def convertSegmentGroup(aSegmentGroup: UpdateActionSegmentGroup): SegmentGroup =
-    SegmentGroup(aSegmentGroup.name, aSegmentGroup.groupId, aSegmentGroup.children.map(convertSegmentGroup))
+    SegmentGroup(aSegmentGroup.name,
+                 aSegmentGroup.groupId,
+                 aSegmentGroup.children.map(convertSegmentGroup),
+                 aSegmentGroup.isExpanded)
 
 }
 

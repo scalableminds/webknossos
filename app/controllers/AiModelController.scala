@@ -135,7 +135,7 @@ class AiModelController @Inject()(
           "training_annotations" -> Json.toJson(trainingAnnotations),
           "organization_name" -> organization.name,
           "model_id" -> modelId,
-          "workflow_yaml" -> request.body.workflowYaml
+          "custom_workflow_provided_by_user" -> request.body.workflowYaml
         )
         existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
                                                                        request.identity._organization)
@@ -177,7 +177,7 @@ class AiModelController @Inject()(
           "bounding_box" -> boundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
           "new_dataset_name" -> request.body.newDatasetName,
-          "workflow_yaml" -> request.body.workflowYaml
+          "custom_workflow_provided_by_user" -> request.body.workflowYaml
         )
         newInferenceJob <- jobService.submitJob(jobCommand, commandArgs, request.identity, dataStore.name) ?~> "job.couldNotRunInferWithModel"
         newAiInference = AiInference(

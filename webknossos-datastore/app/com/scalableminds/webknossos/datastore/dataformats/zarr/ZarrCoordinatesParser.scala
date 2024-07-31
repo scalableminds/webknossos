@@ -17,6 +17,7 @@ object ZarrCoordinatesParser {
       coordinates: String,
   ): Option[Array[Int]] = {
     val ndCoordinatesRx = "^\\s*c\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)(\\.([0-9]+))+\\s*$".r
-    ndCoordinatesRx.findFirstIn(coordinates).map(m => m.split('.').map(coord => Integer.parseInt(coord)))
+    // The tail cuts of the leading "c" form the "c." at the beginning of coordinates.
+    ndCoordinatesRx.findFirstIn(coordinates).map(m => m.split('.').tail.map(coord => Integer.parseInt(coord)))
   }
 }

@@ -385,11 +385,11 @@ class DatasetController @Inject()(userService: UserService,
       case _             => Messages("dataset.notFoundConsiderLogin", datasetName)
     }
 
-  def segmentAnythingEmbedding(organizationName: String,
-                               datasetName: String,
-                               dataLayerName: String,
-                               intensityMin: Option[Float],
-                               intensityMax: Option[Float]): Action[SegmentAnythingEmbeddingParameters] =
+  def segmentAnythingMask(organizationName: String,
+                          datasetName: String,
+                          dataLayerName: String,
+                          intensityMin: Option[Float],
+                          intensityMax: Option[Float]): Action[SegmentAnythingEmbeddingParameters] =
     sil.SecuredAction.async(validateJson[SegmentAnythingEmbeddingParameters]) { implicit request =>
       log() {
         for {
@@ -413,14 +413,9 @@ class DatasetController @Inject()(userService: UserService,
             s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax...")
           _ <- bool2Fox(
             !(dataLayer.elementClass == ElementClass.float || dataLayer.elementClass == ElementClass.double) || (intensityMin.isDefined && intensityMax.isDefined)) ?~> "For float and double data, a supplied intensity range is required."
-          embedding <- wKRemoteSegmentAnythingClient.getEmbedding(
-            data,
-            dataLayer.elementClass,
-            intensityMin,
-            intensityMax) ?~> "segmentAnything.getEmbedding.failed"
-          _ = logger.debug(
-            s"Received ${embedding.length} bytes of embedding from SAM server, forwarding to front-end...")
-        } yield Ok(embedding)
+          mask <- wKRemoteSegmentAnythingClient.getEmbedding(data, dataLayer.elementClass, intensityMin, intensityMax) ?~> "segmentAnything.getEmbedding.failed"
+          _ = logger.debug(s"Received ${mask.length} bytes of mask from SAM server, forwarding to front-end...")
+        } yield Ok(mask)
       }
     }
 

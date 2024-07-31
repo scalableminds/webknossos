@@ -19,10 +19,12 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
   def health: Action[AnyContent] = Action.async { implicit request =>
     log() {
       for {
-        before <- Fox.successful(Instant.now)
+        before <- Fox.successful(System.currentTimeMillis())
         _ <- redisClient.checkHealth
+        afterRedis = System.currentTimeMillis()
         _ <- Fox.bool2Fox(applicationHealthService.getRecentProblem().isEmpty) ?~> "Java Internal Errors detected"
-        _ = logger.info(s"Answering ok for Datastore health check, took ${Instant.since(before)}")
+        _ = logger.info(
+          s"Answering ok for Datastore health check, took ${afterRedis - before} ms (Redis at ${redisClient.authority} ${afterRedis - before} ms)")
       } yield Ok("Ok")
     }
   }

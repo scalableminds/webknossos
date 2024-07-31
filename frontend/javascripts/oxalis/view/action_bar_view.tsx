@@ -284,20 +284,15 @@ class ActionBarView extends React.PureComponent<Props, State> {
       datasetHasNoColorLayer ||
       is2DOrNDDataset ||
       datasetHasOnlyUInt24ColorLayers;
-    const getAIIsDisabledTooltip = () => {
-      if (!shouldDisableAIJobButton) return "";
-      const genericStatement = "AI analysis is not enabled for this dataset.";
-      if (isAIAnalysisDisabled) {
-        return genericStatement;
-      } else if (datasetHasNoColorLayer) {
-        return "The dataset needs to have a color layer to start AI processing jobs.";
-      } else if (datasetHasOnlyUInt24ColorLayers) {
-        return "The dataset needs to have a color layer whose data type is not uInt24 to start AI processing jobs.";
-      } else if (is2DOrNDDataset) {
-        return `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;
-      }
-      return genericStatement;
-    };
+    let tooltip = "AI analysis is not enabled for this dataset.";
+    if (datasetHasNoColorLayer) {
+      tooltip = "The dataset needs to have a color layer to start AI processing jobs.";
+    } else if (datasetHasOnlyUInt24ColorLayers) {
+      tooltip =
+        "The dataset needs to have a color layer whose data type is not uInt24 to start AI processing jobs.";
+    } else if (is2DOrNDDataset) {
+      tooltip = `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;
+    }
 
     return (
       <React.Fragment>
@@ -312,7 +307,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
           <AdditionalCoordinatesInputView />
           {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
           {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
-            ? this.renderStartAIJobButton(shouldDisableAIJobButton, getAIIsDisabledTooltip())
+            ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
             : null}
           {!isReadOnly && constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
           {isViewMode ? this.renderStartTracingButton() : null}

@@ -271,25 +271,17 @@ class ActionBarView extends React.PureComponent<Props, State> {
     });
 
     const colorLayers = getColorLayers(dataset);
-    const colorLayersRightDataFormat = colorLayers.filter(
-      (layer) => layer.elementClass !== "uint24",
-    );
     const datasetHasNoColorLayer = colorLayers.length === 0;
-    const datasetHasOnlyUInt24ColorLayers = colorLayersRightDataFormat.length === 0;
-    const isNd = (colorLayers[0].additionalAxes ?? []).length > 0;
+    const isNd = (colorLayers[0]?.additionalAxes ?? []).length > 0;
     const is2DOrNDDataset = isNd || is2d;
     const isAIAnalysisDisabled = !getIsAIAnalysisEnabled();
     const shouldDisableAIJobButton =
       isAIAnalysisDisabled ||
       datasetHasNoColorLayer ||
-      is2DOrNDDataset ||
-      datasetHasOnlyUInt24ColorLayers;
+      is2DOrNDDataset
     let tooltip = "AI analysis is not enabled for this dataset.";
     if (datasetHasNoColorLayer) {
       tooltip = "The dataset needs to have a color layer to start AI processing jobs.";
-    } else if (datasetHasOnlyUInt24ColorLayers) {
-      tooltip =
-        "The dataset needs to have a color layer whose data type is not uInt24 to start AI processing jobs.";
     } else if (is2DOrNDDataset) {
       tooltip = `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;
     }

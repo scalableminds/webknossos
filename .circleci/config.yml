@@ -166,8 +166,8 @@ jobs:
       - run:
           name: Run webknossos smoke test
           command: |
-            for i in {1..10}; do # retry
-              sleep 10
+            for i in {1..20}; do # retry
+              sleep 5
               curl --fail -v http://localhost:9000/api/health && s=0 && break || s=$?
             done
             (exit $s)
@@ -182,8 +182,8 @@ jobs:
       - run:
           name: Run webknossos-datastore smoke test
           command: |
-            for i in {1..10}; do # retry
-              sleep 10
+            for i in {1..20}; do # retry
+              sleep 5
               curl --fail -v http://localhost:9090/data/health && s=0 && break || s=$?
             done
             (exit $s)
@@ -198,8 +198,8 @@ jobs:
       - run:
           name: Run webknossos-tracingstore smoke test
           command: |
-            for i in {1..10}; do # retry
-              sleep 10
+            for i in {1..20}; do # retry
+              sleep 5
               curl --fail -v http://localhost:9050/tracings/health && s=0 && break || s=$?
             done
             (exit $s)

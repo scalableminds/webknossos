@@ -37,6 +37,12 @@ export function TrainAiModelTab({ onClose }: { onClose: () => void }) {
     await Model.ensureSavedState();
     const readableVolumeName = getReadableNameForLayerName(dataset, tracing, values.layerName);
     const segmentationLayer = getSegmentationLayerByName(dataset, values.layerName);
+    if (segmentationLayer.elementClass !== "uint8") {
+      Toast.error(
+        "AI Analysis jobs can only be started for color layers with the data format uInt8.",
+      );
+      return;
+    }
 
     await runTraining({
       trainingAnnotations: [

@@ -514,7 +514,7 @@ function StartJobForm(props: StartJobFormProps) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
-  const colorLayers = getColorLayers(dataset).filter((layer) => layer.elementClass !== "uint24");
+  const colorLayers = getColorLayers(dataset);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
   const allLayers = getDataLayers(dataset);
   const defaultBBForLayers: UserBoundingBox[] = layers.map((layer, index) => {
@@ -540,6 +540,12 @@ function StartJobForm(props: StartJobFormProps) {
     outputSegmentationLayerName: string;
   }) => {
     const selectedLayer = layers.find((layer) => layer.name === layerName);
+    if (selectedLayer?.elementClass !== "uint8") {
+      Toast.error(
+        "AI Analysis jobs can only be started for color layers with the data format uInt8.",
+      );
+      return;
+    }
     const selectedBoundingBox = userBoundingBoxes.find((bbox) => bbox.id === boundingBoxId);
     if (
       selectedLayer == null ||
@@ -609,6 +615,7 @@ function StartJobForm(props: StartJobFormProps) {
       );
     })
     .map((layer) => getReadableNameOfVolumeLayer(layer, tracing) || layer.name);
+
   return (
     <Form
       onFinish={startJob}

@@ -272,7 +272,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
 
     const colorLayers = getColorLayers(dataset);
     const colorLayersRightDataFormat = colorLayers.filter(
-      (layer) => layer.elementClass !== "uint24",
+      (layer) => layer.elementClass === "uint8", // TODO_c?
     );
     const datasetHasColorLayer = colorLayers.length > 0;
     const datasetHasColorLayerNotUint24 = colorLayersRightDataFormat.length > 0;
@@ -292,7 +292,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
       } else if (!datasetHasColorLayer) {
         return "The dataset needs to have a color layer to start AI processing jobs.";
       } else if (!datasetHasColorLayerNotUint24) {
-        return "The dataset needs to have a color layer that is not in data format uInt24 to start AI processing jobs.";
+        return "The dataset needs to have a color layer that is in data format uInt8 to start AI processing jobs.";
       } else if (is2DOrNDDataset) {
         return `AI Analysis is not supported for ${is2d ? "2D" : "ND"} datasets.`;
       }

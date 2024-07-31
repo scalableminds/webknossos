@@ -260,9 +260,6 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<void> {
       return;
     }
 
-    // todop (easy): remove
-    console.log("starting updateHdf5 because a bucket changed");
-
     // Updating the HDF5 mapping is an async task which requires communication with
     // the back-end. If the front-end does a proofreading operation in parallel,
     // there is a risk of a race condition. Therefore, we cancel the updateHdf5
@@ -451,16 +448,6 @@ function* updateLocalHdf5Mapping(
     intersection: mutableRemainingEntries,
   } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMapping);
 
-  // todop (easy): remove
-  console.log(
-    "New values",
-    newSegmentIds.size,
-    "remaining values",
-    mutableRemainingEntries.size,
-    "previous size",
-    previousMapping.size,
-  );
-
   const newEntries =
     editableMapping != null
       ? yield* call(
@@ -478,12 +465,6 @@ function* updateLocalHdf5Mapping(
           Array.from(newSegmentIds),
         );
 
-  // todop (easy): remove
-  console.log(
-    "received mapped segment ids from server",
-    newEntries.size < 1000 ? newEntries : `<omitted due to size=${newEntries.size}>`,
-  );
-
   // It is safe to mutate mutableRemainingEntries to compute the merged,
   // new mapping. See the definition of mutableRemainingEntries.
   const mapping = mutableRemainingEntries as Mapping;
@@ -498,8 +479,6 @@ function* updateLocalHdf5Mapping(
     onlyB: newSegmentIds,
   });
 
-  // todop (easy): remove
-  console.log("dispatch setMappingAction in mapping saga");
   yield* put(setMappingAction(layerName, mappingName, mappingType, { mapping }));
 }
 

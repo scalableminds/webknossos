@@ -383,8 +383,7 @@ function SegmentInfo() {
     hoveredSegmentId == null
       ? "-"
       : activeMappingInfo?.mappingStatus === MappingStatusEnum.ENABLED
-        ? // todop (easy): remove hoveredUnmappedSegmentId again
-          `${hoveredUnmappedSegmentId} -> ${hoveredSegmentId} (mapped)`
+        ? `${hoveredSegmentId} (mapped)`
         : `${hoveredSegmentId}`;
 
   return <span className="info-element">Segment {idString}</span>;

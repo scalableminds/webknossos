@@ -43,7 +43,7 @@ object DatasetUpdateParameters extends TristateOptionJsonHelper {
     Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
 }
 
-case class SegmentAnythingEmbeddingParameters(
+case class SegmentAnythingMaskParameters(
     mag: Vec3Int,
     surroundingBoundingBox: BoundingBox, // size must be 1024×1024×1 in target mag
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
@@ -53,8 +53,8 @@ case class SegmentAnythingEmbeddingParameters(
     selectionBottomRightY: Int,
 )
 
-object SegmentAnythingEmbeddingParameters {
-  implicit val jsonFormat: Format[SegmentAnythingEmbeddingParameters] = Json.format[SegmentAnythingEmbeddingParameters]
+object SegmentAnythingMaskParameters {
+  implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
 class DatasetController @Inject()(userService: UserService,
@@ -393,8 +393,8 @@ class DatasetController @Inject()(userService: UserService,
                           datasetName: String,
                           dataLayerName: String,
                           intensityMin: Option[Float],
-                          intensityMax: Option[Float]): Action[SegmentAnythingEmbeddingParameters] =
-    sil.SecuredAction.async(validateJson[SegmentAnythingEmbeddingParameters]) { implicit request =>
+                          intensityMax: Option[Float]): Action[SegmentAnythingMaskParameters] =
+    sil.SecuredAction.async(validateJson[SegmentAnythingMaskParameters]) { implicit request =>
       log() {
         for {
           _ <- bool2Fox(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
@@ -428,7 +428,7 @@ class DatasetController @Inject()(userService: UserService,
             request.body.selectionBottomRightY,
             intensityMin,
             intensityMax
-          ) ?~> "segmentAnything.getEmbedding.failed"
+          ) ?~> "segmentAnything.getMask.failed"
           _ = logger.debug(s"Received ${mask.length} bytes of mask from SAM server, forwarding to front-end...")
         } yield Ok(mask)
       }

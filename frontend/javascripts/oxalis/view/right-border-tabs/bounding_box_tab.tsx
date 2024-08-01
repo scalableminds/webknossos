@@ -17,6 +17,7 @@ import * as Utils from "libs/utils";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
+import { AutoSizer } from "react-virtualized";
 
 export default function BoundingBoxTab() {
   const bboxTableRef: Parameters<typeof Table>[0]["ref"] = useRef(null);
@@ -125,7 +126,7 @@ export default function BoundingBoxTab() {
           isVisible={bb.isVisible}
           onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
           onDelete={_.partial(deleteBoundingBox, bb.id)}
-          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
+          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => { }}
           onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
           onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
           onNameChange={_.partial(setBoundingBoxName, bb.id)}
@@ -161,20 +162,31 @@ export default function BoundingBoxTab() {
     >
       {/* Don't render a table in view mode. */}
       {isViewMode ? null : userBoundingBoxes.length > 0 ? (
-        <Table
-          ref={bboxTableRef}
-          columns={boundingBoxWrapperTableColumns}
-          dataSource={userBoundingBoxes}
-          pagination={false}
-          rowKey="id"
-          showHeader={false}
-          className="bounding-box-table"
-          rowSelection={{
-            selectedRowKeys: activeBoundingBoxId != null ? [activeBoundingBoxId] : [],
-            getCheckboxProps: () => ({ disabled: true }),
-          }}
-          footer={() => maybeAddBoundingBoxButton}
-        />
+        <div style={{ flex: "1 1 auto", listStyle: "none" }}>
+          <AutoSizer defaultHeight={500}>
+            {({ height, width }) => (
+              <div
+                style={{
+                  height,
+                  width
+                }}
+              >
+                <Table
+                  ref={bboxTableRef}
+                  columns={boundingBoxWrapperTableColumns}
+                  dataSource={userBoundingBoxes}
+                  pagination={false}
+                  rowKey="id"
+                  showHeader={false}
+                  className="bounding-box-table"
+                  rowSelection={{
+                    selectedRowKeys: activeBoundingBoxId != null ? [activeBoundingBoxId] : [],
+                    getCheckboxProps: () => ({ disabled: true }),
+                  }}
+                  footer={() => maybeAddBoundingBoxButton}
+                />
+              </div>)}
+          </AutoSizer></div>
       ) : (
         <>
           <div>No Bounding Boxes created yet.</div>
@@ -191,6 +203,5 @@ export default function BoundingBoxTab() {
           initialTab="export"
         />
       ) : null}
-    </div>
-  );
+    </div>)
 }

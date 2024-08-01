@@ -818,7 +818,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // https://github.com/scalableminds/webknossos/pull/4755
   resolutions?: Array<Point3>;
   mappingName?: string | null | undefined;
-  mappingIsEditable?: boolean;
+  hasEditableMapping?: boolean;
   mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
 };

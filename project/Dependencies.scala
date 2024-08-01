@@ -55,8 +55,8 @@ object Dependencies {
     "cisd" % "jhdf5" % "19.04.1",
     // MultiArray (ndarray) handles. import ucar
     "edu.ucar" % "cdm-core" % "5.4.2",
-    // Amazon S3 cloud storage client. import com.amazonaws
-    "com.amazonaws" % "aws-java-sdk-s3" % "1.12.584",
+    // Amazon S3 cloud storage client. import software.amazon.awssdk
+    "software.amazon.awssdk" % "s3" % "2.26.21",
     // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
     "com.google.cloud" % "google-cloud-storage" % "2.36.1",
     // Blosc compression. import org.blosc

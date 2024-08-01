@@ -41,7 +41,7 @@ export default class WkDev {
      * something in the DOM which is subject to change on mouse move.
      */
     await sleep(delay);
-    // biome-ignore lint/suspicious/noDebugger: <explanation>
+    // biome-ignore lint/suspicious/noDebugger: expected
     debugger;
   }
 

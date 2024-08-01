@@ -233,7 +233,7 @@ function TreeHierarchyView(props: Props) {
           selectGroupById(groupId);
         },
 
-        onCancel() { },
+        onCancel() {},
       });
     } else {
       selectGroupById(groupId);
@@ -296,6 +296,7 @@ function TreeHierarchyView(props: Props) {
         ? dragTargetNode.id
         : props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID;
 
+    let updatedTreeGroups: TreeGroup[] = props.treeGroups;
     if (draggedNode.type === GroupTypeEnum.TREE) {
       let allTreesToMove = [draggedNode.id];
 
@@ -312,12 +313,12 @@ function TreeHierarchyView(props: Props) {
       onBatchActions(moveActions, "SET_TREE_GROUP");
     } else {
       // A group was dragged - update the groupTree
-      const newTreeGroups = moveGroupsHelper(props.treeGroups, draggedNode.id, parentGroupId);
-      setUpdateTreeGroups(newTreeGroups);
+      updatedTreeGroups = moveGroupsHelper(props.treeGroups, draggedNode.id, parentGroupId);
     }
 
     // in either case expand the parent group
-    const newGroups = mapGroups(props.treeGroups, (group) => {
+    // TODO_c look here
+    const newGroups = mapGroups(updatedTreeGroups, (group) => {
       if (group.groupId === parentGroupId && !group.isExpanded) {
         return { ...group, isExpanded: true };
       } else {
@@ -434,15 +435,15 @@ function TreeHierarchyView(props: Props) {
         },
         labelForActiveItems != null
           ? {
-            key: "moveHere",
-            onClick: () => {
-              onMoveWithContextAction(node);
-              handleGroupDropdownMenuVisibility(id, false);
-            },
-            disabled: isEditingDisabled,
-            icon: <ArrowRightOutlined />,
-            label: `Move active ${labelForActiveItems} here`,
-          }
+              key: "moveHere",
+              onClick: () => {
+                onMoveWithContextAction(node);
+                handleGroupDropdownMenuVisibility(id, false);
+              },
+              disabled: isEditingDisabled,
+              icon: <ArrowRightOutlined />,
+              label: `Move active ${labelForActiveItems} here`,
+            }
           : null,
         {
           key: "delete",
@@ -453,25 +454,25 @@ function TreeHierarchyView(props: Props) {
         },
         hasSubgroup
           ? {
-            key: "collapseSubgroups",
-            onClick: () => {
-              setExpansionOfAllSubgroupsTo(node, false);
-              handleGroupDropdownMenuVisibility(id, false);
-            },
-            icon: <ShrinkOutlined />,
-            label: "Collapse all subgroups",
-          }
+              key: "collapseSubgroups",
+              onClick: () => {
+                setExpansionOfAllSubgroupsTo(node, false);
+                handleGroupDropdownMenuVisibility(id, false);
+              },
+              icon: <ShrinkOutlined />,
+              label: "Collapse all subgroups",
+            }
           : null,
         hasSubgroup
           ? {
-            key: "expandSubgroups",
-            onClick: () => {
-              setExpansionOfAllSubgroupsTo(node, true);
-              handleGroupDropdownMenuVisibility(id, false);
-            },
-            icon: <ExpandAltOutlined />,
-            label: "Expand all subgroups",
-          }
+              key: "expandSubgroups",
+              onClick: () => {
+                setExpansionOfAllSubgroupsTo(node, true);
+                handleGroupDropdownMenuVisibility(id, false);
+              },
+              icon: <ExpandAltOutlined />,
+              label: "Expand all subgroups",
+            }
           : null,
         {
           key: "hideTree",
@@ -612,15 +613,15 @@ function TreeHierarchyView(props: Props) {
           },
           isAgglomerateSkeleton
             ? {
-              key: "convertToNormalSkeleton",
-              onClick: () => {
-                setTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
-                handleTreeDropdownMenuVisibility(tree.treeId, false);
-              },
-              title: "Convert to Normal Tree",
-              icon: <span className="fas fa-clipboard-check" />,
-              label: "Convert to Normal Tree",
-            }
+                key: "convertToNormalSkeleton",
+                onClick: () => {
+                  setTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
+                  handleTreeDropdownMenuVisibility(tree.treeId, false);
+                },
+                title: "Convert to Normal Tree",
+                icon: <span className="fas fa-clipboard-check" />,
+                label: "Convert to Normal Tree",
+              }
             : null,
         ],
       };

@@ -25,7 +25,7 @@ class Application @Inject()(tracingDataStore: TracingDataStore, redisClient: Tra
         _ <- redisClient.checkHealth
         afterRedis = System.currentTimeMillis()
         _ = logger.info(
-          s"Answering ok for Tracingstore health check, took ${afterRedis - before} ms (FossilDB at ${tracingDataStore.healthClient.authority}: ${afterFossil - before} ms, Redis at ${redisClient.authority} ${afterRedis - afterFossil} ms).")
+          s"Answering ok for Tracingstore health check, took ${afterRedis - before} ms (FossilDB at ${tracingDataStore.healthClient.authority} ${afterFossil - before} ms, Redis at ${redisClient.authority} ${afterRedis - afterFossil} ms).")
       } yield Ok("Ok")
     }
   }

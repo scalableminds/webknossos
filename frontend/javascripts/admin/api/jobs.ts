@@ -303,16 +303,20 @@ export function startAlignSectionsJob(
   newDatasetName: string,
   annotationId?: string,
 ): Promise<APIJob> {
-  let params = {
-    layerName,
-    newDatasetName,
-    annotationId,
-  };
-  return Request.sendJSONReceiveJSON(
-    `/api/jobs/run/alignSections/${organizationName}/${datasetName}`,
+  const urlParams = annotationId
+    ? new URLSearchParams({
+        layerName,
+        newDatasetName,
+        annotationId,
+      })
+    : new URLSearchParams({
+        layerName,
+        newDatasetName,
+      });
+  return Request.receiveJSON(
+    `/api/jobs/run/alignSections/${organizationName}/${datasetName}?${urlParams.toString()}`,
     {
       method: "POST",
-      data: JSON.stringify(params),
     },
   );
 }

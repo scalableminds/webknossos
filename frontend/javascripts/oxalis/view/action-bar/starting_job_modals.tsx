@@ -519,8 +519,9 @@ function AlignmentTab() {
   );
 }
 
-function UseSkeletonFormItem() {
+function ShouldUseTreesFormItem() {
   const tracing = useSelector((state: OxalisState) => state.tracing);
+  const trees = tracing.skeleton ? Object.values(tracing.skeleton.trees) : [];
   return (
     <div>
       <Form.Item
@@ -528,7 +529,7 @@ function UseSkeletonFormItem() {
         label={
           <Space>
             <div style={{}}>
-              Manual Matches
+              Manual Matches{" "}
               <Tooltip title="Please select whether the alignment should take connected skeleton nodes between adjacent sections as alignment guideline whenever available.">
                 <InfoCircleOutlined />
               </Tooltip>
@@ -545,8 +546,13 @@ function UseSkeletonFormItem() {
                     "No annotation was found. Please create an annotation first.",
                   );
                 }
-                if (tracing.skeleton == null) {
-                  return Promise.reject("No skeleton was found. Please create a skeleton first.");
+                if (
+                  tracing.skeleton == null ||
+                  trees.filter((tree) => tree.edges.edgeCount > 0).length === 0
+                ) {
+                  return Promise.reject(
+                    "No skeleton edges were found. Please create a skeleton with at least one edge first.",
+                  );
                 }
               }
               return Promise.resolve();
@@ -703,7 +709,7 @@ function StartJobForm(props: StartJobFormProps) {
         onChangeSelectedBoundingBox={(bBoxId) => form.setFieldsValue({ boundingBoxId: bBoxId })}
         value={form.getFieldValue("boundingBoxId")}
       />
-      {isSkeletonSelectable && <UseSkeletonFormItem />}
+      {isSkeletonSelectable && <ShouldUseTreesFormItem />}
       <div style={{ textAlign: "left" }}>
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}

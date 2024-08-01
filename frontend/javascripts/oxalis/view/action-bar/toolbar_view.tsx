@@ -96,39 +96,6 @@ const imgStyleForSpaceyIcons = {
   verticalAlign: "middle",
 };
 
-function getSkeletonToolHint(
-  activeTool: AnnotationTool,
-  isShiftPressed: boolean,
-  isControlOrMetaPressed: boolean,
-  isAltPressed: boolean,
-): string | null | undefined {
-  if (activeTool !== AnnotationToolEnum.SKELETON) {
-    return null;
-  }
-
-  if (!isShiftPressed && !isControlOrMetaPressed && !isAltPressed) {
-    return null;
-  }
-
-  if (isShiftPressed && !isControlOrMetaPressed && !isAltPressed) {
-    return "Click to select a node. Right-click to open a contextmenu.";
-  }
-
-  if (!isShiftPressed && isControlOrMetaPressed && !isAltPressed) {
-    return "Drag to move the selected node. Right-click to create a new node without selecting it.";
-  }
-
-  if (isShiftPressed && !isControlOrMetaPressed && isAltPressed) {
-    return "Click on a node in another tree to merge the two trees.";
-  }
-
-  if (isShiftPressed && isControlOrMetaPressed && !isAltPressed) {
-    return "Click on a node to delete the edge to the currently active node.";
-  }
-
-  return null;
-}
-
 function toggleOverwriteMode(overwriteMode: OverwriteMode) {
   if (overwriteMode === OverwriteModeEnum.OVERWRITE_ALL) {
     return OverwriteModeEnum.OVERWRITE_EMPTY;
@@ -952,11 +919,6 @@ export default function ToolbarView() {
     isControlOrMetaPressed,
     isAltPressed,
   );
-  const skeletonToolHint =
-    hasSkeleton && useLegacyBindings
-      ? getSkeletonToolHint(activeTool, isShiftPressed, isControlOrMetaPressed, isAltPressed)
-      : null;
-  const previousSkeletonToolHint = usePrevious(skeletonToolHint);
 
   const skeletonToolDescription = useLegacyBindings
     ? "Use left-click to move around and right-click to create new skeleton nodes"
@@ -989,19 +951,12 @@ export default function ToolbarView() {
             style={NARROW_BUTTON_STYLE}
             value={AnnotationToolEnum.SKELETON}
           >
-            {/*
-               When visible changes to false, the tooltip fades out in an animation. However, skeletonToolHint
-               will be null, too, which means the tooltip text would immediately change to an empty string.
-               To avoid this, we fallback to previousSkeletonToolHint.
-              */}
-            <FastTooltip title={skeletonToolHint || previousSkeletonToolHint}>
-              <i
-                style={{
-                  opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled ? 0.5 : 1,
-                }}
-                className="fas fa-project-diagram"
-              />
-            </FastTooltip>
+            <i
+              style={{
+                opacity: disabledInfosForTools[AnnotationToolEnum.SKELETON].isDisabled ? 0.5 : 1,
+              }}
+              className="fas fa-project-diagram"
+            />
           </ToolRadioButton>
         ) : null}
 

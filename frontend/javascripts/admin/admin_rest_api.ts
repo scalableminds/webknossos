@@ -2337,9 +2337,9 @@ export async function getSamMask(
   dataset: APIDataset,
   layerName: string,
   mag: Vector3,
-  surroundingBoxMag1: BoundingBox,
-  selectionTopLeft: Vector2,
-  selectionBottomRight: Vector2,
+  surroundingBoxMag1: BoundingBox, // in target mag
+  selectionTopLeft: Vector2, // in target mag
+  selectionBottomRight: Vector2, // in target mag
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
 ): Promise<Float32Array> {

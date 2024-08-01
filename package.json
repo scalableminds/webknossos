@@ -187,7 +187,6 @@
     "ndarray": "^1.0.19",
     "ndarray-moments": "^1.0.0",
     "ndarray-ops": "^1.2.2",
-    "onnxruntime-web": "^1.17.0",
     "pako": "^2.1.0",
     "pretty-bytes": "^5.1.0",
     "process": "^0.11.10",

@@ -26,7 +26,6 @@ import {
   ConfirmQuickSelectAction,
   FineTuneQuickSelectAction,
   finishAnnotationStrokeAction,
-  MaybePrefetchEmbeddingAction,
   registerLabelPointAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -73,9 +72,7 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
 
 let wasPreviewModeToastAlreadyShown = false;
 
-export function* prepareQuickSelect(
-  action: ComputeQuickSelectForRectAction | MaybePrefetchEmbeddingAction,
-): Saga<{
+export function* prepareQuickSelect(action: ComputeQuickSelectForRectAction): Saga<{
   labeledZoomStep: number;
   firstDim: DimensionIndices;
   secondDim: DimensionIndices;
@@ -92,10 +89,8 @@ export function* prepareQuickSelect(
   if (activeViewport === "TDView") {
     // Can happen when the user ends the drag action in the 3D viewport
     console.warn("Ignoring quick select when mouse is in 3D viewport");
-    if ("quickSelectGeometry" in action) {
-      const { quickSelectGeometry } = action;
-      quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-    }
+    const { quickSelectGeometry } = action;
+    quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
     return null;
   }
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);

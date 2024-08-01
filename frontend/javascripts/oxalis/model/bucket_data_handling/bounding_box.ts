@@ -1,9 +1,10 @@
 import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
-import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
+import type { BoundingBoxType, OrthoView, Vector2, Vector3, Vector4 } from "oxalis/constants";
 import constants, { Vector3Indicies } from "oxalis/constants";
 import type { ResolutionInfo } from "../helpers/resolution_info";
+import Dimensions from "../dimensions";
 
 class BoundingBox {
   min: Vector3;
@@ -21,6 +22,16 @@ class BoundingBox {
         this.max[i] = Math.min(this.max[i], boundingBox.max[i]);
       }
     }
+  }
+
+  getMinUV(activeViewport: OrthoView): Vector2 {
+    const [u, v, _w] = Dimensions.transDim(this.min, activeViewport);
+    return [u, v];
+  }
+
+  getMaxUV(activeViewport: OrthoView): Vector2 {
+    const [u, v, _w] = Dimensions.transDim(this.max, activeViewport);
+    return [u, v];
   }
 
   getBoxForZoomStep = _.memoize((resolution: Vector3): BoundingBoxType => {

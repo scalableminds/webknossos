@@ -5233,11 +5233,6 @@ find-up@^6.3.0:
     locate-path "^7.1.0"
     path-exists "^5.0.0"
 
-flatbuffers@^1.12.0:
-  version "1.12.0"
-  resolved "https://registry.yarnpkg.com/flatbuffers/-/flatbuffers-1.12.0.tgz#72e87d1726cb1b216e839ef02658aa87dcef68aa"
-  integrity sha512-c7CZADjRcl6j0PlvFy0ZqXQ67qSEZfrVPynmnL+2zPc+NtMvrF8Y0QceMo7QqnSPc7+uWjUIAbvCQ5WIKlMVdQ==
-
 flexlayout-react@^0.5.5:
   version "0.5.5"
   resolved "https://registry.yarnpkg.com/flexlayout-react/-/flexlayout-react-0.5.5.tgz#e96dbb61bd29868836aff5139d558fb13abf1287"
@@ -5634,11 +5629,6 @@ gud@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/gud/-/gud-1.0.0.tgz#a489581b17e6a70beca9abe3ae57de7a499852c0"
   integrity sha512-zGEOVKFM5sVPPrYs7J5/hYEw2Pof8KCyOwyhG8sAF26mCAeUFAcYPu1mwB7hhpIP29zOIBaDqwuHdLp0jvZXjw==
-
-guid-typescript@^1.0.9:
-  version "1.0.9"
-  resolved "https://registry.yarnpkg.com/guid-typescript/-/guid-typescript-1.0.9.tgz#e35f77003535b0297ea08548f5ace6adb1480ddc"
-  integrity sha512-Y8T4vYhEfwJOTbouREvG+3XDsjr8E3kIr7uf+JZ0BYloFsttiHU0WfvANVsR7TxNUJa/WpCnw/Ino/p+DeBhBQ==
 
 hammerjs@^2.0.8:
   version "2.0.8"
@@ -7113,11 +7103,6 @@ long@^4.0.0:
   resolved "https://registry.yarnpkg.com/long/-/long-4.0.0.tgz#9a7b71cfb7d361a194ea555241c92f7468d5bf28"
   integrity sha512-XsP+KhQif4bjX1kbuSiySJFNAehNxgLb6hPRGJ9QsUr8ajHkuXGdrHmFUTUUXhDwVX2R5bY4JNZEwbUiMhV+MA==
 
-long@^5.0.0, long@^5.2.3:
-  version "5.2.3"
-  resolved "https://registry.yarnpkg.com/long/-/long-5.2.3.tgz#a3ba97f3877cf1d778eccbcb048525ebb77499e1"
-  integrity sha512-lcHwpNoggQTObv5apGNCTdJrO69eHOZMi4BNC+rTLER8iHAqGrUVeLh/irVIM7zTw2bOXA8T6uNPeujwOLg/2Q==
-
 longest-streak@^3.0.0:
   version "3.1.0"
   resolved "https://registry.yarnpkg.com/longest-streak/-/longest-streak-3.1.0.tgz#62fa67cd958742a1574af9f39866364102d90cd4"
@@ -8292,23 +8277,6 @@ onetime@^5.1.0, onetime@^5.1.2:
   dependencies:
     mimic-fn "^2.1.0"
 
-onnxruntime-common@1.17.3:
-  version "1.17.3"
-  resolved "https://registry.yarnpkg.com/onnxruntime-common/-/onnxruntime-common-1.17.3.tgz#aadc456477873a540ee3d611ae9cd4f3de7c43e5"
-  integrity sha512-IkbaDelNVX8cBfHFgsNADRIq2TlXMFWW+nG55mwWvQT4i0NZb32Jf35Pf6h9yjrnK78RjcnlNYaI37w394ovMw==
-
-onnxruntime-web@^1.17.0:
-  version "1.17.3"
-  resolved "https://registry.yarnpkg.com/onnxruntime-web/-/onnxruntime-web-1.17.3.tgz#943063f9ddad0e5f787bc934938dd6c7fbe4897a"
-  integrity sha512-MSDrNUWgc1biP0YzY488OJ9n/jTMS9EXysgm9Aw4CUj2A836ALbO2J1sgzguWJeVUHTlM6p7tRzo8IGAgaXWKw==
-  dependencies:
-    flatbuffers "^1.12.0"
-    guid-typescript "^1.0.9"
-    long "^5.2.3"
-    onnxruntime-common "1.17.3"
-    platform "^1.3.6"
-    protobufjs "^7.2.4"
-
 open@^10.0.3:
   version "10.0.4"
   resolved "https://registry.yarnpkg.com/open/-/open-10.0.4.tgz#4869d009dc5b706ae6585699e15d8ccc6cb73629"
@@ -8774,11 +8742,6 @@ pkg-dir@^4.2.0:
   dependencies:
     find-up "^4.0.0"
 
-platform@^1.3.6:
-  version "1.3.6"
-  resolved "https://registry.yarnpkg.com/platform/-/platform-1.3.6.tgz#48b4ce983164b209c2d45a107adb31f473a6e7a7"
-  integrity sha512-fnWVljUchTro6RiCFvCXBbNhJc2NijN7oIQxbwsyL0buWJPG85v81ehlHI9fXrJsMNgTofEoWIQeClKpgxFLrg==
-
 plur@^4.0.0:
   version "4.0.0"
   resolved "https://registry.yarnpkg.com/plur/-/plur-4.0.0.tgz#729aedb08f452645fe8c58ef115bf16b0a73ef84"
@@ -8996,24 +8959,6 @@ protobufjs@^6.3.1:
     "@types/long" "^4.0.1"
     "@types/node" "^13.7.0"
     long "^4.0.0"
-
-protobufjs@^7.2.4:
-  version "7.3.0"
-  resolved "https://registry.yarnpkg.com/protobufjs/-/protobufjs-7.3.0.tgz#a32ec0422c039798c41a0700306a6e305b9cb32c"
-  integrity sha512-YWD03n3shzV9ImZRX3ccbjqLxj7NokGN0V/ESiBV5xWqrommYHYiihuIyavq03pWSGqlyvYUFmfoMKd+1rPA/g==
-  dependencies:
-    "@protobufjs/aspromise" "^1.1.2"
-    "@protobufjs/base64" "^1.1.2"
-    "@protobufjs/codegen" "^2.0.4"
-    "@protobufjs/eventemitter" "^1.1.0"
-    "@protobufjs/fetch" "^1.1.0"
-    "@protobufjs/float" "^1.0.2"
-    "@protobufjs/inquire" "^1.1.0"
-    "@protobufjs/path" "^1.1.2"
-    "@protobufjs/pool" "^1.1.0"
-    "@protobufjs/utf8" "^1.1.0"
-    "@types/node" ">=13.7.0"
-    long "^5.0.0"
 
 protocols@^2.0.0, protocols@^2.0.1:
   version "2.0.1"

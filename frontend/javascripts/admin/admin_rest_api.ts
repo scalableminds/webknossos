@@ -2333,11 +2333,13 @@ export async function getNeighborsForAgglomerateNode(
 
 // ### Smart Select
 
-export async function getSamEmbedding(
+export async function getSamMask(
   dataset: APIDataset,
   layerName: string,
   mag: Vector3,
-  embeddingBoxMag1: BoundingBox,
+  surroundingBoxMag1: BoundingBox,
+  selectionTopLeft: Vector2,
+  selectionBottomRight: Vector2,
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
 ): Promise<Float32Array> {
@@ -2348,9 +2350,17 @@ export async function getSamEmbedding(
   }
 
   const buffer = await Request.sendJSONReceiveArraybuffer(
-    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding?${params}`,
+    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingMask?${params}`,
     {
-      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox(), additionalCoordinates },
+      data: {
+        mag,
+        surroundingBoundingBox: surroundingBoxMag1.asServerBoundingBox(),
+        additionalCoordinates,
+        selectionTopLeftX: selectionTopLeft[0],
+        selectionTopLeftY: selectionTopLeft[1],
+        selectionBottomRightX: selectionBottomRight[0],
+        selectionBottomRightY: selectionBottomRight[1],
+      },
       showErrorToast: false,
     },
   );

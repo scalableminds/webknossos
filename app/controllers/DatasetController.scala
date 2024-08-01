@@ -45,8 +45,12 @@ object DatasetUpdateParameters extends TristateOptionJsonHelper {
 
 case class SegmentAnythingEmbeddingParameters(
     mag: Vec3Int,
-    boundingBox: BoundingBox,
-    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+    surroundingBoundingBox: BoundingBox, // size must be 1024×1024×1 in target mag
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+    selectionTopLeftX: Int, // in target-mag, relative to paddedBoundingBox topleft
+    selectionTopLeftY: Int,
+    selectionBottomRightX: Int,
+    selectionBottomRightY: Int,
 )
 
 object SegmentAnythingEmbeddingParameters {
@@ -401,19 +405,30 @@ class DatasetController @Inject()(userService: UserService,
           usableDataSource <- dataSource.toUsable ?~> "dataset.notImported"
           dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataset.noLayers"
           datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
-          targetMagBbox: BoundingBox = request.body.boundingBox / request.body.mag
-          _ <- bool2Fox(targetMagBbox.size.sorted == Vec3Int(1, 1024, 1024)) ?~> s"Target-mag bbox must be sized 1024×1024×1 (or transposed), got ${targetMagBbox.size}"
-          data <- datastoreClient.getLayerData(organizationName,
-                                               dataset,
-                                               dataLayer.name,
-                                               request.body.boundingBox,
-                                               request.body.mag,
-                                               request.body.additionalCoordinates) ?~> "segmentAnything.getData.failed"
+          targetMagSelectedBbox: BoundingBox = request.body.surroundingBoundingBox / request.body.mag
+          _ <- bool2Fox(targetMagSelectedBbox.size.sorted == Vec3Int(1, 1024, 1024)) ?~> s"Target-mag selected bbox must be sized 1024×1024×1 (or transposed), got ${targetMagSelectedBbox.size}"
+          data <- datastoreClient.getLayerData(
+            organizationName,
+            dataset,
+            dataLayer.name,
+            request.body.surroundingBoundingBox,
+            request.body.mag,
+            request.body.additionalCoordinates
+          ) ?~> "segmentAnything.getData.failed"
           _ = logger.debug(
             s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax...")
           _ <- bool2Fox(
             !(dataLayer.elementClass == ElementClass.float || dataLayer.elementClass == ElementClass.double) || (intensityMin.isDefined && intensityMax.isDefined)) ?~> "For float and double data, a supplied intensity range is required."
-          mask <- wKRemoteSegmentAnythingClient.getEmbedding(data, dataLayer.elementClass, intensityMin, intensityMax) ?~> "segmentAnything.getEmbedding.failed"
+          mask <- wKRemoteSegmentAnythingClient.getMask(
+            data,
+            dataLayer.elementClass,
+            request.body.selectionTopLeftX,
+            request.body.selectionTopLeftY,
+            request.body.selectionBottomRightX,
+            request.body.selectionBottomRightY,
+            intensityMin,
+            intensityMax
+          ) ?~> "segmentAnything.getEmbedding.failed"
           _ = logger.debug(s"Received ${mask.length} bytes of mask from SAM server, forwarding to front-end...")
         } yield Ok(mask)
       }

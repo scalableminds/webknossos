@@ -213,7 +213,7 @@ function VersionList(props: Props) {
 
   if (newestVersion == null) {
     return (
-      <div style={{ display: "flex", justifyContent: "center" }}>
+      <div className="flex-center-child">
         <Spin spinning />
       </div>
     );
@@ -309,7 +309,7 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
   return (
     <div>
       {hasPreviousPage && (
-        <div style={{ display: "flex", justifyContent: "center" }}>
+        <div className="flex-center-child">
           <Button
             onClick={() => fetchPreviousPage()}
             disabled={!hasPreviousPage || isFetchingPreviousPage}

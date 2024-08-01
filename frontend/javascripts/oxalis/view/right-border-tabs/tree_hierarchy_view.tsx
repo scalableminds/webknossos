@@ -317,7 +317,6 @@ function TreeHierarchyView(props: Props) {
     }
 
     // in either case expand the parent group
-    // TODO_c look here
     const newGroups = mapGroups(updatedTreeGroups, (group) => {
       if (group.groupId === parentGroupId && !group.isExpanded) {
         return { ...group, isExpanded: true };

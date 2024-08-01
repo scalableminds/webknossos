@@ -1,6 +1,5 @@
 package models.dataset
 
-import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass

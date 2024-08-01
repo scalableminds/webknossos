@@ -276,9 +276,7 @@ class ActionBarView extends React.PureComponent<Props, State> {
     const is2DOrNDDataset = isNd || is2d;
     const isAIAnalysisDisabled = !getIsAIAnalysisEnabled();
     const shouldDisableAIJobButton =
-      isAIAnalysisDisabled ||
-      datasetHasNoColorLayer ||
-      is2DOrNDDataset
+      isAIAnalysisDisabled || datasetHasNoColorLayer || is2DOrNDDataset;
     let tooltip = "AI analysis is not enabled for this dataset.";
     if (datasetHasNoColorLayer) {
       tooltip = "The dataset needs to have a color layer to start AI processing jobs.";

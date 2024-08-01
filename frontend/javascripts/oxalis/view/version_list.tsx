@@ -34,8 +34,7 @@ import { useEffectOnlyOnce } from "libs/react_hooks";
 import { useFetch } from "libs/react_helpers";
 import { useSelector } from "react-redux";
 
-// todop: revert (only for testing)
-const ENTRIES_PER_PAGE = 10;
+const ENTRIES_PER_PAGE = 5000;
 
 type Props = {
   versionedObjectType: SaveQueueType;

@@ -83,10 +83,10 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   // Custom color cuckoo table
   uniform highp usampler2D custom_color_texture;
   uniform highp uint custom_color_seeds[3];
-  uniform highp uint CUCKOO_ENTRY_CAPACITY;
-  uniform highp uint CUCKOO_ELEMENTS_PER_ENTRY;
-  uniform highp uint CUCKOO_ELEMENTS_PER_TEXEL;
-  uniform highp uint CUCKOO_TWIDTH;
+  uniform highp uint COLOR_CUCKOO_ENTRY_CAPACITY;
+  uniform highp uint COLOR_CUCKOO_ELEMENTS_PER_ENTRY;
+  uniform highp uint COLOR_CUCKOO_ELEMENTS_PER_TEXEL;
+  uniform highp uint COLOR_CUCKOO_TWIDTH;
 
   uniform vec4 activeCellIdHigh;
   uniform vec4 activeCellIdLow;
@@ -96,14 +96,20 @@ uniform highp uint LOOKUP_CUCKOO_TWIDTH;
   uniform bool isUnmappedSegmentHighlighted;
   uniform float segmentationPatternOpacity;
 
-  uniform bool isMappingEnabled;
-  uniform float mappingSize;
+  uniform bool shouldApplyMappingOnGPU;
+  uniform bool mappingIsPartial;
   uniform bool hideUnmappedIds;
-  uniform sampler2D segmentation_mapping_texture;
-  uniform sampler2D segmentation_mapping_lookup_texture;
+  uniform bool is_mapping_64bit;
+  uniform highp uint mapping_seeds[3];
+  uniform highp uint MAPPING_CUCKOO_ENTRY_CAPACITY;
+  uniform highp uint MAPPING_CUCKOO_ELEMENTS_PER_ENTRY;
+  uniform highp uint MAPPING_CUCKOO_ELEMENTS_PER_TEXEL;
+  uniform highp uint MAPPING_CUCKOO_TWIDTH;
+  uniform highp usampler2D segmentation_mapping_texture;
 <% } %>
 
 uniform float sphericalCapRadius;
+uniform bool selectiveVisibilityInProofreading;
 uniform float viewMode;
 uniform float alpha;
 uniform bool renderBucketIndices;
@@ -121,6 +127,8 @@ uniform float planeID;
 uniform vec3 addressSpaceDimensions;
 uniform vec4 hoveredSegmentIdLow;
 uniform vec4 hoveredSegmentIdHigh;
+uniform vec4 hoveredUnmappedSegmentIdLow;
+uniform vec4 hoveredUnmappedSegmentIdHigh;
 
 // For some reason, taking the dataset scale from the uniform results in imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
@@ -190,14 +198,20 @@ void main() {
   vec4 data_color = vec4(0.0);
 
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
-    vec4 <%= segmentationName%>_id_low = vec4(0.);
-    vec4 <%= segmentationName%>_id_high = vec4(0.);
-    float <%= segmentationName%>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
+    vec4 <%= segmentationName %>_id_low = vec4(0.);
+    vec4 <%= segmentationName %>_id_high = vec4(0.);
+    vec4 <%= segmentationName %>_unmapped_id_low = vec4(0.);
+    vec4 <%= segmentationName %>_unmapped_id_high = vec4(0.);
+    float <%= segmentationName %>_effective_alpha = <%= segmentationName %>_alpha * (1. - <%= segmentationName %>_unrenderable);
 
-    if (<%= segmentationName%>_effective_alpha > 0.) {
-      vec4[2] segmentationId = getSegmentId_<%= segmentationName%>(worldCoordUVW);
-      <%= segmentationName%>_id_low = segmentationId[1];
-      <%= segmentationName%>_id_high = segmentationId[0];
+    if (<%= segmentationName %>_effective_alpha > 0.) {
+      vec4[2] unmapped_segment_id;
+      vec4[2] segment_id;
+      getSegmentId_<%= segmentationName %>(worldCoordUVW, unmapped_segment_id, segment_id);
+      <%= segmentationName %>_unmapped_id_low = unmapped_segment_id[1];
+      <%= segmentationName %>_unmapped_id_high = unmapped_segment_id[0];
+      <%= segmentationName %>_id_low = segment_id[1];
+      <%= segmentationName %>_id_high = segment_id[0];
     }
 
   <% }) %>
@@ -269,25 +283,42 @@ void main() {
   <% _.each(segmentationLayerNames, function(segmentationName, layerIndex) { %>
 
     // Color map (<= to fight rounding mistakes)
-    if ( length(<%= segmentationName%>_id_low) > 0.1 || length(<%= segmentationName%>_id_high) > 0.1 ) {
+    if ( length(<%= segmentationName %>_id_low) > 0.1 || length(<%= segmentationName %>_id_high) > 0.1 ) {
       // Increase cell opacity when cell is hovered or if it is the active activeCell
-      bool isHoveredCell = hoveredSegmentIdLow == <%= segmentationName%>_id_low
-        && hoveredSegmentIdHigh == <%= segmentationName%>_id_high;
-      bool isActiveCell = activeCellIdLow == <%= segmentationName%>_id_low
-         && activeCellIdHigh == <%= segmentationName%>_id_high;
+      bool isHoveredSegment = hoveredSegmentIdLow == <%= segmentationName %>_id_low
+        && hoveredSegmentIdHigh == <%= segmentationName %>_id_high;
+      bool isHoveredUnmappedSegment = hoveredUnmappedSegmentIdLow == <%= segmentationName %>_unmapped_id_low
+        && hoveredUnmappedSegmentIdHigh == <%= segmentationName %>_unmapped_id_high;
+      bool isActiveCell = activeCellIdLow == <%= segmentationName %>_id_low
+         && activeCellIdHigh == <%= segmentationName %>_id_high;
       // Highlight cell only if it's hovered or active during proofreading
       // and if segmentation opacity is not zero
-      float hoverAlphaIncrement = isHoveredCell && <%= segmentationName%>_alpha > 0.0 ? 0.2 : 0.0;
-      float proofreadingAlphaIncrement = isActiveCell && isProofreading && <%= segmentationName%>_alpha > 0.0 ? 0.4 : 0.0;
+      float alphaIncrement = isProofreading
+        ? (isActiveCell
+            ? (isHoveredUnmappedSegment
+              ? 0.4     // Highlight the hovered super-voxel of the active segment
+              : (isHoveredSegment
+                ? 0.15  // Highlight the not-hovered super-voxels of the hovered segment
+                : 0.0
+              )
+          )
+            : (isHoveredSegment
+              ? 0.2
+              // We are in proofreading mode, but the current voxel neither belongs
+              // to the active segment nor is it hovered. When selective visibility
+              // is enabled, lower the opacity.
+              : (selectiveVisibilityInProofreading ? -<%= segmentationName %>_alpha : 0.0)
+          )
+        ) : (isHoveredSegment ? 0.2 : 0.0);
       gl_FragColor = vec4(mix(
         data_color.rgb,
-        convertCellIdToRGB(<%= segmentationName%>_id_high, <%= segmentationName%>_id_low),
-        <%= segmentationName%>_alpha + max(hoverAlphaIncrement, proofreadingAlphaIncrement)
+        convertCellIdToRGB(<%= segmentationName %>_id_high, <%= segmentationName %>_id_low),
+        <%= segmentationName %>_alpha + alphaIncrement
       ), 1.0);
     }
-    vec4 <%= segmentationName%>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
-    <%= segmentationName%>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
-    gl_FragColor = mix(gl_FragColor, <%= segmentationName%>_brushOverlayColor, <%= segmentationName%>_brushOverlayColor.a);
+    vec4 <%= segmentationName %>_brushOverlayColor = getBrushOverlay(worldCoordUVW);
+    <%= segmentationName %>_brushOverlayColor.xyz = convertCellIdToRGB(activeCellIdHigh, activeCellIdLow);
+    gl_FragColor = mix(gl_FragColor, <%= segmentationName %>_brushOverlayColor, <%= segmentationName %>_brushOverlayColor.a);
     gl_FragColor.a = 1.0;
 
   <% }) %>

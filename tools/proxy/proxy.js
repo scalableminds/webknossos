@@ -1,4 +1,3 @@
-// @noflow
 const express = require("express");
 const httpProxy = require("http-proxy");
 const { spawn, exec } = require("child_process");
@@ -91,10 +90,34 @@ process.on("SIGINT", shutdown);
 
 proxy.on("error", (err, req, res) => {
   console.error(loggingPrefix, "Sending Bad gateway due to the following error: ", err);
-  res.writeHead(503);
-  res.end(
-    "Bad gateway. The server might still be starting up, please try again in a few seconds or check console output.",
-  );
+  res.writeHead(503, { 'Content-Type': 'text/html' });
+  res.end(`
+    <html>
+      <head>
+        <title>503 Service Unavailable</title>
+        <script type="text/javascript">
+          let countdown = 5;
+          function updateCountdown() {
+            document.getElementById('countdown').textContent = countdown;
+            countdown--;
+            if (countdown < 0) {
+              location.reload();
+            } else {
+              setTimeout(updateCountdown, 1000);
+            }
+          }
+          window.onload = function() {
+            updateCountdown();
+          }
+        </script>
+      </head>
+      <body>
+        <h1>Bad gateway</h1>
+        <p>The server might still be starting up, please try again in a few seconds or check console output.</p>
+        <p>Reloading in <span id="countdown">5</span> seconds...</p>
+      </body>
+    </html>
+  `);
 });
 
 function toBackend(req, res) {

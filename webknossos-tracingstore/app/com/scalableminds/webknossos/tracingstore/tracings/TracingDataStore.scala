@@ -18,7 +18,7 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
 
   val healthClient = new FossilDBClient("healthCheckOnly", config, slackNotificationService)
 
-  system.scheduler.scheduleOnce(5 seconds)(healthClient.checkHealth)
+  system.scheduler.scheduleOnce(5 seconds)(healthClient.checkHealth(verbose = true))
 
   lazy val skeletons = new FossilDBClient("skeletons", config, slackNotificationService)
 

@@ -490,9 +490,10 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       isOwner,
     );
     return (
-      <React.Fragment>
+      <>
         <Row
           style={{
+            marginTop: 10,
             marginBottom: 10,
           }}
         >
@@ -539,7 +540,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
         </Row>
         <Row
           style={{
-            marginBottom: 20,
+            marginBottom: 10,
           }}
           align="top"
         >
@@ -580,7 +581,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
             </FastTooltip>
           </Col>
         </Row>
-      </React.Fragment>
+      </>
     );
   }
 }

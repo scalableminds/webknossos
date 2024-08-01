@@ -3,7 +3,6 @@ import React, { useCallback, useState } from "react";
 import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
 import { AltOrOptionKey, MappingStatusEnum, OrthoViews } from "oxalis/constants";
-import { Tooltip as ReactTooltip } from "react-tooltip";
 import {
   getMappingInfoOrNull,
   getVisibleSegmentationLayer,
@@ -39,7 +38,6 @@ import { useInterval } from "libs/react_helpers";
 import _ from "lodash";
 import { AdditionalCoordinate } from "types/api_flow_types";
 import FastTooltip from "components/fast_tooltip";
-import { RenderToPortal } from "./layouting/portal_utils";
 import { Store } from "oxalis/singletons";
 import ReactDOMServer from "react-dom/server";
 
@@ -60,11 +58,6 @@ function getPosString(
   const additionalCoordinates = (optAdditionalCoordinates || []).map((coord) => coord.value);
   return V3.floor(pos).concat(additionalCoordinates).join(",");
 }
-
-const TOOLTIP_CONTAINER_STYLE: React.CSSProperties = {
-  position: "absolute",
-  zIndex: 1000,
-};
 
 function ZoomShortcut() {
   return (
@@ -379,6 +372,7 @@ function SegmentInfo() {
   const hoveredSegmentId = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId,
   );
+
   if (hasVisibleSegmentation == null) {
     return null;
   }

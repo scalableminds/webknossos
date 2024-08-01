@@ -183,13 +183,16 @@ class MappingSettingsView extends React.Component<Props, State> {
     // or a mapping was activated, e.g. from the API or by selecting one from the dropdown (this.props.isMappingEnabled).
     const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || isMappingEnabled;
     const renderHideUnmappedSegmentsSwitch =
-      (shouldMappingBeEnabled || isMergerModeEnabled) && mapping && hideUnmappedIds != null;
+      (shouldMappingBeEnabled || isMergerModeEnabled) &&
+      mapping &&
+      this.props.mappingType === "JSON" &&
+      hideUnmappedIds != null;
     const isDisabled = isEditableMappingActive || isMappingLocked || isAnnotationLockedByOwner;
     const disabledMessage = !allowUpdate
       ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByOwner, isOwner)
       : isEditableMappingActive
         ? "The mapping has been edited through proofreading actions and can no longer be disabled or changed."
-        : mapping
+        : isMappingEnabled
           ? "This mapping has been locked to this annotation, because the segmentation was modified while it was active. It can no longer be disabled or changed."
           : "The segmentation was modified while no mapping was active. To ensure a consistent state, mappings can no longer be enabled.";
     return (

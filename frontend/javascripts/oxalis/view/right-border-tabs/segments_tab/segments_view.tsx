@@ -17,7 +17,7 @@ import {
 } from "@ant-design/icons";
 import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
-import { api, Model } from "oxalis/singletons";
+import { api } from "oxalis/singletons";
 import {
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
@@ -37,7 +37,6 @@ import {
 } from "antd";
 import Toast from "libs/toast";
 import _, { isNumber } from "lodash";
-import memoizeOne from "memoize-one";
 import type { Vector3 } from "oxalis/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
@@ -149,7 +148,6 @@ const segmentsTabId = "segment-list";
 type StateProps = {
   meshes: Record<number, MeshInformation>;
   dataset: APIDataset;
-  isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
   centeredSegmentId: number;
   hasVolumeTracing: boolean | undefined;
@@ -198,8 +196,6 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     activeCellId: activeVolumeTracing?.activeCellId,
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
     dataset: state.dataset,
-    isJSONMappingEnabled:
-      mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
     mappingInfo,
     centeredSegmentId: getSegmentIdForPosition(getPosition(state.flycam)),
     hasVolumeTracing: state.tracing.volumes.length > 0,
@@ -333,8 +329,6 @@ type State = {
   };
   activeStatisticsModalGroupId: number | null;
   expandedGroupKeys: Key[];
-  // This needs to be stored in the component because the root group does not exist outside of it.
-  isRootGroupExpanded: boolean;
   contextMenuPosition: [number, number] | null | undefined;
   menu: MenuProps | null | undefined;
 };
@@ -353,16 +347,6 @@ const formatMeshFile = (meshFile: APIMeshFile | null | undefined): string | null
   if (meshFile.mappingName == null) return meshFile.meshFileName;
   return `${meshFile.meshFileName} (${meshFile.mappingName})`;
 };
-
-function _getMapIdFn(visibleSegmentationLayer: APISegmentationLayer | null | undefined) {
-  const dataLayer =
-    visibleSegmentationLayer != null ? Model.getLayerByName(visibleSegmentationLayer.name) : null;
-
-  const mapId = dataLayer != null ? (id: number) => dataLayer.cube.mapId(id) : (id: number) => id;
-  return mapId;
-}
-
-const getMapIdFn = memoizeOne(_getMapIdFn);
 
 function renderEmptyMeshFileSelect() {
   return (
@@ -383,9 +367,9 @@ const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
   }, []);
 };
 
-const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[], isRootGroupExpanded: boolean) => {
+const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[]) => {
   const expandedGroups = getExpandedKeys(segmentGroups);
-  if (isRootGroupExpanded) expandedGroups.unshift(getKeyForGroupId(MISSING_GROUP_ID));
+  expandedGroups.unshift(getKeyForGroupId(MISSING_GROUP_ID));
   return expandedGroups;
 };
 
@@ -496,7 +480,6 @@ class SegmentsView extends React.Component<Props, State> {
     groupsSegmentsVisibilityStateMap: {},
     activeStatisticsModalGroupId: null,
     expandedGroupKeys: [],
-    isRootGroupExpanded: true,
     contextMenuPosition: null,
     menu: null,
   };
@@ -524,10 +507,7 @@ class SegmentsView extends React.Component<Props, State> {
     Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
 
     this.setState({
-      expandedGroupKeys: getExpandedKeysWithRoot(
-        this.props.segmentGroups,
-        this.state.isRootGroupExpanded,
-      ),
+      expandedGroupKeys: getExpandedKeysWithRoot(this.props.segmentGroups),
     });
   }
 
@@ -608,16 +588,6 @@ class SegmentsView extends React.Component<Props, State> {
   setExpandedGroups = (newExpandedGroups: Key[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
     const expandedKeySet = new Set(newExpandedGroups);
-    // Set the state of the root group according to the new expanded groups
-    // so that its expansion state is updated when the root group is expanded/collapsed.
-    if (this.state.isRootGroupExpanded && !expandedKeySet.has(getKeyForGroupId(MISSING_GROUP_ID))) {
-      this.setState({ isRootGroupExpanded: false });
-    } else if (
-      !this.state.isRootGroupExpanded &&
-      expandedKeySet.has(getKeyForGroupId(MISSING_GROUP_ID))
-    ) {
-      this.setState({ isRootGroupExpanded: true });
-    }
     const newGroups = mapGroups(this.props.segmentGroups, (group) => {
       const shouldBeExpanded = expandedKeySet.has(getKeyForGroupId(group.groupId));
       if (shouldBeExpanded !== group.isExpanded) {
@@ -738,7 +708,6 @@ class SegmentsView extends React.Component<Props, State> {
     const rootGroupWithChildren = {
       ...rootGroup,
       children: segmentGroups,
-      isExpanded: prevState.isRootGroupExpanded,
     };
     if (
       prevState.prevProps?.segments !== segments ||
@@ -770,10 +739,7 @@ class SegmentsView extends React.Component<Props, State> {
         groupTree: generatedGroupTree,
         searchableTreeItemList,
         prevProps: nextProps,
-        expandedGroupKeys: getExpandedKeysWithRoot(
-          nextProps.segmentGroups,
-          prevState.isRootGroupExpanded,
-        ),
+        expandedGroupKeys: getExpandedKeysWithRoot(nextProps.segmentGroups),
       };
     }
     if (prevState.prevProps?.meshes !== meshes) {
@@ -1805,7 +1771,6 @@ class SegmentsView extends React.Component<Props, State> {
             const isSegmentHierarchyEmpty = !(
               allSegments?.size() || this.props.segmentGroups.length
             );
-            const mapId = getMapIdFn(this.props.visibleSegmentationLayer);
 
             if (!this.props.visibleSegmentationLayer) {
               return (
@@ -1843,13 +1808,11 @@ class SegmentsView extends React.Component<Props, State> {
                     showContextMenuAt={this.showContextMenuAt}
                     hideContextMenu={this.hideContextMenu}
                     key={segment.id}
-                    mapId={mapId}
                     segment={segment}
-                    centeredSegmentId={centeredSegmentId}
+                    isCentered={centeredSegmentId === segment.id}
                     selectedSegmentIds={this.props.selectedIds.segments}
                     onSelectSegment={this.onSelectSegment}
                     mesh={this.props.meshes[segment.id]}
-                    isJSONMappingEnabled={this.props.isJSONMappingEnabled}
                     mappingInfo={this.props.mappingInfo}
                     activeCellId={this.props.activeCellId}
                     setHoveredSegmentId={this.props.setHoveredSegmentId}
@@ -1866,6 +1829,8 @@ class SegmentsView extends React.Component<Props, State> {
                     currentMeshFile={this.props.currentMeshFile}
                     onRenameStart={this.onRenameStart}
                     onRenameEnd={this.onRenameEnd}
+                    // TODO #7895: The line below causes SegmentItems to always rerender
+                    // if SegmentsView rerenders.
                     multiSelectMenu={multiSelectMenu()}
                     activeVolumeTracing={this.props.activeVolumeTracing}
                   />
@@ -2017,6 +1982,7 @@ class SegmentsView extends React.Component<Props, State> {
                             titleRender={titleRender}
                             style={{
                               marginTop: 12,
+                              marginLeft: -26, // hide switcherIcon for root group
                               flex: "1 1 auto",
                               overflow: "auto", // use hidden when not using virtualization
                             }}

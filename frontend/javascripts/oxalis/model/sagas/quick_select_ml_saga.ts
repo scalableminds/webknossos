@@ -4,7 +4,7 @@ import { OrthoView, TypedArrayWithoutBigInt, Vector2, Vector3 } from "oxalis/con
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { V3 } from "libs/mjs";
+import { V2, V3 } from "libs/mjs";
 import { ComputeQuickSelectForRectAction } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
@@ -48,23 +48,38 @@ async function getMask(
   }
 
   const userBox = userBoxMag1.fromMag1ToMag(mag);
+  const maskBoxInMag = maskBoxMag1.fromMag1ToMag(mag);
   const maskData = await getSamMask(
     dataset,
     layerName,
     mag,
-    maskBoxMag1.fromMag1ToMag(mag),
-    userBox.getMinUV(activeViewport),
-    userBox.getMaxUV(activeViewport),
+    maskBoxInMag,
+    V2.sub(userBox.getMinUV(activeViewport), maskBoxInMag.getMinUV(activeViewport)),
+    V2.sub(userBox.getMaxUV(activeViewport), maskBoxInMag.getMinUV(activeViewport)),
     additionalCoordinates,
     intensityRange,
   );
 
+  const size = maskBoxInMag.getSize();
+  console.log("size", size);
   const stride =
     activeViewport === "PLANE_XZ"
-      ? [MASK_SIZE[1], MASK_SIZE[0], MASK_SIZE[0] * MASK_SIZE[1] * MASK_SIZE[2]]
-      : [MASK_SIZE[2], MASK_SIZE[0], MASK_SIZE[0] * MASK_SIZE[1] * MASK_SIZE[2]];
+      ? [size[1], size[0], size[0] * size[1] * size[2]]
+      : [size[2], size[0], size[0] * size[1] * size[2]];
 
-  return ndarray(maskData, MASK_SIZE, stride);
+  const ndarr = ndarray(maskData, size, stride);
+
+  // a.hi(x,y) => a[:x, :y]
+  // a.lo(x,y) => a[x:, y:]
+  return ndarr
+    .hi(
+      userBox.getMaxUV(activeViewport)[0] - maskBoxInMag.getMinUV(activeViewport)[0],
+      userBox.getMaxUV(activeViewport)[1] - maskBoxInMag.getMinUV(activeViewport)[1],
+    )
+    .lo(
+      userBox.getMinUV(activeViewport)[0] - maskBoxInMag.getMinUV(activeViewport)[0],
+      userBox.getMinUV(activeViewport)[1] - maskBoxInMag.getMinUV(activeViewport)[1],
+    );
 }
 
 export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {

@@ -2342,7 +2342,7 @@ export async function getSamMask(
   selectionBottomRight: Vector2, // in target mag
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
-): Promise<Float32Array> {
+): Promise<Uint8Array> {
   const params = new URLSearchParams();
   if (intensityRange != null) {
     params.append("intensityMin", `${intensityRange[0]}`);
@@ -2364,7 +2364,7 @@ export async function getSamMask(
       showErrorToast: false,
     },
   );
-  return new Float32Array(buffer);
+  return new Uint8Array(buffer);
 }
 
 // ### Short links

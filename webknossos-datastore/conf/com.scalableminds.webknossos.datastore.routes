@@ -79,6 +79,7 @@ POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/seg
 POST          /datasets/:organizationName/:dataSetName/layers/:dataLayerName/segmentStatistics/boundingBox                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getSegmentBoundingBox(token: Option[String], organizationName: String, dataSetName: String, dataLayerName: String)
 
 # DataSource management
+GET           /datasets                                                                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.testChunk(token: Option[String], resumableChunkNumber: Int, resumableIdentifier: String)
 POST          /datasets                                                                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.uploadChunk(token: Option[String])
 POST          /datasets/reserveUpload                                                                                                         @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reserveUpload(token: Option[String])
 POST          /datasets/reserveManualUpload                                                                                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reserveManualUpload(token: Option[String])

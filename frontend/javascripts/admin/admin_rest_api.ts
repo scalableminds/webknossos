@@ -1273,7 +1273,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
     (token) =>
       // @ts-expect-error ts-migrate(2739) FIXME: Type 'Resumable' is missing the following properti... Remove this comment to see the full error message
       new ResumableJS({
-        testChunks: false,
+        testChunks: true,
         target: `${datastoreUrl}/data/datasets?token=${token}`,
         chunkSize: 10 * 1024 * 1024, // 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],

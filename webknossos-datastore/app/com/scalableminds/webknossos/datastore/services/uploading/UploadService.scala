@@ -144,6 +144,21 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def isOutsideUploadDir(uploadDir: Path, filePath: String): Boolean =
     uploadDir.relativize(uploadDir.resolve(filePath)).startsWith("../")
 
+  def isChunkPresent(uploadFileId: String,
+                        currentChunkNumber: Long,
+                        ): Fox[Boolean] = {
+    val uploadId = extractDatasetUploadId(uploadFileId)
+    for {
+      dataSourceId <- getDataSourceIdByUploadId(uploadId)
+      uploadDir = uploadDirectory(dataSourceId.team, uploadId)
+      filePathRaw = uploadFileId.split("/").tail.mkString("/")
+      filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
+      _ <- bool2Fox(!isOutsideUploadDir(uploadDir, filePath)) ?~> s"Invalid file path: $filePath"
+      isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
+      isChunkPresent <- Fox.runIf(isFileKnown)(runningUploadMetadataStore.containedInSet(redisKeyForFileChunkCount(uploadId, filePath), String.valueOf(currentChunkNumber)))
+    } yield isFileKnown && isChunkPresent.getOrElse(false)
+  }
+
   def handleUploadChunk(uploadFileId: String,
                         chunkSize: Long,
                         totalChunkCount: Long,

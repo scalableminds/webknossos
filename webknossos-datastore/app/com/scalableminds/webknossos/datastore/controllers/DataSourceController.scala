@@ -177,6 +177,22 @@ class DataSourceController @Inject()(
         )
     }
 
+  def testChunk(token: Option[String], resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      for {
+        dataSourceId <- uploadService.getDataSourceIdByUploadId(
+          uploadService.extractDatasetUploadId(resumableIdentifier)) ?~> "dataset.upload.validation.failed"
+        result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
+                                                    urlOrHeaderToken(token, request)) {
+          for {
+            isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier) // TODO: Maybe write a convenience function for this
+            _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
+            isPresent <- uploadService.isChunkPresent(resumableIdentifier, resumableChunkNumber)
+          } yield if (isPresent) Ok else NoContent
+        }
+      } yield result
+    }
+
   def finishUpload(token: Option[String]): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {
     implicit request =>
       log() {

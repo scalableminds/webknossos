@@ -19,7 +19,7 @@ import java.util.Date
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
-import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, LengthUnit, VoxelSize}
 import models.team.PricingPlan
 
 object MovieResolutionSetting extends ExtendedEnumeration {
@@ -322,6 +322,7 @@ class JobController @Inject()(
   def runExportTiffJob(organizationName: String,
                        datasetName: String,
                        bbox: String,
+                       additionalCoordinates: Option[String],
                        layerName: Option[String],
                        mag: Option[String],
                        annotationLayerName: Option[String],
@@ -336,6 +337,7 @@ class JobController @Inject()(
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)
+          _ <- Fox.runOptional(additionalCoordinates)(coords => Json.parse(coords).validate[Seq[AdditionalCoordinate]]) ~> "job.additionalCoordinates.invalid"
           command = JobCommand.export_tiff
           exportFileName = if (asOmeTiff)
             s"${formatDateForFilename(new Date())}__${datasetName}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.ome.tif"
@@ -349,7 +351,8 @@ class JobController @Inject()(
             "layer_name" -> layerName,
             "mag" -> mag,
             "annotation_layer_name" -> annotationLayerName,
-            "annotation_id" -> annotationId
+            "annotation_id" -> annotationId,
+            "additional_coordinates" -> additionalCoordinates,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunTiffExport"
           js <- jobService.publicWrites(job)

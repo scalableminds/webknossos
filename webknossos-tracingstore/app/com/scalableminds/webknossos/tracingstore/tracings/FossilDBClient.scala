@@ -53,14 +53,16 @@ class FossilDBClient(collection: String,
   private val stub = FossilDBGrpc.stub(channel)
   private val blockingStub = FossilDBGrpc.blockingStub(channel)
   private val healthStub = HealthGrpc.newFutureStub(channel)
+  lazy val authority: String = f"$address:$port"
 
-  def checkHealth: Fox[Unit] = {
+  def checkHealth(verbose: Boolean = false): Fox[Unit] = {
     val resultFox = for {
       reply: HealthCheckResponse <- wrapException(
         Grpc.guavaFuture2ScalaFuture(healthStub.check(HealthCheckRequest.getDefaultInstance)))
       replyString = reply.getStatus.toString
       _ <- bool2Fox(replyString == "SERVING") ?~> replyString
-      _ = logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
+      _ = if (verbose)
+        logger.info(f"Successfully tested FossilDB health at $authority. Reply: " + replyString)
     } yield ()
     for {
       box <- resultFox.futureBox
@@ -68,7 +70,7 @@ class FossilDBClient(collection: String,
         case Full(()) => Fox.successful(())
         case Empty    => Fox.empty
         case net.liftweb.common.Failure(msg, _, _) =>
-          val errorText = s"Failed to connect to FossilDB at $address:$port: $msg"
+          val errorText = s"Failed to connect to FossilDB at $authority: $msg"
           logger.error(errorText)
           Fox.failure(errorText)
       }

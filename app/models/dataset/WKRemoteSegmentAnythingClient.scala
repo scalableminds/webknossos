@@ -16,6 +16,7 @@ class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
               selectionTopLeftY: Int,
               selectionBottomRightX: Int,
               selectionBottomRightY: Int,
+              sectionCount: Int,
               intensityMin: Option[Float],
               intensityMax: Option[Float]): Fox[Array[Byte]] = {
     val metadataLengthInBytes = 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 1
@@ -28,7 +29,7 @@ class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
     buffer.putInt(selectionTopLeftY)
     buffer.putInt(selectionBottomRightX)
     buffer.putInt(selectionBottomRightY)
-    buffer.put(1.toByte) // section count always 1 for now
+    buffer.put(sectionCount.toByte)
     val imageWithMetadata = buffer.array()
     System.arraycopy(imageData, 0, imageWithMetadata, metadataLengthInBytes, imageData.length)
     rpc(s"${conf.SegmentAnything.uri}/predictions/sam2_hiera_b")

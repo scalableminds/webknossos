@@ -45,7 +45,7 @@ object DatasetUpdateParameters extends TristateOptionJsonHelper {
 
 case class SegmentAnythingMaskParameters(
     mag: Vec3Int,
-    surroundingBoundingBox: BoundingBox, // size must be 1024×1024×1 in target mag
+    surroundingBoundingBox: BoundingBox, // size must be 1024×1024×depth in target mag with depth <= 12
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     selectionTopLeftX: Int, // in target-mag, relative to paddedBoundingBox topleft
     selectionTopLeftY: Int,
@@ -406,7 +406,9 @@ class DatasetController @Inject()(userService: UserService,
           dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataset.noLayers"
           datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           targetMagSelectedBbox: BoundingBox = request.body.surroundingBoundingBox / request.body.mag
-          _ <- bool2Fox(targetMagSelectedBbox.size.sorted == Vec3Int(1, 1024, 1024)) ?~> s"Target-mag selected bbox must be sized 1024×1024×1 (or transposed), got ${targetMagSelectedBbox.size}"
+          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z == 1024) ?~> s"Target-mag selected bbox must be sized 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
+          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.y == 1024) ?~> s"Target-mag selected bbox must be sized 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
+          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.x <= 12) ?~> s"Target-mag selected bbox depth must be at most 12"
           data <- datastoreClient.getLayerData(
             organizationName,
             dataset,
@@ -426,6 +428,7 @@ class DatasetController @Inject()(userService: UserService,
             request.body.selectionTopLeftY,
             request.body.selectionBottomRightX,
             request.body.selectionBottomRightY,
+            targetMagSelectedBbox.size.sorted.x, // section count
             intensityMin,
             intensityMax
           ) ?~> "segmentAnything.getMask.failed"

@@ -124,19 +124,23 @@ function TreeHierarchyView(props: Props) {
     // scroll to active tree if it changes
     if (treeRef.current && props.activeTreeId) {
       const activeTreeKey = getNodeKey(GroupTypeEnum.TREE, props.activeTreeId);
-      treeRef.current.scrollTo({ key: activeTreeKey, align: "top" });
 
+      // For some React rendering/timing  reasons, the target element might  not be rendered yet. That messes with calculcating the offsets for srolling. Hence delay this a bit
+      setTimeout(() => {
+        if (treeRef.current) treeRef.current.scrollTo({ key: activeTreeKey, align: "auto" });
+      });
+      
       // Make sure to select the active tree (for highlighting etc)
       // Remember, the active tree can be changed by actions outside of this component
       props.onSingleSelectTree(props.activeTreeId);
     }
   }, [props.activeTreeId, props.onSingleSelectTree]);
-
+  
   useEffect(() => {
     // scroll to active group if it changes
     if (treeRef.current && props.activeGroupId) {
       const activeGroupKey = getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId);
-      treeRef.current.scrollTo({ key: activeGroupKey, align: "top" });
+      treeRef.current.scrollTo({ key: activeGroupKey, align: "auto" });
     }
   }, [props.activeGroupId]);
 

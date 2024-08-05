@@ -177,13 +177,13 @@ function CommentTabView(props: Props) {
       if (treeRef.current)
         if (activeComment) {
           const commentNodeKey = `comment-${activeComment.nodeId}`;
-          treeRef.current.scrollTo({ key: commentNodeKey, align: "top" });
+          treeRef.current.scrollTo({ key: commentNodeKey, align: "auto" });
           setHighlightedNodeIds([commentNodeKey]);
         } else if (activeTreeId) {
           const treeNodeKey = activeTreeId.toString();
           treeRef.current.scrollTo({
             key: treeNodeKey,
-            align: "top",
+            align: "auto",
           });
           setHighlightedNodeIds([treeNodeKey]);
         }

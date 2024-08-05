@@ -131,10 +131,10 @@ class AnnotationIOController @Inject()(
             dataset <- findDatasetForUploadedAnnotations(skeletonTracings,
                                                          volumeLayersGroupedRaw.flatten.map(_.tracing),
                                                          wkUrl)
-            volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset)
+            dataSource <- datasetService.dataSourceFor(dataset) ?~> Messages("dataset.notImported", dataset.name)
+            usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataset.name)
+            volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset, usableDataSource)
             tracingStoreClient <- tracingStoreService.clientFor(dataset)
-            dataSource <- datasetService.dataSourceFor(dataset)
-            usableDataSource <- dataSource.toUsable.toFox
             mergedVolumeLayers <- mergeAndSaveVolumeLayers(volumeLayersGrouped,
                                                            tracingStoreClient,
                                                            parsedFiles.otherFiles,
@@ -285,9 +285,9 @@ class AnnotationIOController @Inject()(
   }
 
   private def adaptVolumeTracingsToFallbackLayer(volumeLayersGrouped: List[List[UploadedVolumeLayer]],
-                                                 dataset: Dataset): Fox[List[List[UploadedVolumeLayer]]] =
+                                                 dataset: Dataset,
+                                                 dataSource: DataSourceLike): Fox[List[List[UploadedVolumeLayer]]] =
     for {
-      dataSource <- datasetService.dataSourceFor(dataset).flatMap(_.toUsable)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(GlobalAccessContext) ?~> "dataStore.notFoundForDataset"
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext)
       remoteDataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)

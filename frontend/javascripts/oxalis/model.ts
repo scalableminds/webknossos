@@ -227,6 +227,9 @@ export class OxalisModel {
       const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
       const id = cube.getDataValue(pos, additionalCoordinates, null, usableZoomStep);
       return {
+        // Note that this id can be an unmapped id even when
+        // a mapping is active, if it is a HDF5 mapping that is partially loaded
+        // and no entry exists yet for the input id.
         id: cube.mapId(id),
         unmappedId: id,
       };

@@ -1,4 +1,4 @@
-import { createStore, applyMiddleware } from "redux";
+import { createStore, applyMiddleware, Middleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
 import type {
@@ -160,6 +160,7 @@ export type Tree = {
 export type TreeGroupTypeFlat = {
   readonly name: string;
   readonly groupId: number;
+  readonly isExpanded?: boolean;
 };
 export type TreeGroup = TreeGroupTypeFlat & {
   readonly children: Array<TreeGroup>;
@@ -254,7 +255,7 @@ export type VolumeTracing = TracingBase & {
   readonly contourList: Array<Vector3>;
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;
-  readonly mappingIsEditable?: boolean;
+  readonly hasEditableMapping?: boolean;
   readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
 };
@@ -346,6 +347,7 @@ export type QuickSelectConfig = {
 export type UserConfiguration = {
   readonly autoSaveLayouts: boolean;
   readonly autoRenderMeshInProofreading: boolean;
+  readonly selectiveVisibilityInProofreading: boolean;
   readonly brushSize: number;
   readonly clippingDistance: number;
   readonly clippingDistanceArbitrary: number;
@@ -392,7 +394,10 @@ export type RecommendedConfiguration = Partial<
 // A histogram value of undefined indicates that the histogram hasn't been fetched yet
 // whereas a value of null indicates that the histogram couldn't be fetched
 export type HistogramDataForAllLayers = Record<string, APIHistogramData | null>;
-export type Mapping = Map<number, number>;
+export type Mapping = Map<number, number> | Map<bigint, bigint>;
+export type NumberLike = number | bigint;
+export type NumberLikeMap = Map<NumberLike, NumberLike>;
+
 export type MappingType = "JSON" | "HDF5";
 export type ActiveMappingInfo = {
   readonly mappingName: string | null | undefined;
@@ -400,7 +405,6 @@ export type ActiveMappingInfo = {
   readonly mappingColors: number[] | null | undefined;
   readonly hideUnmappedIds: boolean;
   readonly mappingStatus: MappingStatus;
-  readonly mappingSize: number;
   readonly mappingType: MappingType;
 };
 export type TemporaryConfiguration = {
@@ -410,6 +414,7 @@ export type TemporaryConfiguration = {
   readonly controlMode: ControlMode;
   readonly mousePosition: Vector2 | null | undefined;
   readonly hoveredSegmentId: number | null;
+  readonly hoveredUnmappedSegmentId: number | null;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly isMergerModeEnabled: boolean;
   readonly gpuSetup: {
@@ -524,6 +529,7 @@ type UiInformation = {
   readonly aIJobModalState: StartAIJobModalState;
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
+  readonly activeUserBoundingBoxId: number | null | undefined;
   readonly storedLayouts: Record<string, any>;
   readonly isImportingMesh: boolean;
   readonly isInAnnotationView: boolean;
@@ -629,7 +635,7 @@ const combinedReducers = reduceReducers(
 const store = createStore<OxalisState>(
   enableBatching(combinedReducers),
   defaultState,
-  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware),
+  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),
 );
 
 export function startSagas(rootSaga: Saga<any[]>) {

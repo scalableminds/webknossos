@@ -1,5 +1,5 @@
 import { presetPalettes } from "@ant-design/colors";
-import { UnitShort, type Vector3, type Vector6 } from "oxalis/constants";
+import { LongUnitToShortUnitMap, UnitShort, type Vector3, type Vector6 } from "oxalis/constants";
 import { Unicode } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import _ from "lodash";
@@ -145,7 +145,7 @@ export function formatScale(scale: VoxelSize | null | undefined, roundTo: number
   }
   const scaleFactor = scale.factor;
   const smallestScaleFactor = Math.min(...scaleFactor);
-  const unitDimension = { unit: scale.unit, dimension: 1 };
+  const unitDimension = { unit: LongUnitToShortUnitMap[scale.unit], dimension: 1 };
   const [conversionFactor, newUnit] = findBestUnitForFormatting(
     smallestScaleFactor,
     unitDimension,
@@ -173,10 +173,10 @@ function formatNumberInUnit(
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
 ): string {
-  let unit = unitDimension.unit;
+  let maybeAdjustedUnit;
   let valueInUnit = number;
   if (number === 0) {
-    unit = adjustUnitToDimension(unit, unitDimension.dimension);
+    maybeAdjustedUnit = adjustUnitToDimension(unitDimension.unit, unitDimension.dimension);
   } else {
     const [conversionFactor, newUnit] = findBestUnitForFormatting(
       number,
@@ -187,9 +187,9 @@ function formatNumberInUnit(
     );
 
     valueInUnit = number / conversionFactor;
-    unit = newUnit;
+    maybeAdjustedUnit = newUnit;
   }
-  return `${toOptionalFixed(valueInUnit, decimalPrecision)}${ThinSpace}${unit}`;
+  return `${toOptionalFixed(valueInUnit, decimalPrecision)}${ThinSpace}${maybeAdjustedUnit}`;
 }
 
 export const nmFactorToUnit = new Map([
@@ -312,12 +312,20 @@ export function formatNumberToVolume(
   );
 }
 
-const byteFactorToUnit = new Map([
-  [1, "B"],
-  [1e3, "KB"],
-  [1e6, "MB"],
-  [1e9, "GB"],
-  [1e12, "TB"],
+enum ByteUnit {
+  B = "B",
+  KB = "KB",
+  MB = "MB",
+  GB = "GB",
+  TB = "TB",
+}
+
+const byteFactorToUnit: Map<number, ByteUnit> = new Map([
+  [1, ByteUnit.B],
+  [1e3, ByteUnit.KB],
+  [1e6, ByteUnit.MB],
+  [1e9, ByteUnit.GB],
+  [1e12, ByteUnit.TB],
 ]);
 
 // Formats a byte count into a readable string.
@@ -327,7 +335,7 @@ export function formatCountToDataAmountUnit(
   preferShorterDecimals: boolean = false,
   decimalPrecision: number = 1,
 ): string {
-  const unitDimension = { unit: "B", dimension: 1 };
+  const unitDimension = { unit: ByteUnit.B, dimension: 1 };
   return formatNumberInUnit(
     count,
     unitDimension,
@@ -342,9 +350,9 @@ const getSortedFactorsAndUnits = _.memoize((unitMap: Map<number, string>) =>
 );
 
 // This tuple represents the unit and the dimension the unit is in.
-type UnitDimension = { unit: string; dimension: number };
+type UnitDimension = { unit: UnitShort | ByteUnit; dimension: number };
 
-function adjustUnitToDimension(unit: string, dimension: number): string {
+function adjustUnitToDimension(unit: UnitShort | ByteUnit, dimension: number): string {
   return dimension === 1 ? unit : dimension === 2 ? `${unit}²` : `${unit}³`;
 }
 

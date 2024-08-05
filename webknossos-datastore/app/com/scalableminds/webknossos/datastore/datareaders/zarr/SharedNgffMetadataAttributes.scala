@@ -52,4 +52,3 @@ case class NgffChannelAttributes(color: Option[String],
 object NgffChannelAttributes {
   implicit val jsonFormat: OFormat[NgffChannelAttributes] = Json.format[NgffChannelAttributes]
 }
-

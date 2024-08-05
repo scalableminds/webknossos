@@ -1,12 +1,8 @@
-package com.scalableminds.webknossos.datastore.datareaders.zarr;
+package com.scalableminds.webknossos.datastore.datareaders.zarr
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import play.api.libs.json.{Json, OFormat}
-
-
-
-
 
 case class NgffGroupHeader(zarr_format: Int)
 object NgffGroupHeader {
@@ -65,4 +61,3 @@ object NgffLabelsGroup {
   implicit val jsonFormat: OFormat[NgffLabelsGroup] = Json.format[NgffLabelsGroup]
   val LABEL_PATH = "labels/.zattrs"
 }
-

@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.datastore.dataformats.zarr
 
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, option2Fox}
-import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}

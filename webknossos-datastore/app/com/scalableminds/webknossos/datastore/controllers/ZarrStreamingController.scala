@@ -7,11 +7,20 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, NgffMetadataV0_5, ZarrHeader}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{
+  NgffGroupHeader,
+  NgffMetadata,
+  NgffMetadataV0_5,
+  ZarrHeader
+}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3ArrayHeader, Zarr3GroupHeader}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType, AnnotationSource}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.models.requests.{
+  Cuboid,
+  DataServiceDataRequest,
+  DataServiceRequestSettings
+}
 import com.scalableminds.webknossos.datastore.models.{VoxelPosition, VoxelSize}
 import com.scalableminds.webknossos.datastore.services._
 import net.liftweb.common.Box.tryo
@@ -72,9 +81,9 @@ class ZarrStreamingController @Inject()(
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
         omeNgffHeaderV2 = NgffMetadataV0_5.fromNameVoxelSizeAndMags(dataLayerName,
-                                                                  dataSource.scale,
-                                                                  dataLayer.resolutions,
-                                                                  dataLayer.additionalAxes)
+                                                                    dataSource.scale,
+                                                                    dataLayer.resolutions,
+                                                                    dataLayer.additionalAxes)
         zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeaderV2))
       } yield Ok(Json.toJson(zarr3GroupHeader))
     }
@@ -126,9 +135,9 @@ class ZarrStreamingController @Inject()(
                                                                                       dataLayerName) ?~> Messages(
               "dataSource.notFound") ~> NOT_FOUND
             dataSourceOmeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(dataLayerName,
-                                                                              dataSource.scale,
-                                                                              dataLayer.resolutions,
-                                                                              dataLayer.additionalAxes)
+                                                                                dataSource.scale,
+                                                                                dataLayer.resolutions,
+                                                                                dataLayer.additionalAxes)
             zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(dataSourceOmeNgffHeader))
           } yield Ok(Json.toJson(zarr3GroupHeader))
       )
@@ -247,7 +256,7 @@ class ZarrStreamingController @Inject()(
                             annotationSource.tracingStoreUrl,
                             relevantToken)
             .map(Ok(_)),
-        orElse = (annotationSource) =>
+        orElse = annotationSource =>
           rawZarrCube(annotationSource.organizationName, annotationSource.datasetName, dataLayerName, mag, coordinates)
       )
     }
@@ -341,7 +350,7 @@ class ZarrStreamingController @Inject()(
         remoteTracingstoreClient
           .getZArray(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, relevantToken)
           .map(z => Ok(Json.toJson(z))),
-      orElse = (annotationSource) =>
+      orElse = annotationSource =>
         zArray(annotationSource.organizationName, annotationSource.datasetName, dataLayerName, mag)
     )
   }
@@ -368,7 +377,7 @@ class ZarrStreamingController @Inject()(
       accessToken: String,
       dataLayerName: String,
       ifIsAnnotationLayer: (AnnotationLayer, AnnotationSource, Option[String]) => Fox[Result],
-      orElse: (AnnotationSource) => Fox[Result])(implicit request: Request[Any]): Fox[Result] =
+      orElse: AnnotationSource => Fox[Result])(implicit request: Request[Any]): Fox[Result] =
     for {
       annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
       relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)

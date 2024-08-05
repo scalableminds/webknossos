@@ -235,9 +235,9 @@ class VolumeTracingZarrStreamingController @Inject()(
         existingMags = tracing.resolutions.map(vec3IntFromProto)
         dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(tracingId,
-                                                                dataSourceVoxelSize = dataSource.scale,
-                                                                mags = existingMags.toList,
-                                                                additionalAxes = dataSource.additionalAxesUnion)
+                                                                  dataSourceVoxelSize = dataSource.scale,
+                                                                  mags = existingMags.toList,
+                                                                  additionalAxes = dataSource.additionalAxesUnion)
         zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeader))
       } yield Ok(Json.toJson(zarr3GroupHeader))
     }

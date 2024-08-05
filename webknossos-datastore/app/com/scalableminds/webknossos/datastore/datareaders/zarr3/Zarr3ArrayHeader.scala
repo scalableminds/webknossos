@@ -251,7 +251,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
       )
 
   }
-  def fromDataLayer (dataLayer: DataLayer): Zarr3ArrayHeader = {
+  def fromDataLayer(dataLayer: DataLayer): Zarr3ArrayHeader = {
     val additionalAxes = reorderAdditionalAxes(dataLayer.additionalAxes.getOrElse(Seq.empty))
     Zarr3ArrayHeader(
       zarr_format = 3,

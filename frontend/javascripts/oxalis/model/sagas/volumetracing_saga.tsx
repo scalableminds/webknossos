@@ -415,6 +415,12 @@ export function* floodFill(): Saga<void> {
 
     const { position: positionFloat, planeId } = floodFillAction;
     const volumeTracing = yield* select(enforceActiveVolumeTracing);
+    if (volumeTracing.hasEditableMapping) {
+      const message = "Volume modification is not allowed when an editable mapping is active.";
+      Toast.error(message);
+      console.error(message);
+      return;
+    }
     const segmentationLayer = yield* call(
       [Model, Model.getSegmentationTracingLayer],
       volumeTracing.tracingId,

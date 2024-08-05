@@ -1182,6 +1182,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     onClick: computeMeshAdHoc,
     label: "Compute Mesh (ad-hoc)",
   };
+  const isVolumeModificationAllowed = !hasEditableMapping(state);
   const nonSkeletonActions: ItemType[] =
     volumeTracing != null && globalPosition != null
       ? [
@@ -1207,7 +1208,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,
-          allowUpdate
+          allowUpdate && isVolumeModificationAllowed
             ? {
                 key: "fill-cell",
                 onClick: () => handleFloodFillFromGlobalPosition(globalPosition, viewport),

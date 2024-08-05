@@ -42,7 +42,6 @@ import {
   GroupTypeEnum,
   deepFlatFilter,
   getNodeKey,
-  getNodeKeyFromNode,
   moveGroupsHelper,
   findParentGroupNode,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
@@ -69,8 +68,8 @@ import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
 import { api, Store } from "oxalis/singletons";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
-import { useEffectOnlyOnce } from "libs/react_hooks";
 import { ColoredDotIcon } from "./segments_tab/segment_list_item";
+import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 
 type Props = {
   activeTreeId: number | null | undefined;
@@ -106,25 +105,20 @@ function TreeHierarchyView(props: Props) {
       name: "Root",
       groupId: MISSING_GROUP_ID,
       children: props.treeGroups,
+      isExpanded: true,
     };
 
     const generatedGroupTree = insertTreesAndTransform([rootGroup], groupToTreesMap, props.sortBy);
     setUITreeData(generatedGroupTree);
   }, [props.trees, props.sortBy, props.treeGroups]);
 
-  useEffectOnlyOnce(() => {
-    // set default expanded keys
-    // the defaults should include the root node and at the active tree's group if applicable
-    let defaultExpandedKeys: React.Key[] = [getNodeKey(GroupTypeEnum.GROUP, MISSING_GROUP_ID)];
-    if (props.activeTreeId) {
-      const activeTreesGroupId = props.trees[props.activeTreeId].groupId;
-      if (activeTreesGroupId) {
-        defaultExpandedKeys.push(getNodeKey(GroupTypeEnum.GROUP, activeTreesGroupId));
-      }
-
-      setExpandedNodeKeys(defaultExpandedKeys);
-    }
-  });
+  useEffect(() => {
+    const expandedKeys = deepFlatFilter(
+      UITreeData,
+      (node) => node.type === GroupTypeEnum.GROUP && node.expanded,
+    ).map((node) => node.key);
+    setExpandedNodeKeys(expandedKeys);
+  }, [UITreeData]);
 
   useEffect(() => {
     // scroll to active tree if it changes
@@ -148,6 +142,7 @@ function TreeHierarchyView(props: Props) {
 
   const onExpand: TreeProps<TreeNode>["onExpand"] = (expandedKeys, info) => {
     const clickedNode = info.node;
+    const expandedKeySet = new Set(expandedKeys);
 
     if (clickedNode.type === GroupTypeEnum.GROUP && info.expanded === false) {
       // when collapsing a group, we need to collapse all its sub-gropus
@@ -155,10 +150,17 @@ function TreeHierarchyView(props: Props) {
         [clickedNode],
         (node) => node.type === GroupTypeEnum.GROUP,
       ).map((node) => node.key);
-      expandedKeys = _.without(expandedKeys, ...subGroupKeys);
+      subGroupKeys.forEach((key) => expandedKeySet.delete(key));
     }
-
-    setExpandedNodeKeys(expandedKeys);
+    const newGroups = mapGroups(props.treeGroups, (group) => {
+      const shouldBeExpanded = expandedKeySet.has(getNodeKey(GroupTypeEnum.GROUP, group.groupId));
+      if (shouldBeExpanded !== group.isExpanded) {
+        return { ...group, isExpanded: shouldBeExpanded };
+      } else {
+        return group;
+      }
+    });
+    setUpdateTreeGroups(newGroups);
   };
 
   const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
@@ -238,17 +240,30 @@ function TreeHierarchyView(props: Props) {
     }
   }
 
-  function setExpansionOfAllSubgroupsTo(group: TreeNode, expanded: boolean) {
-    const selectedGroupIdKey = getNodeKeyFromNode(group);
-    const subGroupKeys = deepFlatFilter([group], (node) => node.type === GroupTypeEnum.GROUP).map(
-      (node) => node.key,
-    );
-
-    if (expanded) {
-      setExpandedNodeKeys(_.uniq([...expandedNodeKeys, ...subGroupKeys]));
-    } else {
-      setExpandedNodeKeys(_.without(expandedNodeKeys, selectedGroupIdKey, ...subGroupKeys));
+  function setExpansionOfAllSubgroupsTo(parentGroup: TreeNode, expanded: boolean) {
+    if (parentGroup.id === MISSING_GROUP_ID) {
+      const newGroups = mapGroups(props.treeGroups, (group) => {
+        if (group.isExpanded !== expanded) {
+          return { ...group, isExpanded: expanded };
+        }
+        return group;
+      });
+      setUpdateTreeGroups(newGroups);
+      return;
     }
+    const subGroups = getGroupByIdWithSubgroups(props.treeGroups, parentGroup.id);
+    const subGroupsMap = new Set(subGroups);
+    // If the subgroups should be collapsed, do not collapse the group itself.
+    // Do expand the group if the subgroups are expanded though.
+    if (expanded === false) subGroupsMap.delete(parentGroup.id);
+    const newGroups = mapGroups(props.treeGroups, (group) => {
+      if (subGroupsMap.has(group.groupId) && expanded !== group.isExpanded) {
+        return { ...group, isExpanded: expanded };
+      } else {
+        return group;
+      }
+    });
+    setUpdateTreeGroups(newGroups);
   }
 
   function onMoveWithContextAction(targetParentNode: TreeNode) {
@@ -281,6 +296,7 @@ function TreeHierarchyView(props: Props) {
         ? dragTargetNode.id
         : props.trees[dragTargetNode.id].groupId ?? MISSING_GROUP_ID;
 
+    let updatedTreeGroups: TreeGroup[] = props.treeGroups;
     if (draggedNode.type === GroupTypeEnum.TREE) {
       let allTreesToMove = [draggedNode.id];
 
@@ -297,12 +313,18 @@ function TreeHierarchyView(props: Props) {
       onBatchActions(moveActions, "SET_TREE_GROUP");
     } else {
       // A group was dragged - update the groupTree
-      const newTreeGroups = moveGroupsHelper(props.treeGroups, draggedNode.id, parentGroupId);
-      setUpdateTreeGroups(newTreeGroups);
+      updatedTreeGroups = moveGroupsHelper(props.treeGroups, draggedNode.id, parentGroupId);
     }
 
     // in either case expand the parent group
-    setExpandedNodeKeys([...expandedNodeKeys, getNodeKey(GroupTypeEnum.GROUP, parentGroupId)]);
+    const newGroups = mapGroups(updatedTreeGroups, (group) => {
+      if (group.groupId === parentGroupId && !group.isExpanded) {
+        return { ...group, isExpanded: true };
+      } else {
+        return group;
+      }
+    });
+    setUpdateTreeGroups(newGroups);
   }
 
   function createGroup(groupId: number) {

@@ -8,9 +8,9 @@ type Key = number;
 type Value = Vector3;
 type Entry = [Key, Value];
 
-export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
-  static fromCapacity(requestedCapacity: number): CuckooTable {
-    return new CuckooTable(this.computeTextureWidthFromCapacity(requestedCapacity));
+export class CuckooTableVec3 extends AbstractCuckooTable<Key, Value, Entry> {
+  static fromCapacity(requestedCapacity: number): CuckooTableVec3 {
+    return new CuckooTableVec3(this.computeTextureWidthFromCapacity(requestedCapacity));
   }
 
   getEmptyKey(): Key {
@@ -23,21 +23,21 @@ export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
 
   getEntryAtAddress(hashedAddress: number, optTable?: Uint32Array): Entry {
     const table = optTable || this.table;
-    const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
+    const offset = hashedAddress * this.getClass().getElementsPerEntry();
     return [table[offset], [table[offset + 1], table[offset + 2], table[offset + 3]]];
   }
 
   canDisplacedEntryBeIgnored(displacedKey: Key, newKey: Key): boolean {
     return (
       // Either, the slot is empty... (the value of EMPTY_KEY is not allowed as a key)
-      displacedKey === EMPTY_KEY ||
+      this._areKeysEqual(displacedKey, EMPTY_KEY) ||
       // or the slot already refers to the key
-      displacedKey === newKey
+      this._areKeysEqual(displacedKey, newKey)
     );
   }
 
   checkValidKey(key: Key) {
-    if (key === EMPTY_KEY) {
+    if (this._areKeysEqual(key, EMPTY_KEY)) {
       throw new Error(`The key ${EMPTY_KEY} is not allowed for the CuckooTable.`);
     }
   }
@@ -47,16 +47,15 @@ export class CuckooTable extends AbstractCuckooTable<Key, Value, Entry> {
   }
 
   writeEntryToTable(key: Key, value: Value, hashedAddress: number) {
-    const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
+    const offset = hashedAddress * this.getClass().getElementsPerEntry();
     this.table[offset] = key;
     this.table[offset + 1] = value[0];
     this.table[offset + 2] = value[1];
     this.table[offset + 3] = value[2];
   }
 
-  _hashKeyToAddress(seed: number, key: number): number {
+  _hashKeyToAddress(seed: number, key: Key): number {
     const state = this._hashCombine(seed, key);
-
-    return state % this.entryCapacity;
+    return state % this.getDiminishedEntryCapacity();
   }
 }

@@ -113,6 +113,7 @@ import {
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 import messages from "messages";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
+import { ActionPattern } from "redux-saga/effects";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
@@ -720,7 +721,7 @@ export function* diffVolumeTracing(
       // In case no mapping is active, this is denoted by setting the mapping name to null.
       const action = updateMappingName(
         volumeTracing.mappingName || null,
-        volumeTracing.mappingIsEditable || null,
+        volumeTracing.hasEditableMapping || null,
         volumeTracing.mappingIsLocked,
       );
       yield action;
@@ -823,17 +824,27 @@ function* updateHoveredSegmentId(): Saga<void> {
   }
 
   const globalMousePosition = yield* call(getGlobalMousePosition);
-  const hoveredCellInfo = yield* call(
+  const hoveredSegmentInfo = yield* call(
     { context: Model, fn: Model.getHoveredCellId },
     globalMousePosition,
   );
-  const id = hoveredCellInfo != null ? hoveredCellInfo.id : 0;
+  // Note that hoveredSegmentInfo.id can be an unmapped id even when
+  // a mapping is active, if it is a HDF5 mapping that is partially loaded
+  // and no entry exists yet for the input id.
+  const id = hoveredSegmentInfo != null ? hoveredSegmentInfo.id : 0;
+  const unmappedId = hoveredSegmentInfo != null ? hoveredSegmentInfo.unmappedId : 0;
   const oldHoveredSegmentId = yield* select(
     (store) => store.temporaryConfiguration.hoveredSegmentId,
+  );
+  const oldHoveredUnmappedSegmentId = yield* select(
+    (store) => store.temporaryConfiguration.hoveredUnmappedSegmentId,
   );
 
   if (oldHoveredSegmentId !== id) {
     yield* put(updateTemporarySettingAction("hoveredSegmentId", id));
+  }
+  if (oldHoveredUnmappedSegmentId !== unmappedId) {
+    yield* put(updateTemporarySettingAction("hoveredUnmappedSegmentId", unmappedId));
   }
 }
 
@@ -917,7 +928,7 @@ function* ensureValidBrushSize(): Saga<void> {
       "WK_READY",
       (action: Action) =>
         action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
-    ],
+    ] as ActionPattern<Action>,
     maybeClampBrushSize,
   );
 }

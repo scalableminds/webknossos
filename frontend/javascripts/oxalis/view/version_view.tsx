@@ -115,6 +115,7 @@ class VersionView extends React.Component<Props, State> {
           <h4
             style={{
               display: "inline-block",
+              marginLeft: 4,
             }}
           >
             Version History

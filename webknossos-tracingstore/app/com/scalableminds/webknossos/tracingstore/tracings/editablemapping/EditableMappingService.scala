@@ -143,23 +143,6 @@ class EditableMappingService @Inject()(
     } yield (newId, newEditableMappingInfo)
   }
 
-  def agglomerateIdForSegmentId(editableMappingId: String,
-                                segmentId: Long,
-                                remoteFallbackLayer: RemoteFallbackLayer,
-                                userToken: Option[String])(implicit ec: ExecutionContext): Fox[Long] = {
-    val chunkId = segmentId / defaultSegmentToAgglomerateChunkSize
-    for {
-      (info, version) <- getInfoAndActualVersion(editableMappingId, None, remoteFallbackLayer, userToken)
-      chunk <- getSegmentToAgglomerateChunkWithEmptyFallback(editableMappingId, chunkId, version).map(_.toMap)
-      agglomerateId <- chunk.get(segmentId) match {
-        case Some(agglomerateId) => Fox.successful(agglomerateId)
-        case None =>
-          getBaseSegmentToAgglomerate(info.baseMappingName, Set(segmentId), remoteFallbackLayer, userToken)
-            .flatMap(baseSegmentToAgglomerate => baseSegmentToAgglomerate.get(segmentId))
-      }
-    } yield agglomerateId
-  }
-
   def duplicate(editableMappingIdOpt: Option[String],
                 version: Option[Long],
                 remoteFallbackLayerBox: Box[RemoteFallbackLayer],
@@ -263,10 +246,38 @@ class EditableMappingService @Inject()(
 
   def update(editableMappingId: String,
              updateActionGroup: EditableMappingUpdateActionGroup,
-             newVersion: Long): Fox[Unit] =
+             newVersion: Long,
+             remoteFallbackLayer: RemoteFallbackLayer,
+             userToken: Option[String]): Fox[Unit] =
     for {
       actionsWithTimestamp <- Fox.successful(updateActionGroup.actions.map(_.addTimestamp(updateActionGroup.timestamp)))
+      _ <- dryApplyUpdates(editableMappingId, newVersion, actionsWithTimestamp, remoteFallbackLayer, userToken) ?~> "editableMapping.dryUpdate.failed"
       _ <- tracingDataStore.editableMappingUpdates.put(editableMappingId, newVersion, actionsWithTimestamp)
+    } yield ()
+
+  private def dryApplyUpdates(editableMappingId: String,
+                              newVersion: Long,
+                              updates: List[EditableMappingUpdateAction],
+                              remoteFallbackLayer: RemoteFallbackLayer,
+                              userToken: Option[String]): Fox[Unit] =
+    for {
+      (previousInfo, previousVersion) <- getInfoAndActualVersion(editableMappingId,
+                                                                 None,
+                                                                 remoteFallbackLayer,
+                                                                 userToken)
+      updater = new EditableMappingUpdater(
+        editableMappingId,
+        previousInfo.baseMappingName,
+        previousVersion,
+        newVersion,
+        remoteFallbackLayer,
+        userToken,
+        remoteDatastoreClient,
+        this,
+        tracingDataStore,
+        relyOnAgglomerateIds = updates.length <= 1
+      )
+      updated <- updater.applyUpdatesAndSave(previousInfo, updates, dry = true) ?~> "editableMapping.update.failed"
     } yield ()
 
   def applyPendingUpdates(editableMappingId: String,
@@ -413,11 +424,11 @@ class EditableMappingService @Inject()(
     )
 
   private def getSegmentToAgglomerateChunk(editableMappingId: String,
-                                           agglomerateId: Long,
+                                           chunkId: Long,
                                            version: Option[Long]): Fox[Seq[(Long, Long)]] =
     for {
       keyValuePair: VersionedKeyValuePair[SegmentToAgglomerateProto] <- tracingDataStore.editableMappingsSegmentToAgglomerate
-        .get(segmentToAgglomerateKey(editableMappingId, agglomerateId), version, mayBeEmpty = Some(true))(
+        .get(segmentToAgglomerateKey(editableMappingId, chunkId), version, mayBeEmpty = Some(true))(
           fromProtoBytes[SegmentToAgglomerateProto])
       valueProto = keyValuePair.value
       asSequence = valueProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)

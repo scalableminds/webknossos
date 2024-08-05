@@ -355,6 +355,31 @@ class DataSourceController @Inject()(
     }
   }
 
+  def agglomerateIdsForAllSegmentIds(
+      token: Option[String],
+      organizationName: String,
+      datasetName: String,
+      dataLayerName: String,
+      mappingName: String
+  ): Action[ListOfLong] = Action.async(validateProto[ListOfLong]) { implicit request =>
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationName)),
+                                      urlOrHeaderToken(token, request)) {
+      for {
+        agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+        agglomerateIds: Array[Long] <- agglomerateService
+          .agglomerateIdsForAllSegmentIds(
+            AgglomerateFileKey(
+              organizationName,
+              datasetName,
+              dataLayerName,
+              mappingName
+            )
+          )
+          .toFox
+      } yield Ok(Json.toJson(agglomerateIds))
+    }
+  }
+
   def update(token: Option[String], organizationName: String, datasetName: String): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.writeDataSource(DataSourceId(datasetName, organizationName)),

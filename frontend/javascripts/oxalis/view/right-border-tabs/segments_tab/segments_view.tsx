@@ -17,7 +17,7 @@ import {
 } from "@ant-design/icons";
 import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
-import { api, Model } from "oxalis/singletons";
+import { api } from "oxalis/singletons";
 import {
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
@@ -38,7 +38,6 @@ import {
 } from "antd";
 import Toast from "libs/toast";
 import _, { isNumber } from "lodash";
-import memoizeOne from "memoize-one";
 import type { Vector3 } from "oxalis/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
@@ -143,7 +142,6 @@ const segmentsTabId = "segment-list";
 type StateProps = {
   meshes: Record<number, MeshInformation>;
   dataset: APIDataset;
-  isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
   centeredSegmentId: number;
   hasVolumeTracing: boolean | undefined;
@@ -192,8 +190,6 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     activeCellId: activeVolumeTracing?.activeCellId,
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
     dataset: state.dataset,
-    isJSONMappingEnabled:
-      mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
     mappingInfo,
     centeredSegmentId: getSegmentIdForPosition(getPosition(state.flycam)),
     hasVolumeTracing: state.tracing.volumes.length > 0,
@@ -345,16 +341,6 @@ const formatMeshFile = (meshFile: APIMeshFile | null | undefined): string | null
   if (meshFile.mappingName == null) return meshFile.meshFileName;
   return `${meshFile.meshFileName} (${meshFile.mappingName})`;
 };
-
-function _getMapIdFn(visibleSegmentationLayer: APISegmentationLayer | null | undefined) {
-  const dataLayer =
-    visibleSegmentationLayer != null ? Model.getLayerByName(visibleSegmentationLayer.name) : null;
-
-  const mapId = dataLayer != null ? (id: number) => dataLayer.cube.mapId(id) : (id: number) => id;
-  return mapId;
-}
-
-const getMapIdFn = memoizeOne(_getMapIdFn);
 
 function renderEmptyMeshFileSelect() {
   return (
@@ -1679,7 +1665,6 @@ class SegmentsView extends React.Component<Props, State> {
             const isSegmentHierarchyEmpty = !(
               allSegments?.size() || this.props.segmentGroups.length
             );
-            const mapId = getMapIdFn(this.props.visibleSegmentationLayer);
 
             if (!this.props.visibleSegmentationLayer) {
               return (
@@ -1715,15 +1700,13 @@ class SegmentsView extends React.Component<Props, State> {
                 return (
                   <SegmentListItem
                     key={segment.id}
-                    mapId={mapId}
                     segment={segment}
-                    centeredSegmentId={centeredSegmentId}
+                    isCentered={centeredSegmentId === segment.id}
                     selectedSegmentIds={this.props.selectedIds.segments}
                     activeDropdownSegmentId={this.state.activeDropdownSegmentId}
                     onSelectSegment={this.onSelectSegment}
                     handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
                     mesh={this.props.meshes[segment.id]}
-                    isJSONMappingEnabled={this.props.isJSONMappingEnabled}
                     mappingInfo={this.props.mappingInfo}
                     activeCellId={this.props.activeCellId}
                     setHoveredSegmentId={this.props.setHoveredSegmentId}
@@ -1740,6 +1723,8 @@ class SegmentsView extends React.Component<Props, State> {
                     currentMeshFile={this.props.currentMeshFile}
                     onRenameStart={this.onRenameStart}
                     onRenameEnd={this.onRenameEnd}
+                    // TODO #7895: The line below causes SegmentItems to always rerender
+                    // if SegmentsView rerenders.
                     multiSelectMenu={multiSelectMenu()}
                     activeVolumeTracing={this.props.activeVolumeTracing}
                   />

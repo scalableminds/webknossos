@@ -14,7 +14,7 @@ trait MeshMappingHelper {
   protected val binaryDataServiceHolder: BinaryDataServiceHolder
 
   protected def segmentIdsForAgglomerateIdIfNeeded(
-      organizationName: String,
+      organizationId: String,
       datasetName: String,
       dataLayerName: String,
       targetMappingName: Option[String],
@@ -38,7 +38,7 @@ trait MeshMappingHelper {
           segmentIdsBox <- agglomerateService
             .segmentIdsForAgglomerateId(
               AgglomerateFileKey(
-                organizationName,
+                organizationId,
                 datasetName,
                 dataLayerName,
                 mappingName
@@ -67,7 +67,7 @@ trait MeshMappingHelper {
               agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
               localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(
                 AgglomerateFileKey(
-                  organizationName,
+                  organizationId,
                   datasetName,
                   dataLayerName,
                   mappingName

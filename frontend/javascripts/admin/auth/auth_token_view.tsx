@@ -38,7 +38,7 @@ function AuthTokenView() {
     Toast.success("Token copied to clipboard");
   };
 
-  const copyOrganizationNameToClipboard = async () => {
+  const copyOrganizationIdToClipboard = async () => {
     if (activeUser != null) {
       await navigator.clipboard.writeText(activeUser.organization);
       Toast.success("Organization ID copied to clipboard");
@@ -89,7 +89,7 @@ function AuthTokenView() {
                         }}
                         readOnly
                       />
-                      <Button onClick={copyOrganizationNameToClipboard} icon={<CopyOutlined />} />
+                      <Button onClick={copyOrganizationIdToClipboard} icon={<CopyOutlined />} />
                     </Space.Compact>
                   </FormItem>
                 </Form>

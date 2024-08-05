@@ -59,7 +59,7 @@ export function BrainSpinnerWithError({
       type="primary"
       onClick={async () => {
         if (organizationToSwitchTo != null) {
-          await switchToOrganization(organizationToSwitchTo.name);
+          await switchToOrganization(organizationToSwitchTo.id);
         }
       }}
     >

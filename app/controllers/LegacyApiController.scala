@@ -78,7 +78,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def assertValidNewNameV5(organizationName: String, datasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        organization <- organizationDAO.findOneByName(organizationName)
+        organization <- organizationDAO.findOne(organizationName) // the old organizationName is now the organization id
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
         _ <- datasetService.assertValidDatasetName(datasetName)
         _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
@@ -207,7 +207,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     } yield adaptedResult
   }
 
-  def annotationCreateExplorationalV4(organizationName: String,
+  def annotationCreateExplorationalV4(organizationName: String, // the old organizationName is now the organization id
                                       datasetName: String): Action[LegacyCreateExplorationalParameters] =
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {

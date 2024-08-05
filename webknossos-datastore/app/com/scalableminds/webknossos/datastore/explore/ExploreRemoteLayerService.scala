@@ -23,7 +23,7 @@ import javax.inject.Inject
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
-case class ExploreRemoteDatasetRequest(layerParameters: List[ExploreRemoteLayerParameters], organizationName: String)
+case class ExploreRemoteDatasetRequest(layerParameters: List[ExploreRemoteLayerParameters], organizationId: String)
 
 object ExploreRemoteDatasetRequest {
   implicit val jsonFormat: OFormat[ExploreRemoteDatasetRequest] = Json.format[ExploreRemoteDatasetRequest]

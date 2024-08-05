@@ -15,10 +15,10 @@ import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
 
-case class JobExportProperties(jobId: String, runId: String, organizationName: String, exportFileName: String) {
+case class JobExportProperties(jobId: String, runId: String, organizationId: String, exportFileName: String) {
 
   def fullPathIn(baseDir: Path): Path =
-    baseDir.resolve(organizationName).resolve(".export").resolve(runId).resolve(exportFileName)
+    baseDir.resolve(organizationId).resolve(".export").resolve(runId).resolve(exportFileName)
 }
 
 object JobExportProperties {

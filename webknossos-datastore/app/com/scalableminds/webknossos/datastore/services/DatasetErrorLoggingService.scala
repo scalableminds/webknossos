@@ -25,20 +25,20 @@ class DatasetErrorLoggingService @Inject()(
   // Not doing any synchronization here since wrong counts don’t do much harm, and synchronizing would be slow
   private val recentErrors: scala.collection.mutable.Map[(String, String), Int] = scala.collection.mutable.Map()
 
-  def shouldLog(organizationName: String, datasetName: String): Boolean =
-    recentErrors.getOrElse((organizationName, datasetName), 0) < errorCountThresholdPerDataset
+  def shouldLog(organizationId: String, datasetName: String): Boolean =
+    recentErrors.getOrElse((organizationId, datasetName), 0) < errorCountThresholdPerDataset
 
-  def registerLogged(organizationName: String, datasetName: String): Unit = {
-    val previousErrorCount = recentErrors.getOrElse((organizationName, datasetName), 0)
+  def registerLogged(organizationId: String, datasetName: String): Unit = {
+    val previousErrorCount = recentErrors.getOrElse((organizationId, datasetName), 0)
     if (previousErrorCount >= errorCountThresholdPerDataset - 1) {
       logger.info(
-        s"Got >= $errorCountThresholdPerDataset bucket loading errors for dataset $organizationName/$datasetName, muting them until next reset (interval = $tickerInterval) or dataset reload")
+        s"Got >= $errorCountThresholdPerDataset bucket loading errors for dataset $organizationId/$datasetName, muting them until next reset (interval = $tickerInterval) or dataset reload")
     }
-    recentErrors((organizationName, datasetName)) = previousErrorCount + 1
+    recentErrors((organizationId, datasetName)) = previousErrorCount + 1
   }
 
-  def clearForDataset(organizationName: String, datasetName: String): Unit =
-    recentErrors.remove((organizationName, datasetName))
+  def clearForDataset(organizationId: String, datasetName: String): Unit =
+    recentErrors.remove((organizationId, datasetName))
 
   override protected def tick(): Unit = recentErrors.clear()
 }

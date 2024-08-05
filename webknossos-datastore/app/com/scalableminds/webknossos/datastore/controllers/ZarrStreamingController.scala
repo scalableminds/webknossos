@@ -7,21 +7,12 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
-import com.scalableminds.webknossos.datastore.datareaders.zarr.{
-  NgffGroupHeader,
-  NgffMetadata,
-  NgffMetadataV2,
-  ZarrHeader
-}
+import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffGroupHeader, NgffMetadata, NgffMetadataV0_5, ZarrHeader}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{Zarr3ArrayHeader, Zarr3GroupHeader}
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType, AnnotationSource}
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.models.requests.{
-  Cuboid,
-  DataServiceDataRequest,
-  DataServiceRequestSettings
-}
+import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.models.{VoxelPosition, VoxelSize}
 import com.scalableminds.webknossos.datastore.services._
 import net.liftweb.common.Box.tryo
 import play.api.i18n.{Messages, MessagesProvider}
@@ -80,7 +71,7 @@ class ZarrStreamingController @Inject()(
                                                                                   datasetName,
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
-        omeNgffHeaderV2 = NgffMetadataV2.fromNameVoxelSizeAndMags(dataLayerName,
+        omeNgffHeaderV2 = NgffMetadataV0_5.fromNameVoxelSizeAndMags(dataLayerName,
                                                                   dataSource.scale,
                                                                   dataLayer.resolutions,
                                                                   dataLayer.additionalAxes)
@@ -134,7 +125,7 @@ class ZarrStreamingController @Inject()(
                                                                                       annotationSource.datasetName,
                                                                                       dataLayerName) ?~> Messages(
               "dataSource.notFound") ~> NOT_FOUND
-            dataSourceOmeNgffHeader = NgffMetadataV2.fromNameVoxelSizeAndMags(dataLayerName,
+            dataSourceOmeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(dataLayerName,
                                                                               dataSource.scale,
                                                                               dataLayer.resolutions,
                                                                               dataLayer.additionalAxes)
@@ -272,20 +263,9 @@ class ZarrStreamingController @Inject()(
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                 datasetName,
                                                                                 dataLayerName) ~> NOT_FOUND
-      //  (c, x, y, z)
-      parsedCoordinates <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(coordinates) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND // TODO: change error message
+      (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(coordinates) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
       magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
       _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
-      _ <- bool2Fox(parsedCoordinates.head == 0) ~> "zarr.invalidFirstChunkCoord" ~> NOT_FOUND
-      (x, y, z) = (parsedCoordinates(parsedCoordinates.length - 3),
-                   parsedCoordinates(parsedCoordinates.length - 2),
-                   parsedCoordinates(parsedCoordinates.length - 1))
-      additionalCoordinates = Some(
-        parsedCoordinates
-          .slice(1, parsedCoordinates.length - 3)
-          .zipWithIndex
-          .map(coordWithIndex => new AdditionalCoordinate(name = s"t${coordWithIndex._2}", value = coordWithIndex._1))
-          .toList)
       cubeSize = DataLayer.bucketLength
       request = DataServiceDataRequest(
         dataSource,
@@ -346,7 +326,7 @@ class ZarrStreamingController @Inject()(
         "dataSource.notFound") ~> NOT_FOUND
       magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
       _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
-      zarrHeader = Zarr3ArrayHeader.fromDataLayerToVersion3(dataLayer)
+      zarrHeader = Zarr3ArrayHeader.fromDataLayer(dataLayer)
     } yield Ok(Json.toJson(zarrHeader))
 
   def zArrayPrivateLink(token: Option[String],

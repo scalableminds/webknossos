@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesPa
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffGroupHeader,
   NgffMetadata,
-  NgffMetadataV2,
+  NgffMetadataV0_5,
   ZarrHeader
 }
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
@@ -234,7 +234,7 @@ class VolumeTracingZarrStreamingController @Inject()(
 
         existingMags = tracing.resolutions.map(vec3IntFromProto)
         dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
-        omeNgffHeader = NgffMetadataV2.fromNameVoxelSizeAndMags(tracingId,
+        omeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(tracingId,
                                                                 dataSourceVoxelSize = dataSource.scale,
                                                                 mags = existingMags.toList,
                                                                 additionalAxes = dataSource.additionalAxesUnion)
@@ -273,19 +273,8 @@ class VolumeTracingZarrStreamingController @Inject()(
             magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
             _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
 
-            parsedCoordinates <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(coordinates) ?~> Messages(
+            (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(coordinates) ?~> Messages(
               "zarr.invalidChunkCoordinates") ~> NOT_FOUND
-            (x, y, z) = (parsedCoordinates(parsedCoordinates.length - 3),
-                         parsedCoordinates(parsedCoordinates.length - 2),
-                         parsedCoordinates(parsedCoordinates.length - 1))
-            additionalCoordinates = Some(
-              parsedCoordinates
-                .slice(1, parsedCoordinates.length - 3)
-                .zipWithIndex
-                .map(coordWithIndex =>
-                  new AdditionalCoordinate(name = s"t${coordWithIndex._2}", value = coordWithIndex._1))
-                .toList)
-            _ <- bool2Fox(parsedCoordinates.head == 0) ~> Messages("zarr.invalidFirstChunkCoord") ~> NOT_FOUND
             cubeSize = DataLayer.bucketLength
             wkRequest = WebknossosDataRequest(
               position = Vec3Int(x, y, z) * cubeSize * magParsed,

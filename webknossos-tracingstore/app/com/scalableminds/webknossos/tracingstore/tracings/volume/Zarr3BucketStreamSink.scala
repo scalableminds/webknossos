@@ -39,7 +39,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[VoxelSize])(
       implicit ec: ExecutionContext): Iterator[NamedStream] = {
 
-    val header = Zarr3ArrayHeader.fromDataLayerToVersion3(layer)
+    val header = Zarr3ArrayHeader.fromDataLayer(layer)
     bucketStream.flatMap {
       case (bucket, data) =>
         val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedBucket(data)

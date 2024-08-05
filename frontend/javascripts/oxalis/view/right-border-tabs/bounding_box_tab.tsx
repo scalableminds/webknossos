@@ -158,26 +158,38 @@ export default function BoundingBoxTab() {
       className="padded-tab-content"
       style={{
         minWidth: 300,
+        height: "100%",
       }}
     >
       {/* Don't render a table in view mode. */}
       {isViewMode ? null : userBoundingBoxes.length > 0 ? (
-        <Table
-          ref={bboxTableRef}
-          columns={boundingBoxWrapperTableColumns}
-          dataSource={userBoundingBoxes}
-          pagination={false}
-          rowKey="id"
-          showHeader={false}
-          className="bounding-box-table"
-          rowSelection={{
-            selectedRowKeys: activeBoundingBoxId != null ? [activeBoundingBoxId] : [],
-            getCheckboxProps: () => ({ disabled: true }),
-          }}
-          footer={() => maybeAddBoundingBoxButton}
-          virtual
-          scroll={{ y: 500, x: 300 }}
-        />
+        <AutoSizer defaultHeight={500}>
+          {({ height, width }) => (
+            <div
+              style={{
+                height,
+                width,
+              }}
+            >
+              <Table
+                ref={bboxTableRef}
+                columns={boundingBoxWrapperTableColumns}
+                dataSource={userBoundingBoxes}
+                pagination={false}
+                rowKey="id"
+                showHeader={false}
+                className="bounding-box-table"
+                rowSelection={{
+                  selectedRowKeys: activeBoundingBoxId != null ? [activeBoundingBoxId] : [],
+                  getCheckboxProps: () => ({ disabled: true }),
+                }}
+                footer={() => maybeAddBoundingBoxButton}
+                virtual
+                scroll={{ y: height }}
+              />
+            </div>
+          )}
+        </AutoSizer>
       ) : (
         <>
           <div>No Bounding Boxes created yet.</div>

@@ -198,7 +198,7 @@ function TreeHierarchyView(props: Props) {
           (node) => node.type === GroupTypeEnum.TREE && node.id === selectedTreeId,
         );
 
-        if (rangeIndex1 > 0 && rangeIndex2 > 0) {
+        if (rangeIndex1 >= 0 && rangeIndex2 >= 0) {
           let selectedNodes: TreeNode[] = [];
           if (rangeIndex1 < rangeIndex2) {
             selectedNodes = sourceNodeParent.children.slice(rangeIndex1, rangeIndex2 + 1);

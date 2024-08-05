@@ -9,6 +9,7 @@ import type {
   APIEffectiveJobState,
   AiModel,
   RenderAnimationOptions,
+  AdditionalCoordinate,
 } from "types/api_flow_types";
 import { assertResponseLimit } from "./api_utils";
 
@@ -100,6 +101,7 @@ export async function startExportTiffJob(
   datasetName: string,
   organizationName: string,
   bbox: Vector6,
+  additionalCoordinates: AdditionalCoordinate[] | null,
   layerName: string | null | undefined,
   mag: string | null | undefined,
   annotationId: string | null | undefined,
@@ -118,6 +120,9 @@ export async function startExportTiffJob(
   }
   if (annotationLayerName != null) {
     params.append("annotationLayerName", annotationLayerName);
+  }
+  if (additionalCoordinates != null) {
+    params.append("additionalCoordinates", JSON.stringify(additionalCoordinates));
   }
   return Request.receiveJSON(
     `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?${params}`,

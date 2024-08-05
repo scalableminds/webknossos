@@ -409,6 +409,7 @@ class DatasetController @Inject()(userService: UserService,
           _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z == 1024) ?~> s"Target-mag selected bbox must be sized 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
           _ <- bool2Fox(targetMagSelectedBbox.size.sorted.y == 1024) ?~> s"Target-mag selected bbox must be sized 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
           _ <- bool2Fox(targetMagSelectedBbox.size.sorted.x <= 12) ?~> s"Target-mag selected bbox depth must be at most 12"
+          beforeDataLoading = Instant.now
           data <- datastoreClient.getLayerData(
             organizationName,
             dataset,
@@ -417,10 +418,12 @@ class DatasetController @Inject()(userService: UserService,
             request.body.mag,
             request.body.additionalCoordinates
           ) ?~> "segmentAnything.getData.failed"
+          _ = logger.info(s"Data loading for SAM took ${Instant.since(beforeDataLoading)}")
           _ = logger.debug(
             s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax...")
           _ <- bool2Fox(
             !(dataLayer.elementClass == ElementClass.float || dataLayer.elementClass == ElementClass.double) || (intensityMin.isDefined && intensityMax.isDefined)) ?~> "For float and double data, a supplied intensity range is required."
+          beforeMask = Instant.now
           mask <- wKRemoteSegmentAnythingClient.getMask(
             data,
             dataLayer.elementClass,
@@ -432,6 +435,7 @@ class DatasetController @Inject()(userService: UserService,
             intensityMin,
             intensityMax
           ) ?~> "segmentAnything.getMask.failed"
+          _ = logger.info(s"Fetching SAM masks from torchserve took ${Instant.since(beforeMask)}")
           _ = logger.debug(s"Received ${mask.length} bytes of mask from SAM server, forwarding to front-end...")
         } yield Ok(mask)
       }

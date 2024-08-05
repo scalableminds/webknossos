@@ -185,11 +185,13 @@ export function startNeuronInferralJob(
   datasetName: string,
   layerName: string,
   bbox: Vector6,
+  outputSegmentationLayerName: string,
   newDatasetName: string,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,
     bbox: bbox.join(","),
+    outputSegmentationLayerName,
     newDatasetName,
   });
   return Request.receiveJSON(
@@ -222,6 +224,7 @@ function startSegmentationAnnotationDependentJob(
   newDatasetName: string,
   annotationId: string,
   annotationType: APIAnnotationType,
+  outputSegmentationLayerName?: string,
   mergeSegments?: boolean,
 ): Promise<APIJob> {
   const requestURL = new URL(
@@ -235,6 +238,9 @@ function startSegmentationAnnotationDependentJob(
   requestURL.searchParams.append("annotationId", annotationId);
   requestURL.searchParams.append("annotationType", annotationType);
   requestURL.searchParams.append("newDatasetName", newDatasetName);
+  if (outputSegmentationLayerName != null) {
+    requestURL.searchParams.append("outputSegmentationLayerName", outputSegmentationLayerName);
+  }
   if (mergeSegments != null) {
     requestURL.searchParams.append("mergeSegments", mergeSegments.toString());
   }
@@ -249,6 +255,7 @@ export function startMaterializingVolumeAnnotationJob(
   fallbackLayerName: string,
   volumeLayerName: string | null | undefined,
   newDatasetName: string,
+  outputSegmentationLayerName: string,
   annotationId: string,
   annotationType: APIAnnotationType,
   mergeSegments: boolean,
@@ -262,6 +269,7 @@ export function startMaterializingVolumeAnnotationJob(
     newDatasetName,
     annotationId,
     annotationType,
+    outputSegmentationLayerName,
     mergeSegments,
   );
 }
@@ -271,11 +279,13 @@ export function startMitochondriaInferralJob(
   datasetName: string,
   layerName: string,
   bbox: Vector6,
+  outputSegmentationLayerName: string,
   newDatasetName: string,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,
     bbox: bbox.join(","),
+    outputSegmentationLayerName,
     newDatasetName,
   });
   return Request.receiveJSON(
@@ -334,8 +344,8 @@ type RunInferenceParameters = {
   datasetName: string;
   colorLayerName: string;
   boundingBox: Vector6;
+  newSegmentationLayerName: string;
   newDatasetName: string;
-  workflowYaml?: string;
   // maskAnnotationLayerName?: string | null
 };
 

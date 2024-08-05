@@ -88,7 +88,7 @@ export function insertTreesAndTransform(
     const treeNode = makeTreeNodeFromGroup(group, {
       // Ensure that groups are always at the top when sorting by timestamp
       timestamp: 0,
-      children: _.orderBy(treeNodeChildren, ["name"], ["asc"]),
+      children: _.orderBy(treeNodeChildren, [sortBy], ["asc"]),
       disableCheckbox: treeNodeChildren.length === 0,
       expanded: group.isExpanded == null || group.isExpanded,
       isChecked: treeNodeChildren.every(

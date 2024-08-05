@@ -129,13 +129,13 @@ function TreeHierarchyView(props: Props) {
       setTimeout(() => {
         if (treeRef.current) treeRef.current.scrollTo({ key: activeTreeKey, align: "auto" });
       });
-      
+
       // Make sure to select the active tree (for highlighting etc)
       // Remember, the active tree can be changed by actions outside of this component
       props.onSingleSelectTree(props.activeTreeId);
     }
   }, [props.activeTreeId, props.onSingleSelectTree]);
-  
+
   useEffect(() => {
     // scroll to active group if it changes
     if (treeRef.current && props.activeGroupId) {

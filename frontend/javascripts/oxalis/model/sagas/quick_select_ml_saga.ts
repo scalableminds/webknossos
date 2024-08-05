@@ -25,7 +25,7 @@ async function getMask(
   activeViewport: OrthoView,
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
-): Promise<NdArray<TypedArrayWithoutBigInt>> {
+): Promise<Array<NdArray<TypedArrayWithoutBigInt>>> {
   if (userBoxMag1.getVolume() === 0) {
     throw new Error("User bounding box should not have empty volume.");
   }
@@ -33,7 +33,8 @@ async function getMask(
   const sizeInMag1 = V3.scale3(Dimensions.transDim(MASK_SIZE, activeViewport), mag);
   const maskTopLeftMag1 = V3.alignWithMag(V3.sub(centerMag1, V3.scale(sizeInMag1, 0.5)), mag);
   // Effectively, zero the first and second dimension in the mag.
-  const depthSummand = V3.scale3(mag, Dimensions.transDim([0, 0, 1], activeViewport));
+  const depth = window.depth || 8;
+  const depthSummand = V3.scale3(mag, Dimensions.transDim([0, 0, depth], activeViewport));
   const maskBottomRightMag1 = V3.add(maskTopLeftMag1, sizeInMag1);
   const maskBoxMag1 = new BoundingBox({
     min: maskTopLeftMag1,
@@ -62,24 +63,37 @@ async function getMask(
 
   const size = maskBoxInMag.getSize();
   console.log("size", size);
-  const stride =
-    activeViewport === "PLANE_XZ"
-      ? [size[1], size[0], size[0] * size[1] * size[2]]
-      : [size[2], size[0], size[0] * size[1] * size[2]];
+  // const stride =
+  //   activeViewport === "PLANE_XZ"
+  //     ? [size[1] / depth, size[0], size[0] * size[2]]
+  //     : [size[2] / depth, size[0], size[0] * size[1]];
 
+  // const stride =
+  //   activeViewport === "PLANE_XZ"
+  //     ? [size[1] / depth, size[0], size[0] * size[2]] // probably wrong
+  //     : [size[1] * size[2], size[2], 1]; // only valid for xy
+  // size = [1024, 1024, 2]
+  // 1, 1024, 1024**2
+  const stride = [size[2] * size[1], size[2], 1]; // only valid for xy;
+
+  console.log("stride", stride);
   const ndarr = ndarray(maskData, size, stride);
 
   // a.hi(x,y) => a[:x, :y]
   // a.lo(x,y) => a[x:, y:]
-  return ndarr
-    .hi(
-      userBox.getMaxUV(activeViewport)[0] - maskBoxInMag.getMinUV(activeViewport)[0],
-      userBox.getMaxUV(activeViewport)[1] - maskBoxInMag.getMinUV(activeViewport)[1],
-    )
-    .lo(
-      userBox.getMinUV(activeViewport)[0] - maskBoxInMag.getMinUV(activeViewport)[0],
-      userBox.getMinUV(activeViewport)[1] - maskBoxInMag.getMinUV(activeViewport)[1],
-    );
+  return _.range(0, depth).map((zOffset) =>
+    ndarr
+      .hi(
+        userBox.getMaxUV(activeViewport)[0] - maskBoxInMag.getMinUV(activeViewport)[0],
+        userBox.getMaxUV(activeViewport)[1] - maskBoxInMag.getMinUV(activeViewport)[1],
+        zOffset + 1,
+      )
+      .lo(
+        userBox.getMinUV(activeViewport)[0] - maskBoxInMag.getMinUV(activeViewport)[0],
+        userBox.getMinUV(activeViewport)[1] - maskBoxInMag.getMinUV(activeViewport)[1],
+        zOffset,
+      ),
+  );
 }
 
 export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
@@ -130,9 +144,9 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   );
   const { intensityRange } = layerConfiguration;
 
-  let mask;
+  let masks;
   try {
-    mask = yield* call(
+    masks = yield* call(
       getMask,
       dataset,
       colorLayer.name,
@@ -152,18 +166,24 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   );
 
   sendAnalyticsEvent("used_quick_select_with_ai");
-  yield* finalizeQuickSelect(
-    quickSelectGeometry,
-    volumeTracing,
-    activeViewport,
-    labeledResolution,
-    alignedUserBoxMag1,
-    thirdDim,
-    alignedUserBoxInMag.getSize(),
-    firstDim,
-    secondDim,
-    mask,
-    overwriteMode,
-    labeledZoomStep,
-  );
+
+  let zOffset = 0;
+  for (const mask of masks) {
+    yield* finalizeQuickSelect(
+      quickSelectGeometry,
+      volumeTracing,
+      activeViewport,
+      labeledResolution,
+      alignedUserBoxMag1,
+      thirdDim,
+      alignedUserBoxMag1.min[thirdDim] + zOffset,
+      alignedUserBoxInMag.getSize(),
+      firstDim,
+      secondDim,
+      mask,
+      overwriteMode,
+      labeledZoomStep,
+    );
+    zOffset++;
+  }
 }

@@ -501,6 +501,7 @@ export function* finalizeQuickSelect(
   labeledResolution: Vector3,
   boundingBoxMag1: BoundingBox,
   thirdDim: number,
+  w: number,
   size: Vector3,
   firstDim: number,
   secondDim: number,
@@ -514,7 +515,7 @@ export function* finalizeQuickSelect(
     volumeTracing,
     activeViewport,
     labeledResolution,
-    boundingBoxMag1.min[thirdDim],
+    w,
   );
   const voxelBuffer2D = volumeLayer.createVoxelBuffer2D(
     V2.floor(volumeLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),

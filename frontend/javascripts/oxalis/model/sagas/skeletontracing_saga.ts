@@ -215,7 +215,7 @@ export function* watchTreeNames(): Saga<void> {
     }
   }
 }
-export function* watchVersionRestoreParam(): Saga<void> {
+export function* checkVersionRestoreParam(): Saga<void> {
   const showVersionRestore = yield* call(Utils.hasUrlParam, "showVersionRestore");
 
   if (showVersionRestore) {
@@ -476,7 +476,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
   yield* throttle(5000, "PUSH_SAVE_QUEUE_TRANSACTION", watchTracingConsistency);
   yield* fork(watchFailedNodeCreations);
   yield* fork(watchBranchPointDeletion);
-  yield* fork(watchVersionRestoreParam);
+  yield* fork(checkVersionRestoreParam);
 }
 
 function* diffNodes(

@@ -2,43 +2,70 @@ import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
 import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
+import _ from "lodash";
 
-const TEXTURE_CHANNEL_COUNT = 4;
-const DEFAULT_LOAD_FACTOR = 0.25;
+const DEFAULT_LOAD_FACTOR = 0.9;
 export const EMPTY_KEY_VALUE = 2 ** 32 - 1;
+const REHASH_THRESHOLD = 20;
 
 export type SeedSubscriberFn = (seeds: number[]) => void;
 
 let cachedNullTexture: UpdatableTexture | undefined;
 
 export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
-  static ELEMENTS_PER_ENTRY = 4;
   entryCapacity: number;
-  table!: Uint32Array;
-  seeds!: number[];
-  seedSubscribers: Array<SeedSubscriberFn> = [];
+  protected table!: Uint32Array;
+  protected seeds!: number[];
+  protected seedSubscribers: Array<SeedSubscriberFn> = [];
   _texture: UpdatableTexture;
-  textureWidth: number;
+  protected textureWidth: number;
+  protected autoTextureUpdate: boolean = true;
+
+  static getTextureChannelCount() {
+    return 4;
+  }
+
+  static getElementsPerEntry() {
+    return 4;
+  }
+
+  static getTextureType() {
+    return THREE.UnsignedIntType;
+  }
+
+  static getTextureFormat() {
+    return THREE.RGBAIntegerFormat;
+  }
+
+  static getInternalFormat(): THREE.PixelFormatGPU {
+    return "RGBA32UI";
+  }
+
+  getClass(): typeof AbstractCuckooTable {
+    const thisConstructor = this.constructor as typeof AbstractCuckooTable;
+    return thisConstructor;
+  }
 
   constructor(textureWidth: number) {
     this.textureWidth = textureWidth;
     this._texture = createUpdatableTexture(
       textureWidth,
       textureWidth,
-      TEXTURE_CHANNEL_COUNT,
-      THREE.UnsignedIntType,
+      this.getClass().getTextureChannelCount(),
+      this.getClass().getTextureType(),
       getRenderer(),
-      THREE.RGBAIntegerFormat,
+      this.getClass().getTextureFormat(),
     );
 
     // The internal format has to be set manually, since ThreeJS does not
     // derive this value by itself.
     // See https://webgl2fundamentals.org/webgl/lessons/webgl-data-textures.html
     // for a reference of the internal formats.
-    this._texture.internalFormat = "RGBA32UI";
+    this._texture.internalFormat = this.getClass().getInternalFormat();
 
     this.entryCapacity = Math.floor(
-      (textureWidth ** 2 * TEXTURE_CHANNEL_COUNT) / AbstractCuckooTable.ELEMENTS_PER_ENTRY,
+      (textureWidth ** 2 * this.getClass().getTextureChannelCount()) /
+        this.getClass().getElementsPerEntry(),
     );
 
     this.initializeTableArray();
@@ -46,10 +73,18 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     this.flushTableToTexture();
   }
 
+  getCriticalCapacity(): number {
+    /*
+     * Returns the capacity at which inserts can become very expensive due
+     * to increased likelihood of collisions.
+     */
+    return Math.floor(this.entryCapacity * DEFAULT_LOAD_FACTOR);
+  }
+
   static computeTextureWidthFromCapacity(requestedCapacity: number): number {
     const capacity = requestedCapacity / DEFAULT_LOAD_FACTOR;
     const textureWidth = Math.ceil(
-      Math.sqrt((capacity * TEXTURE_CHANNEL_COUNT) / AbstractCuckooTable.ELEMENTS_PER_ENTRY),
+      Math.sqrt((capacity * this.getTextureChannelCount()) / this.getElementsPerEntry()),
     );
     return textureWidth;
   }
@@ -62,18 +97,18 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       // Use 1x1 texture to avoid WebGL warnings.
       1,
       1,
-      TEXTURE_CHANNEL_COUNT,
-      THREE.UnsignedIntType,
+      this.getTextureChannelCount(),
+      this.getTextureType(),
       getRenderer(),
-      THREE.RGBAIntegerFormat,
+      this.getTextureFormat(),
     );
-    cachedNullTexture.internalFormat = "RGBA32UI";
+    cachedNullTexture.internalFormat = this.getInternalFormat();
 
     return cachedNullTexture;
   }
 
   private initializeTableArray() {
-    this.table = new Uint32Array(AbstractCuckooTable.ELEMENTS_PER_ENTRY * this.entryCapacity).fill(
+    this.table = new Uint32Array(this.getClass().getElementsPerEntry() * this.entryCapacity).fill(
       EMPTY_KEY_VALUE,
     );
 
@@ -109,8 +144,8 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   getUniformValues() {
     return {
       CUCKOO_ENTRY_CAPACITY: this.entryCapacity,
-      CUCKOO_ELEMENTS_PER_ENTRY: AbstractCuckooTable.ELEMENTS_PER_ENTRY,
-      CUCKOO_ELEMENTS_PER_TEXEL: TEXTURE_CHANNEL_COUNT,
+      CUCKOO_ELEMENTS_PER_ENTRY: this.getClass().getElementsPerEntry(),
+      CUCKOO_ELEMENTS_PER_TEXEL: this.getClass().getTextureChannelCount(),
       CUCKOO_TWIDTH: this.textureWidth,
     };
   }
@@ -119,38 +154,66 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
     this._texture.update(this.table, 0, 0, this.textureWidth, this.textureWidth);
   }
 
+  disableAutoTextureUpdate() {
+    this.autoTextureUpdate = false;
+  }
+
+  enableAutoTextureUpdateAndFlush() {
+    this.autoTextureUpdate = true;
+    this.flushTableToTexture();
+  }
+
   /*
     Should throw an error if the provided key is not valid (e.g., because it contains
     reserved values).
    */
   abstract checkValidKey(key: K): void;
 
-  set(pendingKey: K, pendingValue: V, rehashAttempt: number = 0) {
+  set(pendingKey: K, pendingValue: V) {
+    const newDisplacedEntry = this.internalSet(pendingKey, pendingValue, !this.autoTextureUpdate);
+    if (newDisplacedEntry == null) {
+      // Success
+      return;
+    }
+    const oldTable = this.table;
+    for (let rehashAttempt = 1; rehashAttempt <= REHASH_THRESHOLD; rehashAttempt++) {
+      if (this.rehash(oldTable, true)) {
+        if (this.internalSet(newDisplacedEntry[0], newDisplacedEntry[1], true) == null) {
+          // Since a rehash was performed, the incremental texture updates were
+          // skipped. Update the entire texture if configured.
+          if (this.autoTextureUpdate) {
+            this.flushTableToTexture();
+          }
+          return;
+        }
+      }
+    }
+    throw new Error(
+      `Cannot rehash, since ${REHASH_THRESHOLD} attempts were exceeded. Is the capacity exceeded?`,
+    );
+  }
+
+  private internalSet(
+    pendingKey: K,
+    pendingValue: V,
+    skipTextureUpdate: boolean,
+  ): Entry | undefined | null {
     this.checkValidKey(pendingKey);
     let displacedEntry;
     let currentAddress;
     let iterationCounter = 0;
-
-    const ITERATION_THRESHOLD = 40;
-    const REHASH_THRESHOLD = 100;
-
-    if (rehashAttempt >= REHASH_THRESHOLD) {
-      throw new Error(
-        `Cannot rehash, since this is already the ${rehashAttempt}th attempt. Is the capacity exceeded?`,
-      );
-    }
 
     const existingValueWithAddress = this.getWithAddress(pendingKey);
     if (existingValueWithAddress) {
       // The key already exists. We only have to overwrite
       // the corresponding value.
       const [, address] = existingValueWithAddress;
-      this.writeEntryAtAddress(pendingKey, pendingValue, address, rehashAttempt > 0);
-      return;
+      this.writeEntryAtAddress(pendingKey, pendingValue, address, skipTextureUpdate);
+      return null;
     }
 
     let seedIndex = Math.floor(Math.random() * this.seeds.length);
-    while (iterationCounter++ < ITERATION_THRESHOLD) {
+    while (iterationCounter++ < this.entryCapacity) {
       const seed = this.seeds[seedIndex];
       currentAddress = this._hashKeyToAddress(seed, pendingKey);
 
@@ -159,11 +222,11 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
         pendingKey,
         pendingValue,
         currentAddress,
-        rehashAttempt > 0,
+        skipTextureUpdate,
       );
 
       if (this.canDisplacedEntryBeIgnored(displacedEntry[0], pendingKey)) {
-        return;
+        return null;
       }
 
       [pendingKey, pendingValue] = displacedEntry;
@@ -172,12 +235,8 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
       seedIndex =
         (seedIndex + Math.floor(Math.random() * (this.seeds.length - 1)) + 1) % this.seeds.length;
     }
-    this.rehash(rehashAttempt + 1);
-    this.set(pendingKey, pendingValue, rehashAttempt + 1);
 
-    // Since a rehash was performed, the incremental texture updates were
-    // skipped. Update the entire texture:
-    this.flushTableToTexture();
+    return displacedEntry;
   }
 
   unset(key: K) {
@@ -186,7 +245,12 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
 
       const value = this.getValueAtAddress(key, hashedAddress);
       if (value != null) {
-        this.writeEntryAtAddress(this.getEmptyKey(), this.getEmptyValue(), hashedAddress, false);
+        this.writeEntryAtAddress(
+          this.getEmptyKey(),
+          this.getEmptyValue(),
+          hashedAddress,
+          !this.autoTextureUpdate,
+        );
         return;
       }
     }
@@ -204,25 +268,29 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
    */
   abstract getEmptyValue(): V;
 
-  private rehash(rehashAttempt: number): void {
-    const oldTable = this.table;
-
+  private rehash(oldTable: Uint32Array, skipTextureUpdate: boolean): boolean {
+    // Theoretically, one could avoid allocating a new table on repeated rehashes,
+    // but these are likely not a bottleneck.
     this.initializeTableArray();
 
     for (
       let offset = 0;
-      offset < this.entryCapacity * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
-      offset += AbstractCuckooTable.ELEMENTS_PER_ENTRY
+      offset < this.entryCapacity * this.getClass().getElementsPerEntry();
+      offset += this.getClass().getElementsPerEntry()
     ) {
       if (oldTable[offset] === EMPTY_KEY_VALUE) {
         continue;
       }
       const [key, value] = this.getEntryAtAddress(
-        offset / AbstractCuckooTable.ELEMENTS_PER_ENTRY,
+        offset / this.getClass().getElementsPerEntry(),
         oldTable,
       );
-      this.set(key, value, rehashAttempt);
+      if (this.internalSet(key, value, skipTextureUpdate) != null) {
+        // Rehash did not work
+        return false;
+      }
     }
+    return true;
   }
 
   get(key: K): V | null {
@@ -260,20 +328,20 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
 
   abstract writeEntryToTable(key: K, value: V, hashedAddress: number): void;
 
-  writeEntryAtAddress(key: K, value: V, hashedAddress: number, isRehashing: boolean): Entry {
+  writeEntryAtAddress(key: K, value: V, hashedAddress: number, skipTextureUpdate: boolean): Entry {
     const displacedEntry: Entry = this.getEntryAtAddress(hashedAddress);
     this.writeEntryToTable(key, value, hashedAddress);
 
-    if (!isRehashing) {
+    if (!skipTextureUpdate) {
       // Only partially update if we are not rehashing. Otherwise, it makes more
       // sense to flush the entire texture content after the rehashing is done.
-      const offset = hashedAddress * AbstractCuckooTable.ELEMENTS_PER_ENTRY;
-      const texelOffset = offset / TEXTURE_CHANNEL_COUNT;
+      const offset = hashedAddress * this.getClass().getElementsPerEntry();
+      const texelOffset = offset / this.getClass().getTextureChannelCount();
       this._texture.update(
-        this.table.subarray(offset, offset + AbstractCuckooTable.ELEMENTS_PER_ENTRY),
+        this.table.subarray(offset, offset + this.getClass().getElementsPerEntry()),
         texelOffset % this.textureWidth,
         Math.floor(texelOffset / this.textureWidth),
-        AbstractCuckooTable.ELEMENTS_PER_ENTRY / TEXTURE_CHANNEL_COUNT,
+        this.getClass().getElementsPerEntry() / this.getClass().getTextureChannelCount(),
         1,
       );
     }
@@ -307,4 +375,23 @@ export abstract class AbstractCuckooTable<K, V, Entry extends [K, V]> {
   }
 
   abstract _hashKeyToAddress(seed: number, key: K): number;
+
+  getDiminishedEntryCapacity(): number {
+    // Important:
+    // This method is only needed for CuckooTable subclasses that
+    // use a single 32-bit key.
+    // We pretend that the entryCapacity has one
+    // slot less than it actually has. This is a shortcut to
+    // avoid that a single _hashCombine call in combination with
+    // a power-of-two-modulo operation does not have good enough
+    // hash properties. Without this, filling the table up to 90%
+    // will not work reliably (unit tests well, too). As an
+    // alternative, one could also use the fmix finalize step by Murmur3,
+    // but this requires more bit operations on CPU and GPU.
+    // The downside of this approach is that we waste one slot of the
+    // hash table.
+    // Other cuckootable implementations don't need this trick, because
+    // they call _hashCombine multiple times.
+    return this.entryCapacity - 1;
+  }
 }

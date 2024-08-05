@@ -263,7 +263,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         case Right(volumeTracing) =>
           volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
           volumeTracing.largestSegmentId.foreach(id => writer.writeAttribute("largestSegmentId", id.toString))
-          if (!volumeTracing.mappingIsEditable.getOrElse(false)) {
+          if (!volumeTracing.hasEditableMapping.getOrElse(false)) {
             volumeTracing.mappingName.foreach { mappingName =>
               writer.writeAttribute("mappingName", mappingName)
             }

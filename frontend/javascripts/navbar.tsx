@@ -483,7 +483,7 @@ function NotificationIcon({
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
-      // Setting the target lazily, to finally let olvy  load the whats new modal as it should be shown now.
+      // Setting the target lazily, to finally let olvy load the “what’s new” modal, as it should be shown now.
       window.Olvy.config.target = "#unused-olvy-target";
       window.Olvy.show();
     }

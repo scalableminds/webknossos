@@ -172,3 +172,33 @@ test("chunkDynamically (IV)", (t) => {
   const batches = Utils.chunkDynamically(elements, 1, (el) => el);
   t.deepEqual(batches, [[5], [7], [10], [234], [10]]);
 });
+
+test("computeHash", (t) => {
+  const hash1 = Utils.computeHash(
+    "https://webknossos.org/datasets/demo_orga/demo_ds/view#2816,4352,1792,0,1.3",
+  );
+  const hash2 = Utils.computeHash(
+    "https://webknossos.org/datasets/demo_orga/demo_ds/view#2816,4352,1792,0,1.4",
+  );
+  const hash3 = Utils.computeHash(
+    "https://randomdomain.org/datasets/demo_orga/demo_ds/view#2816,4352,1792,0,1.3",
+  );
+  t.not(hash1, hash2);
+  t.not(hash1, hash3);
+  t.not(hash2, hash3);
+});
+
+test("encodeBase62", (t) => {
+  const encoded = Utils.encodeToBase62(0);
+  t.is(encoded, "0");
+  const encoded2 = Utils.encodeToBase62(123);
+  t.is(encoded2, "1z");
+  const encoded3 = Utils.encodeToBase62(123456);
+  t.is(encoded3, "W7E");
+  const encoded4 = Utils.encodeToBase62(-1);
+  t.is(encoded4, "z");
+  const encoded5 = Utils.encodeToBase62(-2);
+  t.is(encoded5, "y");
+  const encoded6 = Utils.encodeToBase62(-123456);
+  t.is(encoded6, "Tsm");
+});

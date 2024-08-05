@@ -68,6 +68,7 @@ import VerifyEmailView from "admin/auth/verify_email_view";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
 import loadable from "libs/lazy_loader";
 import { EmptyObject } from "types/globals";
+import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
 
 const { Content } = Layout;
@@ -298,6 +299,11 @@ class ReactRouter extends React.Component<Props> {
                 path="/users"
                 component={UserListView}
                 requiresAdminOrManagerRole
+              />
+              <SecuredRouteWithErrorBoundary
+                isAuthenticated={isAuthenticated}
+                path="/import"
+                component={DatasetURLImport}
               />
               <SecuredRouteWithErrorBoundary
                 isAuthenticated={isAuthenticated}

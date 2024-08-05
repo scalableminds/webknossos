@@ -476,8 +476,10 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             <br />
             {isRetrying ? "Retrying to continue the upload …" : null}
             <br />
-            <Progress // Round to 1 digit after the comma.
-              percent={Math.round(uploadProgress * 1000) / 10}
+            <Progress
+              // Round to 1 digit after the comma, but use floor
+              // to avoid that 100% are displayed even though the progress is lower.
+              percent={Math.floor(uploadProgress * 1000) / 10}
               status="active"
             />
           </Spin>
@@ -1026,7 +1028,7 @@ function FileUploadArea({
 
                   <li>
                     <Popover content={<SingleLayerImageStackExample />} trigger="hover">
-                      Single-Layer Image File Sequence (tif, jpg, png, dm3, dm4)
+                      Single-Layer Image File Sequence (tif, jpg, png, dm3, dm4 etc.)
                       <InfoCircleOutlined
                         style={{
                           marginLeft: 4,
@@ -1111,7 +1113,7 @@ function FileUploadArea({
                       />
                     </Popover>
                   </li>
-                  <li>Single-file images (tif, czi, nifti, raw)</li>
+                  <li>Single-file images (tif, czi, nifti, raw, ims etc.)</li>
 
                   <li>KNOSSOS file hierarchy</li>
                 </ul>

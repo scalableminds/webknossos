@@ -428,7 +428,7 @@ class DatasetController @Inject()(userService: UserService,
             request.body.selectionTopLeftY,
             request.body.selectionBottomRightX,
             request.body.selectionBottomRightY,
-            targetMagSelectedBbox.size.sorted.x, // section count
+            targetMagSelectedBbox.size,
             intensityMin,
             intensityMax
           ) ?~> "segmentAnything.getMask.failed"

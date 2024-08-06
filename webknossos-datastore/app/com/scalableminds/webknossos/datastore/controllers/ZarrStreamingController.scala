@@ -533,7 +533,8 @@ class ZarrStreamingController @Inject()(
           dataSource <- dataSourceRepository.findUsable(DataSourceId(datasetName, organizationName)).toFox ?~> Messages(
             "dataSource.notFound") ~> NOT_FOUND
           layerNames = dataSource.dataLayers.map((dataLayer: DataLayer) => dataLayer.name)
-          additionalVersionDependantFiles = if (zarrVersion == 2) List(NgffGroupHeader.FILENAME_DOT_ZGROUP) else List.empty
+          additionalVersionDependantFiles = if (zarrVersion == 2) List(NgffGroupHeader.FILENAME_DOT_ZGROUP)
+          else List.empty
         } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(
@@ -558,7 +559,8 @@ class ZarrStreamingController @Inject()(
           .map((dataLayer: DataLayer) => dataLayer.name)
           .filter(!annotationLayerNames.contains(_))
         layerNames = annotationLayerNames ++ dataSourceLayerNames
-        additionalEntries = if (zarrVersion == 2) List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON, NgffGroupHeader.FILENAME_DOT_ZGROUP)
+        additionalEntries = if (zarrVersion == 2)
+          List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON, NgffGroupHeader.FILENAME_DOT_ZGROUP)
         else
           List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       } yield

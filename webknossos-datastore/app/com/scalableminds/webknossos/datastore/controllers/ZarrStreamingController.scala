@@ -128,10 +128,14 @@ class ZarrStreamingController @Inject()(
           s.name,
           s.boundingBox,
           s.elementClass,
-          s.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+          mags = s.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
-          numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1)
+          numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1),
+            defaultViewConfiguration = s.defaultViewConfiguration,
+          adminViewConfiguration = s.adminViewConfiguration,
+          coordinateTransformations = s.coordinateTransformations,
+          additionalAxes = s.additionalAxes
         )
       case d: DataLayer =>
         ZarrDataLayer(
@@ -139,9 +143,13 @@ class ZarrStreamingController @Inject()(
           d.category,
           d.boundingBox,
           d.elementClass,
-          d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+          mags = d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
           numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1),
-          additionalAxes = None
+          defaultViewConfiguration = d.defaultViewConfiguration,
+          adminViewConfiguration = d.adminViewConfiguration,
+          coordinateTransformations = d.coordinateTransformations,
+          additionalAxes = d.additionalAxes
+
         )
     }
 

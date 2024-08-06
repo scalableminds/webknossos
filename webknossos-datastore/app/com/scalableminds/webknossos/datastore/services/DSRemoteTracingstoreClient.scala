@@ -25,6 +25,8 @@ class DSRemoteTracingstoreClient @Inject()(
     val lifecycle: ApplicationLifecycle,
 ) extends LazyLogging
     with FoxImplicits {
+  private def getZarrVersionDependantSubPath = (zarrVersion: Int) => if(zarrVersion == 2) "zarr" else "zarr3_experimental"
+
   def getZArray(tracingId: String, mag: String, tracingStoreUri: String, token: Option[String]): Fox[ZarrHeader] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/$mag/.zarray")
       .addQueryStringOptional("token", token)
@@ -71,13 +73,15 @@ class DSRemoteTracingstoreClient @Inject()(
   def getDataLayerMagFolderContents(tracingId: String,
                                     mag: String,
                                     tracingStoreUri: String,
-                                    token: Option[String]): Fox[List[String]] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr/json/$tracingId/$mag")
+                                    token: Option[String],
+                                    zarrVersion: Int): Fox[List[String]] = {
+    rpc(s"$tracingStoreUri/tracings/volume/${getZarrVersionDependantSubPath(zarrVersion)}/json/$tracingId/$mag")
       .addQueryStringOptional("token", token)
       .getWithJsonResponse[List[String]]
+  }
 
-  def getDataLayerFolderContents(tracingId: String, tracingStoreUri: String, token: Option[String]): Fox[List[String]] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr/json/$tracingId")
+  def getDataLayerFolderContents(tracingId: String, tracingStoreUri: String, token: Option[String], zarrVersion: Int): Fox[List[String]] =
+    rpc(s"$tracingStoreUri/tracings/volume/${getZarrVersionDependantSubPath(zarrVersion)}/json/$tracingId")
       .addQueryStringOptional("token", token)
       .getWithJsonResponse[List[String]]
 

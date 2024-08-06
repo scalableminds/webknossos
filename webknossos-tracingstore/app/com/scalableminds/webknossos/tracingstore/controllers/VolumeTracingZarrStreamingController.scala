@@ -28,7 +28,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
-import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataFormat, DataLayer, ElementClass}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
@@ -55,33 +55,42 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   override def defaultErrorCode: Int = NOT_FOUND
 
-  def volumeTracingFolderContent(token: Option[String], tracingId: String): Action[AnyContent] =
+  def volumeTracingFolderContent(token: Option[String], tracingId: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
           existingMags = tracing.resolutions.map(vec3IntFromProto)
+          additionalFiles = if (zarrVersion == 2)
+            List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
+          else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              List(".zattrs", ".zgroup") ++ existingMags.map(_.toMagLiteral(allowScalar = true))
+              additionalFiles ++ existingMags.map(_.toMagLiteral(allowScalar = true))
             )).withHeaders()
       }
     }
 
-  def volumeTracingFolderContentJson(token: Option[String], tracingId: String): Action[AnyContent] =
+  def volumeTracingFolderContentJson(token: Option[String], tracingId: String, zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
           existingMags = tracing.resolutions.map(vec3IntFromProto(_).toMagLiteral(allowScalar = true))
-        } yield Ok(Json.toJson(List(".zattrs", ".zgroup") ++ existingMags))
+          additionalFiles = if (zarrVersion == 2)
+            List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
+          else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
+        } yield Ok(Json.toJson(additionalFiles ++ existingMags))
       }
     }
 
-  def volumeTracingMagFolderContent(token: Option[String], tracingId: String, mag: String): Action[AnyContent] =
+  def volumeTracingMagFolderContent(token: Option[String],
+                                    tracingId: String,
+                                    mag: String,
+                                    zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
@@ -90,17 +99,21 @@ class VolumeTracingZarrStreamingController @Inject()(
           existingMags = tracing.resolutions.map(vec3IntFromProto)
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
+          files = if (zarrVersion == 2) List(".zarray") else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         } yield
           Ok(
             views.html.datastoreZarrDatasourceDir(
               "Tracingstore",
               "%s".format(tracingId),
-              List(".zarray")
+              files
             )).withHeaders()
       }
     }
 
-  def volumeTracingMagFolderContentJson(token: Option[String], tracingId: String, mag: String): Action[AnyContent] =
+  def volumeTracingMagFolderContentJson(token: Option[String],
+                                        tracingId: String,
+                                        mag: String,
+                                        zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
@@ -109,7 +122,8 @@ class VolumeTracingZarrStreamingController @Inject()(
           existingMags = tracing.resolutions.map(vec3IntFromProto)
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
-        } yield Ok(Json.toJson(List(".zarray")))
+          files = if (zarrVersion == 2) List(".zarray") else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
+        } yield Ok(Json.toJson(files))
       }
     }
 
@@ -243,7 +257,10 @@ class VolumeTracingZarrStreamingController @Inject()(
     }
   }
 
-  def zarrSource(token: Option[String], tracingId: String, tracingName: Option[String]): Action[AnyContent] =
+  def zarrSource(token: Option[String],
+                 tracingId: String,
+                 tracingName: Option[String],
+                 zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
@@ -256,7 +273,8 @@ class VolumeTracingZarrStreamingController @Inject()(
             elementClass = tracing.elementClass,
             mags = tracing.resolutions.toList.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
             mappings = None,
-            numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1)
+            numChannels = Some(if (tracing.elementClass.isuint24) 3 else 1),
+            dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3
           )
         } yield Ok(Json.toJson(zarrLayer))
       }

@@ -132,7 +132,7 @@ class ZarrStreamingController @Inject()(
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
           numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1),
-            defaultViewConfiguration = s.defaultViewConfiguration,
+          defaultViewConfiguration = s.defaultViewConfiguration,
           adminViewConfiguration = s.adminViewConfiguration,
           coordinateTransformations = s.coordinateTransformations,
           additionalAxes = s.additionalAxes
@@ -149,7 +149,6 @@ class ZarrStreamingController @Inject()(
           adminViewConfiguration = d.adminViewConfiguration,
           coordinateTransformations = d.coordinateTransformations,
           additionalAxes = d.additionalAxes
-
         )
     }
 

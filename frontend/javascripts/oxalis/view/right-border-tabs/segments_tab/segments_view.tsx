@@ -12,10 +12,12 @@ import {
   EyeInvisibleOutlined,
   EyeOutlined,
   CloseOutlined,
+  ShrinkOutlined,
+  ExpandAltOutlined,
 } from "@ant-design/icons";
 import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
-import { api, Model } from "oxalis/singletons";
+import { api } from "oxalis/singletons";
 import {
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
@@ -36,7 +38,6 @@ import {
 } from "antd";
 import Toast from "libs/toast";
 import _, { isNumber } from "lodash";
-import memoizeOne from "memoize-one";
 import type { Vector3 } from "oxalis/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
@@ -81,6 +82,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
   setSelectedSegmentsOrGroupAction,
+  setSegmentGroupsAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type {
@@ -90,6 +92,7 @@ import type {
   Segment,
   SegmentGroup,
   SegmentMap,
+  TreeGroup,
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
@@ -122,6 +125,7 @@ import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { DataNode } from "antd/lib/tree";
 import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { ValueOf } from "types/globals";
+import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -138,7 +142,6 @@ const segmentsTabId = "segment-list";
 type StateProps = {
   meshes: Record<number, MeshInformation>;
   dataset: APIDataset;
-  isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
   centeredSegmentId: number;
   hasVolumeTracing: boolean | undefined;
@@ -187,8 +190,6 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     activeCellId: activeVolumeTracing?.activeCellId,
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
     dataset: state.dataset,
-    isJSONMappingEnabled:
-      mappingInfo.mappingStatus === MappingStatusEnum.ENABLED && mappingInfo.mappingType === "JSON",
     mappingInfo,
     centeredSegmentId: getSegmentIdForPosition(getPosition(state.flycam)),
     hasVolumeTracing: state.tracing.volumes.length > 0,
@@ -323,6 +324,7 @@ type State = {
     [groupId: number]: { areSomeSegmentsVisible: boolean; areSomeSegmentsInvisible: boolean };
   };
   activeStatisticsModalGroupId: number | null;
+  expandedGroupKeys: Key[];
 };
 
 const formatMagWithLabel = (mag: Vector3, index: number) => {
@@ -340,16 +342,6 @@ const formatMeshFile = (meshFile: APIMeshFile | null | undefined): string | null
   return `${meshFile.meshFileName} (${meshFile.mappingName})`;
 };
 
-function _getMapIdFn(visibleSegmentationLayer: APISegmentationLayer | null | undefined) {
-  const dataLayer =
-    visibleSegmentationLayer != null ? Model.getLayerByName(visibleSegmentationLayer.name) : null;
-
-  const mapId = dataLayer != null ? (id: number) => dataLayer.cube.mapId(id) : (id: number) => id;
-  return mapId;
-}
-
-const getMapIdFn = memoizeOne(_getMapIdFn);
-
 function renderEmptyMeshFileSelect() {
   return (
     <Empty
@@ -358,6 +350,24 @@ function renderEmptyMeshFileSelect() {
     />
   );
 }
+
+const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
+  return segmentGroups.reduce((expandedKeysAcc: string[], node) => {
+    if (node.isExpanded || node.isExpanded == null) {
+      expandedKeysAcc.push(getKeyForGroupId(node.groupId));
+    }
+    if (node.children.length > 0) expandedKeysAcc.push(...getExpandedKeys(node.children));
+    return expandedKeysAcc;
+  }, []);
+};
+
+const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[]) => {
+  const expandedGroups = getExpandedKeys(segmentGroups);
+  expandedGroups.unshift(getKeyForGroupId(MISSING_GROUP_ID));
+  return expandedGroups;
+};
+
+const getKeyForGroupId = (groupId: number) => `group-${groupId}`;
 
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
@@ -389,6 +399,14 @@ function constructTreeData(
   });
 }
 
+const rootGroup = {
+  name: "Root",
+  groupId: MISSING_GROUP_ID,
+  key: `group-${MISSING_GROUP_ID}`,
+  children: [],
+  isExpanded: true,
+};
+
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
   state: State = {
@@ -402,6 +420,7 @@ class SegmentsView extends React.Component<Props, State> {
     groupToDelete: null,
     groupsSegmentsVisibilityStateMap: {},
     activeStatisticsModalGroupId: null,
+    expandedGroupKeys: [],
   };
   tree: React.RefObject<RcTree>;
 
@@ -425,6 +444,10 @@ class SegmentsView extends React.Component<Props, State> {
     }
 
     Store.dispatch(ensureSegmentIndexIsLoadedAction(this.props.visibleSegmentationLayer?.name));
+
+    this.setState({
+      expandedGroupKeys: getExpandedKeysWithRoot(this.props.segmentGroups),
+    });
   }
 
   componentDidUpdate(prevProps: Props) {
@@ -460,6 +483,53 @@ class SegmentsView extends React.Component<Props, State> {
       clearTimeout(this.intervalID);
     }
   }
+
+  getKeysOfSubGroups = (groupId: number) => {
+    if (groupId !== MISSING_GROUP_ID) {
+      return getGroupByIdWithSubgroups(this.props.segmentGroups, groupId)
+        .filter((group) => group !== groupId)
+        .map((group) => getKeyForGroupId(group));
+    }
+    const allSegmentGroups = this.props.segmentGroups.flatMap((group) =>
+      getGroupByIdWithSubgroups(this.props.segmentGroups, group.groupId),
+    );
+    return allSegmentGroups.map((group) => getKeyForGroupId(group));
+  };
+
+  setExpandedGroups = (newExpandedGroups: Key[]) => {
+    if (this.props.visibleSegmentationLayer == null) return;
+    const expandedKeySet = new Set(newExpandedGroups);
+    const newGroups = mapGroups(this.props.segmentGroups, (group) => {
+      const shouldBeExpanded = expandedKeySet.has(getKeyForGroupId(group.groupId));
+      if (shouldBeExpanded !== group.isExpanded) {
+        // Close all groups that are not in the expanded list so this method
+        // can be called for every update, e.g. when a group is collapsed.
+        return {
+          ...group,
+          isExpanded: shouldBeExpanded,
+        };
+      } else {
+        return group;
+      }
+    });
+    Store.dispatch(setSegmentGroupsAction(newGroups, this.props.visibleSegmentationLayer?.name));
+  };
+
+  collapseGroups = (groupsToCollapse: Key[]) => {
+    if (this.props.visibleSegmentationLayer == null) return;
+    const groupsToCollapseSet = new Set(groupsToCollapse);
+    const newGroups = mapGroups(this.props.segmentGroups, (group) => {
+      if (groupsToCollapseSet.has(getKeyForGroupId(group.groupId)) && group.isExpanded) {
+        return {
+          ...group,
+          isExpanded: false,
+        };
+      } else {
+        return group;
+      }
+    });
+    Store.dispatch(setSegmentGroupsAction(newGroups, this.props.visibleSegmentationLayer?.name));
+  };
 
   onSelectTreeItem = (
     keys: Key[],
@@ -546,10 +616,8 @@ class SegmentsView extends React.Component<Props, State> {
     }
     let updateStateObject: Partial<State> | null = null;
     const groupToSegmentsMap = createGroupToSegmentsMap(segments);
-    const rootGroup = {
-      name: "Root",
-      groupId: MISSING_GROUP_ID,
-      key: MISSING_GROUP_ID,
+    const rootGroupWithChildren = {
+      ...rootGroup,
       children: segmentGroups,
     };
     if (
@@ -558,7 +626,7 @@ class SegmentsView extends React.Component<Props, State> {
     ) {
       // Insert the segments into the corresponding groups and create a
       // groupTree object that can be rendered using the antd Tree component
-      const generatedGroupTree = constructTreeData([rootGroup], groupToSegmentsMap);
+      const generatedGroupTree = constructTreeData([rootGroupWithChildren], groupToSegmentsMap);
 
       // Traverse the tree hierarchy so that we get a list of segments and groups
       // that is in the same order as the rendered tree. That way, cycling through
@@ -582,6 +650,7 @@ class SegmentsView extends React.Component<Props, State> {
         groupTree: generatedGroupTree,
         searchableTreeItemList,
         prevProps: nextProps,
+        expandedGroupKeys: getExpandedKeysWithRoot(nextProps.segmentGroups),
       };
     }
     if (prevState.prevProps?.meshes !== meshes) {
@@ -616,7 +685,7 @@ class SegmentsView extends React.Component<Props, State> {
         }
         newVisibleMap[group.groupId] = visibilityEntry;
       };
-      fillNewGroupsSegmentsVisibilityStateMap(rootGroup);
+      fillNewGroupsSegmentsVisibilityStateMap(rootGroupWithChildren);
       return {
         ...updateStateObject, //may be null
         prevProps: nextProps,
@@ -1405,7 +1474,7 @@ class SegmentsView extends React.Component<Props, State> {
       (segmentId) => `segment-${segmentId}`,
     );
     if (this.props.selectedIds.group != null) {
-      return mappedIdsToKeys.concat(`group-${this.props.selectedIds.group}`);
+      return mappedIdsToKeys.concat(getKeyForGroupId(this.props.selectedIds.group));
     }
     return mappedIdsToKeys;
   };
@@ -1596,7 +1665,6 @@ class SegmentsView extends React.Component<Props, State> {
             const isSegmentHierarchyEmpty = !(
               allSegments?.size() || this.props.segmentGroups.length
             );
-            const mapId = getMapIdFn(this.props.visibleSegmentationLayer);
 
             if (!this.props.visibleSegmentationLayer) {
               return (
@@ -1632,15 +1700,13 @@ class SegmentsView extends React.Component<Props, State> {
                 return (
                   <SegmentListItem
                     key={segment.id}
-                    mapId={mapId}
                     segment={segment}
-                    centeredSegmentId={centeredSegmentId}
+                    isCentered={centeredSegmentId === segment.id}
                     selectedSegmentIds={this.props.selectedIds.segments}
                     activeDropdownSegmentId={this.state.activeDropdownSegmentId}
                     onSelectSegment={this.onSelectSegment}
                     handleSegmentDropdownMenuVisibility={this.handleSegmentDropdownMenuVisibility}
                     mesh={this.props.meshes[segment.id]}
-                    isJSONMappingEnabled={this.props.isJSONMappingEnabled}
                     mappingInfo={this.props.mappingInfo}
                     activeCellId={this.props.activeCellId}
                     setHoveredSegmentId={this.props.setHoveredSegmentId}
@@ -1657,6 +1723,8 @@ class SegmentsView extends React.Component<Props, State> {
                     currentMeshFile={this.props.currentMeshFile}
                     onRenameStart={this.onRenameStart}
                     onRenameEnd={this.onRenameEnd}
+                    // TODO #7895: The line below causes SegmentItems to always rerender
+                    // if SegmentsView rerenders.
                     multiSelectMenu={multiSelectMenu()}
                     activeVolumeTracing={this.props.activeVolumeTracing}
                   />
@@ -1686,6 +1754,8 @@ class SegmentsView extends React.Component<Props, State> {
                       icon: <DeleteOutlined />,
                       label: "Delete group",
                     },
+                    this.getExpandSubgroupsItem(id),
+                    this.getCollapseSubgroupsItem(id),
                     this.getMoveSegmentsHereMenuItem(id),
                     {
                       key: "groupAndMeshActionDivider",
@@ -1792,7 +1862,6 @@ class SegmentsView extends React.Component<Props, State> {
                             allowDrop={this.allowDrop}
                             onDrop={this.onDrop}
                             onSelect={this.onSelectTreeItem}
-                            defaultExpandAll
                             className="segments-tree"
                             blockNode
                             // Passing an explicit height here, makes the tree virtualized
@@ -1813,10 +1882,13 @@ class SegmentsView extends React.Component<Props, State> {
                             titleRender={titleRender}
                             style={{
                               marginTop: 12,
+                              marginLeft: -26, // hide switcherIcon for root group
                               flex: "1 1 auto",
                               overflow: "auto", // use hidden when not using virtualization
                             }}
                             ref={this.tree}
+                            onExpand={this.setExpandedGroups}
+                            expandedKeys={this.state.expandedGroupKeys}
                           />
                         </div>
                       )}
@@ -1840,6 +1912,46 @@ class SegmentsView extends React.Component<Props, State> {
         </DomVisibilityObserver>
       </div>
     );
+  }
+
+  getExpandSubgroupsItem(groupId: number) {
+    const children: Key[] = this.getKeysOfSubGroups(groupId);
+    const expandedGroupsSet = new Set(this.state.expandedGroupKeys);
+    const areAllChildrenExpanded = children.every((childNode) => expandedGroupsSet.has(childNode));
+    const isGroupItselfExpanded = expandedGroupsSet.has(getKeyForGroupId(groupId));
+    if (areAllChildrenExpanded && isGroupItselfExpanded) {
+      return null;
+    }
+    return {
+      key: "expandAll",
+      onClick: () => {
+        const allExpandedGroups = children.concat(this.state.expandedGroupKeys);
+        if (!isGroupItselfExpanded) allExpandedGroups.push(getKeyForGroupId(groupId));
+        this.setExpandedGroups(allExpandedGroups);
+        this.closeSegmentOrGroupDropdown();
+      },
+      icon: <ExpandAltOutlined />,
+      label: "Expand all subgroups",
+    };
+  }
+
+  getCollapseSubgroupsItem(groupId: number) {
+    const children = this.getKeysOfSubGroups(groupId);
+    const expandedKeySet = new Set(this.state.expandedGroupKeys);
+    const areAllChildrenCollapsed = children.every((childNode) => !expandedKeySet.has(childNode));
+    const isGroupItselfCollapsed = !expandedKeySet.has(getKeyForGroupId(groupId));
+    if (areAllChildrenCollapsed || isGroupItselfCollapsed) {
+      return null;
+    }
+    return {
+      key: "collapseAll",
+      onClick: () => {
+        this.collapseGroups(children);
+        this.closeSegmentOrGroupDropdown();
+      },
+      icon: <ShrinkOutlined />,
+      label: "Collapse all subgroups",
+    };
   }
 
   createGroup(parentGroupId: number): void {

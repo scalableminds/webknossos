@@ -4,20 +4,12 @@ set -Eeuo pipefail
 if [ "${CIRCLE_BRANCH}" == "master" ] ; then
     author=${CIRCLE_USERNAME}
     author=${author/fm3/<@florian>}
-    author=${author/jstriebel/<@jonathan>}
     author=${author/daniel-wer/<@daniel>}
-    author=${author/georgwiese/<@georg>}
     author=${author/hotzenklotz/<@tom>}
-    author=${author/jfrohnhofen/<@johannes>}
     author=${author/MichaelBuessemeyer/<@michael>}
     author=${author/normanrz/<@norman>}
     author=${author/philippotto/<@philipp>}
-    author=${author/rschwanhold/<@robert>}
-    author=${author/tmbo/<@tmbo>}
     author=${author/valentin-pinkau/<@valentin>}
-    author=${author/youri-k/<@youri>}
-    author=${author/Dagobert42/<@Arthur>}
-    author=${author/leowe/<@leo>}
     author=${author/frcroth/<@felix.roth>}
     author=${author/dieknolle3333/<@charlie.meister>}
     channel="webknossos-bots"
@@ -27,9 +19,9 @@ if [ "${CIRCLE_BRANCH}" == "master" ] ; then
     do
         commitmsg="${BASH_REMATCH[1]}#<https://github.com/scalableminds/webknossos/issues/${BASH_REMATCH[2]}|${BASH_REMATCH[2]}>${BASH_REMATCH[3]}"
     done
-    buildlink="<https://circleci.com/gh/scalableminds/webknossos/${CIRCLE_BUILD_NUM}|${CIRCLE_BUILD_NUM}>"
-    mesg="${author} your ${CIRCLE_BRANCH} build ${buildlink} “${commitmsg}” is almost finished."
-    user="circleci-notify"
+    buildlink="<https://circleci.com/gh/scalableminds/webknossos/${CIRCLE_BUILD_NUM}|ready>"
+    mesg="${author} WEBKNOSSOS docker image \`master__${CIRCLE_BUILD_NUM}\` for “${commitmsg}” is ${buildlink}."
+    user="ci-notify"
     token="${SLACK_NOTIFY_TOKEN:-}"
     res=$(curl -s \
         -X POST \

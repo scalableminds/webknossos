@@ -5,7 +5,7 @@ import {
   Modal,
   Tooltip,
   notification,
-  Tree as AndTree,
+  Tree as AntdTree,
   GetRef,
   TreeProps,
 } from "antd";
@@ -92,7 +92,7 @@ function TreeHierarchyView(props: Props) {
   const [activeTreeDropdownId, setActiveTreeDropdownId] = useState<number | null>(null);
   const [activeGroupDropdownId, setActiveGroupDropdownId] = useState<number | null>(null);
 
-  const treeRef = useRef<GetRef<typeof AndTree>>(null);
+  const treeRef = useRef<GetRef<typeof AntdTree>>(null);
 
   const dispatch = useDispatch();
 
@@ -696,7 +696,7 @@ function TreeHierarchyView(props: Props) {
             width,
           }}
         >
-          <AndTree
+          <AntdTree
             treeData={UITreeData}
             height={height}
             ref={treeRef}

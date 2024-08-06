@@ -17,6 +17,7 @@ import * as Utils from "libs/utils";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
+import { api } from "oxalis/singletons";
 
 export default function BoundingBoxTab() {
   const bboxTableRef: Parameters<typeof Table>[0]["ref"] = useRef(null);
@@ -45,6 +46,37 @@ export default function BoundingBoxTab() {
   const setPosition = (position: Vector3) => dispatch(setPositionAction(position));
 
   const deleteBoundingBox = (id: number) => dispatch(deleteUserBoundingBoxAction(id));
+
+  const registerSegmentsForBoundingBox = async (min: Vector3, max: Vector3) => {
+    const segmentationLayerName = api.data.getSegmentationLayerNames()[0];
+    const data = await api.data.getDataForBoundingBox(segmentationLayerName, {
+      min,
+      max
+    })
+
+    const segmentIdToPosition = new Map();
+    let idx = 0;
+    for (let z = min[2]; z < max[2]; z++) {
+      for (let y = min[1]; y < max[1]; y++) {
+        for (let x = min[0]; x < max[0]; x++) {
+          const id = data[idx];
+          if (!segmentIdToPosition.has(id)) {
+            segmentIdToPosition.set(id, [x, y, z])
+          }
+          idx++;
+        }
+      }
+    }
+
+    for (const [id, position] of segmentIdToPosition.entries()) {
+      api.tracing.registerSegment(
+        id,
+        position,
+        undefined,
+        segmentationLayerName,
+      );
+    }
+  }
 
   const setBoundingBoxVisibility = (id: number, isVisible: boolean) =>
     dispatch(
@@ -125,7 +157,8 @@ export default function BoundingBoxTab() {
           isVisible={bb.isVisible}
           onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
           onDelete={_.partial(deleteBoundingBox, bb.id)}
-          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
+          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => { }}
+          onRegisterSegmentsForBB={registerSegmentsForBoundingBox}
           onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
           onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
           onNameChange={_.partial(setBoundingBoxName, bb.id)}

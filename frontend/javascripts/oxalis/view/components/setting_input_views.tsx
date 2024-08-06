@@ -380,6 +380,7 @@ type UserBoundingBoxInputProps = {
   onBoundingChange: (arg0: Vector6) => void;
   onDelete: () => void;
   onExport: () => void;
+  onRegisterSegmentsForBB: (arg0: Vector3, arg1: Vector3) => void,
   onGoToBoundingBox: () => void;
   onVisibilityChange: (arg0: boolean) => void;
   onNameChange: (arg0: string) => void;
@@ -478,14 +479,15 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     const tooltipStyle = this.state.isValid
       ? null
       : {
-          backgroundColor: "red",
-        };
+        backgroundColor: "red",
+      };
     const {
       tooltipTitle,
       color,
       isVisible,
       onDelete,
       onExport,
+      onRegisterSegmentsForBB,
       isExportEnabled,
       onGoToBoundingBox,
       disabled,
@@ -509,6 +511,13 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       isOwner,
     );
 
+    const getMinAndMax = (value: Vector6): { min: Vector3, max: Vector3 } => {
+      const [minX, minY, minZ, width, height, depth] = value;
+      return { min: [minX, minY, minZ], max: [minX + width, minY + height, minZ + depth] };
+    }
+
+    const { min, max } = getMinAndMax(this.props.value);
+
     const getContextMenu = () => {
       const items: MenuProps["items"] = [
         {
@@ -519,7 +528,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               Register all segments in this bounding box
             </>
           ),
-          onClick: disabled ? () => {} : onDelete,
+          onClick: disabled ? () => { } : () => onRegisterSegmentsForBB(min, max),
         },
         {
           key: "goToCenter",
@@ -549,7 +558,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               {disabled ? editingDisallowedExplanation : "Delete"}
             </>
           ),
-          onClick: disabled ? () => {} : onDelete,
+          onClick: disabled ? () => { } : onDelete,
         },
       ];
 

@@ -303,7 +303,6 @@ class JobController @Inject()(
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
-          alignSectionsJobOptions = request.body
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           _ <- Fox.runOptional(annotationId)(ObjectId.fromString)

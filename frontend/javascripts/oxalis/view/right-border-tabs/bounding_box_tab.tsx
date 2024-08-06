@@ -19,6 +19,8 @@ import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
 import { AutoSizer } from "react-virtualized";
 
+const ADD_BBOX_BUTTON_HEIGHT = 32;
+
 export default function BoundingBoxTab() {
   const bboxTableRef: Parameters<typeof Table>[0]["ref"] = useRef(null);
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
@@ -185,7 +187,8 @@ export default function BoundingBoxTab() {
                 }}
                 footer={() => maybeAddBoundingBoxButton}
                 virtual
-                scroll={{ y: height }}
+                scroll={{ y: height - (allowUpdate ? ADD_BBOX_BUTTON_HEIGHT : 10) }} // If the scroll height is exactly
+                // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
               />
             </div>
           )}

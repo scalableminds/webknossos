@@ -80,6 +80,7 @@ class DatasetController @Inject()(userService: UserService,
       (__ \ "sortingKey").readNullable[Instant] and
       (__ \ "isPublic").read[Boolean] and
       (__ \ "tags").read[List[String]] and
+      (__ \ "metadata").readNullable[JsArray] and
       (__ \ "folderId").readNullable[ObjectId]).tupled
 
   def removeFromThumbnailCache(organizationName: String, datasetName: String): Action[AnyContent] =
@@ -299,17 +300,21 @@ class DatasetController @Inject()(userService: UserService,
   def update(organizationName: String, datasetName: String): Action[JsValue] =
     sil.SecuredAction.async(parse.json) { implicit request =>
       withJsonBodyUsing(datasetPublicReads) {
-        case (description, displayName, sortingKey, isPublic, tags, folderId) =>
+        case (description, displayName, sortingKey, isPublic, tags, metadata, folderId) =>
           for {
             dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, request.identity._organization) ?~> notFoundMessage(
               datasetName) ~> NOT_FOUND
+            maybeUpdatedMetadata = if (metadata.isDefined) metadata else dataset.metadata
             _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-            _ <- datasetDAO.updateFields(dataset._id,
-                                         description,
-                                         displayName,
-                                         sortingKey.getOrElse(dataset.created),
-                                         isPublic,
-                                         folderId.getOrElse(dataset._folder))
+            _ <- datasetDAO.updateFields(
+              dataset._id,
+              description,
+              displayName,
+              sortingKey.getOrElse(dataset.created),
+              isPublic,
+              maybeUpdatedMetadata,
+              folderId.getOrElse(dataset._folder)
+            )
             _ <- datasetDAO.updateTags(dataset._id, tags)
             updated <- datasetDAO.findOneByNameAndOrganization(datasetName, request.identity._organization)
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))

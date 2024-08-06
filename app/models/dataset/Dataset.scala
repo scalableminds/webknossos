@@ -499,12 +499,21 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                    displayName: Option[String],
                    sortingKey: Instant,
                    isPublic: Boolean,
+                   metadata: Option[JsArray],
                    folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val query = for { row <- Datasets if notdel(row) && row._Id === _id.id } yield
-      (row.description, row.displayname, row.sortingkey, row.ispublic, row._Folder)
+    val query = for { row <- Datasets if notdel(row) && row._Id === _id.id } yield {
+      (row.description, row.displayname, row.sortingkey, row.ispublic, row.metadata, row._Folder)
+    }
     for {
       _ <- assertUpdateAccess(_id)
-      _ <- run(query.update(description, displayName, sortingKey.toSql, isPublic, folderId.toString))
+      _ <- run(
+        query.update(
+          (description,
+           displayName,
+           sortingKey.toSql,
+           isPublic,
+           Some(metadata.getOrElse("[]").toString),
+           folderId.toString)))
     } yield ()
   }
 

@@ -9,11 +9,20 @@ import {
   Select,
   Popover,
   PopoverProps,
+  Dropdown,
+  MenuProps,
 } from "antd";
-import { DeleteOutlined, DownloadOutlined, EditOutlined, ScanOutlined } from "@ant-design/icons";
+import {
+  BorderInnerOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  EllipsisOutlined,
+  ScanOutlined,
+} from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import { type Vector3, type Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import messages from "messages";
 
@@ -489,21 +498,68 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       marginLeft: 6,
     };
     const disabledIconStyle = { ...iconStyle, opacity: 0.5, cursor: "not-allowed" };
-    const exportIconStyle = isExportEnabled ? iconStyle : disabledIconStyle;
-    const exportButtonTooltip = isExportEnabled
-      ? "Export data from this bounding box."
-      : messages["data.bounding_box_export_not_supported"];
-    const exportColumn = isExportEnabled ? (
-      <Col span={2}>
-        <Tooltip title={exportButtonTooltip} placement="topRight">
-          <DownloadOutlined onClick={onExport} style={exportIconStyle} />
-        </Tooltip>
-      </Col>
-    ) : null;
+    const exportIconStyle = isExportEnabled ? {} : disabledIconStyle;
+    const exportButton = (
+      <>
+        <DownloadOutlined style={exportIconStyle} /> Export data
+      </>
+    );
     const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
       isLockedByOwner,
       isOwner,
     );
+
+    const getContextMenu = () => {
+      const items: MenuProps["items"] = [
+        {
+          key: "registerSegments",
+          label: (
+            <>
+              <ScanOutlined /> {""}
+              Register all segments in this bounding box
+            </>
+          ),
+          onClick: disabled ? () => {} : onDelete,
+        },
+        {
+          key: "goToCenter",
+          label: (
+            <>
+              <BorderInnerOutlined style={{ marginTop: 6 }} /> Go to center
+            </>
+          ),
+          onClick: onGoToBoundingBox,
+        },
+        {
+          key: "export",
+          label: isExportEnabled ? (
+            exportButton
+          ) : (
+            <Tooltip title={editingDisallowedExplanation}> {exportButton}</Tooltip>
+          ),
+          disabled: !isExportEnabled,
+          onClick: onExport,
+        },
+        {
+          key: "delete",
+          label: (
+            <>
+              {" "}
+              <DeleteOutlined style={disabled ? disabledIconStyle : {}} />{" "}
+              {disabled ? editingDisallowedExplanation : "Delete"}
+            </>
+          ),
+          onClick: disabled ? () => {} : onDelete,
+        },
+      ];
+
+      return (
+        <Dropdown menu={{ items }}>
+          <EllipsisOutlined style={iconStyle} />
+        </Dropdown>
+      );
+    };
+
     return (
       <>
         <Row
@@ -541,15 +597,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               </span>
             </Tooltip>
           </Col>
-          {exportColumn}
-          <Col span={2}>
-            <Tooltip title={disabled ? editingDisallowedExplanation : "Delete this bounding box."}>
-              <DeleteOutlined
-                onClick={disabled ? () => {} : onDelete}
-                style={disabled ? disabledIconStyle : iconStyle}
-              />
-            </Tooltip>
-          </Col>
+          <Col span={2}>{getContextMenu()}</Col>
         </Row>
         <Row
           style={{
@@ -593,11 +641,6 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                   disabled={disabled}
                 />
               </span>
-            </Tooltip>
-          </Col>
-          <Col span={2}>
-            <Tooltip title="Go to the center of the bounding box.">
-              <ScanOutlined onClick={onGoToBoundingBox} style={{ ...iconStyle, marginTop: 6 }} />
             </Tooltip>
           </Col>
         </Row>

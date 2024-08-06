@@ -33,7 +33,7 @@ async function getMask(
   const sizeInMag1 = V3.scale3(Dimensions.transDim(MASK_SIZE, activeViewport), mag);
   const maskTopLeftMag1 = V3.alignWithMag(V3.sub(centerMag1, V3.scale(sizeInMag1, 0.5)), mag);
   // Effectively, zero the first and second dimension in the mag.
-  const depth = window.depth || 8;
+  const depth = window.depth || 2;
   const depthSummand = V3.scale3(mag, Dimensions.transDim([0, 0, depth], activeViewport));
   const maskBottomRightMag1 = V3.add(maskTopLeftMag1, sizeInMag1);
   const maskBoxMag1 = new BoundingBox({
@@ -62,6 +62,7 @@ async function getMask(
   );
 
   const size = maskBoxInMag.getSize();
+  const sizeUVW = Dimensions.transDim(size, activeViewport);
   console.log("size", size);
   // const stride =
   //   activeViewport === "PLANE_XZ"
@@ -74,7 +75,7 @@ async function getMask(
   //     : [size[1] * size[2], size[2], 1]; // only valid for xy
   // size = [1024, 1024, 2]
   // 1, 1024, 1024**2
-  const stride = [size[2] * size[1], size[2], 1]; // only valid for xy;
+  const stride = [sizeUVW[2] * sizeUVW[1], sizeUVW[2], 1];
 
   console.log("stride", stride);
   const ndarr = ndarray(maskData, size, stride);

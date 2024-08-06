@@ -525,6 +525,7 @@ export function* finalizeQuickSelect(
 
   for (let u = 0; u < size[firstDim]; u++) {
     for (let v = 0; v < size[secondDim]; v++) {
+      // w = 0 is correct because...
       if (mask.get(u, v, 0) > 0) {
         voxelBuffer2D.setValue(u, v, 1);
       }

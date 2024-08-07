@@ -534,6 +534,9 @@ export function* finalizeQuickSelect(
     labeledZoomStep,
     activeViewport,
   );
+  if (boundingBoxMag1.getCenter().some((el) => el == null)) {
+    throw new Error("invalid bbox");
+  }
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
   yield* put(

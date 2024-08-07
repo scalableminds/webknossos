@@ -29,12 +29,14 @@ async function getMask(
   if (userBoxMag1.getVolume() === 0) {
     throw new Error("User bounding box should not have empty volume.");
   }
+  const trans = (vec: Vector3) => Dimensions.transDim(vec, activeViewport);
   const centerMag1 = V3.round(userBoxMag1.getCenter());
-  const sizeInMag1 = V3.scale3(Dimensions.transDim(MASK_SIZE, activeViewport), mag);
+
+  const sizeInMag1 = V3.scale3(trans(MASK_SIZE), mag);
   const maskTopLeftMag1 = V3.alignWithMag(V3.sub(centerMag1, V3.scale(sizeInMag1, 0.5)), mag);
   // Effectively, zero the first and second dimension in the mag.
   const depth = window.depth || 2;
-  const depthSummand = V3.scale3(mag, Dimensions.transDim([0, 0, depth], activeViewport));
+  const depthSummand = V3.scale3(mag, trans([0, 0, depth]));
   const maskBottomRightMag1 = V3.add(maskTopLeftMag1, sizeInMag1);
   const maskBoxMag1 = new BoundingBox({
     min: maskTopLeftMag1,
@@ -56,7 +58,7 @@ async function getMask(
     dataset,
     layerName,
     mag,
-    maskBoxInMag,
+    maskBoxMag1,
     userBoxRelativeToMaskInMag.getMinUV(activeViewport),
     userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
     additionalCoordinates,
@@ -64,7 +66,7 @@ async function getMask(
   );
 
   const size = maskBoxInMag.getSize();
-  const sizeUVW = Dimensions.transDim(size, activeViewport);
+  const sizeUVW = trans(size);
   const stride = [sizeUVW[2] * sizeUVW[1], sizeUVW[2], 1];
 
   console.log("size", size);
@@ -153,9 +155,9 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
 
   sendAnalyticsEvent("used_quick_select_with_ai");
 
-  let zOffset = 0;
+  let wOffset = 0;
   for (const mask of masks) {
-    const targetW = alignedUserBoxMag1.min[thirdDim] + zOffset;
+    const targetW = alignedUserBoxMag1.min[thirdDim] + labeledResolution[thirdDim] * wOffset;
 
     let minUV: Vector2 = [Infinity, Infinity];
     let maxUV: Vector2 = [0, 0];
@@ -169,6 +171,10 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
       }
     }
     console.timeEnd("find bbox in mask");
+    if (minUV.includes(Infinity)) {
+      console.log("Mask at", targetW, "is empty");
+      continue;
+    }
     console.log("minUV", minUV);
     console.log("maxUV", maxUV);
     const sizeUVMinusMaxUV = V3.sub(Dimensions.transDim(mask.shape as Vector3, activeViewport), [
@@ -194,6 +200,6 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
       overwriteMode,
       labeledZoomStep,
     );
-    zOffset++;
+    wOffset++;
   }
 }

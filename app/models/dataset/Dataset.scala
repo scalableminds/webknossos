@@ -475,7 +475,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       params.displayName.map(v => q"displayName = $v"),
       params.sortingKey.map(v => q"sortingKey = $v"),
       params.isPublic.map(v => q"isPublic = $v"),
-      params.tags.map(v => q"tags = $v"),
       params.folderId.map(v => q"_folder = $v"),
       params.metadata.map(v => q"metadata = $v"),
     ).flatten
@@ -494,27 +493,22 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     }
   }
 
-  def updateFields(_id: ObjectId,
+  def updateFields(datasetId: ObjectId,
                    description: Option[String],
                    displayName: Option[String],
                    sortingKey: Instant,
                    isPublic: Boolean,
                    metadata: Option[JsArray],
                    folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val query = for { row <- Datasets if notdel(row) && row._Id === _id.id } yield {
-      (row.description, row.displayname, row.sortingkey, row.ispublic, row.metadata, row._Folder)
-    }
-    for {
-      _ <- assertUpdateAccess(_id)
-      _ <- run(
-        query.update(
-          (description,
-           displayName,
-           sortingKey.toSql,
-           isPublic,
-           Some(metadata.getOrElse("[]").toString),
-           folderId.toString)))
-    } yield ()
+    val updateParameters = new DatasetUpdateParameters(
+      description = Some(description),
+      displayName = Some(displayName),
+      sortingKey = Some(sortingKey),
+      isPublic = Some(isPublic),
+      metadata = metadata,
+      folderId = Some(folderId)
+    )
+    updatePartial(datasetId, updateParameters)
   }
 
   def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =

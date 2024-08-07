@@ -17,6 +17,9 @@ import * as Utils from "libs/utils";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
+import { AutoSizer } from "react-virtualized";
+
+const ADD_BBOX_BUTTON_HEIGHT = 32;
 
 export default function BoundingBoxTab() {
   const bboxTableRef: Parameters<typeof Table>[0]["ref"] = useRef(null);
@@ -156,24 +159,39 @@ export default function BoundingBoxTab() {
       className="padded-tab-content"
       style={{
         minWidth: 300,
+        height: "100%",
       }}
     >
       {/* Don't render a table in view mode. */}
       {isViewMode ? null : userBoundingBoxes.length > 0 ? (
-        <Table
-          ref={bboxTableRef}
-          columns={boundingBoxWrapperTableColumns}
-          dataSource={userBoundingBoxes}
-          pagination={false}
-          rowKey="id"
-          showHeader={false}
-          className="bounding-box-table"
-          rowSelection={{
-            selectedRowKeys: activeBoundingBoxId != null ? [activeBoundingBoxId] : [],
-            getCheckboxProps: () => ({ disabled: true }),
-          }}
-          footer={() => maybeAddBoundingBoxButton}
-        />
+        <AutoSizer defaultHeight={500}>
+          {({ height, width }) => (
+            <div
+              style={{
+                height,
+                width,
+              }}
+            >
+              <Table
+                ref={bboxTableRef}
+                columns={boundingBoxWrapperTableColumns}
+                dataSource={userBoundingBoxes}
+                pagination={false}
+                rowKey="id"
+                showHeader={false}
+                className="bounding-box-table"
+                rowSelection={{
+                  selectedRowKeys: activeBoundingBoxId != null ? [activeBoundingBoxId] : [],
+                  getCheckboxProps: () => ({ disabled: true }),
+                }}
+                footer={() => maybeAddBoundingBoxButton}
+                virtual
+                scroll={{ y: height - (allowUpdate ? ADD_BBOX_BUTTON_HEIGHT : 10) }} // If the scroll height is exactly
+                // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
+              />
+            </div>
+          )}
+        </AutoSizer>
       ) : (
         <>
           <div>No Bounding Boxes created yet.</div>

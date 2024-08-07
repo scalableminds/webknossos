@@ -34,7 +34,6 @@ case class DatasetUpdateParameters(
     displayName: Option[Option[String]] = Some(None),
     sortingKey: Option[Instant],
     isPublic: Option[Boolean],
-    tags: Option[List[String]],
     metadata: Option[JsArray],
     folderId: Option[ObjectId]
 )

@@ -103,6 +103,17 @@ class DataSourceController @Inject()(
       }
     }
 
+  def getOngoingUploads() (token: Option[String], organizationName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
+        urlOrHeaderToken(token, request)) {
+        for {
+          dataSourceIds <- remoteWebknossosClient.getReservedDatasetUploadsForUser(urlOrHeaderToken(token, request))
+          ongoingUploads <- uploadService.getUploadInfoForDataSources(dataSourceIds)
+        } yield Ok(Json.toJson(ongoingUploads))
+      }
+    }
+
   // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
   // and it can be put in a webknossos folder where they have access
   def reserveManualUpload(token: Option[String]): Action[ReserveManualUploadInformation] =
@@ -185,7 +196,7 @@ class DataSourceController @Inject()(
         result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
                                                     urlOrHeaderToken(token, request)) {
           for {
-            isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier) // TODO: Maybe write a convenience function for this
+            isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier)
             _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
             isPresent <- uploadService.isChunkPresent(resumableIdentifier, resumableChunkNumber)
           } yield if (isPresent) Ok else NoContent

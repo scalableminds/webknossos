@@ -18,13 +18,15 @@ import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, DataSourceService}
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.tryo
+import net.liftweb.common.Box.{box2Option, tryo}
 import net.liftweb.common._
 import org.apache.commons.io.FileUtils
+import org.apache.pekko.util.Helpers.Requiring
 import play.api.libs.json.{Json, OFormat, Reads}
 
 import java.io.{File, RandomAccessFile}
 import java.nio.file.{Files, Path}
+import scala.collection.IterableOnce.iterableOnceExtensionMethods
 import scala.concurrent.ExecutionContext
 
 case class ReserveUploadInformation(
@@ -72,6 +74,12 @@ object UploadInformation {
 case class CancelUploadInformation(uploadId: String)
 object CancelUploadInformation {
   implicit val jsonFormat: OFormat[CancelUploadInformation] = Json.format[CancelUploadInformation]
+}
+
+case class OngoingUpload(uploadId: String, dataSourceId: DataSourceId)
+
+object OngoingUpload {
+  implicit val jsonFormat: OFormat[OngoingUpload] = Json.format[OngoingUpload]
 }
 
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
@@ -134,6 +142,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         Json.stringify(Json.toJson(DataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization)))
       )
       _ <- runningUploadMetadataStore.insert(
+        Json.stringify(Json.toJson(DataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization))),
+        reserveUploadInformation.uploadId
+      )
+      _ <- runningUploadMetadataStore.insert(
         redisKeyForLinkedLayerIdentifier(reserveUploadInformation.uploadId),
         Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadInformation.layersToLink)))
       )
@@ -141,12 +153,24 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         f"Reserving dataset upload of ${reserveUploadInformation.organization}/${reserveUploadInformation.name} with id ${reserveUploadInformation.uploadId}...")
     } yield ()
 
+  def getUploadInfoForDataSources(dataSourceIds: List[DataSourceId]): Fox[List[OngoingUpload]] =
+    for {
+      maybeOngoingUploads <- Fox.sequence(
+        dataSourceIds.map(
+          id =>
+            runningUploadMetadataStore
+              .find(Json.stringify(Json.toJson(id)))
+              .map(uploadIdOpt => uploadIdOpt.map(uploadId => OngoingUpload(uploadId, id)))
+        ))
+      foundOngoingUploads = maybeOngoingUploads.filter(idBox => idBox.isDefined).flatMap(idBox => idBox.value).collect {
+        case Some(value) => value
+      }
+    } yield foundOngoingUploads
+
   private def isOutsideUploadDir(uploadDir: Path, filePath: String): Boolean =
     uploadDir.relativize(uploadDir.resolve(filePath)).startsWith("../")
 
-  def isChunkPresent(uploadFileId: String,
-                        currentChunkNumber: Long,
-                        ): Fox[Boolean] = {
+  def isChunkPresent(uploadFileId: String, currentChunkNumber: Long): Fox[Boolean] = {
     val uploadId = extractDatasetUploadId(uploadFileId)
     for {
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
@@ -155,7 +179,9 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
       _ <- bool2Fox(!isOutsideUploadDir(uploadDir, filePath)) ?~> s"Invalid file path: $filePath"
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
-      isChunkPresent <- Fox.runIf(isFileKnown)(runningUploadMetadataStore.containedInSet(redisKeyForFileChunkCount(uploadId, filePath), String.valueOf(currentChunkNumber)))
+      isChunkPresent <- Fox.runIf(isFileKnown)(
+        runningUploadMetadataStore.containedInSet(redisKeyForFileChunkCount(uploadId, filePath),
+                                                  String.valueOf(currentChunkNumber)))
     } yield isFileKnown && isChunkPresent.getOrElse(false)
   }
 

@@ -5,12 +5,10 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveUploadInformation}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
+import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveUploadInformation}
 import com.typesafe.scalalogging.LazyLogging
 import mail.{MailchimpClient, MailchimpTag}
-
-import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
 import models.dataset._
@@ -28,6 +26,7 @@ import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironm
 import telemetry.SlackNotificationService
 import utils.{ObjectId, WkConf}
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class WKRemoteDataStoreController @Inject()(
@@ -79,6 +78,22 @@ class WKRemoteDataStoreController @Inject()(
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
         } yield Ok
+      }
+    }
+
+  def getReservedDatasetUploadsForUser(name: String, key: String, token: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          user <- bearerTokenService.userForToken(token)
+          organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            user._organization) ~> NOT_FOUND
+          _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
+          datasets <- datasetService.getAllNotYetUploadedDatasetOfUser(user._id, user._organization)(
+            GlobalAccessContext) ?~> "dataset.upload.couldNotLoadInProgressUploads"
+          datasetIds = datasets.map(d => d.toDataSourceId)
+        } yield Ok(Json.toJson(datasetIds))
       }
     }
 

@@ -215,7 +215,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
     "update a top level tree group" in {
       val updatedName = "Axon 2 updated"
       val updateTreeGroupsSkeletonAction = new UpdateTreeGroupsSkeletonAction(
-        List(UpdateActionTreeGroup(updatedName, 2, List()))
+        List(UpdateActionTreeGroup(updatedName, 2, Some(true), List()))
       )
       val result = applyUpdateAction(updateTreeGroupsSkeletonAction)
       assert(result.trees == Dummies.skeletonTracing.trees)
@@ -226,7 +226,11 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val updatedNameTop = "Axon 1 updated"
       val updatedNameNested = "Axon 3 updated"
       val updateTreeGroupsSkeletonAction = new UpdateTreeGroupsSkeletonAction(
-        List(UpdateActionTreeGroup(updatedNameTop, 1, List(UpdateActionTreeGroup(updatedNameNested, 3, List()))))
+        List(
+          UpdateActionTreeGroup(updatedNameTop,
+                                1,
+                                Some(true),
+                                List(UpdateActionTreeGroup(updatedNameNested, 3, Some(false), List()))))
       )
       val result = applyUpdateAction(updateTreeGroupsSkeletonAction)
       assert(result.trees == Dummies.skeletonTracing.trees)

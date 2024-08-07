@@ -36,6 +36,7 @@ export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
 
   return Maybe.Nothing();
 }
+
 export function getSkeletonDescriptor(
   annotation: APIAnnotation,
 ): AnnotationLayerDescriptor | null | undefined {
@@ -49,6 +50,7 @@ export function getSkeletonDescriptor(
 
   return null;
 }
+
 export function getNullableSkeletonTracing(
   tracings: Array<ServerTracing> | null | undefined,
 ): ServerSkeletonTracing | null | undefined {
@@ -61,9 +63,11 @@ export function getNullableSkeletonTracing(
 
   return null;
 }
+
 export function enforceSkeletonTracing(tracing: Tracing): SkeletonTracing {
   return getSkeletonTracing(tracing).get();
 }
+
 export function getActiveNode(skeletonTracing: SkeletonTracing): Maybe<Node> {
   const { activeTreeId, activeNodeId } = skeletonTracing;
 
@@ -73,6 +77,7 @@ export function getActiveNode(skeletonTracing: SkeletonTracing): Maybe<Node> {
 
   return Maybe.Nothing();
 }
+
 export function getActiveTree(skeletonTracing: SkeletonTracing): Maybe<Tree> {
   const { activeTreeId } = skeletonTracing;
 
@@ -82,6 +87,7 @@ export function getActiveTree(skeletonTracing: SkeletonTracing): Maybe<Tree> {
 
   return Maybe.Nothing();
 }
+
 export function getActiveTreeGroup(skeletonTracing: SkeletonTracing): Maybe<TreeGroup> {
   const { activeGroupId } = skeletonTracing;
 
@@ -92,6 +98,7 @@ export function getActiveTreeGroup(skeletonTracing: SkeletonTracing): Maybe<Tree
 
   return Maybe.Nothing();
 }
+
 export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tree): Maybe<Node> {
   const { activeNodeId } = skeletonTracing;
 
@@ -101,12 +108,15 @@ export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tr
 
   return Maybe.Nothing();
 }
+
 export function findTreeByNodeId(trees: TreeMap, nodeId: number): Tree | undefined {
   return _.values(trees).find((tree) => tree.nodes.has(nodeId));
 }
+
 export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefined {
   return _.values(trees).find((tree: Tree) => tree.name === treeName);
 }
+
 export function getTreesWithType(
   skeletonTracing: SkeletonTracing,
   type?: TreeType | null | undefined,
@@ -115,6 +125,7 @@ export function getTreesWithType(
     ? _.pickBy(skeletonTracing.trees, (tree) => tree.type === type)
     : skeletonTracing.trees;
 }
+
 export function getTree(
   skeletonTracing: SkeletonTracing,
   treeId?: number | null | undefined,
@@ -134,6 +145,7 @@ export function getTree(
 
   return Maybe.Nothing();
 }
+
 export function getNodeAndTree(
   skeletonTracing: SkeletonTracing,
   nodeId?: number | null | undefined,
@@ -176,6 +188,7 @@ export function getNodeAndTree(
 
   return Maybe.Nothing();
 }
+
 export function getNodeAndTreeOrNull(
   skeletonTracing: SkeletonTracing,
   nodeId?: number | null | undefined,

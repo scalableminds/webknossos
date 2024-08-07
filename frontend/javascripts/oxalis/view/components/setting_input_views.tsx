@@ -553,7 +553,6 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           key: "delete",
           label: (
             <>
-              {" "}
               <DeleteOutlined style={disabled ? disabledIconStyle : {}} />{" "}
               {disabled ? editingDisallowedExplanation : "Delete"}
             </>

@@ -55,7 +55,6 @@ export default function BoundingBoxTab() {
     const shape = Utils.computeShapeFromBoundingBox({ min, max });
     const volume = Math.ceil(shape[0] * shape[1] * shape[2]);
     const maxVolume = Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
-    console.log(volume, maxVolume);
     if (volume > maxVolume) {
       Toast.error(
         "The volume of the bounding box is too large, please reduce the size of the bounding box.",
@@ -88,16 +87,16 @@ export default function BoundingBoxTab() {
     }
 
     const segmentIds = Array.from(segmentIdToPosition.entries());
-    console.log(segmentIds.length);
     const maxNoSegments = Constants.REGISTER_SEGMENTS_BB_MAX_NO_SEGMENTS;
+    const halfMaxNoSegments = maxNoSegments / 2;
     if (segmentIds.length > maxNoSegments) {
       Toast.error(
-        "The bounding box contains more than 2000 segments. Please reduce the size of the bounding box.",
+        `The bounding box contains more than ${maxNoSegments} segments. Please reduce the size of the bounding box.`,
       );
       return;
-    } else if (segmentIds.length > maxNoSegments / 2) {
+    } else if (segmentIds.length > halfMaxNoSegments) {
       Toast.warning(
-        "The bounding box contains more than 1000 segments. Registering all segments might take a while.",
+        `The bounding box contains more than ${halfMaxNoSegments}  segments. Registering all segments might take a while.`,
       );
     }
 
@@ -185,7 +184,7 @@ export default function BoundingBoxTab() {
           isVisible={bb.isVisible}
           onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
           onDelete={_.partial(deleteBoundingBox, bb.id)}
-          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => { }}
+          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
           onRegisterSegmentsForBB={registerSegmentsForBoundingBox}
           onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
           onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
@@ -246,7 +245,7 @@ export default function BoundingBoxTab() {
                 footer={() => maybeAddBoundingBoxButton}
                 virtual
                 scroll={{ y: height - (allowUpdate ? ADD_BBOX_BUTTON_HEIGHT : 10) }} // If the scroll height is exactly
-              // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
+                // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
               />
             </div>
           )}

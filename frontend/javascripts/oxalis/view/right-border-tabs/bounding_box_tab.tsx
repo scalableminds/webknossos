@@ -18,6 +18,8 @@ import { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
 import { api } from "oxalis/singletons";
+import features from "features";
+import Toast from "libs/toast";
 
 export default function BoundingBoxTab() {
   const bboxTableRef: Parameters<typeof Table>[0]["ref"] = useRef(null);
@@ -48,7 +50,25 @@ export default function BoundingBoxTab() {
   const deleteBoundingBox = (id: number) => dispatch(deleteUserBoundingBoxAction(id));
 
   const registerSegmentsForBoundingBox = async (min: Vector3, max: Vector3) => {
+    const shape = Utils.computeShapeFromBoundingBox({ min, max });
+    const mag = [1, 1, 1];
+    const volume =
+      Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]); // TODO_c later
+    const maxVolume = features().exportTiffMaxVolumeMVx * 1024 * 1024;
+    console.log(volume, maxVolume);
+    if (volume > maxVolume) {
+      Toast.error(
+        "The volume of the bounding box is too large, please reduce the size of the bounding box.",
+      );
+      return;
+    } else if (volume > maxVolume / 8) {
+      Toast.warning(
+        "The volume of the bounding box is very large, registering all segments might take a while.",
+      );
+    }
+
     const segmentationLayerName = api.data.getSegmentationLayerNames()[0];
+    // TODO getDataForBoundingBox takes mag1 bbs. what about other mags?
     const data = await api.data.getDataForBoundingBox(segmentationLayerName, {
       min,
       max,
@@ -66,6 +86,19 @@ export default function BoundingBoxTab() {
           idx++;
         }
       }
+    }
+
+    const segmentIds = Array.from(segmentIdToPosition.entries());
+    console.log(segmentIds.length);
+    if (segmentIds.length > 2000) {
+      Toast.error(
+        "The bounding box contains more than 2000 segments. Please reduce the size of the bounding box.",
+      );
+      return;
+    } else if (segmentIds.length > 1000) {
+      Toast.warning(
+        "The bounding box contains more than 1000 segments. Registering all segments might take a while.",
+      );
     }
 
     for (const [id, position] of segmentIdToPosition.entries()) {

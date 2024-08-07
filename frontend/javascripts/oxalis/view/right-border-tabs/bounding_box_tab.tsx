@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useRef, useState } from "react";
 import _ from "lodash";
 import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
-import { Vector3, Vector6, BoundingBoxType, ControlModeEnum } from "oxalis/constants";
+import Constants, { Vector3, Vector6, BoundingBoxType, ControlModeEnum } from "oxalis/constants";
 import {
   changeUserBoundingBoxAction,
   addUserBoundingBoxAction,
@@ -18,7 +18,6 @@ import { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
 import { api } from "oxalis/singletons";
-import features from "features";
 import Toast from "libs/toast";
 
 export default function BoundingBoxTab() {
@@ -51,10 +50,8 @@ export default function BoundingBoxTab() {
 
   const registerSegmentsForBoundingBox = async (min: Vector3, max: Vector3) => {
     const shape = Utils.computeShapeFromBoundingBox({ min, max });
-    const mag = [1, 1, 1];
-    const volume =
-      Math.ceil(shape[0] / mag[0]) * Math.ceil(shape[1] / mag[1]) * Math.ceil(shape[2] / mag[2]); // TODO_c later
-    const maxVolume = features().exportTiffMaxVolumeMVx * 1024 * 1024;
+    const volume = Math.ceil(shape[0] * shape[1] * shape[2]);
+    const maxVolume = Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
     console.log(volume, maxVolume);
     if (volume > maxVolume) {
       Toast.error(
@@ -68,7 +65,6 @@ export default function BoundingBoxTab() {
     }
 
     const segmentationLayerName = api.data.getSegmentationLayerNames()[0];
-    // TODO getDataForBoundingBox takes mag1 bbs. what about other mags?
     const data = await api.data.getDataForBoundingBox(segmentationLayerName, {
       min,
       max,
@@ -90,12 +86,13 @@ export default function BoundingBoxTab() {
 
     const segmentIds = Array.from(segmentIdToPosition.entries());
     console.log(segmentIds.length);
-    if (segmentIds.length > 2000) {
+    const maxNoSegments = Constants.REGISTER_SEGMENTS_BB_MAX_NO_SEGMENTS;
+    if (segmentIds.length > maxNoSegments) {
       Toast.error(
         "The bounding box contains more than 2000 segments. Please reduce the size of the bounding box.",
       );
       return;
-    } else if (segmentIds.length > 1000) {
+    } else if (segmentIds.length > maxNoSegments / 2) {
       Toast.warning(
         "The bounding box contains more than 1000 segments. Registering all segments might take a while.",
       );

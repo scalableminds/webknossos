@@ -419,7 +419,7 @@ export function* floodFill(): Saga<void> {
       const message = "Volume modification is not allowed when an editable mapping is active.";
       Toast.error(message);
       console.error(message);
-      return;
+      continue;
     }
     const segmentationLayer = yield* call(
       [Model, Model.getSegmentationTracingLayer],

@@ -129,6 +129,7 @@ import {
   ensureSegmentIndexIsLoadedAction,
 } from "oxalis/model/actions/dataset_actions";
 import { hideContextMenuAction } from "oxalis/model/actions/ui_actions";
+import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -924,6 +925,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
   } = props;
 
   const state = Store.getState();
+  const disabledVolumeInfo = getDisabledInfoForTools(state);
   const isAgglomerateMappingEnabled = hasAgglomerateMapping(state);
   const isConnectomeMappingEnabled = hasConnectomeFile(state);
 
@@ -1183,11 +1185,11 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
     label: "Compute Mesh (ad-hoc)",
   };
   const nonSkeletonActions: ItemType[] =
-    volumeTracing != null && globalPosition != null
+    globalPosition != null && visibleSegmentationLayer != null
       ? [
           // Segment 0 cannot/shouldn't be made active (as this
           // would be an eraser effectively).
-          segmentIdAtPosition > 0
+          segmentIdAtPosition > 0 && !disabledVolumeInfo.PICK_CELL.isDisabled
             ? {
                 key: "select-cell",
                 onClick: () => {
@@ -1195,7 +1197,9 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                     setActiveCellAction(segmentIdAtPosition, globalPosition, additionalCoordinates),
                   );
                 },
-                disabled: segmentIdAtPosition === getActiveCellId(volumeTracing),
+                disabled:
+                  volumeTracing == null || // satisfy TS
+                  segmentIdAtPosition === getActiveCellId(volumeTracing),
                 label: (
                   <>
                     Activate Segment ({segmentIdAtPosition}){" "}
@@ -1207,7 +1211,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
           focusInSegmentListItem,
           loadPrecomputedMeshItem,
           computeMeshAdHocItem,
-          allowUpdate
+          allowUpdate && !disabledVolumeInfo.FILL_CELL.isDisabled
             ? {
                 key: "fill-cell",
                 onClick: () => handleFloodFillFromGlobalPosition(globalPosition, viewport),
@@ -1217,11 +1221,6 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
         ]
       : [];
   const boundingBoxActions = getBoundingBoxMenuOptions(props);
-  if (volumeTracing == null && visibleSegmentationLayer != null && globalPosition != null) {
-    nonSkeletonActions.push(focusInSegmentListItem);
-    nonSkeletonActions.push(loadPrecomputedMeshItem);
-    nonSkeletonActions.push(computeMeshAdHocItem);
-  }
 
   const isSkeletonToolActive = activeTool === AnnotationToolEnum.SKELETON;
   let allActions: ItemType[] = [];

@@ -198,21 +198,24 @@
 }
 
 .bounding-box-table {
-  table {
+  .ant-table {
     border-bottom: none;
   }
-  td {
+  .ant-table-cell {
     padding: 0px 20px !important;
   }
-  tr:last-child {
+  .ant-table-row:last-child {
     border-bottom: none;
-    td {
+    .ant-table-cell {
       border-bottom: none;
     }
   }
-  tr td:first-child {
+  .ant-table-row .ant-table-cell:first-child {
     // Hiding the extra checkbox column rendered due to using rowSelection in the table wrapping the bounding boxes.
     display: none;
+  }
+  .ant-table-row .ant-table-cell:nth-child(2) {
+    flex: 1 1 !important;
   }
   .ant-table-footer {
     background-color: transparent;

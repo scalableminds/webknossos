@@ -115,7 +115,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
     def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing = {
       val unusedGroupId = getMaximumTreeGroupId(tracing.treeGroups) + 1
       val newTrees = tracing.trees.map(tree => tree.copy(groupId = Some(tree.groupId.getOrElse(unusedGroupId))))
-      val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups))
+      val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups, isExpanded = Some(true)))
       tracing.copy(trees = newTrees, treeGroups = newTreeGroups)
     }
 

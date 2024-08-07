@@ -104,7 +104,11 @@ class DataSourceService @Inject()(
       }
     }
 
-    if (emptyDirs.nonEmpty) logger.warn(s"Empty organization dataset dirs: ${emptyDirs.mkString(", ")}")
+    if (emptyDirs.nonEmpty) {
+      val limit = 5
+      val moreLabel = if (emptyDirs.length > limit) s", ... (${emptyDirs.length} total)" else ""
+      logger.warn(s"Empty organization dataset dirs: ${emptyDirs.take(limit).mkString(", ")}$moreLabel")
+    }
   }
 
   def exploreMappings(organizationName: String, datasetName: String, dataLayerName: String): Set[String] =

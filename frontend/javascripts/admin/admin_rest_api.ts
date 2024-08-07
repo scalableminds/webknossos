@@ -950,7 +950,7 @@ export function getUpdateActionLog(
 export function getNewestVersionForTracing(
   tracingStoreUrl: string,
   tracingId: string,
-  tracingType: "skeleton" | "volume",
+  tracingType: SaveQueueType,
 ): Promise<number> {
   return doWithToken((token) =>
     Request.receiveJSON(

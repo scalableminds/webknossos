@@ -30,11 +30,11 @@ import type {
 } from "oxalis/store";
 import Store from "oxalis/store";
 import {
-  getSegmentColorAsHSLA,
+  getSegmentColorAsRGBA,
   getSegmentName,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
-import { hslaToCSS } from "oxalis/shaders/utils.glsl";
+import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
@@ -44,15 +44,15 @@ import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
-export function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
-  const hslaCss = hslaToCSS(segmentColorHSLA);
+export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
+  const rgbaCss = rgbaToCSS(colorRGBA);
 
   return (
     <span
       className="circle"
       style={{
         paddingLeft: "10px",
-        backgroundColor: hslaCss,
+        backgroundColor: rgbaCss,
       }}
     />
   );
@@ -186,10 +186,8 @@ const getMakeSegmentActiveMenuItem = (
 
 type Props = {
   segment: Segment;
-  mapId: (arg0: number) => number;
-  isJSONMappingEnabled: boolean;
   mappingInfo: ActiveMappingInfo;
-  centeredSegmentId: number | null | undefined;
+  isCentered: boolean;
   selectedSegmentIds: number[] | null | undefined;
   activeCellId: number | null | undefined;
   setHoveredSegmentId: (arg0: number | null | undefined) => void;
@@ -382,10 +380,8 @@ const MeshInfoItem = React.memo(_MeshInfoItem);
 
 function _SegmentListItem({
   segment,
-  mapId,
-  isJSONMappingEnabled,
   mappingInfo,
-  centeredSegmentId,
+  isCentered,
   selectedSegmentIds,
   activeCellId,
   setHoveredSegmentId,
@@ -412,21 +408,13 @@ function _SegmentListItem({
   const { modal } = App.useApp();
   const isEditingDisabled = !allowUpdate;
 
-  const mappedId = mapId(segment.id);
-
-  const segmentColorHSLA = useSelector(
-    (state: OxalisState) => getSegmentColorAsHSLA(state, mappedId),
+  const segmentColorRGBA = useSelector(
+    (state: OxalisState) => getSegmentColorAsRGBA(state, segment.id),
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
   );
   const isHoveredSegmentId = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
-
-  const segmentColorRGBA = Utils.hslaToRgba(segmentColorHSLA);
-
-  if (mappingInfo.hideUnmappedIds && mappedId === 0) {
-    return null;
-  }
 
   const andCloseContextMenu = (_ignore?: any) => handleSegmentDropdownMenuVisibility(false, 0);
 
@@ -455,13 +443,6 @@ function _SegmentListItem({
       ),
       {
         key: "changeSegmentColor",
-        /*
-         * Disable the change-color menu if the segment was mapped to another segment, because
-         * changing the color wouldn't do anything as long as the mapping is still active.
-         * This is because the id (A) is mapped to another one (B). So, the user would need
-         * to change the color of B to see the effect for A.
-         */
-        disabled: segment.id !== mappedId,
         label: (
           <ChangeColorMenuItemContent
             isDisabled={false}
@@ -562,14 +543,6 @@ function _SegmentListItem({
   });
 
   function getSegmentIdDetails() {
-    if (isJSONMappingEnabled && segment.id !== mappedId)
-      return (
-        <Tooltip title="Segment ID (Unmapped ID → Mapped ID)">
-          <span className="deemphasized italic">
-            {segment.id} → {mappedId}
-          </span>
-        </Tooltip>
-      );
     // Only if segment.name is truthy, render additional info.
     return segment.name ? (
       <Tooltip title="Segment ID">
@@ -617,7 +590,7 @@ function _SegmentListItem({
       >
         <div>
           <div style={{ display: "inline-flex", alignItems: "center" }}>
-            <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
+            <ColoredDotIcon colorRGBA={segmentColorRGBA} />
             <EditableTextLabel
               value={getSegmentName(segment)}
               label="Segment Name"
@@ -646,7 +619,7 @@ function _SegmentListItem({
             </Tooltip>
             {/* Show Default Segment Name if another one is already defined*/}
             {getSegmentIdDetails()}
-            {segment.id === centeredSegmentId ? (
+            {isCentered ? (
               <Tooltip title="This segment is currently centered in the data viewports.">
                 <i
                   className="fas fa-crosshairs deemphasized"

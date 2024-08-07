@@ -573,6 +573,9 @@ function* watchForSaveConflicts() {
   while (true) {
     const interval = yield* call(getPollInterval);
     yield* call(sleep, interval);
+    if (yield* select((state) => state.uiInformation.showVersionRestore)) {
+      continue;
+    }
     try {
       yield* call(checkForNewVersion);
     } catch (exception) {

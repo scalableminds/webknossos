@@ -156,7 +156,7 @@ export class DataBucket {
   // know whether a certain ID is contained in this bucket. To
   // speed up such requests a cached set of the contained values
   // can be stored in cachedValueSet.
-  cachedValueSet: Set<number | bigint> | null = null;
+  cachedValueSet: Set<number> | Set<bigint> | null = null;
 
   constructor(
     elementClass: ElementClass,
@@ -395,6 +395,7 @@ export class DataBucket {
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
+    this.cube.triggerBucketDataChanged();
   }
 
   uint8ToTypedBuffer(arrayBuffer: Uint8Array | null | undefined) {
@@ -580,7 +581,7 @@ export class DataBucket {
     }
   }
 
-  receiveData(arrayBuffer: Uint8Array | null | undefined): void {
+  receiveData(arrayBuffer: Uint8Array | null | undefined, computeValueSet: boolean = false): void {
     const data = this.uint8ToTypedBuffer(arrayBuffer);
     const [TypedArrayClass, channelCount] = getConstructorForElementClass(this.elementClass);
 
@@ -613,9 +614,13 @@ export class DataBucket {
           this.data = data;
         }
         this.invalidateValueSet();
+        if (computeValueSet) {
+          this.ensureValueSet();
+        }
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
+        this.cube.triggerBucketDataChanged();
         break;
       }
 
@@ -628,16 +633,22 @@ export class DataBucket {
     this.cachedValueSet = null;
   }
 
-  private recomputeValueSet() {
-    // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
-    this.cachedValueSet = new Set(this.data);
+  private ensureValueSet(): asserts this is { cachedValueSet: Set<number> | Set<bigint> } {
+    if (this.cachedValueSet == null) {
+      // @ts-ignore The Set constructor accepts null and BigUint64Arrays just fine.
+      this.cachedValueSet = new Set(this.data);
+    }
   }
 
   containsValue(value: number | bigint): boolean {
-    if (this.cachedValueSet == null) {
-      this.recomputeValueSet();
-    }
-    return this.cachedValueSet!.has(value);
+    this.ensureValueSet();
+    // @ts-ignore The Set has function accepts number | bigint values just fine, regardless of what's in it.
+    return this.cachedValueSet.has(value);
+  }
+
+  getValueSet(): Set<number> | Set<bigint> {
+    this.ensureValueSet();
+    return this.cachedValueSet;
   }
 
   markAsPushed(): void {

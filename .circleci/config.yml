@@ -317,7 +317,7 @@ jobs:
               -H 'content-type: application/json' \
               --data-raw '[{"position":[2752,4320,1728],"additionalCoordinates":[],"mag":[1,1,1],"cubeSize":32,"fourBit":false}]' \
               'https://data-humerus.webknossos.org/data/datasets/scalable_minds/l4dense_motta_et_al_demo/layers/segmentation/data?token=' \
-              | grep -q "content-encoding: gzipp"
+              | grep -q "content-encoding: gzip"
             echo Success.
 
       - run:

@@ -334,7 +334,7 @@ workflows:
   version: 2
   circleci_build:
     jobs:
-      - build_test_deploy:
+      - circleci_nightly:
           context:
             - DockerHub
           filters:

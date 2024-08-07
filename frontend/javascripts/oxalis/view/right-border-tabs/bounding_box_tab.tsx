@@ -51,8 +51,8 @@ export default function BoundingBoxTab() {
     const segmentationLayerName = api.data.getSegmentationLayerNames()[0];
     const data = await api.data.getDataForBoundingBox(segmentationLayerName, {
       min,
-      max
-    })
+      max,
+    });
 
     const segmentIdToPosition = new Map();
     let idx = 0;
@@ -61,7 +61,7 @@ export default function BoundingBoxTab() {
         for (let x = min[0]; x < max[0]; x++) {
           const id = data[idx];
           if (!segmentIdToPosition.has(id)) {
-            segmentIdToPosition.set(id, [x, y, z])
+            segmentIdToPosition.set(id, [x, y, z]);
           }
           idx++;
         }
@@ -69,14 +69,9 @@ export default function BoundingBoxTab() {
     }
 
     for (const [id, position] of segmentIdToPosition.entries()) {
-      api.tracing.registerSegment(
-        id,
-        position,
-        undefined,
-        segmentationLayerName,
-      );
+      api.tracing.registerSegment(id, position, undefined, segmentationLayerName);
     }
-  }
+  };
 
   const setBoundingBoxVisibility = (id: number, isVisible: boolean) =>
     dispatch(
@@ -157,7 +152,7 @@ export default function BoundingBoxTab() {
           isVisible={bb.isVisible}
           onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
           onDelete={_.partial(deleteBoundingBox, bb.id)}
-          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => { }}
+          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
           onRegisterSegmentsForBB={registerSegmentsForBoundingBox}
           onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
           onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}

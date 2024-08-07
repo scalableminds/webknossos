@@ -303,6 +303,22 @@ jobs:
           name: Install dependencies
           command: |
             yarn install --frozen-lockfile
+
+      - run:
+          name: Assert GZIP
+          command: |
+            # Test gzipped assets
+            curl -s -I -H "Accept-Encoding: gzip" https://webknossos.org/assets/bundle/main.js | grep -q "content-encoding: gzip"
+            curl -s -I -H "Accept-Encoding: gzip" https://webknossos.org/assets/bundle/main.css | grep -q "content-encoding: gzip"
+            # Test gzipped buckets
+            curl -s -i \
+              -H 'accept: application/octet-stream' \
+              -H 'Accept-Encoding: gzip' \
+              -H 'content-type: application/json' \
+              --data-raw '[{"position":[2752,4320,1728],"additionalCoordinates":[],"mag":[1,1,1],"cubeSize":32,"fourBit":false},{"position":[2880,4352,1696],"additionalCoordinates":[],"mag":[1,1,1],"cubeSize":32,"fourBit":false},{"position":[2752,4352,1696],"additionalCoordinates":[],"mag":[1,1,1],"cubeSize":32,"fourBit":false},{"position":[2784,4256,1760],"additionalCoordinates":[],"mag":[1,1,1],"cubeSize":32,"fourBit":false},{"position":[2848,4320,1696],"additionalCoordinates":[],"mag":[1,1,1],"cubeSize":32,"fourBit":false},{"position":[2848,4256,1760],"additionalCoordinates":[],"mag":[1,1,1],"cubeSize":32,"fourBit":false}]' \
+              'https://data-humerus.webknossos.org/data/datasets/scalable_minds/l4dense_motta_et_al_demo/layers/segmentation/data?token=' \
+              | grep -q "content-encoding: gzip"
+
       - run:
           name: Run screenshot-tests
           command: |

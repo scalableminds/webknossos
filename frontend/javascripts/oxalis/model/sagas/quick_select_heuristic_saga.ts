@@ -195,9 +195,9 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   const inclusiveMaxW = map3((el, idx) => (idx === thirdDim ? el - 1 : el), boundingBoxMag1.max);
   quickSelectGeometry.setCoordinates(boundingBoxMag1.min, inclusiveMaxW);
 
-  const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(labeledResolution);
+  const boundingBoxInMag = boundingBoxMag1.fromMag1ToMag(labeledResolution);
 
-  if (boundingBoxTarget.getVolume() === 0) {
+  if (boundingBoxInMag.getVolume() === 0) {
     Toast.warning("The drawn rectangular had a width or height of zero.");
     return;
   }
@@ -209,7 +209,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     labeledZoomStep,
     additionalCoordinates,
   );
-  const size = boundingBoxTarget.getSize();
+  const size = boundingBoxInMag.getSize();
   const stride = [1, size[0], size[0] * size[1]];
 
   if (inputDataRaw instanceof BigUint64Array) {
@@ -281,10 +281,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
       activeViewport,
       labeledResolution,
       boundingBoxMag1,
-      thirdDim,
-      size,
-      firstDim,
-      secondDim,
+      boundingBoxMag1.min[thirdDim],
       thresholdField,
       overwriteMode,
       labeledZoomStep,
@@ -354,10 +351,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
         activeViewport,
         labeledResolution,
         boundingBoxMag1,
-        thirdDim,
-        size,
-        firstDim,
-        secondDim,
+        boundingBoxMag1.min[thirdDim],
         thresholdField,
         overwriteMode,
         labeledZoomStep,
@@ -500,15 +494,13 @@ export function* finalizeQuickSelect(
   activeViewport: OrthoView,
   labeledResolution: Vector3,
   boundingBoxMag1: BoundingBox,
-  thirdDim: number,
   w: number,
-  size: Vector3,
-  firstDim: number,
-  secondDim: number,
   mask: ndarray.NdArray<TypedArrayWithoutBigInt>,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
 ) {
+  const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(activeViewport);
+
   quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
   const volumeLayer = yield* call(
     createVolumeLayer,
@@ -517,15 +509,17 @@ export function* finalizeQuickSelect(
     labeledResolution,
     w,
   );
+  const sizeUVWInMag = mask.shape;
   const voxelBuffer2D = volumeLayer.createVoxelBuffer2D(
     V2.floor(volumeLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
-    size[firstDim],
-    size[secondDim],
+    sizeUVWInMag[0],
+    sizeUVWInMag[1],
   );
 
-  for (let u = 0; u < size[firstDim]; u++) {
-    for (let v = 0; v < size[secondDim]; v++) {
-      // w = 0 is correct because...
+  for (let u = 0; u < sizeUVWInMag[0]; u++) {
+    for (let v = 0; v < sizeUVWInMag[1]; v++) {
+      // w = 0 is correct because the correct 3rd dim was already sliced
+      // by the caller.
       if (mask.get(u, v, 0) > 0) {
         voxelBuffer2D.setValue(u, v, 1);
       }

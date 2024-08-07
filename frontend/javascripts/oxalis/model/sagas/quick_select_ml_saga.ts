@@ -25,7 +25,7 @@ async function getMask(
   activeViewport: OrthoView,
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
-): Promise<Array<NdArray<TypedArrayWithoutBigInt>>> {
+): Promise<[BoundingBox, Array<NdArray<TypedArrayWithoutBigInt>>]> {
   if (userBoxMag1.getVolume() === 0) {
     throw new Error("User bounding box should not have empty volume.");
   }
@@ -48,53 +48,37 @@ async function getMask(
     throw new Error("Selected bounding box is too large for AI selection.");
   }
 
-  const userBox = userBoxMag1.fromMag1ToMag(mag);
+  const userBoxInMag = userBoxMag1.fromMag1ToMag(mag);
   const maskBoxInMag = maskBoxMag1.fromMag1ToMag(mag);
+  const userBoxRelativeToMaskInMag = userBoxInMag.offset(V3.negate(maskBoxInMag.min));
+
   const maskData = await getSamMask(
     dataset,
     layerName,
     mag,
     maskBoxInMag,
-    V2.sub(userBox.getMinUV(activeViewport), maskBoxInMag.getMinUV(activeViewport)),
-    V2.sub(userBox.getMaxUV(activeViewport), maskBoxInMag.getMinUV(activeViewport)),
+    userBoxRelativeToMaskInMag.getMinUV(activeViewport),
+    userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
     additionalCoordinates,
     intensityRange,
   );
 
   const size = maskBoxInMag.getSize();
   const sizeUVW = Dimensions.transDim(size, activeViewport);
-  console.log("size", size);
-  // const stride =
-  //   activeViewport === "PLANE_XZ"
-  //     ? [size[1] / depth, size[0], size[0] * size[2]]
-  //     : [size[2] / depth, size[0], size[0] * size[1]];
-
-  // const stride =
-  //   activeViewport === "PLANE_XZ"
-  //     ? [size[1] / depth, size[0], size[0] * size[2]] // probably wrong
-  //     : [size[1] * size[2], size[2], 1]; // only valid for xy
-  // size = [1024, 1024, 2]
-  // 1, 1024, 1024**2
   const stride = [sizeUVW[2] * sizeUVW[1], sizeUVW[2], 1];
 
+  console.log("size", size);
   console.log("stride", stride);
-  const ndarr = ndarray(maskData, size, stride);
+  const ndarr = ndarray(maskData, sizeUVW, stride);
 
   // a.hi(x,y) => a[:x, :y]
   // a.lo(x,y) => a[x:, y:]
-  return _.range(0, depth).map((zOffset) =>
-    ndarr
-      .hi(
-        userBox.getMaxUV(activeViewport)[0] - maskBoxInMag.getMinUV(activeViewport)[0],
-        userBox.getMaxUV(activeViewport)[1] - maskBoxInMag.getMinUV(activeViewport)[1],
-        zOffset + 1,
-      )
-      .lo(
-        userBox.getMinUV(activeViewport)[0] - maskBoxInMag.getMinUV(activeViewport)[0],
-        userBox.getMinUV(activeViewport)[1] - maskBoxInMag.getMinUV(activeViewport)[1],
-        zOffset,
-      ),
-  );
+  return [
+    maskBoxInMag,
+    _.range(0, depth).map((zOffset) =>
+      ndarr.hi(ndarr.shape[0], ndarr.shape[1], zOffset + 1).lo(0, 0, zOffset),
+    ),
+  ];
 }
 
 export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
@@ -138,16 +122,16 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   quickSelectGeometry.setCoordinates(unalignedUserBoxMag1.min, inclusiveMaxW);
 
   const alignedUserBoxMag1 = unalignedUserBoxMag1.alignWithMag(labeledResolution, "floor");
-  const alignedUserBoxInMag = alignedUserBoxMag1.fromMag1ToMag(labeledResolution);
   const dataset = yield* select((state: OxalisState) => state.dataset);
   const layerConfiguration = yield* select(
     (state) => state.datasetConfiguration.layers[colorLayer.name],
   );
   const { intensityRange } = layerConfiguration;
 
-  let masks;
+  let masks: Array<NdArray<TypedArrayWithoutBigInt>> | undefined;
+  let maskBoxInMag: BoundingBox | undefined;
   try {
-    masks = yield* call(
+    const retVal = yield* call(
       getMask,
       dataset,
       colorLayer.name,
@@ -157,6 +141,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
       additionalCoordinates || [],
       colorLayer.elementClass === "uint8" ? null : intensityRange,
     );
+    [maskBoxInMag, masks] = retVal;
   } catch (exception) {
     console.error(exception);
     throw new Error("Could not infer mask. See console for details.");
@@ -170,18 +155,42 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
 
   let zOffset = 0;
   for (const mask of masks) {
+    const targetW = alignedUserBoxMag1.min[thirdDim] + zOffset;
+
+    let minUV: Vector2 = [Infinity, Infinity];
+    let maxUV: Vector2 = [0, 0];
+    console.time("find bbox in mask");
+    for (let u = 0; u < mask.shape[0]; u++) {
+      for (let v = 0; v < mask.shape[1]; v++) {
+        if (mask.get(u, v, 0) > 0) {
+          minUV = V2.min(minUV, [u, v]);
+          maxUV = V2.max(maxUV, [u, v]);
+        }
+      }
+    }
+    console.timeEnd("find bbox in mask");
+    console.log("minUV", minUV);
+    console.log("maxUV", maxUV);
+    const sizeUVMinusMaxUV = V3.sub(Dimensions.transDim(mask.shape as Vector3, activeViewport), [
+      ...maxUV,
+      0,
+    ] as Vector3);
+    const targetBox = maskBoxInMag.paddedWithMargins(
+      V3.negate(Dimensions.transDim([...minUV, 0], activeViewport)),
+      V3.negate(Dimensions.transDim(sizeUVMinusMaxUV, activeViewport)),
+    );
+
     yield* finalizeQuickSelect(
       quickSelectGeometry,
       volumeTracing,
       activeViewport,
       labeledResolution,
-      alignedUserBoxMag1,
-      thirdDim,
-      alignedUserBoxMag1.min[thirdDim] + zOffset,
-      alignedUserBoxInMag.getSize(),
-      firstDim,
-      secondDim,
-      mask,
+      targetBox.fromMagToMag1(labeledResolution),
+      targetW,
+      // a.hi(x,y) => a[:x, :y], // a.lo(x,y) => a[x:, y:]
+      mask
+        .hi(maxUV[0], maxUV[1], 1)
+        .lo(minUV[0], minUV[1], 0),
       overwriteMode,
       labeledZoomStep,
     );

@@ -161,6 +161,23 @@ class BoundingBox {
     });
   }
 
+  fromMagToMag1(mag: Vector3): BoundingBox {
+    const min: Vector3 = [
+      Math.floor(this.min[0] * mag[0]),
+      Math.floor(this.min[1] * mag[1]),
+      Math.floor(this.min[2] * mag[2]),
+    ];
+    const max: Vector3 = [
+      Math.ceil(this.max[0] * mag[0]),
+      Math.ceil(this.max[1] * mag[1]),
+      Math.ceil(this.max[2] * mag[2]),
+    ];
+    return new BoundingBox({
+      min,
+      max,
+    });
+  }
+
   paddedWithMargins(marginsLeft: Vector3, marginsRight?: Vector3): BoundingBox {
     if (marginsRight == null) {
       marginsRight = marginsLeft;
@@ -223,6 +240,13 @@ class BoundingBox {
       min: this.min,
       max: this.max,
     };
+  }
+
+  offset(offset: Vector3): BoundingBox {
+    return new BoundingBox({
+      min: V3.add(this.min, offset),
+      max: V3.add(this.max, offset),
+    });
   }
 }
 

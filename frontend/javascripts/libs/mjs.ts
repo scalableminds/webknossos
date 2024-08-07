@@ -224,6 +224,14 @@ const M4x4 = {
 
 const V2 = {
   ...BareV2,
+  // Component-wise minimum of two vectors.
+  min(vec1: Vector2, vec2: Vector2): Vector2 {
+    return [Math.min(vec1[0], vec2[0]), Math.min(vec1[1], vec2[1])];
+  },
+  // Component-wise maximum of two vectors.
+  max(vec1: Vector2, vec2: Vector2): Vector2 {
+    return [Math.max(vec1[0], vec2[0]), Math.max(vec1[1], vec2[1])];
+  },
   scale2(a: Vector2, k: Vector2, r?: Vector2Like): Vector2Like {
     if (r == null) r = new Float32Array(2);
     r[0] = a[0] * k[0];
@@ -361,6 +369,10 @@ const V3 = {
       roundFn(a[1] / mag[1]) * mag[1],
       roundFn(a[2] / mag[2]) * mag[2],
     ] as Vector3;
+  },
+
+  negate(a: Vector3) {
+    return [-a[0], -a[1], -a[2]] as Vector3;
   },
 };
 

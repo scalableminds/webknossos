@@ -163,7 +163,7 @@ export function AllowedTeamsFormItem({
   setSelectedTeams: (teams: APITeam | Array<APITeam>) => void;
   afterFetchedTeams?: (arg0: Array<APITeam>) => void;
   formRef: React.RefObject<FormInstance<any>>;
-  disabled: boolean;
+  disabled?: boolean;
 }) {
   return (
     <FormItemWithInfo

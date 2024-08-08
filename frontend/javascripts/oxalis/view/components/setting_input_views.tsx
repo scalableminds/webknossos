@@ -18,6 +18,7 @@ import {
   DownloadOutlined,
   EditOutlined,
   EllipsisOutlined,
+  InfoCircleOutlined,
   ScanOutlined,
 } from "@ant-design/icons";
 import * as React from "react";
@@ -500,12 +501,14 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
       isOwner,
     } = this.props;
     const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
-    const iconStyle = {
-      marginRight: 0,
+    const marginRightStyle = {
+      marginRight: 6,
+    };
+    const marginLeftStyle = {
       marginLeft: 6,
     };
-    const disabledIconStyle = { ...iconStyle, opacity: 0.5, cursor: "not-allowed" };
-    const exportIconStyle = isExportEnabled ? {} : disabledIconStyle;
+    const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
+    const exportIconStyle = isExportEnabled ? marginRightStyle : disabledIconStyle;
     const exportButton = (
       <>
         <DownloadOutlined style={exportIconStyle} /> Export data
@@ -521,10 +524,13 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
         {
           key: "registerSegments",
           label: (
-            <Tooltip title="Moves/registers all segments within this bbox into a new group">
-              <ScanOutlined /> {""}
+            <>
+              <ScanOutlined style={marginRightStyle} /> {""}
               Register all segments in this bounding box
-            </Tooltip>
+              <Tooltip title="Moves/registers all segments within this bbox into a new group">
+                <InfoCircleOutlined style={marginLeftStyle} />
+              </Tooltip>
+            </>
           ),
           onClick: disabled ? () => {} : () => onRegisterSegmentsForBB(this.props.value, name),
           disabled: this.props.visibleSegmentationLayer == null,
@@ -533,7 +539,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           key: "goToCenter",
           label: (
             <>
-              <BorderInnerOutlined /> Go to center
+              <BorderInnerOutlined style={marginRightStyle} /> Go to center
             </>
           ),
           onClick: onGoToBoundingBox,
@@ -552,7 +558,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           key: "delete",
           label: (
             <>
-              <DeleteOutlined style={disabled ? disabledIconStyle : {}} />{" "}
+              <DeleteOutlined style={disabled ? disabledIconStyle : marginRightStyle} />{" "}
               {disabled ? editingDisallowedExplanation : "Delete"}
             </>
           ),
@@ -563,7 +569,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
 
       return (
         <Dropdown menu={{ items }}>
-          <EllipsisOutlined style={iconStyle} />
+          <EllipsisOutlined style={marginLeftStyle} />
         </Dropdown>
       );
     };
@@ -645,7 +651,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
                 <ColorSetting
                   value={Utils.rgbToHex(upscaledColor)}
                   onChange={this.handleColorChange}
-                  style={iconStyle}
+                  style={marginLeftStyle}
                   disabled={disabled}
                 />
               </span>

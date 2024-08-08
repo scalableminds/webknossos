@@ -68,8 +68,7 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
-  def getOngoingUploadsForUser(userTokenOpt: Option[String],
-                               organizationName: String): Fox[List[OngoingUpload]] =
+  def getOngoingUploadsForUser(userTokenOpt: Option[String], organizationName: String): Fox[List[OngoingUpload]] =
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "reserveUpload.noUserToken"
       datasetIds <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getOngoingUploadsForUser")

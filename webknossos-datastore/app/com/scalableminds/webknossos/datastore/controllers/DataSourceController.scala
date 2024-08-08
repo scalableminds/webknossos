@@ -109,7 +109,7 @@ class DataSourceController @Inject()(
                                         urlOrHeaderToken(token, request)) {
         for {
           ongoingUploads <- remoteWebknossosClient.getOngoingUploadsForUser(urlOrHeaderToken(token, request),
-                                                                                    organizationName)
+                                                                            organizationName)
           ongoingUploadsWithUploadIds <- uploadService.addUploadIdsToOngoingUploads(ongoingUploads)
         } yield Ok(Json.toJson(ongoingUploadsWithUploadIds))
       }

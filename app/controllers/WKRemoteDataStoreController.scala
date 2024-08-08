@@ -85,10 +85,7 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def getOngoingUploadsForUser(name: String,
-                                       key: String,
-                                       token: String,
-                                       organizationName: String): Action[AnyContent] =
+  def getOngoingUploadsForUser(name: String, key: String, token: String, organizationName: String): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {

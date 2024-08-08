@@ -130,7 +130,8 @@ class JobController @Inject()(
             "organization_name" -> organizationName,
             "organization_display_name" -> organization.displayName,
             "dataset_name" -> datasetName,
-            "scale" -> voxelSize.toNanometer.toUriLiteral
+            "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
+            "voxel_size_unit" -> voxelSize.unit
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)

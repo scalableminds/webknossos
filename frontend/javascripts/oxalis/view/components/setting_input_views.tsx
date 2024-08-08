@@ -9,13 +9,27 @@ import {
   Select,
   Popover,
   PopoverProps,
+  Dropdown,
+  MenuProps,
 } from "antd";
-import { DeleteOutlined, DownloadOutlined, EditOutlined, ScanOutlined } from "@ant-design/icons";
+import {
+  BorderInnerOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  EllipsisOutlined,
+  InfoCircleOutlined,
+  ScanOutlined,
+} from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import { type Vector3, type Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { connect } from "react-redux";
+import { OxalisState } from "oxalis/store";
+import { APISegmentationLayer } from "types/api_flow_types";
 
 const ROW_GUTTER = 1;
 
@@ -371,6 +385,7 @@ type UserBoundingBoxInputProps = {
   onBoundingChange: (arg0: Vector6) => void;
   onDelete: () => void;
   onExport: () => void;
+  onRegisterSegmentsForBB: (arg0: Vector6, arg1: string) => void;
   onGoToBoundingBox: () => void;
   onVisibilityChange: (arg0: boolean) => void;
   onNameChange: (arg0: string) => void;
@@ -378,6 +393,7 @@ type UserBoundingBoxInputProps = {
   disabled: boolean;
   isLockedByOwner: boolean;
   isOwner: boolean;
+  visibleSegmentationLayer: APISegmentationLayer | null | undefined;
 };
 type State = {
   isEditing: boolean;
@@ -386,7 +402,7 @@ type State = {
   name: string;
 };
 
-export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
+class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
   constructor(props: UserBoundingBoxInputProps) {
     super(props);
     this.state = {
@@ -477,6 +493,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       isVisible,
       onDelete,
       onExport,
+      onRegisterSegmentsForBB,
       isExportEnabled,
       onGoToBoundingBox,
       disabled,
@@ -484,26 +501,79 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       isOwner,
     } = this.props;
     const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
-    const iconStyle = {
-      marginRight: 0,
+    const marginRightStyle = {
+      marginRight: 6,
+    };
+    const marginLeftStyle = {
       marginLeft: 6,
     };
-    const disabledIconStyle = { ...iconStyle, opacity: 0.5, cursor: "not-allowed" };
-    const exportIconStyle = isExportEnabled ? iconStyle : disabledIconStyle;
-    const exportButtonTooltip = isExportEnabled
-      ? "Export data from this bounding box."
-      : messages["data.bounding_box_export_not_supported"];
-    const exportColumn = isExportEnabled ? (
-      <Col span={2}>
-        <Tooltip title={exportButtonTooltip} placement="topRight">
-          <DownloadOutlined onClick={onExport} style={exportIconStyle} />
-        </Tooltip>
-      </Col>
-    ) : null;
+    const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
+    const exportIconStyle = isExportEnabled ? marginRightStyle : disabledIconStyle;
+    const exportButton = (
+      <>
+        <DownloadOutlined style={exportIconStyle} /> Export data
+      </>
+    );
     const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
       isLockedByOwner,
       isOwner,
     );
+
+    const getContextMenu = () => {
+      const items: MenuProps["items"] = [
+        {
+          key: "registerSegments",
+          label: (
+            <>
+              <ScanOutlined style={marginRightStyle} /> {""}
+              Register all segments in this bounding box
+              <Tooltip title="Moves/registers all segments within this bbox into a new group">
+                <InfoCircleOutlined style={marginLeftStyle} />
+              </Tooltip>
+            </>
+          ),
+          onClick: disabled ? () => {} : () => onRegisterSegmentsForBB(this.props.value, name),
+          disabled: this.props.visibleSegmentationLayer == null,
+        },
+        {
+          key: "goToCenter",
+          label: (
+            <>
+              <BorderInnerOutlined style={marginRightStyle} /> Go to center
+            </>
+          ),
+          onClick: onGoToBoundingBox,
+        },
+        {
+          key: "export",
+          label: isExportEnabled ? (
+            exportButton
+          ) : (
+            <Tooltip title={editingDisallowedExplanation}> {exportButton}</Tooltip>
+          ),
+          disabled: !isExportEnabled,
+          onClick: onExport,
+        },
+        {
+          key: "delete",
+          label: (
+            <>
+              <DeleteOutlined style={disabled ? disabledIconStyle : marginRightStyle} />{" "}
+              {disabled ? editingDisallowedExplanation : "Delete"}
+            </>
+          ),
+          onClick: disabled ? () => {} : onDelete,
+          disabled: this.props.visibleSegmentationLayer == null,
+        },
+      ];
+
+      return (
+        <Dropdown menu={{ items }}>
+          <EllipsisOutlined style={marginLeftStyle} />
+        </Dropdown>
+      );
+    };
+
     return (
       <>
         <Row
@@ -541,15 +611,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               </span>
             </Tooltip>
           </Col>
-          {exportColumn}
-          <Col span={2}>
-            <Tooltip title={disabled ? editingDisallowedExplanation : "Delete this bounding box."}>
-              <DeleteOutlined
-                onClick={disabled ? () => {} : onDelete}
-                style={disabled ? disabledIconStyle : iconStyle}
-              />
-            </Tooltip>
-          </Col>
+          <Col span={2}>{getContextMenu()}</Col>
         </Row>
         <Row
           style={{
@@ -589,15 +651,10 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                 <ColorSetting
                   value={Utils.rgbToHex(upscaledColor)}
                   onChange={this.handleColorChange}
-                  style={iconStyle}
+                  style={marginLeftStyle}
                   disabled={disabled}
                 />
               </span>
-            </Tooltip>
-          </Col>
-          <Col span={2}>
-            <Tooltip title="Go to the center of the bounding box.">
-              <ScanOutlined onClick={onGoToBoundingBox} style={{ ...iconStyle, marginTop: 6 }} />
             </Tooltip>
           </Col>
         </Row>
@@ -605,6 +662,14 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     );
   }
 }
+
+const mapStateToProps = (state: OxalisState) => ({
+  visibleSegmentationLayer: getVisibleSegmentationLayer(state),
+});
+
+const connector = connect(mapStateToProps)(UserBoundingBoxInput);
+export default connector;
+
 type ColorSettingPropTypes = {
   value: string;
   onChange: (value: Vector3) => void;

@@ -25,6 +25,10 @@ import _ from "lodash";
 import { type Vector3, type Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { connect } from "react-redux";
+import { OxalisState } from "oxalis/store";
+import { APISegmentationLayer } from "types/api_flow_types";
 
 const ROW_GUTTER = 1;
 
@@ -388,6 +392,7 @@ type UserBoundingBoxInputProps = {
   disabled: boolean;
   isLockedByOwner: boolean;
   isOwner: boolean;
+  visibleSegmentationLayer: APISegmentationLayer | null | undefined;
 };
 type State = {
   isEditing: boolean;
@@ -396,7 +401,7 @@ type State = {
   name: string;
 };
 
-export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
+class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
   constructor(props: UserBoundingBoxInputProps) {
     super(props);
     this.state = {
@@ -529,6 +534,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
             </>
           ),
           onClick: disabled ? () => {} : () => onRegisterSegmentsForBB(min, max),
+          disabled: this.props.visibleSegmentationLayer == null,
         },
         {
           key: "goToCenter",
@@ -558,6 +564,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
             </>
           ),
           onClick: disabled ? () => {} : onDelete,
+          disabled: this.props.visibleSegmentationLayer == null,
         },
       ];
 
@@ -656,6 +663,14 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     );
   }
 }
+
+const mapStateToProps = (state: OxalisState) => ({
+  visibleSegmentationLayer: getVisibleSegmentationLayer(state),
+});
+
+const connector = connect(mapStateToProps)(UserBoundingBoxInput);
+export default connector;
+
 type ColorSettingPropTypes = {
   value: string;
   onChange: (value: Vector3) => void;

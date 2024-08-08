@@ -2,20 +2,25 @@ import _ from "lodash";
 import ndarray, { NdArray } from "ndarray";
 import { OrthoView, TypedArrayWithoutBigInt, Vector2, Vector3 } from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
-import { call } from "typed-redux-saga";
+import { call, cancel, fork, put } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V2, V3 } from "libs/mjs";
 import { ComputeQuickSelectForRectAction } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
 import { OxalisState } from "oxalis/store";
-import { map3 } from "libs/utils";
+import { map3, sleep } from "libs/utils";
 import { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
 import { getSamMask, sendAnalyticsEvent } from "admin/admin_rest_api";
 import Dimensions from "../dimensions";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
+import { setGlobalProgressAction } from "../actions/ui_actions";
 
 const MASK_SIZE = [1024, 1024, 0] as Vector3;
+// This should tend to be smaller because the progress rendering at the end of the animation
+// can cope very well with faster operations (the end of the progress bar will finish very slowly).
+// Abruptly terminating progress bars on the other hand can feel weird.
+const EXPECTED_DURATION_PER_SLICE = 500;
 
 function* getMask(
   dataset: APIDataset,
@@ -88,6 +93,26 @@ function* getMask(
   ];
 }
 
+function* showApproximatelyProgress(amount: number, expectedDurationPerItemMs: number) {
+  // The progress bar is split into amount + 1 chunks. The first amount
+  // chunks are filled after expectedDurationPerItemMs passed.
+  // Afterwards, only one chunk is missing. With each additional iteration,
+  // the remaining progress is split into half.
+  let progress = 0;
+  let i = 0;
+  const increment = 1 / (amount + 1);
+  while (true) {
+    yield* call(sleep, expectedDurationPerItemMs);
+    if (i < amount) {
+      progress += increment;
+    } else {
+      progress += increment / 2 ** (i - amount + 1);
+    }
+    yield* put(setGlobalProgressAction(progress));
+    i++;
+  }
+}
+
 export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (additionalCoordinates && additionalCoordinates.length > 0) {
@@ -102,107 +127,122 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   if (preparation == null) {
     return;
   }
-  const {
-    labeledZoomStep,
-    labeledResolution,
-    thirdDim,
-    activeViewport,
-    volumeTracing,
-    colorLayer,
-  } = preparation;
-  const { startPosition, endPosition, quickSelectGeometry } = action;
-
-  // Effectively, zero the first and second dimension in the mag.
-  const depthSummand = V3.scale3(labeledResolution, Dimensions.transDim([0, 0, 1], activeViewport));
-  const unalignedUserBoxMag1 = new BoundingBox({
-    min: V3.floor(V3.min(startPosition, endPosition)),
-    max: V3.floor(V3.add(V3.max(startPosition, endPosition), depthSummand)),
-  });
-  // Ensure that the third dimension is inclusive (otherwise, the center of the passed
-  // coordinates wouldn't be exactly on the W plane on which the user started this action).
-  const inclusiveMaxW = map3(
-    (el, idx) => (idx === thirdDim ? el - 1 : el),
-    unalignedUserBoxMag1.max,
+  const depth = yield* select(
+    (state: OxalisState) => state.userConfiguration.quickSelect.predictionDepth,
   );
-  quickSelectGeometry.setCoordinates(unalignedUserBoxMag1.min, inclusiveMaxW);
-
-  const alignedUserBoxMag1 = unalignedUserBoxMag1.alignWithMag(labeledResolution, "floor");
-  const dataset = yield* select((state: OxalisState) => state.dataset);
-  const layerConfiguration = yield* select(
-    (state) => state.datasetConfiguration.layers[colorLayer.name],
-  );
-  const { intensityRange } = layerConfiguration;
-
-  let masks: Array<NdArray<TypedArrayWithoutBigInt>> | undefined;
-  let maskBoxInMag: BoundingBox | undefined;
+  const progressSaga = yield* fork(showApproximatelyProgress, depth, EXPECTED_DURATION_PER_SLICE);
   try {
-    const retVal = yield* call(
-      getMask,
-      dataset,
-      colorLayer.name,
-      alignedUserBoxMag1,
+    const {
+      labeledZoomStep,
       labeledResolution,
+      thirdDim,
       activeViewport,
-      additionalCoordinates || [],
-      colorLayer.elementClass === "uint8" ? null : intensityRange,
+      volumeTracing,
+      colorLayer,
+    } = preparation;
+    const { startPosition, endPosition, quickSelectGeometry } = action;
+
+    // Effectively, zero the first and second dimension in the mag.
+    const depthSummand = V3.scale3(
+      labeledResolution,
+      Dimensions.transDim([0, 0, 1], activeViewport),
     );
-    [maskBoxInMag, masks] = retVal;
-  } catch (exception) {
-    console.error(exception);
-    throw new Error("Could not infer mask. See console for details.");
-  }
+    const unalignedUserBoxMag1 = new BoundingBox({
+      min: V3.floor(V3.min(startPosition, endPosition)),
+      max: V3.floor(V3.add(V3.max(startPosition, endPosition), depthSummand)),
+    });
+    // Ensure that the third dimension is inclusive (otherwise, the center of the passed
+    // coordinates wouldn't be exactly on the W plane on which the user started this action).
+    const inclusiveMaxW = map3(
+      (el, idx) => (idx === thirdDim ? el - 1 : el),
+      unalignedUserBoxMag1.max,
+    );
+    quickSelectGeometry.setCoordinates(unalignedUserBoxMag1.min, inclusiveMaxW);
 
-  const overwriteMode = yield* select(
-    (state: OxalisState) => state.userConfiguration.overwriteMode,
-  );
+    const alignedUserBoxMag1 = unalignedUserBoxMag1.alignWithMag(labeledResolution, "floor");
+    const dataset = yield* select((state: OxalisState) => state.dataset);
+    const layerConfiguration = yield* select(
+      (state) => state.datasetConfiguration.layers[colorLayer.name],
+    );
+    const { intensityRange } = layerConfiguration;
 
-  sendAnalyticsEvent("used_quick_select_with_ai");
+    let masks: Array<NdArray<TypedArrayWithoutBigInt>> | undefined;
+    let maskBoxInMag: BoundingBox | undefined;
+    try {
+      const retVal = yield* call(
+        getMask,
+        dataset,
+        colorLayer.name,
+        alignedUserBoxMag1,
+        labeledResolution,
+        activeViewport,
+        additionalCoordinates || [],
+        colorLayer.elementClass === "uint8" ? null : intensityRange,
+      );
+      [maskBoxInMag, masks] = retVal;
+    } catch (exception) {
+      console.error(exception);
+      throw new Error("Could not infer mask. See console for details.");
+    }
 
-  let wOffset = 0;
-  for (const mask of masks) {
-    const targetW = alignedUserBoxMag1.min[thirdDim] + labeledResolution[thirdDim] * wOffset;
+    const overwriteMode = yield* select(
+      (state: OxalisState) => state.userConfiguration.overwriteMode,
+    );
 
-    let minUV: Vector2 = [Infinity, Infinity];
-    let maxUV: Vector2 = [0, 0];
-    console.time("find bbox in mask");
-    for (let u = 0; u < mask.shape[0]; u++) {
-      for (let v = 0; v < mask.shape[1]; v++) {
-        if (mask.get(u, v, 0) > 0) {
-          minUV = V2.min(minUV, [u, v]);
-          maxUV = V2.max(maxUV, [u, v]);
+    sendAnalyticsEvent("used_quick_select_with_ai");
+
+    let wOffset = 0;
+    for (const mask of masks) {
+      const targetW = alignedUserBoxMag1.min[thirdDim] + labeledResolution[thirdDim] * wOffset;
+
+      let minUV: Vector2 = [Infinity, Infinity];
+      let maxUV: Vector2 = [0, 0];
+      console.time("find bbox in mask");
+      for (let u = 0; u < mask.shape[0]; u++) {
+        for (let v = 0; v < mask.shape[1]; v++) {
+          if (mask.get(u, v, 0) > 0) {
+            minUV = V2.min(minUV, [u, v]);
+            maxUV = V2.max(maxUV, [u, v]);
+          }
         }
       }
-    }
-    console.timeEnd("find bbox in mask");
-    if (minUV.includes(Infinity)) {
-      console.log("Mask at", targetW, "is empty");
-      continue;
-    }
-    console.log("minUV", minUV);
-    console.log("maxUV", maxUV);
-    const sizeUVMinusMaxUV = V3.sub(Dimensions.transDim(mask.shape as Vector3, activeViewport), [
-      ...maxUV,
-      0,
-    ] as Vector3);
-    const targetBox = maskBoxInMag.paddedWithMargins(
-      V3.negate(Dimensions.transDim([...minUV, 0], activeViewport)),
-      V3.negate(Dimensions.transDim(sizeUVMinusMaxUV, activeViewport)),
-    );
+      console.timeEnd("find bbox in mask");
+      if (minUV.includes(Infinity)) {
+        console.log("Mask at", targetW, "is empty");
+        continue;
+      }
+      console.log("minUV", minUV);
+      console.log("maxUV", maxUV);
+      const sizeUVMinusMaxUV = V3.sub(Dimensions.transDim(mask.shape as Vector3, activeViewport), [
+        ...maxUV,
+        0,
+      ] as Vector3);
+      const targetBox = maskBoxInMag.paddedWithMargins(
+        V3.negate(Dimensions.transDim([...minUV, 0], activeViewport)),
+        V3.negate(Dimensions.transDim(sizeUVMinusMaxUV, activeViewport)),
+      );
 
-    yield* finalizeQuickSelect(
-      quickSelectGeometry,
-      volumeTracing,
-      activeViewport,
-      labeledResolution,
-      targetBox.fromMagToMag1(labeledResolution),
-      targetW,
-      // a.hi(x,y) => a[:x, :y], // a.lo(x,y) => a[x:, y:]
-      mask
-        .hi(maxUV[0], maxUV[1], 1)
-        .lo(minUV[0], minUV[1], 0),
-      overwriteMode,
-      labeledZoomStep,
-    );
-    wOffset++;
+      yield* call(sleep, 10);
+      yield* finalizeQuickSelect(
+        quickSelectGeometry,
+        volumeTracing,
+        activeViewport,
+        labeledResolution,
+        targetBox.fromMagToMag1(labeledResolution),
+        targetW,
+        // a.hi(x,y) => a[:x, :y], // a.lo(x,y) => a[x:, y:]
+        mask
+          .hi(maxUV[0], maxUV[1], 1)
+          .lo(minUV[0], minUV[1], 0),
+        overwriteMode,
+        labeledZoomStep,
+      );
+      wOffset++;
+    }
+  } finally {
+    yield* cancel(progressSaga);
+    yield* put(setGlobalProgressAction(1));
+    yield* call(sleep, 1000);
+    yield* put(setGlobalProgressAction(0));
   }
 }

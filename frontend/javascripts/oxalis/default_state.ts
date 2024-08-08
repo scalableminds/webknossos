@@ -229,6 +229,7 @@ const defaultState: OxalisState = {
   activeUser: null,
   activeOrganization: null,
   uiInformation: {
+    globalProgress: 0,
     activeTool: "MOVE",
     activeUserBoundingBoxId: null,
     showDropzoneModal: false,

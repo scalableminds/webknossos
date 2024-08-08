@@ -524,6 +524,7 @@ export type BusyBlockingInfo = {
   reason?: string;
 };
 type UiInformation = {
+  readonly globalProgress: number; // 0 to 1
   readonly showDropzoneModal: boolean;
   readonly showVersionRestore: boolean;
   readonly showDownloadModal: boolean;

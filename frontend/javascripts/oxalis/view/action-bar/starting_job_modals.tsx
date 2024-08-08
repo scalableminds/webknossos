@@ -234,11 +234,9 @@ function BoundingBoxSelectionFormItem({
                   mag1,
                 );
                 if (isExportable) return Promise.resolve();
-                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${
-                  features().exportTiffMaxVolumeMVx
-                } Megavoxels. Additionally, no bounding box edge should be longer than ${
-                  features().exportTiffMaxEdgeLengthVx
-                }vx.`;
+                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${features().exportTiffMaxVolumeMVx
+                  } Megavoxels. Additionally, no bounding box edge should be longer than ${features().exportTiffMaxEdgeLengthVx
+                  }vx.`;
               }
               // In case no bounding box was selected, the rejectionReason will be "", because the previous rule already checks that.
               return Promise.reject(rejectionReason);
@@ -338,17 +336,17 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
     },
     isSuperUser
       ? {
-          label: "Train a model",
-          key: "trainModel",
-          children: <TrainAiModelTab onClose={onClose} />,
-        }
+        label: "Train a model",
+        key: "trainModel",
+        children: <TrainAiModelTab onClose={onClose} />,
+      }
       : null,
     isSuperUser
       ? {
-          label: "Alignment",
-          key: "alignment",
-          children: <AlignmentTab />,
-        }
+        label: "Alignment",
+        key: "alignment",
+        children: <AlignmentTab />,
+      }
       : null,
   ]);
   return aIJobModalState !== "invisible" ? (
@@ -372,7 +370,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
 function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
   const centerImageStyle = {
     margin: "auto",
-    width: 150,
+    width: 220,
   };
   const isSuperUser = Store.getState().activeUser?.isSuperUser || false;
   const [showCustomAiModels, setShowCustomAiModels] = useState(false);
@@ -494,7 +492,7 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
 function AlignmentTab() {
   const centerImageStyle = {
     margin: "auto",
-    width: 150,
+    width: 220,
   };
   return (
     <div>
@@ -654,9 +652,8 @@ function StartJobForm(props: StartJobFormProps) {
     initialLayerName = fixedSelectedLayer.name;
     initialOutputSegmentationLayerName = getReadableNameOfVolumeLayer(fixedSelectedLayer, tracing);
   }
-  initialOutputSegmentationLayerName = `${initialOutputSegmentationLayerName || "segmentation"}${
-    fixedSelectedLayer ? "_corrected" : "_inferred"
-  }`;
+  initialOutputSegmentationLayerName = `${initialOutputSegmentationLayerName || "segmentation"}${fixedSelectedLayer ? "_corrected" : "_inferred"
+    }`;
   const hasOutputSegmentationLayer =
     jobTypeWithConfigurableOutputSegmentationLayerName.indexOf(jobName) > -1;
   const notAllowedOutputLayerNames = allLayers
@@ -710,7 +707,7 @@ function StartJobForm(props: StartJobFormProps) {
         value={form.getFieldValue("boundingBoxId")}
       />
       {isSkeletonSelectable && <ShouldUseTreesFormItem />}
-      <div style={{ textAlign: "left" }}>
+      <div style={{ textAlign: "center" }}>
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}
         </Button>

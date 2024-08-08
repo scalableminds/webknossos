@@ -54,7 +54,7 @@ export function AiQuickSelectControls() {
       <NumberSliderSetting
         label="Prediction Depth"
         min={1}
-        value={quickSelectConfig.predictionDepth}
+        value={quickSelectConfig.predictionDepth || 1}
         max={5}
         step={1}
         onChange={onChangePredictionDepth}

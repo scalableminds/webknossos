@@ -43,7 +43,7 @@ function* getMask(
   // Effectively, zero the first and second dimension in the mag.
 
   const depth = yield* select(
-    (state: OxalisState) => state.userConfiguration.quickSelect.predictionDepth,
+    (state: OxalisState) => state.userConfiguration.quickSelect.predictionDepth || 1,
   );
 
   const depthSummand = V3.scale3(mag, trans([0, 0, depth]));
@@ -129,7 +129,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     return;
   }
   const depth = yield* select(
-    (state: OxalisState) => state.userConfiguration.quickSelect.predictionDepth,
+    (state: OxalisState) => state.userConfiguration.quickSelect.predictionDepth || 1,
   );
   const progressSaga = yield* fork(showApproximatelyProgress, depth, EXPECTED_DURATION_PER_SLICE);
   try {

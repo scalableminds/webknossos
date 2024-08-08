@@ -337,7 +337,7 @@ export type PartialDatasetConfiguration = Partial<Omit<DatasetConfiguration, "la
 export type QuickSelectConfig = {
   readonly useHeuristic: boolean;
   // Only relevant for useHeuristic=false:
-  readonly predictionDepth: number;
+  readonly predictionDepth?: number;
   // Only relevant for useHeuristic=true:
   readonly showPreview: boolean;
   readonly segmentMode: "dark" | "light";

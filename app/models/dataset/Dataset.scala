@@ -8,7 +8,18 @@ import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, AdditionalAxis, Category, CoordinateTransformation, CoordinateTransformationType, DataSourceId, ElementClass, ThinPlateSplineCorrespondences, DataLayerLike => DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  AbstractDataLayer,
+  AbstractSegmentationLayer,
+  AdditionalAxis,
+  Category,
+  CoordinateTransformation,
+  CoordinateTransformationType,
+  DataSourceId,
+  ElementClass,
+  ThinPlateSplineCorrespondences,
+  DataLayerLike => DataLayer
+}
 import com.scalableminds.webknossos.schema.Tables._
 import controllers.DatasetUpdateParameters
 

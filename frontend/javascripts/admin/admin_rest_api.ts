@@ -1307,6 +1307,35 @@ export function reserveDatasetUpload(
   );
 }
 
+export type OngoingUpload = {
+  uploadId: string;
+  dataSourceId: { name: string; organizationName: string };
+  folderId: string;
+  created: number;
+  allowedTeams: Array<string>;
+};
+
+type OldDataSourceIdFormat = { name: string; team: string };
+
+export function getOngoingUploads(
+  datastoreHost: string,
+  organizationName: string,
+): Promise<OngoingUpload[]> {
+  return doWithToken(async (token) => {
+    const ongoingUploads = (await Request.receiveJSON(
+      `/data/datasets/getOngoingUploads?token=${token}&organizationName=${organizationName}`,
+      {
+        host: datastoreHost,
+      },
+    )) as Array<{ uploadId: string; dataSourceId: OldDataSourceIdFormat }>;
+    // Rename "team" to "organization" as this is the actual used current naming.
+    return ongoingUploads.map(({ dataSourceId: { name, team }, ...rest }) => ({
+      ...rest,
+      dataSourceId: { name, organizationName: team },
+    }));
+  });
+}
+
 export function finishDatasetUpload(
   datastoreHost: string,
   uploadInformation: ArbitraryObject,

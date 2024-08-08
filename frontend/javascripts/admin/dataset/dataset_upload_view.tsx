@@ -14,7 +14,13 @@ import {
   Tooltip,
 } from "antd";
 import { Location as HistoryLocation, Action as HistoryAction } from "history";
-import { InfoCircleOutlined, FileOutlined, FolderOutlined, InboxOutlined } from "@ant-design/icons";
+import {
+  InfoCircleOutlined,
+  FileOutlined,
+  FolderOutlined,
+  InboxOutlined,
+  HourglassOutlined,
+} from "@ant-design/icons";
 import { connect } from "react-redux";
 import React from "react";
 import dayjs from "dayjs";
@@ -42,6 +48,8 @@ import {
   startConvertToWkwJob,
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
+  getOngoingUploads,
+  OngoingUpload,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -91,9 +99,12 @@ type State = {
   isRetrying: boolean;
   uploadProgress: number;
   selectedTeams: APITeam | Array<APITeam>;
+  possibleTeams: Array<APITeam>;
   uploadId: string;
+  continuingOldUpload: boolean;
   resumableUpload: any;
   datastoreUrl: string;
+  ongoingUploads: OngoingUpload[];
 };
 
 function WkwExample() {
@@ -162,6 +173,7 @@ type UploadFormFieldTypes = {
   zipFile: Array<FileWithPath>;
   targetFolderId: string;
   voxelSizeUnit: UnitLong;
+  continuingOldUpload: boolean;
   datastoreUrl: string;
 };
 
@@ -173,9 +185,12 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     isRetrying: false,
     uploadProgress: 0,
     selectedTeams: [],
+    possibleTeams: [],
     uploadId: "",
     resumableUpload: {},
     datastoreUrl: "",
+    ongoingUploads: [],
+    continuingOldUpload: false,
   };
 
   unblock: ((...args: Array<any>) => any) | null | undefined;
@@ -184,6 +199,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");
+    this.updateOngoingUploads();
   }
 
   componentDidUpdate(prevProps: PropsWithFormAndRouter) {
@@ -204,6 +220,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           datastoreUrl: uploadableDatastores[0].url,
         });
         this.setState({ datastoreUrl: uploadableDatastores[0].url });
+        this.updateOngoingUploads();
       }
     }
   }
@@ -211,6 +228,20 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   componentWillUnmount() {
     this.unblockHistory();
   }
+
+  updateOngoingUploads = async () => {
+    const currentFormRef = this.formRef.current;
+    const datastoreUrl = currentFormRef?.getFieldValue("datastoreUrl");
+    const activeOrga = this.props.activeUser?.organization;
+    console.log("Update ongoing uploads", activeOrga, datastoreUrl);
+    if (!datastoreUrl || !activeOrga) {
+      return;
+    }
+    const ongoingUploads = await getOngoingUploads(datastoreUrl, activeOrga);
+    // Sort by created
+    ongoingUploads.sort((a, b) => b.created - a.created);
+    this.setState({ ongoingUploads });
+  };
 
   unblockHistory() {
     window.onbeforeunload = null;
@@ -282,9 +313,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       return Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join("");
     };
 
-    const uploadId = `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${
-      datasetId.name
-    }__${getRandomString()}`;
+    const uploadId =
+      this.state.uploadId ||
+      `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${datasetId.name}__${getRandomString()}`;
     const reserveUploadInformation = {
       uploadId,
       organization: datasetId.owningOrganization,
@@ -362,6 +393,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           this.setState({
             isUploading: false,
             isFinishing: false,
+            continuingOldUpload: false,
           });
 
           if (maybeError == null) {
@@ -385,6 +417,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             isUploading: false,
             isFinishing: false,
             isRetrying: false,
+            continuingOldUpload: false,
             uploadProgress: 0,
           });
         },
@@ -648,11 +681,18 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     );
   };
 
+  onFormValueChange = (changedValues: UploadFormFieldTypes) => {
+    if (changedValues.datastoreUrl) {
+      this.setState({ datastoreUrl: changedValues.datastoreUrl });
+      this.updateOngoingUploads();
+    }
+  };
+
   render() {
     const { activeUser, withoutCard, datastores } = this.props;
     const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(this.props.activeUser);
 
-    const { needsConversion } = this.state;
+    const { needsConversion, continuingOldUpload } = this.state;
     const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
     const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
 
@@ -681,9 +721,72 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             />
           ) : null}
 
+          {this.state.ongoingUploads.length > 0 && (
+            <Alert
+              message={
+                <>
+                  Ongoing unfinished Dataset Uploads{" "}
+                  <Tooltip
+                    title="The list contains all started and unfinished uploads of the past two weeks. You can try to continue the upload."
+                    placement="right"
+                  >
+                    <InfoCircleOutlined />
+                  </Tooltip>
+                </>
+              }
+              description={
+                <div
+                  style={{
+                    paddingTop: 8,
+                  }}
+                >
+                  {this.state.ongoingUploads.map((ongoingUpload) => (
+                    <Row key={ongoingUpload.uploadId} gutter={16}>
+                      <Col span={8}>{ongoingUpload.dataSourceId.name}</Col>
+                      <Col span={8}>
+                        <Button
+                          type="link"
+                          onClick={() => {
+                            const currentFormRef = this.formRef.current;
+                            if (!currentFormRef) {
+                              return;
+                            }
+                            currentFormRef.setFieldsValue({
+                              name: ongoingUpload.dataSourceId.name,
+                              targetFolderId: ongoingUpload.folderId,
+                              initialTeams: this.state.possibleTeams.filter((team) =>
+                                ongoingUpload.allowedTeams.includes(team.id),
+                              ),
+                            });
+                            this.setState({
+                              uploadId: ongoingUpload.uploadId,
+                              continuingOldUpload: true,
+                            });
+                            Toast.info(
+                              "To continue the selected Upload please make sure to select the same file(s) as before and do not change the other form items.",
+                            );
+                          }}
+                        >
+                          Continue upload
+                        </Button>
+                      </Col>
+                    </Row>
+                  ))}
+                </div>
+              }
+              type="info"
+              style={{
+                marginTop: 12,
+                marginBottom: 12,
+              }}
+              showIcon
+              icon={<HourglassOutlined />}
+            />
+          )}
+
           <Form
             onFinish={this.handleSubmit}
-            onValuesChange={(_, { datastoreUrl }) => this.setState({ datastoreUrl })}
+            onValuesChange={this.onFormValueChange}
             layout="vertical"
             ref={this.formRef}
             initialValues={{
@@ -713,14 +816,20 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             )}
             <Row gutter={8}>
               <Col span={12}>
-                <DatasetNameFormItem activeUser={activeUser} />
+                <DatasetNameFormItem
+                  activeUser={activeUser}
+                  disabled={continuingOldUpload}
+                  allowDuplicate
+                />
               </Col>
               <Col span={12}>
                 <AllowedTeamsFormItem
                   isDatasetManagerOrAdmin={isDatasetManagerOrAdmin}
                   selectedTeams={this.state.selectedTeams}
                   setSelectedTeams={(selectedTeams) => this.setState({ selectedTeams })}
+                  afterFetchedTeams={(possibleTeams) => this.setState({ possibleTeams })}
                   formRef={this.formRef}
+                  disabled={continuingOldUpload}
                 />
               </Col>
             </Row>
@@ -737,12 +846,17 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 },
               ]}
             >
-              <FolderSelection width="50%" disableNotEditableFolders />
+              <FolderSelection
+                width="50%"
+                disableNotEditableFolders
+                disabled={continuingOldUpload}
+              />
             </FormItemWithInfo>
 
             <DatastoreFormItem
               datastores={uploadableDatastores}
               hidden={hasOnlyOneDatastoreOrNone}
+              disabled={continuingOldUpload}
             />
             {this.isDatasetConversionEnabled() && needsConversion ? (
               <Row gutter={8}>

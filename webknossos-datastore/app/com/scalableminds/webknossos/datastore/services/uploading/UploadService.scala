@@ -13,12 +13,13 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILE
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants}
+import com.scalableminds.webknossos.datastore.models.OngoingUpload
 import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, DataSourceService}
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.Box.{box2Option, tryo}
+import net.liftweb.common.Box.tryo
 import net.liftweb.common._
 import org.apache.commons.io.FileUtils
 import org.apache.pekko.util.Helpers.Requiring
@@ -26,7 +27,6 @@ import play.api.libs.json.{Json, OFormat, Reads}
 
 import java.io.{File, RandomAccessFile}
 import java.nio.file.{Files, Path}
-import scala.collection.IterableOnce.iterableOnceExtensionMethods
 import scala.concurrent.ExecutionContext
 
 case class ReserveUploadInformation(
@@ -74,12 +74,6 @@ object UploadInformation {
 case class CancelUploadInformation(uploadId: String)
 object CancelUploadInformation {
   implicit val jsonFormat: OFormat[CancelUploadInformation] = Json.format[CancelUploadInformation]
-}
-
-case class OngoingUpload(uploadId: String, dataSourceId: DataSourceId)
-
-object OngoingUpload {
-  implicit val jsonFormat: OFormat[OngoingUpload] = Json.format[OngoingUpload]
 }
 
 class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
@@ -153,14 +147,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         f"Reserving dataset upload of ${reserveUploadInformation.organization}/${reserveUploadInformation.name} with id ${reserveUploadInformation.uploadId}...")
     } yield ()
 
-  def getUploadInfoForDataSources(dataSourceIds: List[DataSourceId]): Fox[List[OngoingUpload]] =
+  def getUploadInfoForDataSources(ongoingUploadsWithoutIds: List[OngoingUpload]): Fox[List[OngoingUpload]] =
     for {
       maybeOngoingUploads <- Fox.sequence(
-        dataSourceIds.map(
-          id =>
+        ongoingUploadsWithoutIds.map(
+          upload =>
             runningUploadMetadataStore
-              .find(Json.stringify(Json.toJson(id)))
-              .map(uploadIdOpt => uploadIdOpt.map(uploadId => OngoingUpload(uploadId, id)))
+              .find(Json.stringify(Json.toJson(upload.dataSourceId)))
+              .map(uploadIdOpt => uploadIdOpt.map(uploadId => upload.copy(uploadId = uploadId)))
         ))
       foundOngoingUploads = maybeOngoingUploads.filter(idBox => idBox.isDefined).flatMap(idBox => idBox.value).collect {
         case Some(value) => value

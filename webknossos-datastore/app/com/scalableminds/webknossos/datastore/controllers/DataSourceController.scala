@@ -103,14 +103,15 @@ class DataSourceController @Inject()(
       }
     }
 
-  def getOngoingUploads() (token: Option[String], organizationName: String): Action[AnyContent] =
+  def getOngoingUploads(token: Option[String], organizationName: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
-        urlOrHeaderToken(token, request)) {
+                                        urlOrHeaderToken(token, request)) {
         for {
-          dataSourceIds <- remoteWebknossosClient.getReservedDatasetUploadsForUser(urlOrHeaderToken(token, request))
-          ongoingUploads <- uploadService.getUploadInfoForDataSources(dataSourceIds)
-        } yield Ok(Json.toJson(ongoingUploads))
+          ongoingUploads <- remoteWebknossosClient.getReservedDatasetUploadsForUser(urlOrHeaderToken(token, request),
+                                                                                    organizationName)
+          ongoingUploadsWithUploadIds <- uploadService.getUploadInfoForDataSources(ongoingUploads)
+        } yield Ok(Json.toJson(ongoingUploadsWithUploadIds))
       }
     }
 

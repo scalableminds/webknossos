@@ -1,7 +1,12 @@
 import { type DataNode } from "antd/es/tree";
+import Toast from "libs/toast";
 import _ from "lodash";
+import Constants, { Vector3, Vector6 } from "oxalis/constants";
 import { mapGroupsWithRoot } from "oxalis/model/accessors/skeletontracing_accessor";
+import { Store, api } from "oxalis/singletons";
 import type { Tree, TreeGroup, SegmentMap, Segment, TreeMap, SegmentGroup } from "oxalis/store";
+import * as Utils from "libs/utils";
+import { updateSegmentAction } from "oxalis/model/actions/volumetracing_actions";
 
 export const MISSING_GROUP_ID = -1;
 
@@ -287,3 +292,68 @@ export function findParentGroupNode(nodes: TreeNode[], parentGroupId: number): T
   });
   return foundParentNode;
 }
+
+export const registerSegmentsForBoundingBox = async (value: Vector6, bbName: string) => {
+  const min: Vector3 = [value[0], value[1], value[2]];
+  const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
+
+  const shape = Utils.computeShapeFromBoundingBox({ min, max });
+  const volume = Math.ceil(shape[0] * shape[1] * shape[2]);
+  const maxVolume = Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
+  if (volume > maxVolume) {
+    Toast.error(
+      "The volume of the bounding box is too large, please reduce the size of the bounding box.",
+    );
+    return;
+  } else if (volume > maxVolume / 8) {
+    Toast.warning(
+      "The volume of the bounding box is very large, registering all segments might take a while.",
+    );
+  }
+
+  const segmentationLayerName = api.data.getSegmentationLayerNames()[0];
+  const data = await api.data.getDataForBoundingBox(segmentationLayerName, {
+    min,
+    max,
+  });
+
+  const segmentIdToPosition = new Map();
+  let idx = 0;
+  for (let z = min[2]; z < max[2]; z++) {
+    for (let y = min[1]; y < max[1]; y++) {
+      for (let x = min[0]; x < max[0]; x++) {
+        const id = data[idx];
+        if (!segmentIdToPosition.has(id)) {
+          segmentIdToPosition.set(id, [x, y, z]);
+        }
+        idx++;
+      }
+    }
+  }
+
+  const segmentIds = Array.from(segmentIdToPosition.entries());
+  const maxNoSegments = Constants.REGISTER_SEGMENTS_BB_MAX_NO_SEGMENTS;
+  const halfMaxNoSegments = maxNoSegments / 2;
+  if (segmentIds.length > maxNoSegments) {
+    Toast.error(
+      `The bounding box contains more than ${maxNoSegments} segments. Please reduce the size of the bounding box.`,
+    );
+    return;
+  } else if (segmentIds.length > halfMaxNoSegments) {
+    Toast.warning(
+      `The bounding box contains more than ${halfMaxNoSegments} segments. Registering all segments might take a while.`,
+    );
+  }
+
+  const groupId = api.tracing.createSegmentGroup(
+    `Segments for BBox ${bbName}`,
+    -1,
+    segmentationLayerName,
+  );
+  for (const [segmentId, position] of segmentIdToPosition.entries()) {
+    api.tracing.registerSegment(segmentId, position, undefined, segmentationLayerName);
+    Store.dispatch(
+      updateSegmentAction(segmentId, { groupId, id: segmentId }, segmentationLayerName),
+    );
+  }
+};

@@ -17,7 +17,7 @@ import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristi
 
 const MASK_SIZE = [1024, 1024, 0] as Vector3;
 
-async function getMask(
+function* getMask(
   dataset: APIDataset,
   layerName: string,
   userBoxMag1: BoundingBox,
@@ -25,7 +25,7 @@ async function getMask(
   activeViewport: OrthoView,
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
-): Promise<[BoundingBox, Array<NdArray<TypedArrayWithoutBigInt>>]> {
+): Saga<[BoundingBox, Array<NdArray<TypedArrayWithoutBigInt>>]> {
   if (userBoxMag1.getVolume() === 0) {
     throw new Error("User bounding box should not have empty volume.");
   }
@@ -35,7 +35,11 @@ async function getMask(
   const sizeInMag1 = V3.scale3(trans(MASK_SIZE), mag);
   const maskTopLeftMag1 = V3.alignWithMag(V3.sub(centerMag1, V3.scale(sizeInMag1, 0.5)), mag);
   // Effectively, zero the first and second dimension in the mag.
-  const depth = window.depth || 2;
+
+  const depth = yield* select(
+    (state: OxalisState) => state.userConfiguration.quickSelect.predictionDepth,
+  );
+
   const depthSummand = V3.scale3(mag, trans([0, 0, depth]));
   const maskBottomRightMag1 = V3.add(maskTopLeftMag1, sizeInMag1);
   const maskBoxMag1 = new BoundingBox({
@@ -54,7 +58,8 @@ async function getMask(
   const maskBoxInMag = maskBoxMag1.fromMag1ToMag(mag);
   const userBoxRelativeToMaskInMag = userBoxInMag.offset(V3.negate(maskBoxInMag.min));
 
-  const maskData = await getSamMask(
+  const maskData = yield* call(
+    getSamMask,
     dataset,
     layerName,
     mag,
@@ -100,8 +105,6 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   const {
     labeledZoomStep,
     labeledResolution,
-    firstDim,
-    secondDim,
     thirdDim,
     activeViewport,
     volumeTracing,

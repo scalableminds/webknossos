@@ -84,6 +84,7 @@ const defaultState: OxalisState = {
     useLegacyBindings: false,
     quickSelect: {
       useHeuristic: false,
+      predictionDepth: 1,
       showPreview: false,
       segmentMode: "light",
       threshold: 128,

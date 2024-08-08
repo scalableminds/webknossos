@@ -436,7 +436,7 @@ function getCenterSubview(inputNdUvw: ndarray.NdArray<Uint8Array>) {
 
 function processBinaryMaskInPlaceAndAttach(
   mask: ndarray.NdArray<Uint8Array>,
-  quickSelectConfig: Omit<QuickSelectConfig, "showPreview" | "useHeuristic">,
+  quickSelectConfig: Omit<QuickSelectConfig, "showPreview" | "useHeuristic" | "predictionDepth">,
   quickSelectGeometry: QuickSelectGeometry,
 ) {
   fillHolesInPlace(mask);
@@ -499,8 +499,6 @@ export function* finalizeQuickSelect(
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
 ) {
-  const [firstDim, secondDim, _thirdDim] = Dimensions.getIndices(activeViewport);
-
   quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
   const volumeLayer = yield* call(
     createVolumeLayer,

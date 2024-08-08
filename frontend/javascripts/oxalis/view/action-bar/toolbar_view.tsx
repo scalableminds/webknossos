@@ -1311,7 +1311,7 @@ function ToolSpecificSettings({
             <i className="fas fa-magic icon-margin-right" /> AI
           </ButtonComponent>
 
-          {isQuickSelectHeuristic && <QuickSelectSettingsPopover />}
+          <QuickSelectSettingsPopover />
         </>
       )}
 

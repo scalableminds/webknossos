@@ -521,10 +521,10 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
         {
           key: "registerSegments",
           label: (
-            <>
+            <Tooltip title="Moves/registers all segments within this bbox into a new group">
               <ScanOutlined /> {""}
               Register all segments in this bounding box
-            </>
+            </Tooltip>
           ),
           onClick: disabled ? () => {} : () => onRegisterSegmentsForBB(this.props.value, name),
           disabled: this.props.visibleSegmentationLayer == null,
@@ -533,7 +533,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           key: "goToCenter",
           label: (
             <>
-              <BorderInnerOutlined style={{ marginTop: 6 }} /> Go to center
+              <BorderInnerOutlined /> Go to center
             </>
           ),
           onClick: onGoToBoundingBox,

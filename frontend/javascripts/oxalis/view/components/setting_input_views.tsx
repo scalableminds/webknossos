@@ -384,7 +384,7 @@ type UserBoundingBoxInputProps = {
   onBoundingChange: (arg0: Vector6) => void;
   onDelete: () => void;
   onExport: () => void;
-  onRegisterSegmentsForBB: (arg0: Vector3, arg1: Vector3) => void;
+  onRegisterSegmentsForBB: (arg0: Vector6, arg1: string) => void;
   onGoToBoundingBox: () => void;
   onVisibilityChange: (arg0: boolean) => void;
   onNameChange: (arg0: string) => void;
@@ -516,13 +516,6 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
       isOwner,
     );
 
-    const getMinAndMax = (value: Vector6): { min: Vector3; max: Vector3 } => {
-      const [minX, minY, minZ, width, height, depth] = value;
-      return { min: [minX, minY, minZ], max: [minX + width, minY + height, minZ + depth] };
-    };
-
-    const { min, max } = getMinAndMax(this.props.value);
-
     const getContextMenu = () => {
       const items: MenuProps["items"] = [
         {
@@ -533,7 +526,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
               Register all segments in this bounding box
             </>
           ),
-          onClick: disabled ? () => {} : () => onRegisterSegmentsForBB(min, max),
+          onClick: disabled ? () => {} : () => onRegisterSegmentsForBB(this.props.value, name),
           disabled: this.props.visibleSegmentationLayer == null,
         },
         {

@@ -17,9 +17,10 @@ import * as Utils from "libs/utils";
 import { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
-import { api } from "oxalis/singletons";
+import { Store, api } from "oxalis/singletons";
 import Toast from "libs/toast";
 import { AutoSizer } from "react-virtualized";
+import { updateSegmentAction } from "oxalis/model/actions/volumetracing_actions";
 
 const ADD_BBOX_BUTTON_HEIGHT = 32;
 
@@ -51,7 +52,10 @@ export default function BoundingBoxTab() {
 
   const deleteBoundingBox = (id: number) => dispatch(deleteUserBoundingBoxAction(id));
 
-  const registerSegmentsForBoundingBox = async (min: Vector3, max: Vector3) => {
+  const registerSegmentsForBoundingBox = async (value: Vector6, bbName: string) => {
+    const min: Vector3 = [value[0], value[1], value[2]];
+    const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
+
     const shape = Utils.computeShapeFromBoundingBox({ min, max });
     const volume = Math.ceil(shape[0] * shape[1] * shape[2]);
     const maxVolume = Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
@@ -100,8 +104,16 @@ export default function BoundingBoxTab() {
       );
     }
 
-    for (const [id, position] of segmentIdToPosition.entries()) {
-      api.tracing.registerSegment(id, position, undefined, segmentationLayerName);
+    const groupId = api.tracing.createSegmentGroup(
+      `Segments for BBox ${bbName}`,
+      -1,
+      segmentationLayerName,
+    );
+    for (const [segmentId, position] of segmentIdToPosition.entries()) {
+      api.tracing.registerSegment(segmentId, position, undefined, segmentationLayerName);
+      Store.dispatch(
+        updateSegmentAction(segmentId, { groupId, id: segmentId }, segmentationLayerName),
+      );
     }
   };
 

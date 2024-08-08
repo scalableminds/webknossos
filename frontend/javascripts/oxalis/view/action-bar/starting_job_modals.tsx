@@ -234,9 +234,11 @@ function BoundingBoxSelectionFormItem({
                   mag1,
                 );
                 if (isExportable) return Promise.resolve();
-                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${features().exportTiffMaxVolumeMVx
-                  } Megavoxels. Additionally, no bounding box edge should be longer than ${features().exportTiffMaxEdgeLengthVx
-                  }vx.`;
+                rejectionReason = `The volume of the selected bounding box is too large. The AI neuron segmentation trial is only supported for up to ${
+                  features().exportTiffMaxVolumeMVx
+                } Megavoxels. Additionally, no bounding box edge should be longer than ${
+                  features().exportTiffMaxEdgeLengthVx
+                }vx.`;
               }
               // In case no bounding box was selected, the rejectionReason will be "", because the previous rule already checks that.
               return Promise.reject(rejectionReason);
@@ -336,17 +338,17 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
     },
     isSuperUser
       ? {
-        label: "Train a model",
-        key: "trainModel",
-        children: <TrainAiModelTab onClose={onClose} />,
-      }
+          label: "Train a model",
+          key: "trainModel",
+          children: <TrainAiModelTab onClose={onClose} />,
+        }
       : null,
     isSuperUser
       ? {
-        label: "Alignment",
-        key: "alignment",
-        children: <AlignmentTab />,
-      }
+          label: "Alignment",
+          key: "alignment",
+          children: <AlignmentTab />,
+        }
       : null,
   ]);
   return aIJobModalState !== "invisible" ? (
@@ -660,8 +662,9 @@ function StartJobForm(props: StartJobFormProps) {
     initialLayerName = fixedSelectedLayer.name;
     initialOutputSegmentationLayerName = getReadableNameOfVolumeLayer(fixedSelectedLayer, tracing);
   }
-  initialOutputSegmentationLayerName = `${initialOutputSegmentationLayerName || "segmentation"}${fixedSelectedLayer ? "_corrected" : "_inferred"
-    }`;
+  initialOutputSegmentationLayerName = `${initialOutputSegmentationLayerName || "segmentation"}${
+    fixedSelectedLayer ? "_corrected" : "_inferred"
+  }`;
   const hasOutputSegmentationLayer =
     jobTypeWithConfigurableOutputSegmentationLayerName.indexOf(jobName) > -1;
   const notAllowedOutputLayerNames = allLayers

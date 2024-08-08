@@ -10,6 +10,8 @@ import com.scalableminds.webknossos.datastore.services.DataStoreStatus
 import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveUploadInformation}
 import com.typesafe.scalalogging.LazyLogging
 import mail.{MailchimpClient, MailchimpTag}
+
+import javax.inject.Inject
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
 import models.dataset._
@@ -28,7 +30,6 @@ import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironm
 import telemetry.SlackNotificationService
 import utils.{ObjectId, WkConf}
 
-import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
 class WKRemoteDataStoreController @Inject()(
@@ -84,7 +85,7 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def getReservedDatasetUploadsForUser(name: String,
+  def getOngoingUploadsForUser(name: String,
                                        key: String,
                                        token: String,
                                        organizationName: String): Action[AnyContent] =
@@ -101,7 +102,7 @@ class WKRemoteDataStoreController @Inject()(
           teamIdsPerDataset <- Fox.combined(datasets.map(dataset => teamDAO.findAllowedTeamIdsForDataset(dataset.id)))
           ongoingUploads = datasets.zipWithIndex.map {
             case (d, index) =>
-              new OngoingUpload("filled-in by datastore",
+              new OngoingUpload("<filled-in by datastore>",
                                 d.toDataSourceId,
                                 d.folderId.toString,
                                 d.created,

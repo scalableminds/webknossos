@@ -81,7 +81,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       statusOpt = Some(notYetUploadedStatus),
       // Only list pending upload since the two last weeks.
       createdSinceOpt = Some(Instant.now - Duration(14, TimeUnit.DAYS))
-    )
+    ) ?~> "dataset.list.fetchFailed"
 
   private def createDataset(
       dataStore: DataStore,
@@ -243,8 +243,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       case None           => createAndSaveSharingToken(datasetName)
     }
   }
-
-  // TODO: schreiben / finden dass mna sich alle unfinished uploaded datasets zurückgeben lassen kann
 
   def dataSourceFor(dataset: Dataset, organization: Option[Organization] = None): Fox[InboxDataSource] =
     (for {

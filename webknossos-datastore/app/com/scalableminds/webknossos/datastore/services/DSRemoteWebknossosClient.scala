@@ -15,7 +15,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataS
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.ReserveUploadInformation
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
-
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{Json, OFormat}
@@ -69,11 +68,11 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
-  def getReservedDatasetUploadsForUser(userTokenOpt: Option[String],
-                                       organizationName: String): Fox[List[OngoingUpload]] =
+  def getOngoingUploadsForUser(userTokenOpt: Option[String],
+                               organizationName: String): Fox[List[OngoingUpload]] =
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "reserveUpload.noUserToken"
-      datasetIds <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getReservedDatasetUploadsForUser")
+      datasetIds <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getOngoingUploadsForUser")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("token" -> userToken)
         .addQueryString("organizationName" -> organizationName)

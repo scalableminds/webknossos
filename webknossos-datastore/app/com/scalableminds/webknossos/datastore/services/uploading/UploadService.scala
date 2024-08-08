@@ -147,7 +147,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         f"Reserving dataset upload of ${reserveUploadInformation.organization}/${reserveUploadInformation.name} with id ${reserveUploadInformation.uploadId}...")
     } yield ()
 
-  def getUploadInfoForDataSources(ongoingUploadsWithoutIds: List[OngoingUpload]): Fox[List[OngoingUpload]] =
+  def addUploadIdsToOngoingUploads(ongoingUploadsWithoutIds: List[OngoingUpload]): Fox[List[OngoingUpload]] =
     for {
       maybeOngoingUploads <- Fox.sequence(
         ongoingUploadsWithoutIds.map(
@@ -164,7 +164,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def isOutsideUploadDir(uploadDir: Path, filePath: String): Boolean =
     uploadDir.relativize(uploadDir.resolve(filePath)).startsWith("../")
 
-  def isChunkPresent(uploadFileId: String, currentChunkNumber: Long): Fox[Boolean] = {
+  private def getFilePathAndDirOfUploadId(uploadFileId: String): Fox[(String, Path)] = {
     val uploadId = extractDatasetUploadId(uploadFileId)
     for {
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
@@ -172,6 +172,13 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       filePathRaw = uploadFileId.split("/").tail.mkString("/")
       filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
       _ <- bool2Fox(!isOutsideUploadDir(uploadDir, filePath)) ?~> s"Invalid file path: $filePath"
+    } yield (filePath, uploadDir)
+  }
+
+  def isChunkPresent(uploadFileId: String, currentChunkNumber: Long): Fox[Boolean] = {
+    val uploadId = extractDatasetUploadId(uploadFileId)
+    for {
+      (filePath, _) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
       isChunkPresent <- Fox.runIf(isFileKnown)(
         runningUploadMetadataStore.containedInSet(redisKeyForFileChunkCount(uploadId, filePath),
@@ -187,10 +194,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     val uploadId = extractDatasetUploadId(uploadFileId)
     for {
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
-      uploadDir = uploadDirectory(dataSourceId.team, uploadId)
-      filePathRaw = uploadFileId.split("/").tail.mkString("/")
-      filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
-      _ <- bool2Fox(!isOutsideUploadDir(uploadDir, filePath)) ?~> s"Invalid file path: $filePath"
+      (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
       _ <- Fox.runIf(!isFileKnown) {
         runningUploadMetadataStore

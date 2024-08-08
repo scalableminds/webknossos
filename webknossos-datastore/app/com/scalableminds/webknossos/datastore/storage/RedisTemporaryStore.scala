@@ -46,7 +46,6 @@ trait RedisTemporaryStore extends LazyLogging {
 
   def insert(id: String, value: String, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
     withExceptionHandler {
-      System.out.println(s"inserting id $id, value $value")
       expirationOpt
         .map(
           expiration => r.setex(id, expiration.toSeconds, value)

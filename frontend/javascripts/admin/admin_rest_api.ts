@@ -1327,7 +1327,7 @@ export function getOngoingUploads(
       {
         host: datastoreHost,
       },
-    )) as Array<{ uploadId: string; dataSourceId: OldDataSourceIdFormat }>;
+    )) as Array<OngoingUpload & { dataSourceId: OldDataSourceIdFormat }>;
     // Rename "team" to "organization" as this is the actual used current naming.
     return ongoingUploads.map(({ dataSourceId: { name, team }, ...rest }) => ({
       ...rest,

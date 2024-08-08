@@ -108,9 +108,9 @@ class DataSourceController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
                                         urlOrHeaderToken(token, request)) {
         for {
-          ongoingUploads <- remoteWebknossosClient.getReservedDatasetUploadsForUser(urlOrHeaderToken(token, request),
+          ongoingUploads <- remoteWebknossosClient.getOngoingUploadsForUser(urlOrHeaderToken(token, request),
                                                                                     organizationName)
-          ongoingUploadsWithUploadIds <- uploadService.getUploadInfoForDataSources(ongoingUploads)
+          ongoingUploadsWithUploadIds <- uploadService.addUploadIdsToOngoingUploads(ongoingUploads)
         } yield Ok(Json.toJson(ongoingUploadsWithUploadIds))
       }
     }

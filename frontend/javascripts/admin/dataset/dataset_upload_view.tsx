@@ -199,7 +199,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");
-    this.updateOngoingUploads();
   }
 
   componentDidUpdate(prevProps: PropsWithFormAndRouter) {
@@ -233,7 +232,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const currentFormRef = this.formRef.current;
     const datastoreUrl = currentFormRef?.getFieldValue("datastoreUrl");
     const activeOrga = this.props.activeUser?.organization;
-    console.log("Update ongoing uploads", activeOrga, datastoreUrl);
     if (!datastoreUrl || !activeOrga) {
       return;
     }
@@ -727,7 +725,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <>
                   Ongoing unfinished Dataset Uploads{" "}
                   <Tooltip
-                    title="The list contains all started and unfinished uploads of the past two weeks. You can try to continue the upload."
+                    title="This list shows all uploads from the past two weeks that were started by you but not completed. You can try continuing these uploads."
                     placement="right"
                   >
                     <InfoCircleOutlined />
@@ -763,7 +761,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                               continuingOldUpload: true,
                             });
                             Toast.info(
-                              "To continue the selected Upload please make sure to select the same file(s) as before and do not change the other form items.",
+                              "To continue the selected Upload please make sure to select the same file(s) as before. Else unexpected behavior may occur.",
                             );
                           }}
                         >

@@ -4,7 +4,7 @@ import { OrthoView, TypedArrayWithoutBigInt, Vector2, Vector3 } from "oxalis/con
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, cancel, fork, put } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { V2, V3 } from "libs/mjs";
+import { V3 } from "libs/mjs";
 import { ComputeQuickSelectForRectAction } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
@@ -15,6 +15,7 @@ import { getSamMask, sendAnalyticsEvent } from "admin/admin_rest_api";
 import Dimensions from "../dimensions";
 import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
 import { setGlobalProgressAction } from "../actions/ui_actions";
+import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
 
 const MASK_SIZE = [1024, 1024, 0] as Vector3;
 // This should tend to be smaller because the progress rendering at the end of the animation
@@ -191,28 +192,22 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
 
     sendAnalyticsEvent("used_quick_select_with_ai");
 
+    const userBoxInMag = alignedUserBoxMag1.fromMag1ToMag(labeledResolution);
+    const userBoxRelativeToMaskInMag = userBoxInMag.offset(V3.negate(maskBoxInMag.min));
+
     let wOffset = 0;
     for (const mask of masks) {
       const targetW = alignedUserBoxMag1.min[thirdDim] + labeledResolution[thirdDim] * wOffset;
 
-      let minUV: Vector2 = [Infinity, Infinity];
-      let maxUV: Vector2 = [0, 0];
-      console.time("find bbox in mask");
-      for (let u = 0; u < mask.shape[0]; u++) {
-        for (let v = 0; v < mask.shape[1]; v++) {
-          if (mask.get(u, v, 0) > 0) {
-            minUV = V2.min(minUV, [u, v]);
-            maxUV = V2.max(maxUV, [u, v]);
-          }
-        }
-      }
-      console.timeEnd("find bbox in mask");
-      if (minUV.includes(Infinity)) {
-        console.log("Mask at", targetW, "is empty");
-        continue;
-      }
-      console.log("minUV", minUV);
-      console.log("maxUV", maxUV);
+      const { min: minUV, max: maxUV } = estimateBBoxInMask(
+        mask,
+        {
+          min: userBoxRelativeToMaskInMag.getMinUV(activeViewport),
+          max: userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
+        },
+        100,
+      );
+
       const sizeUVMinusMaxUV = V3.sub(Dimensions.transDim(mask.shape as Vector3, activeViewport), [
         ...maxUV,
         0,

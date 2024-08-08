@@ -10,7 +10,9 @@ import { Vector2 } from "oxalis/constants";
  * estimateBBoxInMask is an approximative and fast algorithm that takes an initial
  * bounding box and grows that box until the borders of it don't contain
  * 1s in the mask. The bounding box is grown by ${maxError} pixels in each
- * iteration.
+ * iteration. In comparison to the precise algorithm, it is multiple orders of
+ * magnitude faster (for a 1024x1024x5 mask with a max error of 100, it is 100 to 200 times
+ * faster).
  */
 
 export type BoundingBox2D = {

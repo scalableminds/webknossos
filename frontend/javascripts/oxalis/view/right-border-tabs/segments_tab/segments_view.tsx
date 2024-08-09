@@ -116,7 +116,7 @@ import {
 } from "../tree_hierarchy_view_helpers";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { ItemType } from "antd/lib/menu/hooks/useItems";
-import { pluralize, sleep } from "libs/utils";
+import { pluralize } from "libs/utils";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";

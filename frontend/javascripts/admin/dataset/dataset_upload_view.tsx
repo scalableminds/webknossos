@@ -100,7 +100,7 @@ type State = {
   uploadProgress: number;
   selectedTeams: APITeam | Array<APITeam>;
   possibleTeams: Array<APITeam>;
-  uploadId: string;
+  uploadId: string | null;
   continuingOldUpload: boolean;
   resumableUpload: any;
   datastoreUrl: string;
@@ -392,6 +392,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             isUploading: false,
             isFinishing: false,
             continuingOldUpload: false,
+            uploadId: null,
           });
 
           if (maybeError == null) {
@@ -416,6 +417,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             isFinishing: false,
             isRetrying: false,
             continuingOldUpload: false,
+            uploadId: null,
             uploadProgress: 0,
           });
         },
@@ -461,13 +463,16 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
 
     resumableUpload.cancel();
-    await cancelDatasetUpload(datastoreUrl, {
-      uploadId,
-    });
+    if (uploadId) {
+      await cancelDatasetUpload(datastoreUrl, {
+        uploadId,
+      });
+    }
     this.setState({
       isUploading: false,
       isFinishing: false,
       isRetrying: false,
+      uploadId: null,
       uploadProgress: 0,
     });
     Toast.success(messages["dataset.upload_cancel"]);
@@ -817,7 +822,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <DatasetNameFormItem
                   activeUser={activeUser}
                   disabled={continuingOldUpload}
-                  allowDuplicate
+                  allowDuplicate={continuingOldUpload}
                 />
               </Col>
               <Col span={12}>

@@ -18,10 +18,16 @@ import { setGlobalProgressAction } from "../actions/ui_actions";
 import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
 
 const MASK_SIZE = [1024, 1024, 0] as Vector3;
+
 // This should tend to be smaller because the progress rendering at the end of the animation
 // can cope very well with faster operations (the end of the progress bar will finish very slowly).
 // Abruptly terminating progress bars on the other hand can feel weird.
-const EXPECTED_DURATION_PER_SLICE = 500;
+const EXPECTED_DURATION_PER_SLICE_MS = 500;
+
+// The 1024**2 binary mask typically only contains data in the middle (where the user
+// drew a bounding box). Starting from there, we increase the bounding box in steps until
+// the borders only contain zeros. The increment for that is defined in the following constant.
+const MAXIMUM_PADDING_ERROR = 100;
 
 function* getMask(
   dataset: APIDataset,
@@ -131,7 +137,11 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   const depth = yield* select(
     (state: OxalisState) => state.userConfiguration.quickSelect.predictionDepth || 1,
   );
-  const progressSaga = yield* fork(showApproximatelyProgress, depth, EXPECTED_DURATION_PER_SLICE);
+  const progressSaga = yield* fork(
+    showApproximatelyProgress,
+    depth,
+    EXPECTED_DURATION_PER_SLICE_MS,
+  );
   try {
     const {
       labeledZoomStep,
@@ -141,13 +151,12 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
       volumeTracing,
       colorLayer,
     } = preparation;
+    const trans = (vec: Vector3) => Dimensions.transDim(vec, activeViewport);
+
     const { startPosition, endPosition, quickSelectGeometry } = action;
 
     // Effectively, zero the first and second dimension in the mag.
-    const depthSummand = V3.scale3(
-      labeledResolution,
-      Dimensions.transDim([0, 0, 1], activeViewport),
-    );
+    const depthSummand = V3.scale3(labeledResolution, trans([0, 0, 1]));
     const unalignedUserBoxMag1 = new BoundingBox({
       min: V3.floor(V3.min(startPosition, endPosition)),
       max: V3.floor(V3.add(V3.max(startPosition, endPosition), depthSummand)),
@@ -205,17 +214,16 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
           min: userBoxRelativeToMaskInMag.getMinUV(activeViewport),
           max: userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
         },
-        100,
+        MAXIMUM_PADDING_ERROR,
       );
 
-      const sizeUVMinusMaxUV = V3.sub(Dimensions.transDim(mask.shape as Vector3, activeViewport), [
-        ...maxUV,
-        0,
-      ] as Vector3);
-      const targetBox = maskBoxInMag.paddedWithMargins(
-        V3.negate(Dimensions.transDim([...minUV, 0], activeViewport)),
-        V3.negate(Dimensions.transDim(sizeUVMinusMaxUV, activeViewport)),
-      );
+      // Span a bbox from the estimated values (relative to the mask)
+      // and move it by the mask's min position to achieve a global
+      // bbox.
+      const targetBox = new BoundingBox({
+        min: trans([...minUV, 0]),
+        max: trans([...maxUV, labeledResolution[thirdDim]]),
+      }).offset(maskBoxInMag.min);
 
       yield* call(sleep, 10);
       yield* finalizeQuickSelect(

@@ -13,7 +13,7 @@ import { map3, sleep } from "libs/utils";
 import { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
 import { getSamMask, sendAnalyticsEvent } from "admin/admin_rest_api";
 import Dimensions from "../dimensions";
-import { finalizeQuickSelect, prepareQuickSelect } from "./quick_select_heuristic_saga";
+import { finalizeQuickSelectForSlice, prepareQuickSelect } from "./quick_select_heuristic_saga";
 import { setGlobalProgressAction } from "../actions/ui_actions";
 import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
 
@@ -226,7 +226,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
       }).offset(maskBoxInMag.min);
 
       yield* call(sleep, 10);
-      yield* finalizeQuickSelect(
+      yield* finalizeQuickSelectForSlice(
         quickSelectGeometry,
         volumeTracing,
         activeViewport,
@@ -239,6 +239,9 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
           .lo(minUV[0], minUV[1], 0),
         overwriteMode,
         labeledZoomStep,
+        // Only finish annotation stroke in the last iteration.
+        // This allows to undo the entire multi-slice operation in one go.
+        wOffset < masks.length - 1,
       );
       wOffset++;
     }

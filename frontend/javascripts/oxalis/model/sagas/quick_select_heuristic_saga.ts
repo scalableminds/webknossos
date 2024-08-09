@@ -275,7 +275,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
 
   if (!quickSelectConfig.showPreview) {
     sendAnalyticsEvent("used_quick_select_without_preview");
-    yield* finalizeQuickSelect(
+    yield* finalizeQuickSelectForSlice(
       quickSelectGeometry,
       volumeTracing,
       activeViewport,
@@ -345,7 +345,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     } else if (confirm || enter) {
       sendAnalyticsEvent("confirmed_quick_select_preview");
 
-      yield* finalizeQuickSelect(
+      yield* finalizeQuickSelectForSlice(
         quickSelectGeometry,
         volumeTracing,
         activeViewport,
@@ -488,7 +488,7 @@ function normalizeToUint8(
   return inputData;
 }
 
-export function* finalizeQuickSelect(
+export function* finalizeQuickSelectForSlice(
   quickSelectGeometry: QuickSelectGeometry,
   volumeTracing: VolumeTracing,
   activeViewport: OrthoView,
@@ -498,6 +498,7 @@ export function* finalizeQuickSelect(
   mask: ndarray.NdArray<TypedArrayWithoutBigInt>,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
+  skipFinishAnnotationStroke: boolean = false,
 ) {
   quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
   const volumeLayer = yield* call(
@@ -535,7 +536,9 @@ export function* finalizeQuickSelect(
   if (boundingBoxMag1.getCenter().some((el) => el == null)) {
     throw new Error("invalid bbox");
   }
-  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  if (!skipFinishAnnotationStroke) {
+    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  }
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
   yield* put(
     updateSegmentAction(

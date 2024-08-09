@@ -180,7 +180,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     for {
       (filePath, _) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
-      isFilesChunkSetKnown <- Fox.runIf(isFileKnown)(runningUploadMetadataStore.contains(redisKeyForFileChunkSet(uploadId, filePath)))
+      isFilesChunkSetKnown <- Fox.runIf(isFileKnown)(
+        runningUploadMetadataStore.contains(redisKeyForFileChunkSet(uploadId, filePath)))
       isChunkPresent <- Fox.runIf(isFileKnown)(
         runningUploadMetadataStore.containedInSet(redisKeyForFileChunkSet(uploadId, filePath),
                                                   String.valueOf(currentChunkNumber)))

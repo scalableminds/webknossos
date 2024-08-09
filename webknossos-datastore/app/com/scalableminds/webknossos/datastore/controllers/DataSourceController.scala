@@ -103,6 +103,18 @@ class DataSourceController @Inject()(
       }
     }
 
+  def getOngoingUploads(token: Option[String], organizationName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          ongoingUploads <- remoteWebknossosClient.getOngoingUploadsForUser(urlOrHeaderToken(token, request),
+                                                                            organizationName)
+          ongoingUploadsWithUploadIds <- uploadService.addUploadIdsToOngoingUploads(ongoingUploads)
+        } yield Ok(Json.toJson(ongoingUploadsWithUploadIds))
+      }
+    }
+
   // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
   // and it can be put in a webknossos folder where they have access
   def reserveManualUpload(token: Option[String]): Action[ReserveManualUploadInformation] =
@@ -175,6 +187,22 @@ class DataSourceController @Inject()(
               } yield result
           }
         )
+    }
+
+  def testChunk(token: Option[String], resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      for {
+        dataSourceId <- uploadService.getDataSourceIdByUploadId(
+          uploadService.extractDatasetUploadId(resumableIdentifier)) ?~> "dataset.upload.validation.failed"
+        result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
+                                                    urlOrHeaderToken(token, request)) {
+          for {
+            isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier)
+            _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
+            isPresent <- uploadService.isChunkPresent(resumableIdentifier, resumableChunkNumber)
+          } yield if (isPresent) Ok else NoContent
+        }
+      } yield result
     }
 
   def finishUpload(token: Option[String]): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {

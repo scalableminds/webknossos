@@ -13,6 +13,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILE
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants}
+import com.scalableminds.webknossos.datastore.models.OngoingUpload
 import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, DataSourceService}
@@ -21,6 +22,7 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common._
 import org.apache.commons.io.FileUtils
+import org.apache.pekko.util.Helpers.Requiring
 import play.api.libs.json.{Json, OFormat, Reads}
 
 import java.io.{File, RandomAccessFile}
@@ -134,6 +136,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         Json.stringify(Json.toJson(DataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization)))
       )
       _ <- runningUploadMetadataStore.insert(
+        Json.stringify(Json.toJson(DataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization))),
+        reserveUploadInformation.uploadId
+      )
+      _ <- runningUploadMetadataStore.insert(
         redisKeyForLinkedLayerIdentifier(reserveUploadInformation.uploadId),
         Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadInformation.layersToLink)))
       )
@@ -141,8 +147,46 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         f"Reserving dataset upload of ${reserveUploadInformation.organization}/${reserveUploadInformation.name} with id ${reserveUploadInformation.uploadId}...")
     } yield ()
 
+  def addUploadIdsToOngoingUploads(ongoingUploadsWithoutIds: List[OngoingUpload]): Fox[List[OngoingUpload]] =
+    for {
+      maybeOngoingUploads <- Fox.sequence(
+        ongoingUploadsWithoutIds.map(
+          upload =>
+            runningUploadMetadataStore
+              .find(Json.stringify(Json.toJson(upload.dataSourceId)))
+              .map(uploadIdOpt => uploadIdOpt.map(uploadId => upload.copy(uploadId = uploadId)))
+        ))
+      foundOngoingUploads = maybeOngoingUploads.filter(idBox => idBox.isDefined).flatMap(idBox => idBox.value).collect {
+        case Some(value) => value
+      }
+    } yield foundOngoingUploads
+
   private def isOutsideUploadDir(uploadDir: Path, filePath: String): Boolean =
     uploadDir.relativize(uploadDir.resolve(filePath)).startsWith("../")
+
+  private def getFilePathAndDirOfUploadId(uploadFileId: String): Fox[(String, Path)] = {
+    val uploadId = extractDatasetUploadId(uploadFileId)
+    for {
+      dataSourceId <- getDataSourceIdByUploadId(uploadId)
+      uploadDir = uploadDirectory(dataSourceId.team, uploadId)
+      filePathRaw = uploadFileId.split("/").tail.mkString("/")
+      filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
+      _ <- bool2Fox(!isOutsideUploadDir(uploadDir, filePath)) ?~> s"Invalid file path: $filePath"
+    } yield (filePath, uploadDir)
+  }
+
+  def isChunkPresent(uploadFileId: String, currentChunkNumber: Long): Fox[Boolean] = {
+    val uploadId = extractDatasetUploadId(uploadFileId)
+    for {
+      (filePath, _) <- getFilePathAndDirOfUploadId(uploadFileId)
+      isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
+      isFilesChunkSetKnown <- Fox.runIf(isFileKnown)(
+        runningUploadMetadataStore.contains(redisKeyForFileChunkSet(uploadId, filePath)))
+      isChunkPresent <- Fox.runIf(isFileKnown)(
+        runningUploadMetadataStore.containedInSet(redisKeyForFileChunkSet(uploadId, filePath),
+                                                  String.valueOf(currentChunkNumber)))
+    } yield isFileKnown && isFilesChunkSetKnown.getOrElse(false) && isChunkPresent.getOrElse(false)
+  }
 
   def handleUploadChunk(uploadFileId: String,
                         chunkSize: Long,
@@ -152,10 +196,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     val uploadId = extractDatasetUploadId(uploadFileId)
     for {
       dataSourceId <- getDataSourceIdByUploadId(uploadId)
-      uploadDir = uploadDirectory(dataSourceId.team, uploadId)
-      filePathRaw = uploadFileId.split("/").tail.mkString("/")
-      filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
-      _ <- bool2Fox(!isOutsideUploadDir(uploadDir, filePath)) ?~> s"Invalid file path: $filePath"
+      (filePath, uploadDir) <- getFilePathAndDirOfUploadId(uploadFileId)
       isFileKnown <- runningUploadMetadataStore.contains(redisKeyForFileChunkCount(uploadId, filePath))
       _ <- Fox.runIf(!isFileKnown) {
         runningUploadMetadataStore

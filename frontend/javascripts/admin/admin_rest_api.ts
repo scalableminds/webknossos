@@ -1273,7 +1273,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
     (token) =>
       // @ts-expect-error ts-migrate(2739) FIXME: Type 'Resumable' is missing the following properti... Remove this comment to see the full error message
       new ResumableJS({
-        testChunks: false,
+        testChunks: true,
         target: `${datastoreUrl}/data/datasets?token=${token}`,
         chunkSize: 10 * 1024 * 1024, // 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
@@ -1305,6 +1305,35 @@ export function reserveDatasetUpload(
       host: datastoreHost,
     }),
   );
+}
+
+export type OngoingUpload = {
+  uploadId: string;
+  dataSourceId: { name: string; organizationName: string };
+  folderId: string;
+  created: number;
+  allowedTeams: Array<string>;
+};
+
+type OldDataSourceIdFormat = { name: string; team: string };
+
+export function getOngoingUploads(
+  datastoreHost: string,
+  organizationName: string,
+): Promise<OngoingUpload[]> {
+  return doWithToken(async (token) => {
+    const ongoingUploads = (await Request.receiveJSON(
+      `/data/datasets/getOngoingUploads?token=${token}&organizationName=${organizationName}`,
+      {
+        host: datastoreHost,
+      },
+    )) as Array<OngoingUpload & { dataSourceId: OldDataSourceIdFormat }>;
+    // Rename "team" to "organization" as this is the actual used current naming.
+    return ongoingUploads.map(({ dataSourceId: { name, team }, ...rest }) => ({
+      ...rest,
+      dataSourceId: { name, organizationName: team },
+    }));
+  });
 }
 
 export function finishDatasetUpload(

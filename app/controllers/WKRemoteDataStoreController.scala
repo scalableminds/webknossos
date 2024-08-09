@@ -3,10 +3,11 @@ package controllers
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
+import com.scalableminds.webknossos.datastore.models.OngoingUpload
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveUploadInformation}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
+import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveUploadInformation}
 import com.typesafe.scalalogging.LazyLogging
 import mail.{MailchimpClient, MailchimpTag}
 
@@ -19,6 +20,7 @@ import models.folder.FolderDAO
 import models.job.JobDAO
 import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
+import models.team.TeamDAO
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import net.liftweb.common.Full
 import play.api.i18n.{Messages, MessagesProvider}
@@ -41,6 +43,7 @@ class WKRemoteDataStoreController @Inject()(
     datasetDAO: DatasetDAO,
     userDAO: UserDAO,
     folderDAO: FolderDAO,
+    teamDAO: TeamDAO,
     jobDAO: JobDAO,
     multiUserDAO: MultiUserDAO,
     credentialDAO: CredentialDAO,
@@ -79,6 +82,30 @@ class WKRemoteDataStoreController @Inject()(
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           _ <- datasetService.addUploader(dataset, user._id)(AuthorizedAccessContext(user))
         } yield Ok
+      }
+    }
+
+  def getOngoingUploadsForUser(name: String, key: String, token: String, organizationName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          user <- bearerTokenService.userForToken(token)
+          organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            user._organization) ~> NOT_FOUND
+          _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
+          datasets <- datasetService.getAllNotYetUploadedDatasetOfUser(user._id, user._organization)(
+            GlobalAccessContext) ?~> "dataset.upload.couldNotLoadInProgressUploads"
+          teamIdsPerDataset <- Fox.combined(datasets.map(dataset => teamDAO.findAllowedTeamIdsForDataset(dataset.id)))
+          ongoingUploads = datasets.zipWithIndex.map {
+            case (d, index) =>
+              new OngoingUpload("<filled-in by datastore>",
+                                d.toDataSourceId,
+                                d.folderId.toString,
+                                d.created,
+                                teamIdsPerDataset(index).map(_.toString))
+          }
+        } yield Ok(Json.toJson(ongoingUploads))
       }
     }
 

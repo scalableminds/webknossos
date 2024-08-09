@@ -8,6 +8,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.scalableminds.webknossos.datastore.models.OngoingUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
@@ -66,6 +67,16 @@ class DSRemoteWebknossosClient @Inject()(
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
+
+  def getOngoingUploadsForUser(userTokenOpt: Option[String], organizationName: String): Fox[List[OngoingUpload]] =
+    for {
+      userToken <- option2Fox(userTokenOpt) ?~> "reserveUpload.noUserToken"
+      datasetIds <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getOngoingUploadsForUser")
+        .addQueryString("key" -> dataStoreKey)
+        .addQueryString("token" -> userToken)
+        .addQueryString("organizationName" -> organizationName)
+        .getWithJsonResponse[List[OngoingUpload]]
+    } yield datasetIds
 
   def reportUpload(dataSourceId: DataSourceId,
                    datasetSizeBytes: Long,

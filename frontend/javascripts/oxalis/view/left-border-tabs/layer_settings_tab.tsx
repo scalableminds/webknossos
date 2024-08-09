@@ -17,7 +17,7 @@ import {
 } from "@ant-design/icons";
 import ErrorHandling from "libs/error_handling";
 import { connect, useDispatch, useSelector } from "react-redux";
-import React from "react";
+import React, { useCallback } from "react";
 import _ from "lodash";
 import classnames from "classnames";
 import update from "immutability-helper";
@@ -308,54 +308,59 @@ function LayerInfoIconWithTooltip({
   layer,
   dataset,
 }: { layer: APIDataLayer; dataset: APIDataset }) {
-  const elementClass = getElementClass(dataset, layer.name);
-  const resolutionInfo = getResolutionInfo(layer.resolutions);
-  const resolutions = resolutionInfo.getResolutionList();
+  // biome-ignore lint/correctness/useExhaustiveDependencies: dataset and layer don't change often
+  const renderTooltipContent = useCallback(() => {
+    const elementClass = getElementClass(dataset, layer.name);
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const resolutions = resolutionInfo.getResolutionList();
+    return (
+      <div>
+        <div>Data Type: {elementClass}</div>
+        <div>
+          Available resolutions:
+          <ul>
+            {resolutions.map((r) => (
+              <li key={r.join()}>{r.join("-")}</li>
+            ))}
+          </ul>
+        </div>
+        Bounding Box:
+        <table style={{ borderSpacing: 2, borderCollapse: "separate" }}>
+          <tbody>
+            <tr>
+              <td />
+              <td style={{ fontSize: 10 }}>X</td>
+              <td style={{ fontSize: 10 }}>Y</td>
+              <td style={{ fontSize: 10 }}>Z</td>
+            </tr>
+            <tr>
+              <td style={{ fontSize: 10 }}>Min</td>
+              <td>{layer.boundingBox.topLeft[0]} </td>
+              <td>{layer.boundingBox.topLeft[1]} </td>
+              <td>{layer.boundingBox.topLeft[2]}</td>
+            </tr>
+            <tr>
+              <td style={{ fontSize: 10 }}>Max</td>
+              <td>{layer.boundingBox.topLeft[0] + layer.boundingBox.width}</td>
+              <td>{layer.boundingBox.topLeft[1] + layer.boundingBox.height} </td>
+              <td>{layer.boundingBox.topLeft[2] + layer.boundingBox.depth}</td>
+            </tr>
+            <tr>
+              <td style={{ fontSize: 10 }}>Size</td>
+              <td>{layer.boundingBox.width} </td>
+              <td>{layer.boundingBox.height} </td>
+              <td>{layer.boundingBox.depth}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  }, [layer, dataset]);
 
   return (
     <FastTooltip
-      html={ReactDOMServer.renderToStaticMarkup(
-        <div>
-          <div>Data Type: {elementClass}</div>
-          <div>
-            Available resolutions:
-            <ul>
-              {resolutions.map((r) => (
-                <li key={r.join()}>{r.join("-")}</li>
-              ))}
-            </ul>
-          </div>
-          Bounding Box:
-          <table style={{ borderSpacing: 2, borderCollapse: "separate" }}>
-            <tbody>
-              <tr>
-                <td />
-                <td style={{ fontSize: 10 }}>X</td>
-                <td style={{ fontSize: 10 }}>Y</td>
-                <td style={{ fontSize: 10 }}>Z</td>
-              </tr>
-              <tr>
-                <td style={{ fontSize: 10 }}>Min</td>
-                <td>{layer.boundingBox.topLeft[0]} </td>
-                <td>{layer.boundingBox.topLeft[1]} </td>
-                <td>{layer.boundingBox.topLeft[2]}</td>
-              </tr>
-              <tr>
-                <td style={{ fontSize: 10 }}>Max</td>
-                <td>{layer.boundingBox.topLeft[0] + layer.boundingBox.width}</td>
-                <td>{layer.boundingBox.topLeft[1] + layer.boundingBox.height} </td>
-                <td>{layer.boundingBox.topLeft[2] + layer.boundingBox.depth}</td>
-              </tr>
-              <tr>
-                <td style={{ fontSize: 10 }}>Size</td>
-                <td>{layer.boundingBox.width} </td>
-                <td>{layer.boundingBox.height} </td>
-                <td>{layer.boundingBox.depth}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>,
-      )}
+      dynamicRenderer={renderTooltipContent}
+      uniqueKeyForDynamic={`bbox-tooltip-${layer.name}`}
       placement="left"
     >
       <InfoCircleOutlined className="icon-margin-right" />

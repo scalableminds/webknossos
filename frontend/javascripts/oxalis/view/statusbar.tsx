@@ -39,7 +39,6 @@ import _ from "lodash";
 import { AdditionalCoordinate } from "types/api_flow_types";
 import FastTooltip from "components/fast_tooltip";
 import { Store } from "oxalis/singletons";
-import ReactDOMServer from "react-dom/server";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -503,14 +502,14 @@ function DownloadSpeedometer() {
 function ResolutionInfo() {
   const { representativeResolution, isActiveResolutionGlobal } =
     useSelector(getActiveResolutionInfo);
-  const [magTooltipContent, setMagTooltipContent] = useState<string | null>(null);
 
   const renderMagTooltipContent = useCallback(() => {
     const state = Store.getState();
     const { activeMagOfEnabledLayers } = getActiveResolutionInfo(state);
     const dataset = state.dataset;
     const tracing = state.tracing;
-    return ReactDOMServer.renderToStaticMarkup(
+
+    return (
       <>
         Rendered magnification per layer:
         <ul>
@@ -524,7 +523,7 @@ function ResolutionInfo() {
             );
           })}
         </ul>
-      </>,
+      </>
     );
   }, []);
 
@@ -540,14 +539,9 @@ function ResolutionInfo() {
         alt="Resolution"
       />{" "}
       <FastTooltip
-        html={magTooltipContent || ""}
+        dynamicRenderer={renderMagTooltipContent}
+        uniqueKeyForDynamic="status-bar-resolutions"
         placement="top"
-        onMouseEnter={() => {
-          setMagTooltipContent(renderMagTooltipContent());
-        }}
-        onMouseLeave={() => {
-          setMagTooltipContent(null);
-        }}
       >
         {representativeResolution.join("-")}
         {isActiveResolutionGlobal ? "" : "*"}{" "}

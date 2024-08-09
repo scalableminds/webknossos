@@ -46,7 +46,7 @@ import { determineLayout } from "./default_layout_configs";
 import FlexLayoutWrapper from "./flex_layout_wrapper";
 import { FloatingMobileControls } from "./floating_mobile_controls";
 import app from "app";
-import { Tooltip as ReactTooltip } from "react-tooltip";
+import { RootForFastTooltips } from "components/fast_tooltip";
 
 const { Sider } = Layout;
 
@@ -279,7 +279,7 @@ class TracingLayoutView extends React.PureComponent<PropsWithRouter, State> {
 
     return (
       <React.Fragment>
-        <ReactTooltip id="main-tooltip" className="max-z-index" />
+        <RootForFastTooltips />
         <PresentModernControls />
         {this.state.showFloatingMobileButtons && <FloatingMobileControls />}
 

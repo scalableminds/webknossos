@@ -8,7 +8,6 @@ import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
-import ReactDOMServer from "react-dom/server";
 import {
   getDatasetExtentAsString,
   getResolutionUnion,
@@ -528,36 +527,42 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  getResolutionInfo() {
+  renderResolutionsTooltip = () => {
     const { dataset, annotation, activeResolutionInfo } = this.props;
-    const { activeMagOfEnabledLayers, representativeResolution, isActiveResolutionGlobal } =
-      activeResolutionInfo;
+    const { activeMagOfEnabledLayers } = activeResolutionInfo;
     const resolutionUnion = getResolutionUnion(dataset);
+    return (
+      <div>
+        Rendered magnification per layer:
+        <ul>
+          {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+            const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
+
+            return (
+              <li key={layerName}>
+                {readableName}: {mag ? mag.join("-") : "none"}
+              </li>
+            );
+          })}
+        </ul>
+        Available resolutions:
+        <ul>
+          {resolutionUnion.map((mags) => (
+            <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
+  getResolutionInfo() {
+    const { activeResolutionInfo } = this.props;
+    const { representativeResolution, isActiveResolutionGlobal } = activeResolutionInfo;
 
     return representativeResolution != null ? (
       <FastTooltip
-        html={ReactDOMServer.renderToStaticMarkup(
-          <div>
-            Rendered magnification per layer:
-            <ul>
-              {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-                const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
-
-                return (
-                  <li key={layerName}>
-                    {readableName}: {mag ? mag.join("-") : "none"}
-                  </li>
-                );
-              })}
-            </ul>
-            Available resolutions:
-            <ul>
-              {resolutionUnion.map((mags) => (
-                <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
-              ))}
-            </ul>
-          </div>,
-        )}
+        uniqueKeyForDynamic="dataset-resolutions-tooltip"
+        dynamicRenderer={this.renderResolutionsTooltip}
         placement="left"
         wrapper="tr"
       >

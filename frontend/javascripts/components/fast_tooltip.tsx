@@ -28,6 +28,11 @@ import { Tooltip as ReactTooltip } from "react-tooltip";
  *   element is mounted.
  */
 
+const ROOT_TOOLTIP_IDS = {
+  DEFAULT: "main-tooltip",
+  DYNAMIC: "main-tooltip-dynamic",
+};
+
 export type FastTooltipPlacement =
   | "top"
   | "top-start"
@@ -88,10 +93,10 @@ export default function FastTooltip({
 
   const getId = () => {
     if (uniqueKeyForDynamic != null) {
-      return "main-tooltip-dynamic";
+      return ROOT_TOOLTIP_IDS.DYNAMIC;
     }
     if (disabled || (title == null && html == null)) return "";
-    return "main-tooltip";
+    return ROOT_TOOLTIP_IDS.DEFAULT;
   };
 
   return (
@@ -119,9 +124,9 @@ export function RootForFastTooltips() {
 
   return (
     <>
-      <ReactTooltip id="main-tooltip" className="max-z-index" />
+      <ReactTooltip id={ROOT_TOOLTIP_IDS.DEFAULT} className="max-z-index" />
       <ReactTooltip
-        id="main-tooltip-dynamic"
+        id={ROOT_TOOLTIP_IDS.DYNAMIC}
         className="max-z-index"
         setIsOpen={setIsOpen}
         render={

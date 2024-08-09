@@ -357,7 +357,6 @@ type UserBoundingBoxInputProps = {
   color: Vector3;
   isVisible: boolean;
   isExportEnabled: boolean;
-  tooltipTitle: string;
   onBoundingChange: (arg0: Vector6) => void;
   onDelete: () => void;
   onExport: () => void;

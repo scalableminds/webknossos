@@ -1361,7 +1361,8 @@ function NuxPopConfirm({ children }: { children: React.ReactNode }) {
         });
         dispatch(setActiveUserAction(newUserSync));
       }}
-      description="The AI-based quick select feature can now be compute for multiple sections at once."
+      description="The AI-based Quick Select can now be run for multiple sections at once. Open the settings here to enable this."
+      overlayStyle={{ maxWidth: 500 }}
       icon={<InfoCircleOutlined style={{ color: "green" }} />}
       children={children}
     />
@@ -1376,9 +1377,9 @@ function QuickSelectSettingsPopover() {
   const isQuickSelectActive = quickSelectState === "active";
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
 
-  const showPopconfirm =
+  const showNux =
     activeUser != null && !activeUser.novelUserExperienceInfos.hasSeenSegmentAnythingWithDepth;
-  const Wrapper = showPopconfirm ? NuxPopConfirm : IdentityComponent;
+  const Wrapper = showNux ? NuxPopConfirm : IdentityComponent;
 
   return (
     <>
@@ -1396,7 +1397,7 @@ function QuickSelectSettingsPopover() {
             title="Configure Quick Select"
             tooltipPlacement="right"
             className="narrow"
-            type={isQuickSelectActive ? "primary" : "default"}
+            type={isQuickSelectActive || showNux ? "primary" : "default"}
             style={{ marginLeft: 12, marginRight: 12 }}
           >
             <SettingOutlined />

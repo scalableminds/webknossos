@@ -30,11 +30,11 @@ import type {
 } from "oxalis/store";
 import Store from "oxalis/store";
 import {
-  getSegmentColorAsHSLA,
+  getSegmentColorAsRGBA,
   getSegmentName,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
-import { hslaToCSS } from "oxalis/shaders/utils.glsl";
+import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import { MenuItemType } from "antd/lib/menu/hooks/useItems";
@@ -46,15 +46,15 @@ import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
-export function ColoredDotIconForSegment({ segmentColorHSLA }: { segmentColorHSLA: Vector4 }) {
-  const hslaCss = hslaToCSS(segmentColorHSLA);
+export function ColoredDotIcon({ colorRGBA }: { colorRGBA: Vector4 }) {
+  const rgbaCss = rgbaToCSS(colorRGBA);
 
   return (
     <span
       className="circle"
       style={{
         paddingLeft: "10px",
-        backgroundColor: hslaCss,
+        backgroundColor: rgbaCss,
       }}
     />
   );
@@ -402,15 +402,13 @@ function _SegmentListItem({
   const { modal } = App.useApp();
   const isEditingDisabled = !allowUpdate;
 
-  const segmentColorHSLA = useSelector(
-    (state: OxalisState) => getSegmentColorAsHSLA(state, segment.id),
+  const segmentColorRGBA = useSelector(
+    (state: OxalisState) => getSegmentColorAsRGBA(state, segment.id),
     (a: Vector4, b: Vector4) => V4.isEqual(a, b),
   );
   const isHoveredSegmentId = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
-
-  const segmentColorRGBA = Utils.hslaToRgba(segmentColorHSLA);
 
   const createSegmentContextMenu = (): MenuProps => ({
     items: [
@@ -575,7 +573,7 @@ function _SegmentListItem({
     >
       <div>
         <div style={{ display: "inline-flex", alignItems: "center" }}>
-          <ColoredDotIconForSegment segmentColorHSLA={segmentColorHSLA} />
+          <ColoredDotIcon colorRGBA={segmentColorRGBA} />
           <EditableTextLabel
             value={getSegmentName(segment)}
             label="Segment Name"

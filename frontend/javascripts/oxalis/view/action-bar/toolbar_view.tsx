@@ -32,7 +32,7 @@ import {
   getMappingInfoForVolumeTracing,
   getMaximumBrushSize,
   getRenderableResolutionForActiveSegmentationTracing,
-  getSegmentColorAsHSLA,
+  getSegmentColorAsRGBA,
   hasAgglomerateMapping,
   hasEditableMapping,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -68,7 +68,7 @@ import Store, { BrushPresets, OxalisState } from "oxalis/store";
 
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
-import { hslaToCSS } from "oxalis/shaders/utils.glsl";
+import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
 import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 import { QuickSelectControls } from "./quick_select_settings";
 import { MenuInfo } from "rc-menu/lib/interface";
@@ -499,7 +499,7 @@ function CreateCellButton() {
     if (!activeCellId) {
       return null;
     }
-    return hslaToCSS(getSegmentColorAsHSLA(state, activeCellId));
+    return rgbaToCSS(getSegmentColorAsRGBA(state, activeCellId));
   });
 
   const mappedIdInfo = isMappingEnabled ? ` (currently mapped to ${activeCellId})` : "";

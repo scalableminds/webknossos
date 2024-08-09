@@ -2,6 +2,32 @@ import { generateRandomId } from "libs/utils";
 import React, { useEffect, useState } from "react";
 import { Tooltip as ReactTooltip } from "react-tooltip";
 
+/*
+ * This module provides a <FastTooltip /> component that should be preferred
+ * over antd components because it is significantly faster.
+ *
+ * There are some major differences to the antd tooltip:
+ * - Under the hood, react-tooltip is used which provides one (or a few) root
+ *   tooltip component(s) that listen(s) to other (lightweight) trigger elements that
+ *   want to show a tooltip. Since only one tooltip is usually shown at the same
+ *   time, this significantly reduces the need for spawning tooltip components
+ *   at runtime.
+ * - The component always adds an additional HTML element (e.g., div or span)
+ *   around the component that should get the tooltip on hover. Especially in
+ *   combination with antd components, this can cause some slight issues, but
+ *   usually it's possible to move the <FastTooltip /> a bit in the hierarchy
+ *   to fix these.
+ * - Dynamic rendering of the tooltip content is a bit different, because
+ *   react-tooltip only accepts a string or html code for the lightweight
+ *   trigger element. The library supports rendering JSX, but it has to be passed
+ *   to the root tooltip. FastTooltip does this automatically when passing the
+ *   dynamicRenderer prop. That prop is used once when the tooltip should be opened
+ *   (instead of constantly as it is the case with antd tooltips).
+ *   The communication to the root tooltip works via the global variable
+ *   uniqueKeyToDynamicRenderer and a unique id that is created when the trigger
+ *   element is mounted.
+ */
+
 export type FastTooltipPlacement =
   | "top"
   | "top-start"
@@ -16,6 +42,7 @@ export type FastTooltipPlacement =
   | "left-start"
   | "left-end";
 
+// See docstring above for context.
 const uniqueKeyToDynamicRenderer: Record<string, () => React.ReactElement> = {};
 
 export default function FastTooltip({
@@ -23,7 +50,6 @@ export default function FastTooltip({
   children,
   placement,
   disabled,
-  id,
   onMouseEnter,
   onMouseLeave,
   wrapper,
@@ -35,7 +61,6 @@ export default function FastTooltip({
   children?: React.ReactNode;
   placement?: FastTooltipPlacement;
   disabled?: boolean;
-  id?: string; // todop: remove?
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   wrapper?: "div" | "span" | "p" | "tr"; // Any valid HTML tag, span by default.
@@ -66,7 +91,7 @@ export default function FastTooltip({
       return "main-tooltip-dynamic";
     }
     if (disabled || (title == null && html == null)) return "";
-    return id || "main-tooltip";
+    return "main-tooltip";
   };
 
   return (

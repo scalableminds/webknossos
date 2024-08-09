@@ -24,6 +24,7 @@ export default function FastTooltip({
   onMouseLeave,
   wrapper,
   html,
+  style,
 }: {
   title?: string | null | undefined;
   children?: React.ReactNode;
@@ -34,6 +35,7 @@ export default function FastTooltip({
   onMouseLeave?: () => void;
   wrapper?: "div" | "span" | "p" | "tr"; // Any valid HTML tag, span by default.
   html?: string | null | undefined;
+  style?: React.CSSProperties; // style attached to the wrapper
 }) {
   const Tag = wrapper || "span";
   return (
@@ -44,6 +46,7 @@ export default function FastTooltip({
       data-tooltip-html={html}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      style={style}
     >
       {children}
     </Tag>

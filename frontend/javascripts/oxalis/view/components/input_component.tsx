@@ -114,6 +114,8 @@ class InputComponent extends React.PureComponent<InputProps, InputComponentState
       <Input
         ref={this.inputRef}
         {...inputProps}
+        // Only pass the style to the input if no tooltip container is used.
+        // Otherwise, the tooltip container will get the style.
         style={title == null ? style : undefined}
         onChange={this.handleChange}
         onFocus={this.handleFocus}
@@ -123,7 +125,13 @@ class InputComponent extends React.PureComponent<InputProps, InputComponentState
       />
     );
 
-    return title != null ? <FastTooltip title={title}>{input}</FastTooltip> : input;
+    return title != null ? (
+      <FastTooltip style={style} title={title}>
+        {input}
+      </FastTooltip>
+    ) : (
+      input
+    );
   }
 }
 

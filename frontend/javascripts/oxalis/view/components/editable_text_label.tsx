@@ -1,10 +1,11 @@
-import { Input, InputProps, Tooltip } from "antd";
+import { Input, InputProps } from "antd";
 import { CheckOutlined, EditOutlined } from "@ant-design/icons";
 import * as React from "react";
 import Markdown from "libs/markdown_adapter";
 import { MarkdownModal } from "oxalis/view/components/markdown_modal";
 import Toast from "libs/toast";
 import { ValidationResult } from "../left-border-tabs/modals/add_volume_layer_modal";
+import FastTooltip from "components/fast_tooltip";
 
 type Rule = {
   message?: string;
@@ -146,7 +147,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
           {this.props.rows === 1 ? (
             <React.Fragment>
               <Input {...inputComponentProps} onBlur={() => this.handleOnChange} />
-              <Tooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
+              <FastTooltip key="save" title={`Save ${this.props.label}`} placement="bottom">
                 <CheckOutlined
                   style={iconStyle}
                   onClick={(evt) => {
@@ -154,7 +155,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
                     this.handleOnChange();
                   }}
                 />
-              </Tooltip>
+              </FastTooltip>
             </React.Fragment>
           ) : (
             <MarkdownModal
@@ -187,7 +188,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
             <span style={isInvalidStyleMaybe}>{this.props.value}</span>
           )}
           {this.props.disableEditing ? null : (
-            <Tooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
+            <FastTooltip key="edit" title={`Edit ${this.props.label}`} placement="bottom">
               <EditOutlined
                 className={this.props.markdown ? "flex-item" : undefined}
                 style={{
@@ -206,7 +207,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelProp, State
                   }
                 }}
               />
-            </Tooltip>
+            </FastTooltip>
           )}
         </div>
       );

@@ -1,5 +1,5 @@
 import type { Dispatch } from "redux";
-import { Alert, Slider, Row, Col, InputNumber, Spin, Tooltip } from "antd";
+import { Alert, Slider, Row, Col, InputNumber, Spin } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as _ from "lodash";
@@ -9,6 +9,7 @@ import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import type { DatasetLayerConfiguration } from "oxalis/store";
 import { CloseOutlined } from "@ant-design/icons";
+import FastTooltip from "components/fast_tooltip";
 
 type OwnProps = {
   data: APIHistogramData | null | undefined;
@@ -296,7 +297,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               <label className="setting-label">Min:</label>
             </Col>
             <Col span={8}>
-              <Tooltip title={tooltipTitleFor("minimum")}>
+              <FastTooltip title={tooltipTitleFor("minimum")}>
                 <InputNumber
                   size="small"
                   min={defaultMinMax[0]}
@@ -317,7 +318,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   }}
                   style={minMaxInputStyle}
                 />
-              </Tooltip>
+              </FastTooltip>
             </Col>
             <Col span={3}>
               <label
@@ -331,7 +332,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               </label>
             </Col>
             <Col span={8}>
-              <Tooltip title={tooltipTitleFor("maximum")}>
+              <FastTooltip title={tooltipTitleFor("maximum")}>
                 <InputNumber
                   size="small"
                   min={minRange}
@@ -352,9 +353,9 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   }}
                   style={minMaxInputStyle}
                 />
-              </Tooltip>
+              </FastTooltip>
             </Col>
-            <Tooltip title="Stop editing histogram range">
+            <FastTooltip title="Stop editing histogram range">
               <Col
                 span={2}
                 style={{ textAlign: "right", cursor: "pointer" }}
@@ -362,7 +363,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
               >
                 <CloseOutlined />
               </Col>
-            </Tooltip>
+            </FastTooltip>
           </Row>
         ) : null}
       </Spin>

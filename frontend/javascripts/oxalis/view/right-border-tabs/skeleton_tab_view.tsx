@@ -930,7 +930,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     value={activeTreeName || activeGroupName}
                     disabled={noTreesAndGroups || isEditingDisabled}
                     title={isEditingDisabled ? isEditingDisabledMessage : undefined}
-                    style={{ width: "70%" }}
+                    style={{ width: "80%" }}
                   />
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeForward}

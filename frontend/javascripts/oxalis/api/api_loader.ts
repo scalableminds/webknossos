@@ -1,24 +1,24 @@
 // only relative imports are followed by documentationjs
 import type { OxalisModel } from "oxalis/model";
 import app from "app";
-import createApiLatest from "./api_latest";
+import createApiLatest, { ApiInterface } from "./api_latest";
 import createApiV2 from "./api_v2";
+import WkDev from "./wk_dev";
 const latestVersion = 3;
 
-class Api {
+class ApiLoader {
   readyPromise: Promise<void>;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'apiInterface' has no initializer and is ... Remove this comment to see the full error message
-  apiInterface: Record<string, any>;
+  apiInterface!: ApiInterface;
   model: OxalisModel;
+  // See docstrings in WkDev
+  DEV: WkDev;
 
-  /**
-   * @private
-   */
   constructor(oxalisModel: OxalisModel) {
     this.readyPromise = new Promise((resolve) => {
       app.vent.on("webknossos:ready", resolve);
     });
     this.model = oxalisModel;
+    this.DEV = new WkDev(this);
   }
 
   /**
@@ -35,7 +35,7 @@ class Api {
    *   ...
    * });
    */
-  apiReady(version: number = latestVersion): Promise<Record<string, any>> {
+  apiReady(version: number = latestVersion): Promise<ApiInterface> {
     if (!process.env.IS_TESTING) {
       if (version !== latestVersion) {
         console.warn(`
@@ -50,6 +50,7 @@ class Api {
 
     return this.readyPromise.then(() => {
       if (version === 2) {
+        // @ts-ignore The old API does not support all entries from the newest api.
         this.apiInterface = createApiV2(this.model);
       } else if (version === latestVersion) {
         this.apiInterface = createApiLatest(this.model);
@@ -62,6 +63,6 @@ class Api {
   }
 }
 
-export type ApiType = Api;
+export type ApiType = ApiLoader;
 
-export default Api;
+export default ApiLoader;

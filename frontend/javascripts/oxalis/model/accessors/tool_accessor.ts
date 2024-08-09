@@ -337,19 +337,18 @@ function getDisabledVolumeInfo(state: OxalisState) {
 }
 
 const getVolumeDisabledWhenVolumeIsEnabled = memoizeOne(_getVolumeDisabledWhenVolumeIsEnabled);
-export const getDisabledInfoForTools = reuseInstanceOnEquality(
-  (state: OxalisState): Record<AnnotationToolEnum, DisabledInfo> => {
-    const hasSkeleton = state.tracing.skeleton != null;
-    const skeletonToolInfo = getSkeletonToolInfo(hasSkeleton, isSkeletonLayerTransformed(state));
+const _getDisabledInfoForTools = (state: OxalisState): Record<AnnotationToolEnum, DisabledInfo> => {
+  const hasSkeleton = state.tracing.skeleton != null;
+  const skeletonToolInfo = getSkeletonToolInfo(hasSkeleton, isSkeletonLayerTransformed(state));
 
-    const disabledVolumeInfo = getDisabledVolumeInfo(state);
-    return {
-      ...ALWAYS_ENABLED_TOOL_INFOS,
-      ...skeletonToolInfo,
-      ...disabledVolumeInfo,
-    };
-  },
-);
+  const disabledVolumeInfo = getDisabledVolumeInfo(state);
+  return {
+    ...ALWAYS_ENABLED_TOOL_INFOS,
+    ...skeletonToolInfo,
+    ...disabledVolumeInfo,
+  };
+};
+export const getDisabledInfoForTools = reuseInstanceOnEquality(_getDisabledInfoForTools);
 
 export function adaptActiveToolToShortcuts(
   activeTool: AnnotationTool,

@@ -1,4 +1,4 @@
-import { Collapse, CollapseProps, Tooltip } from "antd";
+import { Collapse, CollapseProps } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -29,6 +29,7 @@ import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
 import { ArrayElement } from "types/globals";
+import FastTooltip from "components/fast_tooltip";
 
 type ControlsAndRenderingSettingsTabProps = {
   activeUser: APIUser | null | undefined;
@@ -86,7 +87,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         children: (
           <React.Fragment>
             <LogSliderSetting
-              label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
+              label={<FastTooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</FastTooltip>}
               roundTo={3}
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
@@ -95,9 +96,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <NumberSliderSetting
               label={
-                <Tooltip title={settingsTooltips.mouseRotateValue}>
+                <FastTooltip title={settingsTooltips.mouseRotateValue}>
                   {settingsLabels.mouseRotateValue}
-                </Tooltip>
+                </FastTooltip>
               }
               min={userSettings.mouseRotateValue.minimum}
               max={userSettings.mouseRotateValue.maximum}
@@ -107,7 +108,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <NumberSliderSetting
               label={
-                <Tooltip title={settingsTooltips.rotateValue}>{settingsLabels.rotateValue}</Tooltip>
+                <FastTooltip title={settingsTooltips.rotateValue}>
+                  {settingsLabels.rotateValue}
+                </FastTooltip>
               }
               min={userSettings.rotateValue.minimum}
               max={userSettings.rotateValue.maximum}
@@ -117,9 +120,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <NumberSliderSetting
               label={
-                <Tooltip title={settingsTooltips.crosshairSize}>
+                <FastTooltip title={settingsTooltips.crosshairSize}>
                   {settingsLabels.crosshairSize}
-                </Tooltip>
+                </FastTooltip>
               }
               min={userSettings.crosshairSize.minimum}
               max={userSettings.crosshairSize.maximum}
@@ -129,9 +132,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <NumberSliderSetting
               label={
-                <Tooltip title={settingsTooltips.sphericalCapRadius}>
+                <FastTooltip title={settingsTooltips.sphericalCapRadius}>
                   {settingsLabels.sphericalCapRadius}
-                </Tooltip>
+                </FastTooltip>
               }
               min={userSettings.sphericalCapRadius.minimum}
               max={userSettings.sphericalCapRadius.maximum}
@@ -141,9 +144,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <SwitchSetting
               label={
-                <Tooltip title={settingsTooltips.displayCrosshair}>
+                <FastTooltip title={settingsTooltips.displayCrosshair}>
                   {settingsLabels.displayCrosshair}
-                </Tooltip>
+                </FastTooltip>
               }
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
@@ -158,7 +161,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         children: (
           <React.Fragment>
             <LogSliderSetting
-              label={<Tooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</Tooltip>}
+              label={<FastTooltip title={settingsTooltips.zoom}>{settingsLabels.zoom}</FastTooltip>}
               roundTo={3}
               min={this.props.validZoomRange[0]}
               max={this.props.validZoomRange[1]}
@@ -167,27 +170,27 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <SwitchSetting
               label={
-                <Tooltip title={settingsTooltips.displayCrosshair}>
+                <FastTooltip title={settingsTooltips.displayCrosshair}>
                   {settingsLabels.displayCrosshair}
-                </Tooltip>
+                </FastTooltip>
               }
               value={this.props.userConfiguration.displayCrosshair}
               onChange={this.onChangeUser.displayCrosshair}
             />
             <SwitchSetting
               label={
-                <Tooltip title={settingsTooltips.displayScalebars}>
+                <FastTooltip title={settingsTooltips.displayScalebars}>
                   {settingsLabels.displayScalebars}
-                </Tooltip>
+                </FastTooltip>
               }
               value={this.props.userConfiguration.displayScalebars}
               onChange={this.onChangeUser.displayScalebars}
             />
             <PricingEnforcedSwitchSetting
               label={
-                <Tooltip title={settingsTooltips.renderWatermark}>
+                <FastTooltip title={settingsTooltips.renderWatermark}>
                   {settingsLabels.renderWatermark}
-                </Tooltip>
+                </FastTooltip>
               }
               value={this.props.userConfiguration.renderWatermark}
               onChange={this.onChangeUser.renderWatermark}
@@ -230,7 +233,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
   render() {
     const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
       <NumberSliderSetting
-        label={<Tooltip title={settingsTooltips.moveValue}>{settingsLabels.moveValue}</Tooltip>}
+        label={
+          <FastTooltip title={settingsTooltips.moveValue}>{settingsLabels.moveValue}</FastTooltip>
+        }
         min={userSettings.moveValue3d.minimum}
         max={userSettings.moveValue3d.maximum}
         step={10}
@@ -239,7 +244,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
       />
     ) : (
       <NumberSliderSetting
-        label={<Tooltip title={settingsTooltips.moveValue}>{settingsLabels.moveValue}</Tooltip>}
+        label={
+          <FastTooltip title={settingsTooltips.moveValue}>{settingsLabels.moveValue}</FastTooltip>
+        }
         min={userSettings.moveValue.minimum}
         max={userSettings.moveValue.maximum}
         step={10}
@@ -256,9 +263,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
           <React.Fragment>
             <NumberSliderSetting
               label={
-                <Tooltip title={settingsTooltips.keyboardDelay}>
+                <FastTooltip title={settingsTooltips.keyboardDelay}>
                   {settingsLabels.keyboardDelay}
-                </Tooltip>
+                </FastTooltip>
               }
               min={userSettings.keyboardDelay.minimum}
               max={userSettings.keyboardDelay.maximum}
@@ -268,18 +275,18 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             {moveValueSetting}
             <SwitchSetting
               label={
-                <Tooltip title={settingsTooltips.dynamicSpaceDirection}>
+                <FastTooltip title={settingsTooltips.dynamicSpaceDirection}>
                   {settingsLabels.dynamicSpaceDirection}
-                </Tooltip>
+                </FastTooltip>
               }
               value={this.props.userConfiguration.dynamicSpaceDirection}
               onChange={this.onChangeUser.dynamicSpaceDirection}
             />
             <SwitchSetting
               label={
-                <Tooltip title={settingsTooltips.useLegacyBindings}>
+                <FastTooltip title={settingsTooltips.useLegacyBindings}>
                   {settingsLabels.useLegacyBindings}
-                </Tooltip>
+                </FastTooltip>
               }
               value={this.props.userConfiguration.useLegacyBindings}
               onChange={this.onChangeUser.useLegacyBindings}
@@ -296,9 +303,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             {" "}
             <DropdownSetting
               label={
-                <Tooltip title={settingsTooltips.gpuMemoryFactor}>
+                <FastTooltip title={settingsTooltips.gpuMemoryFactor}>
                   {settingsLabels.gpuMemoryFactor}
-                </Tooltip>
+                </FastTooltip>
               }
               value={(
                 this.props.userConfiguration.gpuMemoryFactor || Constants.DEFAULT_GPU_MEMORY_FACTOR
@@ -315,9 +322,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <DropdownSetting
               label={
-                <Tooltip title={settingsTooltips.loadingStrategy}>
+                <FastTooltip title={settingsTooltips.loadingStrategy}>
                   {settingsLabels.loadingStrategy}
-                </Tooltip>
+                </FastTooltip>
               }
               value={this.props.datasetConfiguration.loadingStrategy}
               onChange={this.onChangeDataset.loadingStrategy}
@@ -334,7 +341,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
             />
             <DropdownSetting
               label={
-                <Tooltip title={settingsTooltips.blendMode}>{settingsLabels.blendMode}</Tooltip>
+                <FastTooltip title={settingsTooltips.blendMode}>
+                  {settingsLabels.blendMode}
+                </FastTooltip>
               }
               value={this.props.datasetConfiguration.blendMode}
               onChange={this.onChangeDataset.blendMode}
@@ -350,7 +359,9 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               ]}
             />
             <SwitchSetting
-              label={<Tooltip title={settingsTooltips.fourBit}>{settingsLabels.fourBit}</Tooltip>}
+              label={
+                <FastTooltip title={settingsTooltips.fourBit}>{settingsLabels.fourBit}</FastTooltip>
+              }
               value={this.props.datasetConfiguration.fourBit}
               onChange={this.onChangeDataset.fourBit}
             />
@@ -358,26 +369,26 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               <div>
                 <SwitchSetting
                   label={
-                    <Tooltip title={settingsTooltips.interpolation}>
+                    <FastTooltip title={settingsTooltips.interpolation}>
                       {settingsLabels.interpolation}
-                    </Tooltip>
+                    </FastTooltip>
                   }
                   value={this.props.datasetConfiguration.interpolation}
                   onChange={this.onChangeDataset.interpolation}
                 >
                   {this.props.datasetConfiguration.interpolation && (
-                    <Tooltip title="Consider disabling interpolation if you notice degraded rendering performance.">
+                    <FastTooltip title="Consider disabling interpolation if you notice degraded rendering performance.">
                       {PERFORMANCE_WARNING_ICON}
-                    </Tooltip>
+                    </FastTooltip>
                   )}
                 </SwitchSetting>
               </div>
             )}
             <SwitchSetting
               label={
-                <Tooltip title={settingsTooltips.antialiasRendering}>
+                <FastTooltip title={settingsTooltips.antialiasRendering}>
                   {settingsLabels.antialiasRendering}
-                </Tooltip>
+                </FastTooltip>
               }
               value={this.props.userConfiguration.antialiasRendering}
               disabled={this.props.activeUser == null}
@@ -390,16 +401,16 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
               }}
             >
               {this.props.userConfiguration.antialiasRendering && (
-                <Tooltip title="Consider disabling antialiasing if you notice degraded rendering performance.">
+                <FastTooltip title="Consider disabling antialiasing if you notice degraded rendering performance.">
                   {PERFORMANCE_WARNING_ICON}
-                </Tooltip>
+                </FastTooltip>
               )}
             </SwitchSetting>
             <SwitchSetting
               label={
-                <Tooltip title={settingsTooltips.renderMissingDataBlack}>
+                <FastTooltip title={settingsTooltips.renderMissingDataBlack}>
                   {settingsLabels.renderMissingDataBlack}{" "}
-                </Tooltip>
+                </FastTooltip>
               }
               value={this.props.datasetConfiguration.renderMissingDataBlack}
               onChange={this.onChangeRenderMissingDataBlack}

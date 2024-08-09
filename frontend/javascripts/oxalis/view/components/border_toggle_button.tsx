@@ -1,8 +1,9 @@
 import * as React from "react";
-import { Button, Tooltip } from "antd";
+import { Button } from "antd";
 import { connect } from "react-redux";
 import type { OxalisState, BorderOpenStatus } from "oxalis/store";
 import { V2 } from "libs/mjs";
+import FastTooltip from "components/fast_tooltip";
 type OwnProps = {
   onClick: () => void;
   side: "left" | "right";
@@ -16,7 +17,7 @@ const DRAG_THRESHOLD = 5;
 
 function BorderToggleButton(props: Props) {
   const { onClick, side, borderOpenStatus, inFooter } = props;
-  const placement = side === "left" ? "topRight" : "topLeft";
+  const placement = side === "left" ? "top-end" : "top-start";
   const iconKind = borderOpenStatus[side] ? "hide" : "show";
   const tooltipTitle = `${borderOpenStatus[side] ? "Hide" : "Open"} ${side} sidebar (${
     side === "left" ? "K" : "L"
@@ -29,7 +30,7 @@ function BorderToggleButton(props: Props) {
   }`;
   const [lastTouchPosition, setLastTouchPosition] = React.useState([0, 0]);
   return (
-    <Tooltip title={tooltipTitle} placement={placement}>
+    <FastTooltip title={tooltipTitle} placement={placement}>
       <Button
         className={className}
         size="small"
@@ -71,7 +72,7 @@ function BorderToggleButton(props: Props) {
       >
         <div className={imageClass} />
       </Button>
-    </Tooltip>
+    </FastTooltip>
   );
 }
 

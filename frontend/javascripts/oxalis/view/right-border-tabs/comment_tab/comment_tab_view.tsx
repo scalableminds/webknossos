@@ -463,9 +463,6 @@ function CommentTabView(props: Props) {
                     (evt.target as HTMLElement).blur()
                   }
                   placeholder="Add comment"
-                  style={{
-                    width: "50%",
-                  }}
                 />
                 <ButtonComponent
                   onClick={() => setMarkdownModalVisibility(true)}

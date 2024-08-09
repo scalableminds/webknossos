@@ -21,7 +21,7 @@ import {
   useDatasetCollectionContext,
 } from "dashboard/dataset/dataset_collection_context";
 import Toast from "libs/toast";
-import _, { set } from "lodash";
+import _ from "lodash";
 import React, { useEffect } from "react";
 import { useState } from "react";
 import { APIDataset, Folder, APIMetadata, APIMetadataType } from "types/api_flow_types";

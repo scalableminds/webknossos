@@ -293,7 +293,8 @@ class JobController @Inject()(
   def runAlignSectionsJob(organizationName: String,
                           datasetName: String,
                           layerName: String,
-                          newDatasetName: String): Action[AnyContent] =
+                          newDatasetName: String,
+                          annotationId: Option[String] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -305,6 +306,7 @@ class JobController @Inject()(
             datasetName) ~> NOT_FOUND
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
+          _ <- Fox.runOptional(annotationId)(ObjectId.fromString)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.alignSections.notAllowed.onlySuperUsers"
           command = JobCommand.align_sections
@@ -313,6 +315,7 @@ class JobController @Inject()(
             "dataset_name" -> datasetName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
+            "annotation_id" -> annotationId
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunAlignSections"
           js <- jobService.publicWrites(job)

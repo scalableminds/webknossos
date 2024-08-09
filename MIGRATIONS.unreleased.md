@@ -9,3 +9,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/24.07.0...HEAD)
 
 ### Postgres Evolutions:
+- [118-add-metadata-to-folders-and-datasets.sql](conf/evolutions/118-add-metadata-to-folders-and-datasets.sql)

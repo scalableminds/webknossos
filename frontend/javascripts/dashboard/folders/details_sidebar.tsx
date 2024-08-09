@@ -16,13 +16,14 @@ import {
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect } from "react";
 import { APIDatasetCompact, Folder } from "types/api_flow_types";
-import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
+import { DatasetLayerTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { getOrganization } from "admin/admin_rest_api";
 import { useQuery } from "@tanstack/react-query";
+import MetadataTable from "./metadata_table";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -87,8 +88,12 @@ function getMaybeSelectMessage(datasetCount: number) {
 }
 
 function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
-  const context = useDatasetCollectionContext();
-  const { data: fullDataset, isFetching } = useDatasetQuery(selectedDataset);
+  // exactDatasetId is needed to prevent refetching when some dataset property of selectedDataset was changed.
+  const exactDatasetId = {
+    owningOrganization: selectedDataset.owningOrganization,
+    name: selectedDataset.name,
+  };
+  const { data: fullDataset, isFetching } = useDatasetQuery(exactDatasetId);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const { data: owningOrganization } = useQuery(
     ["organizations", selectedDataset.owningOrganization],
@@ -172,14 +177,13 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
             </Tag>
           )}
         </div>
+        {fullDataset && (
+          <MetadataTable
+            datasetOrFolder={fullDataset}
+            key={`${fullDataset.dataSource.id.name}#dataset`}
+          />
+        )}
       </Spin>
-
-      {selectedDataset.isActive ? (
-        <div style={{ marginBottom: 4 }}>
-          <div className="sidebar-label">Tags</div>
-          <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
-        </div>
-      ) : null}
 
       {fullDataset?.usedStorageBytes && fullDataset.usedStorageBytes > 10000 ? (
         <div style={{ marginBottom: 4 }}>
@@ -280,7 +284,10 @@ function FolderDetails({
             . {message}
           </p>
           <div className="sidebar-label">Access Permissions</div>
-          <FolderTeamTags folder={folder} />
+          <div style={{ marginBottom: 4 }}>
+            <FolderTeamTags folder={folder} />
+          </div>
+          <MetadataTable datasetOrFolder={folder} key={`${folder.id}#folder`} />
         </div>
       ) : error ? (
         "Could not load folder."

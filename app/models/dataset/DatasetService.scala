@@ -80,9 +80,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     val metadata =
       if (publication.isDefined)
         Json.arr(
-          Json.obj("type" -> "string", "key" -> "species", "value" -> "species name", "index" -> 0),
-          Json.obj("type" -> "string", "key" -> "brainRegion", "value" -> "brain region", "index" -> 1),
-          Json.obj("type" -> "string", "key" -> "acquisition", "value" -> "acquisition method", "index" -> 2)
+          Json.obj("type" -> "string", "key" -> "species", "value" -> "species name"),
+          Json.obj("type" -> "string", "key" -> "brainRegion", "value" -> "brain region"),
+          Json.obj("type" -> "string", "key" -> "acquisition", "value" -> "acquisition method")
         )
       else Json.arr()
 

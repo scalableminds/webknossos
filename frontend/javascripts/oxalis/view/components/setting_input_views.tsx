@@ -376,6 +376,8 @@ type State = {
   name: string;
 };
 
+const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
+
 export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
   constructor(props: UserBoundingBoxInputProps) {
     super(props);
@@ -457,7 +459,6 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
   render() {
     const { name } = this.state;
     const {
-      tooltipTitle,
       color,
       isVisible,
       onDelete,
@@ -551,10 +552,11 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           </Col>
           <Col span={SETTING_RIGHT_SPAN}>
             <FastTooltip
-              title={disabled ? editingDisallowedExplanation : tooltipTitle}
+              title={disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP}
               placement="top-start"
             >
               <Input
+                status={this.state.isValid ? "" : "error"}
                 onChange={this.handleChange}
                 onFocus={this.handleFocus}
                 onBlur={this.handleBlur}

@@ -1,9 +1,10 @@
 import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { map3, mod } from "libs/utils";
-import type { BoundingBoxType, Vector3, Vector4 } from "oxalis/constants";
+import type { BoundingBoxType, OrthoView, Vector2, Vector3, Vector4 } from "oxalis/constants";
 import constants, { Vector3Indicies } from "oxalis/constants";
 import type { ResolutionInfo } from "../helpers/resolution_info";
+import Dimensions from "../dimensions";
 
 class BoundingBox {
   min: Vector3;
@@ -21,6 +22,16 @@ class BoundingBox {
         this.max[i] = Math.min(this.max[i], boundingBox.max[i]);
       }
     }
+  }
+
+  getMinUV(activeViewport: OrthoView): Vector2 {
+    const [u, v, _w] = Dimensions.transDim(this.min, activeViewport);
+    return [u, v];
+  }
+
+  getMaxUV(activeViewport: OrthoView): Vector2 {
+    const [u, v, _w] = Dimensions.transDim(this.max, activeViewport);
+    return [u, v];
   }
 
   getBoxForZoomStep = _.memoize((resolution: Vector3): BoundingBoxType => {
@@ -150,6 +161,23 @@ class BoundingBox {
     });
   }
 
+  fromMagToMag1(mag: Vector3): BoundingBox {
+    const min: Vector3 = [
+      Math.floor(this.min[0] * mag[0]),
+      Math.floor(this.min[1] * mag[1]),
+      Math.floor(this.min[2] * mag[2]),
+    ];
+    const max: Vector3 = [
+      Math.ceil(this.max[0] * mag[0]),
+      Math.ceil(this.max[1] * mag[1]),
+      Math.ceil(this.max[2] * mag[2]),
+    ];
+    return new BoundingBox({
+      min,
+      max,
+    });
+  }
+
   paddedWithMargins(marginsLeft: Vector3, marginsRight?: Vector3): BoundingBox {
     if (marginsRight == null) {
       marginsRight = marginsLeft;
@@ -212,6 +240,13 @@ class BoundingBox {
       min: this.min,
       max: this.max,
     };
+  }
+
+  offset(offset: Vector3): BoundingBox {
+    return new BoundingBox({
+      min: V3.add(this.min, offset),
+      max: V3.add(this.max, offset),
+    });
   }
 }
 

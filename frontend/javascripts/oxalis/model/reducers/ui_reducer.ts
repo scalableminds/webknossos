@@ -185,6 +185,12 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "SET_GLOBAL_PROGRESS": {
+      return updateKey(state, "uiInformation", {
+        globalProgress: action.value,
+      });
+    }
+
     default:
       return state;
   }

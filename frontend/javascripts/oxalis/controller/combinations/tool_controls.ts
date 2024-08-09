@@ -16,7 +16,6 @@ import {
   computeQuickSelectForRectAction,
   confirmQuickSelectAction,
   hideBrushAction,
-  maybePrefetchEmbeddingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -679,8 +678,6 @@ export class QuickSelectTool {
         startPos = V3.floor(calculateGlobalPos(state, pos));
         currentPos = startPos;
         isDragging = true;
-
-        Store.dispatch(maybePrefetchEmbeddingAction(startPos));
       },
       leftMouseUp: () => {
         isDragging = false;

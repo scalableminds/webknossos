@@ -946,6 +946,7 @@ function Navbar({
         "collapsed-nav-header": collapseAllNavItems,
       })}
     >
+      <GlobalProgressBar />
       <MaintenanceBanner />
       <ConfigProvider theme={{ ...getAntdTheme("light") }}>
         <UpgradeVersionBanner />
@@ -992,6 +993,17 @@ function Navbar({
         {trailingNavItems}
       </div>
     </Header>
+  );
+}
+
+function GlobalProgressBar() {
+  const globalProgress = useSelector((state: OxalisState) => state.uiInformation.globalProgress);
+  const hide = globalProgress === 0;
+  return (
+    <div
+      className={`global-progress-bar ${hide ? "hidden-global-progress-bar" : ""}`}
+      style={{ width: `${Math.round(globalProgress * 100)}%` }}
+    />
   );
 }
 

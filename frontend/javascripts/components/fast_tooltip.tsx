@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { generateRandomId } from "libs/utils";
+import React, { useEffect, useState } from "react";
 import { Tooltip as ReactTooltip } from "react-tooltip";
 
 export type FastTooltipPlacement =
@@ -29,32 +30,36 @@ export default function FastTooltip({
   html,
   style,
   dynamicRenderer,
-  uniqueKeyForDynamic,
 }: {
   title?: string | null | undefined;
   children?: React.ReactNode;
   placement?: FastTooltipPlacement;
   disabled?: boolean;
-  id?: string;
+  id?: string; // todop: remove?
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
   wrapper?: "div" | "span" | "p" | "tr"; // Any valid HTML tag, span by default.
   html?: string | null | undefined;
   style?: React.CSSProperties; // style attached to the wrapper
   dynamicRenderer?: () => React.ReactElement;
-  uniqueKeyForDynamic?: string | undefined;
 }) {
   const Tag = wrapper || "span";
+  const [uniqueKeyForDynamic, setUniqueDynamicId] = useState<string | undefined>(undefined);
 
-  if ((uniqueKeyForDynamic != null) !== (dynamicRenderer != null)) {
-    throw new Error(
-      "uniqueKeyForDynamic and dynamicRenderer should either be both defined or undefined.",
-    );
-  }
-
-  if (uniqueKeyForDynamic != null && dynamicRenderer != null) {
-    uniqueKeyToDynamicRenderer[uniqueKeyForDynamic] = dynamicRenderer;
-  }
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new unique id should only be created on mount
+  useEffect(() => {
+    if (!dynamicRenderer) {
+      return;
+    }
+    const uniqueKey = generateRandomId(16);
+    uniqueKeyToDynamicRenderer[uniqueKey] = dynamicRenderer;
+    setUniqueDynamicId(uniqueKey);
+    return () => {
+      if (uniqueKeyForDynamic) {
+        delete uniqueKeyToDynamicRenderer[uniqueKeyForDynamic];
+      }
+    };
+  }, []);
 
   const getId = () => {
     if (uniqueKeyForDynamic != null) {
@@ -102,7 +107,8 @@ export function RootForFastTooltips() {
                 if (!uniqueKey) {
                   return null;
                 }
-                return uniqueKeyToDynamicRenderer[uniqueKey]();
+                const fn = uniqueKeyToDynamicRenderer[uniqueKey];
+                return fn != null ? fn() : null;
               }
         }
       />

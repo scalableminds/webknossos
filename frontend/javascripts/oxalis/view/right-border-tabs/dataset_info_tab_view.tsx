@@ -560,12 +560,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const { representativeResolution, isActiveResolutionGlobal } = activeResolutionInfo;
 
     return representativeResolution != null ? (
-      <FastTooltip
-        uniqueKeyForDynamic="dataset-resolutions-tooltip"
-        dynamicRenderer={this.renderResolutionsTooltip}
-        placement="left"
-        wrapper="tr"
-      >
+      <FastTooltip dynamicRenderer={this.renderResolutionsTooltip} placement="left" wrapper="tr">
         <td
           style={{
             paddingRight: 4,

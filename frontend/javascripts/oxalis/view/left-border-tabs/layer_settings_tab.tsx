@@ -1,6 +1,5 @@
 import { Button, Col, Divider, Dropdown, MenuProps, Modal, Row, Switch } from "antd";
 import type { Dispatch } from "redux";
-import ReactDOMServer from "react-dom/server";
 import {
   EditOutlined,
   InfoCircleOutlined,
@@ -358,11 +357,7 @@ function LayerInfoIconWithTooltip({
   }, [layer, dataset]);
 
   return (
-    <FastTooltip
-      dynamicRenderer={renderTooltipContent}
-      uniqueKeyForDynamic={`bbox-tooltip-${layer.name}`}
-      placement="left"
-    >
+    <FastTooltip dynamicRenderer={renderTooltipContent} placement="left">
       <InfoCircleOutlined className="icon-margin-right" />
     </FastTooltip>
   );

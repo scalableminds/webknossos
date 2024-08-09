@@ -538,11 +538,7 @@ function ResolutionInfo() {
         className="resolution-status-bar-icon"
         alt="Resolution"
       />{" "}
-      <FastTooltip
-        dynamicRenderer={renderMagTooltipContent}
-        uniqueKeyForDynamic="status-bar-resolutions"
-        placement="top"
-      >
+      <FastTooltip dynamicRenderer={renderMagTooltipContent} placement="top">
         {representativeResolution.join("-")}
         {isActiveResolutionGlobal ? "" : "*"}{" "}
       </FastTooltip>

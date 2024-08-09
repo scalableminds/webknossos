@@ -246,17 +246,16 @@ pre.dataset-import-folder-structure-hint {
     }
 
     tr {
-      // Created with the help of Copilot.
-      position: relative; // Ensure the pseudo-element is positioned relative to the tr.
+      // A pseudo element is created to add a horizontal line between the rows. It does not stretch the entire width of the table.
+      position: relative;
       &:not(:last-child)::after {
-        // Using pseudo-element to create a border line that does not extend the whole width of the tr.
         content: "";
         position: absolute;
-        left: 8px; // Margin on the left side
-        right: 8px; // Margin on the right side
+        left: 8px;
+        right: 8px;
         top: 0;
-        height: var(--ant-line-width); // Height of the border line
-        background-color: var(--ant-color-border); // Color of the border line
+        height: var(--ant-line-width);
+        background-color: var(--ant-color-border);
       }
     }
 
@@ -270,6 +269,7 @@ pre.dataset-import-folder-structure-hint {
 
     th {
       padding: 4px !important;
+      padding-left: 9px !important;
       font-weight: normal;
       text-align: left;
     }
@@ -302,6 +302,7 @@ pre.dataset-import-folder-structure-hint {
     thead tr th:nth-child(4),
     tbody tr td:nth-child(4) {
       width: 16px;
+      vertical-align: top;
     }
   }
 

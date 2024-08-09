@@ -200,18 +200,3 @@ export function useEffectOnlyOnce(callback: () => void | (() => void)) {
     return callback();
   }, []);
 }
-
-export function useEffectOnUpdate(
-  callback: () => void | (() => void),
-  dependencies: React.DependencyList,
-) {
-  const isInitialRunRef = useRef(true);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Not updating on callback recompilation.
-  useEffect(() => {
-    if (isInitialRunRef.current) {
-      isInitialRunRef.current = false;
-      return;
-    }
-    return callback();
-  }, dependencies);
-}

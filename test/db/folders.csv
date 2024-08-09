@@ -1,4 +1,4 @@
-_id,name,isDeleted,details
+_id,name,isDeleted,metadata
 '570b9f4e4bb848d0885ea917','Organization_X',f,
 '570b9f4e4bb848d08880712a','A subfolder!',f,
 '570b9f4e4bb848d08880712b','Another subfolder!',f,

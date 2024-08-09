@@ -324,7 +324,6 @@ export function useUpdateFolderMutation() {
               ? {
                   ...updatedFolder,
                   parent: oldFolder.parent,
-                  metadata: oldFolder.metadata,
                 }
               : oldFolder,
           ),

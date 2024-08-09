@@ -15,16 +15,19 @@ import {
   Dropdown,
   Button,
 } from "antd";
-import { usePreviousValue } from "beautiful-react-hooks";
+import { useWillUnmount } from "beautiful-react-hooks";
 import {
   DatasetCollectionContextValue,
   useDatasetCollectionContext,
 } from "dashboard/dataset/dataset_collection_context";
 import Toast from "libs/toast";
-import _ from "lodash";
+import _, { set } from "lodash";
 import React, { useEffect } from "react";
 import { useState } from "react";
 import { APIDataset, Folder, APIMetadata, APIMetadataType } from "types/api_flow_types";
+
+type APIMetadataWithError = APIMetadata & { error?: string | null };
+type IndexedMetadataEntries = APIMetadataWithError[];
 
 function getMetadataTypeLabel(type: APIMetadata["type"]) {
   switch (type) {
@@ -49,11 +52,97 @@ function getMetadataTypeLabel(type: APIMetadata["type"]) {
   }
 }
 
+type EmptyMetadataPlaceholderProps = {
+  addNewEntryMenuItems: MenuProps;
+};
+const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
+  addNewEntryMenuItems,
+}) => {
+  return (
+    <div className="flex-center-child empty-metadata-placeholder">
+      <img
+        src="/assets/images/metadata-teaser.svg"
+        alt="Metadata preview"
+        style={{ width: "60%", marginBottom: 16 }}
+      />
+      <span style={{ marginTop: 10 }}>
+        <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
+          <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>
+            Add First Metadata Entry
+          </Button>
+        </Dropdown>
+      </span>
+    </div>
+  );
+};
+
+interface MetadataValueInputProps {
+  record: APIMetadataWithError;
+  index: number;
+  focusedRow: number | null;
+  setFocusedRow: (row: number | null) => void;
+  updateMetadataValue: (index: number, newValue: number | string | string[]) => void;
+  isSaving: boolean;
+  availableStrArrayTagOptions: { value: string; label: string }[];
+}
+
+const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
+  record,
+  index,
+  focusedRow,
+  setFocusedRow,
+  updateMetadataValue,
+  isSaving,
+  availableStrArrayTagOptions,
+}) => {
+  const isFocused = index === focusedRow;
+  const sharedProps = {
+    className: isFocused ? undefined : "transparent-input",
+    onFocus: () => setFocusedRow(index),
+    onBlur: () => setFocusedRow(null),
+    placeholder: "Value",
+    size: "small" as InputNumberProps<number>["size"],
+    disabled: isSaving,
+  };
+
+  switch (record.type) {
+    case APIMetadataType.NUMBER:
+      return (
+        <InputNumber
+          value={record.value as number}
+          onChange={(newNum) => updateMetadataValue(index, newNum || 0)}
+          {...sharedProps}
+        />
+      );
+    case APIMetadataType.STRING:
+      return (
+        <Input
+          value={record.value}
+          onChange={(evt) => updateMetadataValue(index, evt.target.value)}
+          {...sharedProps}
+        />
+      );
+    case APIMetadataType.STRING_ARRAY:
+      return (
+        <Select
+          mode="tags"
+          value={record.value as string[]}
+          onChange={(values) => updateMetadataValue(index, values)}
+          options={availableStrArrayTagOptions}
+          suffixIcon={null}
+          {...sharedProps}
+        />
+      );
+    default:
+      return null;
+  }
+};
+
 const saveCurrentMetadata = async (
   datasetOrFolderToUpdate: APIDataset | Folder,
   metadata: IndexedMetadataEntries,
   context: DatasetCollectionContextValue,
-  { dontUpdateState }: EffectCancelSignal = { dontUpdateState: false }, // equals whether the component is unmounted
+  // When the component is no longer mounted, state updates should not be performed.
   setIsSaving: (isSaving: boolean) => void,
   setHasUnsavedChanges: (hasUnsavedChanges: boolean) => void,
 ) => {
@@ -61,10 +150,8 @@ const saveCurrentMetadata = async (
   if (hasAnyErrors) {
     return;
   }
-  !dontUpdateState && setIsSaving(true);
-  const metadataWithoutIndexAndError = metadata.map(
-    ({ index: _ignored, error: _ignored2, ...rest }) => rest,
-  );
+  setIsSaving(true);
+  const metadataWithoutIndexAndError = metadata.map(({ error: _ignored, ...rest }) => rest);
   let serverResponse: APIDataset | Folder;
   const isADataset = isDataset(datasetOrFolderToUpdate);
   const datasetOrFolderString = isADataset ? "dataset" : "folder";
@@ -88,7 +175,7 @@ const saveCurrentMetadata = async (
         `Failed to save metadata changes for ${datasetOrFolderString} ${datasetOrFolderToUpdate.name}.`,
       );
     } else {
-      !dontUpdateState && setHasUnsavedChanges(false);
+      setHasUnsavedChanges(false);
     }
   } catch (error) {
     Toast.error(
@@ -96,18 +183,13 @@ const saveCurrentMetadata = async (
     );
     console.error(error);
   } finally {
-    !dontUpdateState && setIsSaving(false);
+    setIsSaving(false);
   }
 };
 
 const saveCurrentMetadataDebounced = _.debounce(saveCurrentMetadata, 3000);
 
-const getKeyInputId = (record: APIMetadataWithIndexAndError) =>
-  `metadata-key-input-id-${record.index}`;
-
-type APIMetadataWithIndexAndError = APIMetadata & { index: number; error?: string | null };
-type IndexedMetadataEntries = APIMetadataWithIndexAndError[];
-type EffectCancelSignal = { dontUpdateState: boolean };
+const getKeyInputIdForIndex = (index: number) => `metadata-key-input-id-${index}`;
 
 const isDataset = (datasetOrFolder: APIDataset | Folder): datasetOrFolder is APIDataset =>
   "folderId" in datasetOrFolder;
@@ -116,136 +198,120 @@ export default function MetadataTable({
   datasetOrFolder,
 }: { datasetOrFolder: APIDataset | Folder }) {
   const context = useDatasetCollectionContext();
-  const previousDatasetOrFolder: APIDataset | Folder | undefined =
-    usePreviousValue(datasetOrFolder);
   const [metadata, setMetadata] = useState<IndexedMetadataEntries>(
-    datasetOrFolder?.metadata?.map((entry, index) => ({ ...entry, index, error: null })) || [],
+    datasetOrFolder?.metadata?.map((entry) => ({ ...entry, error: null })) || [],
   );
   const [focusedRow, setFocusedRow] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [isMounted, setIsMounted] = useState<boolean>(true);
 
-  const isFirstRenderingCycle = previousDatasetOrFolder == null;
-
-  // Always update local state when folder / dataset changes. Prior to that send pending updates.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Only execute this hook when underlying datasetOrFolder changes.
-  useEffect(() => {
-    if (isFirstRenderingCycle) {
-      // Skip first rendering cycle.
-      return;
+  const guardedSetIsSaving = (isSaving: boolean) => {
+    if (isMounted) {
+      setIsSaving(isSaving);
     }
-    const isSameName = datasetOrFolder.name === previousDatasetOrFolder.name;
-    const isSameType = isDataset(datasetOrFolder) === isDataset(previousDatasetOrFolder);
-    const isSameDatasetOrFolder = isSameName && isSameType;
-    const effectCancelSignal = { dontUpdateState: false };
-    if (!isSameDatasetOrFolder && hasUnsavedChanges) {
-      // Flush pending updates as the dataset or folder changed.
+  };
+  const guardedSetHasUnsavedChanges = (hasUnsavedChanges: boolean) => {
+    if (isMounted) {
+      setHasUnsavedChanges(hasUnsavedChanges);
+    }
+  };
+
+  useWillUnmount(() => {
+    setIsMounted(false);
+    if (hasUnsavedChanges) {
       saveCurrentMetadata(
-        previousDatasetOrFolder,
+        datasetOrFolder,
         metadata,
         context,
-        effectCancelSignal,
-        setIsSaving,
-        setHasUnsavedChanges,
+        guardedSetIsSaving,
+        guardedSetHasUnsavedChanges,
       );
     }
-    setMetadata(
-      datasetOrFolder.metadata?.map((entry, index) => ({ ...entry, index, error: null })) || [],
-    );
-    return () => {
-      effectCancelSignal.dontUpdateState = true;
-    };
-  }, [datasetOrFolder.name, isDataset(datasetOrFolder), datasetOrFolder.metadata]);
+  });
 
   // Sent automatic debounced updates to the server when metadata changes.
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only update upon pending changes.
   useEffect(() => {
-    const effectCancelSignal = { dontUpdateState: false };
     if (hasUnsavedChanges) {
       saveCurrentMetadataDebounced(
         datasetOrFolder,
         metadata,
         context,
-        effectCancelSignal,
-        setIsSaving,
-        setHasUnsavedChanges,
+        guardedSetIsSaving,
+        guardedSetHasUnsavedChanges,
       );
     }
-    return () => {
-      effectCancelSignal.dontUpdateState = true;
-    };
   }, [metadata]);
 
-  const updateMetadataKey = (index: number, newPropName: string) => {
-    setMetadata((prev: IndexedMetadataEntries) => {
+  const updateMetadataKey = (indexToUpdate: number, newPropName: string) => {
+    setMetadata((prev) => {
       let error = null;
-      const entry = prev.find((prop) => prop.index === index);
+      const entry = prev[indexToUpdate];
       if (!entry) {
         return prev;
       }
       const maybeAlreadyExistingEntry = prev.find((prop) => prop.key === newPropName);
       if (maybeAlreadyExistingEntry) {
         error = `Property ${newPropName} already exists.`;
-      }
-      if (newPropName === "") {
+      } else if (newPropName === "") {
         error = "Property name cannot be empty.";
       }
-      const detailsWithoutEditedEntry = prev.filter((prop) => prop.index !== index);
+      const updatedMetadata = prev.map((prop, index) =>
+        index !== indexToUpdate ? prop : { ...prop, error, key: newPropName },
+      );
       setHasUnsavedChanges(true);
-      return [
-        ...detailsWithoutEditedEntry,
-        {
-          ...entry,
-          key: newPropName,
-          error,
-        },
-      ];
+      return updatedMetadata;
     });
   };
 
-  const updateMetadataValue = (index: number, newValue: number | string | string[]) => {
+  const updateMetadataValue = (indexToUpdate: number, newValue: number | string | string[]) => {
     setMetadata((prev) => {
-      const entry = prev.find((prop) => prop.index === index);
+      const entry = prev[indexToUpdate];
       if (!entry) {
         return prev;
       }
-      const updatedEntry = { ...entry, value: newValue };
-      const detailsWithoutEditedEntry = prev.filter((prop) => prop.index !== index);
+      const updatedMetadata = prev.map((prop, index) =>
+        index !== indexToUpdate ? prop : { ...prop, value: newValue },
+      );
       setHasUnsavedChanges(true);
-      return [...detailsWithoutEditedEntry, updatedEntry];
+      return updatedMetadata;
     });
   };
 
   const addNewEntryWithType = (type: APIMetadata["type"]) => {
     setMetadata((prev) => {
-      const highestIndex = prev.reduce((acc, curr) => Math.max(acc, curr.index), 0);
-      const newEntry: APIMetadataWithIndexAndError = {
+      const indexOfNewEntry = prev.length;
+      const newEntry: APIMetadataWithError = {
         key: "",
         value:
           type === APIMetadataType.STRING_ARRAY ? [] : type === APIMetadataType.NUMBER ? 0 : "",
-        index: highestIndex + 1,
         type,
         error: "Enter a property name.",
       };
       // Auto focus the key input of the new entry.
-      setTimeout(() => document.getElementById(getKeyInputId(newEntry))?.focus(), 50);
+      setTimeout(
+        () => document.getElementById(getKeyInputIdForIndex(indexOfNewEntry))?.focus(),
+        50,
+      );
       setHasUnsavedChanges(true);
       return [...prev, newEntry];
     });
   };
 
-  const deleteKey = (index: number) => {
+  const deleteKey = (indexToDelete: number) => {
     setMetadata((prev) => {
       setHasUnsavedChanges(true);
-      return prev.filter((prop) => prop.index !== index);
+      return prev.filter((_, index) => index !== indexToDelete);
     });
   };
 
-  const sortedDetails = metadata.sort((a, b) => a.index - b.index);
-
   const availableStrArrayTagOptions = _.uniq(
-    sortedDetails.flatMap((detail) => (detail.type === "string[]" ? detail.value : [])),
-  ).map((tag) => ({ value: tag, label: tag }));
+    metadata.flatMap((entry) => (entry.type === APIMetadataType.STRING_ARRAY ? entry.value : [])),
+  ).map((tag) => ({ value: tag, label: tag })) as {
+    value: string;
+    label: string;
+  }[];
 
   const getTypeSelectDropdownMenu: () => MenuProps = () => ({
     items: Object.values(APIMetadataType).map((type) => {
@@ -257,75 +323,34 @@ export default function MetadataTable({
     }),
   });
 
-  const getKeyInput = (record: APIMetadataWithIndexAndError) => {
-    const isFocused = record.index === focusedRow;
+  const getKeyInput = (record: APIMetadataWithError, index: number) => {
+    const isFocused = index === focusedRow;
     return (
       <>
         <Input
           className={isFocused ? undefined : "transparent-input"}
-          onFocus={() => setFocusedRow(record.index)}
+          onFocus={() => setFocusedRow(index)}
           onBlur={() => setFocusedRow(null)}
           value={record.key}
-          onChange={(evt) => updateMetadataKey(record.index, evt.target.value)}
+          onChange={(evt) => updateMetadataKey(index, evt.target.value)}
           placeholder="Property"
           size="small"
           disabled={isSaving}
-          id={getKeyInputId(record)}
+          id={getKeyInputIdForIndex(index)}
         />
         {record.error != null ? (
           <>
             <br />
-            <Typography.Text type="warning">{record.error}</Typography.Text>
+            <Typography.Text type="warning" style={{ paddingLeft: 8, display: "inline-block" }}>
+              {record.error}
+            </Typography.Text>
           </>
         ) : null}
       </>
     );
   };
 
-  const getValueInput = (record: APIMetadataWithIndexAndError) => {
-    const isFocused = record.index === focusedRow;
-    const sharedProps = {
-      className: isFocused ? undefined : "transparent-input",
-      onFocus: () => setFocusedRow(record.index),
-      onBlur: () => setFocusedRow(null),
-      placeholder: "Value",
-      size: "small" as InputNumberProps<number>["size"],
-      disabled: isSaving,
-    };
-    switch (record.type) {
-      case "number":
-        return (
-          <InputNumber
-            value={record.value as number}
-            onChange={(newNum) => updateMetadataValue(record.index, newNum || 0)}
-            {...sharedProps}
-          />
-        );
-      case "string":
-        return (
-          <Input
-            value={record.value}
-            onChange={(evt) => updateMetadataValue(record.index, evt.target.value)}
-            {...sharedProps}
-          />
-        );
-      case "string[]":
-        return (
-          <Select
-            mode="tags"
-            value={record.value as string[]}
-            onChange={(values) => updateMetadataValue(record.index, values)}
-            options={availableStrArrayTagOptions}
-            suffixIcon={null}
-            {...sharedProps}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-
-  const getDeleteEntryButton = (record: APIMetadataWithIndexAndError) => (
+  const getDeleteEntryButton = (_: APIMetadataWithError, index: number) => (
     <Button
       type="text"
       disabled={isSaving}
@@ -338,17 +363,20 @@ export default function MetadataTable({
         />
       }
       style={{ width: 16 }}
-      onClick={() => deleteKey(record.index)}
+      onClick={() => deleteKey(index)}
     />
   );
+
+  const addNewEntryMenuItems = getTypeSelectDropdownMenu();
 
   return (
     <div style={{ marginBottom: 16 }}>
       <div className="sidebar-label">Metadata</div>
       <div className="ant-tag antd-app-theme metadata-table-wrapper">
         {/* Not using AntD Table to have more control over the styling. */}
-        {sortedDetails.length > 0 ? (
+        {metadata.length > 0 ? (
           <table className="ant-tag antd-app-theme metadata-table">
+            {/* Each row except the last row has a custom horizontal divider created via a css pseudo element. */}
             <thead>
               <tr>
                 <th>Property</th>
@@ -358,19 +386,29 @@ export default function MetadataTable({
               </tr>
             </thead>
             <tbody>
-              {sortedDetails.map((record) => (
-                <tr key={record.index}>
-                  <td>{getKeyInput(record)}</td>
+              {metadata.map((record, index) => (
+                <tr key={index}>
+                  <td>{getKeyInput(record, index)}</td>
                   <td>:</td>
-                  <td>{getValueInput(record)}</td>
-                  <td>{getDeleteEntryButton(record)}</td>
+                  <td>
+                    <MetadataValueInput
+                      record={record}
+                      index={index}
+                      focusedRow={focusedRow}
+                      setFocusedRow={setFocusedRow}
+                      updateMetadataValue={updateMetadataValue}
+                      isSaving={isSaving}
+                      availableStrArrayTagOptions={availableStrArrayTagOptions}
+                    />
+                  </td>
+                  <td>{getDeleteEntryButton(record, index)}</td>
                 </tr>
               ))}
               <tr>
                 <td colSpan={3}>
                   <div className="flex-center-child">
                     <Dropdown
-                      menu={getTypeSelectDropdownMenu()}
+                      menu={addNewEntryMenuItems}
                       placement="bottom"
                       trigger={["click"]}
                       autoFocus
@@ -388,25 +426,7 @@ export default function MetadataTable({
             </tbody>
           </table>
         ) : (
-          <div className="flex-center-child empty-metadata-placeholder">
-            <img
-              src="/assets/images/metadata-teaser.svg"
-              alt="Metadata preview"
-              style={{ width: "60%", marginBottom: 16 }}
-            />
-            <span style={{ marginTop: 10 }}>
-              <Dropdown
-                menu={getTypeSelectDropdownMenu()}
-                placement="bottom"
-                trigger={["click"]}
-                autoFocus
-              >
-                <Button icon={<PlusOutlined style={{ marginLeft: -2 }} />}>
-                  Add First Metadata Entry
-                </Button>
-              </Dropdown>
-            </span>
-          </div>
+          <EmptyMetadataPlaceholder addNewEntryMenuItems={addNewEntryMenuItems} />
         )}
       </div>
     </div>

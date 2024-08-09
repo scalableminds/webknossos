@@ -539,34 +539,6 @@ class SegmentsView extends React.Component<Props, State> {
     }, 100);
   }
 
-  async perfTest() {
-    if (this.tree?.current == null || this.props.segments == null) {
-      return;
-    }
-    console.time("perfTest");
-    const start = performance.now();
-    let counter = 0;
-    const totalCount = 100;
-    for (const segment of this.props.segments.values()) {
-      this.tree.current.scrollTo({ key: `segment-${segment.id}` });
-      await sleep(0);
-      counter++;
-      if (counter % 10 === 0) {
-        console.log(
-          "counter:",
-          counter,
-          "| estimated total: ",
-          ((performance.now() - start) / counter) * totalCount,
-        );
-      }
-      if (counter >= totalCount) {
-        break;
-      }
-    }
-    console.timeEnd("perfTest");
-    console.log("scrolled to", counter, "elements");
-  }
-
   componentWillUnmount() {
     if (this.intervalID != null) {
       clearTimeout(this.intervalID);
@@ -1762,7 +1734,6 @@ class SegmentsView extends React.Component<Props, State> {
           contextMenuPosition={this.state.contextMenuPosition}
           menu={this.state.menu}
         />
-        <Button onClick={() => this.perfTest()}> Perftest </Button>
         <DomVisibilityObserver targetId={segmentsTabId}>
           {(isVisibleInDom) => {
             if (!isVisibleInDom) return null;

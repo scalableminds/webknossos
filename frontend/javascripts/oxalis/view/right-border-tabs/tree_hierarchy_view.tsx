@@ -20,7 +20,7 @@ import {
 } from "@ant-design/icons";
 import { useDispatch } from "react-redux";
 import { batchActions } from "redux-batched-actions";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
 import {
@@ -70,6 +70,7 @@ import { ChangeColorMenuItemContent } from "components/color_picker";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 import { ColoredDotIcon } from "./segments_tab/segment_list_item";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
+import { sleep } from "libs/utils";
 
 type Props = {
   activeTreeId: number | null | undefined;
@@ -91,6 +92,37 @@ function TreeHierarchyView(props: Props) {
   const [UITreeData, setUITreeData] = useState<TreeNode[]>([]);
   const [activeTreeDropdownId, setActiveTreeDropdownId] = useState<number | null>(null);
   const [activeGroupDropdownId, setActiveGroupDropdownId] = useState<number | null>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
+  const perfTest = useCallback(async function perfTest() {
+    if (treeRef.current == null) {
+      return;
+    }
+    await sleep(1000);
+    console.time("perfTest");
+    const start = performance.now();
+    let counter = 0;
+    const totalThreshold = 100;
+    for (const tree of Object.values(props.trees)) {
+      const activeTreeKey = getNodeKey(GroupTypeEnum.TREE, tree.treeId);
+      treeRef.current.scrollTo({ key: activeTreeKey, align: "auto" });
+      await sleep(0);
+      counter++;
+      if (counter % 10 === 0) {
+        console.log(
+          "counter:",
+          counter,
+          "| estimated total: ",
+          ((performance.now() - start) / counter) * totalThreshold,
+        );
+      }
+      if (counter >= totalThreshold) {
+        break;
+      }
+    }
+    console.timeEnd("perfTest");
+    console.log("scrolled to", counter, "elements");
+  }, []);
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
 
@@ -427,6 +459,16 @@ function TreeHierarchyView(props: Props) {
     const menu: MenuProps = {
       items: [
         {
+          key: "perftest",
+
+          onClick: () => {
+            perfTest();
+            handleTreeDropdownMenuVisibility(0, false);
+          },
+          label: "do perf test",
+          title: "do perf test",
+        },
+        {
           key: "create",
           onClick: () => {
             createGroup(id);
@@ -573,6 +615,16 @@ function TreeHierarchyView(props: Props) {
             disabled: isEditingDisabled,
             icon: <i className="fas fa-adjust" />,
             label: "Shuffle Tree Color",
+          },
+          {
+            key: "perftest",
+
+            onClick: () => {
+              perfTest();
+              handleTreeDropdownMenuVisibility(0, false);
+            },
+            label: "do perf test",
+            title: "do perf test",
           },
           {
             key: "deleteTree",

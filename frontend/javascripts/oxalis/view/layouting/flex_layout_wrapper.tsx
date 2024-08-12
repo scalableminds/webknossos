@@ -1,7 +1,7 @@
 import type { Dispatch } from "redux";
 import { Layout } from "antd";
 import { connect } from "react-redux";
-import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
+import FlexLayout, { BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import * as React from "react";
 import _ from "lodash";
 import features from "features";
@@ -495,10 +495,10 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   onRenderTabSet = (
-    tabSetNode: TabSetNode,
+    tabSetNode: TabSetNode | BorderNode,
     renderValues: {
       buttons: Array<React.ReactNode>;
-      headerContent: React.ReactNode;
+      headerContent?: React.ReactNode;
     },
   ) => {
     const { isTopMost, isRightMost } = getPositionStatusOf(tabSetNode);
@@ -557,7 +557,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             factory={(...args) => this.layoutFactory(...args)}
             onModelChange={() => this.onLayoutChange()}
             onAction={this.onAction}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(tabSetNode: TabSetNode, renderValues: {    ... Remove this comment to see the full error message
             onRenderTabSet={this.onRenderTabSet}
             onRenderTab={this.onRenderTab}
             classNameMapper={this.classNameMapper}

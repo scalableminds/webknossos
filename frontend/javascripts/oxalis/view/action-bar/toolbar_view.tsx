@@ -933,7 +933,7 @@ export default function ToolbarView() {
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
         <ToolRadioButton
           name={TOOL_NAMES.MOVE}
-          description="Use left-click to move around and right-click to open a contextmenu."
+          description="Use left-click to move around and right-click to open a context menu."
           disabledExplanation=""
           disabled={false}
           style={NARROW_BUTTON_STYLE}

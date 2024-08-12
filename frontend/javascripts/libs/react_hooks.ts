@@ -1,5 +1,5 @@
 import constants from "oxalis/constants";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { KEYBOARD_BUTTON_LOOP_INTERVAL } from "./input";
 
@@ -219,4 +219,18 @@ export function useStateWithRef<T>(initialValue: T) {
   };
 
   return [state, ref, wrappedSetState] as const;
+}
+
+export function useIsMounted() {
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  const isMounted = useCallback(() => isMountedRef.current, []);
+
+  return isMounted;
 }

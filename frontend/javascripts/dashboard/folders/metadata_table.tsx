@@ -19,7 +19,7 @@ import {
   DatasetCollectionContextValue,
   useDatasetCollectionContext,
 } from "dashboard/dataset/dataset_collection_context";
-import { useStateWithRef } from "libs/react_hooks";
+import { useIsMounted, useStateWithRef } from "libs/react_hooks";
 import Toast from "libs/toast";
 import _ from "lodash";
 import React, { useEffect } from "react";
@@ -227,6 +227,7 @@ export default function MetadataTable({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasUnsavedChanges, hasUnsavedChangesRef, setHasUnsavedChanges] =
     useStateWithRef<boolean>(false);
+  const isMounted = useIsMounted();
 
   // Flush pending updates when the component is unmounted.
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only update when unmounted.
@@ -249,14 +250,13 @@ export default function MetadataTable({
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only update upon pending changes.
   useEffect(() => {
     // Avoid state updates on unmounted MetadataTable.
-    let isMounted = true;
     const guardedSetIsSaving = (isSaving: boolean) => {
-      if (isMounted) {
+      if (isMounted()) {
         setIsSaving(isSaving);
       }
     };
     const guardedSetHasUnsavedChanges = (hasUnsavedChanges: boolean) => {
-      if (isMounted) {
+      if (isMounted()) {
         setHasUnsavedChanges(hasUnsavedChanges);
       }
     };
@@ -271,9 +271,6 @@ export default function MetadataTable({
         focusedRowRef,
       );
     }
-    return () => {
-      isMounted = false;
-    };
   }, [metadata, hasUnsavedChanges, focusedRow]);
 
   const updateMetadataKey = (indexToUpdate: number, newPropName: string) => {

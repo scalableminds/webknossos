@@ -622,7 +622,7 @@ class TracingApi {
     const volume = Math.ceil(shape[0] * shape[1] * shape[2]);
     if (volume > maximumVolume) {
       Toast.error(
-        `The volume of the bounding box exeeds ${maximumVolume} Vx, please reduce the size of the bounding box.`,
+        `The volume of the bounding box exeeds ${maximumVolume} Vx, please make it smaller.`,
       );
       return;
     } else if (volume > maximumVolume / 8) {

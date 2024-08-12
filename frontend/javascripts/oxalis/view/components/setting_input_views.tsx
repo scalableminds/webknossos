@@ -508,10 +508,9 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
       marginLeft: 6,
     };
     const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
-    const exportIconStyle = isExportEnabled ? marginRightStyle : disabledIconStyle;
     const exportButton = (
       <>
-        <DownloadOutlined style={exportIconStyle} />
+        <DownloadOutlined style={isExportEnabled ? marginRightStyle : disabledIconStyle} />
         Export data
       </>
     );

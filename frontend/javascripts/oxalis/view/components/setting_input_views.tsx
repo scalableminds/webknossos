@@ -30,6 +30,7 @@ import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_acce
 import { connect } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { APISegmentationLayer } from "types/api_flow_types";
+import { api } from "oxalis/singletons";
 
 const ROW_GUTTER = 1;
 
@@ -385,7 +386,6 @@ type UserBoundingBoxInputProps = {
   onBoundingChange: (arg0: Vector6) => void;
   onDelete: () => void;
   onExport: () => void;
-  onRegisterSegmentsForBB: (arg0: Vector6, arg1: string) => void;
   onGoToBoundingBox: () => void;
   onVisibilityChange: (arg0: boolean) => void;
   onNameChange: (arg0: string) => void;
@@ -480,6 +480,12 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
     }
   };
 
+  onRegisterSegmentsForBB(value: Vector6, name: string): void {
+    const min: Vector3 = [value[0], value[1], value[2]];
+    const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
+    api.tracing.registerSegmentsForBoundingBox(min, max, name);
+  }
+
   render() {
     const { name } = this.state;
     const tooltipStyle = this.state.isValid
@@ -493,7 +499,6 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
       isVisible,
       onDelete,
       onExport,
-      onRegisterSegmentsForBB,
       isExportEnabled,
       onGoToBoundingBox,
       disabled,
@@ -525,23 +530,20 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           key: "registerSegments",
           label: (
             <>
-              <ScanOutlined style={marginRightStyle} /> {""}
               Register all segments in this bounding box
-              <Tooltip title="Moves/registers all segments within this bbox into a new group">
+              <Tooltip title="Moves/registers all segments within this bounding box into a new segment group">
                 <InfoCircleOutlined style={marginLeftStyle} />
               </Tooltip>
             </>
           ),
-          onClick: disabled ? () => {} : () => onRegisterSegmentsForBB(this.props.value, name),
+          icon: <ScanOutlined style={marginRightStyle} />, //TODO_c styling needed?
+          onClick: disabled ? () => {} : () => this.onRegisterSegmentsForBB(this.props.value, name),
           disabled: this.props.visibleSegmentationLayer == null,
         },
         {
           key: "goToCenter",
-          label: (
-            <>
-              <BorderInnerOutlined style={marginRightStyle} /> Go to center
-            </>
-          ),
+          label: "Go to center",
+          icon: <BorderInnerOutlined style={marginRightStyle} />,
           onClick: onGoToBoundingBox,
         },
         {
@@ -556,12 +558,8 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
         },
         {
           key: "delete",
-          label: (
-            <>
-              <DeleteOutlined style={disabled ? disabledIconStyle : marginRightStyle} />{" "}
-              {disabled ? editingDisallowedExplanation : "Delete"}
-            </>
-          ),
+          label: <>{disabled ? editingDisallowedExplanation : "Delete"}</>,
+          icon: <DeleteOutlined style={disabled ? disabledIconStyle : marginRightStyle} />,
           onClick: disabled ? () => {} : onDelete,
           disabled: this.props.visibleSegmentationLayer == null,
         },

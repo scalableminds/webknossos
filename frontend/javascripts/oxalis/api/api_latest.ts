@@ -145,7 +145,7 @@ import Constants, {
 } from "oxalis/constants";
 import DataLayer from "oxalis/model/data_layer";
 import type { OxalisModel } from "oxalis/model";
-import { Model } from "oxalis/singletons";
+import { Model, api } from "oxalis/singletons";
 import Request from "libs/request";
 import type {
   MappingType,
@@ -589,6 +589,78 @@ class TracingApi {
       clickSegmentAction(segmentId, somePosition, someAdditionalCoordinates, layerName),
     );
   }
+
+  /**
+   * Registers all segments that exist at least partially in the given bounding box.
+   *
+   * @example
+   * api.tracing.registerSegmentsForBoundingBox(
+   *  [0, 0, 0],
+   *  [10, 10, 10],
+   * "My Bounding Box"
+   * );
+   */
+  registerSegmentsForBoundingBox = async (min: Vector3, max: Vector3, bbName: string) => {
+    const shape = Utils.computeShapeFromBoundingBox({ min, max });
+    const volume = Math.ceil(shape[0] * shape[1] * shape[2]);
+    const maxVolume = Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
+    if (volume > maxVolume) {
+      Toast.error(
+        "The volume of the bounding box is too large, please reduce the size of the bounding box.",
+      );
+      return;
+    } else if (volume > maxVolume / 8) {
+      Toast.warning(
+        "The volume of the bounding box is very large, registering all segments might take a while.",
+      );
+    }
+
+    const segmentationLayerName = api.data.getSegmentationLayerNames()[0];
+    const data = await api.data.getDataForBoundingBox(segmentationLayerName, {
+      min,
+      max,
+    });
+
+    const segmentIdToPosition = new Map();
+    let idx = 0;
+    for (let z = min[2]; z < max[2]; z++) {
+      for (let y = min[1]; y < max[1]; y++) {
+        for (let x = min[0]; x < max[0]; x++) {
+          const id = data[idx];
+          if (!segmentIdToPosition.has(id)) {
+            segmentIdToPosition.set(id, [x, y, z]);
+          }
+          idx++;
+        }
+      }
+    }
+
+    const segmentIds = Array.from(segmentIdToPosition.entries());
+    const maxNoSegments = Constants.REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT;
+    const halfMaxNoSegments = maxNoSegments / 2;
+    if (segmentIds.length > maxNoSegments) {
+      Toast.error(
+        `The bounding box contains more than ${maxNoSegments} segments. Please reduce the size of the bounding box.`,
+      );
+      return;
+    } else if (segmentIds.length > halfMaxNoSegments) {
+      Toast.warning(
+        `The bounding box contains more than ${halfMaxNoSegments} segments. Registering all segments might take a while.`,
+      );
+    }
+
+    const groupId = api.tracing.createSegmentGroup(
+      `Segments for BBox ${bbName}`,
+      -1,
+      segmentationLayerName,
+    );
+    for (const [segmentId, position] of segmentIdToPosition.entries()) {
+      api.tracing.registerSegment(segmentId, position, undefined, segmentationLayerName);
+      Store.dispatch(
+        updateSegmentAction(segmentId, { groupId, id: segmentId }, segmentationLayerName),
+      );
+    }
+  };
 
   /**
    * Gets a segment object within the referenced volume layer. Note that this object

@@ -15,6 +15,8 @@ type StateProps = {
 type Props = OwnProps & StateProps;
 const DRAG_THRESHOLD = 5;
 
+const TOOLTIP_STYLE = { height: 24 };
+
 function BorderToggleButton(props: Props) {
   const { onClick, side, borderOpenStatus, inFooter } = props;
   const placement = side === "left" ? "top-end" : "top-start";
@@ -30,7 +32,7 @@ function BorderToggleButton(props: Props) {
   }`;
   const [lastTouchPosition, setLastTouchPosition] = React.useState([0, 0]);
   return (
-    <FastTooltip title={tooltipTitle} placement={placement}>
+    <FastTooltip title={tooltipTitle} placement={placement} style={TOOLTIP_STYLE}>
       <Button
         className={className}
         size="small"

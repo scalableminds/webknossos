@@ -15,11 +15,11 @@ import {
   Dropdown,
   Button,
 } from "antd";
-import { useWillUnmount } from "beautiful-react-hooks";
 import {
   DatasetCollectionContextValue,
   useDatasetCollectionContext,
 } from "dashboard/dataset/dataset_collection_context";
+import { useStateWithRef } from "libs/react_hooks";
 import Toast from "libs/toast";
 import _ from "lodash";
 import React, { useEffect } from "react";
@@ -187,7 +187,29 @@ const saveCurrentMetadata = async (
   }
 };
 
-const saveCurrentMetadataDebounced = _.debounce(saveCurrentMetadata, 3000);
+const saveMetadataDebounced = _.debounce(
+  (
+    datasetOrFolder,
+    metadata,
+    context,
+    guardedSetIsSaving,
+    guardedSetHasUnsavedChanges,
+    hasUnsavedChangesRef,
+    focusedRowRef,
+  ) => {
+    // Before updating the metadata check again if there is no focused row.
+    if (hasUnsavedChangesRef.current && focusedRowRef.current === null) {
+      saveCurrentMetadata(
+        datasetOrFolder,
+        metadata,
+        context,
+        guardedSetIsSaving,
+        guardedSetHasUnsavedChanges,
+      );
+    }
+  },
+  2000,
+);
 
 const getKeyInputIdForIndex = (index: number) => `metadata-key-input-id-${index}`;
 
@@ -198,51 +220,61 @@ export default function MetadataTable({
   datasetOrFolder,
 }: { datasetOrFolder: APIDataset | Folder }) {
   const context = useDatasetCollectionContext();
-  const [metadata, setMetadata] = useState<IndexedMetadataEntries>(
+  const [metadata, metadataRef, setMetadata] = useStateWithRef<IndexedMetadataEntries>(
     datasetOrFolder?.metadata?.map((entry) => ({ ...entry, error: null })) || [],
   );
-  const [focusedRow, setFocusedRow] = useState<number | null>(null);
+  const [focusedRow, focusedRowRef, setFocusedRow] = useStateWithRef<number | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
-  const [isMounted, setIsMounted] = useState<boolean>(true);
+  const [hasUnsavedChanges, hasUnsavedChangesRef, setHasUnsavedChanges] =
+    useStateWithRef<boolean>(false);
 
-  const guardedSetIsSaving = (isSaving: boolean) => {
-    if (isMounted) {
-      setIsSaving(isSaving);
-    }
-  };
-  const guardedSetHasUnsavedChanges = (hasUnsavedChanges: boolean) => {
-    if (isMounted) {
-      setHasUnsavedChanges(hasUnsavedChanges);
-    }
-  };
+  // Flush pending updates when the component is unmounted.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only update when unmounted.
+  useEffect(
+    () => () => {
+      if (hasUnsavedChangesRef.current && metadataRef.current != null) {
+        saveCurrentMetadata(
+          datasetOrFolder,
+          metadataRef.current,
+          context,
+          _.noop, // No state updates on unmounted component.
+          _.noop, // No state updates on unmounted component.
+        );
+      }
+    },
+    [metadataRef, hasUnsavedChangesRef],
+  );
 
-  useWillUnmount(() => {
-    setIsMounted(false);
-    if (hasUnsavedChanges) {
-      saveCurrentMetadata(
-        datasetOrFolder,
-        metadata,
-        context,
-        guardedSetIsSaving,
-        guardedSetHasUnsavedChanges,
-      );
-    }
-  });
-
-  // Sent automatic debounced updates to the server when metadata changes.
+  // Sent automatic async debounced updates to the server when metadata changed and there are no focused rows.
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only update upon pending changes.
   useEffect(() => {
-    if (hasUnsavedChanges) {
-      saveCurrentMetadataDebounced(
+    // Avoid state updates on unmounted MetadataTable.
+    let isMounted = true;
+    const guardedSetIsSaving = (isSaving: boolean) => {
+      if (isMounted) {
+        setIsSaving(isSaving);
+      }
+    };
+    const guardedSetHasUnsavedChanges = (hasUnsavedChanges: boolean) => {
+      if (isMounted) {
+        setHasUnsavedChanges(hasUnsavedChanges);
+      }
+    };
+    if (hasUnsavedChanges && focusedRow === null) {
+      saveMetadataDebounced(
         datasetOrFolder,
         metadata,
         context,
         guardedSetIsSaving,
         guardedSetHasUnsavedChanges,
+        hasUnsavedChangesRef,
+        focusedRowRef,
       );
     }
-  }, [metadata]);
+    return () => {
+      isMounted = false;
+    };
+  }, [metadata, hasUnsavedChanges, focusedRow]);
 
   const updateMetadataKey = (indexToUpdate: number, newPropName: string) => {
     setMetadata((prev) => {

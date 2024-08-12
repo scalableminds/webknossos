@@ -200,3 +200,23 @@ export function useEffectOnlyOnce(callback: () => void | (() => void)) {
     return callback();
   }, []);
 }
+
+// This hook allows to access the current state value in an asynchronous function call.
+// Due to the nature of hooks, the ref value might be one render cycle ahead of the state value.
+// If the ref value should preferably be one render cycle behind the state value,
+// use a different hook that uses an effect instead of a wrapped state setter.
+export function useStateWithRef<T>(initialValue: T) {
+  const [state, setState] = useState(initialValue);
+  const ref = useRef(state);
+
+  const wrappedSetState = (newState: T | ((prevState: T) => T)) => {
+    setState((prevState: T) => {
+      const nextState =
+        typeof newState === "function" ? (newState as (prevState: T) => T)(prevState) : newState;
+      ref.current = nextState;
+      return nextState;
+    });
+  };
+
+  return [state, ref, wrappedSetState] as const;
+}

@@ -515,10 +515,17 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
         Export data
       </>
     );
+    const deleteButton = (
+      <>
+        <DeleteOutlined style={disabled ? disabledIconStyle : marginRightStyle} />
+        Delete
+      </>
+    );
     const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
       isLockedByOwner,
       isOwner,
     );
+    const isDeleteEnabled = !disabled && this.props.visibleSegmentationLayer != null;
 
     const getContextMenu = () => {
       const items: MenuProps["items"] = [
@@ -533,7 +540,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
             </>
           ),
           icon: <ScanOutlined />,
-          onClick: disabled ? () => {} : () => this.onRegisterSegmentsForBB(this.props.value, name),
+          onClick: () => this.onRegisterSegmentsForBB(this.props.value, name),
           disabled: this.props.visibleSegmentationLayer == null,
         },
         {
@@ -547,17 +554,20 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           label: isExportEnabled ? (
             exportButton
           ) : (
-            <FastTooltip title={editingDisallowedExplanation}> {exportButton}</FastTooltip>
+            <FastTooltip title={editingDisallowedExplanation}>{exportButton}</FastTooltip>
           ),
           disabled: !isExportEnabled,
           onClick: onExport,
         },
         {
           key: "delete",
-          label: <>{disabled ? editingDisallowedExplanation : "Delete"}</>,
-          icon: <DeleteOutlined style={disabled ? disabledIconStyle : {}} />,
-          onClick: disabled ? () => {} : onDelete,
-          disabled: this.props.visibleSegmentationLayer == null,
+          label: isDeleteEnabled ? (
+            deleteButton
+          ) : (
+            <FastTooltip title={editingDisallowedExplanation}>{deleteButton}</FastTooltip>
+          ),
+          onClick: onDelete,
+          disabled: !isDeleteEnabled,
         },
       ];
 

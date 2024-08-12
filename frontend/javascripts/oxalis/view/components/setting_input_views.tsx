@@ -4,7 +4,6 @@ import {
   Slider,
   InputNumber,
   Switch,
-  Tooltip,
   Input,
   Select,
   Popover,
@@ -508,7 +507,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
     const marginLeftStyle = {
       marginLeft: 6,
     };
-    const disabledIconStyle = { opacity: 0.5, cursor: "not-allowed" };
+    const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
     const exportIconStyle = isExportEnabled ? marginRightStyle : disabledIconStyle;
     const exportButton = (
       <>
@@ -528,9 +527,9 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           label: (
             <>
               Register all segments in this bounding box
-              <Tooltip title="Moves/registers all segments within this bounding box into a new segment group">
+              <FastTooltip title="Moves/registers all segments within this bounding box into a new segment group">
                 <InfoCircleOutlined style={marginLeftStyle} />
-              </Tooltip>
+              </FastTooltip>
             </>
           ),
           icon: <ScanOutlined />,
@@ -638,14 +637,12 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           </Col>
           <Col span={2}>
             <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
-              <span>
-                <ColorSetting
-                  value={Utils.rgbToHex(upscaledColor)}
-                  onChange={this.handleColorChange}
-                  style={marginLeftStyle}
-                  disabled={disabled}
-                />
-              </span>
+              <ColorSetting
+                value={Utils.rgbToHex(upscaledColor)}
+                onChange={this.handleColorChange}
+                style={marginLeftStyle}
+                disabled={disabled}
+              />
             </FastTooltip>
           </Col>
         </Row>

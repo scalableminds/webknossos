@@ -42,10 +42,7 @@ export function AiQuickSelectControls() {
     dispatch(updateUserSettingAction("quickSelect", conf));
   };
 
-  const onDiscard = () => {
-    dispatch(showQuickSelectSettingsAction(false));
-  };
-  const onConfirm = () => {
+  const closeControls = () => {
     dispatch(showQuickSelectSettingsAction(false));
   };
 
@@ -59,8 +56,8 @@ export function AiQuickSelectControls() {
         step={1}
         onChange={onChangePredictionDepth}
       />
-      <Shortcut supportInputElements keys="escape" onTrigger={onDiscard} />
-      <Shortcut supportInputElements keys="enter" onTrigger={onConfirm} />
+      <Shortcut supportInputElements keys="escape" onTrigger={closeControls} />
+      <Shortcut supportInputElements keys="enter" onTrigger={closeControls} />
     </div>
   );
 }

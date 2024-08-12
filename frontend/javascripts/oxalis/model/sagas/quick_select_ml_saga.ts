@@ -86,8 +86,6 @@ function* getMask(
   const sizeUVW = trans(size);
   const stride = [sizeUVW[2] * sizeUVW[1], sizeUVW[2], 1];
 
-  console.log("size", size);
-  console.log("stride", stride);
   const ndarr = ndarray(maskData, sizeUVW, stride);
 
   // a.hi(x,y) => a[:x, :y]
@@ -225,6 +223,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
         max: trans([...maxUV, labeledResolution[thirdDim]]),
       }).offset(maskBoxInMag.min);
 
+      // Let the UI (especially the progress bar) update
       yield* call(sleep, 10);
       yield* finalizeQuickSelectForSlice(
         quickSelectGeometry,

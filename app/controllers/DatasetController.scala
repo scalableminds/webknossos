@@ -45,7 +45,7 @@ object DatasetUpdateParameters extends TristateOptionJsonHelper {
 
 case class SegmentAnythingMaskParameters(
     mag: Vec3Int,
-    surroundingBoundingBox: BoundingBox, // size must be 1024×1024×depth in target mag with depth <= 12
+    surroundingBoundingBox: BoundingBox, // in mag1 (when converted to target mag, size must be 1024×1024×depth with depth <= 12)
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
     selectionTopLeftX: Int, // in target-mag, relative to paddedBoundingBox topleft
     selectionTopLeftY: Int,

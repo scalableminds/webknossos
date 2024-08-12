@@ -643,7 +643,7 @@ class TracingApi {
       for (let y = min[1]; y < max[1]; y++) {
         for (let x = min[0]; x < max[0]; x++) {
           const id = data[idx];
-          if (!segmentIdToPosition.has(id)) {
+          if (!segmentIdToPosition.has(id) && id !== 0) {
             segmentIdToPosition.set(id, [x, y, z]);
           }
           idx++;
@@ -676,7 +676,8 @@ class TracingApi {
         updateSegmentAction(segmentId, { groupId, id: segmentId }, segmentationLayerName),
       );
     }
-    Store.dispatch(batchUpdateGroupsAndSegmentsAction(updateSegmentActions));
+    if (updateSegmentActions.length > 0)
+      Store.dispatch(batchUpdateGroupsAndSegmentsAction(updateSegmentActions));
   };
 
   /**

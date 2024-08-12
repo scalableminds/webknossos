@@ -1,6 +1,7 @@
-import { Input, InputProps, InputRef, Tooltip } from "antd";
+import { Input, InputProps, InputRef } from "antd";
 import * as React from "react";
 import _ from "lodash";
+import FastTooltip from "components/fast_tooltip";
 
 type InputComponentState = {
   currentValue: React.InputHTMLAttributes<HTMLInputElement>["value"] | bigint;
@@ -113,6 +114,8 @@ class InputComponent extends React.PureComponent<InputProps, InputComponentState
       <Input
         ref={this.inputRef}
         {...inputProps}
+        // Only pass the style to the input if no tooltip container is used.
+        // Otherwise, the tooltip container will get the style.
         style={title == null ? style : undefined}
         onChange={this.handleChange}
         onFocus={this.handleFocus}
@@ -122,11 +125,10 @@ class InputComponent extends React.PureComponent<InputProps, InputComponentState
       />
     );
 
-    // The input needs to be wrapped in a span in order for the tooltip to work. See https://github.com/react-component/tooltip/issues/18#issuecomment-140078802.
     return title != null ? (
-      <Tooltip title={title} style={style}>
-        <span>{input}</span>
-      </Tooltip>
+      <FastTooltip style={style} title={title}>
+        {input}
+      </FastTooltip>
     ) : (
       input
     );

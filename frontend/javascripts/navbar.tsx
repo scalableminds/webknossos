@@ -508,7 +508,7 @@ function NotificationIcon({
 }
 
 export const switchTo = async (org: APIOrganizationCompact) => {
-  Toast.info(`Switching to ${org.displayName || org.id}`);
+  Toast.info(`Switching to ${org.name || org.id}`);
 
   // If the user is currently at the datasets tab, the active folder is encoded
   // in the URI. Switching to another organization means that the folder id
@@ -573,9 +573,7 @@ function LoggedInAvatar({
   const activeOrganization = usersOrganizations.find((org) => org.id === organizationId);
   const switchableOrganizations = usersOrganizations.filter((org) => org.id !== organizationId);
   const orgDisplayName =
-    activeOrganization != null
-      ? activeOrganization.displayName || activeOrganization.id
-      : organizationId;
+    activeOrganization != null ? activeOrganization.name || activeOrganization.id : organizationId;
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
@@ -665,7 +663,7 @@ function LoggedInAvatar({
                     ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
                       key: org.id,
                       onClick: () => switchTo(org),
-                      label: org.displayName || org.id,
+                      label: org.name || org.id,
                     })),
                   ],
                 }

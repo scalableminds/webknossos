@@ -5,6 +5,7 @@ import {
   Select,
   Button,
   Form,
+  Input,
   Slider,
   Row,
   Space,
@@ -15,6 +16,7 @@ import {
   Tabs,
   Switch,
   FormInstance,
+  Checkbox,
 } from "antd";
 import {
   startNucleiInferralJob,
@@ -27,7 +29,11 @@ import {
 } from "admin/admin_rest_api";
 import { useDispatch, useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
-import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
+import {
+  getColorLayers,
+  getSegmentationLayers,
+  getDataLayers,
+} from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveSegmentationTracingLayer,
   getReadableNameOfVolumeLayer,
@@ -50,11 +56,10 @@ import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { TrainAiModelTab, CollapsibleWorkflowYamlEditor } from "../jobs/train_ai_model";
+import { TrainAiModelTab } from "../jobs/train_ai_model";
 import { LayerSelectionFormItem } from "components/layer_selection";
 import { useGuardedFetch } from "libs/react_helpers";
 import _ from "lodash";
-import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
 
 const { ThinSpace } = Unicode;
 
@@ -62,7 +67,6 @@ export type StartAIJobModalState =
   | "neuron_inferral"
   | "nuclei_inferral"
   | "mitochondria_inferral"
-  | "align_sections"
   | "invisible";
 
 // "materialize_volume_annotation" is only used in this module
@@ -70,12 +74,18 @@ const jobNameToImagePath = {
   neuron_inferral: "neuron_inferral_example.jpg",
   nuclei_inferral: "nuclei_inferral_example.jpg",
   mitochondria_inferral: "mito_inferral_example.jpg",
-  align_sections: "align_example.jpg",
+  align_sections: "align_example.png",
   materialize_volume_annotation: "materialize_volume_annotation_example.jpg",
   invisible: "",
   inference: "",
 } as const;
 
+const jobTypeWithConfigurableOutputSegmentationLayerName = [
+  "materialize_volume_annotation",
+  "neuron_inferral",
+  "mitochondria_inferral",
+  "inference",
+];
 type Props = {
   handleClose: () => void;
 };
@@ -87,8 +97,9 @@ type StartAIJobModalProps = {
 type JobApiCallArgsType = {
   newDatasetName: string;
   selectedLayer: APIDataLayer;
+  outputSegmentationLayerName?: string;
   selectedBoundingBox: UserBoundingBox | null | undefined;
-  useCustomWorkflow?: boolean;
+  annotationId?: string;
 };
 type StartJobFormProps = Props & {
   jobApiCall: (arg0: JobApiCallArgsType, form: FormInstance<any>) => Promise<void | APIJob>;
@@ -100,7 +111,7 @@ type StartJobFormProps = Props & {
   fixedSelectedLayer?: APIDataLayer | null | undefined;
   title: string;
   buttonLabel?: string | null;
-  showWorkflowYaml?: boolean;
+  isSkeletonSelectable?: boolean;
 };
 
 type BoundingBoxSelectionProps = {
@@ -276,6 +287,46 @@ export function MagSlider({
   );
 }
 
+type OutputSegmentationLayerNameProps = {
+  hasOutputSegmentationLayer: boolean;
+  notAllowedLayerNames: string[];
+};
+
+export function OutputSegmentationLayerNameFormItem({
+  hasOutputSegmentationLayer,
+  notAllowedLayerNames,
+}: OutputSegmentationLayerNameProps) {
+  return (
+    <Form.Item
+      label="New segmentation layer name"
+      name="outputSegmentationLayerName"
+      rules={[
+        { required: hasOutputSegmentationLayer },
+        {
+          min: 3,
+        },
+        {
+          pattern: /[0-9a-zA-Z_-]+$/,
+        },
+        {
+          validator: async (_rule, newOutputLayerName) => {
+            if (notAllowedLayerNames.includes(newOutputLayerName)) {
+              const reason =
+                "This name is already used by another segmentation layer of this dataset.";
+              return Promise.reject(reason);
+            } else {
+              return Promise.resolve();
+            }
+          },
+        },
+      ]}
+      hidden={!hasOutputSegmentationLayer}
+    >
+      <Input />
+    </Form.Item>
+  );
+}
+
 export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
   const onClose = () => Store.dispatch(setAIJobModalStateAction("invisible"));
   const isSuperUser = useSelector((state: OxalisState) => state.activeUser?.isSuperUser || false);
@@ -290,6 +341,13 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
           label: "Train a model",
           key: "trainModel",
           children: <TrainAiModelTab onClose={onClose} />,
+        }
+      : null,
+    isSuperUser
+      ? {
+          label: "Alignment",
+          key: "alignment",
+          children: <AlignmentTab />,
         }
       : null,
   ]);
@@ -314,7 +372,7 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
 function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
   const centerImageStyle = {
     margin: "auto",
-    width: 150,
+    width: 220,
   };
   const isSuperUser = Store.getState().activeUser?.isSuperUser || false;
   const [showCustomAiModels, setShowCustomAiModels] = useState(false);
@@ -404,27 +462,6 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
             <Tooltip title="Coming soon">
               <Radio.Button
                 className="aIJobSelection"
-                checked={aIJobModalState === "align_sections"}
-                disabled={!isSuperUser}
-                onClick={() => dispatch(setAIJobModalStateAction("align_sections"))}
-              >
-                <Card bordered={false}>
-                  <Space direction="vertical" size="small">
-                    <Row className="ai-job-title">Align Sections</Row>
-                    <Row>
-                      <img
-                        src={`/assets/images/${jobNameToImagePath.align_sections}`}
-                        alt={"Example of improved alignment of slices"}
-                        style={centerImageStyle}
-                      />
-                    </Row>
-                  </Space>
-                </Card>
-              </Radio.Button>
-            </Tooltip>
-            <Tooltip title="Coming soon">
-              <Radio.Button
-                className="aIJobSelection"
                 disabled
                 checked={aIJobModalState === "nuclei_inferral"}
                 onClick={() => dispatch(setAIJobModalStateAction("nuclei_inferral"))}
@@ -454,8 +491,84 @@ function RunAiModelTab({ aIJobModalState }: { aIJobModalState: string }) {
   );
 }
 
+function AlignmentTab() {
+  const centerImageStyle = {
+    margin: "auto",
+    width: 220,
+  };
+  return (
+    <div>
+      <Space align="center">
+        <Radio.Button className="aIJobSelection" checked={true}>
+          <Card bordered={false}>
+            <Space direction="vertical" size="small">
+              <Row className="ai-job-title">Align Sections</Row>
+              <Row>
+                <img
+                  src={`/assets/images/${jobNameToImagePath.align_sections}`}
+                  alt={"Example of improved alignment of slices"}
+                  style={centerImageStyle}
+                />
+              </Row>
+            </Space>
+          </Card>
+        </Radio.Button>
+      </Space>
+      <AlignSectionsForm />
+    </div>
+  );
+}
+
+function ShouldUseTreesFormItem() {
+  const tracing = useSelector((state: OxalisState) => state.tracing);
+  const trees = tracing.skeleton ? Object.values(tracing.skeleton.trees) : [];
+  return (
+    <div>
+      <Form.Item
+        name="useAnnotation"
+        label={
+          <Space>
+            <div style={{}}>
+              Manual Matches{" "}
+              <Tooltip title="Please select whether the alignment should take connected skeleton nodes between adjacent sections as alignment guideline whenever available.">
+                <InfoCircleOutlined />
+              </Tooltip>
+            </div>
+          </Space>
+        }
+        valuePropName="checked"
+        rules={[
+          {
+            validator: (_rule, checked) => {
+              if (checked) {
+                if (tracing.annotationId === "") {
+                  return Promise.reject(
+                    "No annotation was found. Please create an annotation first.",
+                  );
+                }
+                if (
+                  tracing.skeleton == null ||
+                  trees.filter((tree) => tree.edges.edgeCount > 0).length === 0
+                ) {
+                  return Promise.reject(
+                    "No skeleton edges were found. Please create a skeleton with at least one edge first.",
+                  );
+                }
+              }
+              return Promise.resolve();
+            },
+          },
+        ]}
+      >
+        <Checkbox> Use manual matches from skeleton. </Checkbox>
+      </Form.Item>
+    </div>
+  );
+}
+
 function StartJobForm(props: StartJobFormProps) {
   const isBoundingBoxConfigurable = props.isBoundingBoxConfigurable || false;
+  const isSkeletonSelectable = props.isSkeletonSelectable || false;
   const chooseSegmentationLayer = props.chooseSegmentationLayer || false;
   const { handleClose, jobName, jobApiCall, fixedSelectedLayer, title, description } = props;
   const [form] = Form.useForm();
@@ -467,7 +580,7 @@ function StartJobForm(props: StartJobFormProps) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const colorLayers = getColorLayers(dataset);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
-  const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
+  const allLayers = getDataLayers(dataset);
   const defaultBBForLayers: UserBoundingBox[] = layers.map((layer, index) => {
     return {
       id: -1 * index,
@@ -483,10 +596,14 @@ function StartJobForm(props: StartJobFormProps) {
     layerName,
     boundingBoxId,
     name: newDatasetName,
+    outputSegmentationLayerName,
+    useAnnotation,
   }: {
     layerName: string;
     boundingBoxId: number;
     name: string;
+    outputSegmentationLayerName: string;
+    useAnnotation: boolean;
   }) => {
     const selectedLayer = layers.find((layer) => layer.name === layerName);
     if (selectedLayer?.elementClass === "uint24") {
@@ -508,10 +625,11 @@ function StartJobForm(props: StartJobFormProps) {
     try {
       await Model.ensureSavedState();
       const jobArgs: JobApiCallArgsType = {
+        outputSegmentationLayerName,
         newDatasetName,
         selectedLayer,
         selectedBoundingBox,
-        useCustomWorkflow,
+        annotationId: useAnnotation ? tracing.annotationId : undefined,
       };
       const apiJob = await jobApiCall(jobArgs, form);
 
@@ -539,9 +657,33 @@ function StartJobForm(props: StartJobFormProps) {
   };
 
   let initialLayerName = layers.length === 1 ? layers[0].name : null;
+  let initialOutputSegmentationLayerName = getReadableNameOfVolumeLayer(layers[0], tracing);
   if (fixedSelectedLayer) {
     initialLayerName = fixedSelectedLayer.name;
+    initialOutputSegmentationLayerName = getReadableNameOfVolumeLayer(fixedSelectedLayer, tracing);
   }
+  initialOutputSegmentationLayerName = `${initialOutputSegmentationLayerName || "segmentation"}${
+    fixedSelectedLayer ? "_corrected" : "_inferred"
+  }`;
+  const hasOutputSegmentationLayer =
+    jobTypeWithConfigurableOutputSegmentationLayerName.indexOf(jobName) > -1;
+  const notAllowedOutputLayerNames = allLayers
+    .filter((layer) => {
+      // Existing layer names may not be used for the output layer. The only exception
+      // is the name of the currently selected layer. This layer is the only one not
+      // copied over from the original dataset to the output dataset.
+      // Therefore, this name is available as the name for the output layer name.
+      // That is why that layer is filtered out here.
+      const currentSelectedVolumeLayerName = chooseSegmentationLayer
+        ? form.getFieldValue("layerName") || initialLayerName
+        : undefined;
+      return (
+        getReadableNameOfVolumeLayer(layer, tracing) !== currentSelectedVolumeLayerName &&
+        layer.name !== currentSelectedVolumeLayerName
+      );
+    })
+    .map((layer) => getReadableNameOfVolumeLayer(layer, tracing) || layer.name);
+
   return (
     <Form
       onFinish={startJob}
@@ -549,7 +691,7 @@ function StartJobForm(props: StartJobFormProps) {
       initialValues={{
         layerName: initialLayerName,
         boundingBoxId: null,
-        workflowYaml: DEFAULT_PREDICT_WORKFLOW,
+        outputSegmentationLayerName: initialOutputSegmentationLayerName,
       }}
       form={form}
     >
@@ -566,20 +708,17 @@ function StartJobForm(props: StartJobFormProps) {
         fixedLayerName={fixedSelectedLayer?.name}
         tracing={tracing}
       />
+      <OutputSegmentationLayerNameFormItem
+        hasOutputSegmentationLayer={hasOutputSegmentationLayer}
+        notAllowedLayerNames={notAllowedOutputLayerNames}
+      />
       <BoundingBoxSelectionFormItem
         isBoundingBoxConfigurable={isBoundingBoxConfigurable}
         userBoundingBoxes={userBoundingBoxes}
         onChangeSelectedBoundingBox={(bBoxId) => form.setFieldsValue({ boundingBoxId: bBoxId })}
         value={form.getFieldValue("boundingBoxId")}
       />
-
-      {props.showWorkflowYaml ? (
-        <CollapsibleWorkflowYamlEditor
-          isActive={useCustomWorkflow}
-          setActive={setUseCustomWorkflow}
-        />
-      ) : null}
-
+      {isSkeletonSelectable && <ShouldUseTreesFormItem />}
       <div style={{ textAlign: "center" }}>
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}
@@ -638,8 +777,13 @@ export function NeuronSegmentationForm() {
       title="AI Neuron Segmentation"
       suggestedDatasetSuffix="with_reconstructed_neurons"
       isBoundingBoxConfigurable
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
-        if (!selectedBoundingBox) {
+      jobApiCall={async ({
+        newDatasetName,
+        selectedLayer: colorLayer,
+        selectedBoundingBox,
+        outputSegmentationLayerName,
+      }) => {
+        if (!selectedBoundingBox || !outputSegmentationLayerName) {
           return;
         }
 
@@ -649,6 +793,7 @@ export function NeuronSegmentationForm() {
           dataset.name,
           colorLayer.name,
           bbox,
+          outputSegmentationLayerName,
           newDatasetName,
         );
       }}
@@ -680,8 +825,13 @@ export function MitochondriaSegmentationForm() {
       title="AI Mitochondria Segmentation"
       suggestedDatasetSuffix="with_mitochondria_detected"
       isBoundingBoxConfigurable
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
-        if (!selectedBoundingBox) {
+      jobApiCall={async ({
+        newDatasetName,
+        selectedLayer: colorLayer,
+        selectedBoundingBox,
+        outputSegmentationLayerName,
+      }) => {
+        if (!selectedBoundingBox || !outputSegmentationLayerName) {
           return;
         }
 
@@ -691,6 +841,7 @@ export function MitochondriaSegmentationForm() {
           dataset.name,
           colorLayer.name,
           bbox,
+          outputSegmentationLayerName,
           newDatasetName,
         );
       }}
@@ -739,12 +890,16 @@ function CustomAiModelInferenceForm() {
       title="AI Inference"
       suggestedDatasetSuffix="with_custom_model"
       isBoundingBoxConfigurable
-      showWorkflowYaml
       jobApiCall={async (
-        { newDatasetName, selectedLayer: colorLayer, selectedBoundingBox, useCustomWorkflow },
+        {
+          newDatasetName,
+          selectedLayer: colorLayer,
+          selectedBoundingBox,
+          outputSegmentationLayerName,
+        },
         form,
       ) => {
-        if (!selectedBoundingBox) {
+        if (!selectedBoundingBox || !outputSegmentationLayerName) {
           return;
         }
 
@@ -754,10 +909,10 @@ function CustomAiModelInferenceForm() {
         return runInferenceJob({
           ...maybeAnnotationId,
           aiModelId: form.getFieldValue("aiModel"),
-          workflowYaml: useCustomWorkflow ? form.getFieldValue("workflowYaml") : undefined,
           datasetName: dataset.name,
           colorLayerName: colorLayer.name,
           boundingBox,
+          newSegmentationLayerName: outputSegmentationLayerName,
           newDatasetName: newDatasetName,
         });
       }}
@@ -797,12 +952,14 @@ export function AlignSectionsForm() {
       title="Section Alignment"
       suggestedDatasetSuffix="aligned"
       isBoundingBoxConfigurable={false}
-      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer }) =>
+      isSkeletonSelectable={true}
+      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, annotationId }) =>
         startAlignSectionsJob(
           dataset.owningOrganization,
           dataset.name,
           colorLayer.name,
           newDatasetName,
+          annotationId,
         )
       }
       description={
@@ -895,7 +1052,14 @@ export function MaterializeVolumeAnnotationModal({
         suggestedDatasetSuffix="with_merged_segmentation"
         chooseSegmentationLayer
         fixedSelectedLayer={fixedSelectedLayer}
-        jobApiCall={async ({ newDatasetName, selectedLayer: segmentationLayer }) => {
+        jobApiCall={async ({
+          newDatasetName,
+          selectedLayer: segmentationLayer,
+          outputSegmentationLayerName,
+        }) => {
+          if (outputSegmentationLayerName == null) {
+            return;
+          }
           // There are 3 cases for the value assignments to volumeLayerName and baseSegmentationName for the job:
           // 1. There is a volume annotation with a fallback layer. volumeLayerName will reference the volume layer
           // and baseSegmentationName will reference the fallback layer. The job will merge those layers.
@@ -914,6 +1078,7 @@ export function MaterializeVolumeAnnotationModal({
             baseSegmentationName,
             volumeLayerName,
             newDatasetName,
+            outputSegmentationLayerName,
             tracing.annotationId,
             tracing.annotationType,
             isMergerModeEnabled,

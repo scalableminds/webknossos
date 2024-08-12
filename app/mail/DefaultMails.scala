@@ -23,7 +23,7 @@ class DefaultMails @Inject()(conf: WkConf) {
     Mail(
       from = defaultSender,
       subject =
-        s"WEBKNOSSOS | A new user ($name, $email) registered on $uri for ${organization.displayName} (${organization._id})",
+        s"WEBKNOSSOS | A new user ($name, $email) registered on $uri for ${organization.name} (${organization._id})",
       bodyHtml = html.mail.notifyAdminNewUser(name, uri, autoActivate).body,
       recipients = List(recipient)
     )
@@ -64,37 +64,37 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(recipient)
     )
 
-  def newOrganizationMail(organizationDisplayName: String, creatorEmail: String, domain: String): Mail =
+  def newOrganizationMail(organizationName: String, creatorEmail: String, domain: String): Mail =
     Mail(
       from = defaultSender,
       subject = s"WEBKNOSSOS | New Organization created on $domain",
-      bodyHtml = html.mail.notifyAdminNewOrganization(organizationDisplayName, creatorEmail, domain).body,
+      bodyHtml = html.mail.notifyAdminNewOrganization(organizationName, creatorEmail, domain).body,
       recipients = List(newOrganizationMailingList)
     )
 
   def inviteMail(recipient: String,
                  inviteTokenValue: String,
                  autoVerify: Boolean,
-                 organizationDisplayName: String,
+                 organizationName: String,
                  senderName: String): Mail = {
     val host = Try { new URL(uri) }.toOption.getOrElse(uri)
     Mail(
       from = defaultSender,
       subject = s"$senderName invited you to join their WEBKNOSSOS organization at $host",
-      bodyHtml = html.mail.invite(senderName, organizationDisplayName, inviteTokenValue, uri, autoVerify).body,
+      bodyHtml = html.mail.invite(senderName, organizationName, inviteTokenValue, uri, autoVerify).body,
       recipients = List(recipient)
     )
   }
 
   def helpMail(user: User,
                userEmail: String,
-               organizationDisplayName: String,
+               organizationName: String,
                message: String,
                currentUrl: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Help requested // Feedback provided",
-      bodyHtml = html.mail.help(user.name, organizationDisplayName, message, currentUrl).body,
+      bodyHtml = html.mail.help(user.name, organizationName, message, currentUrl).body,
       recipients = List("hello@webknossos.org", userEmail)
     )
 
@@ -132,12 +132,12 @@ class DefaultMails @Inject()(conf: WkConf) {
 
   def upgradePricingPlanRequestMail(user: User,
                                     userEmail: String,
-                                    organizationDisplayName: String,
+                                    organizationName: String,
                                     messageBody: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Request to upgrade WEBKNOSSOS plan",
-      bodyHtml = html.mail.upgradePricingPlanRequest(user.name, userEmail, organizationDisplayName, messageBody).body,
+      bodyHtml = html.mail.upgradePricingPlanRequest(user.name, userEmail, organizationName, messageBody).body,
       recipients = List("hello@webknossos.org")
     )
 

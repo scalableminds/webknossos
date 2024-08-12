@@ -623,7 +623,7 @@ class AuthenticationController @Inject()(
                       .createOrganizationDirectory(organization._id, dataStoreToken) ?~> "organization.folderCreation.failed"
                   } yield {
                     Mailer ! Send(defaultMails
-                      .newOrganizationMail(organization.displayName, email, request.headers.get("Host").getOrElse("")))
+                      .newOrganizationMail(organization.name, email, request.headers.get("Host").getOrElse("")))
                     if (conf.Features.isWkorgInstance) {
                       mailchimpClient.registerUser(user, multiUser, MailchimpTag.RegisteredAsAdmin)
                     }

@@ -32,7 +32,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def compactWrites(organization: Organization): JsObject =
     Json.obj(
       "id" -> organization._id,
-      "displayName" -> organization.displayName
+      "name" -> organization.name
     )
 
   def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
@@ -54,7 +54,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         "name" -> organization._id, // Included for backwards compatibility
         "additionalInformation" -> organization.additionalInformation,
         "enableAutoVerify" -> organization.enableAutoVerify,
-        "displayName" -> organization.displayName,
+        "name" -> organization.name,
         "pricingPlan" -> organization.pricingPlan,
         "paidUntil" -> organization.paidUntil,
         "includedUsers" -> organization.includedUsers,
@@ -99,12 +99,12 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(organizations.isEmpty) ?~> "organizationsNotEmpty"
     } yield ()
 
-  def createOrganization(organizationIdOpt: Option[String], organizationDisplayName: String): Fox[Organization] =
+  def createOrganization(organizationIdOpt: Option[String], organizationName: String): Fox[Organization] =
     for {
-      normalizedDisplayName <- TextUtils.normalizeStrong(organizationDisplayName).toFox ?~> "organization.id.invalid"
+      normalizedName <- TextUtils.normalizeStrong(organizationName).toFox ?~> "organization.id.invalid"
       organizationId = organizationIdOpt
         .flatMap(TextUtils.normalizeStrong)
-        .getOrElse(normalizedDisplayName)
+        .getOrElse(normalizedName)
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).futureBox
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
@@ -116,7 +116,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         organizationId,
         "",
         "",
-        organizationDisplayName,
+        organizationName,
         initialPricingParameters._1,
         None,
         initialPricingParameters._2,

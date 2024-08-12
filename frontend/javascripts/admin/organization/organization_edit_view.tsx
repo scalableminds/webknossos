@@ -86,7 +86,7 @@ const OrganizationEditView = ({ organization }: Props) => {
           <p>
             Deleting an organization{" "}
             <Typography.Text type="danger">cannot be undone</Typography.Text>. Are you certain you
-            want to delete the organization {organization.displayName}?
+            want to delete the organization {organization.name}?
           </p>
         </div>
       ),
@@ -135,7 +135,7 @@ const OrganizationEditView = ({ organization }: Props) => {
     >
       <Row style={{ color: "#aaa", fontSize: " 12" }}>Your Organization</Row>
       <Row style={{ marginBottom: 20 }}>
-        <h2>{organization.displayName}</h2>
+        <h2>{organization.name}</h2>
       </Row>
       {pricingPlanStatus.isExceeded ? <PlanExceededAlert organization={organization} /> : null}
       {pricingPlanStatus.isAlmostExceeded && !pricingPlanStatus.isExceeded ? (
@@ -150,7 +150,7 @@ const OrganizationEditView = ({ organization }: Props) => {
           onFinish={onFinish}
           layout="vertical"
           initialValues={{
-            displayName: organization.displayName,
+            displayName: organization.name,
             newUserMailingList: organization.newUserMailingList,
           }}
         >

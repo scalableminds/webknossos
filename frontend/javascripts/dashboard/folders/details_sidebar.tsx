@@ -97,7 +97,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
       refetchOnWindowFocus: false,
     },
   );
-  const owningOrganizationDisplayName = owningOrganization?.displayName;
+  const owningOrganizationDisplayName = owningOrganization?.name;
 
   const renderOrganization = () => {
     if (activeUser?.organization === selectedDataset.owningOrganization) return;

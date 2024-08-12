@@ -107,7 +107,7 @@ function OrganizationSwitchMenu({
   const items: MenuProps["items"] = switchableOrganizations.map((org) => ({
     key: org.id,
     onClick: () => switchTo(org),
-    label: org.displayName || org.id,
+    label: org.name || org.id,
   }));
 
   return (

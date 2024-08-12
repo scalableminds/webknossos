@@ -4,7 +4,7 @@ import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 const dummyOrga: APIOrganization = {
   id: "dummy_orga",
   additionalInformation: "more information",
-  displayName: "Dummy Orga",
+  name: "Dummy Orga",
   pricingPlan: PricingPlanEnum.Basic,
   enableAutoVerify: true,
   newUserMailingList: "dummy@example.com",

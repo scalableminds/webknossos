@@ -47,9 +47,7 @@ export default function AcceptInviteView({
   }
 
   const targetOrganizationId =
-    targetOrganization != null
-      ? targetOrganization.displayName || targetOrganization.id
-      : "unknown";
+    targetOrganization != null ? targetOrganization.name || targetOrganization.id : "unknown";
 
   const onSuccessfulJoin = (userJustRegistered: boolean = false) => {
     history.push("/dashboard");

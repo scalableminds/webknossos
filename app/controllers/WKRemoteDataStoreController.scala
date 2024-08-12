@@ -124,7 +124,7 @@ class WKRemoteDataStoreController @Inject()(
       addLabel = if (viaAddRoute) "(via explore+add)" else "(upload without conversion)"
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       _ = slackNotificationService.info(s"Dataset added $addLabel$superUserLabel",
-                                        s"For organization: ${organization.displayName}. <$resultLink|Result>")
+                                        s"For organization: ${organization.name}. <$resultLink|Result>")
     } yield ()
 
   def statusUpdate(name: String, key: String): Action[JsValue] = Action.async(parse.json) { implicit request =>

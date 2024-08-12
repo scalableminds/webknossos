@@ -19,7 +19,7 @@ case class Organization(
     _id: String,
     additionalInformation: String,
     logoUrl: String,
-    displayName: String,
+    name: String,
     pricingPlan: PricingPlan,
     paidUntil: Option[Instant],
     includedUsers: Option[Int], // None means unlimited
@@ -49,7 +49,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
         r._Id,
         r.additionalinformation,
         r.logourl,
-        r.displayname,
+        r.name,
         pricingPlan,
         r.paiduntil.map(Instant.fromSql),
         r.includedusers,
@@ -96,11 +96,11 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   def insertOne(o: Organization): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.organizations
-                   (_id, additionalInformation, logoUrl, displayName, _rootFolder,
+                   (_id, additionalInformation, logoUrl, name, _rootFolder,
                    newUserMailingList, enableAutoVerify,
                    pricingplan, paidUntil, includedusers, includedstorage, lastTermsOfServiceAcceptanceTime, lastTermsOfServiceAcceptanceVersion, created, isDeleted)
                    VALUES
-                   (${o._id}, ${o.additionalInformation}, ${o.logoUrl}, ${o.displayName}, ${o._rootFolder},
+                   (${o._id}, ${o.additionalInformation}, ${o.logoUrl}, ${o.name}, ${o._rootFolder},
                    ${o.newUserMailingList}, ${o.enableAutoVerify},
                    ${o.pricingPlan}, ${o.paidUntil}, ${o.includedUsers}, ${o.includedStorageBytes}, ${o.lastTermsOfServiceAcceptanceTime},
                    ${o.lastTermsOfServiceAcceptanceVersion}, ${o.created}, ${o.isDeleted})
@@ -129,13 +129,13 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       r <- rList.headOption.toFox
     } yield r
 
-  def updateFields(organizationId: String, displayName: String, newUserMailingList: String)(
+  def updateFields(organizationId: String, name: String, newUserMailingList: String)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
       _ <- run(q"""UPDATE webknossos.organizations
                    SET
-                     displayName = $displayName,
+                     name = $name,
                      newUserMailingList = $newUserMailingList
                    WHERE _id = $organizationId""".asUpdate)
     } yield ()

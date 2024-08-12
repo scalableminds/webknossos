@@ -202,7 +202,7 @@ class OrganizationController @Inject()(
       _ = Mailer ! Send(
         defaultMails.upgradePricingPlanRequestMail(request.identity,
                                                    userEmail,
-                                                   organization.displayName,
+                                                   organization.name,
                                                    "Extend WEBKNOSSOS plan by a year"))
     } yield Ok
   }
@@ -224,7 +224,7 @@ class OrganizationController @Inject()(
         _ = Mailer ! Send(
           defaultMails.upgradePricingPlanRequestMail(request.identity,
                                                      userEmail,
-                                                     organization.displayName,
+                                                     organization.name,
                                                      s"Upgrade WEBKNOSSOS Plan to $requestedPlan"))
       } yield Ok
   }
@@ -239,7 +239,7 @@ class OrganizationController @Inject()(
         _ = Mailer ! Send(
           defaultMails.upgradePricingPlanRequestMail(request.identity,
                                                      userEmail,
-                                                     organization.displayName,
+                                                     organization.name,
                                                      s"Purchase $requestedUsers additional users"))
       } yield Ok
     }
@@ -254,7 +254,7 @@ class OrganizationController @Inject()(
         _ = Mailer ! Send(
           defaultMails.upgradePricingPlanRequestMail(request.identity,
                                                      userEmail,
-                                                     organization.displayName,
+                                                     organization.name,
                                                      s"Purchase $requestedStorage TB additional storage"))
       } yield Ok
     }

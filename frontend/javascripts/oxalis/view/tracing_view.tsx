@@ -65,7 +65,7 @@ const registerWebGlCrashHandler = (canvas) => {
 
 export default function TracingView() {
   const handleContextMenu = (event: React.SyntheticEvent) => {
-    // hide contextmenu, while right-clicking a canvas
+    // hide context menu, while right-clicking a canvas
     event.preventDefault();
   };
 

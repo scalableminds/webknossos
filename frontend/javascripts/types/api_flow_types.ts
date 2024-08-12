@@ -588,7 +588,7 @@ export type APIAvailableTasksReport = {
 };
 export type APIOrganizationCompact = {
   readonly id: string;
-  readonly displayName: string;
+  readonly name: string;
 };
 export type APIOrganization = APIOrganizationCompact & {
   readonly additionalInformation: string;

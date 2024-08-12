@@ -595,21 +595,28 @@ class TracingApi {
    *
    * @example
    * api.tracing.registerSegmentsForBoundingBox(
-   *  [0, 0, 0],
-   *  [10, 10, 10],
-   * "My Bounding Box"
+   *   [0, 0, 0],
+   *   [10, 10, 10],
+   *   "My Bounding Box"
    * );
    */
-  registerSegmentsForBoundingBox = async (min: Vector3, max: Vector3, bbName: string) => {
+  registerSegmentsForBoundingBox = async (
+    min: Vector3,
+    max: Vector3,
+    bbName: string,
+    options?: { maximumSegmentCount?: number; maximumVolume?: number },
+  ) => {
+    const maximumVolume = options?.maximumVolume ?? Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
+    const maximumSegmentCount =
+      options?.maximumSegmentCount ?? Constants.REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT;
     const shape = Utils.computeShapeFromBoundingBox({ min, max });
     const volume = Math.ceil(shape[0] * shape[1] * shape[2]);
-    const maxVolume = Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
-    if (volume > maxVolume) {
+    if (volume > maximumVolume) {
       Toast.error(
-        "The volume of the bounding box is too large, please reduce the size of the bounding box.",
+        `The volume of the bounding box exeeds ${maximumVolume} Vx, please reduce the size of the bounding box.`,
       );
       return;
-    } else if (volume > maxVolume / 8) {
+    } else if (volume > maximumVolume / 8) {
       Toast.warning(
         "The volume of the bounding box is very large, registering all segments might take a while.",
       );
@@ -635,15 +642,14 @@ class TracingApi {
       }
     }
 
-    const segmentIds = Array.from(segmentIdToPosition.entries());
-    const maxNoSegments = Constants.REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT;
-    const halfMaxNoSegments = maxNoSegments / 2;
-    if (segmentIds.length > maxNoSegments) {
+    const segmentIdCount = Array.from(segmentIdToPosition.entries()).length;
+    const halfMaxNoSegments = maximumSegmentCount / 2;
+    if (segmentIdCount > maximumSegmentCount) {
       Toast.error(
-        `The bounding box contains more than ${maxNoSegments} segments. Please reduce the size of the bounding box.`,
+        `The given bounding box contains ${segmentIdCount} segments, but only ${maximumSegmentCount} segments can be registered at once. Please reduce the size of the bounding box.`,
       );
       return;
-    } else if (segmentIds.length > halfMaxNoSegments) {
+    } else if (segmentIdCount > halfMaxNoSegments) {
       Toast.warning(
         `The bounding box contains more than ${halfMaxNoSegments} segments. Registering all segments might take a while.`,
       );
@@ -654,12 +660,14 @@ class TracingApi {
       -1,
       segmentationLayerName,
     );
+    const updateSegmentActions: BatchableUpdateSegmentAction[] = [];
     for (const [segmentId, position] of segmentIdToPosition.entries()) {
       api.tracing.registerSegment(segmentId, position, undefined, segmentationLayerName);
-      Store.dispatch(
+      updateSegmentActions.push(
         updateSegmentAction(segmentId, { groupId, id: segmentId }, segmentationLayerName),
       );
     }
+    Store.dispatch(batchUpdateGroupsAndSegmentsAction(updateSegmentActions));
   };
 
   /**

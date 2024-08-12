@@ -507,16 +507,17 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
     } = this.props;
     const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
     const marginRightStyle = {
-      marginRight: 6,
+      marginRight: 8,
     };
     const marginLeftStyle = {
       marginLeft: 6,
     };
-    const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
+    const disabledIconStyle = { opacity: 0.5, cursor: "not-allowed" };
     const exportIconStyle = isExportEnabled ? marginRightStyle : disabledIconStyle;
     const exportButton = (
       <>
-        <DownloadOutlined style={exportIconStyle} /> Export data
+        <DownloadOutlined style={exportIconStyle} />
+        Export data
       </>
     );
     const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
@@ -536,14 +537,14 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
               </Tooltip>
             </>
           ),
-          icon: <ScanOutlined style={marginRightStyle} />, //TODO_c styling needed?
+          icon: <ScanOutlined />,
           onClick: disabled ? () => {} : () => this.onRegisterSegmentsForBB(this.props.value, name),
           disabled: this.props.visibleSegmentationLayer == null,
         },
         {
           key: "goToCenter",
           label: "Go to center",
-          icon: <BorderInnerOutlined style={marginRightStyle} />,
+          icon: <BorderInnerOutlined />,
           onClick: onGoToBoundingBox,
         },
         {
@@ -559,7 +560,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
         {
           key: "delete",
           label: <>{disabled ? editingDisallowedExplanation : "Delete"}</>,
-          icon: <DeleteOutlined style={disabled ? disabledIconStyle : marginRightStyle} />,
+          icon: <DeleteOutlined style={disabled ? disabledIconStyle : {}} />,
           onClick: disabled ? () => {} : onDelete,
           disabled: this.props.visibleSegmentationLayer == null,
         },

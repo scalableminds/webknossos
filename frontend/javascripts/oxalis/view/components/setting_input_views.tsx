@@ -31,6 +31,7 @@ import { connect } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { APISegmentationLayer } from "types/api_flow_types";
 import { api } from "oxalis/singletons";
+import FastTooltip from "components/fast_tooltip";
 
 const ROW_GUTTER = 1;
 
@@ -247,7 +248,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={rightSpanValue}>
-          <Tooltip title={tooltipText} placement="top">
+          <FastTooltip title={tooltipText} placement="top">
             {/* This div is necessary for the tooltip to be displayed */}
             <div
               style={{
@@ -256,7 +257,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
                 alignItems: "center",
               }}
             >
-              <Tooltip title={this.props.disabledReason}>
+              <FastTooltip title={this.props.disabledReason}>
                 <Switch
                   onChange={onChange}
                   checked={value}
@@ -264,10 +265,10 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
                   disabled={disabled}
                   loading={loading}
                 />
-              </Tooltip>
+              </FastTooltip>
               {postSwitchIcon}
             </div>
-          </Tooltip>
+          </FastTooltip>
           {this.props.children}
         </Col>
       </Row>
@@ -382,7 +383,6 @@ type UserBoundingBoxInputProps = {
   color: Vector3;
   isVisible: boolean;
   isExportEnabled: boolean;
-  tooltipTitle: string;
   onBoundingChange: (arg0: Vector6) => void;
   onDelete: () => void;
   onExport: () => void;
@@ -401,6 +401,8 @@ type State = {
   text: string;
   name: string;
 };
+
+const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
 
 class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
   constructor(props: UserBoundingBoxInputProps) {
@@ -488,13 +490,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
 
   render() {
     const { name } = this.state;
-    const tooltipStyle = this.state.isValid
-      ? null
-      : {
-          backgroundColor: "red",
-        };
     const {
-      tooltipTitle,
       color,
       isVisible,
       onDelete,
@@ -552,7 +548,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           label: isExportEnabled ? (
             exportButton
           ) : (
-            <Tooltip title={editingDisallowedExplanation}> {exportButton}</Tooltip>
+            <FastTooltip title={editingDisallowedExplanation}> {exportButton}</FastTooltip>
           ),
           disabled: !isExportEnabled,
           onClick: onExport,
@@ -593,7 +589,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           </Col>
 
           <Col span={SETTING_RIGHT_SPAN}>
-            <Tooltip title={disabled ? editingDisallowedExplanation : null}>
+            <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
               <span>
                 <Input
                   defaultValue={name}
@@ -608,7 +604,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
                   disabled={disabled}
                 />
               </span>
-            </Tooltip>
+            </FastTooltip>
           </Col>
           <Col span={2}>{getContextMenu()}</Col>
         </Row>
@@ -619,33 +615,29 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           align="top"
         >
           <Col span={5}>
-            <Tooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
+            <FastTooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
               <label className="settings-label"> Bounds: </label>
-            </Tooltip>
+            </FastTooltip>
           </Col>
           <Col span={SETTING_RIGHT_SPAN}>
-            <Tooltip
-              trigger={disabled ? ["hover"] : ["focus"]}
-              title={disabled ? editingDisallowedExplanation : tooltipTitle}
-              placement="topLeft"
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ backgroundColor: string; } | null' is not ... Remove this comment to see the full error message
-              overlayStyle={tooltipStyle}
+            <FastTooltip
+              title={disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP}
+              placement="top-start"
             >
-              <span>
-                <Input
-                  onChange={this.handleChange}
-                  onFocus={this.handleFocus}
-                  onBlur={this.handleBlur}
-                  value={this.state.text}
-                  placeholder="0, 0, 0, 512, 512, 512"
-                  size="small"
-                  disabled={disabled}
-                />
-              </span>
-            </Tooltip>
+              <Input
+                status={this.state.isValid ? "" : "error"}
+                onChange={this.handleChange}
+                onFocus={this.handleFocus}
+                onBlur={this.handleBlur}
+                value={this.state.text}
+                placeholder="0, 0, 0, 512, 512, 512"
+                size="small"
+                disabled={disabled}
+              />
+            </FastTooltip>
           </Col>
           <Col span={2}>
-            <Tooltip title={disabled ? messages["tracing.read_only_mode_notification"] : null}>
+            <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
               <span>
                 <ColorSetting
                   value={Utils.rgbToHex(upscaledColor)}
@@ -654,7 +646,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
                   disabled={disabled}
                 />
               </span>
-            </Tooltip>
+            </FastTooltip>
           </Col>
         </Row>
       </>
@@ -731,7 +723,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={SETTING_RIGHT_SPAN}>
-          <Tooltip title={this.props.disabledReason}>
+          <FastTooltip title={this.props.disabledReason}>
             <Select
               onChange={onChange}
               // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
@@ -743,7 +735,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
               options={this.props.options}
               disabled={this.props.disabled}
             />
-          </Tooltip>
+          </FastTooltip>
         </Col>
       </Row>
     );

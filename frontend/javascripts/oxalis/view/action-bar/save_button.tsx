@@ -7,7 +7,6 @@ import { isBusy } from "oxalis/model/accessors/save_accessor";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { Model } from "oxalis/singletons";
 import window from "libs/window";
-import { Tooltip } from "antd";
 import {
   CheckOutlined,
   ExclamationCircleOutlined,
@@ -16,6 +15,10 @@ import {
 } from "@ant-design/icons";
 import ErrorHandling from "libs/error_handling";
 import * as Utils from "libs/utils";
+import FastTooltip from "components/fast_tooltip";
+import { Tooltip } from "antd";
+import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
+
 type OwnProps = {
   onClick: (arg0: React.MouseEvent<HTMLButtonElement, MouseEvent>) => Promise<any>;
   className?: string;
@@ -85,21 +88,15 @@ class SaveButton extends React.PureComponent<Props, State> {
       reportUnsavedDurationThresholdExceeded();
     }
 
-    const {
-      compressingBucketCount,
-      waitingForCompressionBucketCount,
-      outstandingBucketDownloadCount,
-    } = Model.getPushQueueStats();
+    const newSaveInfo = this.getPushQueueStats();
     this.setState({
       isStateSaved,
       showUnsavedWarning,
-      saveInfo: {
-        outstandingBucketDownloadCount,
-        compressingBucketCount,
-        waitingForCompressionBucketCount,
-      },
+      saveInfo: newSaveInfo,
     });
   };
+
+  getPushQueueStats = reuseInstanceOnEquality(Model.getPushQueueStats);
 
   getSaveButtonIcon() {
     if (this.state.isStateSaved) {
@@ -134,7 +131,7 @@ class SaveButton extends React.PureComponent<Props, State> {
           background: showUnsavedWarning ? "var(--ant-color-error)" : undefined,
         }}
       >
-        <Tooltip
+        <FastTooltip
           title={
             // Downloading the buckets often takes longer and the progress
             // is visible (as the count will decrease continually).
@@ -159,7 +156,7 @@ class SaveButton extends React.PureComponent<Props, State> {
           ) : (
             <span className="hide-on-small-screen">Save</span>
           )}
-        </Tooltip>
+        </FastTooltip>
         {showUnsavedWarning ? (
           <Tooltip
             open

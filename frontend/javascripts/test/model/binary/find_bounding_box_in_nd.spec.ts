@@ -1,5 +1,5 @@
 import test, { ExecutionContext } from "ava";
-import { BoundingBox2D, estimateBBoxInMask, findBBoxInMask } from "libs/find_bounding_box_in_nd";
+import { BoundingBox2D, estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
 import { V3 } from "libs/mjs";
 import ndarray from "ndarray";
 import { Vector2, Vector3 } from "oxalis/constants";
@@ -35,7 +35,7 @@ function isBBox2DWithinError(
   isVec2WithinError(t, a.max, b.max, error);
 }
 
-test("Test findBBoxInMask and estimateBBoxInMask", (t) => {
+test("Test estimateBBoxInMask", (t) => {
   const size = [1024, 1024, 5] as Vector3;
   const trueBBox = {
     min: [500, 400] as Vector2,
@@ -43,9 +43,6 @@ test("Test findBBoxInMask and estimateBBoxInMask", (t) => {
   };
   const mask = prepareMask(size, trueBBox);
 
-  const foundBBox = findBBoxInMask(mask);
-  t.deepEqual(trueBBox, foundBBox);
-
   const initialBBox = {
     min: [Math.floor(size[0] / 2), Math.floor(size[1] / 2)] as Vector2,
     max: [Math.floor(size[0] / 2) + 10, Math.floor(size[1] / 2) + 10] as Vector2,
@@ -56,7 +53,7 @@ test("Test findBBoxInMask and estimateBBoxInMask", (t) => {
   }
 });
 
-test("Test findBBoxInMask and estimateBBoxInMask: true bounding box touches border", (t) => {
+test("Test estimateBBoxInMask: true bounding box touches border", (t) => {
   const size = [1024, 1024, 5] as Vector3;
   const trueBBox = {
     min: [0, 400] as Vector2,
@@ -64,9 +61,6 @@ test("Test findBBoxInMask and estimateBBoxInMask: true bounding box touches bord
   };
   const mask = prepareMask(size, trueBBox);
 
-  const foundBBox = findBBoxInMask(mask);
-  t.deepEqual(trueBBox, foundBBox);
-
   const initialBBox = {
     min: [Math.floor(size[0] / 2), Math.floor(size[1] / 2)] as Vector2,
     max: [Math.floor(size[0] / 2) + 10, Math.floor(size[1] / 2) + 10] as Vector2,
@@ -77,16 +71,13 @@ test("Test findBBoxInMask and estimateBBoxInMask: true bounding box touches bord
   }
 });
 
-test("Test findBBoxInMask and estimateBBoxInMask: everything is true", (t) => {
+test("Test estimateBBoxInMask: everything is true", (t) => {
   const size = [1024, 1024, 5] as Vector3;
   const trueBBox = {
     min: [0, 0] as Vector2,
     max: [1024, 1024] as Vector2,
   };
   const mask = prepareMask(size, trueBBox);
-
-  const foundBBox = findBBoxInMask(mask);
-  t.deepEqual(trueBBox, foundBBox);
 
   const initialBBox = {
     min: [Math.floor(size[0] / 2), Math.floor(size[1] / 2)] as Vector2,

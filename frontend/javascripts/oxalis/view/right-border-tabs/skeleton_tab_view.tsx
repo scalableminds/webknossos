@@ -601,7 +601,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
   }
 
-  onSingleSelectTree = (treeId: number) => {
+  onSingleSelectTree = (treeId: number, dispatchSetActiveTree: boolean) => {
     if (!this.props.skeletonTracing) {
       return;
     }
@@ -609,7 +609,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     this.setState({
       selectedTrees: [treeId],
     });
-    this.props.onSetActiveTree(treeId);
+    if (dispatchSetActiveTree) {
+      this.props.onSetActiveTree(treeId);
+    }
   };
 
   onRangeSelectTrees = (ids: number[]) => {
@@ -930,7 +932,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     value={activeTreeName || activeGroupName}
                     disabled={noTreesAndGroups || isEditingDisabled}
                     title={isEditingDisabled ? isEditingDisabledMessage : undefined}
-                    style={{ width: "70%" }}
+                    style={{ width: "80%" }}
                   />
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeForward}

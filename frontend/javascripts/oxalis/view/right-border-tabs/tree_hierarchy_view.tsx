@@ -78,7 +78,7 @@ type Props = {
   sortBy: string;
   trees: TreeMap;
   selectedTreeIds: number[];
-  onSingleSelectTree: (treeId: number) => void;
+  onSingleSelectTree: (treeId: number, dispatchSetActiveTree: boolean) => void;
   onMultiSelectTree: (treeId: number) => void;
   onRangeSelectTrees: (treeIds: number[]) => void;
   deselectAllTrees: () => void;
@@ -132,7 +132,7 @@ function TreeHierarchyView(props: Props) {
 
       // Make sure to select the active tree (for highlighting etc)
       // Remember, the active tree can be changed by actions outside of this component
-      props.onSingleSelectTree(props.activeTreeId);
+      props.onSingleSelectTree(props.activeTreeId, false);
     }
   }, [props.activeTreeId, props.onSingleSelectTree]);
 
@@ -215,7 +215,7 @@ function TreeHierarchyView(props: Props) {
     } else {
       // Regular click on a single node without any multi-selection stuff.
       props.deselectAllTrees();
-      props.onSingleSelectTree(selectedTreeId);
+      props.onSingleSelectTree(selectedTreeId, true);
     }
   }
 

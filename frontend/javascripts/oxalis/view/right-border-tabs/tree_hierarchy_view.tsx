@@ -3,7 +3,6 @@ import {
   Dropdown,
   MenuProps,
   Modal,
-  Tooltip,
   notification,
   Tree as AntdTree,
   GetRef,
@@ -77,6 +76,7 @@ import {
   getContextMenuPositionFromEvent,
 } from "../context_menu";
 import Shortcut from "libs/shortcut_component";
+import FastTooltip from "components/fast_tooltip";
 
 type Props = {
   activeTreeId: number | null | undefined;
@@ -724,9 +724,9 @@ function TreeHierarchyView(props: Props) {
 
     const maybeProofreadingIcon =
       tree.type === TreeTypeEnum.AGGLOMERATE ? (
-        <Tooltip title="Agglomerate Skeleton">
+        <FastTooltip title="Agglomerate Skeleton">
           <i className="fas fa-clipboard-check icon-margin-right" />
-        </Tooltip>
+        </FastTooltip>
       ) : null;
 
     return (

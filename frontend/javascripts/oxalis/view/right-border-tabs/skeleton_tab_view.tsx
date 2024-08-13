@@ -32,6 +32,7 @@ import {
   createGroupToTreesMap,
   callDeep,
   MISSING_GROUP_ID,
+  GroupTypeEnum,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
@@ -119,6 +120,7 @@ type State = {
   selectedTrees: Array<number>;
   groupToDelete: number | null | undefined;
 };
+
 export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
   try {
     const wrappedAddTreesAndGroupsAction = (
@@ -344,21 +346,22 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   getTreeAndTreeGroupList = memoizeOne(
     (trees: TreeMap, treeGroups: Array<TreeGroup>, sortBy: string): Array<TreeOrTreeGroup> => {
       const groupToTreesMap = createGroupToTreesMap(trees);
-      const rootGroup = {
+      const rootGroup: TreeGroup = {
         name: "Root",
         groupId: MISSING_GROUP_ID,
         children: treeGroups,
+        isExpanded: true,
       };
 
       const makeTree = (tree: Tree) => ({
         name: tree.name,
-        type: "TREE",
+        type: GroupTypeEnum.TREE,
         id: tree.treeId,
       });
 
       const makeGroup = (group: TreeGroup) => ({
         name: group.name,
-        type: "GROUP",
+        type: GroupTypeEnum.GROUP,
         id: group.groupId,
       });
 
@@ -598,15 +601,39 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
   }
 
-  onSelectTree = (id: number) => {
+  onSingleSelectTree = (treeId: number, dispatchSetActiveTree: boolean) => {
+    if (!this.props.skeletonTracing) {
+      return;
+    }
+
+    this.setState({
+      selectedTrees: [treeId],
+    });
+    if (dispatchSetActiveTree) {
+      this.props.onSetActiveTree(treeId);
+    }
+  };
+
+  onRangeSelectTrees = (ids: number[]) => {
+    // Use this method only for range selecting multiple trees (SHIFT + click)
     const tracing = this.props.skeletonTracing;
 
     if (!tracing) {
       return;
     }
+    this.setState({
+      selectedTrees: ids,
+    });
+  };
 
+  onMultiSelectTree = (id: number) => {
+    // Use this method only for selecting individual trees for multi-select (CTRL + click)
+    const tracing = this.props.skeletonTracing;
     const { selectedTrees } = this.state;
 
+    if (!tracing) {
+      return;
+    }
     // If the tree was already selected
     if (selectedTrees.includes(id)) {
       // If the tree is the second last -> set remaining tree to be the active tree
@@ -627,21 +654,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     } else {
       const { activeTreeId } = tracing;
 
-      if (selectedTrees.length === 0) {
-        this.props.onDeselectActiveGroup();
-
-        /* If there are no selected trees and no active tree:
-           Set selected tree to the active tree */
-        if (activeTreeId == null) {
-          this.props.onSetActiveTree(id);
-          return;
-        }
-      }
-
-      // If the active node is selected, don't go into multi selection mode
-      if (activeTreeId === id) {
-        return;
-      }
+      this.props.onDeselectActiveGroup();
 
       if (selectedTrees.length === 0 && activeTreeId != null) {
         // If this is the first selected tree -> also select the active tree
@@ -666,7 +679,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   };
 
   handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
-    if (selectedElement.type === "TREE") {
+    if (selectedElement.type === GroupTypeEnum.TREE) {
       this.props.onSetActiveTree(selectedElement.id);
     } else {
       this.props.onSetActiveTreeGroup(selectedElement.id);
@@ -686,8 +699,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         activeGroupId={this.props.skeletonTracing.activeGroupId}
         allowUpdate={this.props.allowUpdate}
         sortBy={sortBy}
-        selectedTrees={this.state.selectedTrees}
-        onSelectTree={this.onSelectTree}
+        selectedTreeIds={this.state.selectedTrees}
+        onSingleSelectTree={this.onSingleSelectTree}
+        onMultiSelectTree={this.onMultiSelectTree}
+        onRangeSelectTrees={this.onRangeSelectTrees}
         deselectAllTrees={this.deselectAllTrees}
         onDeleteGroup={this.showDeleteGroupModal}
       />
@@ -773,7 +788,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   }
 
   getSelectedTreesAlert = () =>
-    this.state.selectedTrees.length > 0 ? (
+    this.state.selectedTrees.length > 1 ? (
       <Alert
         type="info"
         message={
@@ -917,7 +932,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     value={activeTreeName || activeGroupName}
                     disabled={noTreesAndGroups || isEditingDisabled}
                     title={isEditingDisabled ? isEditingDisabledMessage : undefined}
-                    style={{ width: "70%" }}
+                    style={{ width: "80%" }}
                   />
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeForward}

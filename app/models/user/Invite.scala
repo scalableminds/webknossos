@@ -65,8 +65,7 @@ class InviteService @Inject()(conf: WkConf,
       organization <- organizationDAO.findOne(invite._organization)
       _ = logger.info("sending invite mail")
       _ = Mailer ! Send(
-        defaultMails
-          .inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.name, sender.name))
+        defaultMails.inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.name, sender.name))
     } yield ()
 
   def removeExpiredInvites(): Fox[Unit] =

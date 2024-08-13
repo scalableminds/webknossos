@@ -610,16 +610,6 @@ function TreeHierarchyView(props: Props) {
             label: "Shuffle Tree Color",
           },
           {
-            key: "perftest",
-
-            onClick: () => {
-              perfTest();
-              hideContextMenu();
-            },
-            label: "do perf test",
-            title: "do perf test",
-          },
-          {
             key: "deleteTree",
             onClick: () => deleteTree(tree.treeId),
             title: "Delete Tree",

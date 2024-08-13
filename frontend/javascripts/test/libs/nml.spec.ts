@@ -126,11 +126,13 @@ const initialSkeletonTracing: SkeletonTracing = {
     {
       groupId: 1,
       name: "Axon 1",
+      isExpanded: true,
       children: [
         {
           groupId: 3,
           name: "Blah",
           children: [],
+          isExpanded: false,
         },
       ],
     },
@@ -138,6 +140,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       groupId: 2,
       name: "Axon 2",
       children: [],
+      isExpanded: true,
     },
   ],
   activeTreeId: 1,

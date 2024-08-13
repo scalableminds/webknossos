@@ -770,7 +770,6 @@ function TreeHierarchyView(props: Props) {
   }
 
   function setExpandedGroups(expandedTreeGroups: Set<Key>) {
-    console.log(expandedTreeGroups);
     dispatch(setExpandedTreeGroupsAction(expandedTreeGroups));
   }
 

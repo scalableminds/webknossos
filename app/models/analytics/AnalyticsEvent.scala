@@ -46,13 +46,17 @@ object AnalyticsEventJsonUserProperties {
   implicit val jsonWrites: OWrites[AnalyticsEventJsonUserProperties] = Json.writes[AnalyticsEventJsonUserProperties]
 
   implicit object analyticsEventJsonUserPropertiesReads extends Reads[AnalyticsEventJsonUserProperties] {
-    override def reads(json: JsValue): JsResult[AnalyticsEventJsonUserProperties] =
+    override def reads(json: JsValue): JsResult[AnalyticsEventJsonUserProperties] = {
+      val organizationIdLookup = (json \ "organization_id").orElse(json \ "organizationId")
       for {
-        organizationId <- (json \ "organization_id").orElse(json \ "organizationId").validate[String]
+        organizationIdObj <- organizationIdLookup.validateOpt[ObjectId]
+        organizationIdStr <- organizationIdLookup.validateOpt[String]
+        organizationId = if(organizationIdObj.isDefined) organizationIdObj.get.id else organizationIdStr.get
         isOrganizationAdmin <- (json \ "is_organization_admin").orElse(json \ "isOrganizationAdmin").validate[Boolean]
         isSuperUser <- (json \ "is_superuser").orElse(json \ "isSuperUser").validate[Boolean]
         webknossosUri <- (json \ "webknossos_uri").orElse(json \ "webknossosUri").validate[String]
       } yield AnalyticsEventJsonUserProperties(organizationId, isOrganizationAdmin, isSuperUser, webknossosUri)
+    }
   }
 }
 

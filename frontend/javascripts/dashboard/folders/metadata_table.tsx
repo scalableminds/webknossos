@@ -234,6 +234,8 @@ export default function MetadataTable({
   useEffect(
     () => () => {
       if (hasUnsavedChangesRef.current && metadataRef.current != null) {
+        // Clear all pending updates before sending final update before unmount.
+        saveMetadataDebounced.cancel();
         saveCurrentMetadata(
           datasetOrFolder,
           metadataRef.current,

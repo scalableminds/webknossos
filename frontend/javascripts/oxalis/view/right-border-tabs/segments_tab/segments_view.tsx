@@ -100,7 +100,6 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import {
   SegmentHierarchyNode,
   getBaseSegmentationName,
-  getKeyForGroupId,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import React, { Key } from "react";
@@ -113,6 +112,8 @@ import {
   createGroupToSegmentsMap,
   findParentIdForGroupId,
   getGroupByIdWithSubgroups,
+  getNodeKey,
+  GroupTypeEnum,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
 import { ChangeColorMenuItemContent } from "components/color_picker";
@@ -360,7 +361,7 @@ function renderEmptyMeshFileSelect() {
 const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
   return segmentGroups.reduce((expandedKeysAcc: string[], node) => {
     if (node.isExpanded || node.isExpanded == null) {
-      expandedKeysAcc.push(getKeyForGroupId(node.groupId));
+      expandedKeysAcc.push(getNodeKey(GroupTypeEnum.GROUP, node.groupId));
     }
     if (node.children.length > 0) expandedKeysAcc.push(...getExpandedKeys(node.children));
     return expandedKeysAcc;
@@ -369,7 +370,7 @@ const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
 
 const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[]) => {
   const expandedGroups = getExpandedKeys(segmentGroups);
-  expandedGroups.unshift(getKeyForGroupId(MISSING_GROUP_ID));
+  expandedGroups.unshift(getNodeKey(GroupTypeEnum.GROUP, MISSING_GROUP_ID));
   return expandedGroups;
 };
 
@@ -384,7 +385,7 @@ function constructTreeData(
     const treeNode: SegmentHierarchyNode = {
       ...group,
       title: group.name,
-      key: `group-${groupId}`,
+      key: getNodeKey(GroupTypeEnum.GROUP, groupId),
       id: groupId,
       type: "group",
       children: constructTreeData(group.children, groupToSegmentsMap).concat(
@@ -406,7 +407,7 @@ function constructTreeData(
 const rootGroup = {
   name: "Root",
   groupId: MISSING_GROUP_ID,
-  key: `group-${MISSING_GROUP_ID}`,
+  key: getNodeKey(GroupTypeEnum.GROUP, MISSING_GROUP_ID),
   children: [],
   isExpanded: true,
 };
@@ -547,12 +548,12 @@ class SegmentsView extends React.Component<Props, State> {
     if (groupId !== MISSING_GROUP_ID) {
       return getGroupByIdWithSubgroups(this.props.segmentGroups, groupId)
         .filter((group) => group !== groupId)
-        .map((group) => getKeyForGroupId(group));
+        .map((group) => getNodeKey(GroupTypeEnum.GROUP, group));
     }
     const allSegmentGroups = this.props.segmentGroups.flatMap((group) =>
       getGroupByIdWithSubgroups(this.props.segmentGroups, group.groupId),
     );
-    return allSegmentGroups.map((group) => getKeyForGroupId(group));
+    return allSegmentGroups.map((group) => getNodeKey(GroupTypeEnum.GROUP, group));
   };
 
   setExpandedGroups = (expandedGroups: Key[]) => {
@@ -1498,18 +1499,19 @@ class SegmentsView extends React.Component<Props, State> {
       (segmentId) => `segment-${segmentId}`,
     );
     if (this.props.selectedIds.group != null) {
-      return mappedIdsToKeys.concat(getKeyForGroupId(this.props.selectedIds.group));
+      return mappedIdsToKeys.concat(getNodeKey(GroupTypeEnum.GROUP, this.props.selectedIds.group));
     }
     return mappedIdsToKeys;
   };
 
   getSegmentOrGroupIdsForKeys = (segmentOrGroupKeys: Key[]) => {
     const selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
+    const groupPrefix = "Group-";
     segmentOrGroupKeys.forEach((key) => {
       const keyAsString = String(key);
-      if (keyAsString.startsWith("group-")) {
-        // Note that negative ids can be found here, which is why group- is used as a splitter
-        const idWithSign = keyAsString.split("group-")[1];
+      if (keyAsString.startsWith(groupPrefix)) {
+        // Note that negative ids can be found here, which is why Group- is used as a splitter
+        const idWithSign = keyAsString.split(groupPrefix)[1];
         if (isNumber(parseInt(idWithSign))) {
           selectedIds.group = parseInt(idWithSign);
         }
@@ -1967,7 +1969,7 @@ class SegmentsView extends React.Component<Props, State> {
     const children: Key[] = this.getKeysOfSubGroups(groupId);
     const expandedGroupsSet = new Set(this.state.expandedGroupKeys);
     const areAllChildrenExpanded = children.every((childNode) => expandedGroupsSet.has(childNode));
-    const isGroupItselfExpanded = expandedGroupsSet.has(getKeyForGroupId(groupId));
+    const isGroupItselfExpanded = expandedGroupsSet.has(getNodeKey(GroupTypeEnum.GROUP, groupId));
     if (areAllChildrenExpanded && isGroupItselfExpanded) {
       return null;
     }
@@ -1975,7 +1977,8 @@ class SegmentsView extends React.Component<Props, State> {
       key: "expandAll",
       onClick: () => {
         const allExpandedGroups = children.concat(this.state.expandedGroupKeys);
-        if (!isGroupItselfExpanded) allExpandedGroups.push(getKeyForGroupId(groupId));
+        if (!isGroupItselfExpanded)
+          allExpandedGroups.push(getNodeKey(GroupTypeEnum.GROUP, groupId));
         this.setExpandedGroups(allExpandedGroups);
         this.hideContextMenu();
       },
@@ -1988,7 +1991,7 @@ class SegmentsView extends React.Component<Props, State> {
     const children = this.getKeysOfSubGroups(groupId);
     const expandedKeySet = new Set(this.state.expandedGroupKeys);
     const areAllChildrenCollapsed = children.every((childNode) => !expandedKeySet.has(childNode));
-    const isGroupItselfCollapsed = !expandedKeySet.has(getKeyForGroupId(groupId));
+    const isGroupItselfCollapsed = !expandedKeySet.has(getNodeKey(GroupTypeEnum.GROUP, groupId));
     if (areAllChildrenCollapsed || isGroupItselfCollapsed) {
       return null;
     }

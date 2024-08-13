@@ -470,10 +470,6 @@ function TreeHierarchyView(props: Props) {
     selectGroupById(newGroupId);
   }
 
-  function deleteGroup(groupId: number) {
-    props.onDeleteGroup(groupId);
-  }
-
   function shuffleTreeGroupColors(groupId: number) {
     const groupToTreeMap = createGroupToTreesMap(props.trees);
     const groupIdWithSubgroups = getGroupByIdWithSubgroups(props.treeGroups, groupId);
@@ -564,7 +560,7 @@ function TreeHierarchyView(props: Props) {
         {
           key: "delete",
           disabled: isEditingDisabled,
-          onClick: () => deleteGroup(id),
+          onClick: () => props.onDeleteGroup(id),
           icon: <DeleteOutlined />,
           label: "Delete group",
         },

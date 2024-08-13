@@ -26,7 +26,7 @@ test("activeUser()", async (t) => {
     id: "misc-activeUser",
   });
 });
-test.skip("getFeatureToggles()", async (t) => {
+test("getFeatureToggles()", async (t) => {
   const features = await api.getFeatureToggles();
   writeTypeCheckingFile(features, "feature-toggles", "APIFeatureToggles");
   t.snapshot(features, {

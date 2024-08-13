@@ -11,7 +11,6 @@ import {
   Row,
   Divider,
   Popconfirm,
-  Button,
 } from "antd";
 import {
   ClearOutlined,
@@ -1404,19 +1403,6 @@ function QuickSelectSettingsPopover() {
           </ButtonComponent>
         </Popover>
       </Wrapper>
-      {/* todop: remove */}
-      {activeUser && (
-        <Button
-          onClick={() => {
-            const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
-              hasSeenSegmentAnythingWithDepth: false,
-            });
-            dispatch(setActiveUserAction(newUserSync));
-          }}
-        >
-          Reset NUX
-        </Button>
-      )}
     </>
   );
 }

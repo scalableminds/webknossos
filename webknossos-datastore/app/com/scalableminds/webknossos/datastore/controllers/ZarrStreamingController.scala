@@ -80,11 +80,11 @@ class ZarrStreamingController @Inject()(
                                                                                   datasetName,
                                                                                   dataLayerName) ?~> Messages(
           "dataSource.notFound") ~> NOT_FOUND
-        omeNgffHeaderV2 = NgffMetadataV0_5.fromNameVoxelSizeAndMags(dataLayerName,
+        omeNgffHeaderV0_5 = NgffMetadataV0_5.fromNameVoxelSizeAndMags(dataLayerName,
                                                                     dataSource.scale,
                                                                     dataLayer.resolutions,
                                                                     dataLayer.additionalAxes)
-        zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeaderV2))
+        zarr3GroupHeader = Zarr3GroupHeader(3, "group", Some(omeNgffHeaderV0_5))
       } yield Ok(Json.toJson(zarr3GroupHeader))
     }
   }

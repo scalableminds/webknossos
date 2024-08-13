@@ -51,7 +51,7 @@ object AnalyticsEventJsonUserProperties {
       for {
         organizationIdObj <- organizationIdLookup.validateOpt[ObjectId]
         organizationIdStr <- organizationIdLookup.validateOpt[String]
-        organizationId = if(organizationIdObj.isDefined) organizationIdObj.get.id else organizationIdStr.get
+        organizationId = if (organizationIdObj.isDefined) organizationIdObj.get.id else organizationIdStr.get
         isOrganizationAdmin <- (json \ "is_organization_admin").orElse(json \ "isOrganizationAdmin").validate[Boolean]
         isSuperUser <- (json \ "is_superuser").orElse(json \ "isSuperUser").validate[Boolean]
         webknossosUri <- (json \ "webknossos_uri").orElse(json \ "webknossosUri").validate[String]

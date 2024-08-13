@@ -239,28 +239,33 @@ function TreeHierarchyView(props: Props) {
 
   function setExpansionOfAllSubgroupsTo(parentGroup: TreeNode, expanded: boolean) {
     if (parentGroup.id === MISSING_GROUP_ID) {
-      const newGroups = mapGroups(props.treeGroups, (group) => {
-        if (group.isExpanded !== expanded) {
-          return { ...group, isExpanded: expanded };
-        }
-        return group;
-      });
-      setUpdateTreeGroups(newGroups);
-      return;
-    }
-    const subGroups = getGroupByIdWithSubgroups(props.treeGroups, parentGroup.id);
-    const subGroupsMap = new Set(subGroups);
-    // If the subgroups should be collapsed, do not collapse the group itself.
-    // Do expand the group if the subgroups are expanded though.
-    if (expanded === false) subGroupsMap.delete(parentGroup.id);
-    const newGroups = mapGroups(props.treeGroups, (group) => {
-      if (subGroupsMap.has(group.groupId) && expanded !== group.isExpanded) {
-        return { ...group, isExpanded: expanded };
+      if (!expanded) {
+        setExpandedGroups(new Set([]));
       } else {
-        return group;
+        const newGroups = props.treeGroups.flatMap((group) =>
+          getGroupByIdWithSubgroups(props.treeGroups, group.groupId),
+        );
+        const expandedGroupKeys = newGroups.map((groupId) =>
+          getNodeKey(GroupTypeEnum.GROUP, groupId),
+        );
+        setExpandedGroups(new Set(expandedGroupKeys));
       }
-    });
-    setUpdateTreeGroups(newGroups);
+    } else {
+      // group is not the root group
+      const subGroups = getGroupByIdWithSubgroups(props.treeGroups, parentGroup.id).map((groupId) =>
+        getNodeKey(GroupTypeEnum.GROUP, groupId),
+      );
+      if (expanded) {
+        const newExpandedKeys = new Set([...expandedNodeKeys, ...subGroups]);
+        setExpandedGroups(newExpandedKeys);
+      } else {
+        const parentGroupNode = getNodeKey(GroupTypeEnum.GROUP, parentGroup.id);
+        // If the subgroups should be collapsed, do not collapse the group itself, if it was expanded before.
+        const subGroupsWithoutParent = subGroups.filter((groupKey) => groupKey !== parentGroupNode);
+        const newExpandedKeys = _.difference(expandedNodeKeys, subGroupsWithoutParent);
+        setExpandedGroups(new Set(newExpandedKeys));
+      }
+    }
   }
 
   function onMoveWithContextAction(targetParentNode: TreeNode) {
@@ -765,6 +770,7 @@ function TreeHierarchyView(props: Props) {
   }
 
   function setExpandedGroups(expandedTreeGroups: Set<Key>) {
+    console.log(expandedTreeGroups);
     dispatch(setExpandedTreeGroupsAction(expandedTreeGroups));
   }
 

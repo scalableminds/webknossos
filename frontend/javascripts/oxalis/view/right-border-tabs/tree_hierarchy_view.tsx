@@ -157,7 +157,7 @@ function TreeHierarchyView(props: Props) {
       ).map((node) => node.key);
       subGroupKeys.forEach((key) => expandedKeySet.delete(key));
     }
-    setTreeGroupExpansion(expandedKeySet);
+    setExpandedGroups(expandedKeySet);
   };
 
   const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
@@ -764,8 +764,8 @@ function TreeHierarchyView(props: Props) {
     dispatch(setTreeGroupsAction(treeGroups));
   }
 
-  function setTreeGroupExpansion(updatedTreeGroups: Set<Key>) {
-    dispatch(setExpandedTreeGroupsAction(updatedTreeGroups));
+  function setExpandedGroups(expandedTreeGroups: Set<Key>) {
+    dispatch(setExpandedTreeGroupsAction(expandedTreeGroups));
   }
 
   function onBatchActions(actions: Action[], actionName: string) {

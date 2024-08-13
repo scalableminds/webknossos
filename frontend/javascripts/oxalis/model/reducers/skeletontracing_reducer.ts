@@ -500,9 +500,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
           if (currentTreeGroups == null) {
             return state;
           }
-          const expandedKeySet = new Set(expandedGroups);
           const newGroups = mapGroups(currentTreeGroups, (group) => {
-            const shouldBeExpanded = expandedKeySet.has(
+            const shouldBeExpanded = expandedGroups.has(
               getNodeKey(GroupTypeEnum.GROUP, group.groupId),
             );
             if (shouldBeExpanded !== group.isExpanded) {

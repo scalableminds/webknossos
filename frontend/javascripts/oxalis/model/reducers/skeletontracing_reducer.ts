@@ -36,12 +36,17 @@ import {
   getTreesWithType,
   getNodeAndTree,
   isSkeletonLayerTransformed,
+  mapGroups,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import ColorGenerator from "libs/color_generator";
 import Constants, { AnnotationToolEnum, TreeTypeEnum } from "oxalis/constants";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { userSettings } from "types/schemas/user_settings.schema";
+import {
+  GroupTypeEnum,
+  getNodeKey,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -486,6 +491,36 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
               }),
             )
             .getOrElse(state);
+        }
+
+        case "SET_EXPANDED_TREE_GROUPS": {
+          const { expandedGroups } = action;
+
+          const currentTreeGroups = state.tracing?.skeleton?.treeGroups;
+          if (currentTreeGroups == null) {
+            return state;
+          }
+          const expandedKeySet = new Set(expandedGroups);
+          const newGroups = mapGroups(currentTreeGroups, (group) => {
+            const shouldBeExpanded = expandedKeySet.has(
+              getNodeKey(GroupTypeEnum.GROUP, group.groupId),
+            );
+            if (shouldBeExpanded !== group.isExpanded) {
+              return { ...group, isExpanded: shouldBeExpanded };
+            } else {
+              return group;
+            }
+          });
+
+          return update(state, {
+            tracing: {
+              skeleton: {
+                treeGroups: {
+                  $set: newGroups,
+                },
+              },
+            },
+          });
         }
 
         case "TOGGLE_ALL_TREES": {

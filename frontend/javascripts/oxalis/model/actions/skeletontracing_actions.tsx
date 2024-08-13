@@ -1,5 +1,5 @@
 import { Modal } from "antd";
-import React from "react";
+import React, { Key } from "react";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
 import type { Vector3, TreeType } from "oxalis/constants";
 import {
@@ -29,6 +29,7 @@ type DeleteBranchPointAction = ReturnType<typeof deleteBranchPointAction>;
 type DeleteBranchpointByIdAction = ReturnType<typeof deleteBranchpointByIdAction>;
 type ToggleTreeAction = ReturnType<typeof toggleTreeAction>;
 type SetTreeVisibilityAction = ReturnType<typeof setTreeVisibilityAction>;
+type SetExpandedTreeGroupsAction = ReturnType<typeof setExpandedTreeGroupsAction>;
 type ToggleAllTreesAction = ReturnType<typeof toggleAllTreesAction>;
 type ToggleInactiveTreesAction = ReturnType<typeof toggleInactiveTreesAction>;
 type ToggleTreeGroupAction = ReturnType<typeof toggleTreeGroupAction>;
@@ -107,6 +108,7 @@ export type SkeletonTracingAction =
   | ToggleTreeAction
   | ToggleAllTreesAction
   | SetTreeVisibilityAction
+  | SetExpandedTreeGroupsAction
   | ToggleInactiveTreesAction
   | ToggleTreeGroupAction
   | NoAction
@@ -335,6 +337,12 @@ export const toggleTreeAction = (
     type: "TOGGLE_TREE",
     treeId,
     timestamp,
+  }) as const;
+
+export const setExpandedTreeGroupsAction = (expandedGroups: Set<Key>) =>
+  ({
+    type: "SET_EXPANDED_TREE_GROUPS",
+    expandedGroups,
   }) as const;
 
 export const setTreeVisibilityAction = (treeId: number | null | undefined, isVisible: boolean) =>

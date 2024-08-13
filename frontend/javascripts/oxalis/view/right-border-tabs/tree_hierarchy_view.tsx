@@ -20,7 +20,7 @@ import {
 } from "@ant-design/icons";
 import { useDispatch } from "react-redux";
 import { batchActions } from "redux-batched-actions";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Key } from "react";
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
 import {
@@ -62,6 +62,7 @@ import {
   shuffleAllTreeColorsAction,
   setTreeEdgeVisibilityAction,
   setTreeTypeAction,
+  setExpandedTreeGroupsAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import messages from "messages";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
@@ -156,15 +157,7 @@ function TreeHierarchyView(props: Props) {
       ).map((node) => node.key);
       subGroupKeys.forEach((key) => expandedKeySet.delete(key));
     }
-    const newGroups = mapGroups(props.treeGroups, (group) => {
-      const shouldBeExpanded = expandedKeySet.has(getNodeKey(GroupTypeEnum.GROUP, group.groupId));
-      if (shouldBeExpanded !== group.isExpanded) {
-        return { ...group, isExpanded: shouldBeExpanded };
-      } else {
-        return group;
-      }
-    });
-    setUpdateTreeGroups(newGroups);
+    setTreeGroupExpansion(expandedKeySet);
   };
 
   const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
@@ -769,6 +762,10 @@ function TreeHierarchyView(props: Props) {
 
   function setUpdateTreeGroups(treeGroups: TreeGroup[]) {
     dispatch(setTreeGroupsAction(treeGroups));
+  }
+
+  function setTreeGroupExpansion(updatedTreeGroups: Set<Key>) {
+    dispatch(setExpandedTreeGroupsAction(updatedTreeGroups));
   }
 
   function onBatchActions(actions: Action[], actionName: string) {

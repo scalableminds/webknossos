@@ -22,10 +22,10 @@ ALTER TABLE webknossos.datasets DROP CONSTRAINT organization_ref;
 ALTER TABLE webknossos.teams DROP CONSTRAINT organization_ref;
 ALTER TABLE webknossos.users DROP CONSTRAINT organization_ref;
 ALTER TABLE webknossos.experienceDomains DROP CONSTRAINT organization_ref;
-ALTER TABLE webknossos.voxelytics_runs DROP CONSTRAINT voxelytics_runs__organization_fkey;
-ALTER TABLE webknossos.voxelytics_workflows DROP CONSTRAINT voxelytics_workflows__organization_fkey;
-ALTER TABLE webknossos.aiModels DROP CONSTRAINT aimodels__organization_fkey;
-ALTER TABLE webknossos.aiInferences DROP CONSTRAINT aiinferences__organization_fkey;
+ALTER TABLE webknossos.voxelytics_runs DROP CONSTRAINT organization_ref;
+ALTER TABLE webknossos.voxelytics_workflows DROP CONSTRAINT organization_ref;
+ALTER TABLE webknossos.aiModels DROP CONSTRAINT organization_ref;
+ALTER TABLE webknossos.aiInferences DROP CONSTRAINT organization_ref;
 
 -- Revert changes to the organization column in various tables
 UPDATE webknossos.datasets SET _organization = (SELECT _id_old FROM webknossos.organizations WHERE _id = _organization);

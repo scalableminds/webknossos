@@ -69,7 +69,6 @@ import { ChangeColorMenuItemContent } from "components/color_picker";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 import { ColoredDotIcon } from "./segments_tab/segment_list_item";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
-import { sleep } from "libs/utils";
 import {
   ContextMenuContext,
   GenericContextMenuContainer,
@@ -167,50 +166,15 @@ function TreeHierarchyView(props: Props) {
     // of the context menu. This causes the context menu to instantly close after opening.
     // Therefore delay the state update to delay that the context menu is rendered.
     // Thus the context overlay does not get the right click as an event and therefore does not close.
-    setTimeout(
-      // todop: still necessary?
-      () => {
-        setContextMenuPosition([xPos, yPos]);
-        setMenu(menu);
-      },
-      0,
-    );
+    setTimeout(() => {
+      setContextMenuPosition([xPos, yPos]);
+      setMenu(menu);
+    }, 0);
   }, []);
 
   const hideContextMenu = useCallback(() => {
     setContextMenuPosition(null);
     setMenu(null);
-  }, []);
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
-  const perfTest = useCallback(async function perfTest() {
-    if (treeRef.current == null) {
-      return;
-    }
-    await sleep(1000);
-    console.time("perfTest");
-    const start = performance.now();
-    let counter = 0;
-    const totalThreshold = 100;
-    for (const tree of Object.values(props.trees)) {
-      const activeTreeKey = getNodeKey(GroupTypeEnum.TREE, tree.treeId);
-      treeRef.current.scrollTo({ key: activeTreeKey, align: "auto" });
-      await sleep(0);
-      counter++;
-      if (counter % 10 === 0) {
-        console.log(
-          "counter:",
-          counter,
-          "| estimated total: ",
-          ((performance.now() - start) / counter) * totalThreshold,
-        );
-      }
-      if (counter >= totalThreshold) {
-        break;
-      }
-    }
-    console.timeEnd("perfTest");
-    console.log("scrolled to", counter, "elements");
   }, []);
 
   const treeRef = useRef<GetRef<typeof AntdTree>>(null);
@@ -512,16 +476,6 @@ function TreeHierarchyView(props: Props) {
     const createMenu = (): MenuProps => ({
       items: [
         {
-          key: "perftest",
-
-          onClick: () => {
-            perfTest();
-            hideContextMenu();
-          },
-          label: "do perf test",
-          title: "do perf test",
-        },
-        {
           key: "create",
           onClick: () => {
             createGroup(id);
@@ -622,7 +576,6 @@ function TreeHierarchyView(props: Props) {
     );
   }
 
-  // todop: use callback?
   function renderTreeNode(node: TreeNode): React.ReactNode {
     const tree = props.trees[node.id];
     if (!tree) return null;

@@ -1309,13 +1309,13 @@ export function reserveDatasetUpload(
 
 export type OngoingUpload = {
   uploadId: string;
-  dataSourceId: { name: string; organizationName: string };
+  datasetId: { name: string; organizationName: string };
   folderId: string;
   created: number;
   allowedTeams: Array<string>;
 };
 
-type OldDataSourceIdFormat = { name: string; team: string };
+type OldDatasetIdFormat = { name: string; team: string };
 
 export function getOngoingUploads(
   datastoreHost: string,
@@ -1327,11 +1327,11 @@ export function getOngoingUploads(
       {
         host: datastoreHost,
       },
-    )) as Array<OngoingUpload & { dataSourceId: OldDataSourceIdFormat }>;
+    )) as Array<OngoingUpload & { datasetId: OldDatasetIdFormat }>;
     // Rename "team" to "organization" as this is the actual used current naming.
-    return ongoingUploads.map(({ dataSourceId: { name, team }, ...rest }) => ({
+    return ongoingUploads.map(({ datasetId: { name, team }, ...rest }) => ({
       ...rest,
-      dataSourceId: { name, organizationName: team },
+      datasetId: { name, organizationName: team },
     }));
   });
 }

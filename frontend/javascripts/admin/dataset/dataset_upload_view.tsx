@@ -100,7 +100,7 @@ type State = {
   uploadProgress: number;
   selectedTeams: APITeam | Array<APITeam>;
   possibleTeams: Array<APITeam>;
-  uploadId: string | null;
+  uploadId: string | undefined;
   continuingOldUpload: boolean;
   resumableUpload: any;
   datastoreUrl: string;
@@ -186,7 +186,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     uploadProgress: 0,
     selectedTeams: [],
     possibleTeams: [],
-    uploadId: "",
+    uploadId: undefined,
     resumableUpload: {},
     datastoreUrl: "",
     ongoingUploads: [],
@@ -236,7 +236,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       return;
     }
     const ongoingUploads = await getOngoingUploads(datastoreUrl, activeOrga);
-    // Sort by created
+    // Sort so that most-recent uploads come first
     ongoingUploads.sort((a, b) => b.created - a.created);
     this.setState({ ongoingUploads });
   };
@@ -392,7 +392,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             isUploading: false,
             isFinishing: false,
             continuingOldUpload: false,
-            uploadId: null,
+            uploadId: undefined,
           });
 
           if (maybeError == null) {
@@ -417,7 +417,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             isFinishing: false,
             isRetrying: false,
             continuingOldUpload: false,
-            uploadId: null,
+            uploadId: undefined,
             uploadProgress: 0,
           });
         },
@@ -472,7 +472,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       isUploading: false,
       isFinishing: false,
       isRetrying: false,
-      uploadId: null,
+      uploadId: undefined,
       uploadProgress: 0,
     });
     Toast.success(messages["dataset.upload_cancel"]);
@@ -728,7 +728,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             <Alert
               message={
                 <>
-                  Ongoing unfinished Dataset Uploads{" "}
+                  Unfinished Dataset Uploads{" "}
                   <Tooltip
                     title="This list shows all uploads from the past two weeks that were started by you but not completed. You can try continuing these uploads."
                     placement="right"
@@ -745,7 +745,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 >
                   {this.state.ongoingUploads.map((ongoingUpload) => (
                     <Row key={ongoingUpload.uploadId} gutter={16}>
-                      <Col span={8}>{ongoingUpload.dataSourceId.name}</Col>
+                      <Col span={8}>{ongoingUpload.datasetId.name}</Col>
                       <Col span={8}>
                         <Button
                           type="link"
@@ -755,7 +755,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                               return;
                             }
                             currentFormRef.setFieldsValue({
-                              name: ongoingUpload.dataSourceId.name,
+                              name: ongoingUpload.datasetId.name,
                               targetFolderId: ongoingUpload.folderId,
                               initialTeams: this.state.possibleTeams.filter((team) =>
                                 ongoingUpload.allowedTeams.includes(team.id),
@@ -766,7 +766,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                               continuingOldUpload: true,
                             });
                             Toast.info(
-                              "To continue the selected Upload please make sure to select the same file(s) as before. Else unexpected behavior may occur.",
+                              "To continue the selected upload please make sure to select the same file(s) as before. Otherwise, the upload may be corrupted.",
                             );
                           }}
                         >

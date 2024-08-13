@@ -540,7 +540,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           ),
           icon: <ScanOutlined />,
           onClick: () => this.onRegisterSegmentsForBB(this.props.value, name),
-          disabled: this.props.visibleSegmentationLayer == null,
+          disabled: this.props.visibleSegmentationLayer == null || disabled,
         },
         {
           key: "goToCenter",

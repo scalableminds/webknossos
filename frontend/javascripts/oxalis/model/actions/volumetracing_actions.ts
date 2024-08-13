@@ -8,6 +8,7 @@ import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actio
 import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { batchActions } from "redux-batched-actions";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import { Key } from "react";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
@@ -42,6 +43,7 @@ export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
+export type SetExpandedSegmentGroupsAction = ReturnType<typeof setExpandedSegmentGroupsAction>;
 export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappingAction>;
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
 
@@ -85,6 +87,7 @@ export type VolumeTracingAction =
   | RemoveSegmentAction
   | DeleteSegmentDataAction
   | SetSegmentGroupsAction
+  | SetExpandedSegmentGroupsAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
@@ -105,6 +108,7 @@ export const VolumeTracingSaveRelevantActions = [
   "FINISH_ANNOTATION_STROKE",
   "UPDATE_SEGMENT",
   "SET_SEGMENT_GROUPS",
+  "SET_EXPANDED_SEGMENT_GROUPS",
   "REMOVE_SEGMENT",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
@@ -281,6 +285,13 @@ export const setSegmentGroupsAction = (
     segmentGroups,
     layerName,
     calledFromUndoSaga,
+  }) as const;
+
+export const setExpandedSegmentGroupsAction = (expandedSegmentGroups: Key[], layerName: string) =>
+  ({
+    type: "SET_EXPANDED_SEGMENT_GROUPS",
+    expandedSegmentGroups,
+    layerName,
   }) as const;
 
 export const interpolateSegmentationLayerAction = () =>

@@ -146,6 +146,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "CREATE_COMMENT",
   "DELETE_COMMENT",
   "SET_TREE_GROUPS",
+  "SET_EXPANDED_TREE_GROUPS",
   "SET_TREE_GROUP",
   "SET_MERGER_MODE_ENABLED",
   "TOGGLE_TREE",

@@ -81,7 +81,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
   setSelectedSegmentsOrGroupAction,
-  setSegmentGroupsAction,
+  setExpandedSegmentGroupsAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type {
@@ -124,7 +124,6 @@ import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { DataNode } from "antd/lib/tree";
 import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { ValueOf } from "types/globals";
-import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   ContextMenuContext,
   GenericContextMenuContainer,
@@ -373,7 +372,7 @@ const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[]) => {
   return expandedGroups;
 };
 
-const getKeyForGroupId = (groupId: number) => `group-${groupId}`;
+export const getKeyForGroupId = (groupId: number) => `group-${groupId}`;
 
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
@@ -557,39 +556,19 @@ class SegmentsView extends React.Component<Props, State> {
     return allSegmentGroups.map((group) => getKeyForGroupId(group));
   };
 
-  setExpandedGroups = (newExpandedGroups: Key[]) => {
+  setExpandedGroups = (expandedGroups: Key[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
-    const expandedKeySet = new Set(newExpandedGroups);
-    const newGroups = mapGroups(this.props.segmentGroups, (group) => {
-      const shouldBeExpanded = expandedKeySet.has(getKeyForGroupId(group.groupId));
-      if (shouldBeExpanded !== group.isExpanded) {
-        // Close all groups that are not in the expanded list so this method
-        // can be called for every update, e.g. when a group is collapsed.
-        return {
-          ...group,
-          isExpanded: shouldBeExpanded,
-        };
-      } else {
-        return group;
-      }
-    });
-    Store.dispatch(setSegmentGroupsAction(newGroups, this.props.visibleSegmentationLayer?.name));
+    Store.dispatch(
+      setExpandedSegmentGroupsAction(expandedGroups, this.props.visibleSegmentationLayer?.name),
+    );
   };
 
-  collapseGroups = (groupsToCollapse: Key[]) => {
+  collapseGroups = (groupsToCollapse: string[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
-    const groupsToCollapseSet = new Set(groupsToCollapse);
-    const newGroups = mapGroups(this.props.segmentGroups, (group) => {
-      if (groupsToCollapseSet.has(getKeyForGroupId(group.groupId)) && group.isExpanded) {
-        return {
-          ...group,
-          isExpanded: false,
-        };
-      } else {
-        return group;
-      }
-    });
-    Store.dispatch(setSegmentGroupsAction(newGroups, this.props.visibleSegmentationLayer?.name));
+    const newExpandedGroups = _.difference(this.state.expandedGroupKeys, groupsToCollapse);
+    Store.dispatch(
+      setExpandedSegmentGroupsAction(newExpandedGroups, this.props.visibleSegmentationLayer.name),
+    );
   };
 
   onSelectTreeItem = (

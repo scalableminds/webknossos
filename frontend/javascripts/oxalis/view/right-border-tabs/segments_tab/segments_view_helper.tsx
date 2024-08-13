@@ -144,3 +144,5 @@ export function withMappingActivationConfirmation(
 
   return confirmMappingActivation;
 }
+
+export const getKeyForGroupId = (groupId: number) => `group-${groupId}`;

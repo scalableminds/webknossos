@@ -100,6 +100,7 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import {
   SegmentHierarchyNode,
   getBaseSegmentationName,
+  getKeyForGroupId,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import React, { Key } from "react";
@@ -371,8 +372,6 @@ const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[]) => {
   expandedGroups.unshift(getKeyForGroupId(MISSING_GROUP_ID));
   return expandedGroups;
 };
-
-export const getKeyForGroupId = (groupId: number) => `group-${groupId}`;
 
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],

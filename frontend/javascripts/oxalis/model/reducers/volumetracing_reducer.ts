@@ -55,7 +55,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { mapGroups } from "../accessors/skeletontracing_accessor";
 import { findParentIdForGroupId } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { getKeyForGroupId } from "oxalis/view/right-border-tabs/segments_tab/segments_view";
+import { getKeyForGroupId } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";

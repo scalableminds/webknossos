@@ -246,10 +246,10 @@ function TreeHierarchyView(props: Props) {
     if (treeRef.current && props.activeTreeId) {
       const activeTreeKey = getNodeKey(GroupTypeEnum.TREE, props.activeTreeId);
 
-      // For some React rendering/timing  reasons, the target element might  not be rendered yet. That messes with calculcating the offsets for srolling. Hence delay this a bit
+      // For some React rendering/timing reasons, the target element might not be rendered yet. That messes with calculcating the offsets for srolling. Hence delay this a bit
       setTimeout(() => {
         if (treeRef.current) treeRef.current.scrollTo({ key: activeTreeKey, align: "auto" });
-      });
+      }, 30);
 
       // Make sure to select the active tree (for highlighting etc)
       // Remember, the active tree can be changed by actions outside of this component
@@ -497,20 +497,6 @@ function TreeHierarchyView(props: Props) {
       setTreeColorAction(tree.treeId, color),
     );
     onBatchActions(setTreeColorActions, "SET_TREE_COLOR");
-  }
-
-  function handleMeasureSkeletonLength(treeId: number, treeName: string) {
-    const dataSourceUnit = Store.getState().dataset.dataSource.scale.unit;
-    const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
-
-    notification.open({
-      message: messages["tracing.tree_length_notification"](
-        treeName,
-        formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[dataSourceUnit]),
-        formatLengthAsVx(lengthInVx),
-      ),
-      icon: <i className="fas fa-ruler" />,
-    });
   }
 
   function renderGroupNode(node: TreeNode) {
@@ -831,6 +817,20 @@ function TreeHierarchyView(props: Props) {
     props.deselectAllTrees();
     dispatch(deleteTreeAction(treeId));
   }
+}
+
+function handleMeasureSkeletonLength(treeId: number, treeName: string) {
+  const dataSourceUnit = Store.getState().dataset.dataSource.scale.unit;
+  const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
+
+  notification.open({
+    message: messages["tracing.tree_length_notification"](
+      treeName,
+      formatNumberToLength(lengthInUnit, LongUnitToShortUnitMap[dataSourceUnit]),
+      formatLengthAsVx(lengthInVx),
+    ),
+    icon: <i className="fas fa-ruler" />,
+  });
 }
 
 function setActiveTree(treeId: number) {

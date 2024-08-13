@@ -574,13 +574,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
     const state = Store.getState();
-    const nml = serializeToNml(
-      state,
-      this.props.annotation,
-      skeletonTracing,
-      buildInfo,
-      applyTransforms,
-    );
+    const nml = serializeToNml(state, state.tracing, skeletonTracing, buildInfo, applyTransforms);
     this.setState({
       isDownloading: false,
     });
@@ -1003,7 +997,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  annotation: state.tracing,
   allowUpdate: state.tracing.restrictions.allowUpdate,
   skeletonTracing: state.tracing.skeleton,
   userConfiguration: state.userConfiguration,

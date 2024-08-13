@@ -120,7 +120,6 @@ export default function BoundingBoxTab() {
       render: (_id: number, bb: UserBoundingBox) => (
         <UserBoundingBoxInput
           key={bb.id}
-          tooltipTitle="Format: minX, minY, minZ, width, height, depth"
           value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
           color={bb.color}
           name={bb.name}

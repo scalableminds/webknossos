@@ -71,6 +71,12 @@ import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 import { ColoredDotIcon } from "./segments_tab/segment_list_item";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import { sleep } from "libs/utils";
+import {
+  ContextMenuContext,
+  GenericContextMenuContainer,
+  getContextMenuPositionFromEvent,
+} from "../context_menu";
+import Shortcut from "libs/shortcut_component";
 
 type Props = {
   activeTreeId: number | null | undefined;
@@ -87,11 +93,94 @@ type Props = {
   allowUpdate: boolean;
 };
 
+function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
+  const inputRef = React.useContext(ContextMenuContext);
+  const { contextMenuPosition, hideContextMenu } = propsWithInputRef;
+  let menu: MenuProps = { items: [] };
+
+  if (contextMenuPosition != null) {
+    menu = propsWithInputRef.menu || {
+      onClick: hideContextMenu,
+      style: {
+        borderRadius: 6,
+      },
+      mode: "vertical",
+      items: [
+        {
+          key: "view",
+          disabled: true,
+          label: "No actions available.",
+        },
+      ],
+    };
+  }
+
+  if (inputRef == null || inputRef.current == null) return null;
+  const refContent = inputRef.current;
+
+  return (
+    <React.Fragment>
+      <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
+      <Dropdown
+        menu={menu}
+        overlayClassName="dropdown-overlay-container-for-context-menu"
+        open={contextMenuPosition != null}
+        getPopupContainer={() => refContent}
+        destroyPopupOnHide
+      >
+        <div />
+      </Dropdown>
+    </React.Fragment>
+  );
+}
+
+type ContextMenuProps = {
+  contextMenuPosition: [number, number] | null | undefined;
+  hideContextMenu: () => void;
+  menu: MenuProps | null | undefined;
+};
+
+function ContextMenuContainer(props: ContextMenuProps) {
+  return (
+    <GenericContextMenuContainer {...props} className="tree-list-context-menu-overlay">
+      <ContextMenuInner {...props} />
+    </GenericContextMenuContainer>
+  );
+}
+
 function TreeHierarchyView(props: Props) {
   const [expandedNodeKeys, setExpandedNodeKeys] = useState<React.Key[]>([]);
   const [UITreeData, setUITreeData] = useState<TreeNode[]>([]);
-  const [activeTreeDropdownId, setActiveTreeDropdownId] = useState<number | null>(null);
-  const [activeGroupDropdownId, setActiveGroupDropdownId] = useState<number | null>(null);
+
+  const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
+  const [menu, setMenu] = useState<MenuProps | null>(null);
+
+  const onOpenContextMenu = (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+
+    const [x, y] = getContextMenuPositionFromEvent(event, "tree-list-context-menu-overlay");
+    showContextMenuAt(x, y, menu);
+  };
+
+  const showContextMenuAt = useCallback((xPos: number, yPos: number, menu: MenuProps) => {
+    // On Windows the right click to open the context menu is also triggered for the overlay
+    // of the context menu. This causes the context menu to instantly close after opening.
+    // Therefore delay the state update to delay that the context menu is rendered.
+    // Thus the context overlay does not get the right click as an event and therefore does not close.
+    setTimeout(
+      // todop: still necessary?
+      () => {
+        setContextMenuPosition([xPos, yPos]);
+        setMenu(menu);
+      },
+      0,
+    );
+  }, []);
+
+  const hideContextMenu = useCallback(() => {
+    setContextMenuPosition(null);
+    setMenu(null);
+  }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: <explanation>
   const perfTest = useCallback(async function perfTest() {
@@ -414,24 +503,6 @@ function TreeHierarchyView(props: Props) {
     onBatchActions(setTreeColorActions, "SET_TREE_COLOR");
   }
 
-  function handleTreeDropdownMenuVisibility(treeId: number, isVisible: boolean) {
-    if (isVisible) {
-      setActiveTreeDropdownId(treeId);
-      return;
-    }
-
-    setActiveTreeDropdownId(null);
-  }
-
-  function handleGroupDropdownMenuVisibility(groupId: number, isVisible: boolean) {
-    if (isVisible) {
-      setActiveGroupDropdownId(groupId);
-      return;
-    }
-
-    setActiveGroupDropdownId(null);
-  }
-
   function handleMeasureSkeletonLength(treeId: number, treeName: string) {
     const dataSourceUnit = Store.getState().dataset.dataSource.scale.unit;
     const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
@@ -456,14 +527,14 @@ function TreeHierarchyView(props: Props) {
       (child) => child.type === GroupTypeEnum.GROUP,
     );
     const labelForActiveItems = getLabelForActiveItems();
-    const menu: MenuProps = {
+    const createMenu = (): MenuProps => ({
       items: [
         {
           key: "perftest",
 
           onClick: () => {
             perfTest();
-            handleTreeDropdownMenuVisibility(0, false);
+            hideContextMenu();
           },
           label: "do perf test",
           title: "do perf test",
@@ -472,7 +543,7 @@ function TreeHierarchyView(props: Props) {
           key: "create",
           onClick: () => {
             createGroup(id);
-            handleGroupDropdownMenuVisibility(id, false);
+            hideContextMenu();
           },
           disabled: isEditingDisabled,
           icon: <PlusOutlined />,
@@ -483,7 +554,7 @@ function TreeHierarchyView(props: Props) {
               key: "moveHere",
               onClick: () => {
                 onMoveWithContextAction(node);
-                handleGroupDropdownMenuVisibility(id, false);
+                hideContextMenu();
               },
               disabled: isEditingDisabled,
               icon: <ArrowRightOutlined />,
@@ -502,7 +573,7 @@ function TreeHierarchyView(props: Props) {
               key: "collapseSubgroups",
               onClick: () => {
                 setExpansionOfAllSubgroupsTo(node, false);
-                handleGroupDropdownMenuVisibility(id, false);
+                hideContextMenu();
               },
               icon: <ShrinkOutlined />,
               label: "Collapse all subgroups",
@@ -513,7 +584,7 @@ function TreeHierarchyView(props: Props) {
               key: "expandSubgroups",
               onClick: () => {
                 setExpansionOfAllSubgroupsTo(node, true);
-                handleGroupDropdownMenuVisibility(id, false);
+                hideContextMenu();
               },
               icon: <ExpandAltOutlined />,
               label: "Expand all subgroups",
@@ -524,7 +595,7 @@ function TreeHierarchyView(props: Props) {
           onClick: () => {
             setActiveTreeGroup(id);
             toggleHideInactiveTrees();
-            handleGroupDropdownMenuVisibility(id, false);
+            hideContextMenu();
           },
           icon: <i className="fas fa-eye" />,
           label: "Hide/Show all other trees",
@@ -555,40 +626,27 @@ function TreeHierarchyView(props: Props) {
           ),
         },
       ],
-    };
+    });
 
     // Make sure the displayed name is not empty
     const displayableName = name.trim() || "<Unnamed Group>";
     return (
-      <Dropdown
-        menu={menu}
-        placement="bottom"
-        // AutoDestroy is used to remove the menu from DOM and keep up the performance.
-        // destroyPopupOnHide should also be an option according to the docs, but
-        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
-        autoDestroy
-        open={activeGroupDropdownId === id} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-        onOpenChange={(isVisible, info) => {
-          if (info.source === "trigger") handleGroupDropdownMenuVisibility(id, isVisible);
-        }}
-        trigger={["contextMenu"]}
-      >
+      <div className="nowrap" onContextMenu={(evt) => onOpenContextMenu(createMenu(), evt)}>
         <span>
           <FolderOutlined className="icon-margin-right" />
           {displayableName}
         </span>
-      </Dropdown>
+      </div>
     );
   }
 
+  // todop: use callback?
   function renderTreeNode(node: TreeNode): React.ReactNode {
     const tree = props.trees[node.id];
     if (!tree) return null;
 
     const isEditingDisabled = !props.allowUpdate;
     const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
-    const isDropdownVisible = activeTreeDropdownId === tree.treeId;
 
     const createMenu = (): MenuProps => {
       return {
@@ -621,7 +679,7 @@ function TreeHierarchyView(props: Props) {
 
             onClick: () => {
               perfTest();
-              handleTreeDropdownMenuVisibility(0, false);
+              hideContextMenu();
             },
             label: "do perf test",
             title: "do perf test",
@@ -638,7 +696,7 @@ function TreeHierarchyView(props: Props) {
             key: "measureSkeleton",
             onClick: () => {
               handleMeasureSkeletonLength(tree.treeId, tree.name);
-              handleTreeDropdownMenuVisibility(tree.treeId, false);
+              hideContextMenu();
             },
             title: "Measure Tree Length",
             icon: <i className="fas fa-ruler" />,
@@ -649,7 +707,7 @@ function TreeHierarchyView(props: Props) {
             onClick: () => {
               setActiveTree(tree.treeId);
               toggleHideInactiveTrees();
-              handleTreeDropdownMenuVisibility(tree.treeId, false);
+              hideContextMenu();
             },
             title: "Hide/Show All Other Trees",
             icon: <i className="fas fa-eye" />,
@@ -660,7 +718,7 @@ function TreeHierarchyView(props: Props) {
             onClick: () => {
               setActiveTree(tree.treeId);
               setTreeEdgesVisibility(tree.treeId, !tree.edgesAreVisible);
-              handleTreeDropdownMenuVisibility(tree.treeId, false);
+              hideContextMenu();
             },
             title: "Hide/Show Edges of This Tree",
             icon: <HideTreeEdgesIcon />,
@@ -671,7 +729,7 @@ function TreeHierarchyView(props: Props) {
                 key: "convertToNormalSkeleton",
                 onClick: () => {
                   setTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
-                  handleTreeDropdownMenuVisibility(tree.treeId, false);
+                  hideContextMenu();
                 },
                 title: "Convert to Normal Tree",
                 icon: <span className="fas fa-clipboard-check" />,
@@ -690,26 +748,10 @@ function TreeHierarchyView(props: Props) {
       ) : null;
 
     return (
-      <Dropdown
-        // only render the menu items when the dropdown menu is visible. Maybe this helps performance
-        menu={isDropdownVisible ? createMenu() : { items: [] }} //
-        // AutoDestroy is used to remove the menu from DOM and keep up the performance.
-        // destroyPopupOnHide should also be an option according to the docs, but
-        // does not work properly. See https://github.com/react-component/trigger/issues/106#issuecomment-948532990
-        // @ts-expect-error ts-migrate(2322) FIXME: Type '{ children: Element; overlay: () => Element;... Remove this comment to see the full error message
-        autoDestroy
-        placement="bottom"
-        open={isDropdownVisible} // explicit visibility handling is required here otherwise the color picker component for "Change Tree color" is rendered/positioned incorrectly
-        onOpenChange={(isVisible, info) => {
-          if (info.source === "trigger") handleTreeDropdownMenuVisibility(tree.treeId, isVisible);
-        }}
-        trigger={["contextMenu"]}
-      >
-        <div className="nowrap">
-          <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
-          {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
-        </div>
-      </Dropdown>
+      <div className="nowrap" onContextMenu={(evt) => onOpenContextMenu(createMenu(), evt)}>
+        <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
+        {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
+      </div>
     );
   }
 
@@ -740,104 +782,111 @@ function TreeHierarchyView(props: Props) {
   if (props.activeGroupId) selectedKeys.push(getNodeKey(GroupTypeEnum.GROUP, props.activeGroupId));
 
   return (
-    <AutoSizer>
-      {({ height, width }) => (
-        <div
-          style={{
-            height,
-            width,
-          }}
-        >
-          <AntdTree
-            treeData={UITreeData}
-            height={height}
-            ref={treeRef}
-            titleRender={(node) =>
-              node.type === GroupTypeEnum.TREE ? renderTreeNode(node) : renderGroupNode(node)
-            }
-            switcherIcon={<DownOutlined />}
-            onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
-              info.node.type === GroupTypeEnum.TREE
-                ? onSelectTreeNode(info.node, info.nativeEvent)
-                : onSelectGroupNode(info.node)
-            }
-            onDrop={onDrop}
-            onCheck={onCheck}
-            onExpand={onExpand}
-            // @ts-expect-error isNodeDraggable has argument of base type DataNode but we use it's extended parent type TreeNode
-            draggable={{ nodeDraggable: isNodeDraggable, icon: false }}
-            checkedKeys={checkedKeys}
-            expandedKeys={expandedNodeKeys}
-            selectedKeys={selectedKeys}
-            style={{ marginLeft: -14 }}
-            autoExpandParent
-            checkable
-            blockNode
-            showLine
-            multiple
-            defaultExpandAll
-          />
-        </div>
-      )}
-    </AutoSizer>
+    <>
+      <ContextMenuContainer
+        hideContextMenu={hideContextMenu}
+        contextMenuPosition={contextMenuPosition}
+        menu={menu}
+      />
+      <AutoSizer>
+        {({ height, width }) => (
+          <div
+            style={{
+              height,
+              width,
+            }}
+          >
+            <AntdTree
+              treeData={UITreeData}
+              height={height}
+              ref={treeRef}
+              titleRender={(node) =>
+                node.type === GroupTypeEnum.TREE ? renderTreeNode(node) : renderGroupNode(node)
+              }
+              switcherIcon={<DownOutlined />}
+              onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
+                info.node.type === GroupTypeEnum.TREE
+                  ? onSelectTreeNode(info.node, info.nativeEvent)
+                  : onSelectGroupNode(info.node)
+              }
+              onDrop={onDrop}
+              onCheck={onCheck}
+              onExpand={onExpand}
+              // @ts-expect-error isNodeDraggable has argument of base type DataNode but we use it's extended parent type TreeNode
+              draggable={{ nodeDraggable: isNodeDraggable, icon: false }}
+              checkedKeys={checkedKeys}
+              expandedKeys={expandedNodeKeys}
+              selectedKeys={selectedKeys}
+              style={{ marginLeft: -14 }}
+              autoExpandParent
+              checkable
+              blockNode
+              showLine
+              multiple
+              defaultExpandAll
+            />
+          </div>
+        )}
+      </AutoSizer>
+    </>
   );
-
-  function setActiveTree(treeId: number) {
-    dispatch(setActiveTreeAction(treeId));
-  }
-
-  function setActiveTreeGroup(groupId: number) {
-    dispatch(setActiveTreeGroupAction(groupId));
-  }
-
-  function setTreeColor(treeId: number, color: Vector3) {
-    dispatch(setTreeColorAction(treeId, color));
-  }
-
-  function shuffleTreeColor(treeId: number) {
-    dispatch(shuffleTreeColorAction(treeId));
-  }
 
   function deleteTree(treeId: number) {
     props.deselectAllTrees();
     dispatch(deleteTreeAction(treeId));
   }
+}
 
-  function toggleTree(treeId: number) {
-    dispatch(toggleTreeAction(treeId));
-  }
+function setActiveTree(treeId: number) {
+  Store.dispatch(setActiveTreeAction(treeId));
+}
 
-  function setTreeEdgesVisibility(treeId: number, edgesAreVisible: boolean) {
-    dispatch(setTreeEdgeVisibilityAction(treeId, edgesAreVisible));
-  }
+function setActiveTreeGroup(groupId: number) {
+  Store.dispatch(setActiveTreeGroupAction(groupId));
+}
 
-  function toggleTreeGroup(groupId: number) {
-    dispatch(toggleTreeGroupAction(groupId));
-  }
+function setTreeColor(treeId: number, color: Vector3) {
+  Store.dispatch(setTreeColorAction(treeId, color));
+}
 
-  function setToggleAllTrees() {
-    dispatch(toggleAllTreesAction());
-  }
+function shuffleTreeColor(treeId: number) {
+  Store.dispatch(shuffleTreeColorAction(treeId));
+}
 
-  function setUpdateTreeGroups(treeGroups: TreeGroup[]) {
-    dispatch(setTreeGroupsAction(treeGroups));
-  }
+function toggleTree(treeId: number) {
+  Store.dispatch(toggleTreeAction(treeId));
+}
 
-  function onBatchActions(actions: Action[], actionName: string) {
-    dispatch(batchActions(actions, actionName));
-  }
+function setTreeEdgesVisibility(treeId: number, edgesAreVisible: boolean) {
+  Store.dispatch(setTreeEdgeVisibilityAction(treeId, edgesAreVisible));
+}
 
-  function toggleHideInactiveTrees() {
-    dispatch(toggleInactiveTreesAction());
-  }
+function toggleTreeGroup(groupId: number) {
+  Store.dispatch(toggleTreeGroupAction(groupId));
+}
 
-  function shuffleAllTreeColors() {
-    dispatch(shuffleAllTreeColorsAction());
-  }
+function setToggleAllTrees() {
+  Store.dispatch(toggleAllTreesAction());
+}
 
-  function setTreeType(treeId: number, type: TreeType) {
-    dispatch(setTreeTypeAction(treeId, type));
-  }
+function setUpdateTreeGroups(treeGroups: TreeGroup[]) {
+  Store.dispatch(setTreeGroupsAction(treeGroups));
+}
+
+function onBatchActions(actions: Action[], actionName: string) {
+  Store.dispatch(batchActions(actions, actionName));
+}
+
+function toggleHideInactiveTrees() {
+  Store.dispatch(toggleInactiveTreesAction());
+}
+
+function shuffleAllTreeColors() {
+  Store.dispatch(shuffleAllTreeColorsAction());
+}
+
+function setTreeType(treeId: number, type: TreeType) {
+  Store.dispatch(setTreeTypeAction(treeId, type));
 }
 
 // React.memo is used to prevent the component from re-rendering without the props changing

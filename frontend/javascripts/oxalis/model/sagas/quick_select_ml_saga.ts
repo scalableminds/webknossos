@@ -5,7 +5,10 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, cancel, fork, put } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
-import { ComputeQuickSelectForRectAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  ComputeQuickSelectForPointAction,
+  ComputeQuickSelectForRectAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
 import { OxalisState } from "oxalis/store";
@@ -38,9 +41,7 @@ function* getMask(
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
 ): Saga<[BoundingBox, Array<NdArray<TypedArrayWithoutBigInt>>]> {
-  if (userBoxMag1.getVolume() === 0) {
-    throw new Error("User bounding box should not have empty volume.");
-  }
+  const usePointPrompt = userBoxMag1.getVolume() === 0;
   const trans = (vec: Vector3) => Dimensions.transDim(vec, activeViewport);
   const centerMag1 = V3.round(userBoxMag1.getCenter());
 
@@ -76,8 +77,19 @@ function* getMask(
     layerName,
     mag,
     maskBoxMag1,
-    userBoxRelativeToMaskInMag.getMinUV(activeViewport),
-    userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
+    usePointPrompt
+      ? {
+          type: "POINT",
+          pointX: userBoxRelativeToMaskInMag.getMinUV(activeViewport)[0],
+          pointY: userBoxRelativeToMaskInMag.getMinUV(activeViewport)[1],
+        }
+      : {
+          type: "BOUNDING_BOX",
+          selectionTopLeftX: userBoxRelativeToMaskInMag.getMinUV(activeViewport)[0],
+          selectionTopLeftY: userBoxRelativeToMaskInMag.getMinUV(activeViewport)[1],
+          selectionBottomRightX: userBoxRelativeToMaskInMag.getMaxUV(activeViewport)[0],
+          selectionBottomRightY: userBoxRelativeToMaskInMag.getMaxUV(activeViewport)[1],
+        },
     additionalCoordinates,
     intensityRange,
   );
@@ -118,7 +130,9 @@ function* showApproximatelyProgress(amount: number, expectedDurationPerItemMs: n
   }
 }
 
-export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
+export default function* performQuickSelect(
+  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction,
+): Saga<void> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (additionalCoordinates && additionalCoordinates.length > 0) {
     Toast.warning(
@@ -151,7 +165,17 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     } = preparation;
     const trans = (vec: Vector3) => Dimensions.transDim(vec, activeViewport);
 
-    const { startPosition, endPosition, quickSelectGeometry } = action;
+    const { type, quickSelectGeometry } = action;
+
+    let startPosition;
+    let endPosition;
+    if (type === "COMPUTE_QUICK_SELECT_FOR_POINT") {
+      startPosition = action.position;
+      endPosition = action.position;
+    } else {
+      startPosition = action.startPosition;
+      endPosition = action.endPosition;
+    }
 
     // Effectively, zero the first and second dimension in the mag.
     const depthSummand = V3.scale3(labeledResolution, trans([0, 0, 1]));
@@ -199,7 +223,9 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
 
     sendAnalyticsEvent("used_quick_select_with_ai");
 
-    const userBoxInMag = alignedUserBoxMag1.fromMag1ToMag(labeledResolution);
+    const userBoxInMag = alignedUserBoxMag1
+      .fromMag1ToMag(labeledResolution)
+      .paddedWithMargins(trans([100, 100, 0]));
     const userBoxRelativeToMaskInMag = userBoxInMag.offset(V3.negate(maskBoxInMag.min));
 
     let wOffset = 0;

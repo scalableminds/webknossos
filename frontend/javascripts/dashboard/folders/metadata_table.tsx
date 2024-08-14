@@ -142,7 +142,6 @@ const saveCurrentMetadata = async (
   datasetOrFolderToUpdate: APIDataset | Folder,
   metadata: IndexedMetadataEntries,
   context: DatasetCollectionContextValue,
-  // When the component is no longer mounted, state updates should not be performed.
   setIsSaving: (isSaving: boolean) => void,
   setHasUnsavedChanges: (hasUnsavedChanges: boolean) => void,
 ) => {
@@ -216,6 +215,8 @@ const getKeyInputIdForIndex = (index: number) => `metadata-key-input-id-${index}
 const isDataset = (datasetOrFolder: APIDataset | Folder): datasetOrFolder is APIDataset =>
   "folderId" in datasetOrFolder;
 
+// !Important! It is necessary to remount the component when the dataset or folder changes
+// to ensure the metadata is displayed and saved correctly.
 export default function MetadataTable({
   datasetOrFolder,
 }: { datasetOrFolder: APIDataset | Folder }) {
@@ -248,7 +249,7 @@ export default function MetadataTable({
     [metadataRef, hasUnsavedChangesRef],
   );
 
-  // Sent automatic async debounced updates to the server when metadata changed and there are no focused rows.
+  // Send automatic async debounced updates to the server when metadata changed and there are no focused rows.
   // biome-ignore lint/correctness/useExhaustiveDependencies: Only update upon pending changes.
   useEffect(() => {
     // Avoid state updates on unmounted MetadataTable.

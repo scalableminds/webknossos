@@ -178,6 +178,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
           )}
         </div>
         {fullDataset && (
+          /* The key is crucial to enforce rerendering when the dataset changes. This is necessary for the MetadataTable to work correctly. */
           <MetadataTable
             datasetOrFolder={fullDataset}
             key={`${fullDataset.dataSource.id.name}#dataset`}
@@ -287,6 +288,7 @@ function FolderDetails({
           <div style={{ marginBottom: 4 }}>
             <FolderTeamTags folder={folder} />
           </div>
+          {/* The key is crucial to enforce rerendering when the folder changes. This is necessary for the MetadataTable to work correctly. */}
           <MetadataTable datasetOrFolder={folder} key={`${folder.id}#folder`} />
         </div>
       ) : error ? (

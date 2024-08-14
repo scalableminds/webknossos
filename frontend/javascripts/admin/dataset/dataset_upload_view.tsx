@@ -1008,7 +1008,7 @@ function FileUploadArea({
             color: "var(--ant-color-primary)",
           }}
         />
-        <p
+        <div
           style={{
             maxWidth: 800,
             textAlign: "center",
@@ -1139,7 +1139,7 @@ function FileUploadArea({
               </div>
             </>
           ) : null}
-        </p>
+        </div>
       </div>
 
       {files.length > 0 ? (

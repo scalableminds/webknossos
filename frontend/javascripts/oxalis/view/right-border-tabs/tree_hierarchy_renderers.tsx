@@ -100,10 +100,6 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
   const isEditingDisabled = !props.allowUpdate;
   const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
 
-  function deleteTree(treeId: number) {
-    props.deselectAllTrees();
-    Store.dispatch(deleteTreeAction(treeId));
-  }
   return {
     items: [
       {
@@ -131,7 +127,10 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
       },
       {
         key: "deleteTree",
-        onClick: () => deleteTree(tree.treeId),
+        onClick: () => {
+          props.deselectAllTrees();
+          Store.dispatch(deleteTreeAction(tree.treeId));
+        },
         title: "Delete Tree",
         disabled: isEditingDisabled,
         icon: <i className="fas fa-trash" />,

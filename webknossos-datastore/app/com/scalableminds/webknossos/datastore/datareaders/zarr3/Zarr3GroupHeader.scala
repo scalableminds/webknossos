@@ -15,6 +15,7 @@ object Zarr3GroupHeader {
       for {
         zarr_format <- (json \ "zarr_format").validate[Int]
         node_type <- (json \ "node_type").validate[String]
+        // Read the metadata from the correct json path.
         ngffMetadata <- (json \ "attributes" \ "ome").validateOpt[NgffMetadataV0_5]
       } yield
         Zarr3GroupHeader(
@@ -27,6 +28,7 @@ object Zarr3GroupHeader {
       Json.obj(
         "zarr_format" -> zarrArrayGroup.zarr_format,
         "node_type" -> zarrArrayGroup.node_type,
+        // Enforce correct path for ngffMetadata in the json.
         "attributes" -> Json.obj("ome" -> zarrArrayGroup.ngffMetadata),
       )
   }

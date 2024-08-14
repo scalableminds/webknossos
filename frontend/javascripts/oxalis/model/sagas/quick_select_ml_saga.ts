@@ -170,6 +170,10 @@ export default function* performQuickSelect(
     let startPosition;
     let endPosition;
     if (type === "COMPUTE_QUICK_SELECT_FOR_POINT") {
+      // We use the click position for both start and end position so that
+      // the logic dealing for centering the mask etc can be done with the
+      // same code. The resulting bounding box will have a volume of 0 which
+      // is okay.
       startPosition = action.position;
       endPosition = action.position;
     } else {
@@ -223,9 +227,13 @@ export default function* performQuickSelect(
 
     sendAnalyticsEvent("used_quick_select_with_ai");
 
-    const userBoxInMag = alignedUserBoxMag1
-      .fromMag1ToMag(labeledResolution)
-      .paddedWithMargins(trans([100, 100, 0]));
+    let userBoxInMag = alignedUserBoxMag1.fromMag1ToMag(labeledResolution);
+    if (action.type === "COMPUTE_QUICK_SELECT_FOR_POINT") {
+      // In the point case, the bounding box will have a volume of zero which
+      // prevents the estimateBBoxInMask call from inferring the correct bbox.
+      // Therefore, we pad the bbox a bit.
+      userBoxInMag = userBoxInMag.paddedWithMargins(trans([100, 100, 0]));
+    }
     const userBoxRelativeToMaskInMag = userBoxInMag.offset(V3.negate(maskBoxInMag.min));
 
     let wOffset = 0;

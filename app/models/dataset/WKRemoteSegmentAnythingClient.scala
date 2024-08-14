@@ -4,6 +4,8 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import controllers.SAMInteractionType
+import controllers.SAMInteractionType.SAMInteractionType
 import utils.WkConf
 
 import java.nio.{ByteBuffer, ByteOrder}
@@ -14,10 +16,13 @@ class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
   def getMask(
       imageData: Array[Byte],
       elementClass: ElementClass.Value,
-      selectionTopLeftX: Int,
-      selectionTopLeftY: Int,
-      selectionBottomRightX: Int,
-      selectionBottomRightY: Int,
+      samInteractionType: SAMInteractionType,
+      selectionTopLeftXOpt: Option[Int],
+      selectionTopLeftYOpt: Option[Int],
+      selectionBottomRightXOpt: Option[Int],
+      selectionBottomRightYOpt: Option[Int],
+      pointXOpt: Option[Int],
+      pointYOpt: Option[Int],
       dataShape: Vec3Int, // two of the axes will be 1024, the other is the "depth". Axis order varies depending on viewport
       intensityMin: Option[Float],
       intensityMax: Option[Float]): Fox[Array[Byte]] = {
@@ -27,10 +32,17 @@ class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
     buffer.put(if (intensityMin.isDefined && intensityMax.isDefined) 1.toByte else 0.toByte)
     buffer.putFloat(intensityMin.getOrElse(0.0f))
     buffer.putFloat(intensityMax.getOrElse(0.0f))
-    buffer.putInt(selectionTopLeftX)
-    buffer.putInt(selectionTopLeftY)
-    buffer.putInt(selectionBottomRightX)
-    buffer.putInt(selectionBottomRightY)
+    if (samInteractionType == SAMInteractionType.BOUNDING_BOX) {
+      buffer.put(0.toByte) // Set bounding box interaction
+      buffer.putInt(selectionTopLeftXOpt.getOrElse(0))
+      buffer.putInt(selectionTopLeftYOpt.getOrElse(0))
+      buffer.putInt(selectionBottomRightXOpt.getOrElse(0))
+      buffer.putInt(selectionBottomRightYOpt.getOrElse(0))
+    } else { // Else only point interaction is possible
+      buffer.put(1.toByte) // Set point interaction
+      buffer.putInt(pointXOpt.getOrElse(0))
+      buffer.putInt(pointYOpt.getOrElse(0))
+    }
     buffer.putInt(dataShape.x)
     buffer.putInt(dataShape.y)
     buffer.putInt(dataShape.z)

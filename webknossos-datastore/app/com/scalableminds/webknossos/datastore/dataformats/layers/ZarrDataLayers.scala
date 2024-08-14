@@ -4,12 +4,14 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.dataformats.{DatasetArrayBucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.datastore.models.datasource.{DataFormat, _}
+import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.RemoteSourceDescriptorService
 import play.api.libs.json.{Json, OFormat}
 import ucar.ma2.{Array => MultiArray}
 
 trait ZarrLayer extends DataLayerWithMagLocators {
+
+  val dataFormat: DataFormat.Value = DataFormat.zarr
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                      dataSourceId: DataSourceId,
@@ -34,8 +36,7 @@ case class ZarrDataLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
-    override val additionalAxes: Option[Seq[AdditionalAxis]],
-    override val dataFormat: DataFormat.Value,
+    override val additionalAxes: Option[Seq[AdditionalAxis]]
 ) extends ZarrLayer
 
 object ZarrDataLayer {
@@ -53,8 +54,7 @@ case class ZarrSegmentationLayer(
     adminViewConfiguration: Option[LayerViewConfiguration] = None,
     coordinateTransformations: Option[List[CoordinateTransformation]] = None,
     override val numChannels: Option[Int] = Some(1),
-    additionalAxes: Option[Seq[AdditionalAxis]] = None,
-    override val dataFormat: DataFormat.Value,
+    additionalAxes: Option[Seq[AdditionalAxis]] = None
 ) extends SegmentationLayer
     with ZarrLayer
 

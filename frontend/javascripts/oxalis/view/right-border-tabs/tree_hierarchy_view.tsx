@@ -2,7 +2,6 @@ import { DownOutlined } from "@ant-design/icons";
 import { Tree as AntdTree, GetRef, MenuProps, Modal, TreeProps } from "antd";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AutoSizer } from "react-virtualized";
-
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeGroupAction,
@@ -31,6 +30,7 @@ import {
   renderGroupNode,
   renderTreeNode,
   selectGroupById,
+  setExpandedGroups,
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
 
@@ -138,15 +138,7 @@ function TreeHierarchyView(props: Props) {
       ).map((node) => node.key);
       subGroupKeys.forEach((key) => expandedKeySet.delete(key));
     }
-    const newGroups = mapGroups(props.treeGroups, (group) => {
-      const shouldBeExpanded = expandedKeySet.has(getNodeKey(GroupTypeEnum.GROUP, group.groupId));
-      if (shouldBeExpanded !== group.isExpanded) {
-        return { ...group, isExpanded: shouldBeExpanded };
-      } else {
-        return group;
-      }
-    });
-    setUpdateTreeGroups(newGroups);
+    setExpandedGroups(expandedKeySet);
   };
 
   function onSelectTreeNode(node: TreeNode, evt: MouseEvent) {

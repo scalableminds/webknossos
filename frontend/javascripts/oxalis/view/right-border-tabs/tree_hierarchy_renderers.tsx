@@ -15,18 +15,18 @@ import {
   type Vector3,
 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
-import React from "react";
+import React, { Key } from "react";
 import { batchActions } from "redux-batched-actions";
 
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
-import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   deleteTreeAction,
   setActiveTreeAction,
   setActiveTreeGroupAction,
+  setExpandedTreeGroupsAction,
   setTreeColorAction,
   setTreeEdgeVisibilityAction,
   setTreeGroupAction,
@@ -282,28 +282,33 @@ const createMenuForTreeGroup = (
 
   function setExpansionOfAllSubgroupsTo(parentGroup: TreeNode, expanded: boolean) {
     if (parentGroup.id === MISSING_GROUP_ID) {
-      const newGroups = mapGroups(props.treeGroups, (group) => {
-        if (group.isExpanded !== expanded) {
-          return { ...group, isExpanded: expanded };
-        }
-        return group;
-      });
-      setUpdateTreeGroups(newGroups);
-      return;
-    }
-    const subGroups = getGroupByIdWithSubgroups(props.treeGroups, parentGroup.id);
-    const subGroupsMap = new Set(subGroups);
-    // If the subgroups should be collapsed, do not collapse the group itself.
-    // Do expand the group if the subgroups are expanded though.
-    if (expanded === false) subGroupsMap.delete(parentGroup.id);
-    const newGroups = mapGroups(props.treeGroups, (group) => {
-      if (subGroupsMap.has(group.groupId) && expanded !== group.isExpanded) {
-        return { ...group, isExpanded: expanded };
+      if (!expanded) {
+        setExpandedGroups(new Set([]));
       } else {
-        return group;
+        const newGroups = props.treeGroups.flatMap((group) =>
+          getGroupByIdWithSubgroups(props.treeGroups, group.groupId),
+        );
+        const expandedGroupKeys = newGroups.map((groupId) =>
+          getNodeKey(GroupTypeEnum.GROUP, groupId),
+        );
+        setExpandedGroups(new Set(expandedGroupKeys));
       }
-    });
-    setUpdateTreeGroups(newGroups);
+    } else {
+      // group is not the root group
+      const subGroups = getGroupByIdWithSubgroups(props.treeGroups, parentGroup.id).map((groupId) =>
+        getNodeKey(GroupTypeEnum.GROUP, groupId),
+      );
+      if (expanded) {
+        const newExpandedKeys = new Set([...expandedNodeKeys, ...subGroups]);
+        setExpandedGroups(newExpandedKeys);
+      } else {
+        const parentGroupNode = getNodeKey(GroupTypeEnum.GROUP, parentGroup.id);
+        // If the subgroups should be collapsed, do not collapse the group itself, if it was expanded before.
+        const subGroupsWithoutParent = subGroups.filter((groupKey) => groupKey !== parentGroupNode);
+        const newExpandedKeys = _.difference(expandedNodeKeys, subGroupsWithoutParent);
+        setExpandedGroups(new Set(newExpandedKeys));
+      }
+    }
   }
 
   function onMoveWithContextAction(targetParentNode: TreeNode) {
@@ -462,6 +467,10 @@ export function selectGroupById(deselectAllTrees: () => void, groupId: number) {
 
 function setActiveTreeGroup(groupId: number) {
   Store.dispatch(setActiveTreeGroupAction(groupId));
+}
+
+export function setExpandedGroups(expandedTreeGroups: Set<Key>) {
+  Store.dispatch(setExpandedTreeGroupsAction(expandedTreeGroups));
 }
 
 function handleMeasureSkeletonLength(treeId: number, treeName: string) {

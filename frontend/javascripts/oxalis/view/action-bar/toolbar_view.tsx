@@ -9,8 +9,15 @@ import {
   Col,
   Row,
   Divider,
+  Popconfirm,
 } from "antd";
-import { ClearOutlined, DownOutlined, ExportOutlined, SettingOutlined } from "@ant-design/icons";
+import {
+  ClearOutlined,
+  DownOutlined,
+  ExportOutlined,
+  InfoCircleOutlined,
+  SettingOutlined,
+} from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useCallback, useState } from "react";
 
@@ -76,6 +83,8 @@ import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { APIJobType } from "types/api_flow_types";
 import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
+import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import FastTooltip from "components/fast_tooltip";
 
 const NARROW_BUTTON_STYLE = {
@@ -1273,7 +1282,7 @@ function ToolSpecificSettings({
             <i className="fas fa-magic icon-margin-right" /> AI
           </ButtonComponent>
 
-          {isQuickSelectHeuristic && <QuickSelectSettingsPopover />}
+          <QuickSelectSettingsPopover />
         </>
       )}
 
@@ -1292,32 +1301,71 @@ function ToolSpecificSettings({
   );
 }
 
+function IdentityComponent({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
+}
+
+function NuxPopConfirm({ children }: { children: React.ReactNode }) {
+  const dispatch = useDispatch();
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  return (
+    <Popconfirm
+      open
+      title="Did you know?"
+      showCancel={false}
+      onConfirm={() => {
+        if (!activeUser) {
+          return;
+        }
+        const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
+          hasSeenSegmentAnythingWithDepth: true,
+        });
+        dispatch(setActiveUserAction(newUserSync));
+      }}
+      description="The AI-based Quick Select can now be run for multiple sections at once. Open the settings here to enable this."
+      overlayStyle={{ maxWidth: 500 }}
+      icon={<InfoCircleOutlined style={{ color: "green" }} />}
+      children={children}
+    />
+  );
+}
+
 function QuickSelectSettingsPopover() {
   const dispatch = useDispatch();
   const { quickSelectState, areQuickSelectSettingsOpen } = useSelector(
     (state: OxalisState) => state.uiInformation,
   );
   const isQuickSelectActive = quickSelectState === "active";
+  const activeUser = useSelector((state: OxalisState) => state.activeUser);
+
+  const showNux =
+    activeUser != null && !activeUser.novelUserExperienceInfos.hasSeenSegmentAnythingWithDepth;
+  const Wrapper = showNux ? NuxPopConfirm : IdentityComponent;
+
   return (
-    <Popover
-      trigger="click"
-      placement="bottom"
-      open={areQuickSelectSettingsOpen}
-      content={<QuickSelectControls />}
-      onOpenChange={(open: boolean) => {
-        dispatch(showQuickSelectSettingsAction(open));
-      }}
-    >
-      <ButtonComponent
-        title="Configure Quick Select"
-        tooltipPlacement="right"
-        className="narrow"
-        type={isQuickSelectActive ? "primary" : "default"}
-        style={{ marginLeft: 12, marginRight: 12 }}
-      >
-        <SettingOutlined />
-      </ButtonComponent>
-    </Popover>
+    <>
+      <Wrapper>
+        <Popover
+          trigger="click"
+          placement="bottom"
+          open={areQuickSelectSettingsOpen}
+          content={<QuickSelectControls />}
+          onOpenChange={(open: boolean) => {
+            dispatch(showQuickSelectSettingsAction(open));
+          }}
+        >
+          <ButtonComponent
+            title="Configure Quick Select"
+            tooltipPlacement="right"
+            className="narrow"
+            type={isQuickSelectActive || showNux ? "primary" : "default"}
+            style={{ marginLeft: 12, marginRight: 12 }}
+          >
+            <SettingOutlined />
+          </ButtonComponent>
+        </Popover>
+      </Wrapper>
+    </>
   );
 }
 

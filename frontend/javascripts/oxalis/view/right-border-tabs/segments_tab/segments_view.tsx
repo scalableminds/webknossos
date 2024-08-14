@@ -81,7 +81,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
   setSelectedSegmentsOrGroupAction,
-  setSegmentGroupsAction,
+  setExpandedSegmentGroupsAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type {
@@ -112,6 +112,7 @@ import {
   createGroupToSegmentsMap,
   findParentIdForGroupId,
   getGroupByIdWithSubgroups,
+  getGroupNodeKey,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
 import { ChangeColorMenuItemContent } from "components/color_picker";
@@ -124,7 +125,6 @@ import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import { DataNode } from "antd/lib/tree";
 import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { ValueOf } from "types/globals";
-import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   ContextMenuContext,
   GenericContextMenuContainer,
@@ -328,7 +328,7 @@ type State = {
     [groupId: number]: { areSomeSegmentsVisible: boolean; areSomeSegmentsInvisible: boolean };
   };
   activeStatisticsModalGroupId: number | null;
-  expandedGroupKeys: Key[];
+  expandedGroupKeys: string[];
   contextMenuPosition: [number, number] | null | undefined;
   menu: MenuProps | null | undefined;
 };
@@ -360,7 +360,7 @@ function renderEmptyMeshFileSelect() {
 const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
   return segmentGroups.reduce((expandedKeysAcc: string[], node) => {
     if (node.isExpanded || node.isExpanded == null) {
-      expandedKeysAcc.push(getKeyForGroupId(node.groupId));
+      expandedKeysAcc.push(getGroupNodeKey(node.groupId));
     }
     if (node.children.length > 0) expandedKeysAcc.push(...getExpandedKeys(node.children));
     return expandedKeysAcc;
@@ -369,11 +369,9 @@ const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
 
 const getExpandedKeysWithRoot = (segmentGroups: TreeGroup[]) => {
   const expandedGroups = getExpandedKeys(segmentGroups);
-  expandedGroups.unshift(getKeyForGroupId(MISSING_GROUP_ID));
+  expandedGroups.unshift(getGroupNodeKey(MISSING_GROUP_ID));
   return expandedGroups;
 };
-
-const getKeyForGroupId = (groupId: number) => `group-${groupId}`;
 
 function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
@@ -386,7 +384,7 @@ function constructTreeData(
     const treeNode: SegmentHierarchyNode = {
       ...group,
       title: group.name,
-      key: `group-${groupId}`,
+      key: getGroupNodeKey(groupId),
       id: groupId,
       type: "group",
       children: constructTreeData(group.children, groupToSegmentsMap).concat(
@@ -408,7 +406,7 @@ function constructTreeData(
 const rootGroup = {
   name: "Root",
   groupId: MISSING_GROUP_ID,
-  key: `group-${MISSING_GROUP_ID}`,
+  key: getGroupNodeKey(MISSING_GROUP_ID),
   children: [],
   isExpanded: true,
 };
@@ -549,47 +547,29 @@ class SegmentsView extends React.Component<Props, State> {
     if (groupId !== MISSING_GROUP_ID) {
       return getGroupByIdWithSubgroups(this.props.segmentGroups, groupId)
         .filter((group) => group !== groupId)
-        .map((group) => getKeyForGroupId(group));
+        .map((group) => getGroupNodeKey(group));
     }
     const allSegmentGroups = this.props.segmentGroups.flatMap((group) =>
       getGroupByIdWithSubgroups(this.props.segmentGroups, group.groupId),
     );
-    return allSegmentGroups.map((group) => getKeyForGroupId(group));
+    return allSegmentGroups.map((group) => getGroupNodeKey(group));
   };
 
-  setExpandedGroups = (newExpandedGroups: Key[]) => {
+  setExpandedGroups = (expandedGroups: Key[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
-    const expandedKeySet = new Set(newExpandedGroups);
-    const newGroups = mapGroups(this.props.segmentGroups, (group) => {
-      const shouldBeExpanded = expandedKeySet.has(getKeyForGroupId(group.groupId));
-      if (shouldBeExpanded !== group.isExpanded) {
-        // Close all groups that are not in the expanded list so this method
-        // can be called for every update, e.g. when a group is collapsed.
-        return {
-          ...group,
-          isExpanded: shouldBeExpanded,
-        };
-      } else {
-        return group;
-      }
-    });
-    Store.dispatch(setSegmentGroupsAction(newGroups, this.props.visibleSegmentationLayer?.name));
+    const expandedGroupSet = new Set(expandedGroups as string[]);
+    Store.dispatch(
+      setExpandedSegmentGroupsAction(expandedGroupSet, this.props.visibleSegmentationLayer?.name),
+    );
   };
 
-  collapseGroups = (groupsToCollapse: Key[]) => {
+  collapseGroups = (groupsToCollapse: string[]) => {
     if (this.props.visibleSegmentationLayer == null) return;
-    const groupsToCollapseSet = new Set(groupsToCollapse);
-    const newGroups = mapGroups(this.props.segmentGroups, (group) => {
-      if (groupsToCollapseSet.has(getKeyForGroupId(group.groupId)) && group.isExpanded) {
-        return {
-          ...group,
-          isExpanded: false,
-        };
-      } else {
-        return group;
-      }
-    });
-    Store.dispatch(setSegmentGroupsAction(newGroups, this.props.visibleSegmentationLayer?.name));
+    const newExpandedGroups = _.difference(this.state.expandedGroupKeys, groupsToCollapse);
+    const expandedGroupSet = new Set(newExpandedGroups);
+    Store.dispatch(
+      setExpandedSegmentGroupsAction(expandedGroupSet, this.props.visibleSegmentationLayer.name),
+    );
   };
 
   onSelectTreeItem = (
@@ -617,13 +597,13 @@ class SegmentsView extends React.Component<Props, State> {
     // Windows / Mac single pick
     const ctrlPick: boolean = nativeEvent?.ctrlKey || nativeEvent?.metaKey;
 
-    let newSelectedKeys: Key[];
+    let newSelectedKeys: string[];
     if (ctrlPick) {
-      newSelectedKeys = keys;
+      newSelectedKeys = keys as string[];
     } else {
-      newSelectedKeys = [key];
+      newSelectedKeys = [key as string];
     }
-    const selectedIdsForCaseDistinction = this.getSegmentOrGroupIdsForKeys(keys);
+    const selectedIdsForCaseDistinction = this.getSegmentOrGroupIdsForKeys(keys as string[]);
     const selectedIdsForState = this.getSegmentOrGroupIdsForKeys(newSelectedKeys);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;
     if (visibleSegmentationLayer == null) return;
@@ -1459,7 +1439,6 @@ class SegmentsView extends React.Component<Props, State> {
       Store.dispatch(removeSegmentAction(segment.id, visibleSegmentationLayer.name)),
     );
     // manually reset selected segments
-
     Store.dispatch(setSelectedSegmentsOrGroupAction([], null, visibleSegmentationLayer.name));
   };
 
@@ -1520,24 +1499,24 @@ class SegmentsView extends React.Component<Props, State> {
       (segmentId) => `segment-${segmentId}`,
     );
     if (this.props.selectedIds.group != null) {
-      return mappedIdsToKeys.concat(getKeyForGroupId(this.props.selectedIds.group));
+      return mappedIdsToKeys.concat(getGroupNodeKey(this.props.selectedIds.group));
     }
     return mappedIdsToKeys;
   };
 
-  getSegmentOrGroupIdsForKeys = (segmentOrGroupKeys: Key[]) => {
+  getSegmentOrGroupIdsForKeys = (segmentOrGroupKeys: string[]) => {
     const selectedIds: { segments: number[]; group: number | null } = { segments: [], group: null };
+    const groupPrefix = "Group-";
     segmentOrGroupKeys.forEach((key) => {
-      const keyAsString = String(key);
-      if (keyAsString.startsWith("group-")) {
-        // Note that negative ids can be found here, which is why group- is used as a splitter
-        const idWithSign = keyAsString.split("group-")[1];
+      if (key.startsWith(groupPrefix)) {
+        // Note that negative ids can be found here, which is why Group- is used as a splitter
+        const idWithSign = key.split(groupPrefix)[1];
         if (isNumber(parseInt(idWithSign))) {
           selectedIds.group = parseInt(idWithSign);
         }
-      } else if (keyAsString.startsWith("segment-")) {
+      } else if (key.startsWith("segment-")) {
         // there should be no negative segment IDs
-        const regexSplit = keyAsString.split("-");
+        const regexSplit = key.split("-");
         if (isNumber(parseInt(regexSplit[1]))) {
           selectedIds.segments.push(parseInt(regexSplit[1]));
         }
@@ -1986,10 +1965,10 @@ class SegmentsView extends React.Component<Props, State> {
   }
 
   getExpandSubgroupsItem(groupId: number) {
-    const children: Key[] = this.getKeysOfSubGroups(groupId);
+    const children = this.getKeysOfSubGroups(groupId);
     const expandedGroupsSet = new Set(this.state.expandedGroupKeys);
     const areAllChildrenExpanded = children.every((childNode) => expandedGroupsSet.has(childNode));
-    const isGroupItselfExpanded = expandedGroupsSet.has(getKeyForGroupId(groupId));
+    const isGroupItselfExpanded = expandedGroupsSet.has(getGroupNodeKey(groupId));
     if (areAllChildrenExpanded && isGroupItselfExpanded) {
       return null;
     }
@@ -1997,7 +1976,7 @@ class SegmentsView extends React.Component<Props, State> {
       key: "expandAll",
       onClick: () => {
         const allExpandedGroups = children.concat(this.state.expandedGroupKeys);
-        if (!isGroupItselfExpanded) allExpandedGroups.push(getKeyForGroupId(groupId));
+        if (!isGroupItselfExpanded) allExpandedGroups.push(getGroupNodeKey(groupId));
         this.setExpandedGroups(allExpandedGroups);
         this.hideContextMenu();
       },
@@ -2010,7 +1989,7 @@ class SegmentsView extends React.Component<Props, State> {
     const children = this.getKeysOfSubGroups(groupId);
     const expandedKeySet = new Set(this.state.expandedGroupKeys);
     const areAllChildrenCollapsed = children.every((childNode) => !expandedKeySet.has(childNode));
-    const isGroupItselfCollapsed = !expandedKeySet.has(getKeyForGroupId(groupId));
+    const isGroupItselfCollapsed = !expandedKeySet.has(getGroupNodeKey(groupId));
     if (areAllChildrenCollapsed || isGroupItselfCollapsed) {
       return null;
     }

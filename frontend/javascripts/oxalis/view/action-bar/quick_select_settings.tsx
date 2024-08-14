@@ -13,6 +13,7 @@ import { Radio, RadioChangeEvent } from "antd";
 import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
 import ButtonComponent from "../components/button_component";
 import { showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
+import features from "features";
 
 const OPTIONS_WITH_DISABLED = [
   { label: "Dark Segment", value: "dark" },
@@ -20,19 +21,62 @@ const OPTIONS_WITH_DISABLED = [
 ];
 
 export function QuickSelectControls() {
-  const isQuickSelectActive = useSelector(
-    (state: OxalisState) => state.uiInformation.quickSelectState === "active",
-  );
   const quickSelectConfig = useSelector(
     (state: OxalisState) => state.userConfiguration.quickSelect,
   );
+  const isAISelectAvailable = features().segmentAnythingEnabled;
+  const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
+
+  return isQuickSelectHeuristic ? <HeuristicQuickSelectControls /> : <AiQuickSelectControls />;
+}
+
+export function AiQuickSelectControls() {
+  const quickSelectConfig = useSelector(
+    (state: OxalisState) => state.userConfiguration.quickSelect,
+  );
+
+  const dispatch = useDispatch();
+
+  const onChangePredictionDepth = (predictionDepth: number) => {
+    const conf = { ...quickSelectConfig, predictionDepth };
+    dispatch(updateUserSettingAction("quickSelect", conf));
+  };
+
+  const closeControls = () => {
+    dispatch(showQuickSelectSettingsAction(false));
+  };
+
+  return (
+    <div>
+      <NumberSliderSetting
+        label="Prediction Depth"
+        min={1}
+        value={quickSelectConfig.predictionDepth || 1}
+        max={5}
+        step={1}
+        onChange={onChangePredictionDepth}
+      />
+      <Shortcut supportInputElements keys="escape" onTrigger={closeControls} />
+      <Shortcut supportInputElements keys="enter" onTrigger={closeControls} />
+    </div>
+  );
+}
+export function HeuristicQuickSelectControls() {
+  const quickSelectConfig = useSelector(
+    (state: OxalisState) => state.userConfiguration.quickSelect,
+  );
+  const isQuickSelectActive = useSelector(
+    (state: OxalisState) => state.uiInformation.quickSelectState === "active",
+  );
+
   const dispatch = useDispatch();
 
   const onResetValues = () => {
-    const { segmentMode, threshold, closeValue, erodeValue, dilateValue } =
+    const { segmentMode, threshold, closeValue, erodeValue, dilateValue, ...rest } =
       defaultState.userConfiguration.quickSelect;
     dispatch(
       updateUserSettingAction("quickSelect", {
+        ...rest,
         useHeuristic: true,
         showPreview: quickSelectConfig.showPreview,
         segmentMode,

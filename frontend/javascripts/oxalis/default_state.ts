@@ -84,6 +84,7 @@ const defaultState: OxalisState = {
     useLegacyBindings: false,
     quickSelect: {
       useHeuristic: false,
+      predictionDepth: 1,
       showPreview: false,
       segmentMode: "light",
       threshold: 128,
@@ -228,6 +229,7 @@ const defaultState: OxalisState = {
   activeUser: null,
   activeOrganization: null,
   uiInformation: {
+    globalProgress: 0,
     activeTool: "MOVE",
     activeUserBoundingBoxId: null,
     showDropzoneModal: false,

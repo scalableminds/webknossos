@@ -2334,14 +2334,16 @@ export async function getNeighborsForAgglomerateNode(
 
 // ### Smart Select
 
-export async function getSamEmbedding(
+export async function getSamMask(
   dataset: APIDataset,
   layerName: string,
   mag: Vector3,
-  embeddingBoxMag1: BoundingBox,
+  surroundingBoxMag1: BoundingBox, // in mag 1
+  selectionTopLeft: Vector2, // in target mag
+  selectionBottomRight: Vector2, // in target mag
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
-): Promise<Float32Array> {
+): Promise<Uint8Array> {
   const params = new URLSearchParams();
   if (intensityRange != null) {
     params.append("intensityMin", `${intensityRange[0]}`);
@@ -2349,13 +2351,21 @@ export async function getSamEmbedding(
   }
 
   const buffer = await Request.sendJSONReceiveArraybuffer(
-    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding?${params}`,
+    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingMask?${params}`,
     {
-      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox(), additionalCoordinates },
+      data: {
+        mag,
+        surroundingBoundingBox: surroundingBoxMag1.asServerBoundingBox(),
+        additionalCoordinates,
+        selectionTopLeftX: selectionTopLeft[0],
+        selectionTopLeftY: selectionTopLeft[1],
+        selectionBottomRightX: selectionBottomRight[0],
+        selectionBottomRightY: selectionBottomRight[1],
+      },
       showErrorToast: false,
     },
   );
-  return new Float32Array(buffer);
+  return new Uint8Array(buffer);
 }
 
 // ### Short links

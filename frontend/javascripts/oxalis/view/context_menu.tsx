@@ -1,6 +1,6 @@
 import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
-import { Dropdown, Empty, notification, Tooltip, Popover, Input, MenuProps, Modal } from "antd";
+import { Dropdown, Empty, notification, Popover, Input, MenuProps, Modal } from "antd";
 import { useSelector } from "react-redux";
 import React, { createContext, MouseEvent, useContext, useEffect, useState } from "react";
 import type {
@@ -130,6 +130,7 @@ import {
 } from "oxalis/model/actions/dataset_actions";
 import { hideContextMenuAction } from "oxalis/model/actions/ui_actions";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
+import FastTooltip from "components/fast_tooltip";
 
 type ContextMenuContextValue = React.MutableRefObject<HTMLElement | null> | null;
 export const ContextMenuContext = createContext<ContextMenuContextValue>(null);
@@ -180,7 +181,7 @@ type NoNodeContextMenuProps = Props & {
 
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
-    <Tooltip title={title}>
+    <FastTooltip title={title}>
       <CopyOutlined
         style={{
           margin: "0 0 0 5px",
@@ -190,7 +191,7 @@ function copyIconWithTooltip(value: string | number, title: string) {
           Toast.success(`"${value}" copied to clipboard`);
         }}
       />
-    </Tooltip>
+    </FastTooltip>
   );
 }
 
@@ -415,7 +416,7 @@ function getMeshItems(
             return Store.dispatch(proofreadMerge(null, maybeUnmappedSegmentId, clickedMeshId));
           },
           label: (
-            <Tooltip
+            <FastTooltip
               title={
                 !isProofreadingActive
                   ? "Cannot merge because the proofreading tool is not active."
@@ -427,7 +428,7 @@ function getMeshItems(
               }
             >
               Merge with active segment
-            </Tooltip>
+            </FastTooltip>
           ),
         },
         {
@@ -449,7 +450,7 @@ function getMeshItems(
             );
           },
           label: (
-            <Tooltip
+            <FastTooltip
               title={
                 !isProofreadingActive
                   ? "Cannot split because the proofreading tool is not active."
@@ -461,7 +462,7 @@ function getMeshItems(
               }
             >
               Split from active segment
-            </Tooltip>
+            </FastTooltip>
           ),
         },
         {
@@ -477,7 +478,7 @@ function getMeshItems(
             );
           },
           label: (
-            <Tooltip
+            <FastTooltip
               title={
                 !isProofreadingActive
                   ? "Cannot split because the proofreading tool is not active."
@@ -487,7 +488,7 @@ function getMeshItems(
               }
             >
               Split from all neighboring segments
-            </Tooltip>
+            </FastTooltip>
           ),
         },
       ]
@@ -651,7 +652,7 @@ function getNodeContextMenuOptions({
                     ),
                   ),
                 label: (
-                  <Tooltip
+                  <FastTooltip
                     title={
                       isProofreadingActive
                         ? undefined
@@ -659,7 +660,7 @@ function getNodeContextMenuOptions({
                     }
                   >
                     Split from all neighboring segments
-                  </Tooltip>
+                  </FastTooltip>
                 ),
               }
             : null,
@@ -1045,14 +1046,12 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                     "Agglomerate files",
                   ),
             label: (
-              <Tooltip
+              <FastTooltip
                 title={
                   isAgglomerateMappingEnabled.value ? undefined : isAgglomerateMappingEnabled.reason
                 }
-                onOpenChange={(open: boolean) => {
-                  if (open) {
-                    Store.dispatch(ensureLayerMappingsAreLoadedAction());
-                  }
+                onMouseEnter={() => {
+                  Store.dispatch(ensureLayerMappingsAreLoadedAction());
                 }}
               >
                 <span>
@@ -1062,7 +1061,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                   ) : null}{" "}
                   {shortcutBuilder(["Shift", "middleMouse"])}
                 </span>
-              </Tooltip>
+              </FastTooltip>
             ),
           },
           isAgglomerateMappingEnabled.value
@@ -1071,7 +1070,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 disabled: !isProofreadingActive,
                 onClick: () => Store.dispatch(proofreadMerge(globalPosition)),
                 label: (
-                  <Tooltip
+                  <FastTooltip
                     title={
                       isProofreadingActive
                         ? undefined
@@ -1079,7 +1078,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                     }
                   >
                     <span>Merge with active segment {shortcutBuilder(["Shift", "leftMouse"])}</span>
-                  </Tooltip>
+                  </FastTooltip>
                 ),
               }
             : null,
@@ -1089,7 +1088,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 disabled: !isProofreadingActive,
                 onClick: () => Store.dispatch(minCutAgglomerateWithPositionAction(globalPosition)),
                 label: (
-                  <Tooltip
+                  <FastTooltip
                     title={
                       isProofreadingActive
                         ? undefined
@@ -1099,7 +1098,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                     <span>
                       Split from active segment {shortcutBuilder([CtrlOrCmdKey, "leftMouse"])}
                     </span>
-                  </Tooltip>
+                  </FastTooltip>
                 ),
               }
             : null,
@@ -1109,7 +1108,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                 disabled: !isProofreadingActive,
                 onClick: () => Store.dispatch(cutAgglomerateFromNeighborsAction(globalPosition)),
                 label: (
-                  <Tooltip
+                  <FastTooltip
                     title={
                       isProofreadingActive
                         ? undefined
@@ -1117,7 +1116,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
                     }
                   >
                     Split from all neighboring segments
-                  </Tooltip>
+                  </FastTooltip>
                 ),
               }
             : null,
@@ -1149,12 +1148,12 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       label: isConnectomeMappingEnabled.value ? (
         "Import Synapses"
       ) : (
-        <Tooltip title={isConnectomeMappingEnabled.reason}>
+        <FastTooltip title={isConnectomeMappingEnabled.reason}>
           Import Synapses{" "}
           {!isConnectomeMappingEnabled.value ? (
             <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
           ) : null}{" "}
-        </Tooltip>
+        </FastTooltip>
       ),
     };
     // This action doesn't need a skeleton tracing but is conceptually related to the "Import Agglomerate Skeleton" action
@@ -1261,6 +1260,7 @@ export function GenericContextMenuContainer(props: {
   hideContextMenu: () => void;
   children: React.ReactElement;
   positionAbsolute?: boolean;
+  className?: string;
 }) {
   /*
    * This container for the context menu is *always* rendered.
@@ -1286,7 +1286,7 @@ export function GenericContextMenuContainer(props: {
   return (
     <React.Fragment>
       <div
-        className="node-context-menu-overlay"
+        className={`node-context-menu-overlay ${props.className || ""}`}
         onClick={hideContextMenu}
         onContextMenu={(evt) => {
           evt.preventDefault();
@@ -1304,7 +1304,7 @@ export function GenericContextMenuContainer(props: {
          div.
         */}
       <div
-        className="node-context-menu-overlay"
+        className={`node-context-menu-overlay ${props.className || ""}`}
         style={{
           pointerEvents: "none",
           display: contextMenuPosition == null ? "none" : "inherit",
@@ -1316,6 +1316,7 @@ export function GenericContextMenuContainer(props: {
             left: contextMenuPosition != null ? contextMenuPosition[0] : 0,
             top: contextMenuPosition != null ? contextMenuPosition[1] : 0,
             width: "fit-content",
+            height: "fit-content",
             pointerEvents: "all",
           }}
           className="node-context-menu"
@@ -1584,14 +1585,14 @@ function ContextMenuInner(propsWithInputRef: Props) {
   };
 
   const refreshButton = (
-    <Tooltip title="Update this statistic">
+    <FastTooltip title="Update this statistic">
       <AsyncIconButton
         onClick={handleRefreshSegmentVolume}
         type="primary"
         icon={<ReloadOutlined />}
         style={{ marginLeft: 4 }}
       />
-    </Tooltip>
+    </FastTooltip>
   );
 
   const areSegmentStatisticsAvailable = wasSegmentOrMeshClicked && isSegmentIndexAvailable;
@@ -1634,13 +1635,13 @@ function ContextMenuInner(propsWithInputRef: Props) {
     infoRows.push(
       getInfoMenuItem(
         "distanceInfo",
-        <Tooltip title="Distance to the active Node of the active Tree">
+        <FastTooltip title="Distance to the active Node of the active Tree">
           <>
             <i className="fas fa-ruler" /> {distanceToSelection[0]} ({distanceToSelection[1]}) to
             this {maybeClickedNodeId != null ? "Node" : "Position"}
             {copyIconWithTooltip(distanceToSelection[0], "Copy the distance")}
           </>
-        </Tooltip>,
+        </FastTooltip>,
       ),
     );
   }
@@ -1730,6 +1731,30 @@ function ContextMenuInner(propsWithInputRef: Props) {
       </Dropdown>
     </React.Fragment>
   );
+}
+
+export function getContextMenuPositionFromEvent(
+  event: React.MouseEvent<HTMLDivElement>,
+  className: string,
+): [number, number] {
+  const overlayDivs = document.getElementsByClassName(className);
+  const referenceDiv = Array.from(overlayDivs)
+    .map((p) => p.parentElement)
+    .find((potentialParent) => {
+      if (potentialParent == null) {
+        return false;
+      }
+      const bounds = potentialParent.getBoundingClientRect();
+      return bounds.width > 0;
+    });
+
+  if (referenceDiv == null) {
+    return [0, 0];
+  }
+  const bounds = referenceDiv.getBoundingClientRect();
+  const x = event.clientX - bounds.left;
+  const y = event.clientY - bounds.top;
+  return [x, y];
 }
 
 const Actions = {

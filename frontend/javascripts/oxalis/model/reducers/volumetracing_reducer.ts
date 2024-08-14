@@ -55,9 +55,8 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { mapGroups } from "../accessors/skeletontracing_accessor";
 import {
-  GroupTypeEnum,
   findParentIdForGroupId,
-  getNodeKey,
+  getGroupNodeKey,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 type SegmentUpdateInfo =
   | {
@@ -350,13 +349,10 @@ function VolumeTracingReducer(
 
     case "SET_EXPANDED_SEGMENT_GROUPS": {
       const { expandedSegmentGroups, layerName } = action;
-      const expandedKeySet = new Set(expandedSegmentGroups);
       const { segmentGroups } = getVisibleSegments(state);
       const newGroups = mapGroups(segmentGroups, (group) => {
-        const shouldBeExpanded = expandedKeySet.has(getNodeKey(GroupTypeEnum.GROUP, group.groupId));
+        const shouldBeExpanded = expandedSegmentGroups.has(getGroupNodeKey(group.groupId));
         if (shouldBeExpanded !== group.isExpanded) {
-          // Close all groups that are not in the expanded list so this method
-          // can be called for every update, e.g. when a group is collapsed.
           return {
             ...group,
             isExpanded: shouldBeExpanded,

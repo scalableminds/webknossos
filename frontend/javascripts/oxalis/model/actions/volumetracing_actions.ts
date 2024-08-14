@@ -8,7 +8,6 @@ import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actio
 import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { batchActions } from "redux-batched-actions";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import { Key } from "react";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
@@ -285,7 +284,10 @@ export const setSegmentGroupsAction = (
     calledFromUndoSaga,
   }) as const;
 
-export const setExpandedSegmentGroupsAction = (expandedSegmentGroups: Key[], layerName: string) =>
+export const setExpandedSegmentGroupsAction = (
+  expandedSegmentGroups: Set<string>,
+  layerName: string,
+) =>
   ({
     type: "SET_EXPANDED_SEGMENT_GROUPS",
     expandedSegmentGroups,

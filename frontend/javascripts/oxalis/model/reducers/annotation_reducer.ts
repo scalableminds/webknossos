@@ -454,6 +454,7 @@ function AnnotationReducer(state: OxalisState, action: Action): OxalisState {
 
     case "SET_SELECTED_SEGMENTS_OR_GROUP": {
       const { selectedSegments, selectedGroup, layerName } = action;
+      console.log(action);
       return updateKey2(state, "localSegmentationData", layerName, {
         selectedIds: { segments: selectedSegments, group: selectedGroup },
       });

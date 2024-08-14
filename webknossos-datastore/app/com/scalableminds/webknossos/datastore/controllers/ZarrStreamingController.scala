@@ -19,7 +19,7 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 import com.scalableminds.webknossos.datastore.services._
 import net.liftweb.common.Box.tryo
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.{JsArray, JsNumber, JsObject, JsValue, Json}
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
@@ -104,7 +104,8 @@ class ZarrStreamingController @Inject()(
         zarrLayers = dataLayers.map(convertLayerToZarrLayer)
         zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
         zarrSourceJson <- replaceVoxelSizeByLegacyFormat(Json.toJson(zarrSource))
-      } yield Ok(Json.toJson(zarrSourceJson))
+        fixedZarrSourceJson = fixAxesIndexing(zarrSourceJson)
+      } yield Ok(Json.toJson(fixedZarrSourceJson))
     }
   }
 
@@ -119,6 +120,47 @@ class ZarrStreamingController @Inject()(
           newDataSource <- tryo(jsObject - "scale" + ("scale" -> Json.toJson(inNanometer)))
         } yield newDataSource
     }
+  }
+
+  private def fixAxesIndexing(jsValue: JsValue): JsObject = {
+    val jsObject = jsValue.as[JsObject]
+    val dataLayersOpt = (jsObject \ "dataLayers").asOpt[JsArray]
+    val fixedDataLayers = dataLayersOpt.map { dataLayers =>
+      dataLayers.value.map { layer =>
+        val layerObjectOpt = layer.asOpt[JsObject]
+        layerObjectOpt.map { layerObject =>
+          val additionalAxes = (layerObject \ "additionalAxes").as[JsArray].value
+          val fixedAdditionalAxes = additionalAxes.zipWithIndex.map {
+            case (additionalAxis, index) =>
+              Json.obj(
+                "name" -> (additionalAxis \ "name").as[JsValue],
+                "bounds" -> (additionalAxis \ "bounds").as[JsValue],
+                "index" -> JsNumber(index + 1)
+              )
+          }
+
+          // Fix axis order of mags.axisOrder
+          val fixedMags = (layerObject \ "mags").as[JsArray].value.map { mag =>
+            Json.obj(
+              "mag" -> (mag \ "mag").as[JsArray].value,
+              "axisOrder" -> Json.obj(
+                "x" -> JsNumber(additionalAxes.length + 1),
+                "y" -> JsNumber(additionalAxes.length + 2),
+                "z" -> JsNumber(additionalAxes.length + 3),
+                "c" -> JsNumber(0)
+              )
+            )
+          }
+          // Create a new JsObject with the updated additionalAxes and axisOrder
+          layerObject +
+            ("additionalAxes" -> Json.toJson(fixedAdditionalAxes)) +
+            ("mags" -> Json.toJson(fixedMags))
+        }.getOrElse(layer)
+      }
+    }
+
+    // Create a new JsObject with the modified dataLayers
+    jsObject + ("dataLayers" -> Json.toJson(fixedDataLayers))
   }
 
   private def convertLayerToZarrLayer(layer: DataLayer): ZarrLayer =

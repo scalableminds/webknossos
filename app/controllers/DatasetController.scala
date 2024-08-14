@@ -60,7 +60,7 @@ case class SegmentAnythingMaskParameters(
     selectionTopLeftY: Option[Int],
     selectionBottomRightX: Option[Int],
     selectionBottomRightY: Option[Int],
-    pointX: Option[Int],// in target-mag, relative to paddedBoundingBox topleft
+    pointX: Option[Int], // in target-mag, relative to paddedBoundingBox topleft
     pointY: Option[Int],
 )
 

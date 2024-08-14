@@ -15,7 +15,7 @@ import {
   type Vector3,
 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
-import React, { Key } from "react";
+import React from "react";
 import { batchActions } from "redux-batched-actions";
 
 import { ChangeColorMenuItemContent } from "components/color_picker";
@@ -44,6 +44,7 @@ import {
   callDeep,
   createGroupToTreesMap,
   getGroupByIdWithSubgroups,
+  getNodeKey,
   GroupTypeEnum,
   makeBasicGroupObject,
   MISSING_GROUP_ID,
@@ -189,6 +190,7 @@ export function renderGroupNode(
   onOpenContextMenu: (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => void,
   hideContextMenu: () => void,
   node: TreeNode,
+  expandedNodeKeys: string[],
 ) {
   // The root group must not be removed or renamed
   const { name } = node;
@@ -199,7 +201,10 @@ export function renderGroupNode(
     <div
       className="nowrap"
       onContextMenu={(evt) =>
-        onOpenContextMenu(createMenuForTreeGroup(props, hideContextMenu, node), evt)
+        onOpenContextMenu(
+          createMenuForTreeGroup(props, hideContextMenu, node, expandedNodeKeys),
+          evt,
+        )
       }
     >
       <span>
@@ -214,6 +219,7 @@ const createMenuForTreeGroup = (
   props: Props,
   hideContextMenu: () => void,
   node: TreeNode,
+  expandedNodeKeys: string[],
 ): MenuProps => {
   const { id } = node;
 
@@ -469,7 +475,7 @@ function setActiveTreeGroup(groupId: number) {
   Store.dispatch(setActiveTreeGroupAction(groupId));
 }
 
-export function setExpandedGroups(expandedTreeGroups: Set<Key>) {
+export function setExpandedGroups(expandedTreeGroups: Set<string>) {
   Store.dispatch(setExpandedTreeGroupsAction(expandedTreeGroups));
 }
 

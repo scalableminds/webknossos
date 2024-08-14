@@ -47,7 +47,7 @@ const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
 };
 
 function TreeHierarchyView(props: Props) {
-  const [expandedNodeKeys, setExpandedNodeKeys] = useState<React.Key[]>([]);
+  const [expandedNodeKeys, setExpandedNodeKeys] = useState<string[]>([]);
   const [UITreeData, setUITreeData] = useState<TreeNode[]>([]);
 
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
@@ -75,7 +75,7 @@ function TreeHierarchyView(props: Props) {
     const expandedKeys = deepFlatFilter(
       UITreeData,
       (node) => node.type === GroupTypeEnum.GROUP && node.expanded,
-    ).map((node) => node.key);
+    ).map((node) => node.key as string);
     setExpandedNodeKeys(expandedKeys);
   }, [UITreeData]);
 
@@ -128,14 +128,14 @@ function TreeHierarchyView(props: Props) {
 
   const onExpand: TreeProps<TreeNode>["onExpand"] = (expandedKeys, info) => {
     const clickedNode = info.node;
-    const expandedKeySet = new Set(expandedKeys);
+    const expandedKeySet = new Set(expandedKeys as string[]);
 
     if (clickedNode.type === GroupTypeEnum.GROUP && info.expanded === false) {
       // when collapsing a group, we need to collapse all its sub-gropus
       const subGroupKeys = deepFlatFilter(
         [clickedNode],
         (node) => node.type === GroupTypeEnum.GROUP,
-      ).map((node) => node.key);
+      ).map((node) => node.key as string);
       subGroupKeys.forEach((key) => expandedKeySet.delete(key));
     }
     setExpandedGroups(expandedKeySet);
@@ -276,7 +276,13 @@ function TreeHierarchyView(props: Props) {
               titleRender={(node) =>
                 node.type === GroupTypeEnum.TREE
                   ? renderTreeNode(props, onOpenContextMenu, hideContextMenu, node)
-                  : renderGroupNode(props, onOpenContextMenu, hideContextMenu, node)
+                  : renderGroupNode(
+                      props,
+                      onOpenContextMenu,
+                      hideContextMenu,
+                      node,
+                      expandedNodeKeys,
+                    )
               }
               switcherIcon={<DownOutlined />}
               onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>

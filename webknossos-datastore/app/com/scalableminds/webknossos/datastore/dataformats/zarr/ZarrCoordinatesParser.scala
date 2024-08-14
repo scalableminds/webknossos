@@ -15,7 +15,6 @@ object ZarrCoordinatesParser {
   )(implicit ec: ExecutionContext, m: MessagesProvider): Fox[(Int, Int, Int, Option[List[AdditionalCoordinate]])] = {
     val ndCoordinatesRx = "^\\s*([0-9]+)\\.([0-9]+)\\.([0-9]+)(\\.([0-9]+))+\\s*$".r
 
-    // The tail cuts off the leading "c" form the "c." at the beginning of coordinates.
     for {
       parsedCoordinates <- ndCoordinatesRx
         .findFirstIn(coordinates)

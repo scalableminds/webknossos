@@ -2,21 +2,14 @@ import _ from "lodash";
 import ErrorHandling from "libs/error_handling";
 
 import { Saga, select } from "oxalis/model/sagas/effect-generators";
-import { call, put, takeEvery, takeLatest } from "typed-redux-saga";
-import {
-  ComputeQuickSelectForRectAction,
-  MaybePrefetchEmbeddingAction,
-} from "oxalis/model/actions/volumetracing_actions";
+import { call, put, takeEvery } from "typed-redux-saga";
+import { ComputeQuickSelectForRectAction } from "oxalis/model/actions/volumetracing_actions";
 import Toast from "libs/toast";
 import features from "features";
 
 import { setBusyBlockingInfoAction, setQuickSelectStateAction } from "../actions/ui_actions";
 import performQuickSelectHeuristic from "./quick_select_heuristic_saga";
-import performQuickSelectML, {
-  getInferenceSession,
-  prefetchEmbedding,
-} from "./quick_select_ml_saga";
-import { AnnotationToolEnum } from "oxalis/constants";
+import performQuickSelectML from "./quick_select_ml_saga";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getActiveSegmentationTracing } from "../accessors/volumetracing_accessor";
 import { VolumeTracing } from "oxalis/store";
@@ -63,27 +56,6 @@ export default function* listenToQuickSelect(): Saga<void> {
       }
     },
   );
-
-  yield* takeLatest(
-    "MAYBE_PREFETCH_EMBEDDING",
-    function* guard(action: MaybePrefetchEmbeddingAction) {
-      const useHeuristic = yield* call(shouldUseHeuristic);
-      if (!useHeuristic) {
-        yield* call(prefetchEmbedding, action);
-      }
-    },
-  );
-
-  yield* takeEvery(["SET_TOOL", "CYCLE_TOOL"], function* guard() {
-    const isQuickSelectTool = yield* select(
-      (state) => state.uiInformation.activeTool === AnnotationToolEnum.QUICK_SELECT,
-    );
-    if (isQuickSelectTool && features().segmentAnythingEnabled) {
-      // Retrieve the inference session to prefetch it as soon as the tool
-      // is selected. If the session is cached, this is basically a noop.
-      yield* call(getInferenceSession);
-    }
-  });
 
   yield* takeEvery("ESCAPE", function* handler() {
     if (yield* select((state) => state.uiInformation.quickSelectState === "drawing")) {

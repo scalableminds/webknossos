@@ -274,6 +274,10 @@ export function getNodeKey(type: GroupTypeEnum, id: number): string {
   return `${type}-${id.toString()}`;
 }
 
+export function getGroupNodeKey(groupId: number): string {
+  return getNodeKey(GroupTypeEnum.GROUP, groupId);
+}
+
 export function getNodeKeyFromNode(node: TreeNode): string {
   return getNodeKey(node.type, node.id);
 }

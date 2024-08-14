@@ -54,7 +54,10 @@ import {
   getMaximumSegmentIdForLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { mapGroups } from "../accessors/skeletontracing_accessor";
-import { findParentIdForGroupId } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import {
+  findParentIdForGroupId,
+  getGroupNodeKey,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";
@@ -342,6 +345,23 @@ function VolumeTracingReducer(
 
     case "REMOVE_SEGMENT": {
       return handleRemoveSegment(state, action);
+    }
+
+    case "SET_EXPANDED_SEGMENT_GROUPS": {
+      const { expandedSegmentGroups, layerName } = action;
+      const { segmentGroups } = getVisibleSegments(state);
+      const newGroups = mapGroups(segmentGroups, (group) => {
+        const shouldBeExpanded = expandedSegmentGroups.has(getGroupNodeKey(group.groupId));
+        if (shouldBeExpanded !== group.isExpanded) {
+          return {
+            ...group,
+            isExpanded: shouldBeExpanded,
+          };
+        } else {
+          return group;
+        }
+      });
+      return setSegmentGroups(state, layerName, newGroups);
     }
 
     case "SET_SEGMENT_GROUPS": {

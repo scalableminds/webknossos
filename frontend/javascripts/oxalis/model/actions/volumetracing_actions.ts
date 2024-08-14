@@ -42,11 +42,11 @@ export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
+export type SetExpandedSegmentGroupsAction = ReturnType<typeof setExpandedSegmentGroupsAction>;
 export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappingAction>;
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
-export type MaybePrefetchEmbeddingAction = ReturnType<typeof maybePrefetchEmbeddingAction>;
 export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
 export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
@@ -85,6 +85,7 @@ export type VolumeTracingAction =
   | RemoveSegmentAction
   | DeleteSegmentDataAction
   | SetSegmentGroupsAction
+  | SetExpandedSegmentGroupsAction
   | AddBucketToUndoAction
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
@@ -93,7 +94,6 @@ export type VolumeTracingAction =
   | SetMappingIsLockedAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
-  | MaybePrefetchEmbeddingAction
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
@@ -105,6 +105,7 @@ export const VolumeTracingSaveRelevantActions = [
   "FINISH_ANNOTATION_STROKE",
   "UPDATE_SEGMENT",
   "SET_SEGMENT_GROUPS",
+  "SET_EXPANDED_SEGMENT_GROUPS",
   "REMOVE_SEGMENT",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
@@ -283,6 +284,16 @@ export const setSegmentGroupsAction = (
     calledFromUndoSaga,
   }) as const;
 
+export const setExpandedSegmentGroupsAction = (
+  expandedSegmentGroups: Set<string>,
+  layerName: string,
+) =>
+  ({
+    type: "SET_EXPANDED_SEGMENT_GROUPS",
+    expandedSegmentGroups,
+    layerName,
+  }) as const;
+
 export const interpolateSegmentationLayerAction = () =>
   ({
     type: "INTERPOLATE_SEGMENTATION_LAYER",
@@ -380,12 +391,6 @@ export const computeQuickSelectForRectAction = (
     startPosition,
     endPosition,
     quickSelectGeometry,
-  }) as const;
-
-export const maybePrefetchEmbeddingAction = (startPosition: Vector3) =>
-  ({
-    type: "MAYBE_PREFETCH_EMBEDDING",
-    startPosition,
   }) as const;
 
 export const fineTuneQuickSelectAction = (

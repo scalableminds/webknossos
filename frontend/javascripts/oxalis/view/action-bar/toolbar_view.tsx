@@ -1322,7 +1322,7 @@ function NuxPopConfirm({ children }: { children: React.ReactNode }) {
         });
         dispatch(setActiveUserAction(newUserSync));
       }}
-      description="The AI-based Quick Select can now be run for multiple sections at once. Open the settings here to enable this."
+      description="The AI-based Quick Select can now be triggered with a single click. Also, it can be run for multiple sections at once (open the settings here to enable this)."
       overlayStyle={{ maxWidth: 500 }}
       icon={<InfoCircleOutlined style={{ color: "green" }} />}
       children={children}

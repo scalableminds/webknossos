@@ -5,7 +5,7 @@ import {
   DatasetNameFormItem,
   layerNameRules,
 } from "admin/dataset/dataset_components";
-import { Button, Col, Form, FormInstance, Input, List, Row, Tooltip } from "antd";
+import { Button, Checkbox, Col, Form, FormInstance, Input, List, Row, Tooltip } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
@@ -13,12 +13,18 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
-import { Vector3 } from "oxalis/constants";
 import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_accessor";
 import { OxalisState } from "oxalis/store";
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
-import { APIDataLayer, APIDataset, APIDatasetId, APITeam, LayerLink } from "types/api_flow_types";
+import {
+  APIDataLayer,
+  APIDataset,
+  APIDatasetId,
+  APITeam,
+  areDatasetsIdentical,
+  LayerLink,
+} from "types/api_flow_types";
 import { syncValidator } from "types/validation";
 import { WizardComponentProps } from "./common";
 import { useEffectOnlyOnce } from "libs/react_hooks";
@@ -50,24 +56,9 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     form.setFieldsValue({ layers: newLayers });
   };
 
-  const handleTransformImport = async (sourcePoints: Vector3[], targetPoints: Vector3[]) => {
-    const datasets = linkedDatasets;
-    const transformationArr =
-      sourcePoints.length > 0 && targetPoints.length > 0
-        ? [
-            // {
-            //   type: "affine" as const,
-            //   matrix: flatToNestedMatrix(estimateAffineMatrix4x4(sourcePoints, targetPoints)),
-            // },
-            {
-              type: "thin_plate_spline" as const,
-              correspondences: { source: sourcePoints, target: targetPoints },
-            },
-          ]
-        : [];
-
+  const handleTransformImport = async () => {
     const newLinks: LayerLink[] = (
-      _.flatMap(datasets, (dataset) =>
+      _.flatMap(linkedDatasets, (dataset) =>
         dataset.dataSource.dataLayers.map((layer) => [dataset, layer]),
       ) as [APIDataset, APIDataLayer][]
     ).map(
@@ -78,21 +69,46 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         },
         sourceName: dataLayer.name,
         newName: dataLayer.name,
-        transformations: dataset === datasets[0] ? transformationArr : [],
+        transformations: [],
       }),
     );
     form.setFieldsValue({ layers: newLinks });
   };
 
   useEffectOnlyOnce(() => {
-    handleTransformImport(wizardContext.sourcePoints, wizardContext.targetPoints);
+    handleTransformImport();
   });
 
   const handleSubmit = async () => {
     if (activeUser == null) {
       throw new Error("Cannot create dataset without being logged in.");
     }
-    const layers = form.getFieldValue(["layers"]);
+    const layersWithoutTransforms = form.getFieldValue(["layers"]);
+    const useThinPlateSplines = form.getFieldValue("useThinPlateSplines");
+
+    function withTransforms(layers: LayerLink[]) {
+      const { sourcePoints, targetPoints } = wizardContext;
+      const transformationArr =
+        sourcePoints.length > 0 && targetPoints.length > 0
+          ? [
+              useThinPlateSplines
+                ? {
+                    type: "thin_plate_spline" as const,
+                    correspondences: { source: sourcePoints, target: targetPoints },
+                  }
+                : {
+                    type: "affine" as const,
+                    matrix: flatToNestedMatrix(estimateAffineMatrix4x4(sourcePoints, targetPoints)),
+                  },
+            ]
+          : [];
+      return layers.map((layer) => ({
+        ...layer,
+        transformations: areDatasetsIdentical(layer.datasetId, linkedDatasets[0])
+          ? transformationArr
+          : [],
+      }));
+    }
 
     const uploadableDatastores = props.datastores.filter((datastore) => datastore.allowsUpload);
     const datastoreToUse = uploadableDatastores[0];
@@ -109,7 +125,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         targetFolderId: form.getFieldValue(["targetFolderId"]),
         organizationName: activeUser.organization,
         voxelSize: linkedDatasets.slice(-1)[0].dataSource.scale,
-        layers,
+        layers: withTransforms(layersWithoutTransforms),
       });
     } finally {
       setIsLoading(false);
@@ -184,6 +200,9 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
             );
           }}
         </Form.Item>
+        <FormItem name={["useThinPlateSplines"]} valuePropName="checked">
+          <Checkbox>Use Thin-Plate-Splines (Experimental)</Checkbox>
+        </FormItem>
 
         <FormItem
           style={{

@@ -55,9 +55,13 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     const transformationArr =
       sourcePoints.length > 0 && targetPoints.length > 0
         ? [
+            // {
+            //   type: "affine" as const,
+            //   matrix: flatToNestedMatrix(estimateAffineMatrix4x4(sourcePoints, targetPoints)),
+            // },
             {
-              type: "affine" as const,
-              matrix: flatToNestedMatrix(estimateAffineMatrix4x4(sourcePoints, targetPoints)),
+              type: "thin_plate_spline" as const,
+              correspondences: { source: sourcePoints, target: targetPoints },
             },
           ]
         : [];

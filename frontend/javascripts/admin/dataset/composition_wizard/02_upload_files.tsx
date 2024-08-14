@@ -173,7 +173,10 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("The two NML files should have the same tree count.");
   }
 
-  for (const [tree1, tree2] of _.zip(Utils.values(trees1), Utils.values(trees2))) {
+  for (const [tree1, tree2] of _.zip(
+    Utils.values(trees1).sort((a, b) => a.treeId - b.treeId),
+    Utils.values(trees2).sort((a, b) => a.treeId - b.treeId),
+  )) {
     if (tree1 == null || tree2 == null) {
       // Satisfy TS. This should not happen, as we checked before that both tree collections
       // have the same size.

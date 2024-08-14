@@ -2,7 +2,11 @@ import { Dropdown, MenuProps } from "antd";
 import React from "react";
 
 import Shortcut from "libs/shortcut_component";
-import { ContextMenuContext, GenericContextMenuContainer } from "../context_menu";
+import {
+  ContextMenuContext,
+  GenericContextMenuContainer,
+  getNoActionsAvailableMenu,
+} from "../context_menu";
 
 function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   const inputRef = React.useContext(ContextMenuContext);
@@ -10,20 +14,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
   let menu: MenuProps = { items: [] };
 
   if (contextMenuPosition != null) {
-    menu = propsWithInputRef.menu || {
-      onClick: hideContextMenu,
-      style: {
-        borderRadius: 6,
-      },
-      mode: "vertical",
-      items: [
-        {
-          key: "view",
-          disabled: true,
-          label: "No actions available.",
-        },
-      ],
-    };
+    menu = propsWithInputRef.menu || getNoActionsAvailableMenu(hideContextMenu);
   }
 
   if (inputRef == null || inputRef.current == null) return null;

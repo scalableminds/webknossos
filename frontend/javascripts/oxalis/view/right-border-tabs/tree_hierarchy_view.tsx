@@ -61,11 +61,7 @@ import { ChangeColorMenuItemContent } from "components/color_picker";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 import { ColoredDotIcon } from "./segments_tab/segment_list_item";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  ContextMenuContext,
-  GenericContextMenuContainer,
-  getContextMenuPositionFromEvent,
-} from "../context_menu";
+import { getContextMenuPositionFromEvent } from "../context_menu";
 import FastTooltip from "components/fast_tooltip";
 import { ContextMenuContainer } from "./sidebar_context_menu";
 

@@ -9,28 +9,17 @@ import play.api.i18n.{Messages, MessagesProvider}
 import scala.concurrent.ExecutionContext
 
 object ZarrCoordinatesParser {
-  def parseDotCoordinates(
-      cxyz: String,
-  ): Option[(Int, Int, Int, Int)] = {
-    val singleRx = "^\\s*c\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)\\s*$".r
-
-    cxyz match {
-      case singleRx(c, x, y, z) =>
-        Some(Integer.parseInt(c), Integer.parseInt(x), Integer.parseInt(y), Integer.parseInt(z))
-      case _ => None
-    }
-  }
 
   def parseNDimensionalDotCoordinates(
       coordinates: String,
   )(implicit ec: ExecutionContext, m: MessagesProvider): Fox[(Int, Int, Int, Option[List[AdditionalCoordinate]])] = {
-    val ndCoordinatesRx = "^\\s*c\\.([0-9]+)\\.([0-9]+)\\.([0-9]+)(\\.([0-9]+))+\\s*$".r
-    // The tail cuts off the leading "c" form the "c." at the beginning of coordinates.
+    val ndCoordinatesRx = "^\\s*([0-9]+)\\.([0-9]+)\\.([0-9]+)(\\.([0-9]+))+\\s*$".r
 
+    // The tail cuts off the leading "c" form the "c." at the beginning of coordinates.
     for {
       parsedCoordinates <- ndCoordinatesRx
         .findFirstIn(coordinates)
-        .map(m => m.split('.').tail.map(coord => Integer.parseInt(coord))) ?~>
+        .map(m => m.split('.').map(coord => Integer.parseInt(coord))) ?~>
         Messages("zarr.invalidChunkCoordinates") ~> NOT_FOUND
       channelCoordinate <- parsedCoordinates.headOption ~> NOT_FOUND
       _ <- bool2Fox(channelCoordinate == 0) ?~> "zarr.invalidFirstChunkCoord" ~> NOT_FOUND

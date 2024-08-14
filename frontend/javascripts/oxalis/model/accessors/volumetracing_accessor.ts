@@ -45,7 +45,10 @@ import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
 import { ResolutionInfo } from "../helpers/resolution_info";
 import messages from "messages";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import {
+  MISSING_GROUP_ID,
+  getGroupByIdWithSubgroups,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { Store } from "oxalis/singletons";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
 import _ from "lodash";
@@ -397,9 +400,10 @@ function _getSelectedIds(state: OxalisState): [
   const currentSegmentIds = new Set(currentVisibleSegments?.segments?.map((segment) => segment.id));
   let cleanedSelectedGroup = null;
   if (group != null) {
-    const availableGroups = currentVisibleSegments.segmentGroups
-      .map((group) => group.groupId)
-      .concat(MISSING_GROUP_ID);
+    const availableGroups = currentVisibleSegments.segmentGroups.flatMap((group) =>
+      getGroupByIdWithSubgroups(currentVisibleSegments.segmentGroups, group.groupId),
+    );
+    availableGroups.concat(MISSING_GROUP_ID);
     cleanedSelectedGroup = availableGroups.includes(group) ? group : null;
   }
   const selectedIds = {

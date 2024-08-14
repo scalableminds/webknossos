@@ -603,7 +603,6 @@ class SegmentsView extends React.Component<Props, State> {
     } else {
       newSelectedKeys = [key as string];
     }
-    console.log(newSelectedKeys);
     const selectedIdsForCaseDistinction = this.getSegmentOrGroupIdsForKeys(keys as string[]);
     const selectedIdsForState = this.getSegmentOrGroupIdsForKeys(newSelectedKeys);
     const visibleSegmentationLayer = this.props.visibleSegmentationLayer;

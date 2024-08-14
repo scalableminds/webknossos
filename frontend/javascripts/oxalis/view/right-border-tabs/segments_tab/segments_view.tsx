@@ -125,13 +125,9 @@ import { DataNode } from "antd/lib/tree";
 import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { ValueOf } from "types/globals";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  ContextMenuContext,
-  GenericContextMenuContainer,
-  getContextMenuPositionFromEvent,
-} from "oxalis/view/context_menu";
-import Shortcut from "libs/shortcut_component";
+import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 import FastTooltip from "components/fast_tooltip";
+import { ContextMenuContainer } from "../sidebar_context_menu";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -412,61 +408,6 @@ const rootGroup = {
   children: [],
   isExpanded: true,
 };
-
-function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
-  const inputRef = React.useContext(ContextMenuContext);
-  const { contextMenuPosition, hideContextMenu } = propsWithInputRef;
-  let menu: MenuProps = { items: [] };
-
-  if (contextMenuPosition != null) {
-    menu = propsWithInputRef.menu || {
-      onClick: hideContextMenu,
-      style: {
-        borderRadius: 6,
-      },
-      mode: "vertical",
-      items: [
-        {
-          key: "view",
-          disabled: true,
-          label: "No actions available.",
-        },
-      ],
-    };
-  }
-
-  if (inputRef == null || inputRef.current == null) return null;
-  const refContent = inputRef.current;
-
-  return (
-    <React.Fragment>
-      <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
-      <Dropdown
-        menu={menu}
-        overlayClassName="dropdown-overlay-container-for-context-menu"
-        open={contextMenuPosition != null}
-        getPopupContainer={() => refContent}
-        destroyPopupOnHide
-      >
-        <div />
-      </Dropdown>
-    </React.Fragment>
-  );
-}
-
-type ContextMenuProps = {
-  contextMenuPosition: [number, number] | null | undefined;
-  hideContextMenu: () => void;
-  menu: MenuProps | null | undefined;
-};
-
-function ContextMenuContainer(props: ContextMenuProps) {
-  return (
-    <GenericContextMenuContainer {...props} className="segment-list-context-menu-overlay">
-      <ContextMenuInner {...props} />
-    </GenericContextMenuContainer>
-  );
-}
 
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
@@ -1733,6 +1674,7 @@ class SegmentsView extends React.Component<Props, State> {
           hideContextMenu={this.hideContextMenu}
           contextMenuPosition={this.state.contextMenuPosition}
           menu={this.state.menu}
+          className="segment-list-context-menu-overlay"
         />
         <DomVisibilityObserver targetId={segmentsTabId}>
           {(isVisibleInDom) => {

@@ -1,13 +1,5 @@
 import { AutoSizer } from "react-virtualized";
-import {
-  Dropdown,
-  MenuProps,
-  Modal,
-  notification,
-  Tree as AntdTree,
-  GetRef,
-  TreeProps,
-} from "antd";
+import { MenuProps, Modal, notification, Tree as AntdTree, GetRef, TreeProps } from "antd";
 import {
   DeleteOutlined,
   PlusOutlined,
@@ -74,8 +66,8 @@ import {
   GenericContextMenuContainer,
   getContextMenuPositionFromEvent,
 } from "../context_menu";
-import Shortcut from "libs/shortcut_component";
 import FastTooltip from "components/fast_tooltip";
+import { ContextMenuContainer } from "./sidebar_context_menu";
 
 type Props = {
   activeTreeId: number | null | undefined;
@@ -91,61 +83,6 @@ type Props = {
   onDeleteGroup: (arg0: number) => void;
   allowUpdate: boolean;
 };
-
-function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
-  const inputRef = React.useContext(ContextMenuContext);
-  const { contextMenuPosition, hideContextMenu } = propsWithInputRef;
-  let menu: MenuProps = { items: [] };
-
-  if (contextMenuPosition != null) {
-    menu = propsWithInputRef.menu || {
-      onClick: hideContextMenu,
-      style: {
-        borderRadius: 6,
-      },
-      mode: "vertical",
-      items: [
-        {
-          key: "view",
-          disabled: true,
-          label: "No actions available.",
-        },
-      ],
-    };
-  }
-
-  if (inputRef == null || inputRef.current == null) return null;
-  const refContent = inputRef.current;
-
-  return (
-    <React.Fragment>
-      <Shortcut supportInputElements keys="escape" onTrigger={hideContextMenu} />
-      <Dropdown
-        menu={menu}
-        overlayClassName="dropdown-overlay-container-for-context-menu"
-        open={contextMenuPosition != null}
-        getPopupContainer={() => refContent}
-        destroyPopupOnHide
-      >
-        <div />
-      </Dropdown>
-    </React.Fragment>
-  );
-}
-
-type ContextMenuProps = {
-  contextMenuPosition: [number, number] | null | undefined;
-  hideContextMenu: () => void;
-  menu: MenuProps | null | undefined;
-};
-
-function ContextMenuContainer(props: ContextMenuProps) {
-  return (
-    <GenericContextMenuContainer {...props} className="tree-list-context-menu-overlay">
-      <ContextMenuInner {...props} />
-    </GenericContextMenuContainer>
-  );
-}
 
 function TreeHierarchyView(props: Props) {
   const [expandedNodeKeys, setExpandedNodeKeys] = useState<React.Key[]>([]);
@@ -712,6 +649,7 @@ function TreeHierarchyView(props: Props) {
         hideContextMenu={hideContextMenu}
         contextMenuPosition={contextMenuPosition}
         menu={menu}
+        className="tree-list-context-menu-overlay"
       />
       <AutoSizer>
         {({ height, width }) => (

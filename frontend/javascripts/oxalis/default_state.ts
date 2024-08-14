@@ -51,6 +51,7 @@ const defaultState: OxalisState = {
   userConfiguration: {
     autoSaveLayouts: true,
     autoRenderMeshInProofreading: true,
+    selectiveVisibilityInProofreading: true,
     brushSize: 50,
     clippingDistance: 50,
     clippingDistanceArbitrary: 64,
@@ -83,6 +84,7 @@ const defaultState: OxalisState = {
     useLegacyBindings: false,
     quickSelect: {
       useHeuristic: false,
+      predictionDepth: 1,
       showPreview: false,
       segmentMode: "light",
       threshold: 128,
@@ -100,6 +102,7 @@ const defaultState: OxalisState = {
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
     hoveredSegmentId: 0,
+    hoveredUnmappedSegmentId: 0,
     activeMappingByLayer: {},
     isMergerModeEnabled: false,
     gpuSetup: {
@@ -226,7 +229,9 @@ const defaultState: OxalisState = {
   activeUser: null,
   activeOrganization: null,
   uiInformation: {
+    globalProgress: 0,
     activeTool: "MOVE",
+    activeUserBoundingBoxId: null,
     showDropzoneModal: false,
     showVersionRestore: false,
     showDownloadModal: false,

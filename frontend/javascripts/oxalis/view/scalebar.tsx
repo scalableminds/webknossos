@@ -1,6 +1,5 @@
 import { connect } from "react-redux";
 import * as React from "react";
-import { Tooltip } from "antd";
 import type { APIDataset } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import { formatNumberToLength } from "libs/format_utils";
@@ -9,7 +8,10 @@ import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import type { OrthoView } from "oxalis/constants";
 import constants, { Unicode, OrthoViews, LongUnitToShortUnitMap } from "oxalis/constants";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
+import FastTooltip from "components/fast_tooltip";
+
 const { ThinSpace, MultiplicationSymbol } = Unicode;
+
 type OwnProps = {
   viewportID: OrthoView;
 };
@@ -72,30 +74,30 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
   const limitScalebar = scaleBarWidthFactor === maxScaleBarWidthFactor;
   const padding = 4;
   return (
-    <Tooltip
-      title={
-        <div>
-          <div>Viewport Size:</div>
-          <div>{tooltip}</div>
-        </div>
-      }
+    <div
+      style={{
+        position: "absolute",
+        bottom: constants.SCALEBAR_OFFSET,
+        right: constants.SCALEBAR_OFFSET,
+        width: collapseScalebar ? 16 : `${scaleBarWidthFactor * 100}%`,
+        height: constants.SCALEBAR_HEIGHT - padding * 2,
+        background: "rgba(0, 0, 0, .3)",
+        color: "white",
+        textAlign: "center",
+        fontSize: 12,
+        lineHeight: "14px",
+        boxSizing: "content-box",
+        padding,
+      }}
+      className="scalebar"
     >
-      <div
-        style={{
-          position: "absolute",
-          bottom: constants.SCALEBAR_OFFSET,
-          right: constants.SCALEBAR_OFFSET,
-          width: collapseScalebar ? 16 : `${scaleBarWidthFactor * 100}%`,
-          height: constants.SCALEBAR_HEIGHT - padding * 2,
-          background: "rgba(0, 0, 0, .3)",
-          color: "white",
-          textAlign: "center",
-          fontSize: 12,
-          lineHeight: "14px",
-          boxSizing: "content-box",
-          padding,
-        }}
-        className="scalebar"
+      <FastTooltip
+        html={`
+            <div>
+              <div>Viewport Size:</div>
+              <div>${tooltip}</div>
+            </div>
+          `}
       >
         <div
           style={{
@@ -113,8 +115,8 @@ function Scalebar({ zoomValue, dataset, viewportWidthInPixels, viewportHeightInP
                 true,
               )}
         </div>
-      </div>
-    </Tooltip>
+      </FastTooltip>
+    </div>
   );
 }
 

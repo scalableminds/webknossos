@@ -21,6 +21,7 @@ export type SegmentHierarchyGroup = {
   name: string | null | undefined;
   id: number;
   key: string;
+  isExpanded?: boolean;
   children: Array<SegmentHierarchyNode>;
 };
 

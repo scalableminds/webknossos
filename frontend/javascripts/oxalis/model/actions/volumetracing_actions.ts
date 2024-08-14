@@ -1,7 +1,7 @@
 import type { ServerEditableMapping, ServerVolumeTracing } from "types/api_flow_types";
 import type { Vector2, Vector3, OrthoView, ContourMode, BucketAddress } from "oxalis/constants";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
-import type { Segment, SegmentGroup, SegmentMap } from "oxalis/store";
+import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "oxalis/store";
 import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
@@ -42,11 +42,10 @@ export type UpdateSegmentAction = ReturnType<typeof updateSegmentAction>;
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
-export type SetMappingIsEditableAction = ReturnType<typeof setMappingIsEditableAction>;
+export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappingAction>;
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
-export type MaybePrefetchEmbeddingAction = ReturnType<typeof maybePrefetchEmbeddingAction>;
 export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
 export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
@@ -89,11 +88,10 @@ export type VolumeTracingAction =
   | ImportVolumeTracingAction
   | SetLargestSegmentIdAction
   | SetSelectedSegmentsOrGroupAction
-  | SetMappingIsEditableAction
+  | SetHasEditableMappingAction
   | SetMappingIsLockedAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
-  | MaybePrefetchEmbeddingAction
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
@@ -108,11 +106,12 @@ export const VolumeTracingSaveRelevantActions = [
   "REMOVE_SEGMENT",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
-  // Note that the following two actions are defined in settings_actions.ts
+  // Note that the following three actions are defined in settings_actions.ts
   "SET_MAPPING",
   "SET_MAPPING_ENABLED",
+  "FINISH_MAPPING_INITIALIZATION_ACTION",
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",
-  "SET_MAPPING_IS_EDITABLE",
+  "SET_HAS_EDITABLE_MAPPING",
   "SET_MAPPING_IS_LOCKED",
 ];
 
@@ -227,7 +226,7 @@ export const setSegmentsAction = (segments: SegmentMap, layerName: string) =>
   }) as const;
 
 export const updateSegmentAction = (
-  segmentId: number,
+  segmentId: NumberLike,
   segment: Partial<Segment>,
   layerName: string,
   timestamp: number = Date.now(),
@@ -235,7 +234,8 @@ export const updateSegmentAction = (
 ) =>
   ({
     type: "UPDATE_SEGMENT",
-    segmentId,
+    // TODO: Proper 64 bit support (#6921)
+    segmentId: Number(segmentId),
     segment,
     layerName,
     timestamp,
@@ -243,13 +243,14 @@ export const updateSegmentAction = (
   }) as const;
 
 export const removeSegmentAction = (
-  segmentId: number,
+  segmentId: NumberLike,
   layerName: string,
   timestamp: number = Date.now(),
 ) =>
   ({
     type: "REMOVE_SEGMENT",
-    segmentId,
+    // TODO: Proper 64 bit support (#6921)
+    segmentId: Number(segmentId),
     layerName,
     timestamp,
   }) as const;
@@ -357,9 +358,9 @@ export const dispatchFloodfillAsync = async (
   await readyDeferred.promise();
 };
 
-export const setMappingIsEditableAction = () =>
+export const setHasEditableMappingAction = () =>
   ({
-    type: "SET_MAPPING_IS_EDITABLE",
+    type: "SET_HAS_EDITABLE_MAPPING",
   }) as const;
 
 export const setMappingIsLockedAction = () =>
@@ -377,12 +378,6 @@ export const computeQuickSelectForRectAction = (
     startPosition,
     endPosition,
     quickSelectGeometry,
-  }) as const;
-
-export const maybePrefetchEmbeddingAction = (startPosition: Vector3) =>
-  ({
-    type: "MAYBE_PREFETCH_EMBEDDING",
-    startPosition,
   }) as const;
 
 export const fineTuneQuickSelectAction = (

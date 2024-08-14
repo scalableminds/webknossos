@@ -16,7 +16,6 @@ import {
   computeQuickSelectForRectAction,
   confirmQuickSelectAction,
   hideBrushAction,
-  maybePrefetchEmbeddingAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
@@ -26,6 +25,7 @@ import PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import {
   createBoundingBoxAndGetEdges,
+  handleMovingBoundingBox,
   SelectedEdge,
 } from "oxalis/controller/combinations/bounding_box_handlers";
 import {
@@ -50,6 +50,7 @@ import {
   setQuickSelectStateAction,
   setLastMeasuredPositionAction,
   setIsMeasuringAction,
+  setActiveUserBoundingBoxId,
 } from "oxalis/model/actions/ui_actions";
 import ArbitraryView from "oxalis/view/arbitrary_view";
 
@@ -561,12 +562,16 @@ export class BoundingBoxTool {
         delta: Point2,
         pos: Point2,
         _id: string | null | undefined,
-        _event: MouseEvent,
+        event: MouseEvent,
       ) => {
-        if (primarySelectedEdge != null) {
-          handleResizingBoundingBox(pos, planeId, primarySelectedEdge, secondarySelectedEdge);
-        } else {
+        if (primarySelectedEdge == null) {
           MoveHandlers.handleMovePlane(delta);
+          return;
+        }
+        if (event.ctrlKey || event.metaKey) {
+          handleMovingBoundingBox(delta, planeId, primarySelectedEdge);
+        } else {
+          handleResizingBoundingBox(pos, planeId, primarySelectedEdge, secondarySelectedEdge);
         }
       },
       leftMouseDown: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
@@ -596,7 +601,13 @@ export class BoundingBoxTool {
       mouseMove: (delta: Point2, position: Point2, _id: any, event: MouseEvent) => {
         if (primarySelectedEdge == null && planeId !== OrthoViews.TDView) {
           MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
-          highlightAndSetCursorOnHoveredBoundingBox(position, planeId);
+          highlightAndSetCursorOnHoveredBoundingBox(position, planeId, event);
+        }
+      },
+      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent) => {
+        const currentlyHoveredEdge = getClosestHoveredBoundingBox(pos, planeId);
+        if (currentlyHoveredEdge) {
+          Store.dispatch(setActiveUserBoundingBoxId(currentlyHoveredEdge[0].boxId));
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
@@ -609,12 +620,12 @@ export class BoundingBoxTool {
     _activeTool: AnnotationTool,
     _useLegacyBindings: boolean,
     _shiftKey: boolean,
-    _ctrlOrMetaKey: boolean,
+    ctrlOrMetaKey: boolean,
     _altKey: boolean,
     _isTDViewportActive: boolean,
   ): ActionDescriptor {
     return {
-      leftDrag: "Create/Resize Bounding Boxes",
+      leftDrag: ctrlOrMetaKey ? "Move Bounding Boxes" : "Create/Resize Bounding Boxes",
       rightClick: "Context Menu",
     };
   }
@@ -667,8 +678,6 @@ export class QuickSelectTool {
         startPos = V3.floor(calculateGlobalPos(state, pos));
         currentPos = startPos;
         isDragging = true;
-
-        Store.dispatch(maybePrefetchEmbeddingAction(startPos));
       },
       leftMouseUp: () => {
         isDragging = false;

@@ -283,6 +283,7 @@ export type APIUserBase = APIUserCompact & {
 };
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
+  hasSeenSegmentAnythingWithDepth?: boolean;
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
@@ -818,7 +819,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // https://github.com/scalableminds/webknossos/pull/4755
   resolutions?: Array<Point3>;
   mappingName?: string | null | undefined;
-  mappingIsEditable?: boolean;
+  hasEditableMapping?: boolean;
   mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
 };

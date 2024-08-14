@@ -75,11 +75,7 @@
   height: inherit;
   display: flex;
   flex-direction: column;
-  .fa-angle-right {
-    width: 11px;
-    margin-left: 5px;
-  }
-
+  
   .ant-space-compact {
     // Spacing between skeleton tab buttons and name input
     margin: 0 0 10px 0;
@@ -92,23 +88,6 @@
     right: 12px;
     top: 12px;
     z-index: 1;
-  }
-
-  .selected-tree-node {
-    background-color: var(--color-blue-zircon);
-  }
-
-  .rst__rowLabel {
-    padding-right: 0px;
-    .rst__rowTitle div {
-      padding-right: 10px;
-    }
-  }
-  .rst__rowSearchMatch .rst__rowLabel {
-    background-color: var(--ant-blue-3);
-    &:hover {
-      background-color: var(--ant-blue-1);
-    }
   }
 }
 
@@ -215,5 +194,31 @@
     text-align: center;
     width: 24px;
     height: 24px;
+  }
+}
+
+.bounding-box-table {
+  .ant-table {
+    border-bottom: none;
+  }
+  .ant-table-cell {
+    padding: 0px !important;
+  }
+  .ant-table-row:last-child {
+    border-bottom: none;
+    .ant-table-cell {
+      border-bottom: none;
+    }
+  }
+  .ant-table-row .ant-table-cell:first-child {
+    // Hiding the extra checkbox column rendered due to using rowSelection in the table wrapping the bounding boxes.
+    display: none;
+  }
+  .ant-table-row .ant-table-cell:nth-child(2) {
+    flex: 1 1 !important;
+  }
+  .ant-table-footer {
+    background-color: transparent;
+    padding: 8px;
   }
 }

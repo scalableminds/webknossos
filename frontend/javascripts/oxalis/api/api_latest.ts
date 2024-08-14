@@ -26,6 +26,7 @@ import {
   setTreeGroupAction,
   setTreeGroupsAction,
   setTreeEdgeVisibilityAction,
+  createTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   bucketPositionToGlobalAddress,
@@ -40,7 +41,7 @@ import {
   moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
+import { disableSavingAction, discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
   finishAnnotation,
@@ -318,6 +319,14 @@ class TracingApi {
   centerActiveNode() {
     assertSkeleton(Store.getState().tracing);
     Store.dispatch(centerActiveNodeAction());
+  }
+
+  /**
+   * Creates a new and empty tree
+   */
+  createTree() {
+    assertSkeleton(Store.getState().tracing);
+    Store.dispatch(createTreeAction());
   }
 
   /**
@@ -690,6 +699,7 @@ class TracingApi {
       name: name || `Group ${newGroupId}`,
       groupId: newGroupId,
       children: [],
+      isExpanded: false,
     };
 
     if (parentGroupId === MISSING_GROUP_ID) {
@@ -1363,6 +1373,14 @@ class TracingApi {
     await downsampleSegmentation(annotationId, annotationType, volumeTracingId);
     await this.hardReload();
   }
+
+  /**
+   * Disables the saving for the current annotation.
+   * WARNING: Cannot be undone. Only do this if you know what you are doing.
+   */
+  disableSaving() {
+    Store.dispatch(disableSavingAction());
+  }
 }
 /**
  * All binary data / layer related API methods.
@@ -1523,7 +1541,7 @@ class DataApi {
     const mappingProperties = {
       mapping:
         mapping instanceof Map
-          ? new Map(mapping)
+          ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
           : new Map(Object.entries(mapping).map(([key, value]) => [parseInt(key, 10), value])),
       mappingColors,
       hideUnmappedIds,

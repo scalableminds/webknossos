@@ -1,11 +1,12 @@
 import { saveAs } from "file-saver";
 import _ from "lodash";
 import { V3 } from "libs/mjs";
-import { chunkDynamically, sleep } from "libs/utils";
+import { areVec3AlmostEqual, chunkDynamically, sleep } from "libs/utils";
 import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeBufferGeometries } from "libs/BufferGeometryUtils";
 import Deferred from "libs/async/deferred";
+import { ActionPattern } from "redux-saga/effects";
 
 import Store from "oxalis/store";
 import {
@@ -293,10 +294,10 @@ function* loadAdHocMesh(
       removeExistingMesh,
     ),
     cancel: take(
-      (action: Action) =>
+      ((action: Action) =>
         action.type === "REMOVE_MESH" &&
         action.segmentId === segmentId &&
-        action.layerName === layer.name,
+        action.layerName === layer.name) as ActionPattern,
     ),
   });
   removeMeshWithoutVoxels(segmentId, layer.name, seedAdditionalCoordinates);
@@ -351,7 +352,7 @@ function* loadFullAdHocMesh(
   if (meshExtraInfo.useDataStore != null) {
     // ... except if the caller specified whether to use the data store ...
     useDataStore = meshExtraInfo.useDataStore;
-  } else if (volumeTracing?.mappingIsEditable) {
+  } else if (volumeTracing?.hasEditableMapping) {
     // ... or if an editable mapping is active.
     useDataStore = false;
   }
@@ -360,7 +361,7 @@ function* loadFullAdHocMesh(
   // and that don't have editable mappings.
   const usePositionsFromSegmentIndex =
     volumeTracing?.hasSegmentIndex &&
-    !volumeTracing.mappingIsEditable &&
+    !volumeTracing.hasEditableMapping &&
     visibleSegmentationLayer?.tracingId != null;
   let positionsToRequest = usePositionsFromSegmentIndex
     ? yield* getChunkPositionsFromSegmentIndex(
@@ -754,10 +755,10 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       mergeChunks,
     ),
     cancel: take(
-      (otherAction: Action) =>
+      ((otherAction: Action) =>
         otherAction.type === "REMOVE_MESH" &&
         otherAction.segmentId === segmentId &&
-        otherAction.layerName === layer.name,
+        otherAction.layerName === layer.name) as ActionPattern,
     ),
   });
 }
@@ -1027,11 +1028,21 @@ function _getLoadChunksTasks(
                 // Compute vertex normals to achieve smooth shading
                 bufferGeometries.forEach((geometry) => geometry.computeVertexNormals());
 
-                // Check if the mesh scale is different to the dataset scale and warn in the console to make debugging easier in such a case.
-                if (!_.isEqual(scale, dataset.dataSource.scale.factor)) {
-                  console.warn(
-                    `Scale of mesh ${id} is different to dataset scale. Mesh scale: ${scale}, Dataset scale: ${dataset.dataSource.scale.factor}. This might lead to unexpected rendering results.`,
+                // Check if the mesh scale is different to all supported resolutions of the active segmentation scaled by the dataset scale and warn in the console to make debugging easier in such a case.
+                // This hint at the mesh file being computed when the dataset scale was different than currently configured.
+                const segmentationLayerResolutions = yield* select(
+                  (state) => getVisibleSegmentationLayer(state)?.resolutions,
+                );
+                const datasetScaleFactor = dataset.dataSource.scale.factor;
+                if (segmentationLayerResolutions && scale) {
+                  const doesSomeSegmResolutionMatchMeshScale = segmentationLayerResolutions.some(
+                    (res) => areVec3AlmostEqual(V3.scale3(datasetScaleFactor, res), scale),
                   );
+                  if (!doesSomeSegmResolutionMatchMeshScale) {
+                    console.warn(
+                      `Scale of mesh ${id} is different to dataset scale. Mesh scale: ${scale}, Dataset scale: ${dataset.dataSource.scale.factor}. This might lead to unexpected rendering results.`,
+                    );
+                  }
                 }
 
                 yield* call(

@@ -1,10 +1,35 @@
-import { Row, Col, Slider, InputNumber, Switch, Input, Select, Popover, PopoverProps } from "antd";
-import { DeleteOutlined, DownloadOutlined, EditOutlined, ScanOutlined } from "@ant-design/icons";
+import {
+  Row,
+  Col,
+  Slider,
+  InputNumber,
+  Switch,
+  Input,
+  Select,
+  Popover,
+  PopoverProps,
+  Dropdown,
+  MenuProps,
+} from "antd";
+import {
+  BorderInnerOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  EllipsisOutlined,
+  InfoCircleOutlined,
+  ScanOutlined,
+} from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import { type Vector3, type Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { connect } from "react-redux";
+import { OxalisState } from "oxalis/store";
+import { APISegmentationLayer } from "types/api_flow_types";
+import { api } from "oxalis/singletons";
 import FastTooltip from "components/fast_tooltip";
 
 const ROW_GUTTER = 1;
@@ -367,6 +392,7 @@ type UserBoundingBoxInputProps = {
   disabled: boolean;
   isLockedByOwner: boolean;
   isOwner: boolean;
+  visibleSegmentationLayer: APISegmentationLayer | null | undefined;
 };
 type State = {
   isEditing: boolean;
@@ -377,7 +403,7 @@ type State = {
 
 const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
 
-export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
+class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
   constructor(props: UserBoundingBoxInputProps) {
     super(props);
     this.state = {
@@ -455,6 +481,12 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     }
   };
 
+  onRegisterSegmentsForBB(value: Vector6, name: string): void {
+    const min: Vector3 = [value[0], value[1], value[2]];
+    const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
+    api.tracing.registerSegmentsForBoundingBox(min, max, name);
+  }
+
   render() {
     const { name } = this.state;
     const {
@@ -469,26 +501,82 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       isOwner,
     } = this.props;
     const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
-    const iconStyle = {
-      marginRight: 0,
+    const marginRightStyle = {
+      marginRight: 8,
+    };
+    const marginLeftStyle = {
       marginLeft: 6,
     };
-    const disabledIconStyle = { ...iconStyle, opacity: 0.5, cursor: "not-allowed" };
-    const exportIconStyle = isExportEnabled ? iconStyle : disabledIconStyle;
-    const exportButtonTooltip = isExportEnabled
-      ? "Export data from this bounding box."
-      : messages["data.bounding_box_export_not_supported"];
-    const exportColumn = isExportEnabled ? (
-      <Col span={2}>
-        <FastTooltip title={exportButtonTooltip} placement="top-end">
-          <DownloadOutlined onClick={onExport} style={exportIconStyle} />
-        </FastTooltip>
-      </Col>
-    ) : null;
+    const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
+    const exportButton = (
+      <>
+        <DownloadOutlined style={isExportEnabled ? marginRightStyle : disabledIconStyle} />
+        Export data
+      </>
+    );
+    const deleteButton = (
+      <>
+        <DeleteOutlined style={disabled ? disabledIconStyle : marginRightStyle} />
+        Delete
+      </>
+    );
     const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
       isLockedByOwner,
       isOwner,
     );
+    const isDeleteEnabled = !disabled && this.props.visibleSegmentationLayer != null;
+
+    const getContextMenu = () => {
+      const items: MenuProps["items"] = [
+        {
+          key: "registerSegments",
+          label: (
+            <>
+              Register all segments in this bounding box
+              <FastTooltip title="Moves/registers all segments within this bounding box into a new segment group">
+                <InfoCircleOutlined style={marginLeftStyle} />
+              </FastTooltip>
+            </>
+          ),
+          icon: <ScanOutlined />,
+          onClick: () => this.onRegisterSegmentsForBB(this.props.value, name),
+          disabled: this.props.visibleSegmentationLayer == null || disabled,
+        },
+        {
+          key: "goToCenter",
+          label: "Go to center",
+          icon: <BorderInnerOutlined />,
+          onClick: onGoToBoundingBox,
+        },
+        {
+          key: "export",
+          label: isExportEnabled ? (
+            exportButton
+          ) : (
+            <FastTooltip title={editingDisallowedExplanation}>{exportButton}</FastTooltip>
+          ),
+          disabled: !isExportEnabled,
+          onClick: onExport,
+        },
+        {
+          key: "delete",
+          label: isDeleteEnabled ? (
+            deleteButton
+          ) : (
+            <FastTooltip title={editingDisallowedExplanation}>{deleteButton}</FastTooltip>
+          ),
+          onClick: onDelete,
+          disabled: !isDeleteEnabled,
+        },
+      ];
+
+      return (
+        <Dropdown menu={{ items }}>
+          <EllipsisOutlined style={marginLeftStyle} />
+        </Dropdown>
+      );
+    };
+
     return (
       <>
         <Row
@@ -526,17 +614,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               </span>
             </FastTooltip>
           </Col>
-          {exportColumn}
-          <Col span={2}>
-            <FastTooltip
-              title={disabled ? editingDisallowedExplanation : "Delete this bounding box."}
-            >
-              <DeleteOutlined
-                onClick={disabled ? () => {} : onDelete}
-                style={disabled ? disabledIconStyle : iconStyle}
-              />
-            </FastTooltip>
-          </Col>
+          <Col span={2}>{getContextMenu()}</Col>
         </Row>
         <Row
           style={{
@@ -571,14 +649,9 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
               <ColorSetting
                 value={Utils.rgbToHex(upscaledColor)}
                 onChange={this.handleColorChange}
-                style={iconStyle}
+                style={marginLeftStyle}
                 disabled={disabled}
               />
-            </FastTooltip>
-          </Col>
-          <Col span={2}>
-            <FastTooltip title="Go to the center of the bounding box.">
-              <ScanOutlined onClick={onGoToBoundingBox} style={{ ...iconStyle, marginTop: 6 }} />
             </FastTooltip>
           </Col>
         </Row>
@@ -586,6 +659,14 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     );
   }
 }
+
+const mapStateToProps = (state: OxalisState) => ({
+  visibleSegmentationLayer: getVisibleSegmentationLayer(state),
+});
+
+const connector = connect(mapStateToProps)(UserBoundingBoxInput);
+export default connector;
+
 type ColorSettingPropTypes = {
   value: string;
   onChange: (value: Vector3) => void;

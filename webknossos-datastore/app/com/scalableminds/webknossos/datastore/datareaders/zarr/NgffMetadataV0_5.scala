@@ -31,7 +31,7 @@ object NgffMetadataV0_5 {
                                dataSourceVoxelSize: VoxelSize,
                                mags: List[Vec3Int],
                                additionalAxes: Option[Seq[AdditionalAxis]],
-                               version: String = "0.5-dev2"): NgffMetadataV0_5 = {
+                               version: String = "0.5"): NgffMetadataV0_5 = {
     val datasets = mags.map(
       mag =>
         NgffDataset(

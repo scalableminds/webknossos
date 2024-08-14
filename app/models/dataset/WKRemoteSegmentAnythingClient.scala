@@ -26,7 +26,10 @@ class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
       dataShape: Vec3Int, // two of the axes will be 1024, the other is the "depth". Axis order varies depending on viewport
       intensityMin: Option[Float],
       intensityMax: Option[Float]): Fox[Array[Byte]] = {
-    val metadataLengthInBytes = 1 + 1 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4 + 4
+    val interactionInputLengthInBytes = 1 + (
+      if (samInteractionType == SAMInteractionType.BOUNDING_BOX) 4 + 4 + 4 + 4 else 4 + 4
+    )
+    val metadataLengthInBytes = 1 + 1 + 4 + 4 + interactionInputLengthInBytes + 4 + 4 + 4
     val buffer = ByteBuffer.allocate(metadataLengthInBytes + imageData.length).order(ByteOrder.LITTLE_ENDIAN)
     buffer.put(ElementClass.encodeAsByte(elementClass))
     buffer.put(if (intensityMin.isDefined && intensityMax.isDefined) 1.toByte else 0.toByte)

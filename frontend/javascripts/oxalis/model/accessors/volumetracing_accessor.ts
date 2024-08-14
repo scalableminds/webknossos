@@ -403,7 +403,7 @@ function _getSelectedIds(state: OxalisState): [
     const availableGroups = currentVisibleSegments.segmentGroups.flatMap((group) =>
       getGroupByIdWithSubgroups(currentVisibleSegments.segmentGroups, group.groupId),
     );
-    availableGroups.concat(MISSING_GROUP_ID);
+    availableGroups.push(MISSING_GROUP_ID);
     cleanedSelectedGroup = availableGroups.includes(group) ? group : null;
   }
   const selectedIds = {

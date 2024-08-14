@@ -39,7 +39,39 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[VoxelSize])(
       implicit ec: ExecutionContext): Iterator[NamedStream] = {
 
-    val header = Zarr3ArrayHeader.fromDataLayer(layer)
+    val header = Zarr3ArrayHeader(
+      zarr_format = 3,
+      node_type = "array",
+      // channel, additional axes, XYZ
+      shape = Array(1) ++ additionalAxesSorted.map(_.highestValue).toArray ++ layer.boundingBox.bottomRight.toArray,
+      data_type = Left(layer.elementClass.toString),
+      chunk_grid = Left(
+        ChunkGridSpecification(
+          "regular",
+          ChunkGridConfiguration(
+            chunk_shape = Array.fill(1 + additionalAxesSorted.length)(1) ++ Array(DataLayer.bucketLength,
+                                                                                  DataLayer.bucketLength,
+                                                                                  DataLayer.bucketLength))
+        )),
+      chunk_key_encoding =
+        ChunkKeyEncoding("default",
+                         configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(dimensionSeparator)))),
+      fill_value = Right(0),
+      attributes = None,
+      codecs = Seq(
+        TransposeCodecConfiguration(TransposeSetting.fOrderFromRank(rank)),
+        BytesCodecConfiguration(Some("little")),
+        BloscCodecConfiguration(
+          BloscCompressor.defaultCname,
+          BloscCompressor.defaultCLevel,
+          StringCompressionSetting(BloscCodecConfiguration.shuffleSettingFromInt(BloscCompressor.defaultShuffle)),
+          Some(BloscCompressor.defaultTypesize),
+          BloscCompressor.defaultBlocksize
+        )
+      ),
+      storage_transformers = None,
+      dimension_names = Some(Array("c") ++ additionalAxesSorted.map(_.name).toArray ++ Seq("x", "y", "z"))
+    )
     bucketStream.flatMap {
       case (bucket, data) =>
         val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedBucket(data)

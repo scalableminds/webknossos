@@ -730,7 +730,7 @@ export class QuickSelectTool {
       },
       leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
         const state = Store.getState();
-        const startPos = V3.floor(calculateGlobalPos(state, pos));
+        const clickedPos = V3.floor(calculateGlobalPos(state, pos));
         isDragging = false;
 
         const quickSelectConfig = state.userConfiguration.quickSelect;
@@ -738,7 +738,7 @@ export class QuickSelectTool {
         const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
 
         if (!isQuickSelectHeuristic) {
-          Store.dispatch(computeQuickSelectForPointAction(startPos, quickSelectGeometry));
+          Store.dispatch(computeQuickSelectForPointAction(clickedPos, quickSelectGeometry));
         }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {

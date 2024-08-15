@@ -71,6 +71,9 @@ function* getMask(
   const maskBoxInMag = maskBoxMag1.fromMag1ToMag(mag);
   const userBoxRelativeToMaskInMag = userBoxInMag.offset(V3.negate(maskBoxInMag.min));
 
+  const minUV = userBoxRelativeToMaskInMag.getMinUV(activeViewport);
+  const maxUV = userBoxRelativeToMaskInMag.getMaxUV(activeViewport);
+
   const maskData = yield* call(
     getSamMask,
     dataset,
@@ -80,15 +83,15 @@ function* getMask(
     usePointPrompt
       ? {
           type: "POINT",
-          pointX: userBoxRelativeToMaskInMag.getMinUV(activeViewport)[0],
-          pointY: userBoxRelativeToMaskInMag.getMinUV(activeViewport)[1],
+          pointX: minUV[0],
+          pointY: minUV[1],
         }
       : {
           type: "BOUNDING_BOX",
-          selectionTopLeftX: userBoxRelativeToMaskInMag.getMinUV(activeViewport)[0],
-          selectionTopLeftY: userBoxRelativeToMaskInMag.getMinUV(activeViewport)[1],
-          selectionBottomRightX: userBoxRelativeToMaskInMag.getMaxUV(activeViewport)[0],
-          selectionBottomRightY: userBoxRelativeToMaskInMag.getMaxUV(activeViewport)[1],
+          selectionTopLeftX: minUV[0],
+          selectionTopLeftY: minUV[1],
+          selectionBottomRightX: maxUV[0],
+          selectionBottomRightY: maxUV[1],
         },
     additionalCoordinates,
     intensityRange,

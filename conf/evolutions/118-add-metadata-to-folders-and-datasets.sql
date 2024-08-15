@@ -19,7 +19,6 @@ SET metadata = CASE
         metadata || jsonb_build_array(
             jsonb_build_object(
                 'type', 'string',
-                'index', 0,
                 'key', 'species',
                 'value', details->>'species'
             )
@@ -34,7 +33,6 @@ SET metadata = CASE
         metadata || jsonb_build_array(
             jsonb_build_object(
                 'type', 'string',
-                'index', 1,
                 'key', 'brainRegion',
                 'value', details->>'brainRegion'
             )
@@ -50,7 +48,6 @@ SET metadata = CASE
         metadata || jsonb_build_array(
             jsonb_build_object(
                 'type', 'string',
-                'index', 2,
                 'key', 'acquisition',
                 'value', details->>'acquisition'
             )
@@ -58,6 +55,20 @@ SET metadata = CASE
     ELSE
         metadata
 END;
+
+-- Move all tags into metadata
+UPDATE webknossos.datasets
+SET metadata = metadata || jsonb_build_array(
+    jsonb_build_object(
+        'type', 'string[]',
+        'key', 'tags',
+        'value', json_build_array(tags)
+    )
+)
+WHERE EXISTS (
+    SELECT 1
+    FROM unnest(tags) AS t
+);
 
 -- Drop details
 ALTER TABLE webknossos.datasets DROP COLUMN details;

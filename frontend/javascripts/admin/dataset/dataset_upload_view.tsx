@@ -1033,10 +1033,10 @@ function FileUploadArea({
               </div>
             </>
           ) : (
-            <>
+            <div style={{ marginTop: 8 }}>
               Drag your file(s) to this area to upload them. Either add individual image files, a
               zip archive or a folder.
-            </>
+            </div>
           )}
           {isDatasetConversionEnabled ? (
             <>

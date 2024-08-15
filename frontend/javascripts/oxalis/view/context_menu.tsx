@@ -98,7 +98,7 @@ import {
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { roundTo, hexToRgb, rgbToHex, truncateStringToLength } from "libs/utils";
-import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
+import { handleNodeCreation } from "oxalis/controller/combinations/skeleton_handlers";
 import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { api } from "oxalis/singletons";
@@ -1016,7 +1016,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       ? [
           {
             key: "create-node",
-            onClick: () => setWaypoint(globalPosition, viewport, false),
+            onClick: () => handleNodeCreation(globalPosition, viewport, false),
             label: "Create Node here",
             disabled: isSkeletonLayerTransformed(state),
           },
@@ -1024,7 +1024,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             key: "create-node-with-tree",
             onClick: () => {
               Store.dispatch(createTreeAction());
-              setWaypoint(globalPosition, viewport, false);
+              handleNodeCreation(globalPosition, viewport, false);
             },
             label: (
               <>

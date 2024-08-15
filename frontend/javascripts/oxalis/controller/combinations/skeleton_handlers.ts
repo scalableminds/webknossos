@@ -123,7 +123,7 @@ export function handleCreateNode(position: Point2, ctrlPressed: boolean) {
   }
 
   const globalPosition = calculateGlobalPos(state, position);
-  setWaypoint(globalPosition, activeViewport, ctrlPressed);
+  handleNodeCreation(globalPosition, activeViewport, ctrlPressed);
 }
 export function handleOpenContextMenu(
   planeView: PlaneView,
@@ -233,7 +233,7 @@ export function finishNodeMovement(nodeId: number) {
   );
 }
 
-export function setWaypoint(
+export function handleNodeCreation(
   position: Vector3,
   activeViewport: OrthoView,
   ctrlIsPressed: boolean,
@@ -264,10 +264,10 @@ export function setWaypoint(
   // the new one is still activated regardless of CTRL (otherwise, using CTRL+click in an empty tree multiple times would
   // not create any edges; see https://github.com/scalableminds/webknossos/issues/5303).
   const activate = !ctrlIsPressed || activeNodeMaybe.isNothing;
-  addNode(position, rotation, createNewTree, center, branchpoint, activate);
+  addSkeletonNode(position, rotation, createNewTree, center, branchpoint, activate);
 }
 
-function addNode(
+export function addSkeletonNode(
   position: Vector3,
   rotation: Vector3,
   createNewTree: boolean,

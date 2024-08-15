@@ -272,7 +272,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   setRecord(record: boolean): void {
     if (record !== Store.getState().temporaryConfiguration.flightmodeRecording) {
       Store.dispatch(setFlightmodeRecordingAction(record));
-      this.setWaypoint();
+      this.handleCreateNode();
     }
   }
 
@@ -325,7 +325,7 @@ class ArbitraryController extends React.PureComponent<Props> {
           if (isRecording) {
             // This listener is responsible for setting a new waypoint, when the user enables
             // the "flightmode recording" toggle in the top-left corner of the flight canvas.
-            this.setWaypoint();
+            this.handleCreateNode();
           }
         },
       ),
@@ -394,7 +394,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.input.keyboardNoLoop?.destroy();
   }
 
-  setWaypoint(): void {
+  handleCreateNode(): void {
     if (!Store.getState().temporaryConfiguration.flightmodeRecording) {
       return;
     }
@@ -433,7 +433,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
 
     // Consider for deletion
-    this.setWaypoint();
+    this.handleCreateNode();
     Store.dispatch(createBranchPointAction());
     Toast.success(messages["tracing.branchpoint_set"]);
   }
@@ -454,7 +454,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     const vectorLength = V3.length(vector);
 
     if (vectorLength > 10) {
-      this.setWaypoint();
+      this.handleCreateNode();
       this.lastNodeMatrix = matrix;
     }
   }

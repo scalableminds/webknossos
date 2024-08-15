@@ -49,7 +49,6 @@ import {
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
 import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
-import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
 import { userSettings } from "types/schemas/user_settings.schema";

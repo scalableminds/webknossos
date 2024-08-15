@@ -241,13 +241,14 @@ class ArbitraryController extends React.PureComponent<Props> {
           return;
         }
 
-        getActiveNode(skeletonTracing).map((activeNode) =>
+        const activeNode = getActiveNode(skeletonTracing);
+        if (activeNode) {
           api.tracing.centerPositionAnimated(
             getNodePosition(activeNode, state),
             false,
             activeNode.rotation,
-          ),
-        );
+          );
+        }
       },
       ".": () => this.nextNode(true),
       ",": () => this.nextNode(false),
@@ -283,15 +284,16 @@ class ArbitraryController extends React.PureComponent<Props> {
       return;
     }
 
-    Utils.zipMaybe(getActiveNode(skeletonTracing), getMaxNodeId(skeletonTracing)).map(
-      ([activeNode, maxNodeId]) => {
-        if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
-          return;
-        }
-
-        Store.dispatch(setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1)); // implicit cast from boolean to int
-      },
-    );
+    const activeNode = getActiveNode(skeletonTracing);
+    const maxNodeId = getMaxNodeId(skeletonTracing);
+    if (activeNode == null || maxNodeId == null) {
+      return;
+    }
+    if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
+      return;
+    }
+    // implicit cast from boolean to int
+    Store.dispatch(setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1));
   }
 
   move(timeFactor: number): void {

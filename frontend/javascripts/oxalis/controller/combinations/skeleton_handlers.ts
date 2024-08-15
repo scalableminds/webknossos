@@ -64,9 +64,10 @@ export function handleMergeTrees(
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    getActiveNode(skeletonTracing).map((activeNode) =>
-      Store.dispatch(mergeTreesAction(activeNode.id, nodeId)),
-    );
+    const activeNode = getActiveNode(skeletonTracing);
+    if (activeNode) {
+      Store.dispatch(mergeTreesAction(activeNode.id, nodeId));
+    }
   }
 }
 export function handleDeleteEdge(
@@ -80,9 +81,10 @@ export function handleDeleteEdge(
 
   // otherwise we have hit the background and do nothing
   if (nodeId != null && nodeId > 0) {
-    getActiveNode(skeletonTracing).map((activeNode) =>
-      Store.dispatch(deleteEdgeAction(activeNode.id, nodeId)),
-    );
+    const activeNode = getActiveNode(skeletonTracing);
+    if (activeNode) {
+      Store.dispatch(deleteEdgeAction(activeNode.id, nodeId));
+    }
   }
 }
 export function handleSelectNode(
@@ -259,7 +261,7 @@ export function getOptionsForCreateSkeletonNode(
 ) {
   const state = Store.getState();
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
-  const activeNodeMaybe = getActiveNode(skeletonTracing);
+  const activeNode = getActiveNode(skeletonTracing);
   const rotation = getRotationOrtho(activeViewport || state.viewModeData.plane.activeViewport);
 
   // Center node if the corresponding setting is true. Only pressing CTRL can override this.
@@ -271,7 +273,7 @@ export function getOptionsForCreateSkeletonNode(
   // Always activate the new node unless CTRL is pressed. If there is no current node,
   // the new one is still activated regardless of CTRL (otherwise, using CTRL+click in an empty tree multiple times would
   // not create any edges; see https://github.com/scalableminds/webknossos/issues/5303).
-  const activate = !ctrlIsPressed || activeNodeMaybe.isNothing;
+  const activate = !ctrlIsPressed || activeNode == null;
 
   return { rotation, center, branchpoint, activate };
 }
@@ -334,8 +336,8 @@ export function createSkeletonNode(
 
 function updateTraceDirection(position: Vector3) {
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
-  const activeNodeMaybe = getActiveNode(skeletonTracing);
-  activeNodeMaybe.map((activeNode) => {
+  const activeNode = getActiveNode(skeletonTracing);
+  if (activeNode != null) {
     const activeNodePosition = getNodePosition(activeNode, Store.getState());
     return Store.dispatch(
       setDirectionAction([
@@ -344,7 +346,7 @@ function updateTraceDirection(position: Vector3) {
         position[2] - activeNodePosition[2],
       ]),
     );
-  });
+  }
 }
 
 export function moveAlongDirection(reverse: boolean = false): void {

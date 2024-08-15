@@ -68,14 +68,14 @@ export function enforceSkeletonTracing(tracing: Tracing): SkeletonTracing {
   return getSkeletonTracing(tracing).get();
 }
 
-export function getActiveNode(skeletonTracing: SkeletonTracing): Maybe<Node> {
+export function getActiveNode(skeletonTracing: SkeletonTracing): Node | null {
   const { activeTreeId, activeNodeId } = skeletonTracing;
 
   if (activeTreeId != null && activeNodeId != null) {
-    return Maybe.Just(skeletonTracing.trees[activeTreeId].nodes.getOrThrow(activeNodeId));
+    return skeletonTracing.trees[activeTreeId].nodes.getOrThrow(activeNodeId);
   }
 
-  return Maybe.Nothing();
+  return null;
 }
 
 export function getActiveTree(skeletonTracing: SkeletonTracing): Maybe<Tree> {
@@ -251,15 +251,14 @@ export function getMaxNodeIdInTree(tree: Tree): Maybe<number> {
 
   return maxNodeId === -Infinity ? Maybe.Nothing() : Maybe.Just(maxNodeId);
 }
-export function getMaxNodeId(skeletonTracing: SkeletonTracing): Maybe<number> {
+export function getMaxNodeId(skeletonTracing: SkeletonTracing): number | null {
   const maxNodeId = _.reduce(
     skeletonTracing.trees,
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Tree' is not assignable to param... Remove this comment to see the full error message
-    (r, tree) => Math.max(r, getMaxNodeId(tree).getOrElse(-Infinity)),
+    (r, tree) => Math.max(r, getMaxNodeIdInTree(tree).getOrElse(-Infinity)),
     -Infinity,
   );
 
-  return maxNodeId === -Infinity ? Maybe.Nothing() : Maybe.Just(maxNodeId);
+  return maxNodeId === -Infinity ? null : maxNodeId;
 }
 export function getBranchPoints(tracing: Tracing): Maybe<Array<BranchPoint>> {
   return getSkeletonTracing(tracing).map((skeletonTracing) =>

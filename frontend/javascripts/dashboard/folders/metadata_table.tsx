@@ -383,20 +383,22 @@ export default function MetadataTable({
   };
 
   const getDeleteEntryButton = (_: APIMetadataWithError, index: number) => (
-    <Button
-      type="text"
-      disabled={isSaving}
-      icon={
-        <DeleteOutlined
-          style={{
-            color: "var(--ant-color-text-tertiary)",
-            width: 16,
-          }}
-        />
-      }
-      style={{ width: 16 }}
-      onClick={() => deleteKey(index)}
-    />
+    <div className="flex-center-child">
+      <Button
+        type="text"
+        disabled={isSaving}
+        icon={
+          <DeleteOutlined
+            style={{
+              color: "var(--ant-color-text-tertiary)",
+              width: 16,
+            }}
+          />
+        }
+        style={{ width: 16 }}
+        onClick={() => deleteKey(index)}
+      />
+    </div>
   );
 
   const addNewEntryMenuItems = getTypeSelectDropdownMenu();

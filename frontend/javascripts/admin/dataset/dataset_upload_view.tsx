@@ -1010,7 +1010,6 @@ function FileUploadArea({
         />
         <p
           style={{
-            maxWidth: 800,
             textAlign: "center",
             display: "inline-block",
             marginTop: 8,
@@ -1018,33 +1017,34 @@ function FileUploadArea({
         >
           {features().recommendWkorgInstance ? (
             <>
-              Drag and drop your files in WKW format. <br />
+              Drag and drop your files in WKW format.
               <div
                 style={{
-                  maxWidth: 800,
                   textAlign: "left",
-                  display: "inline-block",
-                  marginTop: 8,
+                  display: "list-item",
+                  maxWidth: 475,
+                  marginTop: 10,
                 }}
               >
                 Need to upload files in other formats? Switch to{" "}
-                <a href="https://webknossos.org">webknossos.org</a>
-                <br /> for more file types support and automatic conversion.
-                <br />
+                <a href="https://webknossos.org">webknossos.org</a> for more file types support and
+                automatic conversion.
                 <a href="webknossos.org/self-hosted-upgrade"> Learn more!</a>
               </div>
             </>
           ) : (
-            "Drag your file(s) to this area to upload them. Either add individual image files, a zip archive or a folder."
+            <>
+              Drag your file(s) to this area to upload them. Either add individual image files, a
+              zip archive or a folder.
+            </>
           )}
           {isDatasetConversionEnabled ? (
             <>
-              <br />
-              <br />
               <div
                 style={{
                   textAlign: "left",
                   display: "inline-block",
+                  marginTop: 10,
                 }}
               >
                 The following file formats are supported:

@@ -101,7 +101,7 @@ export function handleSelectNode(
 
   return false;
 }
-export function handleCreateNode(position: Point2, ctrlPressed: boolean) {
+export function handleCreateNodeFromEvent(position: Point2, ctrlPressed: boolean) {
   const state = Store.getState();
 
   if (isMagRestrictionViolated(state)) {
@@ -123,7 +123,7 @@ export function handleCreateNode(position: Point2, ctrlPressed: boolean) {
   }
 
   const globalPosition = calculateGlobalPos(state, position);
-  handleNodeCreation(globalPosition, activeViewport, ctrlPressed);
+  handleCreateNodeFromGlobalPosition(globalPosition, activeViewport, ctrlPressed);
 }
 export function handleOpenContextMenu(
   planeView: PlaneView,
@@ -233,51 +233,45 @@ export function finishNodeMovement(nodeId: number) {
   );
 }
 
-export function handleNodeCreation(
+export function handleCreateNodeFromGlobalPosition(
   position: Vector3,
   activeViewport: OrthoView,
   ctrlIsPressed: boolean,
 ): void {
+  const rotation = getRotationOrtho(activeViewport);
   const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
   const activeNodeMaybe = getActiveNode(skeletonTracing);
-  const rotation = getRotationOrtho(activeViewport);
-  // set the new trace direction
-  activeNodeMaybe.map((activeNode) => {
-    const activeNodePosition = getNodePosition(activeNode, Store.getState());
-    return Store.dispatch(
-      setDirectionAction([
-        position[0] - activeNodePosition[0],
-        position[1] - activeNodePosition[1],
-        position[2] - activeNodePosition[2],
-      ]),
-    );
-  });
+
   const state = Store.getState();
   // Create a new tree automatically if the corresponding setting is true and allowed
   const createNewTree =
     state.tracing.restrictions.somaClickingAllowed && state.userConfiguration.newNodeNewTree;
+  if (createNewTree) {
+    Store.dispatch(createTreeAction());
+  }
+
   // Center node if the corresponding setting is true. Only pressing CTRL can override this.
   const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;
+
   // Only create a branchpoint if CTRL is pressed. Unless newNodeNewTree is activated (branchpoints make no sense then)
   const branchpoint = ctrlIsPressed && !state.userConfiguration.newNodeNewTree;
+
   // Always activate the new node unless CTRL is pressed. If there is no current node,
   // the new one is still activated regardless of CTRL (otherwise, using CTRL+click in an empty tree multiple times would
   // not create any edges; see https://github.com/scalableminds/webknossos/issues/5303).
   const activate = !ctrlIsPressed || activeNodeMaybe.isNothing;
-  addSkeletonNode(position, rotation, createNewTree, center, branchpoint, activate);
+
+  createSkeletonNode(position, rotation, center, branchpoint, activate);
 }
 
-export function addSkeletonNode(
+export function createSkeletonNode(
   position: Vector3,
   rotation: Vector3,
-  createNewTree: boolean,
   center: boolean,
   branchpoint: boolean,
   activate: boolean,
 ): void {
-  if (createNewTree) {
-    Store.dispatch(createTreeAction());
-  }
+  updateTraceDirection(position);
 
   const state = Store.getState();
   const enabledColorLayers = getEnabledColorLayers(state.dataset, state.datasetConfiguration);
@@ -318,6 +312,21 @@ export function addSkeletonNode(
   if (branchpoint) {
     Store.dispatch(createBranchPointAction());
   }
+}
+
+function updateTraceDirection(position: Vector3) {
+  const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
+  const activeNodeMaybe = getActiveNode(skeletonTracing);
+  activeNodeMaybe.map((activeNode) => {
+    const activeNodePosition = getNodePosition(activeNode, Store.getState());
+    return Store.dispatch(
+      setDirectionAction([
+        position[0] - activeNodePosition[0],
+        position[1] - activeNodePosition[1],
+        position[2] - activeNodePosition[2],
+      ]),
+    );
+  });
 }
 
 export function moveAlongDirection(reverse: boolean = false): void {

@@ -9,7 +9,7 @@ DROP VIEW webknossos.datasets_;
 ALTER TABLE webknossos.folders DROP COLUMN metadata;
 
 -- Dataset part
-ALTER TABLE webknossos.datasets ADD COLUMN details JSONB DEFAULT '{}';
+ALTER TABLE webknossos.datasets ADD COLUMN details JSONB;
 ALTER TABLE webknossos.datasets ADD CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'object');
 
 -- Add existing info on species of metadata to details

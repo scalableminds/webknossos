@@ -1148,8 +1148,6 @@ function FileUploadArea({
                     </Popover>
                   </li>
                   <li>Single-file images (tif, czi, nifti, raw, ims etc.)</li>
-
-                  <li>KNOSSOS file hierarchy</li>
                 </ul>
                 Have a look at{" "}
                 <a href="https://docs.webknossos.org/webknossos/data_formats.html">

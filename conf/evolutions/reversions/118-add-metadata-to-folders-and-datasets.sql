@@ -56,6 +56,24 @@ WHERE EXISTS (
     WHERE m->>'key' = 'acquisition'
 );
 
+-- Move existing from metadata back to details
+UPDATE webknossos.datasets
+SET tags = (
+    SELECT ARRAY(
+        SELECT jsonb_array_elements_text(elem -> 'value')
+        FROM jsonb_array_elements(metadata) AS elem
+        WHERE elem ->> 'key' = 'tags'
+        AND elem ->> 'type' = 'string[]'
+    )
+)
+WHERE EXISTS (
+    SELECT 1
+    FROM jsonb_array_elements(metadata) AS elem
+    WHERE elem ->> 'key' = 'tags'
+    AND elem ->> 'type' = 'string[]'
+);
+
+
 
 -- Drop details
 ALTER TABLE webknossos.datasets DROP COLUMN metadata;

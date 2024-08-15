@@ -3,7 +3,7 @@ import type { OrthoView, OrthoViewMap, Point2, Vector3, Viewport } from "oxalis/
 import { OrthoViews } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import _ from "lodash";
-import { enforce, values } from "libs/utils";
+import { values } from "libs/utils";
 import {
   enforceSkeletonTracing,
   getSkeletonTracing,
@@ -238,10 +238,6 @@ export function handleCreateNodeFromGlobalPosition(
   activeViewport: OrthoView,
   ctrlIsPressed: boolean,
 ): void {
-  const rotation = getRotationOrtho(activeViewport);
-  const skeletonTracing = enforceSkeletonTracing(Store.getState().tracing);
-  const activeNodeMaybe = getActiveNode(skeletonTracing);
-
   const state = Store.getState();
   // Create a new tree automatically if the corresponding setting is true and allowed
   const createNewTree =
@@ -249,6 +245,22 @@ export function handleCreateNodeFromGlobalPosition(
   if (createNewTree) {
     Store.dispatch(createTreeAction());
   }
+
+  const { rotation, center, branchpoint, activate } = getOptionsForCreateSkeletonNode(
+    activeViewport,
+    ctrlIsPressed,
+  );
+  createSkeletonNode(position, rotation, center, branchpoint, activate);
+}
+
+export function getOptionsForCreateSkeletonNode(
+  activeViewport: OrthoView | null = null,
+  ctrlIsPressed: boolean = false,
+) {
+  const state = Store.getState();
+  const skeletonTracing = enforceSkeletonTracing(state.tracing);
+  const activeNodeMaybe = getActiveNode(skeletonTracing);
+  const rotation = getRotationOrtho(activeViewport || state.viewModeData.plane.activeViewport);
 
   // Center node if the corresponding setting is true. Only pressing CTRL can override this.
   const center = state.userConfiguration.centerNewNode && !ctrlIsPressed;
@@ -261,7 +273,7 @@ export function handleCreateNodeFromGlobalPosition(
   // not create any edges; see https://github.com/scalableminds/webknossos/issues/5303).
   const activate = !ctrlIsPressed || activeNodeMaybe.isNothing;
 
-  createSkeletonNode(position, rotation, center, branchpoint, activate);
+  return { rotation, center, branchpoint, activate };
 }
 
 export function createSkeletonNode(
@@ -273,7 +285,7 @@ export function createSkeletonNode(
 ): void {
   updateTraceDirection(position);
 
-  const state = Store.getState();
+  let state = Store.getState();
   const enabledColorLayers = getEnabledColorLayers(state.dataset, state.datasetConfiguration);
   const activeMagIndices = getActiveMagIndicesForLayers(state);
   const activeMagIndicesOfEnabledColorLayers = _.pick(
@@ -299,14 +311,20 @@ export function createSkeletonNode(
     ),
   );
 
+  // We need a reference to the new store state, so that the new node exists in it.
+  state = Store.getState();
+
   if (center) {
-    // we created a new node, so get a new reference from the current store state
-    const newState = Store.getState();
-    enforce(getActiveNode)(newState.tracing.skeleton).map((newActiveNode) =>
+    const newSkeleton = enforceSkeletonTracing(state.tracing);
+    // Note that the new node isn't necessarily active
+    const newNodeId = newSkeleton.cachedMaxNodeId;
+
+    const { activeTreeId } = newSkeleton;
+    getNodeAndTree(newSkeleton, newNodeId, activeTreeId).map(([, newNode]) => {
       // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
       // This is important because otherwise the user cannot continue to trace until the animation is over
-      api.tracing.centerPositionAnimated(getNodePosition(newActiveNode, state), true),
-    );
+      api.tracing.centerPositionAnimated(getNodePosition(newNode, state), true);
+    });
   }
 
   if (branchpoint) {

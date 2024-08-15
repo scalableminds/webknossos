@@ -178,6 +178,10 @@ import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import {
+  createSkeletonNode,
+  getOptionsForCreateSkeletonNode,
+} from "oxalis/controller/combinations/skeleton_handlers";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -322,11 +326,21 @@ class TracingApi {
   }
 
   /**
-   * Creates a new and empty tree
+   * Creates a new and empty tree. Returns the
+   * id of that tree.
    */
   createTree() {
     assertSkeleton(Store.getState().tracing);
-    Store.dispatch(createTreeAction());
+    let treeId = null;
+    Store.dispatch(
+      createTreeAction((id) => {
+        treeId = id;
+      }),
+    );
+    if (treeId == null) {
+      throw new Error("Could not create tree.");
+    }
+    return treeId;
   }
 
   /**
@@ -335,6 +349,31 @@ class TracingApi {
   deleteTree(treeId: number) {
     assertSkeleton(Store.getState().tracing);
     Store.dispatch(deleteTreeAction(treeId));
+  }
+
+  /**
+   * Creates a new node in the current tree. If the active tree
+   * is not empty, the node will be connected with an edge to
+   * the currently active node.
+   */
+  createNode(
+    position: Vector3,
+    options?: {
+      rotation?: Vector3;
+      center?: boolean;
+      branchpoint?: boolean;
+      activate?: boolean;
+    },
+  ) {
+    assertSkeleton(Store.getState().tracing);
+    const defaultOptions = getOptionsForCreateSkeletonNode();
+    createSkeletonNode(
+      position,
+      options?.rotation ?? defaultOptions.rotation,
+      options?.center ?? defaultOptions.center,
+      options?.branchpoint ?? defaultOptions.branchpoint,
+      options?.activate ?? defaultOptions.activate,
+    );
   }
 
   /**

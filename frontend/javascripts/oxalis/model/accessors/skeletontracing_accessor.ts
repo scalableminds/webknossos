@@ -78,14 +78,17 @@ export function getActiveNode(skeletonTracing: SkeletonTracing): Node | null {
   return null;
 }
 
-export function getActiveTree(skeletonTracing: SkeletonTracing): Maybe<Tree> {
+export function getActiveTree(skeletonTracing: SkeletonTracing | null | undefined): Tree | null {
+  if (skeletonTracing == null) {
+    return null;
+  }
   const { activeTreeId } = skeletonTracing;
 
   if (activeTreeId != null) {
-    return Maybe.Just(skeletonTracing.trees[activeTreeId]);
+    return skeletonTracing.trees[activeTreeId];
   }
 
-  return Maybe.Nothing();
+  return null;
 }
 
 export function getActiveTreeGroup(skeletonTracing: SkeletonTracing): Maybe<TreeGroup> {

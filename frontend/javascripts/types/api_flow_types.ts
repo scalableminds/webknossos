@@ -1083,7 +1083,7 @@ export type FlatFolderTreeItem = {
 // Frontend type of FlatFolderTreeItem with inferred nested structure.
 export type FolderItem = {
   title: string;
-  key: string;
+  key: string; // folder id
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;

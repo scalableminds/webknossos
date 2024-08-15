@@ -1015,7 +1015,7 @@ function FileUploadArea({
             marginTop: 8,
           }}
         >
-          {features().recommendWkorgInstance ? (
+          {features().recommendWkorgInstance && !isDatasetConversionEnabled ? (
             <>
               Drag and drop your files in WKW format.
               <div

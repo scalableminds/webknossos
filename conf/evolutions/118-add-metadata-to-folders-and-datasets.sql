@@ -62,7 +62,7 @@ SET metadata = metadata || jsonb_build_array(
     jsonb_build_object(
         'type', 'string[]',
         'key', 'tags',
-        'value', json_build_array(tags)
+        'value', tags
     )
 )
 WHERE EXISTS (

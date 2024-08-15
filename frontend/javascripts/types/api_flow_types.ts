@@ -652,6 +652,7 @@ export type APIFeatureToggles = {
   readonly discussionBoardRequiresAdmin: boolean;
   readonly hideNavbarLogin: boolean;
   readonly isWkorgInstance: boolean;
+  readonly recommendWkorgInstance: boolean;
   readonly taskReopenAllowedInSeconds: number;
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;

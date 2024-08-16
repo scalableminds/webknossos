@@ -182,8 +182,8 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
       // have the same size.
       throw new SoftError("A tree was unexpectedly parsed as null. Please try again");
     }
-    const nodes1 = Array.from(tree1.nodes.values());
-    const nodes2 = Array.from(tree2.nodes.values());
+    const nodes1 = Array.from(tree1.nodes.values()).sort((a, b) => a.id - b.id);
+    const nodes2 = Array.from(tree2.nodes.values()).sort((a, b) => a.id - b.id);
     for (const [node1, node2] of _.zip(nodes1, nodes2)) {
       if ((node1 == null) !== (node2 == null)) {
         throw new SoftError(

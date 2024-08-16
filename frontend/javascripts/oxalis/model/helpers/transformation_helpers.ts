@@ -34,6 +34,7 @@ export function createAffineTransformFromMatrix(
 }
 
 export function createAffineTransform(source: Vector3[], target: Vector3[]): Transform {
+  /* Creates an affine transform that transforms from source points to target points. */
   const affineMatrix = estimateAffineMatrix4x4(source, target);
 
   return {
@@ -48,6 +49,7 @@ export function createThinPlateSplineTransform(
   target: Vector3[],
   scale: Vector3,
 ): Transform {
+  /* Creates a TPS that transforms from source points to target points. */
   const affineMatrix = estimateAffineMatrix4x4(source, target);
   const affineMatrixInv = estimateAffineMatrix4x4(target, source);
 

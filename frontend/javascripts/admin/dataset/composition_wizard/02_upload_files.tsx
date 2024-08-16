@@ -204,8 +204,8 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
 
   return {
     datasets: datasets || [],
-    sourcePoints,
-    targetPoints,
+    sourcePoints, // The first dataset (will be transformed to match the second later)
+    targetPoints, // The second dataset (won't be transformed by default)
     currentWizardStep: "SelectDatasets",
   };
 }

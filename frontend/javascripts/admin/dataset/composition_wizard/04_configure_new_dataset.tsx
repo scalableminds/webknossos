@@ -104,6 +104,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
           : [];
       return layers.map((layer) => ({
         ...layer,
+        // The first dataset will be transformed to match the second.
         transformations: areDatasetsIdentical(layer.datasetId, linkedDatasets[0])
           ? transformationArr
           : [],

@@ -516,7 +516,7 @@ export default function TaskListView({
     const taskArtifacts = report.artifacts[task.taskName] || {};
     let foreignWorkflow: null | [string, string] = null;
     if (taskInfo.state === VoxelyticsRunState.SKIPPED) {
-      foreignWorkflow = Object.values(taskArtifacts)[0]?.foreignWorkflow;
+      foreignWorkflow = Object.values(taskArtifacts)[0]?.foreignWorkflow ?? null;
     }
 
     return {

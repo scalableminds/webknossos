@@ -142,7 +142,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           o._run AS other_run
         FROM webknossos.voxelytics_artifacts a
         JOIN latest_complete_tasks t ON t._id = a._task
-        LEFT JOIN (
+        LEFT JOIN ( -- when the task is skipped, the artifact from the producing task run is joined for linking
           SELECT
             DISTINCT ON (a.path)
             a.path path,

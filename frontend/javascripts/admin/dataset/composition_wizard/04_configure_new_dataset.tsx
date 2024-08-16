@@ -1,5 +1,5 @@
 import { DeleteOutlined } from "@ant-design/icons";
-import { createDatasetComposition } from "admin/admin_rest_api";
+import { createDatasetComposition, updateDatasetPartial } from "admin/admin_rest_api";
 import {
   AllowedTeamsFormItem,
   DatasetNameFormItem,
@@ -83,8 +83,11 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     if (activeUser == null) {
       throw new Error("Cannot create dataset without being logged in.");
     }
-    const layersWithoutTransforms = form.getFieldValue(["layers"]);
-    const useThinPlateSplines = form.getFieldValue("useThinPlateSplines");
+    const layersWithoutTransforms = form.getFieldValue(["layers"]) as LayerLink[];
+    // todop: does this throw when the ui was not rendered?
+    const useThinPlateSplines = form.getFieldValue("useThinPlateSplines") as boolean;
+
+    const affineMeanError = { meanError: 0 };
 
     function withTransforms(layers: LayerLink[]) {
       const { sourcePoints, targetPoints } = wizardContext;
@@ -98,7 +101,9 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
                   }
                 : {
                     type: "affine" as const,
-                    matrix: flatToNestedMatrix(estimateAffineMatrix4x4(sourcePoints, targetPoints)),
+                    matrix: flatToNestedMatrix(
+                      estimateAffineMatrix4x4(sourcePoints, targetPoints, affineMeanError),
+                    ),
                   },
             ]
           : [];
@@ -128,6 +133,35 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         voxelSize: linkedDatasets.slice(-1)[0].dataSource.scale,
         layers: withTransforms(layersWithoutTransforms),
       });
+
+      const uniqueDatasets = _.uniqBy(
+        layersWithoutTransforms.map((layer) => layer.datasetId),
+        (id) => id.owningOrganization + "-" + id.name,
+      );
+      const datasetMarkdownLinks = uniqueDatasets
+        .map((el) => `- [${el.name}](/datasets/${el.owningOrganization}/${el.name})`)
+        .join("\n");
+
+      await updateDatasetPartial(
+        { owningOrganization: activeUser.organization, name: newDatasetName },
+        {
+          description: [
+            "This dataset was composed from:",
+            datasetMarkdownLinks,
+            "",
+            "The layers were combined " +
+              (wizardContext.sourcePoints.length === 0
+                ? "without any transforms"
+                : `with ${
+                    useThinPlateSplines
+                      ? `Thin-Plate-Splines (${wizardContext.sourcePoints.length} correspondences)`
+                      : `an affine transformation (mean error: ${affineMeanError})`
+                  }`) +
+              ".",
+          ].join("\n"),
+        },
+        // todop test
+      );
     } finally {
       setIsLoading(false);
     }
@@ -201,9 +235,11 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
             );
           }}
         </Form.Item>
-        <FormItem name={["useThinPlateSplines"]} valuePropName="checked">
-          <Checkbox>Use Thin-Plate-Splines (Experimental)</Checkbox>
-        </FormItem>
+        {wizardContext.sourcePoints.length > 0 && (
+          <FormItem name={["useThinPlateSplines"]} valuePropName="checked">
+            <Checkbox>Use Thin-Plate-Splines (Experimental)</Checkbox>
+          </FormItem>
+        )}
 
         <FormItem
           style={{

@@ -179,6 +179,21 @@ type NoNodeContextMenuProps = Props & {
   infoRows: ItemType[];
 };
 
+export const getNoActionsAvailableMenu = (hideContextMenu: () => void): MenuProps => ({
+  onClick: hideContextMenu,
+  style: {
+    borderRadius: 6,
+  },
+  mode: "vertical",
+  items: [
+    {
+      key: "view",
+      disabled: true,
+      label: "No actions available.",
+    },
+  ],
+});
+
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
     <FastTooltip title={title}>

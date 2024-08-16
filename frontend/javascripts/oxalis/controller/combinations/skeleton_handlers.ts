@@ -47,6 +47,7 @@ import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bou
 import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
 import ArbitraryView from "oxalis/view/arbitrary_view";
 import { showContextMenuAction } from "oxalis/model/actions/ui_actions";
+import { AdditionalCoordinate } from "types/api_flow_types";
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,
@@ -248,11 +249,9 @@ export function handleCreateNodeFromGlobalPosition(
     Store.dispatch(createTreeAction());
   }
 
-  const { rotation, center, branchpoint, activate } = getOptionsForCreateSkeletonNode(
-    activeViewport,
-    ctrlIsPressed,
-  );
-  createSkeletonNode(position, rotation, center, branchpoint, activate);
+  const { additionalCoordinates, rotation, center, branchpoint, activate } =
+    getOptionsForCreateSkeletonNode(activeViewport, ctrlIsPressed);
+  createSkeletonNode(position, additionalCoordinates, rotation, center, branchpoint, activate);
 }
 
 export function getOptionsForCreateSkeletonNode(
@@ -260,6 +259,7 @@ export function getOptionsForCreateSkeletonNode(
   ctrlIsPressed: boolean = false,
 ) {
   const state = Store.getState();
+  const additionalCoordinates = state.flycam.additionalCoordinates;
   const skeletonTracing = enforceSkeletonTracing(state.tracing);
   const activeNode = getActiveNode(skeletonTracing);
   const rotation = getRotationOrtho(activeViewport || state.viewModeData.plane.activeViewport);
@@ -275,11 +275,12 @@ export function getOptionsForCreateSkeletonNode(
   // not create any edges; see https://github.com/scalableminds/webknossos/issues/5303).
   const activate = !ctrlIsPressed || activeNode == null;
 
-  return { rotation, center, branchpoint, activate };
+  return { additionalCoordinates, rotation, center, branchpoint, activate };
 }
 
 export function createSkeletonNode(
   position: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   center: boolean,
   branchpoint: boolean,
@@ -300,7 +301,7 @@ export function createSkeletonNode(
   Store.dispatch(
     createNodeAction(
       untransformNodePosition(position, state),
-      state.flycam.additionalCoordinates,
+      additionalCoordinates,
       rotation,
       OrthoViewToNumber[Store.getState().viewModeData.plane.activeViewport],
       // This is the magnification index at which the node was created. Since

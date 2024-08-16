@@ -355,6 +355,7 @@ class TracingApi {
   createNode(
     position: Vector3,
     options?: {
+      additionalCoordinates?: AdditionalCoordinate[];
       rotation?: Vector3;
       center?: boolean;
       branchpoint?: boolean;
@@ -365,6 +366,7 @@ class TracingApi {
     const defaultOptions = getOptionsForCreateSkeletonNode();
     createSkeletonNode(
       position,
+      options?.additionalCoordinates ?? defaultOptions.additionalCoordinates,
       options?.rotation ?? defaultOptions.rotation,
       options?.center ?? defaultOptions.center,
       options?.branchpoint ?? defaultOptions.branchpoint,

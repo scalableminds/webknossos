@@ -57,6 +57,7 @@ export default function FolderSelection({
       value={folderId || undefined}
       dropdownStyle={{ maxHeight: 500, overflow: "auto" }}
       placeholder="Select Folder"
+      treeNodeFilterProp={"title"}
       allowClear
       popupMatchSelectWidth={false}
       treeDefaultExpandAll

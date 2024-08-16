@@ -283,6 +283,7 @@ export type APIUserBase = APIUserCompact & {
 };
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
+  hasSeenSegmentAnythingWithDepth?: boolean;
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
@@ -1073,7 +1074,7 @@ export type FlatFolderTreeItem = {
 // Frontend type
 export type FolderItem = {
   title: string;
-  key: string;
+  key: string; // folder id
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;

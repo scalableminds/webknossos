@@ -537,8 +537,9 @@ export default function TaskListView({
           {foreignWorkflow != null ? (
             <>
               <Link to={`/workflows/${foreignWorkflow[0]}?runId=${foreignWorkflow[1]}`}>
+                {task.taskName}
+                &nbsp;
                 <ExportOutlined />
-                &nbsp;{task.taskName}
               </Link>
             </>
           ) : (

@@ -417,9 +417,9 @@ class DatasetController @Inject()(userService: UserService,
           dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataset.noLayers"
           datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           targetMagSelectedBbox: BoundingBox = request.body.surroundingBoundingBox / request.body.mag
-          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z == 1024) ?~> s"Target-mag selected bbox must be sized 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
-          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.y == 1024) ?~> s"Target-mag selected bbox must be sized 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
+          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z <= 1024 && targetMagSelectedBbox.size.sorted.y <= 1024) ?~> s"Target-mag selected bbox must be smaller than 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
           _ <- bool2Fox(targetMagSelectedBbox.size.sorted.x <= 12) ?~> s"Target-mag selected bbox depth must be at most 12"
+          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z == targetMagSelectedBbox.size.sorted.y) ?~> s"Target-mag selected bbox must equally sized long edges, got ${targetMagSelectedBbox.size}"
           _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.BOUNDING_BOX)(
             bool2Fox(request.body.selectionTopLeftX.isDefined &&
               request.body.selectionTopLeftY.isDefined && request.body.selectionBottomRightX.isDefined && request.body.selectionBottomRightY.isDefined)) ?~> "Missing selectionTopLeft and selectionBottomRight parameters for bounding box interaction."

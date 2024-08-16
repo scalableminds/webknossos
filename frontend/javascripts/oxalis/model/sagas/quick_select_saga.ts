@@ -48,7 +48,7 @@ export default function* listenToQuickSelect(): Saga<void> {
           );
           return;
         }
-        yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
+        yield* put(setBusyBlockingInfoAction(true, "Quick-Selecting segment"));
 
         yield* put(setQuickSelectStateAction("active"));
         if (yield* call(shouldUseHeuristic)) {

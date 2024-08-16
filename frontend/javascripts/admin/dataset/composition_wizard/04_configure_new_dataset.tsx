@@ -28,6 +28,7 @@ import {
 import { syncValidator } from "types/validation";
 import { WizardComponentProps } from "./common";
 import { useEffectOnlyOnce } from "libs/react_hooks";
+import { formatNumber } from "libs/format_utils";
 
 const FormItem = Form.Item;
 
@@ -155,7 +156,9 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
                 : `with ${
                     useThinPlateSplines
                       ? `Thin-Plate-Splines (${wizardContext.sourcePoints.length} correspondences)`
-                      : `an affine transformation (mean error: ${affineMeanError})`
+                      : `an affine transformation (mean error: ${formatNumber(
+                          affineMeanError.meanError,
+                        )} vx)`
                   }`) +
               ".",
           ].join("\n"),

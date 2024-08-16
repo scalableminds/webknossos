@@ -19,8 +19,9 @@ import Dimensions from "../dimensions";
 import { finalizeQuickSelectForSlice, prepareQuickSelect } from "./quick_select_heuristic_saga";
 import { setGlobalProgressAction } from "../actions/ui_actions";
 import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
+import { getPlaneExtentInVoxelFromStore } from "../accessors/view_mode_accessor";
 
-const MASK_SIZE = [1024, 1024, 0] as Vector3;
+const MAXIMUM_MASK_BASE = 1024;
 
 // This should tend to be smaller because the progress rendering at the end of the animation
 // can cope very well with faster operations (the end of the progress bar will finish very slowly).
@@ -45,7 +46,20 @@ function* getMask(
   const trans = (vec: Vector3) => Dimensions.transDim(vec, activeViewport);
   const centerMag1 = V3.round(userBoxMag1.getCenter());
 
-  const sizeInMag1 = V3.scale3(trans(MASK_SIZE), mag);
+  const viewportExtent = yield* select((state) => {
+    const [width, height] = getPlaneExtentInVoxelFromStore(
+      state,
+      state.flycam.zoomStep,
+      activeViewport,
+    );
+    return Math.ceil(Math.max(width, height));
+  });
+  const maskSizeBase = Math.min(MAXIMUM_MASK_BASE, viewportExtent + 100);
+  const maskSize = (
+    window.webknossos.DEV.flags.sam.useLocalMask ? [maskSizeBase, maskSizeBase, 0] : [1024, 1024, 0]
+  ) as Vector3;
+
+  const sizeInMag1 = V3.scale3(trans(maskSize), mag);
   const maskTopLeftMag1 = V3.alignWithMag(V3.sub(centerMag1, V3.scale(sizeInMag1, 0.5)), mag);
   // Effectively, zero the first and second dimension in the mag.
 

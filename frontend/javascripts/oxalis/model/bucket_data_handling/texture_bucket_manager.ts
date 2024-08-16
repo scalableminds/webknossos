@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
+import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import {
   getBucketCapacity,
@@ -126,7 +126,7 @@ export default class TextureBucketManager {
       return;
     }
 
-    if (bucketDebuggingFlags.visualizeBucketsOnGPU) {
+    if (window.webknossos.DEV.flags.bucketDebugging.visualizeBucketsOnGPU) {
       bucket.unvisualize();
     }
 
@@ -209,7 +209,7 @@ export default class TextureBucketManager {
         continue;
       }
 
-      if (bucketDebuggingFlags.visualizeBucketsOnGPU) {
+      if (window.webknossos.DEV.flags.bucketDebugging.visualizeBucketsOnGPU) {
         bucket.visualize();
       }
 

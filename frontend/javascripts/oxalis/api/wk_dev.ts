@@ -15,6 +15,21 @@ export default class WkDev {
   apiLoader: ApiLoader;
   _api!: ApiInterface;
 
+  flags = {
+    sam: {
+      useLocalMask: true,
+    },
+    bucketDebugging: {
+      // For visualizing buckets which are passed to the GPU
+      visualizeBucketsOnGPU: false,
+      // For visualizing buckets which are prefetched
+      visualizePrefetchedBuckets: false,
+      // For enforcing fallback rendering. enforcedZoomDiff == 2, means
+      // that buckets of currentZoomStep + 2 are rendered.
+      enforcedZoomDiff: undefined,
+    },
+  };
+
   constructor(apiLoader: ApiLoader) {
     this.apiLoader = apiLoader;
     this.apiLoader.apiReady().then(async (api) => {

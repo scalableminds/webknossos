@@ -171,7 +171,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     initializeSceneController();
     this.initKeyboard();
     this.initTaskScript();
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type '(Win... Remove this comment to see the full error message
     window.webknossos = new ApiLoader(Model);
     app.vent.emit("webknossos:ready");
     Store.dispatch(wkReadyAction());

@@ -15,6 +15,7 @@ import window from "libs/window";
 import type { ElementClass } from "types/api_flow_types";
 import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import app from "app";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -126,7 +127,7 @@ export default class TextureBucketManager {
       return;
     }
 
-    if (window.webknossos.DEV.flags.bucketDebugging.visualizeBucketsOnGPU) {
+    if (WkDevFlags.bucketDebugging.visualizeBucketsOnGPU) {
       bucket.unvisualize();
     }
 
@@ -209,7 +210,7 @@ export default class TextureBucketManager {
         continue;
       }
 
-      if (window.webknossos.DEV.flags.bucketDebugging.visualizeBucketsOnGPU) {
+      if (WkDevFlags.bucketDebugging.visualizeBucketsOnGPU) {
         bucket.visualize();
       }
 

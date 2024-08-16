@@ -20,6 +20,7 @@ import { finalizeQuickSelectForSlice, prepareQuickSelect } from "./quick_select_
 import { setGlobalProgressAction } from "../actions/ui_actions";
 import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
 import { getPlaneExtentInVoxelFromStore } from "../accessors/view_mode_accessor";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 
 const MAXIMUM_MASK_BASE = 1024;
 
@@ -56,7 +57,7 @@ function* getMask(
   });
   const maskSizeBase = Math.min(MAXIMUM_MASK_BASE, viewportExtent + 100);
   const maskSize = (
-    window.webknossos.DEV.flags.sam.useLocalMask ? [maskSizeBase, maskSizeBase, 0] : [1024, 1024, 0]
+    WkDevFlags.sam.useLocalMask ? [maskSizeBase, maskSizeBase, 0] : [1024, 1024, 0]
   ) as Vector3;
 
   const sizeInMag1 = V3.scale3(trans(maskSize), mag);

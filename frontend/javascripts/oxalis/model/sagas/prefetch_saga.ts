@@ -20,6 +20,7 @@ import DataLayer from "oxalis/model/data_layer";
 import { Model } from "oxalis/singletons";
 import type { Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -140,7 +141,7 @@ export function* prefetchForPlaneMode(
           additionalCoordinates,
         );
 
-        if (window.webknossos.DEV.flags.bucketDebugging.visualizePrefetchedBuckets) {
+        if (WkDevFlags.bucketDebugging.visualizePrefetchedBuckets) {
           for (const item of buckets) {
             const bucket = layer.cube.getOrCreateBucket(item.bucket);
 
@@ -201,7 +202,7 @@ export function* prefetchForArbitraryMode(
           additionalCoordinates,
         );
 
-        if (window.webknossos.DEV.flags.bucketDebugging.visualizePrefetchedBuckets) {
+        if (WkDevFlags.bucketDebugging.visualizePrefetchedBuckets) {
           for (const item of buckets) {
             const bucket = cube.getOrCreateBucket(item.bucket);
 

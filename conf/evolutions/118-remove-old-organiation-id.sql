@@ -80,10 +80,95 @@ UPDATE webknossos.voxelytics_runs SET _organization = (SELECT name FROM webknoss
 ALTER TABLE webknossos.voxelytics_workflows ALTER COLUMN _organization TYPE VARCHAR(256);
 UPDATE webknossos.voxelytics_workflows SET _organization = (SELECT name FROM webknossos.organizations WHERE _id = _organization);
 
--- update analyticsEvents
+-- update analyticsEvents local event only first
 ALTER TABLE webknossos.analyticsEvents ALTER COLUMN _organization TYPE VARCHAR(256);
-UPDATE webknossos.analyticsEvents SET _organization = (SELECT name FROM webknossos.organizations WHERE _id = _organization);
+UPDATE webknossos.analyticsEvents
+SET _organization = (
+    SELECT o.name
+    FROM webknossos.organizations o
+    WHERE o._id = webknossos.analyticsEvents._organization
+)
+-- preventing the update if the organization does not exist for this event.
+WHERE EXISTS (
+    SELECT 1
+    FROM webknossos.organizations
+    WHERE _id = webknossos.analyticsEvents._organization
+);
+/*case class JoinOrganizationEvent(user: User, organization: Organization)(implicit ec: ExecutionContext)
+    extends AnalyticsEvent {
+  def eventType: String = "join_organization"
+  def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+    Fox.successful(Json.obj("joined_organization_id" -> organization._id))
+}*/
+-- join events
+UPDATE webknossos.analyticsEvents
+SET eventProperties = CASE
+    WHEN EXISTS (SELECT 1 FROM webknossos.organizations WHERE _id = eventProperties->>'joined_organization_id') THEN
+        (SELECT json_build_object('joined_organization_id', name) FROM webknossos.organizations WHERE _id = organization_id)
+    ELSE eventProperties
+END
+WHERE eventType = 'join_organization';
+/*case class OpenDatasetEvent(user: User, dataset: Dataset)(implicit ec: ExecutionContext) extends AnalyticsEvent {
+    def eventType: String = "open_dataset"
+    def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+      for {
+        uploader_multiuser_id <- Fox.runOptional(dataset._uploader)(uploader =>
+          analyticsLookUpService.multiUserIdFor(uploader))
+      } yield {
+        Json.obj(
+          "dataset_id" -> dataset._id.id,
+          "dataset_name" -> dataset.name,
+          "dataset_organization_id" -> dataset._organization,
+          "dataset_uploader_multiuser_id" -> uploader_multiuser_id
+        )
+      }
+  }*/
+
+  /*case class UploadDatasetEvent(user: User, dataset: Dataset, dataStore: DataStore, datasetSizeBytes: Long)(
+      implicit ec: ExecutionContext)
+      extends AnalyticsEvent {
+    def eventType: String = "upload_dataset"
+    def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+      Fox.successful(
+        Json.obj(
+          "dataset_id" -> dataset._id.id,
+          "dataset_name" -> dataset.name,
+          "dataset_size_bytes" -> datasetSizeBytes,
+          "datastore_uri" -> dataStore.publicUrl,
+          "dataset_organization_id" -> dataset._organization
+        ))
+  }*/
+-- open dataset or upload dataset events
+UPDATE webknossos.analyticsEvents
+SET eventProperties = CASE
+    WHEN (SELECT 1 FROM webknossos.organizations WHERE _id = eventProperties->>'dataset_organization_id') THEN
+        (
+          SELECT jsonb_set(
+            eventProperties::jsonb,
+            '{dataset_organization_id}',
+            to_jsonb(name)
+          )
+          FROM webknossos.organizations
+          WHERE _id = organization_id
+        )
+    ELSE eventProperties
+END
+WHERE eventType = 'open_dataset' or eventType = 'upload_dataset';
+
+
+-- TODO: What to do about
+/*case class FrontendAnalyticsEvent(user: User, eventType: String, eventProperties: JsObject)(
+    implicit ec: ExecutionContext)
+    extends AnalyticsEvent {
+  override def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
+    Fox.successful(eventProperties ++ Json.obj("is_frontend_event" -> true))
+}*/
+
+
+
 -- TODO: Properly migrate eventProperties -> potentially missing some ids because they might be from remote wks.
+
+
 
 -- update organization table
 ALTER TABLE webknossos.organizations RENAME COLUMN _id TO _id_old;
@@ -96,9 +181,9 @@ CREATE UNIQUE INDEX organizations_pkey ON webknossos.organizations (_id);
 ALTER TABLE webknossos.organizations DROP CONSTRAINT organizations_pkeyold;
 ALTER TABLE webknossos.organizations ADD PRIMARY KEY USING INDEX organizations_pkey;
 
-ALTER TABLE webknossos.organizations ALTER COLUMN _id_old TYPE CHAR(24); 
+ALTER TABLE webknossos.organizations ALTER COLUMN _id_old TYPE CHAR(24);
 ALTER TABLE webknossos.organizations ALTER COLUMN _id_old SET DEFAULT NULL;
-ALTER TABLE webknossos.organizations ALTER COLUMN _id TYPE VARCHAR(256); 
+ALTER TABLE webknossos.organizations ALTER COLUMN _id TYPE VARCHAR(256);
 ALTER TABLE webknossos.organizations ADD CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$');
 
 

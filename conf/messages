@@ -361,7 +361,7 @@ folder.nameMustNotContainSlash=Folder names cannot contain forward slashes
 segmentAnything.notEnabled=AI based quick select is not enabled for this WEBKNOSSOS instance.
 segmentAnything.noUri=No Uri for SAM server configured.
 segmentAnything.getData.failed=Failed to get image data to send to SAM server.
-segmentAnything.getEmbedding.failed=Failed to get image embedding from SAM server.
+segmentAnything.getMask.failed=Failed to get image mask from SAM server.
 
 shortLink.notFound=No shortlink with this key could be found
 

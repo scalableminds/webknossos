@@ -3,7 +3,7 @@ import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useRef, useState } from "react";
 import _ from "lodash";
-import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
+import UserBoundingBoxInput from "oxalis/view/components/setting_input_views";
 import { Vector3, Vector6, BoundingBoxType, ControlModeEnum } from "oxalis/constants";
 import {
   changeUserBoundingBoxAction,
@@ -120,7 +120,6 @@ export default function BoundingBoxTab() {
       render: (_id: number, bb: UserBoundingBox) => (
         <UserBoundingBoxInput
           key={bb.id}
-          tooltipTitle="Format: minX, minY, minZ, width, height, depth"
           value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
           color={bb.color}
           name={bb.name}

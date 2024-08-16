@@ -24,6 +24,7 @@ import {
   ExclamationCircleOutlined,
   LeftOutlined,
   FieldTimeOutlined,
+  ExportOutlined,
 } from "@ant-design/icons";
 import MiniSearch from "minisearch";
 
@@ -512,6 +513,12 @@ export default function TaskListView({
       return undefined;
     }
 
+    const taskArtifacts = report.artifacts[task.taskName] || {};
+    let foreignWorkflow: null | [string, string] = null;
+    if (taskInfo.state === VoxelyticsRunState.SKIPPED) {
+      foreignWorkflow = Object.values(taskArtifacts)[0]?.foreignWorkflow;
+    }
+
     return {
       key: task.taskName,
       id: `task-panel-${task.taskName}`,
@@ -527,7 +534,16 @@ export default function TaskListView({
               backgroundColor: colorHasher.hex(task.task),
             }}
           />
-          {task.taskName}
+          {foreignWorkflow != null ? (
+            <>
+              <Link to={`/workflows/${foreignWorkflow[0]}?runId=${foreignWorkflow[1]}`}>
+                <ExportOutlined />
+                &nbsp;{task.taskName}
+              </Link>
+            </>
+          ) : (
+            task.taskName
+          )}
           <wbr />
           {task.config.name != null && <span className="task-panel-name">{task.config.name}</span>}
           <wbr />
@@ -542,7 +558,7 @@ export default function TaskListView({
           workflowHash={report.workflow.hash}
           runId={singleRunId}
           task={task}
-          artifacts={report.artifacts[task.taskName] || []}
+          artifacts={taskArtifacts}
           dag={report.dag}
           taskInfo={taskInfo}
           onSelectTask={handleSelectTask}

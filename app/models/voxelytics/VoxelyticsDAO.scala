@@ -108,23 +108,26 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         ) running_chunks ON running_chunks.name = tc.name AND running_chunks.executionId = tc.executionId AND running_chunks.chunkName = tc.chunkName
         WHERE TRUE ${taskName.map(t => q"AND tc.name = $t").getOrElse(q"")}"""
 
-  private def latestCompleteTaskQ(runIds: List[ObjectId], taskName: Option[String], staleTimeout: FiniteDuration) =
+  private def latestCompleteOrSkippedTaskQ(runIds: List[ObjectId],
+                                           taskName: Option[String],
+                                           staleTimeout: FiniteDuration) =
     q"""SELECT
           DISTINCT ON (t.name)
           t.name,
-          t._id
+          t._id,
+          ts.state
         FROM (${tasksWithStateQ(staleTimeout)}) ts
         JOIN webknossos.voxelytics_tasks t ON t._id = ts._id
         WHERE
-          ts.state = ${VoxelyticsRunState.COMPLETE}
+          ts.state IN ${SqlToken.tupleFromValues(VoxelyticsRunState.COMPLETE, VoxelyticsRunState.SKIPPED)}
           AND t._run IN ${SqlToken.tupleFromList(runIds)}
           ${taskName.map(t => q" AND t.name = $t").getOrElse(q"")}
         ORDER BY t.name, ts.beginTime DESC"""
 
-  def findArtifacts(runIds: List[ObjectId], staleTimeout: FiniteDuration): Fox[List[ArtifactEntry]] =
+  def findArtifacts(currentUser: User, runIds: List[ObjectId], staleTimeout: FiniteDuration): Fox[List[ArtifactEntry]] =
     for {
       r <- run(q"""
-        WITH latest_complete_tasks AS (${latestCompleteTaskQ(runIds, None, staleTimeout)})
+        WITH latest_complete_tasks AS (${latestCompleteOrSkippedTaskQ(runIds, None, staleTimeout)})
         SELECT
           a._id,
           a._task,
@@ -134,10 +137,24 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           a.inodeCount,
           a.version,
           a.metadata,
-          t.name AS taskName
+          t.name AS taskName,
+          o.workflow_hash AS other_workflow_hash,
+          o._run AS other_run
         FROM webknossos.voxelytics_artifacts a
         JOIN latest_complete_tasks t ON t._id = a._task
-        """.as[(String, String, String, String, Long, Long, String, String, String)])
+        LEFT JOIN (
+          SELECT
+            DISTINCT ON (a.path)
+            a.path path,
+            r.workflow_hash workflow_hash,
+            r._id _run
+          FROM webknossos.voxelytics_artifacts a
+          JOIN webknossos.voxelytics_tasks t ON a._task = t._id
+          JOIN (${tasksWithStateQ(staleTimeout)}) ts ON ts._id = t._id AND ts.state = ${VoxelyticsRunState.COMPLETE}
+          JOIN (${visibleRunsQ(currentUser, allowUnlisted = true)}) r ON r._id = t._run
+          ORDER BY a.path, ts.beginTime DESC
+        ) o ON o.path = a.path AND t.state = ${VoxelyticsRunState.SKIPPED}
+        """.as[(String, String, String, String, Long, Long, String, String, String, Option[String], Option[String])])
     } yield
       r.toList.map(
         row =>
@@ -150,7 +167,11 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             inodeCount = row._6,
             version = row._7,
             metadata = Json.parse(row._8).as[JsObject],
-            taskName = row._9
+            taskName = row._9,
+            foreignWorkflow = (row._10, row._11) match {
+              case (Some(workflow_hash), Some(run)) => Some((workflow_hash, run))
+              case _                                => None
+            }
         ))
 
   def findTasks(runId: ObjectId): Fox[List[TaskEntry]] =
@@ -725,7 +746,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                            staleTimeout: FiniteDuration): Fox[List[ArtifactChecksumEntry]] =
     for {
       r <- run(q"""
-        WITH latest_complete_tasks AS (${latestCompleteTaskQ(runIds, Some(taskName), staleTimeout)})
+        WITH latest_complete_tasks AS (${latestCompleteOrSkippedTaskQ(runIds, Some(taskName), staleTimeout)})
         SELECT
           t.name,
           a.name,

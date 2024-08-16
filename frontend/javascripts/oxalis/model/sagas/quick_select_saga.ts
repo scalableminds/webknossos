@@ -41,6 +41,13 @@ export default function* listenToQuickSelect(): Saga<void> {
             return;
           }
         }
+        const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
+        if (busyBlockingInfo.isBusy) {
+          console.warn(
+            `Ignoring ${action.type} request (reason: ${busyBlockingInfo.reason || "null"})`,
+          );
+          return;
+        }
         yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
 
         yield* put(setQuickSelectStateAction("active"));

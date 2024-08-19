@@ -62,12 +62,12 @@ function* getMask(
 
   const sizeInMag1 = V3.scale3(trans(maskSize), mag);
   const maskTopLeftMag1 = V3.alignWithMag(V3.sub(centerMag1, V3.scale(sizeInMag1, 0.5)), mag);
-  // Effectively, zero the first and second dimension in the mag.
 
   const depth = yield* select(
     (state: OxalisState) => state.userConfiguration.quickSelect.predictionDepth || 1,
   );
 
+  // Effectively, zero the first and second dimension in the mag.
   const depthSummand = V3.scale3(mag, trans([0, 0, depth]));
   const maskBottomRightMag1 = V3.add(maskTopLeftMag1, sizeInMag1);
   const maskBoxMag1 = new BoundingBox({
@@ -249,8 +249,8 @@ export default function* performQuickSelect(
     if (action.type === "COMPUTE_QUICK_SELECT_FOR_POINT") {
       // In the point case, the bounding box will have a volume of zero which
       // prevents the estimateBBoxInMask call from inferring the correct bbox.
-      // Therefore, we pad the bbox a bit.
-      userBoxInMag = userBoxInMag.paddedWithMargins(trans([100, 100, 0]));
+      // Therefore, we enlarge the bounding box by one pixel in u and v.
+      userBoxInMag = userBoxInMag.paddedWithMargins([0, 0, 0], trans([1, 1, 0]));
     }
     const userBoxRelativeToMaskInMag = userBoxInMag.offset(V3.negate(maskBoxInMag.min));
 

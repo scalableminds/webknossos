@@ -673,6 +673,14 @@ class TracingApi {
     }
 
     const segmentationLayerName = api.data.getSegmentationLayerNames()[0];
+    const layer = getLayerByName(Store.getState().dataset, segmentationLayerName);
+
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const finestResolution = resolutionInfo.getFinestResolution();
+    // By default, getDataForBoundingBox uses the finest existing magnification.
+    // We use that as strides to traverse the data array properly.
+    const [dx, dy, dz] = finestResolution;
+
     const data = await api.data.getDataForBoundingBox(segmentationLayerName, {
       min,
       max,
@@ -680,9 +688,9 @@ class TracingApi {
 
     const segmentIdToPosition = new Map();
     let idx = 0;
-    for (let z = min[2]; z < max[2]; z++) {
-      for (let y = min[1]; y < max[1]; y++) {
-        for (let x = min[0]; x < max[0]; x++) {
+    for (let z = min[2]; z < max[2]; z += dz) {
+      for (let y = min[1]; y < max[1]; y += dy) {
+        for (let x = min[0]; x < max[0]; x += dx) {
           const id = data[idx];
           if (id !== 0 && !segmentIdToPosition.has(id)) {
             segmentIdToPosition.set(id, [x, y, z]);

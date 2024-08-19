@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffGroupHeader,
   NgffMetadata,
@@ -24,7 +24,7 @@ import com.scalableminds.webknossos.datastore.models.{VoxelPosition, VoxelSize}
 import com.scalableminds.webknossos.datastore.services._
 import net.liftweb.common.Box.tryo
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsArray, JsNumber, JsObject, JsValue, Json}
+import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
@@ -37,7 +37,8 @@ class ZarrStreamingController @Inject()(
     remoteWebknossosClient: DSRemoteWebknossosClient,
     remoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit ec: ExecutionContext)
-    extends Controller {
+    extends Controller
+    with Zarr3OutputHelper {
 
   override def defaultErrorCode: Int = NOT_FOUND
 
@@ -161,8 +162,7 @@ class ZarrStreamingController @Inject()(
         zarrLayers = dataLayers.map(convertLayerToZarrLayer(_, zarrVersion))
         zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
         zarrSourceJson <- replaceVoxelSizeByLegacyFormat(Json.toJson(zarrSource))
-        fixedZarrSourceJson = fixAxesIndexing(zarrSourceJson)
-      } yield Ok(Json.toJson(fixedZarrSourceJson))
+      } yield Ok(Json.toJson(zarrSourceJson))
     }
   }
 
@@ -179,77 +179,38 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-  private def fixAxesIndexing(jsValue: JsValue): JsObject = {
-    val jsObject = jsValue.as[JsObject]
-    val dataLayersOpt = (jsObject \ "dataLayers").asOpt[JsArray]
-    val fixedDataLayers = dataLayersOpt.map { dataLayers =>
-      dataLayers.value.map { layer =>
-        val layerObjectOpt = layer.asOpt[JsObject]
-        layerObjectOpt.map { layerObject =>
-          val additionalAxes = (layerObject \ "additionalAxes").as[JsArray].value
-          val fixedAdditionalAxes = additionalAxes.zipWithIndex.map {
-            case (additionalAxis, index) =>
-              Json.obj(
-                "name" -> (additionalAxis \ "name").as[JsValue],
-                "bounds" -> (additionalAxis \ "bounds").as[JsValue],
-                "index" -> JsNumber(index + 1)
-              )
-          }
-
-          // Fix axis order of mags.axisOrder
-          val fixedMags = (layerObject \ "mags").as[JsArray].value.map { mag =>
-            Json.obj(
-              "mag" -> (mag \ "mag").as[JsArray].value,
-              "axisOrder" -> Json.obj(
-                "x" -> JsNumber(additionalAxes.length + 1),
-                "y" -> JsNumber(additionalAxes.length + 2),
-                "z" -> JsNumber(additionalAxes.length + 3),
-                "c" -> JsNumber(0)
-              )
-            )
-          }
-          // Create a new JsObject with the updated additionalAxes and axisOrder
-          layerObject +
-            ("additionalAxes" -> Json.toJson(fixedAdditionalAxes)) +
-            ("mags" -> Json.toJson(fixedMags))
-        }.getOrElse(layer)
-      }
-    }
-
-    // Create a new JsObject with the modified dataLayers
-    jsObject + ("dataLayers" -> Json.toJson(fixedDataLayers))
-  }
-
   private def convertLayerToZarrLayer(layer: DataLayer, zarrVersion: Int): ZarrLayer = {
     val dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3
     layer match {
       case s: SegmentationLayer =>
+        val rank = s.additionalAxes.map(_.length).getOrElse(0) + 4 // We’re writing c, additionalAxes, xyz
         ZarrSegmentationLayer(
           s.name,
           s.boundingBox,
           s.elementClass,
-          mags = s.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+          mags = s.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cAdditionalxyz(rank)), None, None)),
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
           numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1),
           defaultViewConfiguration = s.defaultViewConfiguration,
           adminViewConfiguration = s.adminViewConfiguration,
           coordinateTransformations = s.coordinateTransformations,
-          additionalAxes = s.additionalAxes,
+          additionalAxes = s.additionalAxes.map(reorderAdditionalAxes),
           dataFormat = dataFormat
         )
       case d: DataLayer =>
+        val rank = d.additionalAxes.map(_.length).getOrElse(0) + 4 // We’re writing c, additionalAxes, xyz
         ZarrDataLayer(
           d.name,
           d.category,
           d.boundingBox,
           d.elementClass,
-          mags = d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+          mags = d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cAdditionalxyz(rank)), None, None)),
           numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1),
           defaultViewConfiguration = d.defaultViewConfiguration,
           adminViewConfiguration = d.adminViewConfiguration,
           coordinateTransformations = d.coordinateTransformations,
-          additionalAxes = d.additionalAxes,
+          additionalAxes = d.additionalAxes.map(reorderAdditionalAxes),
           dataFormat = dataFormat
         )
     }
@@ -428,11 +389,12 @@ class ZarrStreamingController @Inject()(
     )
   }
 
-  def ifIsAnnotationLayerOrElse(token: Option[String],
-                                accessToken: String,
-                                dataLayerName: String,
-                                ifIsAnnotationLayer: (AnnotationLayer, AnnotationSource, Option[String]) => Fox[Result],
-                                orElse: AnnotationSource => Fox[Result])(implicit request: Request[Any]): Fox[Result] =
+  private def ifIsAnnotationLayerOrElse(
+      token: Option[String],
+      accessToken: String,
+      dataLayerName: String,
+      ifIsAnnotationLayer: (AnnotationLayer, AnnotationSource, Option[String]) => Fox[Result],
+      orElse: AnnotationSource => Fox[Result])(implicit request: Request[Any]): Fox[Result] =
     for {
       annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
       relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)

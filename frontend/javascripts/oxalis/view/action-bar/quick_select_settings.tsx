@@ -54,16 +54,17 @@ export function AiQuickSelectControls() {
         <FastTooltip
           placement="right-start"
           dynamicRenderer={() => (
-            <p>
-              The AI-based Quick Select feature can be used
-              <ul>
-                <li>by clicking on a cell or</li>
-                <li>by drawing a rectangle around a cell</li>
-                <li>for multiple sections at once</li>
-              </ul>
-              Hint: If the predicted selection is too big, try to zoom in a bit further and try
-              again.
-            </p>
+            <div style={{ maxWidth: 400 }}>
+              <p>
+                The AI-based Quick Select feature can be used by clicking on a cell or by drawing a
+                rectangle around a cell. By configuring the prediction depth, multiple sections can
+                be segmented at once.
+              </p>
+              <p>
+                Hint: If the predicted selection is too big, try to zoom in a bit further and try
+                again.
+              </p>
+            </div>
           )}
         >
           <QuestionCircleOutlined />

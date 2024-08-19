@@ -4,6 +4,7 @@
 # Note: keep this in sync with the reported version numbers in the utils.ApiVersioning trait
 
 # version log:
+ # changed in v8: Datasets' name was renamed to id and the displayName is now named name.
  # changed in v7: datasources now contain scale as object with keys factor and unit, e.g. {"factor": [11,11,5.5], "unit": "nm"}
  # changed in v6: isValidName always returns Ok, with a JSON object containing possible errors and key "isValid"
  # new in v5: annotation layers (changed annotation json result, changed createExplorational params)
@@ -11,7 +12,10 @@
  # new in v3: annotation info and finish request now take timestamp
  # new in v2: annotation json contains visibility enum instead of booleans
 
-->       /v7/                                                                 webknossos.latest.Routes
+->       /v8/                                                                 webknossos.latest.Routes
+
+# v7: support changes to v8
+GET      /v7/datasets                                                         controllers.LegacyApiController.listDatasetsV7(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
 
 # v6: support changes to v7
 GET      /v6/datasets                                                         controllers.LegacyApiController.listDatasetsV6(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])

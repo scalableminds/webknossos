@@ -42,6 +42,28 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
+  def listDatasetsV7(isActive: Option[Boolean],
+                     isUnreported: Option[Boolean],
+                     organizationName: Option[String],
+                     onlyMyOrganization: Option[Boolean],
+                     uploaderId: Option[String],
+                     folderId: Option[String],
+                     includeSubfolders: Option[Boolean],
+                     searchQuery: Option[String],
+                     limit: Option[Int],
+                     compact: Option[Boolean]): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    datasetController.list(isActive,
+                           isUnreported,
+                           organizationName,
+                           onlyMyOrganization,
+                           uploaderId,
+                           folderId,
+                           includeSubfolders,
+                           searchQuery,
+                           limit,
+                           compact)(request)
+  }
+
   def listDatasetsV6(isActive: Option[Boolean],
                      isUnreported: Option[Boolean],
                      organizationName: Option[String],

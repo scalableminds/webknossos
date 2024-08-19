@@ -89,7 +89,6 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-
   def zAttrsWithAnnotationPrivateLink(token: Option[String],
                                       accessToken: String,
                                       dataLayerName: String = ""): Action[AnyContent] =
@@ -537,12 +536,11 @@ class ZarrStreamingController @Inject()(
           additionalVersionDependantFiles = if (zarrVersion == 2) List(NgffGroupHeader.FILENAME_DOT_ZGROUP)
           else List.empty
         } yield
-          Ok(
-            views.html.datastoreZarrDatasourceDir(
-              "Datastore",
-              s"$organizationId/$datasetName",
-              List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON) ++ additionalVersionDependantFiles ++ layerNames
-            ))
+          Ok(views.html.datastoreZarrDatasourceDir(
+            "Datastore",
+            s"$organizationId/$datasetName",
+            List(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON) ++ additionalVersionDependantFiles ++ layerNames
+          ))
       }
     }
 

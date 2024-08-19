@@ -1078,7 +1078,7 @@ export type FlatFolderTreeItem = {
 // Frontend type
 export type FolderItem = {
   title: string;
-  key: string;
+  key: string; // folder id
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;

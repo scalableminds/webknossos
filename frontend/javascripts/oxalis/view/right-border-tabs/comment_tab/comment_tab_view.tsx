@@ -191,7 +191,8 @@ function CommentTabView(props: Props) {
   }
 
   function nextComment(forward: boolean = true) {
-    getActiveNode(props.skeletonTracing).map((activeNode) => {
+    const activeNode = getActiveNode(props.skeletonTracing);
+    if (activeNode != null) {
       const sortAscending = forward ? isSortedAscending : !isSortedAscending;
       const { trees } = props.skeletonTracing;
 
@@ -211,7 +212,7 @@ function CommentTabView(props: Props) {
       if (nextCommentIndex >= 0 && nextCommentIndex < sortedComments.length) {
         setActiveNode(sortedComments[nextCommentIndex].nodeId);
       }
-    });
+    }
   }
   nextCommentRef.current = nextComment;
 
@@ -413,8 +414,8 @@ function CommentTabView(props: Props) {
   // Replace line breaks as they will otherwise be stripped when shown in an input field
   const activeCommentContent = activeComment?.content.replace(/\r?\n/g, "\\n");
   const isMultilineComment = activeCommentContent?.indexOf("\\n") !== -1;
-  const activeNodeMaybe = getActiveNode(props.skeletonTracing);
-  const isEditingDisabled = activeNodeMaybe.isNothing || !allowUpdate;
+  const activeNode = getActiveNode(props.skeletonTracing);
+  const isEditingDisabled = activeNode == null || !allowUpdate;
 
   const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
     isAnnotationLockedByUser,

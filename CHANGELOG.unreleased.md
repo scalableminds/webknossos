@@ -49,6 +49,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that activating the skeleton tab would always change the active position to the active node. [#7958](https://github.com/scalableminds/webknossos/pull/7958)
 - Fixed that skeleton groups couldn't be collapsed or expanded in locked annotations. [#7988](https://github.com/scalableminds/webknossos/pull/7988)
 - Fixed uploading datasets in neuroglancer precomputed and n5 data format. [#8008](https://github.com/scalableminds/webknossos/pull/8008)
+- Various fixes for composing datasets with landmarks. Note that the interpretation of correspondence points was inverted for thin plate splines. [#7992](https://github.com/scalableminds/webknossos/pull/7992)
 
 ### Removed
 

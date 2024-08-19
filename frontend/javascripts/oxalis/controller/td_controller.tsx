@@ -120,9 +120,10 @@ class TDController extends React.PureComponent<Props> {
       // The rotation center of this viewport is not updated to the new position after selecting a node in the viewport.
       // This happens because the selection of the node does not trigger a call to setTargetAndFixPosition directly.
       // Thus we do it manually whenever the active node changes.
-      getActiveNode(this.props.tracing.skeleton).map((activeNode) =>
-        this.setTargetAndFixPosition(getNodePosition(activeNode, Store.getState())),
-      );
+      const activeNode = getActiveNode(this.props.tracing.skeleton);
+      if (activeNode) {
+        this.setTargetAndFixPosition(getNodePosition(activeNode, Store.getState()));
+      }
     }
   }
 

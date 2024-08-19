@@ -143,6 +143,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         FROM webknossos.voxelytics_artifacts a
         JOIN latest_complete_tasks t ON t._id = a._task
         LEFT JOIN ( -- when the task is skipped, the artifact from the producing task run is joined for linking
+          -- Fan out is not possible because of distinct path selection in combination with unique (_task, path) constraint
           SELECT
             DISTINCT ON (a.path)
             a.path path,

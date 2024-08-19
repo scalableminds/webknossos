@@ -284,9 +284,15 @@ export const requestDeleteBranchPointAction = () =>
     type: "REQUEST_DELETE_BRANCHPOINT",
   }) as const;
 
-export const createTreeAction = (timestamp: number = Date.now()) =>
+export const createTreeAction = (
+  // If the tree creation is about to succeed, this callback
+  // will be triggered with the id that will be assigned.
+  treeIdCallback?: (id: number) => void,
+  timestamp: number = Date.now(),
+) =>
   ({
     type: "CREATE_TREE",
+    treeIdCallback,
     timestamp,
   }) as const;
 

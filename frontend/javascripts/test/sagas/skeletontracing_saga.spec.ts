@@ -166,7 +166,7 @@ const createNodeAction = SkeletonTracingActions.createNodeAction(
   1.2,
 );
 const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
-const createTreeAction = SkeletonTracingActions.createTreeAction(12345678);
+const createTreeAction = SkeletonTracingActions.createTreeAction(undefined, 12345678);
 const deleteTreeAction = SkeletonTracingActions.deleteTreeAction();
 const setNodeRadiusAction = SkeletonTracingActions.setNodeRadiusAction(12);
 const createCommentAction = SkeletonTracingActions.createCommentAction("Hallo");

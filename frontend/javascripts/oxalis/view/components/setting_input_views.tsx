@@ -4,18 +4,33 @@ import {
   Slider,
   InputNumber,
   Switch,
-  Tooltip,
   Input,
   Select,
   Popover,
   PopoverProps,
+  Dropdown,
+  MenuProps,
 } from "antd";
-import { DeleteOutlined, DownloadOutlined, EditOutlined, ScanOutlined } from "@ant-design/icons";
+import {
+  BorderInnerOutlined,
+  DeleteOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  EllipsisOutlined,
+  InfoCircleOutlined,
+  ScanOutlined,
+} from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import { type Vector3, type Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import messages from "messages";
+import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
+import { connect } from "react-redux";
+import { OxalisState } from "oxalis/store";
+import { APISegmentationLayer } from "types/api_flow_types";
+import { api } from "oxalis/singletons";
+import FastTooltip from "components/fast_tooltip";
 
 const ROW_GUTTER = 1;
 
@@ -232,7 +247,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={rightSpanValue}>
-          <Tooltip title={tooltipText} placement="top">
+          <FastTooltip title={tooltipText} placement="top">
             {/* This div is necessary for the tooltip to be displayed */}
             <div
               style={{
@@ -241,7 +256,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
                 alignItems: "center",
               }}
             >
-              <Tooltip title={this.props.disabledReason}>
+              <FastTooltip title={this.props.disabledReason}>
                 <Switch
                   onChange={onChange}
                   checked={value}
@@ -249,10 +264,10 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
                   disabled={disabled}
                   loading={loading}
                 />
-              </Tooltip>
+              </FastTooltip>
               {postSwitchIcon}
             </div>
-          </Tooltip>
+          </FastTooltip>
           {this.props.children}
         </Col>
       </Row>
@@ -367,7 +382,6 @@ type UserBoundingBoxInputProps = {
   color: Vector3;
   isVisible: boolean;
   isExportEnabled: boolean;
-  tooltipTitle: string;
   onBoundingChange: (arg0: Vector6) => void;
   onDelete: () => void;
   onExport: () => void;
@@ -378,6 +392,7 @@ type UserBoundingBoxInputProps = {
   disabled: boolean;
   isLockedByOwner: boolean;
   isOwner: boolean;
+  visibleSegmentationLayer: APISegmentationLayer | null | undefined;
 };
 type State = {
   isEditing: boolean;
@@ -386,7 +401,9 @@ type State = {
   name: string;
 };
 
-export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
+const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
+
+class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps, State> {
   constructor(props: UserBoundingBoxInputProps) {
     super(props);
     this.state = {
@@ -464,15 +481,15 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
     }
   };
 
+  onRegisterSegmentsForBB(value: Vector6, name: string): void {
+    const min: Vector3 = [value[0], value[1], value[2]];
+    const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
+    api.tracing.registerSegmentsForBoundingBox(min, max, name);
+  }
+
   render() {
     const { name } = this.state;
-    const tooltipStyle = this.state.isValid
-      ? null
-      : {
-          backgroundColor: "red",
-        };
     const {
-      tooltipTitle,
       color,
       isVisible,
       onDelete,
@@ -484,30 +501,87 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
       isOwner,
     } = this.props;
     const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
-    const iconStyle = {
-      marginRight: 0,
+    const marginRightStyle = {
+      marginRight: 8,
+    };
+    const marginLeftStyle = {
       marginLeft: 6,
     };
-    const disabledIconStyle = { ...iconStyle, opacity: 0.5, cursor: "not-allowed" };
-    const exportIconStyle = isExportEnabled ? iconStyle : disabledIconStyle;
-    const exportButtonTooltip = isExportEnabled
-      ? "Export data from this bounding box."
-      : messages["data.bounding_box_export_not_supported"];
-    const exportColumn = isExportEnabled ? (
-      <Col span={2}>
-        <Tooltip title={exportButtonTooltip} placement="topRight">
-          <DownloadOutlined onClick={onExport} style={exportIconStyle} />
-        </Tooltip>
-      </Col>
-    ) : null;
+    const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
+    const exportButton = (
+      <>
+        <DownloadOutlined style={isExportEnabled ? marginRightStyle : disabledIconStyle} />
+        Export data
+      </>
+    );
+    const deleteButton = (
+      <>
+        <DeleteOutlined style={disabled ? disabledIconStyle : marginRightStyle} />
+        Delete
+      </>
+    );
     const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
       isLockedByOwner,
       isOwner,
     );
+    const isDeleteEnabled = !disabled && this.props.visibleSegmentationLayer != null;
+
+    const getContextMenu = () => {
+      const items: MenuProps["items"] = [
+        {
+          key: "registerSegments",
+          label: (
+            <>
+              Register all segments in this bounding box
+              <FastTooltip title="Moves/registers all segments within this bounding box into a new segment group">
+                <InfoCircleOutlined style={marginLeftStyle} />
+              </FastTooltip>
+            </>
+          ),
+          icon: <ScanOutlined />,
+          onClick: () => this.onRegisterSegmentsForBB(this.props.value, name),
+          disabled: this.props.visibleSegmentationLayer == null || disabled,
+        },
+        {
+          key: "goToCenter",
+          label: "Go to center",
+          icon: <BorderInnerOutlined />,
+          onClick: onGoToBoundingBox,
+        },
+        {
+          key: "export",
+          label: isExportEnabled ? (
+            exportButton
+          ) : (
+            <FastTooltip title={editingDisallowedExplanation}>{exportButton}</FastTooltip>
+          ),
+          disabled: !isExportEnabled,
+          onClick: onExport,
+        },
+        {
+          key: "delete",
+          label: isDeleteEnabled ? (
+            deleteButton
+          ) : (
+            <FastTooltip title={editingDisallowedExplanation}>{deleteButton}</FastTooltip>
+          ),
+          onClick: onDelete,
+          disabled: !isDeleteEnabled,
+        },
+      ];
+
+      return (
+        <Dropdown menu={{ items }}>
+          <EllipsisOutlined style={marginLeftStyle} />
+        </Dropdown>
+      );
+    };
+
     return (
-      <React.Fragment>
+      <>
         <Row
           style={{
+            marginTop: 10,
             marginBottom: 10,
           }}
         >
@@ -523,7 +597,7 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
           </Col>
 
           <Col span={SETTING_RIGHT_SPAN}>
-            <Tooltip title={disabled ? editingDisallowedExplanation : null}>
+            <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
               <span>
                 <Input
                   defaultValue={name}
@@ -538,72 +612,61 @@ export class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInp
                   disabled={disabled}
                 />
               </span>
-            </Tooltip>
+            </FastTooltip>
           </Col>
-          {exportColumn}
-          <Col span={2}>
-            <Tooltip title={disabled ? editingDisallowedExplanation : "Delete this bounding box."}>
-              <DeleteOutlined
-                onClick={disabled ? () => {} : onDelete}
-                style={disabled ? disabledIconStyle : iconStyle}
-              />
-            </Tooltip>
-          </Col>
+          <Col span={2}>{getContextMenu()}</Col>
         </Row>
         <Row
           style={{
-            marginBottom: 20,
+            marginBottom: 10,
           }}
           align="top"
         >
           <Col span={5}>
-            <Tooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
+            <FastTooltip title="The top-left corner of the bounding box followed by the width, height, and depth.">
               <label className="settings-label"> Bounds: </label>
-            </Tooltip>
+            </FastTooltip>
           </Col>
           <Col span={SETTING_RIGHT_SPAN}>
-            <Tooltip
-              trigger={disabled ? ["hover"] : ["focus"]}
-              title={disabled ? editingDisallowedExplanation : tooltipTitle}
-              placement="topLeft"
-              // @ts-expect-error ts-migrate(2322) FIXME: Type '{ backgroundColor: string; } | null' is not ... Remove this comment to see the full error message
-              overlayStyle={tooltipStyle}
+            <FastTooltip
+              title={disabled ? editingDisallowedExplanation : FORMAT_TOOLTIP}
+              placement="top-start"
             >
-              <span>
-                <Input
-                  onChange={this.handleChange}
-                  onFocus={this.handleFocus}
-                  onBlur={this.handleBlur}
-                  value={this.state.text}
-                  placeholder="0, 0, 0, 512, 512, 512"
-                  size="small"
-                  disabled={disabled}
-                />
-              </span>
-            </Tooltip>
+              <Input
+                status={this.state.isValid ? "" : "error"}
+                onChange={this.handleChange}
+                onFocus={this.handleFocus}
+                onBlur={this.handleBlur}
+                value={this.state.text}
+                placeholder="0, 0, 0, 512, 512, 512"
+                size="small"
+                disabled={disabled}
+              />
+            </FastTooltip>
           </Col>
           <Col span={2}>
-            <Tooltip title={disabled ? messages["tracing.read_only_mode_notification"] : null}>
-              <span>
-                <ColorSetting
-                  value={Utils.rgbToHex(upscaledColor)}
-                  onChange={this.handleColorChange}
-                  style={iconStyle}
-                  disabled={disabled}
-                />
-              </span>
-            </Tooltip>
-          </Col>
-          <Col span={2}>
-            <Tooltip title="Go to the center of the bounding box.">
-              <ScanOutlined onClick={onGoToBoundingBox} style={{ ...iconStyle, marginTop: 6 }} />
-            </Tooltip>
+            <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
+              <ColorSetting
+                value={Utils.rgbToHex(upscaledColor)}
+                onChange={this.handleColorChange}
+                style={marginLeftStyle}
+                disabled={disabled}
+              />
+            </FastTooltip>
           </Col>
         </Row>
-      </React.Fragment>
+      </>
     );
   }
 }
+
+const mapStateToProps = (state: OxalisState) => ({
+  visibleSegmentationLayer: getVisibleSegmentationLayer(state),
+});
+
+const connector = connect(mapStateToProps)(UserBoundingBoxInput);
+export default connector;
+
 type ColorSettingPropTypes = {
   value: string;
   onChange: (value: Vector3) => void;
@@ -666,7 +729,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={SETTING_RIGHT_SPAN}>
-          <Tooltip title={this.props.disabledReason}>
+          <FastTooltip title={this.props.disabledReason}>
             <Select
               onChange={onChange}
               // @ts-expect-error ts-migrate(2322) FIXME: Type 'string' is not assignable to type 'number | ... Remove this comment to see the full error message
@@ -678,7 +741,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
               options={this.props.options}
               disabled={this.props.disabled}
             />
-          </Tooltip>
+          </FastTooltip>
         </Col>
       </Row>
     );

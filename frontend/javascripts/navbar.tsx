@@ -483,7 +483,7 @@ function NotificationIcon({
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
-      // Setting the target lazily, to finally let olvy  load the whats new modal as it should be shown now.
+      // Setting the target lazily, to finally let olvy load the “what’s new” modal, as it should be shown now.
       window.Olvy.config.target = "#unused-olvy-target";
       window.Olvy.show();
     }
@@ -946,6 +946,7 @@ function Navbar({
         "collapsed-nav-header": collapseAllNavItems,
       })}
     >
+      <GlobalProgressBar />
       <MaintenanceBanner />
       <ConfigProvider theme={{ ...getAntdTheme("light") }}>
         <UpgradeVersionBanner />
@@ -992,6 +993,17 @@ function Navbar({
         {trailingNavItems}
       </div>
     </Header>
+  );
+}
+
+function GlobalProgressBar() {
+  const globalProgress = useSelector((state: OxalisState) => state.uiInformation.globalProgress);
+  const hide = globalProgress === 0;
+  return (
+    <div
+      className={`global-progress-bar ${hide ? "hidden-global-progress-bar" : ""}`}
+      style={{ width: `${Math.round(globalProgress * 100)}%` }}
+    />
   );
 }
 

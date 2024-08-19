@@ -264,7 +264,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         case Right(volumeTracing) =>
           volumeTracing.fallbackLayer.foreach(writer.writeAttribute("fallbackLayer", _))
           volumeTracing.largestSegmentId.foreach(id => writer.writeAttribute("largestSegmentId", id.toString))
-          if (!volumeTracing.mappingIsEditable.getOrElse(false)) {
+          if (!volumeTracing.hasEditableMapping.getOrElse(false)) {
             volumeTracing.mappingName.foreach { mappingName =>
               writer.writeAttribute("mappingName", mappingName)
             }
@@ -395,6 +395,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       Xml.withinElementSync("group") {
         writer.writeAttribute("name", t.name)
         writer.writeAttribute("id", t.groupId.toString)
+        writer.writeAttribute("isExpanded", t.isExpanded.getOrElse(true).toString)
         writeTreeGroupsAsXml(t.children)
       }
     }

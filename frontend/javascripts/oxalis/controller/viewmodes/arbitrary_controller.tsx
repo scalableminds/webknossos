@@ -241,13 +241,14 @@ class ArbitraryController extends React.PureComponent<Props> {
           return;
         }
 
-        getActiveNode(skeletonTracing).map((activeNode) =>
+        const activeNode = getActiveNode(skeletonTracing);
+        if (activeNode) {
           api.tracing.centerPositionAnimated(
             getNodePosition(activeNode, state),
             false,
             activeNode.rotation,
-          ),
-        );
+          );
+        }
       },
       ".": () => this.nextNode(true),
       ",": () => this.nextNode(false),
@@ -272,7 +273,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   setRecord(record: boolean): void {
     if (record !== Store.getState().temporaryConfiguration.flightmodeRecording) {
       Store.dispatch(setFlightmodeRecordingAction(record));
-      this.setWaypoint();
+      this.handleCreateNode();
     }
   }
 
@@ -283,15 +284,16 @@ class ArbitraryController extends React.PureComponent<Props> {
       return;
     }
 
-    Utils.zipMaybe(getActiveNode(skeletonTracing), getMaxNodeId(skeletonTracing)).map(
-      ([activeNode, maxNodeId]) => {
-        if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
-          return;
-        }
-
-        Store.dispatch(setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1)); // implicit cast from boolean to int
-      },
-    );
+    const activeNode = getActiveNode(skeletonTracing);
+    const maxNodeId = getMaxNodeId(skeletonTracing);
+    if (activeNode == null || maxNodeId == null) {
+      return;
+    }
+    if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
+      return;
+    }
+    // implicit cast from boolean to int
+    Store.dispatch(setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1));
   }
 
   move(timeFactor: number): void {
@@ -325,7 +327,7 @@ class ArbitraryController extends React.PureComponent<Props> {
           if (isRecording) {
             // This listener is responsible for setting a new waypoint, when the user enables
             // the "flightmode recording" toggle in the top-left corner of the flight canvas.
-            this.setWaypoint();
+            this.handleCreateNode();
           }
         },
       ),
@@ -394,7 +396,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.input.keyboardNoLoop?.destroy();
   }
 
-  setWaypoint(): void {
+  handleCreateNode(): void {
     if (!Store.getState().temporaryConfiguration.flightmodeRecording) {
       return;
     }
@@ -433,7 +435,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
 
     // Consider for deletion
-    this.setWaypoint();
+    this.handleCreateNode();
     Store.dispatch(createBranchPointAction());
     Toast.success(messages["tracing.branchpoint_set"]);
   }
@@ -454,7 +456,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     const vectorLength = V3.length(vector);
 
     if (vectorLength > 10) {
-      this.setWaypoint();
+      this.handleCreateNode();
       this.lastNodeMatrix = matrix;
     }
   }

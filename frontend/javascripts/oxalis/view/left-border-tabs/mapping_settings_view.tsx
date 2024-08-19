@@ -1,12 +1,10 @@
-import { Select, Tooltip } from "antd";
+import { Select } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import debounceRender from "react-debounce-render";
-import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
+import type { APISegmentationLayer } from "types/api_flow_types";
 import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType, EditableMapping } from "oxalis/store";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getSegmentationLayerByName,
   getMappingInfo,
@@ -29,6 +27,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import messages from "messages";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
+import FastTooltip from "components/fast_tooltip";
 
 const { Option, OptGroup } = Select;
 
@@ -36,15 +35,12 @@ type OwnProps = {
   layerName: string;
 };
 type StateProps = {
-  dataset: APIDataset;
   segmentationLayer: APISegmentationLayer | null | undefined;
-  position: Vector3;
   isMappingEnabled: boolean;
   mapping: Mapping | null | undefined;
   mappingName: string | null | undefined;
   hideUnmappedIds: boolean | null | undefined;
   mappingType: MappingType;
-  mappingColors: Array<number> | null | undefined;
   editableMapping: EditableMapping | null | undefined;
   isMappingLocked: boolean;
   isMergerModeEnabled: boolean;
@@ -187,13 +183,16 @@ class MappingSettingsView extends React.Component<Props, State> {
     // or a mapping was activated, e.g. from the API or by selecting one from the dropdown (this.props.isMappingEnabled).
     const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || isMappingEnabled;
     const renderHideUnmappedSegmentsSwitch =
-      (shouldMappingBeEnabled || isMergerModeEnabled) && mapping && hideUnmappedIds != null;
+      (shouldMappingBeEnabled || isMergerModeEnabled) &&
+      mapping &&
+      this.props.mappingType === "JSON" &&
+      hideUnmappedIds != null;
     const isDisabled = isEditableMappingActive || isMappingLocked || isAnnotationLockedByOwner;
     const disabledMessage = !allowUpdate
       ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByOwner, isOwner)
       : isEditableMappingActive
         ? "The mapping has been edited through proofreading actions and can no longer be disabled or changed."
-        : mapping
+        : isMappingEnabled
           ? "This mapping has been locked to this annotation, because the segmentation was modified while it was active. It can no longer be disabled or changed."
           : "The segmentation was modified while no mapping was active. To ensure a consistent state, mappings can no longer be enabled.";
     return (
@@ -203,7 +202,7 @@ class MappingSettingsView extends React.Component<Props, State> {
          to avoid conflicts in the logic of the UI. */
           !this.props.isMergerModeEnabled ? (
             <React.Fragment>
-              <Tooltip title={isDisabled ? disabledMessage : null}>
+              <FastTooltip title={isDisabled ? disabledMessage : null}>
                 <div
                   style={{
                     marginBottom: 6,
@@ -218,7 +217,7 @@ class MappingSettingsView extends React.Component<Props, State> {
                     disabled={isDisabled}
                   />
                 </div>
-              </Tooltip>
+              </FastTooltip>
 
               {/*
                 Show mapping-select even when the mapping is disabled but the UI was used before
@@ -274,14 +273,11 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
   const editableMapping = getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId);
 
   return {
-    dataset: state.dataset,
-    position: getPosition(state.flycam),
     hideUnmappedIds: activeMappingInfo.hideUnmappedIds,
     isMappingEnabled: activeMappingInfo.mappingStatus === MappingStatusEnum.ENABLED,
     mapping: activeMappingInfo.mapping,
     mappingName: activeMappingInfo.mappingName,
     mappingType: activeMappingInfo.mappingType,
-    mappingColors: activeMappingInfo.mappingColors,
     segmentationLayer,
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
     allowUpdate: state.tracing.restrictions.allowUpdate,

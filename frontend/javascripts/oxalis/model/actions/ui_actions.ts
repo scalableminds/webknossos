@@ -27,6 +27,8 @@ type SetIsMeasuringAction = ReturnType<typeof setIsMeasuringAction>;
 type SetNavbarHeightAction = ReturnType<typeof setNavbarHeightAction>;
 type ShowContextMenuAction = ReturnType<typeof showContextMenuAction>;
 type HideContextMenuAction = ReturnType<typeof hideContextMenuAction>;
+type SetActiveUserBoundingBoxId = ReturnType<typeof setActiveUserBoundingBoxId>;
+type SetGlobalProgressAction = ReturnType<typeof setGlobalProgressAction>;
 
 type SetRenderAnimationModalVisibilityAction = ReturnType<
   typeof setRenderAnimationModalVisibilityAction
@@ -58,7 +60,9 @@ export type UiAction =
   | SetIsMeasuringAction
   | SetNavbarHeightAction
   | ShowContextMenuAction
-  | HideContextMenuAction;
+  | HideContextMenuAction
+  | SetActiveUserBoundingBoxId
+  | SetGlobalProgressAction;
 
 export const setDropzoneModalVisibilityAction = (visible: boolean) =>
   ({
@@ -210,3 +214,17 @@ export const hideContextMenuAction = () =>
   ({
     type: "HIDE_CONTEXT_MENU",
   }) as const;
+
+export const setActiveUserBoundingBoxId = (id: number | null) => {
+  return {
+    type: "SET_ACTIVE_USER_BOUNDING_BOX_ID",
+    id,
+  } as const;
+};
+
+export const setGlobalProgressAction = (value: number) => {
+  return {
+    type: "SET_GLOBAL_PROGRESS",
+    value,
+  } as const;
+};

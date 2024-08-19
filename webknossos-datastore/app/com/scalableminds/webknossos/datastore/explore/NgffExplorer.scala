@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfigu
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   Category,
+  DataFormat,
   ElementClass,
   LayerViewConfiguration
 }
@@ -123,7 +124,8 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
               magsWithAttributes.map(_.mag),
               largestSegmentId = None,
               additionalAxes = Some(additionalAxes),
-              defaultViewConfiguration = Some(viewConfig)
+              defaultViewConfiguration = Some(viewConfig),
+              dataFormat = DataFormat.zarr
             )
           } else
             ZarrDataLayer(
@@ -133,7 +135,8 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
               elementClass,
               magsWithAttributes.map(_.mag),
               additionalAxes = Some(additionalAxes),
-              defaultViewConfiguration = Some(viewConfig)
+              defaultViewConfiguration = Some(viewConfig),
+              dataFormat = DataFormat.zarr
             )
         } yield (layer, VoxelSize(voxelSizeFactor, unifiedAxisUnit))
       })

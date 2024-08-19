@@ -854,8 +854,11 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
         case "CREATE_TREE": {
           const { timestamp } = action;
           return createTree(state, timestamp)
-            .map((tree) =>
-              update(state, {
+            .map((tree) => {
+              if (action.treeIdCallback) {
+                action.treeIdCallback(tree.treeId);
+              }
+              return update(state, {
                 tracing: {
                   skeleton: {
                     trees: {
@@ -874,8 +877,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                     },
                   },
                 },
-              }),
-            )
+              });
+            })
             .getOrElse(state);
         }
 

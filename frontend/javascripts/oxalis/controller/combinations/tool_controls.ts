@@ -204,7 +204,7 @@ export class SkeletonTool {
       if (event.shiftKey) {
         SkeletonHandlers.handleOpenContextMenu(planeView, position, plane, isTouch, event);
       } else {
-        SkeletonHandlers.handleCreateNode(position, event.ctrlKey || event.metaKey);
+        SkeletonHandlers.handleCreateNodeFromEvent(position, event.ctrlKey || event.metaKey);
       }
     };
 
@@ -305,7 +305,7 @@ export class SkeletonTool {
 
     if (allowNodeCreation && !didSelectNode && !useLegacyBindings && !shiftPressed) {
       // Will only have an effect, when not in 3D viewport
-      SkeletonHandlers.handleCreateNode(position, ctrlPressed);
+      SkeletonHandlers.handleCreateNodeFromEvent(position, ctrlPressed);
     }
   }
 

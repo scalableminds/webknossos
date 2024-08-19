@@ -98,7 +98,7 @@ import {
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { roundTo, hexToRgb, rgbToHex, truncateStringToLength } from "libs/utils";
-import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
+import { handleCreateNodeFromGlobalPosition } from "oxalis/controller/combinations/skeleton_handlers";
 import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { api } from "oxalis/singletons";
@@ -178,6 +178,21 @@ type NoNodeContextMenuProps = Props & {
   activeTool: AnnotationTool;
   infoRows: ItemType[];
 };
+
+export const getNoActionsAvailableMenu = (hideContextMenu: () => void): MenuProps => ({
+  onClick: hideContextMenu,
+  style: {
+    borderRadius: 6,
+  },
+  mode: "vertical",
+  items: [
+    {
+      key: "view",
+      disabled: true,
+      label: "No actions available.",
+    },
+  ],
+});
 
 function copyIconWithTooltip(value: string | number, title: string) {
   return (
@@ -1016,7 +1031,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       ? [
           {
             key: "create-node",
-            onClick: () => setWaypoint(globalPosition, viewport, false),
+            onClick: () => handleCreateNodeFromGlobalPosition(globalPosition, viewport, false),
             label: "Create Node here",
             disabled: isSkeletonLayerTransformed(state),
           },
@@ -1024,7 +1039,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             key: "create-node-with-tree",
             onClick: () => {
               Store.dispatch(createTreeAction());
-              setWaypoint(globalPosition, viewport, false);
+              handleCreateNodeFromGlobalPosition(globalPosition, viewport, false);
             },
             label: (
               <>

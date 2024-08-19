@@ -196,7 +196,7 @@ class VolumeTracingZarrStreamingController @Inject()(
                                                                                   DataLayer.bucketLength))
               )),
             chunk_key_encoding =
-              ChunkKeyEncoding("default", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
+              ChunkKeyEncoding("v2", configuration = Some(ChunkKeyEncodingConfiguration(separator = Some(".")))),
             fill_value = Right(0),
             attributes = None,
             codecs = Seq(

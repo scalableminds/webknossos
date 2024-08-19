@@ -289,7 +289,10 @@ class ZarrStreamingController @Inject()(
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                 datasetName,
                                                                                 dataLayerName) ~> NOT_FOUND
-      (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(coordinates) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
+      reorderedAdditionalAxes = dataLayer.additionalAxes.map(reorderAdditionalAxes)
+      (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
+        coordinates,
+        reorderedAdditionalAxes) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
       magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
       _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       cubeSize = DataLayer.bucketLength

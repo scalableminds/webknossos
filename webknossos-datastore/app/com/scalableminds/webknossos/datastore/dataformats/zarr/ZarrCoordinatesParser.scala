@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.dataformats.zarr
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
 
@@ -12,6 +13,7 @@ object ZarrCoordinatesParser {
 
   def parseNDimensionalDotCoordinates(
       coordinates: String,
+      reorderedAdditionalAxesOpt: Option[Seq[AdditionalAxis]]
   )(implicit ec: ExecutionContext, m: MessagesProvider): Fox[(Int, Int, Int, Option[List[AdditionalCoordinate]])] = {
     val ndCoordinatesRx = "^\\s*([0-9]+)\\.([0-9]+)\\.([0-9]+)(\\.([0-9]+))+\\s*$".r
 
@@ -26,12 +28,18 @@ object ZarrCoordinatesParser {
       (x, y, z) = (parsedCoordinates(parsedCoordinates.length - 3),
                    parsedCoordinates(parsedCoordinates.length - 2),
                    parsedCoordinates(parsedCoordinates.length - 1))
-      additionalCoordinates = if (parsedCoordinates.length > 4)
+      reorderedAdditionalAxes = reorderedAdditionalAxesOpt.getOrElse(List.empty)
+      _ <- bool2Fox(reorderedAdditionalAxes.length == parsedCoordinates.length - 4) ?~> "zarr.invalidAdditionalCoordinates" ~> NOT_FOUND
+      sentAdditionalCoordinates = parsedCoordinates.length > 4
+      additionalCoordinates = if (sentAdditionalCoordinates)
         Some(
           parsedCoordinates
             .slice(1, parsedCoordinates.length - 3)
             .zipWithIndex
-            .map(coordWithIndex => new AdditionalCoordinate(name = s"t${coordWithIndex._2}", value = coordWithIndex._1))
+            .map({
+              case (coordinate, index) =>
+                new AdditionalCoordinate(name = reorderedAdditionalAxes(index).name, value = coordinate)
+            })
             .toList)
       else None
     } yield (x, y, z, additionalCoordinates)

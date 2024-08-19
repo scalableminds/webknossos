@@ -47,14 +47,25 @@ object ReserveManualUploadInformation {
     Json.format[ReserveManualUploadInformation]
 }
 
-case class LinkedLayerIdentifier(organizationId: String,
+case class LinkedLayerIdentifier(organizationId: Option[String],
+                                 organizationName: Option[String],
                                  dataSetName: String,
                                  layerName: String,
                                  newLayerName: Option[String] = None) {
-  def pathIn(dataBaseDir: Path): Path = dataBaseDir.resolve(organizationId).resolve(dataSetName).resolve(layerName)
+  def this(organizationId: String, dataSetName: String, layerName: String, newLayerName: Option[String]) =
+    this(Some(organizationId), None, dataSetName, layerName, newLayerName)
+
+  def getOrganizationId: String = this.organizationId.getOrElse(this.organizationName.getOrElse(""))
+
+  def pathIn(dataBaseDir: Path): Path = dataBaseDir.resolve(getOrganizationId).resolve(dataSetName).resolve(layerName)
 }
 
 object LinkedLayerIdentifier {
+  def apply(organizationId: String,
+            dataSetName: String,
+            layerName: String,
+            newLayerName: Option[String]): LinkedLayerIdentifier =
+    new LinkedLayerIdentifier(Some(organizationId), None, dataSetName, layerName, newLayerName)
   implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
@@ -360,7 +371,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def layerFromIdentifier(layerIdentifier: LinkedLayerIdentifier): Fox[DataLayer] = {
     val dataSourcePath = layerIdentifier.pathIn(dataBaseDir).getParent
-    val inboxDataSource = dataSourceService.dataSourceFromDir(dataSourcePath, layerIdentifier.organizationId)
+    val inboxDataSource = dataSourceService.dataSourceFromDir(dataSourcePath, layerIdentifier.getOrganizationId)
     for {
       usableDataSource <- inboxDataSource.toUsable.toFox ?~> "Layer to link is not in dataset with valid properties file."
       layer: DataLayer <- usableDataSource.getDataLayer(layerIdentifier.layerName).toFox

@@ -85,9 +85,9 @@ class WKRemoteDataStoreController @Inject()(
   private def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier,
                                   requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOne(layerIdentifier.organizationId)(GlobalAccessContext) ?~> Messages(
+      organization <- organizationDAO.findOne(layerIdentifier.getOrganizationId)(GlobalAccessContext) ?~> Messages(
         "organization.notFound",
-        layerIdentifier.organizationId) ~> NOT_FOUND
+        layerIdentifier.getOrganizationId) ~> NOT_FOUND
       dataset <- datasetDAO.findOneByNameAndOrganization(layerIdentifier.dataSetName, organization._id)(
         AuthorizedAccessContext(requestingUser)) ?~> Messages("dataset.notFound", layerIdentifier.dataSetName)
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)

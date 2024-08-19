@@ -234,8 +234,11 @@ export const updateSegmentAction = (
   layerName: string,
   timestamp: number = Date.now(),
   createsNewUndoState: boolean = false,
-) =>
-  ({
+) => {
+  if (segmentId == null) {
+    throw new Error("Segment ID must not be null.");
+  }
+  return {
     type: "UPDATE_SEGMENT",
     // TODO: Proper 64 bit support (#6921)
     segmentId: Number(segmentId),
@@ -243,7 +246,8 @@ export const updateSegmentAction = (
     layerName,
     timestamp,
     createsNewUndoState,
-  }) as const;
+  } as const;
+};
 
 export const removeSegmentAction = (
   segmentId: NumberLike,

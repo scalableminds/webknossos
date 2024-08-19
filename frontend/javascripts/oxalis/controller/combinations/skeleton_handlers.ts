@@ -249,9 +249,23 @@ export function handleCreateNodeFromGlobalPosition(
     Store.dispatch(createTreeAction());
   }
 
-  const { additionalCoordinates, rotation, center, branchpoint, activate } =
-    getOptionsForCreateSkeletonNode(activeViewport, ctrlIsPressed);
-  createSkeletonNode(position, additionalCoordinates, rotation, center, branchpoint, activate);
+  const {
+    additionalCoordinates,
+    rotation,
+    center,
+    branchpoint,
+    activate,
+    skipCenteringAnimationInThirdDimension,
+  } = getOptionsForCreateSkeletonNode(activeViewport, ctrlIsPressed);
+  createSkeletonNode(
+    position,
+    additionalCoordinates,
+    rotation,
+    center,
+    branchpoint,
+    activate,
+    skipCenteringAnimationInThirdDimension,
+  );
 }
 
 export function getOptionsForCreateSkeletonNode(
@@ -275,7 +289,16 @@ export function getOptionsForCreateSkeletonNode(
   // not create any edges; see https://github.com/scalableminds/webknossos/issues/5303).
   const activate = !ctrlIsPressed || activeNode == null;
 
-  return { additionalCoordinates, rotation, center, branchpoint, activate };
+  const skipCenteringAnimationInThirdDimension = true;
+
+  return {
+    additionalCoordinates,
+    rotation,
+    center,
+    branchpoint,
+    activate,
+    skipCenteringAnimationInThirdDimension,
+  };
 }
 
 export function createSkeletonNode(
@@ -285,6 +308,7 @@ export function createSkeletonNode(
   center: boolean,
   branchpoint: boolean,
   activate: boolean,
+  skipCenteringAnimationInThirdDimension: boolean,
 ): void {
   updateTraceDirection(position);
 
@@ -324,9 +348,10 @@ export function createSkeletonNode(
 
     const { activeTreeId } = newSkeleton;
     getNodeAndTree(newSkeleton, newNodeId, activeTreeId).map(([, newNode]) => {
-      // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
-      // This is important because otherwise the user cannot continue to trace until the animation is over
-      api.tracing.centerPositionAnimated(getNodePosition(newNode, state), true);
+      api.tracing.centerPositionAnimated(
+        getNodePosition(newNode, state),
+        skipCenteringAnimationInThirdDimension,
+      );
     });
   }
 

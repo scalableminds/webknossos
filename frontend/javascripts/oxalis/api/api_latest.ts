@@ -360,6 +360,7 @@ class TracingApi {
       center?: boolean;
       branchpoint?: boolean;
       activate?: boolean;
+      skipCenteringAnimationInThirdDimension?: boolean;
     },
   ) {
     assertSkeleton(Store.getState().tracing);
@@ -371,6 +372,9 @@ class TracingApi {
       options?.center ?? defaultOptions.center,
       options?.branchpoint ?? defaultOptions.branchpoint,
       options?.activate ?? defaultOptions.activate,
+      // This is the only parameter where we don't fall back to the default option,
+      // as the parameter mostly makes sense when the user creates a node *manually*.
+      options?.skipCenteringAnimationInThirdDimension ?? false,
     );
   }
 
@@ -1333,20 +1337,23 @@ class TracingApi {
    * Starts an animation to center the given position. See setCameraPosition for a non-animated version of this function.
    *
    * @param position - Vector3
-   * @param skipDimensions - Boolean which decides whether the third dimension shall also be animated (defaults to true)
+   * @param skipCenteringAnimationInThirdDimension -
+   *        Boolean which decides whether the third dimension shall also be animated (defaults to true)
+   *        When true, this lets the user still manipulate the "third dimension"
+   *        during the animation (important because otherwise the user cannot continue to trace until
+   *        the animation is over).
    * @param rotation - Vector3 (optional) - Will only be noticeable in flight or oblique mode.
    * @example
    * api.tracing.centerPositionAnimated([0, 0, 0])
    */
   centerPositionAnimated(
     position: Vector3,
-    skipDimensions: boolean = true,
+    skipCenteringAnimationInThirdDimension: boolean = true,
     rotation?: Vector3,
   ): void {
-    // Let the user still manipulate the "third dimension" during animation
     const { activeViewport } = Store.getState().viewModeData.plane;
     const dimensionToSkip =
-      skipDimensions && activeViewport !== OrthoViews.TDView
+      skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView
         ? dimensions.thirdDimensionForPlane(activeViewport)
         : null;
     const curPosition = getPosition(Store.getState().flycam);

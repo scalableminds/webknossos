@@ -92,9 +92,7 @@ class TracingApi {
    */
   getActiveNodeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveNode(tracing)
-      .map((node) => node.id)
-      .getOrElse(null);
+    return getActiveNode(tracing)?.id ?? null;
   }
 
   /**
@@ -102,9 +100,7 @@ class TracingApi {
    */
   getActiveTreeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveTree(tracing)
-      .map((tree) => tree.treeId)
-      .getOrElse(null);
+    return getActiveTree(tracing)?.treeId ?? null;
   }
 
   /**

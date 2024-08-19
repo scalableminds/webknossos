@@ -102,8 +102,8 @@ function* centerActiveNode(action: Action): Saga<void> {
     }
   }
 
-  const activeNode = Utils.toNullable(
-    getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))),
+  const activeNode = getActiveNode(
+    yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing)),
   );
 
   if (activeNode != null) {

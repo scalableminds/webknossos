@@ -14,6 +14,8 @@ import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_
 import ButtonComponent from "../components/button_component";
 import { showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
 import features from "features";
+import FastTooltip from "components/fast_tooltip";
+import { QuestionCircleOutlined } from "@ant-design/icons";
 
 const OPTIONS_WITH_DISABLED = [
   { label: "Dark Segment", value: "dark" },
@@ -48,6 +50,25 @@ export function AiQuickSelectControls() {
 
   return (
     <div>
+      <div style={{ position: "absolute", right: 4, top: 4 }}>
+        <FastTooltip
+          placement="right-start"
+          dynamicRenderer={() => (
+            <p>
+              The AI-based Quick Select feature can be used
+              <ul>
+                <li>by clicking on a cell or</li>
+                <li>by drawing a rectangle around a cell</li>
+                <li>for multiple sections at once</li>
+              </ul>
+              Hint: If the predicted selection is too big, try to zoom in a bit further and try
+              again.
+            </p>
+          )}
+        >
+          <QuestionCircleOutlined />
+        </FastTooltip>
+      </div>
       <NumberSliderSetting
         label="Prediction Depth"
         min={1}

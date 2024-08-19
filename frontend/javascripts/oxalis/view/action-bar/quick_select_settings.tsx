@@ -61,8 +61,7 @@ export function AiQuickSelectControls() {
                 be segmented at once.
               </p>
               <p>
-                Hint: If the predicted selection is too big, try to zoom in a bit further and try
-                again.
+                Hint: If the predicted selection is too big, zoom in a bit further and try again.
               </p>
             </div>
           )}

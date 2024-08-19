@@ -23,7 +23,7 @@ class WKRemoteSegmentAnythingClient @Inject()(rpc: RPC, conf: WkConf) {
       selectionBottomRightYOpt: Option[Int],
       pointXOpt: Option[Int],
       pointYOpt: Option[Int],
-      dataShape: Vec3Int, // two of the axes will be 1024, the other is the "depth". Axis order varies depending on viewport
+      dataShape: Vec3Int, // two of the axes will be at most 1024, the other is the "depth". Axis order varies depending on viewport
       intensityMin: Option[Float],
       intensityMax: Option[Float]): Fox[Array[Byte]] = {
     val interactionInputLengthInBytes = 1 + (

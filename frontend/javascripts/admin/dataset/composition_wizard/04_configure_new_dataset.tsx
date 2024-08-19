@@ -31,6 +31,7 @@ import { useEffectOnlyOnce } from "libs/react_hooks";
 import { formatNumber } from "libs/format_utils";
 
 const FormItem = Form.Item;
+const ALLOW_TPS_IN_COMPOSITION = false;
 
 export function ConfigureNewDataset(props: WizardComponentProps) {
   const formRef = React.useRef<FormInstance<any>>(null);
@@ -85,8 +86,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       throw new Error("Cannot create dataset without being logged in.");
     }
     const layersWithoutTransforms = form.getFieldValue(["layers"]) as LayerLink[];
-    // todop: does this throw when the ui was not rendered?
-    const useThinPlateSplines = form.getFieldValue("useThinPlateSplines") as boolean;
+    const useThinPlateSplines = (form.getFieldValue("useThinPlateSplines") ?? false) as boolean;
 
     const affineMeanError = { meanError: 0 };
 
@@ -163,7 +163,6 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
               ".",
           ].join("\n"),
         },
-        // todop test
       );
     } finally {
       setIsLoading(false);
@@ -238,7 +237,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
             );
           }}
         </Form.Item>
-        {wizardContext.sourcePoints.length > 0 && (
+        {ALLOW_TPS_IN_COMPOSITION && wizardContext.sourcePoints.length > 0 && (
           <FormItem name={["useThinPlateSplines"]} valuePropName="checked">
             <Checkbox>Use Thin-Plate-Splines (Experimental)</Checkbox>
           </FormItem>

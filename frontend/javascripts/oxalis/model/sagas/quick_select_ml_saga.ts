@@ -47,15 +47,17 @@ function* getMask(
   const trans = (vec: Vector3) => Dimensions.transDim(vec, activeViewport);
   const centerMag1 = V3.round(userBoxMag1.getCenter());
 
-  const viewportExtent = yield* select((state) => {
+  const viewportExtentInMag = yield* select((state) => {
     const [width, height] = getPlaneExtentInVoxelFromStore(
       state,
       state.flycam.zoomStep,
       activeViewport,
     );
-    return Math.ceil(Math.max(width, height));
+    const [u, v] = Dimensions.getIndices(activeViewport);
+
+    return Math.ceil(Math.max(width / mag[u], height / mag[v]));
   });
-  const maskSizeBase = Math.min(MAXIMUM_MASK_BASE, viewportExtent + 100);
+  const maskSizeBase = Math.min(MAXIMUM_MASK_BASE, viewportExtentInMag + 100);
   const maskSize = (
     WkDevFlags.sam.useLocalMask ? [maskSizeBase, maskSizeBase, 0] : [1024, 1024, 0]
   ) as Vector3;

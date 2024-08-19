@@ -42,7 +42,6 @@ import {
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
 import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
-import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -547,10 +546,7 @@ function CreateNewBoundingBoxButton() {
 
 function CreateTreeButton() {
   const dispatch = useDispatch();
-  const activeTree = useSelector((state: OxalisState) =>
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'SkeletonTracing | null | undefin... Remove this comment to see the full error message
-    toNullable(getActiveTree(state.tracing.skeleton)),
-  );
+  const activeTree = useSelector((state: OxalisState) => getActiveTree(state.tracing.skeleton));
   const rgbColorString =
     activeTree != null
       ? `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`

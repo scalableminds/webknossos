@@ -830,9 +830,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
 
     const { showSkeletons } = skeletonTracing;
-    const activeTreeName = getActiveTree(skeletonTracing)
-      .map((activeTree) => activeTree.name)
-      .getOrElse("");
+    const activeTreeName = getActiveTree(skeletonTracing)?.name ?? "";
     const activeGroupName = getActiveTreeGroup(skeletonTracing)
       .map((activeGroup) => activeGroup.name)
       .getOrElse("");

@@ -1,14 +1,17 @@
 {
     "name": "webknossos",
     "license": "AGPL-3.0",
-    "engines": {
+    "engines":
+    {
         "node": ">=16"
     },
-    "repository": {
+    "repository":
+    {
         "type": "git",
         "url": "git://github.com/scalableminds/webknossos.git"
     },
-    "devDependencies": {
+    "devDependencies":
+    {
         "@biomejs/biome": "^1.5.3",
         "@redux-saga/testing-utils": "^1.1.5",
         "@shaderfrog/glsl-parser": "^0.3.0",
@@ -71,8 +74,10 @@
         "webpack-cli": "^5.1.4",
         "webpack-dev-server": "^5.0.2"
     },
-    "optionalDependencies": {},
-    "scripts": {
+    "optionalDependencies":
+    {},
+    "scripts":
+    {
         "start": "node tools/proxy/proxy.js",
         "build": "node --max-old-space-size=4096 node_modules/.bin/webpack --env production",
         "@comment build-backend": "Only check for errors in the backend code like done by the CI. This command is not needed to run WEBKNOSSOS",
@@ -130,7 +135,8 @@
         "beautify-front": "yarn fix-frontend && yarn typecheck",
         "beautify": "yarn format-backend && yarn beautify-front"
     },
-    "dependencies": {
+    "dependencies":
+    {
         "@airbrake/browser": "^2.1.7",
         "@ant-design/colors": "^6.0.0",
         "@ant-design/icons": "^5.4.0",
@@ -218,26 +224,33 @@
         "url-join": "^4.0.0",
         "worker-loader": "^3.0.8"
     },
-    "resolutions": {
+    "resolutions":
+    {
         "**/mini-store": "^1.1.0",
         "**/redux": "3.7.2",
         "**/rc-tree": "^5.7.12"
     },
-    "ava": {
-        "files": [
+    "ava":
+    {
+        "files":
+        [
             "./public-test/test-bundle/**/*.{js,jsx}"
         ],
-        "ignoredByWatcher": [
+        "ignoredByWatcher":
+        [
             "./binaryData/**/*.*"
         ],
-        "require": [
+        "require":
+        [
             "./frontend/javascripts/test/_ava_polyfill_provider.ts"
         ],
         "snapshotDir": "frontend/javascripts/test/snapshots",
         "concurrency": 8
     },
-    "c8": {
-        "exclude": [
+    "c8":
+    {
+        "exclude":
+        [
             "public-test/test-bundle/test/**/*.*",
             "frontend/javascripts/test/**/*.*"
         ],

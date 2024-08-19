@@ -4,8 +4,9 @@ import {
   ReloadOutlined,
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
+  TagsOutlined,
 } from "@ant-design/icons";
-import { List, MenuProps, App } from "antd";
+import { List, MenuProps, App, Tag } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
@@ -43,6 +44,7 @@ import { type AdditionalCoordinate } from "types/api_flow_types";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import FastTooltip from "components/fast_tooltip";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
+import { stringToColor } from "libs/format_utils";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
@@ -457,6 +459,31 @@ function _SegmentListItem({
         ),
       },
       {
+        key: "addProperty",
+        label: "Add Property",
+        onClick: () => {
+          if (visibleSegmentationLayer == null) {
+            return;
+          }
+          const key = prompt("Please type in a key");
+          const value = prompt("Please type in a value");
+          if (key && value) {
+            updateSegment(
+              segment.id,
+              {
+                userDefinedProperties: [
+                  ...segment.userDefinedProperties,
+                  { key, stringValue: value },
+                ],
+              },
+              visibleSegmentationLayer.name,
+              true,
+            );
+          }
+          hideContextMenu();
+        },
+      },
+      {
         key: "resetSegmentColor",
         disabled: segment.color == null,
         onClick: () => {
@@ -556,7 +583,6 @@ function _SegmentListItem({
         : createSegmentContextMenu(),
     );
   };
-
   return (
     <List.Item
       style={{
@@ -593,8 +619,19 @@ function _SegmentListItem({
               }
             }}
             margin="0 5px"
+            iconClassName="deemphasized"
             disableEditing={!allowUpdate}
           />
+          {(segment.userDefinedProperties || []).length > 0 ? (
+            <FastTooltip
+              className="deemphasized"
+              title={segment.userDefinedProperties
+                .map((prop) => `${prop.key}: ${prop.stringValue}`)
+                .join(", ")}
+            >
+              <TagsOutlined />
+            </FastTooltip>
+          ) : null}
           <FastTooltip title="Open context menu (also available via right-click)">
             <EllipsisOutlined onClick={onOpenContextMenu} />
           </FastTooltip>
@@ -638,6 +675,19 @@ function _SegmentListItem({
             setPosition={setPosition}
             setAdditionalCoordinates={setAdditionalCoordinates}
           />
+        </div>
+        <div
+          style={{
+            marginLeft: 16,
+            // display: "flex",
+            flexFlow: "row wrap",
+          }}
+        >
+          {(segment.userDefinedProperties || []).map((prop) => (
+            <Tag color={stringToColor(prop.key)}>
+              <span style={{ opacity: 0.8 }}>{prop.key}</span>: {prop.stringValue}
+            </Tag>
+          ))}
         </div>
       </div>
     </List.Item>

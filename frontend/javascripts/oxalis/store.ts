@@ -26,6 +26,7 @@ import type {
   APIUserCompact,
   AdditionalCoordinate,
   AdditionalAxis,
+  UserDefinedProperty,
 } from "types/api_flow_types";
 import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
 import type { Action } from "oxalis/model/actions/actions";
@@ -231,6 +232,7 @@ export type Segment = {
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
+  readonly userDefinedProperties: UserDefinedProperty[];
 };
 export type SegmentMap = DiffableMap<number, Segment>;
 

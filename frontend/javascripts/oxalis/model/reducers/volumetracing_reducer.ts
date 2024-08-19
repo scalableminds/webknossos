@@ -183,7 +183,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       // without a position.
     }
 
-    const newSegment = {
+    const newSegment: Segment = {
       // If oldSegment exists, its creationTime will be
       // used by ...oldSegment
       creationTime: action.timestamp,
@@ -191,6 +191,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       color: null,
       groupId: null,
       someAdditionalCoordinates: someAdditionalCoordinates,
+      userDefinedProperties: [],
       ...oldSegment,
       ...segment,
       somePosition,

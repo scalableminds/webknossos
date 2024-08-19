@@ -59,6 +59,7 @@ export default function FastTooltip({
   onMouseLeave,
   wrapper,
   html,
+  className,
   style,
   dynamicRenderer,
 }: {
@@ -70,6 +71,7 @@ export default function FastTooltip({
   onMouseLeave?: () => void;
   wrapper?: "div" | "span" | "p" | "tr"; // Any valid HTML tag, span by default.
   html?: string | null | undefined;
+  className?: string; // class name attached to the wrapper
   style?: React.CSSProperties; // style attached to the wrapper
   dynamicRenderer?: () => React.ReactElement;
 }) {
@@ -108,6 +110,7 @@ export default function FastTooltip({
       data-unique-key={uniqueKeyForDynamic}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      className={className}
       style={style}
     >
       {children}

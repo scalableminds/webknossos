@@ -769,6 +769,13 @@ export type ServerSkeletonTracingTree = {
   type?: TreeType;
   edgesAreVisible?: boolean;
 };
+export type UserDefinedProperty = {
+  key: string;
+  stringValue?: string;
+  boolValue?: boolean;
+  numberValue?: number;
+  stringListValue?: string[];
+};
 type ServerSegment = {
   segmentId: number;
   name: string | null | undefined;
@@ -777,6 +784,7 @@ type ServerSegment = {
   creationTime: number | null | undefined;
   color: ColorObject | null;
   groupId: number | null | undefined;
+  userDefinedProperties: UserDefinedProperty[];
 };
 export type ServerTracingBase = {
   id: string;

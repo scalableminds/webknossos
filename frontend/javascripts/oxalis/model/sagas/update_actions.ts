@@ -10,7 +10,7 @@ import type {
   NumberLike,
 } from "oxalis/store";
 import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
-import { AdditionalCoordinate } from "types/api_flow_types";
+import { AdditionalCoordinate, UserDefinedProperty } from "types/api_flow_types";
 
 export type NodeWithTreeId = {
   treeId: number;
@@ -317,8 +317,11 @@ export function createSegmentVolumeAction(
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
+  userDefinedProperties: UserDefinedProperty[],
   creationTime: number | null | undefined = Date.now(),
 ) {
+  // todop: validate here?
+
   return {
     name: "createSegment",
     value: {
@@ -327,10 +330,12 @@ export function createSegmentVolumeAction(
       name,
       color,
       groupId,
+      userDefinedProperties,
       creationTime,
     },
   } as const;
 }
+
 export function updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
@@ -338,6 +343,7 @@ export function updateSegmentVolumeAction(
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
+  userDefinedProperties: Array<UserDefinedProperty>,
   creationTime: number | null | undefined = Date.now(),
 ) {
   return {
@@ -349,6 +355,7 @@ export function updateSegmentVolumeAction(
       name,
       color,
       groupId,
+      userDefinedProperties,
       creationTime,
     },
   } as const;

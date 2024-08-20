@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 117, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 118, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 
 -- Drop views
@@ -94,54 +94,19 @@ WHERE EXISTS (
     FROM webknossos.organizations
     WHERE _id = webknossos.analyticsEvents._organization
 );
-/*case class JoinOrganizationEvent(user: User, organization: Organization)(implicit ec: ExecutionContext)
-    extends AnalyticsEvent {
-  def eventType: String = "join_organization"
-  def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
-    Fox.successful(Json.obj("joined_organization_id" -> organization._id))
-}*/
+
 -- join events
 UPDATE webknossos.analyticsEvents
 SET eventProperties = CASE
     WHEN EXISTS (SELECT 1 FROM webknossos.organizations WHERE _id = eventProperties->>'joined_organization_id') THEN
-        (SELECT json_build_object('joined_organization_id', name) FROM webknossos.organizations WHERE _id = organization_id)
+        (SELECT jsonb_build_object('joined_organization_id', name) FROM webknossos.organizations WHERE _id = eventProperties->>'joined_organization_id')
     ELSE eventProperties
 END
 WHERE eventType = 'join_organization';
-/*case class OpenDatasetEvent(user: User, dataset: Dataset)(implicit ec: ExecutionContext) extends AnalyticsEvent {
-    def eventType: String = "open_dataset"
-    def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
-      for {
-        uploader_multiuser_id <- Fox.runOptional(dataset._uploader)(uploader =>
-          analyticsLookUpService.multiUserIdFor(uploader))
-      } yield {
-        Json.obj(
-          "dataset_id" -> dataset._id.id,
-          "dataset_name" -> dataset.name,
-          "dataset_organization_id" -> dataset._organization,
-          "dataset_uploader_multiuser_id" -> uploader_multiuser_id
-        )
-      }
-  }*/
 
-  /*case class UploadDatasetEvent(user: User, dataset: Dataset, dataStore: DataStore, datasetSizeBytes: Long)(
-      implicit ec: ExecutionContext)
-      extends AnalyticsEvent {
-    def eventType: String = "upload_dataset"
-    def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
-      Fox.successful(
-        Json.obj(
-          "dataset_id" -> dataset._id.id,
-          "dataset_name" -> dataset.name,
-          "dataset_size_bytes" -> datasetSizeBytes,
-          "datastore_uri" -> dataStore.publicUrl,
-          "dataset_organization_id" -> dataset._organization
-        ))
-  }*/
--- open dataset or upload dataset events
 UPDATE webknossos.analyticsEvents
 SET eventProperties = CASE
-    WHEN (SELECT 1 FROM webknossos.organizations WHERE _id = eventProperties->>'dataset_organization_id') THEN
+    WHEN (SELECT True FROM webknossos.organizations WHERE _id = eventProperties->>'dataset_organization_id') THEN
         (
           SELECT jsonb_set(
             eventProperties::jsonb,
@@ -149,24 +114,11 @@ SET eventProperties = CASE
             to_jsonb(name)
           )
           FROM webknossos.organizations
-          WHERE _id = organization_id
+          WHERE _id = eventProperties->>'dataset_organization_id'
         )
     ELSE eventProperties
 END
 WHERE eventType = 'open_dataset' or eventType = 'upload_dataset';
-
-
--- TODO: What to do about
-/*case class FrontendAnalyticsEvent(user: User, eventType: String, eventProperties: JsObject)(
-    implicit ec: ExecutionContext)
-    extends AnalyticsEvent {
-  override def eventProperties(analyticsLookUpService: AnalyticsLookUpService): Fox[JsObject] =
-    Fox.successful(eventProperties ++ Json.obj("is_frontend_event" -> true))
-}*/
-
-
-
--- TODO: Properly migrate eventProperties -> potentially missing some ids because they might be from remote wks.
 
 
 
@@ -183,6 +135,7 @@ ALTER TABLE webknossos.organizations ADD PRIMARY KEY USING INDEX organizations_p
 
 ALTER TABLE webknossos.organizations ALTER COLUMN _id_old TYPE CHAR(24);
 ALTER TABLE webknossos.organizations ALTER COLUMN _id_old SET DEFAULT NULL;
+ALTER TABLE webknossos.organizations ALTER COLUMN _id_old DROP NOT NULL;
 ALTER TABLE webknossos.organizations ALTER COLUMN _id TYPE VARCHAR(256);
 ALTER TABLE webknossos.organizations ADD CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$');
 
@@ -223,6 +176,6 @@ JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 118;
+UPDATE webknossos.releaseInformation SET schemaVersion = 119;
 
 COMMIT TRANSACTION;

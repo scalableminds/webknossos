@@ -1,7 +1,7 @@
 START TRANSACTION;
 
 -- Ensure current schema version matches expected value before rollback
-DO $$ BEGIN ASSERT (SELECT schemaVersion FROM webknossos.releaseInformation) = 118, 'Current schema version mismatch'; END; $$ LANGUAGE plpgsql;
+DO $$ BEGIN ASSERT (SELECT schemaVersion FROM webknossos.releaseInformation) = 119, 'Current schema version mismatch'; END; $$ LANGUAGE plpgsql;
 
 -- Drop views
 DROP VIEW webknossos.userInfos;
@@ -121,7 +121,7 @@ JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
 -- Revert schema version
-UPDATE webknossos.releaseInformation SET schemaVersion = 117;
+UPDATE webknossos.releaseInformation SET schemaVersion = 118;
 
 COMMIT TRANSACTION;
 

@@ -2339,8 +2339,19 @@ export async function getSamMask(
   layerName: string,
   mag: Vector3,
   surroundingBoxMag1: BoundingBox, // in mag 1
-  selectionTopLeft: Vector2, // in target mag
-  selectionBottomRight: Vector2, // in target mag
+  prompt:
+    | {
+        type: "BOUNDING_BOX"; // relative to topleft
+        selectionTopLeftX: number; // int, in target mag
+        selectionTopLeftY: number; // int, in target mag
+        selectionBottomRightX: number; // int, in target mag
+        selectionBottomRightY: number; // int, in target mag
+      }
+    | {
+        type: "POINT";
+        pointX: number; // int, relative to topleft
+        pointY: number; // int, relative to topleft
+      },
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
 ): Promise<Uint8Array> {
@@ -2350,6 +2361,8 @@ export async function getSamMask(
     params.append("intensityMax", `${intensityRange[1]}`);
   }
 
+  const { type: interactionType, ...promptWithoutType } = prompt;
+
   const buffer = await Request.sendJSONReceiveArraybuffer(
     `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingMask?${params}`,
     {
@@ -2357,10 +2370,8 @@ export async function getSamMask(
         mag,
         surroundingBoundingBox: surroundingBoxMag1.asServerBoundingBox(),
         additionalCoordinates,
-        selectionTopLeftX: selectionTopLeft[0],
-        selectionTopLeftY: selectionTopLeft[1],
-        selectionBottomRightX: selectionBottomRight[0],
-        selectionBottomRightY: selectionBottomRight[1],
+        interactionType,
+        ...promptWithoutType,
       },
       showErrorToast: false,
     },

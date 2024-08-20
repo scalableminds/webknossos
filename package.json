@@ -139,7 +139,7 @@
     {
         "@airbrake/browser": "^2.1.7",
         "@ant-design/colors": "^6.0.0",
-        "@ant-design/icons": "^4.6.2",
+        "@ant-design/icons": "^5.4.0",
         "@fortawesome/fontawesome-free": "^5.15.4",
         "@rehooks/document-title": "^1.0.2",
         "@scalableminds/prop-types": "^15.8.1",

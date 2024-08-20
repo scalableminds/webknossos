@@ -492,11 +492,11 @@ export function createTree(
     let groupId = null;
 
     if (addToActiveGroup) {
-      const groupIdOfActiveTreeMaybe = getActiveTree(skeletonTracing).map((tree) => tree.groupId);
+      const groupIdOfActiveTree = getActiveTree(skeletonTracing)?.groupId;
       const groupIdOfActiveGroupMaybe = getActiveTreeGroup(skeletonTracing).map(
         (group) => group.groupId,
       );
-      groupId = Utils.toNullable(groupIdOfActiveTreeMaybe.orElse(() => groupIdOfActiveGroupMaybe));
+      groupId = groupIdOfActiveTree ?? Utils.toNullable(groupIdOfActiveGroupMaybe);
     }
 
     // Create the new tree

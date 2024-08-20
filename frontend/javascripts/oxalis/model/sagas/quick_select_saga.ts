@@ -3,7 +3,10 @@ import ErrorHandling from "libs/error_handling";
 
 import { Saga, select } from "oxalis/model/sagas/effect-generators";
 import { call, put, takeEvery } from "typed-redux-saga";
-import { ComputeQuickSelectForRectAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  ComputeQuickSelectForPointAction,
+  ComputeQuickSelectForRectAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import Toast from "libs/toast";
 import features from "features";
 
@@ -22,8 +25,8 @@ function* shouldUseHeuristic() {
 
 export default function* listenToQuickSelect(): Saga<void> {
   yield* takeEvery(
-    "COMPUTE_QUICK_SELECT_FOR_RECT",
-    function* guard(action: ComputeQuickSelectForRectAction) {
+    ["COMPUTE_QUICK_SELECT_FOR_RECT", "COMPUTE_QUICK_SELECT_FOR_POINT"],
+    function* guard(action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction) {
       try {
         const volumeTracing: VolumeTracing | null | undefined = yield* select(
           getActiveSegmentationTracing,
@@ -38,7 +41,14 @@ export default function* listenToQuickSelect(): Saga<void> {
             return;
           }
         }
-        yield* put(setBusyBlockingInfoAction(true, "Selecting segment"));
+        const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
+        if (busyBlockingInfo.isBusy) {
+          console.warn(
+            `Ignoring ${action.type} request (reason: ${busyBlockingInfo.reason || "null"})`,
+          );
+          return;
+        }
+        yield* put(setBusyBlockingInfoAction(true, "Quick-Selecting segment"));
 
         yield* put(setQuickSelectStateAction("active"));
         if (yield* call(shouldUseHeuristic)) {

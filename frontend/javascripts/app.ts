@@ -1,4 +1,3 @@
-import window from "libs/window";
 import { createNanoEvents } from "nanoevents";
 
 class OxalisApplication {
@@ -13,6 +12,5 @@ class OxalisApplication {
 }
 
 const app = new OxalisApplication();
-(window as any).app = app;
 
 export default app;

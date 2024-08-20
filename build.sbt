@@ -22,6 +22,9 @@ ThisBuild / javacOptions ++= Seq(
 )
 ThisBuild / dependencyCheckAssemblyAnalyzerEnabled := Some(false)
 
+// Keep asset timestamps when assembling jar
+ThisBuild / packageOptions += Package.FixedTimestamp(Package.keepTimestamps)
+
 PlayKeys.devSettings := Seq("play.server.pekko.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
 // Disable unused import warnings, only in sbt console REPL

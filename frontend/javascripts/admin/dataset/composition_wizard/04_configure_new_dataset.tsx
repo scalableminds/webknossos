@@ -5,7 +5,7 @@ import {
   DatasetNameFormItem,
   layerNameRules,
 } from "admin/dataset/dataset_components";
-import { Button, Checkbox, Col, Form, FormInstance, Input, List, Row, Tooltip } from "antd";
+import { Button, Checkbox, Col, Form, FormInstance, Input, List, Modal, Row, Tooltip } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
@@ -25,13 +25,26 @@ import {
   areDatasetsIdentical,
   LayerLink,
 } from "types/api_flow_types";
+import ErrorHandling from "libs/error_handling";
 import { syncValidator } from "types/validation";
 import { WizardComponentProps } from "./common";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { formatNumber } from "libs/format_utils";
+import { checkLandmarksForThinPlateSpline } from "oxalis/model/helpers/transformation_helpers";
+import { Vector3 } from "oxalis/constants";
 
 const FormItem = Form.Item;
 const ALLOW_TPS_IN_COMPOSITION = false;
+
+async function guardedWithErrorToast(fn: () => Promise<any>) {
+  try {
+    await fn();
+  } catch (error) {
+    Toast.error("An error unexpected occurred. Please check the console for details");
+    console.error(error);
+    ErrorHandling.notify(error as Error);
+  }
+}
 
 export function ConfigureNewDataset(props: WizardComponentProps) {
   const formRef = React.useRef<FormInstance<any>>(null);
@@ -90,24 +103,27 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
 
     const affineMeanError = { meanError: 0 };
 
-    function withTransforms(layers: LayerLink[]) {
-      const { sourcePoints, targetPoints } = wizardContext;
-      const transformationArr =
-        sourcePoints.length > 0 && targetPoints.length > 0
-          ? [
-              useThinPlateSplines
-                ? {
-                    type: "thin_plate_spline" as const,
-                    correspondences: { source: sourcePoints, target: targetPoints },
-                  }
-                : {
-                    type: "affine" as const,
-                    matrix: flatToNestedMatrix(
-                      estimateAffineMatrix4x4(sourcePoints, targetPoints, affineMeanError),
-                    ),
-                  },
-            ]
-          : [];
+    function withTransforms(layers: LayerLink[], sourcePoints: Vector3[], targetPoints: Vector3[]) {
+      if (sourcePoints.length + targetPoints.length === 0) {
+        return layers;
+      }
+
+      const transformationArr = [
+        useThinPlateSplines
+          ? {
+              type: "thin_plate_spline" as const,
+              correspondences: { source: sourcePoints, target: targetPoints },
+            }
+          : {
+              type: "affine" as const,
+              matrix: flatToNestedMatrix(
+                estimateAffineMatrix4x4(sourcePoints, targetPoints, affineMeanError),
+              ),
+            },
+      ];
+      if (useThinPlateSplines) {
+        checkLandmarksForThinPlateSpline(sourcePoints, targetPoints);
+      }
       return layers.map((layer) => ({
         ...layer,
         // The first dataset will be transformed to match the second.
@@ -124,6 +140,35 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       return;
     }
 
+    let layersWithTransforms;
+    const { sourcePoints, targetPoints } = wizardContext;
+    try {
+      layersWithTransforms = withTransforms(layersWithoutTransforms, sourcePoints, targetPoints);
+    } catch (exception) {
+      const tryAugmentation = await new Promise((resolve) => {
+        Modal.confirm({
+          title: "Augment landmarks?",
+          content:
+            "The provided landmarks can't be used for affine estimation, possibly " +
+            "due to their planar nature. Should a constant translation in the Z " +
+            "direction be assumed, and the landmarks adjusted accordingly?",
+          onOk: () => resolve(true),
+          onCancel: () => resolve(false),
+        });
+      });
+      const augmentLandmarks = (points: Vector3[]) =>
+        points.concat(points.map((p) => [p[0], p[1], p[2] + 1]));
+      if (tryAugmentation) {
+        layersWithTransforms = withTransforms(
+          layersWithoutTransforms,
+          augmentLandmarks(sourcePoints),
+          augmentLandmarks(targetPoints),
+        );
+      } else {
+        throw exception;
+      }
+    }
+
     const newDatasetName = form.getFieldValue(["name"]);
     setIsLoading(true);
     try {
@@ -132,7 +177,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         targetFolderId: form.getFieldValue(["targetFolderId"]),
         organizationName: activeUser.organization,
         voxelSize: linkedDatasets.slice(-1)[0].dataSource.scale,
-        layers: withTransforms(layersWithoutTransforms),
+        layers: layersWithTransforms,
       });
 
       const uniqueDatasets = _.uniqBy(
@@ -151,11 +196,11 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
             datasetMarkdownLinks,
             "",
             "The layers were combined " +
-              (wizardContext.sourcePoints.length === 0
+              (sourcePoints.length === 0
                 ? "without any transforms"
                 : `with ${
                     useThinPlateSplines
-                      ? `Thin-Plate-Splines (${wizardContext.sourcePoints.length} correspondences)`
+                      ? `Thin-Plate-Splines (${sourcePoints.length} correspondences)`
                       : `an affine transformation (mean error: ${formatNumber(
                           affineMeanError.meanError,
                         )} vx)`
@@ -175,7 +220,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
       <p>Please configure the dataset that is about to be created.</p>
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+      <Form form={form} layout="vertical" onFinish={() => guardedWithErrorToast(handleSubmit)}>
         <Row gutter={8}>
           <Col span={12}>
             <DatasetNameFormItem activeUser={activeUser} />

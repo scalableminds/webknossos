@@ -197,6 +197,10 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     }
   }
 
+  if (sourcePoints.length < 3) {
+    throw new SoftError("Each file should contain at least 3 nodes.");
+  }
+
   const datasets = await tryToFetchDatasetsByName(
     [datasetName1, datasetName2],
     "Could not derive datasets from NML. Please specify these manually.",

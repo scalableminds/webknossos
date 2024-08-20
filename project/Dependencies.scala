@@ -9,7 +9,7 @@ object Dependencies {
 
   val utilDependencies: Seq[ModuleID] = Seq(
     // Play Web Framework. import play
-    "org.playframework" %% "play" % "3.0.4",
+    "org.playframework" %% "play" % "3.0.5",
     // Play’s JSON serialization. import play.api.libs.json
     "com.typesafe.play" %% "play-json" % "2.10.5",
     // Sending emails. import org.apache.commons.mail
@@ -17,7 +17,7 @@ object Dependencies {
     // File utils. import org.apache.commons.io
     "commons-io" % "commons-io" % "2.16.1",
     // HashCodeBuilder. import org.apache.commons.lang3
-    "org.apache.commons" % "commons-lang3" % "3.14.0",
+    "org.apache.commons" % "commons-lang3" % "3.15.0",
     // Box/Tryo. import net.liftweb
     "net.liftweb" %% "lift-common" % "3.5.0",
     // ObjectIds. import reactivemongo.api.bson
@@ -58,7 +58,7 @@ object Dependencies {
     // Amazon S3 cloud storage client. import software.amazon.awssdk
     "software.amazon.awssdk" % "s3" % "2.26.21",
     // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
-    "com.google.cloud" % "google-cloud-storage" % "2.36.1",
+    "com.google.cloud" % "google-cloud-storage" % "2.40.1",
     // Blosc compression. import org.blosc
     "org.lasersonlab" % "jblosc" % "1.0.1",
     // Zstd compression. import org.apache.commons.compress
@@ -82,7 +82,7 @@ object Dependencies {
 
   val webknossosDependencies: Seq[ModuleID] = Seq(
     // Base64, Hashing. import org.apache.commons.codec
-    "commons-codec" % "commons-codec" % "1.16.0",
+    "commons-codec" % "commons-codec" % "1.17.0",
     // End-to-end tests, backend unit tests. import org.scalatestplus.play
     "org.scalatestplus.play" %% "scalatestplus-play" % "7.0.1" % "test",
     // Authenticated requests. import play.silhouette

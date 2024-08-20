@@ -122,7 +122,6 @@
         "insert-local-datastore": "./tools/postgres/dbtool.js insert-local-datastore",
         "coverage-local": "c8 report --reporter=html && echo Success! Open coverage/index.html",
         "coverage": "c8 report --reporter=text-lcov | coveralls",
-        "postcheckout": "echo 'Deleting auto-generated typescript files...' && rm -f frontend/javascripts/test/snapshots/type-check/*.ts",
         "apply-evolutions": "tools/postgres/dbtool.js apply-evolutions",
         "postinstall": "cd tools/proxy && yarn install",
         "typecheck": "yarn tsc",

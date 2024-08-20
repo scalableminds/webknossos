@@ -34,12 +34,12 @@ export default function estimateAffine(
   const xMatrix = solve(A, b);
   const x = xMatrix.to1DArray();
   const error = Matrix.sub(b, new Matrix(A).mmul(xMatrix)).to1DArray();
+  const meanError = _.mean(error.map((el) => Math.abs(el)));
+  if (optInfoOut) {
+    optInfoOut.meanError = meanError;
+  }
   if (!process.env.IS_TESTING) {
-    const meanError = _.mean(error.map((el) => Math.abs(el)));
     console.log("Affine estimation error: ", error, `(mean=${meanError})`);
-    if (optInfoOut) {
-      optInfoOut.meanError = meanError;
-    }
   }
 
   const affineMatrix = new Matrix([

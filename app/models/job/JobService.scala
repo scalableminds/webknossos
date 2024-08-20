@@ -55,7 +55,8 @@ class JobService @Inject()(wkConf: WkConf,
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
       _ = analyticsService.track(FailedJobEvent(user, jobBeforeChange.command))
-      msg = s"Job ${jobBeforeChange._id} failed$durationLabel. Command ${jobBeforeChange.command}, organization: ${organization.displayName}."
+      workflowLink = jobAfterChange.workflowLinkSlackFormatted(wkConf.Http.uri)
+      msg = s"Job ${jobBeforeChange._id} failed$durationLabel. Command ${jobBeforeChange.command}, organization: ${organization.displayName}.$workflowLink"
       _ = logger.warn(msg)
       _ = slackNotificationService.warn(
         s"Failed job$superUserLabel",
@@ -72,11 +73,11 @@ class JobService @Inject()(wkConf: WkConf,
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       resultLink = jobAfterChange.resultLinkPublic(organization.name, wkConf.Http.uri)
       resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization.name, wkConf.Http.uri)
+      workflowLink = jobAfterChange.workflowLinkSlackFormatted(wkConf.Http.uri)
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       durationLabel = jobAfterChange.duration.map(d => s" after ${formatDuration(d)}").getOrElse("")
-      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization: ${organization.displayName}.${resultLinkSlack
-        .getOrElse("")}"
+      msg = s"Job ${jobBeforeChange._id} succeeded$durationLabel. Command ${jobBeforeChange.command}, organization: ${organization.displayName}.$resultLinkSlack$workflowLink"
       _ = logger.info(msg)
       _ = slackNotificationService.success(
         s"Successful job$superUserLabel",

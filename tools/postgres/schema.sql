@@ -594,6 +594,7 @@ CREATE TABLE webknossos.voxelytics_artifacts(
     metadata JSONB,
     PRIMARY KEY (_id),
     UNIQUE (_task, name),
+    UNIQUE (_task, path),
     CONSTRAINT metadataIsJsonObject CHECK(jsonb_typeof(metadata) = 'object')
 );
 

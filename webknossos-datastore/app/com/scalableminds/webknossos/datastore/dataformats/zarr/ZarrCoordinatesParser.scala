@@ -30,8 +30,8 @@ object ZarrCoordinatesParser {
                    parsedCoordinates(parsedCoordinates.length - 1))
       reorderedAdditionalAxes = reorderedAdditionalAxesOpt.getOrElse(List.empty)
       _ <- bool2Fox(reorderedAdditionalAxes.length == parsedCoordinates.length - 4) ?~> "zarr.invalidAdditionalCoordinates" ~> NOT_FOUND
-      sentAdditionalCoordinates = parsedCoordinates.length > 4
-      additionalCoordinates = if (sentAdditionalCoordinates)
+      requestContainsAdditionalCoordinates = parsedCoordinates.length > 4
+      additionalCoordinates = if (requestContainsAdditionalCoordinates)
         Some(
           parsedCoordinates
             .slice(1, parsedCoordinates.length - 3)

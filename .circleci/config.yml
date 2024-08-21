@@ -49,10 +49,10 @@ jobs:
             - pnpm-cache-{{ checksum ".circleci/cache_version" }}-
       - run:
           name: Install pnpm
-          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base npm install pnpm
+          command: nvm install 18 && nvm use 18 && npm install -g pnpm
       - run:
           name: Install frontend dependencies
-          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base pnpm install --frozen-lockfile
+          command: pnpm install --frozen-lockfile
       - run:
           name: Assert unique evolution numbers
           command: docker-compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers

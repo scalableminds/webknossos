@@ -908,6 +908,7 @@ export type VoxelyticsArtifactConfig = {
     iframes: Record<string, string>;
     links: Record<string, string>;
   };
+  foreignWorkflow: [string, string] | null;
 };
 
 export type VoxelyticsRunInfo = {

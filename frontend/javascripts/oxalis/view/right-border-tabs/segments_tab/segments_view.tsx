@@ -14,6 +14,7 @@ import {
   CloseOutlined,
   ShrinkOutlined,
   ExpandAltOutlined,
+  TagsOutlined,
 } from "@ant-design/icons";
 import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
@@ -105,7 +106,13 @@ import React, { Key, useEffect, useRef, useState } from "react";
 import { connect, useSelector } from "react-redux";
 import { AutoSizer } from "react-virtualized";
 import type { Dispatch } from "redux";
-import type { APIDataset, APIMeshFile, APISegmentationLayer, APIUser } from "types/api_flow_types";
+import type {
+  APIDataset,
+  APIMeshFile,
+  APISegmentationLayer,
+  APIUser,
+  UserDefinedProperty,
+} from "types/api_flow_types";
 import DeleteGroupModalView from "../delete_group_modal_view";
 import {
   createGroupToSegmentsMap,
@@ -464,6 +471,28 @@ function ResizableSplitPane({
         {secondChild}
       </div>
     </div>
+  );
+}
+
+function InputWithUpdateOnBlur({
+  value,
+  onChange,
+}: { value: string; onChange: (value: string) => void }) {
+  const [localValue, setLocalValue] = useState(value);
+
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  return (
+    <input
+      type="text"
+      value={localValue}
+      onBlur={() => onChange(localValue)}
+      onChange={(event) => {
+        setLocalValue(event.currentTarget.value);
+      }}
+    />
   );
 }
 
@@ -1981,7 +2010,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (segments.length === 1) {
       const segment = this.props.segments?.getNullable(segments[0]);
       if (segment == null) {
-        return "Cannot find details for selected segment.";
+        return <>Cannot find details for selected segment.</>;
       }
       return (
         <table className="segment-details-table">
@@ -1991,19 +2020,55 @@ class SegmentsView extends React.Component<Props, State> {
           </tr>
           <tr>
             <td>Name</td>
-            <td>{segment.name}</td>
+            <td>
+              <InputWithUpdateOnBlur
+                value={segment.name || ""}
+                onChange={(newValue) => {
+                  if (this.props.visibleSegmentationLayer == null) {
+                    return;
+                  }
+                  this.props.updateSegment(
+                    segment.id,
+                    { name: newValue },
+                    this.props.visibleSegmentationLayer.name,
+                    true,
+                  );
+                }}
+              />
+            </td>
           </tr>
 
           {segment.userDefinedProperties?.length > 0 ? (
             <>
               <tr className={"divider-row"}>
-                <td>User-defined Properties</td>
+                <td>
+                  User-defined Properties <TagsOutlined />
+                </td>
                 <td />
               </tr>
               {segment.userDefinedProperties.map((prop) => (
                 <tr key={prop.key}>
-                  <td>{prop.key}</td>
-                  <td>{prop.stringValue}</td>
+                  <td>
+                    <InputWithUpdateOnBlur
+                      value={prop.key}
+                      onChange={(newValue) => {
+                        this.updateUserDefinedProperty(segment, prop, {
+                          key: newValue,
+                        });
+                      }}
+                    />
+                  </td>
+
+                  <td>
+                    <InputWithUpdateOnBlur
+                      value={prop.stringValue || ""}
+                      onChange={(newValue) => {
+                        this.updateUserDefinedProperty(segment, prop, {
+                          stringValue: newValue,
+                        });
+                      }}
+                    />
+                  </td>
                 </tr>
               ))}
             </>
@@ -2013,6 +2078,31 @@ class SegmentsView extends React.Component<Props, State> {
     }
     return null;
   }
+
+  updateUserDefinedProperty = (
+    segment: Segment,
+    oldProp: UserDefinedProperty,
+    newPropPartial: Partial<UserDefinedProperty>,
+  ) => {
+    if (this.props.visibleSegmentationLayer == null) {
+      return;
+    }
+    this.props.updateSegment(
+      segment.id,
+      {
+        userDefinedProperties: segment.userDefinedProperties.map((element) =>
+          element.key === oldProp.key
+            ? {
+                ...element,
+                ...newPropPartial,
+              }
+            : element,
+        ),
+      },
+      this.props.visibleSegmentationLayer.name,
+      true,
+    );
+  };
 
   getExpandSubgroupsItem(groupId: number) {
     const children = this.getKeysOfSubGroups(groupId);

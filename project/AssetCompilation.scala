@@ -146,7 +146,7 @@ object AssetCompilation {
     }
 
   val settings = Seq(
-    AssetCompilation.SettingsKeys.yarnPath := "yarn",
+    AssetCompilation.SettingsKeys.yarnPath := "pnpm",
     stage := (stage dependsOn assetsGenerationTask).value,
     dist := (dist dependsOn assetsGenerationTask).value,
     Compile / sourceGenerators += slickClassesFromDBSchemaTask,

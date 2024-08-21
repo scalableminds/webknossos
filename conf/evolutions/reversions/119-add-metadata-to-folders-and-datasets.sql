@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 118, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 119, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 DROP VIEW webknossos.folders_;
 DROP VIEW webknossos.datasets_;
@@ -80,6 +80,6 @@ ALTER TABLE webknossos.datasets DROP COLUMN metadata;
 
 CREATE VIEW webknossos.folders_ as SELECT * FROM webknossos.folders WHERE NOT isDeleted;
 CREATE VIEW webknossos.datasets_ as SELECT * FROM webknossos.datasets WHERE NOT isDeleted;
-UPDATE webknossos.releaseInformation SET schemaVersion = 117;
+UPDATE webknossos.releaseInformation SET schemaVersion = 118;
 
 COMMIT TRANSACTION;

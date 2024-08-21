@@ -1307,7 +1307,7 @@ export async function guardedWithErrorToast(fn: () => Promise<any>) {
   try {
     await fn();
   } catch (error) {
-    Toast.error("An error unexpected occurred. Please check the console for details");
+    Toast.error("An unexpected error occurred. Please check the console for details");
     console.error(error);
     ErrorHandling.notify(error as Error);
   }

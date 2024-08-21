@@ -67,8 +67,48 @@ ALTER TABLE webknossos.voxelytics_runs ALTER COLUMN _organization TYPE CHAR(24);
 UPDATE webknossos.voxelytics_workflows SET _organization = (SELECT _id_old FROM webknossos.organizations WHERE _id = _organization);
 ALTER TABLE webknossos.voxelytics_workflows ALTER COLUMN _organization TYPE CHAR(24);
 
-UPDATE webknossos.analyticsEvents SET _organization = (SELECT _id_old FROM webknossos.organizations WHERE _id = _organization);
-ALTER TABLE webknossos.analyticsEvents ALTER COLUMN _organization TYPE CHAR(24);
+-- Do not alter column type to keep rows that are not migrated back, is still valid.
+-- ALTER TABLE webknossos.analyticsEvents ALTER COLUMN _organization TYPE CHAR(24);
+ALTER TABLE webknossos.analyticsEvents ALTER COLUMN _organization TYPE VARCHAR(256);
+UPDATE webknossos.analyticsEvents
+SET _organization = (
+    SELECT o._id_old
+    FROM webknossos.organizations o
+    WHERE o._id = webknossos.analyticsEvents._organization
+)
+-- preventing the update if the organization does not exist for this event.
+WHERE EXISTS (
+    SELECT True
+    FROM webknossos.organizations
+    WHERE _id = webknossos.analyticsEvents._organization
+);
+
+-- join events
+UPDATE webknossos.analyticsEvents
+SET eventProperties = CASE
+    WHEN EXISTS (SELECT True FROM webknossos.organizations WHERE _id = eventProperties->>'joined_organization_id') THEN
+        (SELECT jsonb_build_object('joined_organization_id', _id_old) FROM webknossos.organizations WHERE _id = eventProperties->>'joined_organization_id')
+    ELSE eventProperties
+END
+WHERE eventType = 'join_organization';
+
+UPDATE webknossos.analyticsEvents
+SET eventProperties = CASE
+    WHEN (SELECT True FROM webknossos.organizations WHERE _id = eventProperties->>'dataset_organization_id') THEN
+        (
+          SELECT jsonb_set(
+            eventProperties::jsonb,
+            '{dataset_organization_id}',
+            to_jsonb(_id_old)
+          )
+          FROM webknossos.organizations
+          WHERE _id = eventProperties->>'dataset_organization_id'
+        )
+    ELSE eventProperties
+END
+WHERE eventType = 'open_dataset' or eventType = 'upload_dataset';
+
+
 
 -- Revert changes to the organizations table
 -- reusing the already existing index during new index creation
@@ -125,4 +165,3 @@ JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 UPDATE webknossos.releaseInformation SET schemaVersion = 118;
 
 COMMIT TRANSACTION;
-

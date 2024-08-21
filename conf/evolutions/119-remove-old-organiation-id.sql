@@ -138,6 +138,8 @@ ALTER TABLE webknossos.organizations ALTER COLUMN _id_old SET DEFAULT NULL;
 ALTER TABLE webknossos.organizations ALTER COLUMN _id_old DROP NOT NULL;
 ALTER TABLE webknossos.organizations ALTER COLUMN _id TYPE VARCHAR(256);
 ALTER TABLE webknossos.organizations ADD CONSTRAINT validOrganizationId CHECK (_id ~* '^[A-Za-z0-9\-_. ]+$');
+-- Drop old unique constraint which is no longer needed as the orga name (now id) is the primary key.
+ALTER TABLE webknossos.organizations DROP CONSTRAINT organizations_name_key;
 
 
 

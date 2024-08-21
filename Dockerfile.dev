@@ -11,9 +11,8 @@ RUN apt-get update && apt-get install apt-transport-https
 # add node package source
 RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash -
 
-# add yarn package source
-RUN echo "deb https://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list \
-  && curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+# add pnpm package source
+RUN curl -fsSL https://get.pnpm.io/install.sh | sh -
 
 # Install sbt, node & build-essentials
 RUN apt-get update \
@@ -22,7 +21,6 @@ RUN apt-get update \
   findutils \
   nodejs \
   postgresql-client \
-  yarn \
   cmake \
   git \
   libdraco-dev \

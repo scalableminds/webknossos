@@ -100,7 +100,6 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     for {
       updated <- updateAction match {
         case a: AddLayerAnnotationUpdateAction =>
-          // TODO create tracing object (ask wk for needed parameters e.g. fallback layer info?)
           Fox.successful(annotationWithTracings.addTracing(a))
         case a: DeleteLayerAnnotationUpdateAction =>
           Fox.successful(annotationWithTracings.deleteTracing(a))
@@ -113,10 +112,17 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
         case a: ApplyableVolumeUpdateAction =>
           annotationWithTracings.applyVolumeAction(a)
         case a: EditableMappingUpdateAction =>
-          Fox.failure("not yet implemented")
+          annotationWithTracings.applyEditableMappingAction(a)
+        // TODO make Mapping Editable
+        // Note: UpdateBucketVolumeActions are not handled here, but instead eagerly on saving.
         case _ => Fox.failure("Received unsupported AnnotationUpdateAction action")
       }
     } yield updated
+
+  def createTracing(a: AddLayerAnnotationUpdateAction)(
+      implicit ec: ExecutionContext): Fox[Either[SkeletonTracing, VolumeTracing]] =
+    Fox.failure("not implemented")
+  // TODO create tracing object (ask wk for needed parameters e.g. fallback layer info?)
 
   def updateActionLog(annotationId: String, newestVersion: Option[Long], oldestVersion: Option[Long]): Fox[JsValue] = {
     def versionedTupleToJson(tuple: (Long, List[UpdateAction])): JsObject =

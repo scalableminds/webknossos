@@ -1,13 +1,27 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
+import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
+import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
+import play.api.libs.json.Json.WithDefaultValues
 import play.api.libs.json.{Json, OFormat}
+
+case class AnnotationLayerParameters(typ: AnnotationLayerType,
+                                     fallbackLayerName: Option[String],
+                                     autoFallbackLayer: Boolean = false,
+                                     mappingName: Option[String] = None,
+                                     resolutionRestrictions: Option[ResolutionRestrictions],
+                                     name: Option[String],
+                                     additionalAxes: Option[Seq[AdditionalAxis]])
+object AnnotationLayerParameters {
+  implicit val jsonFormat: OFormat[AnnotationLayerParameters] =
+    Json.using[WithDefaultValues].format[AnnotationLayerParameters]
+}
 
 trait AnnotationUpdateAction extends UpdateAction
 
-case class AddLayerAnnotationUpdateAction(layerName: String,
+case class AddLayerAnnotationUpdateAction(layerParameters: AnnotationLayerParameters,
                                           tracingId: String,
-                                          `type`: AnnotationLayerType,
                                           actionTimestamp: Option[Long] = None,
                                           actionAuthorId: Option[String] = None,
                                           info: Option[String] = None)

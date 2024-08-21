@@ -7,13 +7,10 @@ import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
-import com.scalableminds.webknossos.datastore.models.annotation.{
-  AnnotationLayer,
-  AnnotationLayerStatistics,
-  AnnotationLayerType
-}
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerStatistics, AnnotationLayerType}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.scalableminds.webknossos.tracingstore.annotation.AnnotationLayerParameters
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingIds, TracingType}
 import mail.{MailchimpClient, MailchimpTag}
@@ -39,18 +36,6 @@ import utils.{ObjectId, WkConf}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-
-case class AnnotationLayerParameters(typ: AnnotationLayerType,
-                                     fallbackLayerName: Option[String],
-                                     autoFallbackLayer: Boolean = false,
-                                     mappingName: Option[String] = None,
-                                     resolutionRestrictions: Option[ResolutionRestrictions],
-                                     name: Option[String],
-                                     additionalAxes: Option[Seq[AdditionalAxis]])
-object AnnotationLayerParameters {
-  implicit val jsonFormat: OFormat[AnnotationLayerParameters] =
-    Json.using[WithDefaultValues].format[AnnotationLayerParameters]
-}
 
 class AnnotationController @Inject()(
     annotationDAO: AnnotationDAO,

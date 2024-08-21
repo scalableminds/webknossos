@@ -6,7 +6,10 @@ import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappin
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
-import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingUpdater
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
+  EditableMappingUpdateAction,
+  EditableMappingUpdater
+}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.SkeletonUpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ApplyableVolumeUpdateAction
 import net.liftweb.common.{Box, Failure, Full}
@@ -89,4 +92,8 @@ case class AnnotationWithTracings(
       AnnotationWithTracings(annotation,
                              tracingsById.updated(a.actionTracingId, Right(updated)),
                              editableMappingsByTracingId)
+
+  def applyEditableMappingAction(a: EditableMappingUpdateAction)(
+      implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+    Fox.failure("not implemented yet") // TODO
 }

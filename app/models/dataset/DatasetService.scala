@@ -23,9 +23,8 @@ import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.{ObjectId, WkConf}
 
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class DatasetService @Inject()(organizationDAO: OrganizationDAO,
@@ -79,8 +78,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       isActiveOpt = Some(false),
       includeSubfolders = true,
       statusOpt = Some(notYetUploadedStatus),
-      // Only list pending upload since the two last weeks.
-      createdSinceOpt = Some(Instant.now - Duration(14, TimeUnit.DAYS))
+      // Only list pending uploads since the two last weeks.
+      createdSinceOpt = Some(Instant.now - (14 days))
     ) ?~> "dataset.list.fetchFailed"
 
   private def createDataset(

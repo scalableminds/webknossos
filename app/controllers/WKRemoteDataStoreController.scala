@@ -97,13 +97,13 @@ class WKRemoteDataStoreController @Inject()(
           datasets <- datasetService.getAllNotYetUploadedDatasetOfUser(user._id, user._organization)(
             GlobalAccessContext) ?~> "dataset.upload.couldNotLoadInProgressUploads"
           teamIdsPerDataset <- Fox.combined(datasets.map(dataset => teamDAO.findAllowedTeamIdsForDataset(dataset.id)))
-          ongoingUploads = datasets.zipWithIndex.map {
-            case (d, index) =>
+          ongoingUploads = datasets.zip(teamIdsPerDataset).map {
+            case (d, teamIds) =>
               new OngoingUpload("<filled-in by datastore>",
-                                d.toDataSourceId,
+                                d.dataSourceId,
                                 d.folderId.toString,
                                 d.created,
-                                teamIdsPerDataset(index).map(_.toString))
+                                teamIds.map(_.toString))
           }
         } yield Ok(Json.toJson(ongoingUploads))
       }

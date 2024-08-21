@@ -149,16 +149,14 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   def addUploadIdsToOngoingUploads(ongoingUploadsWithoutIds: List[OngoingUpload]): Fox[List[OngoingUpload]] =
     for {
-      maybeOngoingUploads <- Fox.sequence(
+      maybeOngoingUploads: List[Box[Option[OngoingUpload]]] <- Fox.sequence(
         ongoingUploadsWithoutIds.map(
           upload =>
             runningUploadMetadataStore
               .find(Json.stringify(Json.toJson(upload.dataSourceId)))
               .map(uploadIdOpt => uploadIdOpt.map(uploadId => upload.copy(uploadId = uploadId)))
         ))
-      foundOngoingUploads = maybeOngoingUploads.filter(idBox => idBox.isDefined).flatMap(idBox => idBox.value).collect {
-        case Some(value) => value
-      }
+      foundOngoingUploads = maybeOngoingUploads.collect { case Full(Some(value)) => value }
     } yield foundOngoingUploads
 
   private def isOutsideUploadDir(uploadDir: Path, filePath: String): Boolean =
@@ -183,8 +181,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       isFilesChunkSetKnown <- Fox.runIf(isFileKnown)(
         runningUploadMetadataStore.contains(redisKeyForFileChunkSet(uploadId, filePath)))
       isChunkPresent <- Fox.runIf(isFileKnown)(
-        runningUploadMetadataStore.containedInSet(redisKeyForFileChunkSet(uploadId, filePath),
-                                                  String.valueOf(currentChunkNumber)))
+        runningUploadMetadataStore.isContainedInSet(redisKeyForFileChunkSet(uploadId, filePath),
+                                                    String.valueOf(currentChunkNumber)))
     } yield isFileKnown && isFilesChunkSetKnown.getOrElse(false) && isChunkPresent.getOrElse(false)
   }
 

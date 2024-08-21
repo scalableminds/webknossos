@@ -71,12 +71,12 @@ class DSRemoteWebknossosClient @Inject()(
   def getOngoingUploadsForUser(userTokenOpt: Option[String], organizationName: String): Fox[List[OngoingUpload]] =
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "reserveUpload.noUserToken"
-      datasetIds <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getOngoingUploadsForUser")
+      ongoingUploads <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getOngoingUploadsForUser")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("token" -> userToken)
         .addQueryString("organizationName" -> organizationName)
         .getWithJsonResponse[List[OngoingUpload]]
-    } yield datasetIds
+    } yield ongoingUploads
 
   def reportUpload(dataSourceId: DataSourceId,
                    datasetSizeBytes: Long,

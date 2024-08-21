@@ -81,7 +81,7 @@ case class DatasetCompactInfo(
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
 ) {
-  def toDataSourceId = new DataSourceId(name, owningOrganization)
+  def dataSourceId = new DataSourceId(name, owningOrganization)
 }
 
 object DatasetCompactInfo {

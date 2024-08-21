@@ -93,7 +93,7 @@ trait RedisTemporaryStore extends LazyLogging {
       r.sadd(id, value).getOrElse(0L) > 0
     }
 
-  def containedInSet(id: String, value: String): Fox[Boolean] =
+  def isContainedInSet(id: String, value: String): Fox[Boolean] =
     withExceptionHandler {
       r.sismember(id, value)
     }

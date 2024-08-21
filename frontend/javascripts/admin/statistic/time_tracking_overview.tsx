@@ -12,7 +12,7 @@ import ProjectAndAnnotationTypeDropdown, {
 import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
 import messages from "messages";
 import Toast from "libs/toast";
-import dayjs, { Dayjs } from "antd/node_modules/dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
 import LinkButton from "components/link_button";
 import FixedExpandableTable from "components/fixed_expandable_table";

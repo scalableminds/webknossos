@@ -80,7 +80,7 @@
     {
         "preinstall": "npx only-allow pnpm",
         "start": "node tools/proxy/proxy.js",
-        "build": "node --max-old-space-size=4096 node_modules/.bin/webpack --env production",
+        "build": "NODE_OPTIONS='--max-old-space-size=4096' node_modules/.bin/webpack --env production",
         "@comment build-backend": "Only check for errors in the backend code like done by the CI. This command is not needed to run WEBKNOSSOS",
         "build-backend": "pnpm build-wk-backend && pnpm build-wk-datastore && pnpm build-wk-tracingstore",
         "build-wk-backend": "sbt -no-colors -DfailOnWarning compile stage",

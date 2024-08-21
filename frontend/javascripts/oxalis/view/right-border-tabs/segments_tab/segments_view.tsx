@@ -101,7 +101,7 @@ import {
   getBaseSegmentationName,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
-import React, { Key } from "react";
+import React, { Key, useEffect, useRef, useState } from "react";
 import { connect, useSelector } from "react-redux";
 import { AutoSizer } from "react-virtualized";
 import type { Dispatch } from "redux";
@@ -405,6 +405,70 @@ const rootGroup = {
   children: [],
   isExpanded: true,
 };
+
+function ResizableSplitPane({
+  firstChild,
+  secondChild,
+}: { firstChild: React.ReactElement; secondChild: React.ReactElement | null }) {
+  const [height1, setHeight1] = useState<string | number>("calc(100vh - 400px)");
+  const [height2, setHeight2] = useState(400);
+  const dividerRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const isResizingRef = useRef(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingRef.current || containerRef.current == null || dividerRef.current == null)
+        return;
+
+      const DIVIDER_HEIGHT = 22;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const newHeight1 = e.clientY - containerRect.top - DIVIDER_HEIGHT / 2;
+      const newHeight2 = containerRect.height - newHeight1 - dividerRef.current.clientHeight;
+
+      if (newHeight1 > 0 && newHeight2 > 0) {
+        setHeight1(newHeight1);
+        setHeight2(newHeight2);
+      }
+    };
+
+    const handleMouseUp = () => {
+      isResizingRef.current = false;
+      document.body.style.cursor = "default";
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
+
+  const handleMouseDown = () => {
+    isResizingRef.current = true;
+    document.body.style.cursor = "row-resize";
+  };
+
+  if (secondChild == null) {
+    return firstChild;
+  }
+
+  return (
+    <div ref={containerRef} className="segment-container">
+      <div className="child-1" style={{ height: height1 }}>
+        {firstChild}
+      </div>
+      <div ref={dividerRef} onMouseDown={handleMouseDown} className="resizable-divider">
+        <Divider />
+      </div>
+      <div className="child-2" style={{ height: height2 }}>
+        {secondChild}
+      </div>
+    </div>
+  );
+}
 
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
@@ -1839,51 +1903,61 @@ class SegmentsView extends React.Component<Props, State> {
                       }`}
                     />
                   ) : (
-                    /* Without the default height, height will be 0 on the first render, leading to tree virtualization being disabled.
-                    This has a major performance impact. */
-                    <AutoSizer defaultHeight={500}>
-                      {({ height, width }) => (
-                        <div
-                          style={{
-                            height,
-                            width,
-                          }}
-                        >
-                          <Tree
-                            allowDrop={this.allowDrop}
-                            onDrop={this.onDrop}
-                            onSelect={this.onSelectTreeItem}
-                            className="segments-tree"
-                            blockNode
-                            // Passing an explicit height here, makes the tree virtualized
-                            height={height} // without virtualization, pass 0 here and/or virtual={false}
-                            draggable={{
-                              icon: false,
-                              nodeDraggable: () =>
-                                // Forbid renaming when segments or groups are being renamed,
-                                // since selecting text within the editable input box would not work
-                                // otherwise (instead, the item would be dragged).
-                                this.state.renamingCounter === 0 && this.props.allowUpdate,
-                            }}
-                            multiple
-                            showLine
-                            selectedKeys={this.getSelectedItemKeys()}
-                            switcherIcon={<DownOutlined />}
-                            treeData={this.state.groupTree}
-                            titleRender={titleRender}
-                            style={{
-                              marginTop: 12,
-                              marginLeft: -26, // hide switcherIcon for root group
-                              flex: "1 1 auto",
-                              overflow: "auto", // use hidden when not using virtualization
-                            }}
-                            ref={this.tree}
-                            onExpand={this.setExpandedGroups}
-                            expandedKeys={this.state.expandedGroupKeys}
-                          />
-                        </div>
-                      )}
-                    </AutoSizer>
+                    <>
+                      <ResizableSplitPane
+                        firstChild={
+                          <>
+                            {/* Without the default height, height will be 0 on the first render, leading
+                            to tree virtualization being disabled. This has a major performance impact. */}
+                            <AutoSizer defaultHeight={500}>
+                              {({ height, width }) => (
+                                <div
+                                  style={{
+                                    height,
+                                    width,
+                                    overflow: "hidden",
+                                  }}
+                                >
+                                  <Tree
+                                    allowDrop={this.allowDrop}
+                                    onDrop={this.onDrop}
+                                    onSelect={this.onSelectTreeItem}
+                                    className="segments-tree"
+                                    blockNode
+                                    // Passing an explicit height here, makes the tree virtualized
+                                    height={height} // without virtualization, pass 0 here and/or virtual={false}
+                                    draggable={{
+                                      icon: false,
+                                      nodeDraggable: () =>
+                                        // Forbid renaming when segments or groups are being renamed,
+                                        // since selecting text within the editable input box would not work
+                                        // otherwise (instead, the item would be dragged).
+                                        this.state.renamingCounter === 0 && this.props.allowUpdate,
+                                    }}
+                                    multiple
+                                    showLine
+                                    selectedKeys={this.getSelectedItemKeys()}
+                                    switcherIcon={<DownOutlined />}
+                                    treeData={this.state.groupTree}
+                                    titleRender={titleRender}
+                                    style={{
+                                      marginTop: 12,
+                                      marginLeft: -26, // hide switcherIcon for root group
+                                      flex: "1 1 auto",
+                                      overflow: "auto", // use hidden when not using virtualization
+                                    }}
+                                    ref={this.tree}
+                                    onExpand={this.setExpandedGroups}
+                                    expandedKeys={this.state.expandedGroupKeys}
+                                  />
+                                </div>
+                              )}
+                            </AutoSizer>
+                          </>
+                        }
+                        secondChild={this.renderDetailsForSelection()}
+                      />
+                    </>
                   )}
                 </div>
                 {groupToDelete !== null ? (
@@ -1903,6 +1977,44 @@ class SegmentsView extends React.Component<Props, State> {
         </DomVisibilityObserver>
       </div>
     );
+  }
+
+  renderDetailsForSelection() {
+    const { segments } = this.props.selectedIds;
+    if (segments.length === 1) {
+      const segment = this.props.segments?.getNullable(segments[0]);
+      if (segment == null) {
+        return "Cannot find details for selected segment.";
+      }
+      return (
+        <table className="segment-details-table">
+          <tr>
+            <td>ID</td>
+            <td>{segment.id}</td>
+          </tr>
+          <tr>
+            <td>Name</td>
+            <td>{segment.name}</td>
+          </tr>
+
+          {segment.userDefinedProperties?.length > 0 ? (
+            <>
+              <tr className={"divider-row"}>
+                <td>User-defined Properties</td>
+                <td />
+              </tr>
+              {segment.userDefinedProperties.map((prop) => (
+                <tr key={prop.key}>
+                  <td>{prop.key}</td>
+                  <td>{prop.stringValue}</td>
+                </tr>
+              ))}
+            </>
+          ) : null}
+        </table>
+      );
+    }
+    return null;
   }
 
   getExpandSubgroupsItem(groupId: number) {

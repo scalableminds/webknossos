@@ -676,19 +676,6 @@ function _SegmentListItem({
             setAdditionalCoordinates={setAdditionalCoordinates}
           />
         </div>
-        <div
-          style={{
-            marginLeft: 16,
-            // display: "flex",
-            flexFlow: "row wrap",
-          }}
-        >
-          {(segment.userDefinedProperties || []).map((prop) => (
-            <Tag color={stringToColor(prop.key)}>
-              <span style={{ opacity: 0.8 }}>{prop.key}</span>: {prop.stringValue}
-            </Tag>
-          ))}
-        </div>
       </div>
     </List.Item>
   );

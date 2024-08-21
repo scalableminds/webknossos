@@ -222,3 +222,37 @@
     padding: 8px;
   }
 }
+
+.segment-details-table {
+  border-collapse: collapse;
+  width: 100%;
+
+  th, td {
+    border: 1px solid #4A4A4A;
+    padding: 2px 4px;
+    text-align: left;
+    color: #FFFFFF;
+  }
+
+  th {
+    background-color: #333333;
+  }
+
+  td {
+    background-color: #262626;
+  }
+
+  tr:nth-child(even) td {
+    background-color: #1A1A1A;
+  }
+
+  tr.divider-row {
+    font-weight: bold;
+    td:first-child {
+      border-right: 0;
+    }
+    td:nth-child(2) {
+      border-left: 0;
+    }
+  }
+}

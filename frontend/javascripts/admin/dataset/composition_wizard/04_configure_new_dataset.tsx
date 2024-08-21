@@ -100,15 +100,15 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       const transformationArr = [
         useThinPlateSplines
           ? {
-            type: "thin_plate_spline" as const,
-            correspondences: { source: sourcePoints, target: targetPoints },
-          }
+              type: "thin_plate_spline" as const,
+              correspondences: { source: sourcePoints, target: targetPoints },
+            }
           : {
-            type: "affine" as const,
-            matrix: flatToNestedMatrix(
-              estimateAffineMatrix4x4(sourcePoints, targetPoints, affineMeanError),
-            ),
-          },
+              type: "affine" as const,
+              matrix: flatToNestedMatrix(
+                estimateAffineMatrix4x4(sourcePoints, targetPoints, affineMeanError),
+              ),
+            },
       ];
       if (useThinPlateSplines) {
         checkLandmarksForThinPlateSpline(sourcePoints, targetPoints);
@@ -185,15 +185,16 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
             datasetMarkdownLinks,
             "",
             "The layers were combined " +
-            (sourcePoints.length === 0
-              ? "without any transforms"
-              : `with ${useThinPlateSplines
-                ? `Thin-Plate-Splines (${sourcePoints.length} correspondences)`
-                : `an affine transformation (mean error: ${formatNumber(
-                  affineMeanError.meanError,
-                )} vx)`
-              }`) +
-            ".",
+              (sourcePoints.length === 0
+                ? "without any transforms"
+                : `with ${
+                    useThinPlateSplines
+                      ? `Thin-Plate-Splines (${sourcePoints.length} correspondences)`
+                      : `an affine transformation (mean error: ${formatNumber(
+                          affineMeanError.meanError,
+                        )} vx)`
+                  }`) +
+              ".",
           ].join("\n"),
         },
       );

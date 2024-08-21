@@ -129,27 +129,28 @@ ALTER TABLE webknossos.organizations ADD CONSTRAINT organizations_name_key UNIQU
 ALTER TABLE webknossos.organizations DROP CONSTRAINT validOrganizationId;
 
 -- Recreate original Foreign Key Constraints
-ALTER TABLE webknossos.datasets ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id);
-ALTER TABLE webknossos.teams ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id);
-ALTER TABLE webknossos.users ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id);
-ALTER TABLE webknossos.experienceDomains ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id);
-ALTER TABLE webknossos.voxelytics_runs ADD CONSTRAINT voxelytics_runs__organization_fkey FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE webknossos.voxelytics_workflows ADD CONSTRAINT voxelytics_workflows__organization_fkey FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE webknossos.aiModels ADD CONSTRAINT aimodels__organization_fkey FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE webknossos.aiInferences ADD CONSTRAINT aiinferences__organization_fkey FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE webknossos.datasets ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE;
+ALTER TABLE webknossos.teams ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id)  DEFERRABLE;
+ALTER TABLE webknossos.users ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id)  DEFERRABLE;
+ALTER TABLE webknossos.experienceDomains ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id)  DEFERRABLE;
+ALTER TABLE webknossos.voxelytics_runs ADD CONSTRAINT voxelytics_runs__organization_fkey FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.voxelytics_workflows ADD CONSTRAINT voxelytics_workflows__organization_fkey FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.aiModels ADD CONSTRAINT aimodels__organization_fkey FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.aiInferences ADD CONSTRAINT aiinferences__organization_fkey FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 
 -- Recreate original views
-CREATE VIEW webknossos.datasets_ AS SELECT * FROM webknossos.datasets;
-CREATE VIEW webknossos.projects_ AS SELECT * FROM webknossos.projects;
-CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes;
-CREATE VIEW webknossos.teams_ AS SELECT * FROM webknossos.teams;
-CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations;
-CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam;
-CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users;
-CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites;
-CREATE VIEW webknossos.credentials_ AS SELECT * FROM webknossos.credentials;
-CREATE VIEW webknossos.aiModels_ AS SELECT * FROM webknossos.aiModels;
-CREATE VIEW webknossos.aiInferences_ AS SELECT * FROM webknossos.aiInferences;
+CREATE VIEW webknossos.datasets_ AS SELECT * FROM webknossos.datasets WHERE NOT isDeleted;
+
+CREATE VIEW webknossos.projects_ AS SELECT * FROM webknossos.projects WHERE NOT isDeleted;
+CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NOT isDeleted;
+CREATE VIEW webknossos.teams_ AS SELECT * FROM webknossos.teams WHERE NOT isDeleted;
+CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
+CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
+CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
+CREATE VIEW webknossos.invites_ AS SELECT * FROM webknossos.invites WHERE NOT isDeleted;
+CREATE VIEW webknossos.credentials_ as SELECT * FROM webknossos.credentials WHERE NOT isDeleted;
+CREATE VIEW webknossos.aiModels_ as SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
+CREATE VIEW webknossos.aiInferences_ as SELECT * FROM webknossos.aiInferences WHERE NOT isDeleted;
 
 CREATE VIEW webknossos.userInfos AS
 SELECT

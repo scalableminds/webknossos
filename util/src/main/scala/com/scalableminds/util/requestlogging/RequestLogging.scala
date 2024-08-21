@@ -31,9 +31,10 @@ trait AbstractRequestLogging extends LazyLogging {
   def logTime(notifier: String => Unit, durationThreshold: FiniteDuration = 30 seconds)(
       block: => Future[Result])(implicit request: Request[_], ec: ExecutionContext): Future[Result] = {
     def logTimeFormatted(executionTime: FiniteDuration, request: Request[_], result: Result): Unit = {
-      val debugString = s"Request ${request.method} ${request.uri} took ${BigDecimal(executionTime.toMillis / 1000)
-        .setScale(2, BigDecimal.RoundingMode.HALF_UP)} seconds and was${if (result.header.status != 200) " not "
-      else " "}successful"
+      val debugString =
+        s"Request ${request.method} ${request.uri} took ${BigDecimal(executionTime.toMillis.toDouble / 1000)
+          .setScale(2, BigDecimal.RoundingMode.HALF_UP)} seconds and was${if (result.header.status != 200) " not "
+        else " "}successful"
       logger.info(debugString)
       notifier(debugString)
     }

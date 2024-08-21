@@ -3,10 +3,14 @@ package com.scalableminds.webknossos.tracingstore.annotation
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
-import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
+import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
+import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
+import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
+  EditableMappingUpdateAction,
+  EditableMappingUpdater
+}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
   CreateNodeSkeletonAction,
   DeleteNodeSkeletonAction,
@@ -22,7 +26,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingUpdatesReport}
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Empty, Full}
 import play.api.libs.json.{JsObject, JsValue, Json}
 
 import javax.inject.Inject
@@ -46,7 +50,8 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
         ))
     } yield ()
 
-  def currentVersion(annotationId: String): Fox[Long] = ???
+  def currentMaterializableVersion(annotationId: String): Fox[Long] =
+    tracingDataStore.annotations.getVersion(annotationId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
 
   def handleUpdateGroup(annotationId: String, updateActionGroup: UpdateActionGroup, userToken: Option[String])(
       implicit ec: ExecutionContext): Fox[Unit] =
@@ -107,6 +112,8 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
           annotationWithTracings.applySkeletonAction(a)
         case a: ApplyableVolumeUpdateAction =>
           annotationWithTracings.applyVolumeAction(a)
+        case a: EditableMappingUpdateAction =>
+          Fox.failure("not yet implemented")
         case _ => Fox.failure("Received unsupported AnnotationUpdateAction action")
       }
     } yield updated
@@ -157,6 +164,8 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
       case u: VolumeUpdateAction => Some(u.actionTracingId)
       case _                     => None
     }
+    // TODO fetch editable mappings + instantiate editableMappingUpdaters/buffers if there are updates for them
+    val editableMappingsMap: Map[String, (EditableMappingInfo, EditableMappingUpdater)] = Map.empty
     for {
       skeletonTracings <- Fox.serialCombined(skeletonTracingIds)(
         id =>
@@ -172,7 +181,7 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
       volumeTracingsMap: Map[String, Either[SkeletonTracing, VolumeTracing]] = volumeTracingIds
         .zip(volumeTracings.map(versioned => Right[SkeletonTracing, VolumeTracing](versioned.value)))
         .toMap
-    } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap)
+    } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, editableMappingsMap)
   }
 
   private def applyUpdates(annotation: AnnotationWithTracings,

@@ -140,7 +140,7 @@ class AnnotationTransactionService @Inject()(
     if (updateGroups.forall(_.transactionGroupCount == 1)) {
       commitUpdates(annotationId, updateGroups, userToken)
     } else {
-      updateGroups.foldLeft(annotationService.currentVersion(annotationId)) {
+      updateGroups.foldLeft(annotationService.currentMaterializableVersion(annotationId)) {
         (currentCommittedVersionFox, updateGroup) =>
           handleUpdateGroupForTransaction(annotationId, currentCommittedVersionFox, updateGroup, userToken)
       }
@@ -151,7 +151,7 @@ class AnnotationTransactionService @Inject()(
       implicit ec: ExecutionContext): Fox[Long] =
     for {
       _ <- annotationService.reportUpdates(annotationId, updateGroups, userToken)
-      currentCommittedVersion: Fox[Long] = annotationService.currentVersion(annotationId)
+      currentCommittedVersion: Fox[Long] = annotationService.currentMaterializableVersion(annotationId)
       newVersion <- updateGroups.foldLeft(currentCommittedVersion) { (previousVersion, updateGroup) =>
         previousVersion.flatMap { prevVersion: Long =>
           if (prevVersion + 1 == updateGroup.version) {

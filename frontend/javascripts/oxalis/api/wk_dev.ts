@@ -24,6 +24,9 @@ export const WkDevFlags = {
   meshing: {
     marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,
   },
+  datasetComposition: {
+    allowThinPlateSplines: false,
+  },
 };
 
 export default class WkDev {

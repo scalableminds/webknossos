@@ -32,9 +32,9 @@ import { useEffectOnlyOnce } from "libs/react_hooks";
 import { formatNumber } from "libs/format_utils";
 import { checkLandmarksForThinPlateSpline } from "oxalis/model/helpers/transformation_helpers";
 import { Vector3 } from "oxalis/constants";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 
 const FormItem = Form.Item;
-const ALLOW_TPS_IN_COMPOSITION = false;
 
 async function guardedWithErrorToast(fn: () => Promise<any>) {
   try {
@@ -282,11 +282,12 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
             );
           }}
         </Form.Item>
-        {ALLOW_TPS_IN_COMPOSITION && wizardContext.sourcePoints.length > 0 && (
-          <FormItem name={["useThinPlateSplines"]} valuePropName="checked">
-            <Checkbox>Use Thin-Plate-Splines (Experimental)</Checkbox>
-          </FormItem>
-        )}
+        {WkDevFlags.datasetComposition.allowThinPlateSplines &&
+          wizardContext.sourcePoints.length > 0 && (
+            <FormItem name={["useThinPlateSplines"]} valuePropName="checked">
+              <Checkbox>Use Thin-Plate-Splines (Experimental)</Checkbox>
+            </FormItem>
+          )}
 
         <FormItem
           style={{

@@ -154,9 +154,9 @@ CREATE VIEW webknossos.aiInferences_ as SELECT * FROM webknossos.aiInferences WH
 
 CREATE VIEW webknossos.userInfos AS
 SELECT
-u._id AS _user, m.email, u.firstName, u.lastname, o.name AS organization_name,
+u._id AS _user, m.email, u.firstName, u.lastname, o.displayName AS organization_displayName,
 u.isDeactivated, u.isDatasetManager, u.isAdmin, m.isSuperUser,
-u._organization, o._id AS organization_id, u.created AS user_created,
+u._organization, o.name AS organization_name, u.created AS user_created,
 m.created AS multiuser_created, u._multiUser, m._lastLoggedInIdentity, u.lastActivity, m.isEmailVerified
 FROM webknossos.users_ u
 JOIN webknossos.organizations_ o ON u._organization = o._id

@@ -223,7 +223,6 @@ class JobController @Inject()(
                          datasetName: String,
                          layerName: String,
                          bbox: String,
-                         outputSegmentationLayerName: String,
                          newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
@@ -235,7 +234,6 @@ class JobController @Inject()(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
           _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
@@ -245,7 +243,6 @@ class JobController @Inject()(
             "dataset_name" -> datasetName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
-            "output_segmentation_layer_name" -> outputSegmentationLayerName,
             "bbox" -> bbox,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNeuronInferral"
@@ -258,7 +255,6 @@ class JobController @Inject()(
                               datasetName: String,
                               layerName: String,
                               bbox: String,
-                              outputSegmentationLayerName: String,
                               newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
@@ -270,7 +266,6 @@ class JobController @Inject()(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
           _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
@@ -281,7 +276,6 @@ class JobController @Inject()(
             "dataset_name" -> datasetName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
-            "output_segmentation_layer_name" -> outputSegmentationLayerName,
             "bbox" -> bbox,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunInferMitochondria"

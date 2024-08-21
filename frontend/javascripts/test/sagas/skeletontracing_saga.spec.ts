@@ -141,6 +141,7 @@ skeletonTracing.trees[1] = {
   groupId: MISSING_GROUP_ID,
   type: TreeTypeEnum.DEFAULT,
   edgesAreVisible: true,
+  userDefinedProperties: [],
 };
 const initialState = update(defaultState, {
   tracing: {

@@ -1,24 +1,21 @@
 import {
+  ArrowRightOutlined,
+  CloseOutlined,
   DeleteOutlined,
+  DownloadOutlined,
   DownOutlined,
+  ExclamationCircleOutlined,
+  ExpandAltOutlined,
+  EyeInvisibleOutlined,
+  EyeOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
-  SettingOutlined,
-  ExclamationCircleOutlined,
-  ArrowRightOutlined,
-  DownloadOutlined,
   SearchOutlined,
-  EyeInvisibleOutlined,
-  EyeOutlined,
-  CloseOutlined,
+  SettingOutlined,
   ShrinkOutlined,
-  ExpandAltOutlined,
-  TagsOutlined,
 } from "@ant-design/icons";
-import type RcTree from "rc-tree";
 import { getJobs, startComputeMeshFileJob } from "admin/admin_rest_api";
-import { api } from "oxalis/singletons";
 import {
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
@@ -35,15 +32,20 @@ import {
   Select,
   Tree,
 } from "antd";
+import { ItemType } from "antd/lib/menu/hooks/useItems";
+import { DataNode } from "antd/lib/tree";
+import { ChangeColorMenuItemContent } from "components/color_picker";
+import FastTooltip from "components/fast_tooltip";
 import Toast from "libs/toast";
+import { pluralize } from "libs/utils";
 import _, { isNumber } from "lodash";
 import type { Vector3 } from "oxalis/constants";
 import { EMPTY_OBJECT, MappingStatusEnum } from "oxalis/constants";
 import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 import {
   getMappingInfo,
-  getResolutionInfoOfVisibleSegmentationLayer,
   getMaybeSegmentIndexAvailability,
+  getResolutionInfoOfVisibleSegmentationLayer,
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
@@ -65,6 +67,7 @@ import {
   updateCurrentMeshFileAction,
   updateMeshVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
+import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
 import {
   setAdditionalCoordinatesAction,
   setPositionAction,
@@ -76,14 +79,15 @@ import {
 import { updateTemporarySettingAction } from "oxalis/model/actions/settings_actions";
 import {
   batchUpdateGroupsAndSegmentsAction,
-  removeSegmentAction,
   deleteSegmentDataAction,
+  removeSegmentAction,
   setActiveCellAction,
-  updateSegmentAction,
-  setSelectedSegmentsOrGroupAction,
   setExpandedSegmentGroupsAction,
+  setSelectedSegmentsOrGroupAction,
+  updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import { api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
   MeshInformation,
@@ -95,14 +99,17 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import Store from "oxalis/store";
+import ButtonComponent from "oxalis/view/components/button_component";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import {
-  SegmentHierarchyNode,
-  getBaseSegmentationName,
-} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
-import React, { Key, useEffect, useRef, useState } from "react";
+import {
+  getBaseSegmentationName,
+  SegmentHierarchyNode,
+} from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
+import type RcTree from "rc-tree";
+import React, { Key } from "react";
 import { connect, useSelector } from "react-redux";
 import { AutoSizer } from "react-virtualized";
 import type { Dispatch } from "redux";
@@ -113,7 +120,12 @@ import type {
   APIUser,
   UserDefinedProperty,
 } from "types/api_flow_types";
+import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
+import { ValueOf } from "types/globals";
+import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
+import { ResizableSplitPane } from "../resizable_split_pane";
+import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
   createGroupToSegmentsMap,
   findParentIdForGroupId,
@@ -121,19 +133,8 @@ import {
   getGroupNodeKey,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
-import { ChangeColorMenuItemContent } from "components/color_picker";
-import { ItemType } from "antd/lib/menu/hooks/useItems";
-import { pluralize } from "libs/utils";
-import AdvancedSearchPopover from "../advanced_search_popover";
-import ButtonComponent from "oxalis/view/components/button_component";
+import { InputWithUpdateOnBlur, UserDefinedTableRows } from "../user_defined_properties_table";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
-import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
-import { DataNode } from "antd/lib/tree";
-import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
-import { ValueOf } from "types/globals";
-import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
-import FastTooltip from "components/fast_tooltip";
-import { ContextMenuContainer } from "../sidebar_context_menu";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -412,89 +413,6 @@ const rootGroup = {
   children: [],
   isExpanded: true,
 };
-
-function ResizableSplitPane({
-  firstChild,
-  secondChild,
-}: { firstChild: React.ReactElement; secondChild: React.ReactElement | null }) {
-  const [maxHeightForSecondChild, setMaxHeightForSecondChild] = useState(400);
-  const dividerRef = useRef<HTMLDivElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const isResizingRef = useRef(false);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizingRef.current || containerRef.current == null || dividerRef.current == null)
-        return;
-
-      const DIVIDER_HEIGHT = 22;
-      const containerRect = containerRef.current.getBoundingClientRect();
-      const newHeightForFirstChild = e.clientY - containerRect.top - DIVIDER_HEIGHT / 2;
-      const newMaxHeightForSecondChild =
-        containerRect.height - newHeightForFirstChild - dividerRef.current.clientHeight;
-
-      if (newHeightForFirstChild > 0 && newMaxHeightForSecondChild > 0) {
-        setMaxHeightForSecondChild(newMaxHeightForSecondChild);
-      }
-    };
-
-    const handleMouseUp = () => {
-      isResizingRef.current = false;
-      document.body.style.cursor = "default";
-    };
-
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, []);
-
-  const handleMouseDown = () => {
-    isResizingRef.current = true;
-    document.body.style.cursor = "row-resize";
-  };
-
-  if (secondChild == null) {
-    return firstChild;
-  }
-
-  return (
-    <div ref={containerRef} className="resizable-two-split-pane">
-      <div className="child-1">{firstChild}</div>
-      <div ref={dividerRef} onMouseDown={handleMouseDown} className="resizable-divider">
-        <Divider />
-      </div>
-      <div className="child-2" style={{ maxHeight: maxHeightForSecondChild }}>
-        {secondChild}
-      </div>
-    </div>
-  );
-}
-
-function InputWithUpdateOnBlur({
-  value,
-  onChange,
-}: { value: string; onChange: (value: string) => void }) {
-  const [localValue, setLocalValue] = useState(value);
-
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  return (
-    <input
-      type="text"
-      value={localValue}
-      onBlur={() => onChange(localValue)}
-      onChange={(event) => {
-        setLocalValue(event.currentTarget.value);
-      }}
-    />
-  );
-}
 
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
@@ -2037,42 +1955,12 @@ class SegmentsView extends React.Component<Props, State> {
               />
             </td>
           </tr>
-
-          {segment.userDefinedProperties?.length > 0 ? (
-            <>
-              <tr className={"divider-row"}>
-                <td>
-                  User-defined Properties <TagsOutlined />
-                </td>
-                <td />
-              </tr>
-              {segment.userDefinedProperties.map((prop) => (
-                <tr key={prop.key}>
-                  <td>
-                    <InputWithUpdateOnBlur
-                      value={prop.key}
-                      onChange={(newValue) => {
-                        this.updateUserDefinedProperty(segment, prop, {
-                          key: newValue,
-                        });
-                      }}
-                    />
-                  </td>
-
-                  <td>
-                    <InputWithUpdateOnBlur
-                      value={prop.stringValue || ""}
-                      onChange={(newValue) => {
-                        this.updateUserDefinedProperty(segment, prop, {
-                          stringValue: newValue,
-                        });
-                      }}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </>
-          ) : null}
+          <UserDefinedTableRows
+            userDefinedProperties={segment.userDefinedProperties}
+            onChange={(oldKey: string, propPartial: Partial<UserDefinedProperty>) => {
+              this.updateUserDefinedProperty(segment, oldKey, propPartial);
+            }}
+          />
         </table>
       );
     }
@@ -2081,7 +1969,7 @@ class SegmentsView extends React.Component<Props, State> {
 
   updateUserDefinedProperty = (
     segment: Segment,
-    oldProp: UserDefinedProperty,
+    oldPropKey: string,
     newPropPartial: Partial<UserDefinedProperty>,
   ) => {
     if (this.props.visibleSegmentationLayer == null) {
@@ -2091,7 +1979,7 @@ class SegmentsView extends React.Component<Props, State> {
       segment.id,
       {
         userDefinedProperties: segment.userDefinedProperties.map((element) =>
-          element.key === oldProp.key
+          element.key === oldPropKey
             ? {
                 ...element,
                 ...newPropPartial,

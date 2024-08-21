@@ -79,6 +79,7 @@ initialSkeletonTracing.trees[1] = {
   groupId: MISSING_GROUP_ID,
   type: TreeTypeEnum.DEFAULT,
   edgesAreVisible: true,
+  userDefinedProperties: [],
 };
 const initialState: OxalisState = update(defaultState, {
   tracing: {
@@ -351,6 +352,7 @@ test("SkeletonTracing should delete nodes and split the tree", (t) => {
               isVisible: true,
               type: TreeTypeEnum.DEFAULT,
               edgesAreVisible: true,
+              userDefinedProperties: [],
             },
             [1]: {
               treeId: 1,
@@ -378,6 +380,7 @@ test("SkeletonTracing should delete nodes and split the tree", (t) => {
               isVisible: true,
               type: TreeTypeEnum.DEFAULT,
               edgesAreVisible: true,
+              userDefinedProperties: [],
             },
           },
         },
@@ -507,6 +510,7 @@ test("SkeletonTracing should delete an edge and split the tree", (t) => {
               isVisible: true,
               type: TreeTypeEnum.DEFAULT,
               edgesAreVisible: true,
+              userDefinedProperties: [],
             },
             [1]: {
               treeId: 1,
@@ -534,6 +538,7 @@ test("SkeletonTracing should delete an edge and split the tree", (t) => {
               isVisible: true,
               type: TreeTypeEnum.DEFAULT,
               edgesAreVisible: true,
+              userDefinedProperties: [],
             },
           },
         },

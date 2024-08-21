@@ -130,6 +130,7 @@ export function createTree(tree: Tree) {
       isVisible: tree.isVisible,
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
+      userDefinedProperties: tree.userDefinedProperties,
     },
   } as const;
 }

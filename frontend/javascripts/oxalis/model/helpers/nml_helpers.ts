@@ -689,6 +689,7 @@ function splitTreeIntoComponents(
       groupId: newGroupId,
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
+      userDefinedProperties: tree.userDefinedProperties,
     };
     newTrees.push(newTree);
   }
@@ -818,6 +819,8 @@ export function parseNml(nmlString: string): Promise<{
               groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
               type: _parseTreeType(attr, "type", TreeTypeEnum.DEFAULT),
               edgesAreVisible: _parseBool(attr, "edgesAreVisible", true),
+              // todop
+              userDefinedProperties: [],
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);

@@ -768,6 +768,8 @@ export type ServerSkeletonTracingTree = {
   isVisible?: boolean;
   type?: TreeType;
   edgesAreVisible?: boolean;
+  // todop: check whether this is really not-optional
+  userDefinedProperties: UserDefinedProperty[];
 };
 export type UserDefinedProperty = {
   key: string;

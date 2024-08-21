@@ -155,6 +155,7 @@ const synapseTreeCreator = (synapseId: number, synapseType: string): MutableTree
   groupId: null,
   type: TreeTypeEnum.DEFAULT,
   edgesAreVisible: true,
+  userDefinedProperties: [],
 });
 
 const synapseNodeCreator = (synapseId: number, synapsePosition: Vector3): MutableNode => ({

@@ -124,7 +124,7 @@
         "coverage-local": "c8 report --reporter=html && echo Success! Open coverage/index.html",
         "coverage": "c8 report --reporter=text-lcov | coveralls",
         "apply-evolutions": "tools/postgres/dbtool.js apply-evolutions",
-        "postinstall": "cd tools/proxy && pnpm install",
+        "postinstall": "cd tools/proxy && npm install",
         "typecheck": "pnpm tsc",
         "ts": "pnpm tsc",
         "ts-watch": "pnpm tsc --watch",

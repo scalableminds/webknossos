@@ -234,7 +234,7 @@ class ZarrStreamingController @Inject()(
         annotationLayers <- Fox.serialCombined(volumeAnnotationLayers)(
           l =>
             remoteTracingstoreClient
-              .getVolumeLayerAsZarrLayer(l.tracingId, Some(l.name), annotationSource.tracingStoreUrl, relevantToken))
+              .getVolumeLayerAsZarrLayer(l.tracingId, Some(l.name), annotationSource.tracingStoreUrl, relevantToken, zarrVersion))
         allLayer = dataSourceLayers ++ annotationLayers
         zarrSource = GenericDataSource[DataLayer](dataSource.id, allLayer, dataSource.scale)
         zarrSourceJson <- replaceVoxelSizeByLegacyFormat(Json.toJson(zarrSource))

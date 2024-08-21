@@ -13,6 +13,7 @@ import {
   handleClickSegment,
 } from "oxalis/controller/combinations/segmentation_handlers";
 import {
+  computeQuickSelectForPointAction,
   computeQuickSelectForRectAction,
   confirmQuickSelectAction,
   hideBrushAction,
@@ -53,6 +54,7 @@ import {
   setActiveUserBoundingBoxId,
 } from "oxalis/model/actions/ui_actions";
 import ArbitraryView from "oxalis/view/arbitrary_view";
+import features from "features";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -725,6 +727,19 @@ export class QuickSelectTool {
         currentPos = newCurrentPos;
 
         quickSelectGeometry.setCoordinates(startPos, currentPos);
+      },
+      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
+        const state = Store.getState();
+        const clickedPos = V3.floor(calculateGlobalPos(state, pos));
+        isDragging = false;
+
+        const quickSelectConfig = state.userConfiguration.quickSelect;
+        const isAISelectAvailable = features().segmentAnythingEnabled;
+        const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
+
+        if (!isQuickSelectHeuristic) {
+          Store.dispatch(computeQuickSelectForPointAction(clickedPos, quickSelectGeometry));
+        }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.handleOpenContextMenu(planeView, pos, plane, isTouch, event);

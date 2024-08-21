@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(117);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(118);
 COMMIT TRANSACTION;
 
 
@@ -594,6 +594,7 @@ CREATE TABLE webknossos.voxelytics_artifacts(
     metadata JSONB,
     PRIMARY KEY (_id),
     UNIQUE (_task, name),
+    UNIQUE (_task, path),
     CONSTRAINT metadataIsJsonObject CHECK(jsonb_typeof(metadata) = 'object')
 );
 

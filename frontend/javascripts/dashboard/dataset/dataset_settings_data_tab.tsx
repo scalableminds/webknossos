@@ -367,7 +367,7 @@ function SimpleLayerForm({
       }}
     >
       {mayLayerBeRemoved && (
-        <div style={{ position: "absolute", top: 12, right: 0, zIndex: 1000 }}>
+        <div style={{ position: "absolute", top: 12, right: 0, zIndex: 500 }}>
           <Tooltip title="Remove Layer">
             <Button shape="circle" icon={<DeleteOutlined />} onClick={() => onRemoveLayer(layer)} />
           </Tooltip>

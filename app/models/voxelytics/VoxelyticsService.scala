@@ -100,7 +100,8 @@ case class ArtifactEntry(artifactId: ObjectId,
                          inodeCount: Long,
                          version: String,
                          metadata: JsObject,
-                         taskName: String)
+                         taskName: String,
+                         foreignWorkflow: Option[(String, String)])
 
 object ArtifactEntry {
   implicit val jsonFormat: OFormat[ArtifactEntry] = Json.format[ArtifactEntry]

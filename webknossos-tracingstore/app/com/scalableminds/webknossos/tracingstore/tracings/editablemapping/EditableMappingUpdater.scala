@@ -54,11 +54,12 @@ class EditableMappingUpdater(
   private val agglomerateToGraphBuffer: mutable.Map[String, (AgglomerateGraph, Boolean)] =
     new mutable.HashMap[String, (AgglomerateGraph, Boolean)]()
 
-  def applyUpdatesAndSave(existingEditabeMappingInfo: EditableMappingInfo, updates: List[UpdateAction])(
-      implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
+  def applyUpdatesAndSave(existingEditabeMappingInfo: EditableMappingInfo,
+                          updates: List[UpdateAction],
+                          dry: Boolean = false)(implicit ec: ExecutionContext): Fox[EditableMappingInfo] =
     for {
-      updatedEditableMappingInfo <- updateIter(Some(existingEditabeMappingInfo), updates)
-      _ <- flushToFossil(updatedEditableMappingInfo)
+      updatedEditableMappingInfo: EditableMappingInfo <- updateIter(Some(existingEditabeMappingInfo), updates)
+      _ <- Fox.runIf(!dry)(flushToFossil(updatedEditableMappingInfo))
     } yield updatedEditableMappingInfo
 
   private def flushToFossil(updatedEditableMappingInfo: EditableMappingInfo)(implicit ec: ExecutionContext): Fox[Unit] =
@@ -361,7 +362,7 @@ class EditableMappingUpdater(
       (agglomerateId1, agglomerateId2) <- agglomerateIdsForMergeAction(update, segmentId1, segmentId2) ?~> "Failed to look up agglomerate ids for merge action segments"
       agglomerateGraph1 <- agglomerateGraphForIdWithFallback(mapping, agglomerateId1) ?~> s"Failed to get agglomerate graph for id $agglomerateId1"
       agglomerateGraph2 <- agglomerateGraphForIdWithFallback(mapping, agglomerateId2) ?~> s"Failed to get agglomerate graph for id $agglomerateId2"
-      _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> "Segment as queried by position is not contained in fetched agglomerate graph"
+      _ <- bool2Fox(agglomerateGraph2.segments.contains(segmentId2)) ?~> s"Segment $segmentId2 as queried by position ${update.segmentPosition2} is not contained in fetched agglomerate graph for agglomerate $agglomerateId2"
       mergedGraphOpt = mergeGraph(agglomerateGraph1,
                                   agglomerateGraph2,
                                   update,

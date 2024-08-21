@@ -92,7 +92,9 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     // Preview a working annotation version if the showVersionRestore URL parameter is supplied
     const versions = Utils.hasUrlParam("showVersionRestore")
       ? {
-          skeleton: 1,
+          skeleton: Utils.hasUrlParam("skeletonVersion")
+            ? parseInt(Utils.getUrlParamValue("skeletonVersion"))
+            : 1,
         }
       : undefined;
     Model.fetch(this.props.initialMaybeCompoundType, this.props.initialCommandType, true, versions)
@@ -169,7 +171,6 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     initializeSceneController();
     this.initKeyboard();
     this.initTaskScript();
-    // @ts-expect-error ts-migrate(2339) FIXME: Property 'webknossos' does not exist on type '(Win... Remove this comment to see the full error message
     window.webknossos = new ApiLoader(Model);
     app.vent.emit("webknossos:ready");
     Store.dispatch(wkReadyAction());

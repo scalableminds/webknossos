@@ -1,4 +1,4 @@
-import { createStore, applyMiddleware } from "redux";
+import { createStore, applyMiddleware, Middleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
 import type {
@@ -135,8 +135,8 @@ export type MutableTree = {
   color: Vector3;
   name: string;
   timestamp: number;
-  comments: Array<MutableCommentType>;
-  branchPoints: Array<MutableBranchPoint>;
+  comments: MutableCommentType[];
+  branchPoints: MutableBranchPoint[];
   edges: EdgeCollection;
   isVisible: boolean;
   nodes: MutableNodeMap;
@@ -149,8 +149,8 @@ export type Tree = {
   readonly color: Vector3;
   readonly name: string;
   readonly timestamp: number;
-  readonly comments: Array<CommentType>;
-  readonly branchPoints: Array<BranchPoint>;
+  readonly comments: CommentType[];
+  readonly branchPoints: BranchPoint[];
   readonly edges: EdgeCollection;
   readonly isVisible: boolean;
   readonly nodes: NodeMap;
@@ -163,12 +163,12 @@ export type TreeGroupTypeFlat = {
   readonly isExpanded?: boolean;
 };
 export type TreeGroup = TreeGroupTypeFlat & {
-  readonly children: Array<TreeGroup>;
+  readonly children: TreeGroup[];
 };
 export type MutableTreeGroup = {
   name: string;
   groupId: number;
-  children: Array<MutableTreeGroup>;
+  children: MutableTreeGroup[];
 };
 
 export type SegmentGroupTypeFlat = TreeGroupTypeFlat;
@@ -255,7 +255,7 @@ export type VolumeTracing = TracingBase & {
   readonly contourList: Array<Vector3>;
   readonly fallbackLayer?: string;
   readonly mappingName?: string | null | undefined;
-  readonly mappingIsEditable?: boolean;
+  readonly hasEditableMapping?: boolean;
   readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
 };
@@ -336,6 +336,9 @@ export type PartialDatasetConfiguration = Partial<Omit<DatasetConfiguration, "la
 
 export type QuickSelectConfig = {
   readonly useHeuristic: boolean;
+  // Only relevant for useHeuristic=false:
+  readonly predictionDepth?: number;
+  // Only relevant for useHeuristic=true:
   readonly showPreview: boolean;
   readonly segmentMode: "dark" | "light";
   readonly threshold: number;
@@ -347,6 +350,7 @@ export type QuickSelectConfig = {
 export type UserConfiguration = {
   readonly autoSaveLayouts: boolean;
   readonly autoRenderMeshInProofreading: boolean;
+  readonly selectiveVisibilityInProofreading: boolean;
   readonly brushSize: number;
   readonly clippingDistance: number;
   readonly clippingDistanceArbitrary: number;
@@ -393,7 +397,10 @@ export type RecommendedConfiguration = Partial<
 // A histogram value of undefined indicates that the histogram hasn't been fetched yet
 // whereas a value of null indicates that the histogram couldn't be fetched
 export type HistogramDataForAllLayers = Record<string, APIHistogramData | null>;
-export type Mapping = Map<number, number>;
+export type Mapping = Map<number, number> | Map<bigint, bigint>;
+export type NumberLike = number | bigint;
+export type NumberLikeMap = Map<NumberLike, NumberLike>;
+
 export type MappingType = "JSON" | "HDF5";
 export type ActiveMappingInfo = {
   readonly mappingName: string | null | undefined;
@@ -401,7 +408,6 @@ export type ActiveMappingInfo = {
   readonly mappingColors: number[] | null | undefined;
   readonly hideUnmappedIds: boolean;
   readonly mappingStatus: MappingStatus;
-  readonly mappingSize: number;
   readonly mappingType: MappingType;
 };
 export type TemporaryConfiguration = {
@@ -411,6 +417,7 @@ export type TemporaryConfiguration = {
   readonly controlMode: ControlMode;
   readonly mousePosition: Vector2 | null | undefined;
   readonly hoveredSegmentId: number | null;
+  readonly hoveredUnmappedSegmentId: number | null;
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly isMergerModeEnabled: boolean;
   readonly gpuSetup: {
@@ -517,6 +524,7 @@ export type BusyBlockingInfo = {
   reason?: string;
 };
 type UiInformation = {
+  readonly globalProgress: number; // 0 to 1
   readonly showDropzoneModal: boolean;
   readonly showVersionRestore: boolean;
   readonly showDownloadModal: boolean;
@@ -631,7 +639,7 @@ const combinedReducers = reduceReducers(
 const store = createStore<OxalisState>(
   enableBatching(combinedReducers),
   defaultState,
-  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware),
+  applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),
 );
 
 export function startSagas(rootSaga: Saga<any[]>) {

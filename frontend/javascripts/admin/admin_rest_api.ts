@@ -77,13 +77,19 @@ import type {
   MappingType,
   VolumeTracing,
   UserConfiguration,
+  Mapping,
+  NumberLike,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import {
+  parseProtoListOfLong,
+  parseProtoTracing,
+  serializeProtoListOfLong,
+} from "oxalis/model/helpers/proto_helpers";
 import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
@@ -886,7 +892,7 @@ export async function getTracingForAnnotationType(
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
   const version = extractVersion(versions, tracingId, typ);
-  const tracingType = typ.toLowerCase();
+  const tracingType = typ.toLowerCase() as "skeleton" | "volume";
   const possibleVersionString = version != null ? `&version=${version}` : "";
   const tracingArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
@@ -944,7 +950,7 @@ export function getUpdateActionLog(
 export function getNewestVersionForTracing(
   tracingStoreUrl: string,
   tracingId: string,
-  tracingType: "skeleton" | "volume",
+  tracingType: SaveQueueType,
 ): Promise<number> {
   return doWithToken((token) =>
     Request.receiveJSON(
@@ -1599,23 +1605,6 @@ export function getEditableMappingInfo(
   );
 }
 
-export function getAgglomerateIdForSegmentId(
-  tracingStoreUrl: string,
-  tracingId: string,
-  segmentId: number,
-): Promise<number> {
-  return doWithToken(async (token) => {
-    const urlParams = new URLSearchParams({
-      token,
-      segmentId: `${segmentId}`,
-    });
-    const { agglomerateId } = await Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateIdForSegmentId?${urlParams.toString()}`,
-    );
-    return agglomerateId;
-  });
-}
-
 export function getPositionForSegmentInAgglomerate(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -2068,6 +2057,67 @@ export function getAgglomerateSkeleton(
   );
 }
 
+export async function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingId: string,
+  segmentIds: Array<T>,
+): Promise<Mapping> {
+  const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
+      {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+      },
+    ),
+  );
+  // Ensure that the values are bigint if the keys are bigint
+  const adaptToType = Utils.isBigInt(segmentIds[0])
+    ? (el: NumberLike) => BigInt(el)
+    : (el: NumberLike) => el;
+  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  // @ts-ignore
+  return new Map(keyValues);
+}
+
+export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentIds: Array<T>,
+): Promise<Mapping> {
+  const segmentIdBuffer = serializeProtoListOfLong<T>(
+    // The tracing store expects the ids to be sorted
+    segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
+  );
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
+      {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+      },
+    ),
+  );
+
+  // Ensure that the values are bigint if the keys are bigint
+  const adaptToType = Utils.isBigInt(segmentIds[0])
+    ? (el: NumberLike) => BigInt(el)
+    : (el: NumberLike) => el;
+
+  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  // @ts-ignore
+  return new Map(keyValues);
+}
+
 export function getEditableAgglomerateSkeleton(
   tracingStoreUrl: string,
   tracingId: string,
@@ -2228,10 +2278,10 @@ export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   segmentsInfo: {
-    segmentId1: number;
-    segmentId2: number;
+    segmentId1: NumberLike;
+    segmentId2: NumberLike;
     mag: Vector3;
-    agglomerateId: number;
+    agglomerateId: NumberLike;
     editableMappingId: string;
   },
 ): Promise<Array<MinCutTargetEdge>> {
@@ -2239,7 +2289,13 @@ export async function getEdgesForAgglomerateMinCut(
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
       {
-        data: segmentsInfo,
+        data: {
+          ...segmentsInfo,
+          // TODO: Proper 64 bit support (#6921)
+          segmentId1: Number(segmentsInfo.segmentId1),
+          segmentId2: Number(segmentsInfo.segmentId2),
+          agglomerateId: Number(segmentsInfo.agglomerateId),
+        },
       },
     ),
   );
@@ -2254,9 +2310,9 @@ export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
   segmentInfo: {
-    segmentId: number;
+    segmentId: NumberLike;
     mag: Vector3;
-    agglomerateId: number;
+    agglomerateId: NumberLike;
     editableMappingId: string;
   },
 ): Promise<NeighborInfo> {
@@ -2264,7 +2320,12 @@ export async function getNeighborsForAgglomerateNode(
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
       {
-        data: segmentInfo,
+        data: {
+          ...segmentInfo,
+          // TODO: Proper 64 bit support (#6921)
+          segmentId: Number(segmentInfo.segmentId),
+          agglomerateId: Number(segmentInfo.agglomerateId),
+        },
       },
     ),
   );
@@ -2272,28 +2333,49 @@ export async function getNeighborsForAgglomerateNode(
 
 // ### Smart Select
 
-export async function getSamEmbedding(
+export async function getSamMask(
   dataset: APIDataset,
   layerName: string,
   mag: Vector3,
-  embeddingBoxMag1: BoundingBox,
+  surroundingBoxMag1: BoundingBox, // in mag 1
+  prompt:
+    | {
+        type: "BOUNDING_BOX"; // relative to topleft
+        selectionTopLeftX: number; // int, in target mag
+        selectionTopLeftY: number; // int, in target mag
+        selectionBottomRightX: number; // int, in target mag
+        selectionBottomRightY: number; // int, in target mag
+      }
+    | {
+        type: "POINT";
+        pointX: number; // int, relative to topleft
+        pointY: number; // int, relative to topleft
+      },
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
-): Promise<Float32Array> {
+): Promise<Uint8Array> {
   const params = new URLSearchParams();
   if (intensityRange != null) {
     params.append("intensityMin", `${intensityRange[0]}`);
     params.append("intensityMax", `${intensityRange[1]}`);
   }
 
+  const { type: interactionType, ...promptWithoutType } = prompt;
+
   const buffer = await Request.sendJSONReceiveArraybuffer(
-    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding?${params}`,
+    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingMask?${params}`,
     {
-      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox(), additionalCoordinates },
+      data: {
+        mag,
+        surroundingBoundingBox: surroundingBoxMag1.asServerBoundingBox(),
+        additionalCoordinates,
+        interactionType,
+        ...promptWithoutType,
+      },
       showErrorToast: false,
     },
   );
-  return new Float32Array(buffer);
+  return new Uint8Array(buffer);
 }
 
 // ### Short links

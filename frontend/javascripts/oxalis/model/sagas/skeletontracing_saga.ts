@@ -542,10 +542,14 @@ function updateTracingPredicate(
 
 function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
   return (
-    prevTree.branchPoints !== tree.branchPoints ||
+    // branchPoints and comments are arrays and therefore checked for
+    // equality. This avoids unnecessary updates in certain cases (e.g.,
+    // when two trees are merged, the comments are concatenated, even
+    // if one of them is empty; thus, resulting in new instances).
+    !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
+    !_.isEqual(prevTree.comments, tree.comments) ||
     prevTree.color !== tree.color ||
     prevTree.name !== tree.name ||
-    prevTree.comments !== tree.comments ||
     prevTree.timestamp !== tree.timestamp ||
     prevTree.groupId !== tree.groupId ||
     prevTree.type !== tree.type ||

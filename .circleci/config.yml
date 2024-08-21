@@ -31,7 +31,7 @@ jobs:
             DEV_CACHE=$NORMALIZED_BRANCH docker-compose build base
       - run:
           name: Prepare dependency folders
-          command: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier ~/.cache/yarn
+          command: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier ~/.cache/pnpm
       - restore_cache:
           name: Restore target cache
           keys:
@@ -43,13 +43,16 @@ jobs:
             - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
             - sbt-cache-{{ checksum ".circleci/cache_version" }}-
       - restore_cache:
-          name: Restore yarn cache
+          name: Restore pnpm cache
           keys:
-            - yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
-            - yarn-cache-{{ checksum ".circleci/cache_version" }}-
+            - pnpm-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "pnpm-lock.yaml" }}
+            - pnpm-cache-{{ checksum ".circleci/cache_version" }}-
+      - run:
+          name: Install pnpm
+          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base npm install pnpm
       - run:
           name: Install frontend dependencies
-          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
+          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base pnpm install --frozen-lockfile
       - run:
           name: Assert unique evolution numbers
           command: docker-compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
@@ -68,11 +71,11 @@ jobs:
           name: Build frontend documentation
           command: |
             WK_VERSION=${CIRCLE_TAG:-${CIRCLE_BUILD_NUM:-dev}}
-            docker-compose run base yarn run docs --project-version $WK_VERSION
+            docker-compose run base pnpm run docs --project-version $WK_VERSION
       - run:
           name: Build webknossos (webpack)
           command: |
-            docker-compose run base yarn build
+            docker-compose run base pnpm build
       - run:
           name: Build webknossos (sbt)
           command: |
@@ -104,10 +107,10 @@ jobs:
             - "~/.cache/coursier"
 
       - save_cache:
-          name: Save yarn cache
-          key: yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
+          name: Save pnpm cache
+          key: pnpm-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "pnpm-lock.yaml" }}
           paths:
-            - "~/.cache/yarn"
+            - "~/.cache/pnpm"
 
       - save_cache:
           name: Save webpack cache
@@ -130,15 +133,15 @@ jobs:
       - run:
           name: Lint frontend code and check formatting
           command: |
-            .circleci/not-on-master.sh docker-compose run base bash -c "yarn run check-frontend"
+            .circleci/not-on-master.sh docker-compose run base bash -c "pnpm run check-frontend"
       - run:
           name: Check for cyclic dependencies in front-end
           command: |
-            .circleci/not-on-master.sh docker-compose run base yarn check-cyclic-dependencies
+            .circleci/not-on-master.sh docker-compose run base pnpm check-cyclic-dependencies
       - run:
           name: Run frontend tests
           command: |
-            .circleci/not-on-master.sh docker-compose run base yarn test-verbose
+            .circleci/not-on-master.sh docker-compose run base pnpm test-verbose
       - run:
           name: Lint backend code and check formatting
           command: |
@@ -157,7 +160,7 @@ jobs:
       - run:
           name: Validate frontend types
           command: |
-            .circleci/not-on-master.sh docker-compose run base yarn typecheck
+            .circleci/not-on-master.sh docker-compose run base pnpm typecheck
       - run:
           name: Start webknossos
           background: true
@@ -241,7 +244,7 @@ jobs:
             docker logout
       - run:
           name: Report coverage
-          command: .circleci/not-on-master.sh docker-compose run base yarn coverage || true
+          command: .circleci/not-on-master.sh docker-compose run base pnpm coverage || true
       - run:
           name: Send Slack notification (master only)
           command: .circleci/slack-notification.sh

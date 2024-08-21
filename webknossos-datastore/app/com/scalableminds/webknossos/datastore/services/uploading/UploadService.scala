@@ -22,7 +22,6 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
 import net.liftweb.common._
 import org.apache.commons.io.FileUtils
-import org.apache.pekko.util.Helpers.Requiring
 import play.api.libs.json.{Json, OFormat, Reads}
 
 import java.io.{File, RandomAccessFile}

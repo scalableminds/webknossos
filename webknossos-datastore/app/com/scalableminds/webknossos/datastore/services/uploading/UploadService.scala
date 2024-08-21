@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILE
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants}
-import com.scalableminds.webknossos.datastore.models.OngoingUpload
+import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, DataSourceService}
@@ -146,17 +146,18 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         f"Reserving dataset upload of ${reserveUploadInformation.organization}/${reserveUploadInformation.name} with id ${reserveUploadInformation.uploadId}...")
     } yield ()
 
-  def addUploadIdsToOngoingUploads(ongoingUploadsWithoutIds: List[OngoingUpload]): Fox[List[OngoingUpload]] =
+  def addUploadIdsToUnfinishedUploads(
+      unfinishedUploadsWithoutIds: List[UnfinishedUpload]): Fox[List[UnfinishedUpload]] =
     for {
-      maybeOngoingUploads: List[Box[Option[OngoingUpload]]] <- Fox.sequence(
-        ongoingUploadsWithoutIds.map(
+      maybeUnfinishedUploads: List[Box[Option[UnfinishedUpload]]] <- Fox.sequence(
+        unfinishedUploadsWithoutIds.map(
           upload =>
             runningUploadMetadataStore
               .find(Json.stringify(Json.toJson(upload.dataSourceId)))
               .map(uploadIdOpt => uploadIdOpt.map(uploadId => upload.copy(uploadId = uploadId)))
         ))
-      foundOngoingUploads = maybeOngoingUploads.collect { case Full(Some(value)) => value }
-    } yield foundOngoingUploads
+      foundUnfinishedUploads = maybeUnfinishedUploads.collect { case Full(Some(value)) => value }
+    } yield foundUnfinishedUploads
 
   private def isOutsideUploadDir(uploadDir: Path, filePath: String): Boolean =
     uploadDir.relativize(uploadDir.resolve(filePath)).startsWith("../")

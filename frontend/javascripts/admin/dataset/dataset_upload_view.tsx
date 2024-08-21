@@ -48,8 +48,8 @@ import {
   startConvertToWkwJob,
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
-  getOngoingUploads,
-  OngoingUpload,
+  getUnfinishedUploads,
+  UnfinishedUpload,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -101,10 +101,10 @@ type State = {
   selectedTeams: APITeam | Array<APITeam>;
   possibleTeams: Array<APITeam>;
   uploadId: string | undefined;
-  continuingOldUpload: boolean;
+  continuingUnfinishedUpload: boolean;
   resumableUpload: any;
   datastoreUrl: string;
-  ongoingUploads: OngoingUpload[];
+  unfinishedUploads: UnfinishedUpload[];
 };
 
 function WkwExample() {
@@ -189,8 +189,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     uploadId: undefined,
     resumableUpload: {},
     datastoreUrl: "",
-    ongoingUploads: [],
-    continuingOldUpload: false,
+    unfinishedUploads: [],
+    continuingUnfinishedUpload: false,
   };
 
   unblock: ((...args: Array<any>) => any) | null | undefined;
@@ -219,7 +219,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           datastoreUrl: uploadableDatastores[0].url,
         });
         this.setState({ datastoreUrl: uploadableDatastores[0].url });
-        this.updateOngoingUploads();
+        this.updateUnfinishedUploads();
       }
     }
   }
@@ -228,17 +228,17 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     this.unblockHistory();
   }
 
-  updateOngoingUploads = async () => {
+  updateUnfinishedUploads = async () => {
     const currentFormRef = this.formRef.current;
     const datastoreUrl = currentFormRef?.getFieldValue("datastoreUrl");
     const activeOrga = this.props.activeUser?.organization;
     if (!datastoreUrl || !activeOrga) {
       return;
     }
-    const ongoingUploads = await getOngoingUploads(datastoreUrl, activeOrga);
+    const unfinishedUploads = await getUnfinishedUploads(datastoreUrl, activeOrga);
     // Sort so that most-recent uploads come first
-    ongoingUploads.sort((a, b) => b.created - a.created);
-    this.setState({ ongoingUploads });
+    unfinishedUploads.sort((a, b) => b.created - a.created);
+    this.setState({ unfinishedUploads: unfinishedUploads });
   };
 
   unblockHistory() {
@@ -391,7 +391,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           this.setState({
             isUploading: false,
             isFinishing: false,
-            continuingOldUpload: false,
+            continuingUnfinishedUpload: false,
             uploadId: undefined,
           });
 
@@ -416,7 +416,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             isUploading: false,
             isFinishing: false,
             isRetrying: false,
-            continuingOldUpload: false,
+            continuingUnfinishedUpload: false,
             uploadId: undefined,
             uploadProgress: 0,
           });
@@ -687,7 +687,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
   onFormValueChange = (changedValues: UploadFormFieldTypes) => {
     if (changedValues.datastoreUrl) {
       this.setState({ datastoreUrl: changedValues.datastoreUrl });
-      this.updateOngoingUploads();
+      this.updateUnfinishedUploads();
     }
   };
 
@@ -695,9 +695,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const { activeUser, withoutCard, datastores } = this.props;
     const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(this.props.activeUser);
 
-    const { needsConversion, continuingOldUpload } = this.state;
+    const { needsConversion, continuingUnfinishedUpload } = this.state;
     const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
     const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
+
+    const unfinishedAndNotSelectedUploads = this.state.unfinishedUploads.filter(
+      (unfinishedUploads) => unfinishedUploads.uploadId !== this.state.uploadId,
+    );
 
     return (
       <div
@@ -724,7 +728,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             />
           ) : null}
 
-          {this.state.ongoingUploads.length > 0 && (
+          {unfinishedAndNotSelectedUploads.length > 0 && (
             <Alert
               message={
                 <>
@@ -743,9 +747,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     paddingTop: 8,
                   }}
                 >
-                  {this.state.ongoingUploads.map((ongoingUpload) => (
-                    <Row key={ongoingUpload.uploadId} gutter={16}>
-                      <Col span={8}>{ongoingUpload.datasetId.name}</Col>
+                  {unfinishedAndNotSelectedUploads.map((unfinishedUpload) => (
+                    <Row key={unfinishedUpload.uploadId} gutter={16}>
+                      <Col span={8}>{unfinishedUpload.datasetId.name}</Col>
                       <Col span={8}>
                         <Button
                           type="link"
@@ -755,15 +759,15 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                               return;
                             }
                             currentFormRef.setFieldsValue({
-                              name: ongoingUpload.datasetId.name,
-                              targetFolderId: ongoingUpload.folderId,
+                              name: unfinishedUpload.datasetId.name,
+                              targetFolderId: unfinishedUpload.folderId,
                               initialTeams: this.state.possibleTeams.filter((team) =>
-                                ongoingUpload.allowedTeams.includes(team.id),
+                                unfinishedUpload.allowedTeams.includes(team.id),
                               ),
                             });
                             this.setState({
-                              uploadId: ongoingUpload.uploadId,
-                              continuingOldUpload: true,
+                              uploadId: unfinishedUpload.uploadId,
+                              continuingUnfinishedUpload: true,
                             });
                             Toast.info(
                               "To continue the selected upload please make sure to select the same file(s) as before. Otherwise, the upload may be corrupted.",
@@ -821,8 +825,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               <Col span={12}>
                 <DatasetNameFormItem
                   activeUser={activeUser}
-                  disabled={continuingOldUpload}
-                  allowDuplicate={continuingOldUpload}
+                  disabled={continuingUnfinishedUpload}
+                  allowDuplicate={continuingUnfinishedUpload}
                 />
               </Col>
               <Col span={12}>
@@ -832,7 +836,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   setSelectedTeams={(selectedTeams) => this.setState({ selectedTeams })}
                   afterFetchedTeams={(possibleTeams) => this.setState({ possibleTeams })}
                   formRef={this.formRef}
-                  disabled={continuingOldUpload}
+                  disabled={continuingUnfinishedUpload}
                 />
               </Col>
             </Row>
@@ -852,14 +856,14 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               <FolderSelection
                 width="50%"
                 disableNotEditableFolders
-                disabled={continuingOldUpload}
+                disabled={continuingUnfinishedUpload}
               />
             </FormItemWithInfo>
 
             <DatastoreFormItem
               datastores={uploadableDatastores}
               hidden={hasOnlyOneDatastoreOrNone}
-              disabled={continuingOldUpload}
+              disabled={continuingUnfinishedUpload}
             />
             {this.isDatasetConversionEnabled() && needsConversion ? (
               <Row gutter={8}>

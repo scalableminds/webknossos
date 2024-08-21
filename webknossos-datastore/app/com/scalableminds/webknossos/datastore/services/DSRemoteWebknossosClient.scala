@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
-import com.scalableminds.webknossos.datastore.models.OngoingUpload
+import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
@@ -68,15 +68,15 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryString("key" -> dataStoreKey)
       .put(dataSource)
 
-  def getOngoingUploadsForUser(userTokenOpt: Option[String], organizationName: String): Fox[List[OngoingUpload]] =
+  def getUnfinishedUploadsForUser(userTokenOpt: Option[String], organizationName: String): Fox[List[UnfinishedUpload]] =
     for {
       userToken <- option2Fox(userTokenOpt) ?~> "reserveUpload.noUserToken"
-      ongoingUploads <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getOngoingUploadsForUser")
+      unfinishedUploads <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getUnfinishedUploadsForUser")
         .addQueryString("key" -> dataStoreKey)
         .addQueryString("token" -> userToken)
         .addQueryString("organizationName" -> organizationName)
-        .getWithJsonResponse[List[OngoingUpload]]
-    } yield ongoingUploads
+        .getWithJsonResponse[List[UnfinishedUpload]]
+    } yield unfinishedUploads
 
   def reportUpload(dataSourceId: DataSourceId,
                    datasetSizeBytes: Long,

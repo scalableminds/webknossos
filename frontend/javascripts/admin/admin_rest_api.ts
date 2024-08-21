@@ -1307,7 +1307,7 @@ export function reserveDatasetUpload(
   );
 }
 
-export type OngoingUpload = {
+export type UnfinishedUpload = {
   uploadId: string;
   datasetId: { name: string; organizationName: string };
   folderId: string;
@@ -1317,19 +1317,19 @@ export type OngoingUpload = {
 
 type OldDatasetIdFormat = { name: string; team: string };
 
-export function getOngoingUploads(
+export function getUnfinishedUploads(
   datastoreHost: string,
   organizationName: string,
-): Promise<OngoingUpload[]> {
+): Promise<UnfinishedUpload[]> {
   return doWithToken(async (token) => {
-    const ongoingUploads = (await Request.receiveJSON(
-      `/data/datasets/getOngoingUploads?token=${token}&organizationName=${organizationName}`,
+    const unfinishedUploads = (await Request.receiveJSON(
+      `/data/datasets/getUnfinishedUploads?token=${token}&organizationName=${organizationName}`,
       {
         host: datastoreHost,
       },
-    )) as Array<OngoingUpload & { dataSourceId: OldDatasetIdFormat }>;
+    )) as Array<UnfinishedUpload & { dataSourceId: OldDatasetIdFormat }>;
     // Rename "team" to "organization" as this is the actual used current naming.
-    return ongoingUploads.map(({ dataSourceId: { name, team }, ...rest }) => ({
+    return unfinishedUploads.map(({ dataSourceId: { name, team }, ...rest }) => ({
       ...rest,
       datasetId: { name, organizationName: team },
     }));

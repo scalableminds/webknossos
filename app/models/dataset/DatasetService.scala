@@ -70,7 +70,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     createDataset(dataStore, organizationName, unreportedDatasource)
   }
 
-  def getAllNotYetUploadedDatasetOfUser(userId: ObjectId, organizationId: ObjectId)(
+  def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     datasetDAO.findAllCompactWithSearch(
       uploaderIdOpt = Some(userId),

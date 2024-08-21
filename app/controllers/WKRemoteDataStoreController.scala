@@ -3,7 +3,7 @@ package controllers
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
-import com.scalableminds.webknossos.datastore.models.OngoingUpload
+import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
@@ -85,7 +85,10 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def getOngoingUploadsForUser(name: String, key: String, token: String, organizationName: String): Action[AnyContent] =
+  def getUnfinishedUploadsForUser(name: String,
+                                  key: String,
+                                  token: String,
+                                  organizationName: String): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
@@ -94,18 +97,18 @@ class WKRemoteDataStoreController @Inject()(
             "organization.notFound",
             user._organization) ~> NOT_FOUND
           _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
-          datasets <- datasetService.getAllNotYetUploadedDatasetOfUser(user._id, user._organization)(
-            GlobalAccessContext) ?~> "dataset.upload.couldNotLoadInProgressUploads"
+          datasets <- datasetService.getAllUnfinishedDatasetUploadsOfUser(user._id, user._organization)(
+            GlobalAccessContext) ?~> "dataset.upload.couldNotLoadUnfinishedUploads"
           teamIdsPerDataset <- Fox.combined(datasets.map(dataset => teamDAO.findAllowedTeamIdsForDataset(dataset.id)))
-          ongoingUploads = datasets.zip(teamIdsPerDataset).map {
+          unfinishedUploads = datasets.zip(teamIdsPerDataset).map {
             case (d, teamIds) =>
-              new OngoingUpload("<filled-in by datastore>",
-                                d.dataSourceId,
-                                d.folderId.toString,
-                                d.created,
-                                teamIds.map(_.toString))
+              new UnfinishedUpload("<filled-in by datastore>",
+                                   d.dataSourceId,
+                                   d.folderId.toString,
+                                   d.created,
+                                   teamIds.map(_.toString))
           }
-        } yield Ok(Json.toJson(ongoingUploads))
+        } yield Ok(Json.toJson(unfinishedUploads))
       }
     }
 

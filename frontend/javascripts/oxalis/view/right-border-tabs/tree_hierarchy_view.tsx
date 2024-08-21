@@ -5,12 +5,14 @@ import { AutoSizer } from "react-virtualized";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeGroupAction,
+  setTreeNameAction,
+  setTreeUserDefinedPropertiesAction,
   toggleAllTreesAction,
   toggleTreeAction,
   toggleTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { Store } from "oxalis/singletons";
-import type { TreeGroup } from "oxalis/store";
+import type { Tree, TreeGroup, TreeMap } from "oxalis/store";
 import {
   createGroupToTreesMap,
   deepFlatFilter,
@@ -33,6 +35,9 @@ import {
   setExpandedGroups,
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
+import { ResizableSplitPane } from "./resizable_split_pane";
+import { InputWithUpdateOnBlur, UserDefinedTableRows } from "./user_defined_properties_table";
+import { UserDefinedProperty } from "types/api_flow_types";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
   const { id, type } = info.node;
@@ -261,56 +266,119 @@ function TreeHierarchyView(props: Props) {
         menu={menu}
         className="tree-list-context-menu-overlay"
       />
-      <AutoSizer>
-        {({ height, width }) => (
-          <div
-            style={{
-              height,
-              width,
-            }}
-          >
-            <AntdTree
-              treeData={UITreeData}
-              height={height}
-              ref={treeRef}
-              titleRender={(node) =>
-                node.type === GroupTypeEnum.TREE
-                  ? renderTreeNode(props, onOpenContextMenu, hideContextMenu, node)
-                  : renderGroupNode(
-                      props,
-                      onOpenContextMenu,
-                      hideContextMenu,
-                      node,
-                      expandedNodeKeys,
-                    )
-              }
-              switcherIcon={<DownOutlined />}
-              onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
-                info.node.type === GroupTypeEnum.TREE
-                  ? onSelectTreeNode(info.node, info.nativeEvent)
-                  : onSelectGroupNode(info.node)
-              }
-              onDrop={onDrop}
-              onCheck={onCheck}
-              onExpand={onExpand}
-              // @ts-expect-error isNodeDraggable has argument of base type DataNode but we use it's extended parent type TreeNode
-              draggable={{ nodeDraggable: isNodeDraggable, icon: false }}
-              checkedKeys={checkedKeys}
-              expandedKeys={expandedNodeKeys}
-              selectedKeys={selectedKeys}
-              style={{ marginLeft: -14 }}
-              autoExpandParent
-              checkable
-              blockNode
-              showLine
-              multiple
-              defaultExpandAll
-            />
-          </div>
-        )}
-      </AutoSizer>
+      <ResizableSplitPane
+        firstChild={
+          <AutoSizer>
+            {({ height, width }) => (
+              <div
+                style={{
+                  height,
+                  width,
+                }}
+              >
+                <AntdTree
+                  treeData={UITreeData}
+                  height={height}
+                  ref={treeRef}
+                  titleRender={(node) =>
+                    node.type === GroupTypeEnum.TREE
+                      ? renderTreeNode(props, onOpenContextMenu, hideContextMenu, node)
+                      : renderGroupNode(
+                          props,
+                          onOpenContextMenu,
+                          hideContextMenu,
+                          node,
+                          expandedNodeKeys,
+                        )
+                  }
+                  switcherIcon={<DownOutlined />}
+                  onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
+                    info.node.type === GroupTypeEnum.TREE
+                      ? onSelectTreeNode(info.node, info.nativeEvent)
+                      : onSelectGroupNode(info.node)
+                  }
+                  onDrop={onDrop}
+                  onCheck={onCheck}
+                  onExpand={onExpand}
+                  // @ts-expect-error isNodeDraggable has argument of base type DataNode but we use it's extended parent type TreeNode
+                  draggable={{ nodeDraggable: isNodeDraggable, icon: false }}
+                  checkedKeys={checkedKeys}
+                  expandedKeys={expandedNodeKeys}
+                  selectedKeys={selectedKeys}
+                  style={{ marginLeft: -14 }}
+                  autoExpandParent
+                  checkable
+                  blockNode
+                  showLine
+                  multiple
+                  defaultExpandAll
+                />
+              </div>
+            )}
+          </AutoSizer>
+        }
+        secondChild={
+          <DetailsForSelection trees={props.trees} selectedTreeIds={props.selectedTreeIds} />
+        }
+      />
     </>
   );
+}
+
+const updateUserDefinedProperty = (
+  tree: Tree,
+  oldPropKey: string,
+  newPropPartial: Partial<UserDefinedProperty>,
+) => {
+  Store.dispatch(
+    setTreeUserDefinedPropertiesAction(
+      tree.userDefinedProperties.map((element) =>
+        element.key === oldPropKey
+          ? {
+              ...element,
+              ...newPropPartial,
+            }
+          : element,
+      ),
+      tree.treeId,
+    ),
+  );
+};
+
+function DetailsForSelection({
+  trees,
+  selectedTreeIds,
+}: { trees: TreeMap; selectedTreeIds: number[] }) {
+  if (selectedTreeIds.length === 1) {
+    const tree = trees[selectedTreeIds[0]];
+    if (tree == null) {
+      return <>Cannot find details for selected tree.</>;
+    }
+    return (
+      <table className="segment-details-table">
+        <tr>
+          <td>ID</td>
+          <td>{tree.treeId}</td>
+        </tr>
+        <tr>
+          <td>Name</td>
+          <td>
+            <InputWithUpdateOnBlur
+              value={tree.name || ""}
+              onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
+            />
+          </td>
+        </tr>
+        <UserDefinedTableRows
+          userDefinedProperties={tree.userDefinedProperties}
+          onChange={(oldKey: string, propPartial: Partial<UserDefinedProperty>) => {
+            updateUserDefinedProperty(tree, oldKey, propPartial);
+          }}
+        />
+      </table>
+    );
+  }
+  return null;
 }
 
 // React.memo is used to prevent the component from re-rendering without the props changing

@@ -1,6 +1,6 @@
 import { Modal } from "antd";
 import React, { Key } from "react";
-import type { ServerSkeletonTracing } from "types/api_flow_types";
+import type { ServerSkeletonTracing, UserDefinedProperty } from "types/api_flow_types";
 import type { Vector3, TreeType } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
@@ -46,6 +46,7 @@ type SetActiveTreeGroupAction = ReturnType<typeof setActiveTreeGroupAction>;
 type DeselectActiveTreeGroupAction = ReturnType<typeof deselectActiveTreeGroupAction>;
 export type MergeTreesAction = ReturnType<typeof mergeTreesAction>;
 type SetTreeNameAction = ReturnType<typeof setTreeNameAction>;
+type SetTreeUserDefinedPropertiesAction = ReturnType<typeof setTreeUserDefinedPropertiesAction>;
 type SelectNextTreeAction = ReturnType<typeof selectNextTreeAction>;
 type SetTreeColorIndexAction = ReturnType<typeof setTreeColorIndexAction>;
 type ShuffleTreeColorAction = ReturnType<typeof shuffleTreeColorAction>;
@@ -97,6 +98,7 @@ export type SkeletonTracingAction =
   | DeselectActiveTreeAction
   | MergeTreesAction
   | SetTreeNameAction
+  | SetTreeUserDefinedPropertiesAction
   | SelectNextTreeAction
   | SetTreeColorAction
   | SetTreeTypeAction
@@ -138,6 +140,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_ACTIVE_TREE",
   "SET_ACTIVE_TREE_BY_NAME",
   "SET_TREE_NAME",
+  "SET_TREE_USER_DEFINED_PROPERTIES",
   "MERGE_TREES",
   "SELECT_NEXT_TREE",
   "SHUFFLE_TREE_COLOR",
@@ -419,6 +422,16 @@ export const setTreeNameAction = (
   ({
     type: "SET_TREE_NAME",
     name,
+    treeId,
+  }) as const;
+
+export const setTreeUserDefinedPropertiesAction = (
+  userDefinedProperties: UserDefinedProperty[],
+  treeId?: number | null | undefined,
+) =>
+  ({
+    type: "SET_TREE_USER_DEFINED_PROPERTIES",
+    userDefinedProperties,
     treeId,
   }) as const;
 

@@ -542,13 +542,14 @@ function updateTracingPredicate(
 
 function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
   return (
-    !_.isEqual(prevTree.branchPoints, tree.branchPoints) ||
+    prevTree.branchPoints !== tree.branchPoints ||
     prevTree.color !== tree.color ||
     prevTree.name !== tree.name ||
-    !_.isEqual(prevTree.comments, tree.comments) ||
+    prevTree.comments !== tree.comments ||
     prevTree.timestamp !== tree.timestamp ||
     prevTree.groupId !== tree.groupId ||
-    prevTree.type !== tree.type
+    prevTree.type !== tree.type ||
+    prevTree.userDefinedProperties !== tree.userDefinedProperties
   );
 }
 

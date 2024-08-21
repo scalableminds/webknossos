@@ -1847,61 +1847,59 @@ class SegmentsView extends React.Component<Props, State> {
                       }`}
                     />
                   ) : (
-                    <>
-                      <ResizableSplitPane
-                        firstChild={
-                          <>
-                            {/* Without the default height, height will be 0 on the first render, leading
-                            to tree virtualization being disabled. This has a major performance impact. */}
-                            <AutoSizer defaultHeight={500}>
-                              {({ height, width }) => (
-                                <div
-                                  style={{
-                                    height,
-                                    width,
-                                    overflow: "hidden",
-                                  }}
-                                >
-                                  <Tree
-                                    allowDrop={this.allowDrop}
-                                    onDrop={this.onDrop}
-                                    onSelect={this.onSelectTreeItem}
-                                    className="segments-tree"
-                                    blockNode
-                                    // Passing an explicit height here, makes the tree virtualized
-                                    height={height} // without virtualization, pass 0 here and/or virtual={false}
-                                    draggable={{
-                                      icon: false,
-                                      nodeDraggable: () =>
-                                        // Forbid renaming when segments or groups are being renamed,
-                                        // since selecting text within the editable input box would not work
-                                        // otherwise (instead, the item would be dragged).
-                                        this.state.renamingCounter === 0 && this.props.allowUpdate,
-                                    }}
-                                    multiple
-                                    showLine
-                                    selectedKeys={this.getSelectedItemKeys()}
-                                    switcherIcon={<DownOutlined />}
-                                    treeData={this.state.groupTree}
-                                    titleRender={titleRender}
-                                    style={{
-                                      marginTop: 12,
-                                      marginLeft: -26, // hide switcherIcon for root group
-                                      flex: "1 1 auto",
-                                      overflow: "auto", // use hidden when not using virtualization
-                                    }}
-                                    ref={this.tree}
-                                    onExpand={this.setExpandedGroups}
-                                    expandedKeys={this.state.expandedGroupKeys}
-                                  />
-                                </div>
-                              )}
-                            </AutoSizer>
-                          </>
-                        }
-                        secondChild={this.renderDetailsForSelection()}
-                      />
-                    </>
+                    <ResizableSplitPane
+                      firstChild={
+                        <AutoSizer
+                          // Without the default height, height will be 0 on the first render, leading
+                          // to tree virtualization being disabled. This has a major performance impact.
+                          defaultHeight={500}
+                        >
+                          {({ height, width }) => (
+                            <div
+                              style={{
+                                height,
+                                width,
+                                overflow: "hidden",
+                              }}
+                            >
+                              <Tree
+                                allowDrop={this.allowDrop}
+                                onDrop={this.onDrop}
+                                onSelect={this.onSelectTreeItem}
+                                className="segments-tree"
+                                blockNode
+                                // Passing an explicit height here, makes the tree virtualized
+                                height={height} // without virtualization, pass 0 here and/or virtual={false}
+                                draggable={{
+                                  icon: false,
+                                  nodeDraggable: () =>
+                                    // Forbid renaming when segments or groups are being renamed,
+                                    // since selecting text within the editable input box would not work
+                                    // otherwise (instead, the item would be dragged).
+                                    this.state.renamingCounter === 0 && this.props.allowUpdate,
+                                }}
+                                multiple
+                                showLine
+                                selectedKeys={this.getSelectedItemKeys()}
+                                switcherIcon={<DownOutlined />}
+                                treeData={this.state.groupTree}
+                                titleRender={titleRender}
+                                style={{
+                                  marginTop: 12,
+                                  marginLeft: -26, // hide switcherIcon for root group
+                                  flex: "1 1 auto",
+                                  overflow: "auto", // use hidden when not using virtualization
+                                }}
+                                ref={this.tree}
+                                onExpand={this.setExpandedGroups}
+                                expandedKeys={this.state.expandedGroupKeys}
+                              />
+                            </div>
+                          )}
+                        </AutoSizer>
+                      }
+                      secondChild={this.renderDetailsForSelection()}
+                    />
                   )}
                 </div>
                 {groupToDelete !== null ? (

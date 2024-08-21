@@ -5,6 +5,7 @@ import {
   FolderOutlined,
   PlusOutlined,
   ShrinkOutlined,
+  TagsOutlined,
 } from "@ant-design/icons";
 import { MenuProps, notification } from "antd";
 import _ from "lodash";
@@ -32,6 +33,7 @@ import {
   setTreeGroupAction,
   setTreeGroupsAction,
   setTreeTypeAction,
+  setTreeUserDefinedPropertiesAction,
   shuffleAllTreeColorsAction,
   shuffleTreeColorAction,
   toggleInactiveTreesAction,
@@ -125,6 +127,24 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         disabled: isEditingDisabled,
         icon: <i className="fas fa-adjust" />,
         label: "Shuffle Tree Color",
+      },
+      {
+        key: "addProperty",
+        label: "Add Property",
+        icon: <TagsOutlined />,
+        onClick: () => {
+          const key = prompt("Please type in a key");
+          const value = prompt("Please type in a value");
+          if (key && value) {
+            Store.dispatch(
+              setTreeUserDefinedPropertiesAction(
+                [...tree.userDefinedProperties, { key, stringValue: value }],
+                tree.treeId,
+              ),
+            );
+          }
+          hideContextMenu();
+        },
       },
       {
         key: "deleteTree",

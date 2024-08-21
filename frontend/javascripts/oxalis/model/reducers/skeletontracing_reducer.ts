@@ -1024,6 +1024,26 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
+        case "SET_TREE_USER_DEFINED_PROPERTIES": {
+          return getTree(skeletonTracing, action.treeId)
+            .map((tree) => {
+              return update(state, {
+                tracing: {
+                  skeleton: {
+                    trees: {
+                      [tree.treeId]: {
+                        userDefinedProperties: {
+                          $set: action.userDefinedProperties,
+                        },
+                      },
+                    },
+                  },
+                },
+              });
+            })
+            .getOrElse(state);
+        }
+
         case "SET_EDGES_ARE_VISIBLE": {
           return getTree(skeletonTracing, action.treeId)
             .map((tree) => {

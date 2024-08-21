@@ -410,8 +410,7 @@ function ResizableSplitPane({
   firstChild,
   secondChild,
 }: { firstChild: React.ReactElement; secondChild: React.ReactElement | null }) {
-  const [height1, setHeight1] = useState<string | number>("calc(100vh - 400px)");
-  const [height2, setHeight2] = useState(400);
+  const [maxHeightForSecondChild, setMaxHeightForSecondChild] = useState(400);
   const dividerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isResizingRef = useRef(false);
@@ -423,12 +422,12 @@ function ResizableSplitPane({
 
       const DIVIDER_HEIGHT = 22;
       const containerRect = containerRef.current.getBoundingClientRect();
-      const newHeight1 = e.clientY - containerRect.top - DIVIDER_HEIGHT / 2;
-      const newHeight2 = containerRect.height - newHeight1 - dividerRef.current.clientHeight;
+      const newHeightForFirstChild = e.clientY - containerRect.top - DIVIDER_HEIGHT / 2;
+      const newMaxHeightForSecondChild =
+        containerRect.height - newHeightForFirstChild - dividerRef.current.clientHeight;
 
-      if (newHeight1 > 0 && newHeight2 > 0) {
-        setHeight1(newHeight1);
-        setHeight2(newHeight2);
+      if (newHeightForFirstChild > 0 && newMaxHeightForSecondChild > 0) {
+        setMaxHeightForSecondChild(newMaxHeightForSecondChild);
       }
     };
 
@@ -456,14 +455,12 @@ function ResizableSplitPane({
   }
 
   return (
-    <div ref={containerRef} className="segment-container">
-      <div className="child-1" style={{ height: height1 }}>
-        {firstChild}
-      </div>
+    <div ref={containerRef} className="resizable-two-split-pane">
+      <div className="child-1">{firstChild}</div>
       <div ref={dividerRef} onMouseDown={handleMouseDown} className="resizable-divider">
         <Divider />
       </div>
-      <div className="child-2" style={{ height: height2 }}>
+      <div className="child-2" style={{ maxHeight: maxHeightForSecondChild }}>
         {secondChild}
       </div>
     </div>

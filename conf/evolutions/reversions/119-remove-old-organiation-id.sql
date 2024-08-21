@@ -84,6 +84,7 @@ ALTER TABLE webknossos.organizations RENAME COLUMN _id_old TO _id;
 
 ALTER TABLE webknossos.organizations ALTER COLUMN _id TYPE CHAR(24);
 ALTER TABLE webknossos.organizations ALTER COLUMN _id SET NOT NULL;
+ALTER TABLE webknossos.organizations ADD CONSTRAINT organizations_name_key UNIQUE (name);
 -- Drop newly added constraint for naming restrictions on the now called name column.
 ALTER TABLE webknossos.organizations DROP CONSTRAINT validOrganizationId;
 

@@ -25,7 +25,6 @@ import {
   areDatasetsIdentical,
   LayerLink,
 } from "types/api_flow_types";
-import ErrorHandling from "libs/error_handling";
 import { syncValidator } from "types/validation";
 import { WizardComponentProps } from "./common";
 import { useEffectOnlyOnce } from "libs/react_hooks";
@@ -35,16 +34,6 @@ import { Vector3 } from "oxalis/constants";
 import { WkDevFlags } from "oxalis/api/wk_dev";
 
 const FormItem = Form.Item;
-
-async function guardedWithErrorToast(fn: () => Promise<any>) {
-  try {
-    await fn();
-  } catch (error) {
-    Toast.error("An error unexpected occurred. Please check the console for details");
-    console.error(error);
-    ErrorHandling.notify(error as Error);
-  }
-}
 
 export function ConfigureNewDataset(props: WizardComponentProps) {
   const formRef = React.useRef<FormInstance<any>>(null);
@@ -220,7 +209,11 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
       <p>Please configure the dataset that is about to be created.</p>
-      <Form form={form} layout="vertical" onFinish={() => guardedWithErrorToast(handleSubmit)}>
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={() => Utils.guardedWithErrorToast(handleSubmit)}
+      >
         <Row gutter={8}>
           <Col span={12}>
             <DatasetNameFormItem activeUser={activeUser} />

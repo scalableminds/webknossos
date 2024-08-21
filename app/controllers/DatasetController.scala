@@ -318,7 +318,7 @@ class DatasetController @Inject()(userService: UserService,
           for {
             dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, request.identity._organization) ?~> notFoundMessage(
               datasetName) ~> NOT_FOUND
-            maybeUpdatedMetadata = if (metadata.isDefined) metadata else dataset.metadata
+            maybeUpdatedMetadata = metadata.orElse(dataset.metadata)
             _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
             _ <- datasetDAO.updateFields(
               dataset._id,

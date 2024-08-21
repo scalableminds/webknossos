@@ -139,13 +139,12 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: FoldersRow): Fox[Folder] =
     for {
       metadata <- parseMetadata(r.metadata)
-      folder <- Fox.successful(Folder(ObjectId(r._Id), r.name, metadata))
-    } yield folder
+    } yield Folder(ObjectId(r._Id), r.name, metadata)
 
   private def parseWithParent(t: (String, String, Option[String], Option[String])): Fox[FolderWithParent] =
     for {
       metadata <- parseMetadata(t._3)
-      folderWithParent <- Fox.successful(FolderWithParent(ObjectId(t._1), t._2, metadata, t._4.map(ObjectId(_))))
+      folderWithParent = FolderWithParent(ObjectId(t._1), t._2, metadata, t._4.map(ObjectId(_)))
     } yield folderWithParent
 
   private def parseMetadata(literal: Option[String]): Fox[JsArray] =

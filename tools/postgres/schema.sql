@@ -123,7 +123,7 @@ CREATE TABLE webknossos.datasets(
   sharingToken CHAR(256),
   logoUrl VARCHAR(2048),
   sortingKey TIMESTAMPTZ NOT NULL,
-  metadata JSONB DEFAULT '[]',
+  metadata JSONB NOT NULL DEFAULT '[]',
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
@@ -518,7 +518,7 @@ CREATE TABLE webknossos.folders(
     _id CHAR(24) PRIMARY KEY,
     name TEXT NOT NULL CHECK (name !~ '/'),
     isDeleted BOOLEAN NOT NULL DEFAULT false,
-    metadata JSONB DEFAULT '[]',
+    metadata JSONB  NOT NULL DEFAULT '[]',
     CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array')
 );
 

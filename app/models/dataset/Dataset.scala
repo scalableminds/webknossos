@@ -54,7 +54,7 @@ case class Dataset(_id: ObjectId,
                    status: String,
                    logoUrl: Option[String],
                    sortingKey: Instant = Instant.now,
-                   metadata: Option[JsArray] = None,
+                   metadata: JsArray = JsArray.empty,
                    tags: List[String] = List.empty,
                    created: Instant = Instant.now,
                    isDeleted: Boolean = false)
@@ -116,7 +116,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
         JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
-      metadata <- Fox.runOptional(r.metadata)(JsonHelper.parseAndValidateJson[JsArray](_))
+      metadata <- JsonHelper.parseAndValidateJson[JsArray](r.metadata)
     } yield {
       Dataset(
         ObjectId(r._Id),
@@ -500,7 +500,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                    sortingKey: Instant,
                    isPublic: Boolean,
                    tags: List[String],
-                   metadataOpt: Option[JsArray],
+                   metadata: JsArray,
                    folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val updateParameters = new DatasetUpdateParameters(
       description = Some(description),
@@ -508,7 +508,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       sortingKey = Some(sortingKey),
       isPublic = Some(isPublic),
       tags = Some(tags),
-      metadata = metadataOpt,
+      metadata = Some(metadata),
       folderId = Some(folderId)
     )
     updatePartial(datasetId, updateParameters)

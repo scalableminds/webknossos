@@ -6,11 +6,11 @@ DROP VIEW webknossos.folders_;
 DROP VIEW webknossos.datasets_;
 
 -- Folder part
-ALTER TABLE webknossos.folders ADD COLUMN metadata JSONB DEFAULT '[]';
+ALTER TABLE webknossos.folders ADD COLUMN metadata JSONB NOT NULL DEFAULT '[]';
 ALTER TABLE webknossos.folders ADD CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array');
 
 -- Dataset part
-ALTER TABLE webknossos.datasets ADD COLUMN metadata JSONB DEFAULT '[]';
+ALTER TABLE webknossos.datasets ADD COLUMN metadata JSONB NOT NULL DEFAULT '[]';
 ALTER TABLE webknossos.datasets ADD CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array');
 -- Add existing details on species to metadata
 UPDATE webknossos.datasets

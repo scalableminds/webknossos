@@ -141,14 +141,14 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       metadata <- parseMetadata(r.metadata)
     } yield Folder(ObjectId(r._Id), r.name, metadata)
 
-  private def parseWithParent(t: (String, String, Option[String], Option[String])): Fox[FolderWithParent] =
+  private def parseWithParent(t: (String, String, String, Option[String])): Fox[FolderWithParent] =
     for {
       metadata <- parseMetadata(t._3)
       folderWithParent = FolderWithParent(ObjectId(t._1), t._2, metadata, t._4.map(ObjectId(_)))
     } yield folderWithParent
 
-  private def parseMetadata(literal: Option[String]): Fox[JsArray] =
-    JsonHelper.parseAndValidateJson[JsArray](literal.getOrElse("[]"))
+  private def parseMetadata(literal: String): Fox[JsArray] =
+    JsonHelper.parseAndValidateJson[JsArray](literal)
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     readAccessQWithPrefix(requestingUserId, q"")
@@ -300,7 +300,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               FROM webknossos.folders_
               WHERE _id = $folderId
               AND $accessQuery
-              """.as[(String, String, Option[String], Option[String])])
+              """.as[(String, String, String, Option[String])])
       parsed <- Fox.combined(rows.toList.map(parseWithParent))
     } yield parsed
 

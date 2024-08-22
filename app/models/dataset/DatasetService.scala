@@ -109,7 +109,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         sharingToken = None,
         status = dataSource.statusOpt.getOrElse(""),
         logoUrl = None,
-        metadata = Some(metadata)
+        metadata = metadata
       )
       _ <- datasetDAO.insertOne(dataset)
       _ <- datasetDataLayerDAO.updateLayers(newId, dataSource)

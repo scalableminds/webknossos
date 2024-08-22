@@ -35,6 +35,19 @@ type ToastParams = {
   details?: string;
 };
 
+export async function guardedWithErrorToast(fn: () => Promise<any>) {
+  try {
+    await fn();
+  } catch (error) {
+    import("libs/error_handling").then((_ErrorHandling) => {
+      const ErrorHandling = _ErrorHandling.default;
+      Toast.error("An unexpected error occurred. Please check the console for details");
+      console.error(error);
+      ErrorHandling.notify(error as Error);
+    });
+  }
+}
+
 const Toast = {
   // The notificationAPI is designed to be a singleton spawned by the ToastContextMountRoot
   // mounted in the GlobalThemeProvider.

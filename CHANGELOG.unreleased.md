@@ -44,6 +44,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The overall performance was improved (especially for the segments tab). [#7958](https://github.com/scalableminds/webknossos/pull/7958)
 - The performance for the skeleton tab was improved. [#7989](https://github.com/scalableminds/webknossos/pull/7989)
 - Upgraded ant icons to version 5.4. [#8007](https://github.com/scalableminds/webknossos/pull/8007)
+- Increased maximum depth for ai-based quick select from 5 to 16. [#8021](https://github.com/scalableminds/webknossos/pull/8021)
 
 ### Fixed
 - Fixed a bug that allowed the default newly created bounding box to appear outside the dataset. In case the whole bounding box would be outside it is created regardless. [#7892](https://github.com/scalableminds/webknossos/pull/7892)

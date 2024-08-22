@@ -73,7 +73,7 @@ export function AiQuickSelectControls() {
         label="Prediction Depth"
         min={1}
         value={quickSelectConfig.predictionDepth || 1}
-        max={5}
+        max={30}
         step={1}
         onChange={onChangePredictionDepth}
       />

@@ -17,6 +17,8 @@ import features from "features";
 import FastTooltip from "components/fast_tooltip";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 
+const MAX_DEPTH_FOR_SAM = 16;
+
 const OPTIONS_WITH_DISABLED = [
   { label: "Dark Segment", value: "dark" },
   { label: "Light Segment", value: "light" },
@@ -73,7 +75,7 @@ export function AiQuickSelectControls() {
         label="Prediction Depth"
         min={1}
         value={quickSelectConfig.predictionDepth || 1}
-        max={30}
+        max={MAX_DEPTH_FOR_SAM}
         step={1}
         onChange={onChangePredictionDepth}
       />

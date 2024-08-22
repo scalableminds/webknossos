@@ -20,11 +20,10 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceDataRequest,
   DataServiceRequestSettings
 }
-import com.scalableminds.webknossos.datastore.models.{VoxelPosition, VoxelSize}
+import com.scalableminds.webknossos.datastore.models.VoxelPosition
 import com.scalableminds.webknossos.datastore.services._
-import net.liftweb.common.Box.tryo
 import play.api.i18n.{Messages, MessagesProvider}
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
@@ -161,21 +160,7 @@ class ZarrStreamingController @Inject()(
         dataLayers = dataSource.dataLayers
         zarrLayers = dataLayers.map(convertLayerToZarrLayer(_, zarrVersion))
         zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
-        zarrSourceJson <- replaceVoxelSizeByLegacyFormat(Json.toJson(zarrSource))
-      } yield Ok(Json.toJson(zarrSourceJson))
-    }
-  }
-
-  private def replaceVoxelSizeByLegacyFormat(jsValue: JsValue): Fox[JsValue] = {
-    val jsObject = jsValue.as[JsObject]
-    val voxelSizeOpt = (jsObject \ "scale").asOpt[VoxelSize]
-    voxelSizeOpt match {
-      case None => Fox.successful(jsObject)
-      case Some(voxelSize) =>
-        val inNanometer = voxelSize.toNanometer
-        for {
-          newDataSource <- tryo(jsObject - "scale" + ("scale" -> Json.toJson(inNanometer)))
-        } yield newDataSource
+      } yield Ok(Json.toJson(zarrSource))
     }
   }
 
@@ -240,8 +225,7 @@ class ZarrStreamingController @Inject()(
                                                                zarrVersion))
         allLayer = dataSourceLayers ++ annotationLayers
         zarrSource = GenericDataSource[DataLayer](dataSource.id, allLayer, dataSource.scale)
-        zarrSourceJson <- replaceVoxelSizeByLegacyFormat(Json.toJson(zarrSource))
-      } yield Ok(Json.toJson(zarrSourceJson))
+      } yield Ok(Json.toJson(zarrSource))
     }
 
   def requestRawZarrCube(

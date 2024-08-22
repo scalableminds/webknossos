@@ -173,14 +173,17 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("The two NML files should have the same tree count.");
   }
 
-  for (const [tree1, tree2] of _.zip(Utils.values(trees1), Utils.values(trees2))) {
+  for (const [tree1, tree2] of _.zip(
+    Utils.values(trees1).sort((a, b) => a.treeId - b.treeId),
+    Utils.values(trees2).sort((a, b) => a.treeId - b.treeId),
+  )) {
     if (tree1 == null || tree2 == null) {
       // Satisfy TS. This should not happen, as we checked before that both tree collections
       // have the same size.
       throw new SoftError("A tree was unexpectedly parsed as null. Please try again");
     }
-    const nodes1 = Array.from(tree1.nodes.values());
-    const nodes2 = Array.from(tree2.nodes.values());
+    const nodes1 = Array.from(tree1.nodes.values()).sort((a, b) => a.id - b.id);
+    const nodes2 = Array.from(tree2.nodes.values()).sort((a, b) => a.id - b.id);
     for (const [node1, node2] of _.zip(nodes1, nodes2)) {
       if ((node1 == null) !== (node2 == null)) {
         throw new SoftError(
@@ -194,6 +197,10 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     }
   }
 
+  if (sourcePoints.length < 3) {
+    throw new SoftError("Each file should contain at least 3 nodes.");
+  }
+
   const datasets = await tryToFetchDatasetsByName(
     [datasetName1, datasetName2],
     "Could not derive datasets from NML. Please specify these manually.",
@@ -201,8 +208,8 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
 
   return {
     datasets: datasets || [],
-    sourcePoints,
-    targetPoints,
+    sourcePoints, // The first dataset (will be transformed to match the second later)
+    targetPoints, // The second dataset (won't be transformed by default)
     currentWizardStep: "SelectDatasets",
   };
 }

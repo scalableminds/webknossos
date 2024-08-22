@@ -167,6 +167,9 @@ export type MutableAPIDatasetId = {
   owningOrganization: string;
   name: string;
 };
+export function areDatasetsIdentical(a: APIDatasetId, b: APIDatasetId) {
+  return a.owningOrganization === b.owningOrganization && a.name === b.name;
+}
 export type APIDatasetId = Readonly<MutableAPIDatasetId>;
 export type APIDatasetDetails = {
   readonly species?: string;
@@ -901,6 +904,7 @@ export type VoxelyticsArtifactConfig = {
     iframes: Record<string, string>;
     links: Record<string, string>;
   };
+  foreignWorkflow: [string, string] | null;
 };
 
 export type VoxelyticsRunInfo = {

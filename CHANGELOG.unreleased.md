@@ -32,6 +32,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The alignment job is in a separate tab of the "AI Tools" now. The "Align Sections" AI job now supports including manually created matches between adjacent section given as skeletons. [#7967](https://github.com/scalableminds/webknossos/pull/7967)  
 - Added `api.tracing.createNode(position, options)`` to the front-end API. [#7998](https://github.com/scalableminds/webknossos/pull/7998)
 - Added a feature to register all segments for a given bounding box at once via the context menu of the bounding box. [#7979](https://github.com/scalableminds/webknossos/pull/7979)
+- Added links in the workflow report for skipped tasks to the corresponding workflow view. [#8006](https://github.com/scalableminds/webknossos/pull/8006)
+- Upgraded backend dependencies for improved performance and stability, including a memory leak fix for FossilDB. [#8014](https://github.com/scalableminds/webknossos/pull/8014)
 
 ### Changed
 - Replaced skeleton tab component with antd's `<Tree />`component. Added support for selecting tree ranges with SHIFT. [#7819](https://github.com/scalableminds/webknossos/pull/7819) 
@@ -52,6 +54,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that skeleton groups couldn't be collapsed or expanded in locked annotations. [#7988](https://github.com/scalableminds/webknossos/pull/7988)
 - Fixed that registering segments for a bounding box did only work if the segmentation had mag 1. [#8009](https://github.com/scalableminds/webknossos/pull/8009)
 - Fixed uploading datasets in neuroglancer precomputed and n5 data format. [#8008](https://github.com/scalableminds/webknossos/pull/8008)
+- Various fixes for composing datasets with landmarks. Note that the interpretation of correspondence points was inverted for thin plate splines. [#7992](https://github.com/scalableminds/webknossos/pull/7992)
 
 ### Removed
 

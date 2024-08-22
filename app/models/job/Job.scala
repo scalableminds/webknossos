@@ -79,11 +79,16 @@ case class Job(
       else s"$resultLink"
     } yield resultLinkPublic
 
-  def resultLinkSlackFormatted(organizationName: String, webknossosPublicUrl: String): Option[String] =
-    for {
+  def resultLinkSlackFormatted(organizationName: String, webknossosPublicUrl: String): String =
+    (for {
       resultLink <- resultLinkPublic(organizationName, webknossosPublicUrl)
       resultLinkFormatted = s" <$resultLink|Result>"
-    } yield resultLinkFormatted
+    } yield resultLinkFormatted).getOrElse("")
+
+  def workflowLinkSlackFormatted(webknossosPublicUrl: String): String =
+    _voxelyticsWorkflowHash.map { hash =>
+      s" <$webknossosPublicUrl/workflows/$hash|Workflow Report>"
+    }.getOrElse("")
 }
 
 class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

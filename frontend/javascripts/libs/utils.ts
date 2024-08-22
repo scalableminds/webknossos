@@ -16,8 +16,6 @@ import type {
 import window, { document, location } from "libs/window";
 import { ArbitraryObject, Comparator } from "types/globals";
 import dayjs from "dayjs";
-import Toast from "./toast";
-import ErrorHandling from "libs/error_handling";
 
 type UrlParams = Record<string, string>;
 // Fix JS modulo bug
@@ -1301,14 +1299,4 @@ export function generateRandomId(length: number) {
     counter += 1;
   }
   return result;
-}
-
-export async function guardedWithErrorToast(fn: () => Promise<any>) {
-  try {
-    await fn();
-  } catch (error) {
-    Toast.error("An unexpected error occurred. Please check the console for details");
-    console.error(error);
-    ErrorHandling.notify(error as Error);
-  }
 }

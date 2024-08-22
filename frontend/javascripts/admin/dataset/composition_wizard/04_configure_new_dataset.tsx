@@ -9,7 +9,7 @@ import { Button, Checkbox, Col, Form, FormInstance, Input, List, Modal, Row, Too
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
-import Toast from "libs/toast";
+import Toast, { guardedWithErrorToast } from "libs/toast";
 import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
@@ -209,11 +209,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>
       <p>Please configure the dataset that is about to be created.</p>
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={() => Utils.guardedWithErrorToast(handleSubmit)}
-      >
+      <Form form={form} layout="vertical" onFinish={() => guardedWithErrorToast(handleSubmit)}>
         <Row gutter={8}>
           <Col span={12}>
             <DatasetNameFormItem activeUser={activeUser} />

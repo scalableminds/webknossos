@@ -257,17 +257,22 @@ export default function* performQuickSelect(
     const userBoxRelativeToMaskInMag = userBoxInMag.offset(V3.negate(maskBoxInMag.min));
 
     let wOffset = 0;
+    const currentEstimationInputForBBoxEstimation = {
+      min: userBoxRelativeToMaskInMag.getMinUV(activeViewport),
+      max: userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
+    };
     for (const mask of masks) {
       const targetW = alignedUserBoxMag1.min[thirdDim] + labeledResolution[thirdDim] * wOffset;
 
       const { min: minUV, max: maxUV } = estimateBBoxInMask(
         mask,
-        {
-          min: userBoxRelativeToMaskInMag.getMinUV(activeViewport),
-          max: userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
-        },
+        currentEstimationInputForBBoxEstimation,
         MAXIMUM_PADDING_ERROR,
       );
+      // Use the estimated bbox as input for the next iteration so that
+      // moving segments don't "exit" the used bbox at the some point in W.
+      currentEstimationInputForBBoxEstimation.min = minUV;
+      currentEstimationInputForBBoxEstimation.max = maxUV;
 
       // Span a bbox from the estimated values (relative to the mask)
       // and move it by the mask's min position to achieve a global

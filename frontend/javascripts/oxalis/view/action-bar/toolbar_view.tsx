@@ -49,7 +49,6 @@ import {
   adaptActiveToolToShortcuts,
 } from "oxalis/model/accessors/tool_accessor";
 import { setToolAction, showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
-import { toNullable } from "libs/utils";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { usePrevious, useKeyPress } from "libs/react_hooks";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -556,10 +555,7 @@ function CreateNewBoundingBoxButton() {
 
 function CreateTreeButton() {
   const dispatch = useDispatch();
-  const activeTree = useSelector((state: OxalisState) =>
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'SkeletonTracing | null | undefin... Remove this comment to see the full error message
-    toNullable(getActiveTree(state.tracing.skeleton)),
-  );
+  const activeTree = useSelector((state: OxalisState) => getActiveTree(state.tracing.skeleton));
   const rgbColorString =
     activeTree != null
       ? `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`
@@ -1104,7 +1100,7 @@ export default function ToolbarView() {
         ) : null}
         <ToolRadioButton
           name={TOOL_NAMES.QUICK_SELECT}
-          description="Draw a rectangle around a segment to automatically detect it"
+          description="Click on a segment or draw a rectangle around it to automatically detect it"
           disabledExplanation={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].explanation}
           disabled={disabledInfosForTools[AnnotationToolEnum.QUICK_SELECT].isDisabled}
           style={NARROW_BUTTON_STYLE}
@@ -1322,8 +1318,8 @@ function NuxPopConfirm({ children }: { children: React.ReactNode }) {
         });
         dispatch(setActiveUserAction(newUserSync));
       }}
-      description="The AI-based Quick Select can now be run for multiple sections at once. Open the settings here to enable this."
-      overlayStyle={{ maxWidth: 500 }}
+      description="The AI-based Quick Select can now be triggered with a single click. Also, it can be run for multiple sections at once (open the settings here to enable this)."
+      overlayStyle={{ maxWidth: 400 }}
       icon={<InfoCircleOutlined style={{ color: "green" }} />}
       children={children}
     />

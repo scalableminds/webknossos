@@ -592,11 +592,14 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     }
 
     let needsConversion = true;
+    const fileBaseNames = fileNames.map((name) => name.split(/[\\/]/).pop());
     if (
       containsExtension("wkw") ||
-      containsExtension("zarray") ||
-      fileNames.includes("datasource-properties.json") ||
-      fileNames.includes("zarr.json")
+      containsExtension("zarray") || // zarr2
+      fileBaseNames.includes("datasource-properties.json") || // wk-ready dataset
+      fileBaseNames.includes("zarr.json") || // zarr 3
+      fileBaseNames.includes("info") || // neuroglancer precomputed
+      fileBaseNames.includes("attributes.json") // n5
     ) {
       needsConversion = false;
     }

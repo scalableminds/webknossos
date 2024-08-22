@@ -35,6 +35,7 @@ case class DatasetUpdateParameters(
     displayName: Option[Option[String]] = Some(None),
     sortingKey: Option[Instant],
     isPublic: Option[Boolean],
+    tags: Option[List[String]],
     metadata: Option[JsArray],
     folderId: Option[ObjectId]
 )
@@ -326,10 +327,10 @@ class DatasetController @Inject()(userService: UserService,
               displayName,
               sortingKey.getOrElse(dataset.created),
               isPublic,
+              tags,
               maybeUpdatedMetadata,
               folderId.getOrElse(dataset._folder)
             )
-            _ <- datasetDAO.updateTags(dataset._id, tags)
             updated <- datasetDAO.findOneByNameAndOrganization(datasetName, request.identity._organization)
             _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
             js <- datasetService.publicWrites(updated, Some(request.identity))

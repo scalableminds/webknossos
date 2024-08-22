@@ -56,20 +56,6 @@ SET metadata = CASE
         metadata
 END;
 
--- Move all tags into metadata
-UPDATE webknossos.datasets
-SET metadata = metadata || jsonb_build_array(
-    jsonb_build_object(
-        'type', 'string[]',
-        'key', 'tags',
-        'value', tags
-    )
-)
-WHERE EXISTS (
-    SELECT 1
-    FROM unnest(tags) AS t
-);
-
 -- Drop details
 ALTER TABLE webknossos.datasets DROP COLUMN details;
 

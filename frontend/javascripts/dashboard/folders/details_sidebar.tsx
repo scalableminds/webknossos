@@ -16,7 +16,7 @@ import {
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect } from "react";
 import { APIDatasetCompact, Folder } from "types/api_flow_types";
-import { DatasetLayerTags, TeamTags } from "../advanced_dataset/dataset_table";
+import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import { useSelector } from "react-redux";
@@ -88,6 +88,7 @@ function getMaybeSelectMessage(datasetCount: number) {
 }
 
 function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompact }) {
+  const context = useDatasetCollectionContext();
   // exactDatasetId is needed to prevent refetching when some dataset property of selectedDataset was changed.
   const exactDatasetId = {
     owningOrganization: selectedDataset.owningOrganization,
@@ -177,6 +178,14 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
             </Tag>
           )}
         </div>
+
+        {selectedDataset.isActive ? (
+          <div style={{ marginBottom: 4 }}>
+            <div className="sidebar-label">Tags</div>
+            <DatasetTags dataset={selectedDataset} updateDataset={context.updateCachedDataset} />
+          </div>
+        ) : null}
+
         {fullDataset && (
           /* The key is crucial to enforce rerendering when the dataset changes. This is necessary for the MetadataTable to work correctly. */
           <MetadataTable

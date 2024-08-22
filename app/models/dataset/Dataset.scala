@@ -475,6 +475,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       params.displayName.map(v => q"displayName = $v"),
       params.sortingKey.map(v => q"sortingKey = $v"),
       params.isPublic.map(v => q"isPublic = $v"),
+      params.tags.map(v => q"tags = $v"),
       params.folderId.map(v => q"_folder = $v"),
       params.metadata.map(v => q"metadata = $v"),
     ).flatten
@@ -498,15 +499,17 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                    displayName: Option[String],
                    sortingKey: Instant,
                    isPublic: Boolean,
-                   metadata: Option[JsArray],
+                   tags: List[String],
+                   metadataOpt: Option[JsArray],
                    folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val updateParameters = new DatasetUpdateParameters(
       description = Some(description),
       displayName = Some(displayName),
       sortingKey = Some(sortingKey),
       isPublic = Some(isPublic),
-      metadata = metadata,
+      metadata = metadataOpt,
       folderId = Some(folderId)
+      tags = Some(tags)
     )
     updatePartial(datasetId, updateParameters)
   }

@@ -5,8 +5,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
-import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffGroupHeader,
   NgffMetadata,
@@ -29,6 +28,7 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc._
 
 import scala.concurrent.ExecutionContext
+import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 
 class ZarrStreamingController @Inject()(
     dataSourceRepository: DataSourceRepository,
@@ -37,7 +37,8 @@ class ZarrStreamingController @Inject()(
     remoteWebknossosClient: DSRemoteWebknossosClient,
     remoteTracingstoreClient: DSRemoteTracingstoreClient,
 )(implicit ec: ExecutionContext)
-    extends Controller {
+    extends Controller
+    with Zarr3OutputHelper {
 
   override def defaultErrorCode: Int = NOT_FOUND
 
@@ -182,25 +183,34 @@ class ZarrStreamingController @Inject()(
     val dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3
     layer match {
       case s: SegmentationLayer =>
+        val rank = s.additionalAxes.map(_.length).getOrElse(0) + 4 // We’re writing c, additionalAxes, xyz
         ZarrSegmentationLayer(
           s.name,
           s.boundingBox,
           s.elementClass,
-          s.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+          mags = s.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cAdditionalxyz(rank)), None, None)),
           mappings = s.mappings,
           largestSegmentId = s.largestSegmentId,
           numChannels = Some(if (s.elementClass == ElementClass.uint24) 3 else 1),
+          defaultViewConfiguration = s.defaultViewConfiguration,
+          adminViewConfiguration = s.adminViewConfiguration,
+          coordinateTransformations = s.coordinateTransformations,
+          additionalAxes = s.additionalAxes.map(reorderAdditionalAxes),
           dataFormat = dataFormat
         )
       case d: DataLayer =>
+        val rank = d.additionalAxes.map(_.length).getOrElse(0) + 4 // We’re writing c, additionalAxes, xyz
         ZarrDataLayer(
           d.name,
           d.category,
           d.boundingBox,
           d.elementClass,
-          d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cxyz), None, None)),
+          mags = d.resolutions.map(x => MagLocator(x, None, None, Some(AxisOrder.cAdditionalxyz(rank)), None, None)),
           numChannels = Some(if (d.elementClass == ElementClass.uint24) 3 else 1),
-          additionalAxes = None,
+          defaultViewConfiguration = d.defaultViewConfiguration,
+          adminViewConfiguration = d.adminViewConfiguration,
+          coordinateTransformations = d.coordinateTransformations,
+          additionalAxes = d.additionalAxes.map(reorderAdditionalAxes),
           dataFormat = dataFormat
         )
     }
@@ -223,8 +233,11 @@ class ZarrStreamingController @Inject()(
           .map(convertLayerToZarrLayer(_, zarrVersion))
         annotationLayers <- Fox.serialCombined(volumeAnnotationLayers)(
           l =>
-            remoteTracingstoreClient
-              .getVolumeLayerAsZarrLayer(l.tracingId, Some(l.name), annotationSource.tracingStoreUrl, relevantToken))
+            remoteTracingstoreClient.getVolumeLayerAsZarrLayer(l.tracingId,
+                                                               Some(l.name),
+                                                               annotationSource.tracingStoreUrl,
+                                                               relevantToken,
+                                                               zarrVersion))
         allLayer = dataSourceLayers ++ annotationLayers
         zarrSource = GenericDataSource[DataLayer](dataSource.id, allLayer, dataSource.scale)
         zarrSourceJson <- replaceVoxelSizeByLegacyFormat(Json.toJson(zarrSource))
@@ -279,7 +292,10 @@ class ZarrStreamingController @Inject()(
       (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
                                                                                 datasetName,
                                                                                 dataLayerName) ~> NOT_FOUND
-      (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(coordinates) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
+      reorderedAdditionalAxes = dataLayer.additionalAxes.map(reorderAdditionalAxes)
+      (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
+        coordinates,
+        reorderedAdditionalAxes) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
       magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
       _ <- bool2Fox(dataLayer.containsResolution(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       cubeSize = DataLayer.bucketLength
@@ -379,11 +395,12 @@ class ZarrStreamingController @Inject()(
     )
   }
 
-  def ifIsAnnotationLayerOrElse(token: Option[String],
-                                accessToken: String,
-                                dataLayerName: String,
-                                ifIsAnnotationLayer: (AnnotationLayer, AnnotationSource, Option[String]) => Fox[Result],
-                                orElse: AnnotationSource => Fox[Result])(implicit request: Request[Any]): Fox[Result] =
+  private def ifIsAnnotationLayerOrElse(
+      token: Option[String],
+      accessToken: String,
+      dataLayerName: String,
+      ifIsAnnotationLayer: (AnnotationLayer, AnnotationSource, Option[String]) => Fox[Result],
+      orElse: AnnotationSource => Fox[Result])(implicit request: Request[Any]): Fox[Result] =
     for {
       annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
       relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)

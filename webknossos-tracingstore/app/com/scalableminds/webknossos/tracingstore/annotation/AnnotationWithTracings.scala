@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, 
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
   EditableMappingUpdateAction,
   EditableMappingUpdater
@@ -44,9 +44,11 @@ case class AnnotationWithTracings(
   def addTracing(a: AddLayerAnnotationUpdateAction): AnnotationWithTracings =
     AnnotationWithTracings(
       annotation.copy(
-        layers = annotation.layers :+ AnnotationLayerProto(a.tracingId,
-                                                           a.layerName,
-                                                           `type` = AnnotationLayerType.toProto(a.`type`))),
+        layers = annotation.layers :+ AnnotationLayerProto(
+          a.tracingId,
+          a.layerParameters.name.getOrElse(AnnotationLayer.defaultNameForType(a.layerParameters.typ)),
+          `type` = AnnotationLayerType.toProto(a.layerParameters.typ)
+        )),
       tracingsById,
       editableMappingsByTracingId
     )

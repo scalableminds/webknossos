@@ -507,9 +507,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       displayName = Some(displayName),
       sortingKey = Some(sortingKey),
       isPublic = Some(isPublic),
+      tags = Some(tags),
       metadata = metadataOpt,
       folderId = Some(folderId)
-      tags = Some(tags)
     )
     updatePartial(datasetId, updateParameters)
   }

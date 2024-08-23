@@ -11,4 +11,4 @@ The following functionality is available for each segment:
 - changing the color of the segment
 - activating the segment id (so that you can annotate with that id)
 
-![Segments Tab](images/segments_tab2.jpeg)
+![Segments Tab](../images/segments_tab2.jpeg)

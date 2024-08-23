@@ -37,13 +37,13 @@ Create a free account on [https://webknossos.org/](https://webknossos.org/) and 
 
 ## Screenshots
 
-![Skeleton Annotations](./images/tracing_ui_skeleton.jpeg)
-![Volume Annotations](./images/tracing_ui_volume.jpeg)
-![Flight Mode](./images/tracing_ui_flight.jpeg)
+![Skeleton Annotations](../images/tracing_ui_skeleton.jpeg)
+![Volume Annotations](../images/tracing_ui_volume.jpeg)
+![Flight Mode](../images/tracing_ui_flight.jpeg)
 
-![Managing Datasets](./images/dashboard_datasets.jpeg)
-![Working on Tasks](./images/dashboard_tasks.jpeg)
-![Showcasing Datasets](./images/dashboard_featured_publications.jpeg)
+![Managing Datasets](../images/dashboard_datasets.jpeg)
+![Working on Tasks](../images/dashboard_tasks.jpeg)
+![Showcasing Datasets](../images/dashboard_featured_publications.jpeg)
 
 # Built for Science
 

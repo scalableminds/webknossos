@@ -10,7 +10,7 @@ WEBKNOSSOS skeleton annotations can be downloaded, modified, and imported using 
 
 This article shows you how to view, edit, or create skeleton annotations in WEBKNOSSOS
 
-![An example of a complex WEBKNOSSOS skeleton annotation](images/tracing_ui_skeletontracing.jpeg)
+![An example of a complex WEBKNOSSOS skeleton annotation](../images/tracing_ui_skeletontracing.jpeg)
 
 
 ![youtube-video](https://www.youtube.com/embed/iw2C7XB6wP4?start=306)
@@ -53,5 +53,5 @@ There are two ways for merging annotations:
 
 2. If you would like to merge your current annotation with another existing annotation, select the `Merge` operation from the overflow menu next to the `Save` button (see image). Either enter the ID of an existing explorative annotation or select a whole project and proceed to merge the selection with your currently open annotation. The resulting annotation can either be created as a new explorative annotation or the merge will happen in your current annotation.
 
-![1. Select the Merge operation from the menu](images/tracing_ui_merge_1.jpeg)
-![2. Merging can be done with the whole WEBKNOSSOS project or using the ID of an existing explorative annotation](images/tracing_ui_merge_2.jpeg)
+![1. Select the Merge operation from the menu](../images/tracing_ui_merge_1.jpeg)
+![2. Merging can be done with the whole WEBKNOSSOS project or using the ID of an existing explorative annotation](../images/tracing_ui_merge_2.jpeg)

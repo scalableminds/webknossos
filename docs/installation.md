@@ -55,13 +55,13 @@ When starting with WEBKNOSSOS you first need to create an organization.
 An organization represents your lab in WEBKNOSSOS and handles permissions for users and datasets.
 Choose a descriptive name for your organization, e.g., "The University of Springfield", "Simpsons Lab" or "Neuroscience Department".
 
-![Create your organization](./images/onboarding_organization.jpeg)
+![Create your organization](../images/onboarding_organization.jpeg)
 
 In the onboarding flow, you are asked to create a user account for yourself.
 This will be the first user of your organization which will automatically be activated and granted admin rights.
 Make sure to enter a correct email address.
 
-![Create your first user](./images/onboarding_user.jpeg)
+![Create your first user](../images/onboarding_user.jpeg)
 
 
 ### Your First Dataset
@@ -78,5 +78,5 @@ If you do not have a compatible dataset available, you can convert your own data
 By default, datasets are visible to all users in your organization.
 However, WEBKNOSSOS includes fine-grained permissions to assign datasets to groups of users.
 
-![Upload your first dataset](./images/onboarding_data1.jpeg)
-![Confirm the detected dataset properties](./images/onboarding_data2.jpeg)
+![Upload your first dataset](../images/onboarding_data1.jpeg)
+![Confirm the detected dataset properties](../images/onboarding_data2.jpeg)

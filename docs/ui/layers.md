@@ -22,7 +22,7 @@ Each dataset consists of one or more data and annotation layers. A dataset typic
 - `Visibility`: Use the eye icon on the left side of layer name to enable/disable it. Toggling the visibility of a layer, is often the quickest way to make information available in the dataset or hide to get an overview.
   Disabling the visibility, unloads/frees these resources from your GPU hardware and can make viewing larger datasets more performant. Also, depending on your GPU hardware, there is a physical upper limit for how many layers - typically 16 or more - can be displayed at any time (WebGL limitation). Toggle layers as needed to mitigate this.
 
-![The Histogram overview](images/histogram.jpeg)
+![The Histogram overview](../images/histogram.jpeg)
 
 ### Color and Segmentation Layers
 
@@ -78,7 +78,7 @@ Note, not all control/viewport settings are available in every annotation mode.
 
 |Additive Blend Mode        | &nbsp;&nbsp;&nbsp;&nbsp;Cover Blend Mode &nbsp; &nbsp;|
 |:-------------------------:|:-------------------------:|
-|![](./images/blend-mode-example-additive-bosch-et-al.png)|![](./images/blend-mode-example-cover-bosch-et-al.png)|
+|![](../images/blend-mode-example-additive-bosch-et-al.png)|![](../images/blend-mode-example-cover-bosch-et-al.png)|
 
 - `4 Bit`: Toggles data download from the server using only 4 bit instead of 8 bit for each voxel. Use this to reduce the amount of necessary internet bandwidth for WEBKNOSSOS. Useful for showcasing data on the go over cellular networks, e.g 4G.
 - `Interpolation`: When interpolation is enabled, bilinear filtering is applied while rendering pixels between two voxels. As a result, data may look "smoother" (or blurry when being zoomed in very far). Without interpolation, data may look more "crisp" (or pixelated when being zoomed in very far).

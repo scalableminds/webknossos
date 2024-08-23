@@ -54,7 +54,7 @@ To share a dataset privately, follow these steps:
 2. Select the dataset that you want to share and click on `Settings`.
 3. Under the `Sharing & Permissions` tab, scroll down to the `Sharing Link` and copy it.
 
-![Configure the Dataset Sharing](images/dataset_general.jpeg)
+![Configure the Dataset Sharing](../images/dataset_general.jpeg)
 
 To revoke a sharing link in the future, click the `Revoke` button on the right-hand side of the link.
 
@@ -66,7 +66,7 @@ Public access rights are not required for private sharing.**
 Public sharing provides access to your dataset to the general public.
 Anyone can access the shared dataset and view it on your WEBKNOSSOS instance without the need for an account.
 
-![The Featured Publications tab provides a public showcase of selected published, community datasets. ](images/getting_started-datasets.jpeg)
+![The Featured Publications tab provides a public showcase of selected published, community datasets. ](../images/getting_started-datasets.jpeg)
 
 Public datasets provide an easy and convenient way of sharing your data with outside users after you have successfully published them.
 Outside users can explore your data from the comfort of their browser without needing to sign up for an account.
@@ -79,7 +79,7 @@ To share a dataset publicly, follow these steps:
 4. Copy the sharing link and distribute it to your colleagues through email, social media, messengers, etc.
 5. (Recommended. From the `Metadata` tab, add/edit the dataset's description and give it a more appropriate title (`Display name`)).
 
-![The Metadata tab overview](images/metadata_tab.jpeg)
+![The Metadata tab overview](../images/metadata_tab.jpeg)
 
 **We recommend giving your datasets a meaningful display name and description. Both are featured next to the data viewport in the `Info` tab in the main WEBKNOSSOS UI.**
 
@@ -103,7 +103,7 @@ To change the visibility of an annotation, follow these steps:
 2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Select the desired permission level from the three available options.
 
-![Configure the Annotation Permissions](images/sharing_modal_visibility.jpeg)
+![Configure the Annotation Permissions](../images/sharing_modal_visibility.jpeg)
 
 Additionally, you can control whether other users, who can see your annotation, may also edit your annotation.
 Use this setting to enable collaborative work within your annotation.
@@ -138,7 +138,7 @@ To get the sharing link of an annotation, follow the same steps as for changing 
 2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Copy the sharing URL.
 
-![Get the Annotation Sharing Link](images/sharing_modal_link.jpeg)
+![Get the Annotation Sharing Link](../images/sharing_modal_link.jpeg)
 
 #### Sharing Link Format
 
@@ -223,7 +223,7 @@ To share an annotation with a certain team, follow these steps:
 2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Under *Team Sharing*, select the teams from the dropdown menu.
 
-![Enable Team Sharing for your annotation](images/sharing_modal_team.jpeg)
+![Enable Team Sharing for your annotation](../images/sharing_modal_team.jpeg)
 
 Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](./dashboard.md#shared-annotations). By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.
 

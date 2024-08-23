@@ -8,7 +8,7 @@ The main WEBKNOSSOS user interface for viewing and annotating datasets is divide
 4. The right-hand side panel is occupied by several tabs providing more information on your current dataset, skeleton/volume annotations, and other lists. Depending on your editing mode these tabs might adapt.
 5. The bottom of the screen is covered by a status bar showing context-sensitive hints for mouse controls as well as additional information on mouse hover.
 
-![An overview of the WEBKNOSSOS annotation UI highlighting the 4 main sections of the interface](images/tracing_ui_overview.jpeg)
+![An overview of the WEBKNOSSOS annotation UI highlighting the 4 main sections of the interface](../images/tracing_ui_overview.jpeg)
 
 Read More About [Skeleton Annotation](./skeleton_annotation.md)
 

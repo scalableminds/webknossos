@@ -26,7 +26,7 @@ WKW cubes are 1024^3 voxels in size by default and each cube is stored as one fi
 Each cube contains multiple *buckets* of 32^3 voxel size.
 This is the unit in which the data is streamed to a user's browser.
 
-![Datasets, Cubes, and Buckets](images/cubes-and-buckets.jpeg)
+![Datasets, Cubes, and Buckets](../images/cubes-and-buckets.jpeg)
 
 ### Layers
 
@@ -37,7 +37,7 @@ Additionally, there may be one or more `segmentation` layers that hold manually 
 
 A WEBKNOSSOS dataset can contain several `color` and `segmentation` layers which can be rendered individually or overlaid on top of each other. The maximum number of visible layers depends on your GPU hardware - typically 16 layers.
 
-![Color and Segmentation Layers](images/datalayers.jpeg)
+![Color and Segmentation Layers](../images/datalayers.jpeg)
 
 ### Magnification Steps and Downsampling
 
@@ -48,7 +48,7 @@ Downsampling is done in power-of-two steps: `1, 2, 4, 8, 16, 32, 64, …`
 
 WEBKNOSSOS also supports non-uniform (anisotropic) downsampling. For example, `[2, 2, 1]` is downsampled in the `x` and `y` dimensions, but not in `z`.
 
-![Downsampling the data to improve zooming](images/downsampling.jpeg)
+![Downsampling the data to improve zooming](../images/downsampling.jpeg)
 
 
 ### Segmentation

@@ -7,7 +7,7 @@ Mesh visibility can also be triggered from the `Segments` tab.
 Shift + Click on any mesh in the 3D viewport will navigate WEBKNOSSOS to that position.
 CTRL + Click on any mesh will unload that mesh.
 
-![Segments Tab](images/segments_tab2.jpeg)
+![Segments Tab](../images/segments_tab2.jpeg)
 
 Additionally, hiding, removing, reloading a mesh or jumping to its hovered position can be done with the context menu in the 3d viewport via right-click on a hovered mesh.
 

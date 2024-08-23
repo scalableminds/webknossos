@@ -25,13 +25,13 @@ To get started, navigate to the `Featured Publications` tab on your [dashboard](
 There, you find a list of all available public datasets.
 Click on the dataset name to open the dataset.
 
-![The list of available datasets](./images/getting_started-datasets.jpeg)
+![The list of available datasets](../images/getting_started-datasets.jpeg)
 
 You can open any WEBKNOSSOS dataset for read-only viewing (“View” mode) or in editor-mode to create a new skeleton and/or volume annotation.
 Three orthogonal viewports slicing the data along the major axis and a 3D viewport make up the main WEBKNOSSOS user interface.
 Read more [about the user interface](./tracing_ui.md).
 
-![The WEBKNOSSOS user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](./images/main_ui.jpeg)
+![The WEBKNOSSOS user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](../images/main_ui.jpeg)
 
 You can use the following shortcuts to navigate the data.
 See the full list of [gestures and keyboard shortcuts](./keyboard_shortcuts.md) for advanced use.
@@ -49,7 +49,7 @@ See the full list of [gestures and keyboard shortcuts](./keyboard_shortcuts.md) 
 
 You can also change the size of the viewports to see more details in your data and customize your layout.
 
-![Explore datasets with customized viewport layouts](./images/getting_started-viewports.jpeg)
+![Explore datasets with customized viewport layouts](../images/getting_started-viewports.jpeg)
 
 ## Your First Annotation
 
@@ -69,7 +69,7 @@ Use the mouse wheel or press the spacebar keyboard shortcut to move along the 3r
 
 Read the guides about the [annotation UI](./tracing_ui.md), [skeleton annotation](./skeleton_annotation.md), or [volume annotation](./volume_annotation.md) for more details.
 
-![Editing skeleton and volume annotations in the Annotation UI](./images/tracing_ui.jpeg)
+![Editing skeleton and volume annotations in the Annotation UI](../images/tracing_ui.jpeg)
 
 ## Tutorials
 We have tutorials on a wide range of topics to get you started. Also check out our [YouTube channel](https://www.youtube.com/@webknossos) for video guides. 

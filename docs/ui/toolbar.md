@@ -24,7 +24,7 @@ A user can directly jump to any position within their datasets by entering them 
 The same is true for the camera rotation in flight/oblique modes.
 Clicking on the position or rotation labels copies the values to the clipboard.
 
-![The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving und Undo/Redo](images/tracing_ui_toolbar.jpeg)
+![The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving und Undo/Redo](../images/tracing_ui_toolbar.jpeg)
 
 The toolbar further features all available navigation and annotation tools for quick access:
 
@@ -40,4 +40,4 @@ The toolbar further features all available navigation and annotation tools for q
 
 Please see the detailed documentation on [skeleton](./skeleton_annotation.md#tools) and [volume annotation](./volume_annotation.md#tools) tools for a for explanation of all context-sensitve modifiers that are available to some tools.
 
-![The WEBKNOSSOS navigation and annotation tools](images/tracing_ui_toolbar2.jpeg)
+![The WEBKNOSSOS navigation and annotation tools](../images/tracing_ui_toolbar2.jpeg)

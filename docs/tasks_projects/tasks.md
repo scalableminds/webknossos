@@ -9,7 +9,7 @@ First, a _Task Type_ needs to be created:
    - Note that the `Description` field supports Markdown formatting.
    - If you don't have a sophisticated team structure, select the [default Team](./users.md#organizations).
 
-![Create a Task Type](./images/tasks_tasktype.jpeg)
+![Create a Task Type](../images/tasks_tasktype.jpeg)
 
 Next, you need to set up a [Project](./projects.md):
 
@@ -20,7 +20,7 @@ Next, you need to set up a [Project](./projects.md):
    - Note that you can assign a `Priority` to the Project. A higher value means that Tasks from this Project will be more likely to be assigned to users.
    - With the `Time Limit` property, you can specify the expected completion time of a Task Instance. There will be an email notification if users exceed this limit.
 
-![Create a Project](./images/tasks_project.jpeg)
+![Create a Project](../images/tasks_project.jpeg)
 
 Now, you are ready to create _Tasks_:
 
@@ -33,25 +33,25 @@ Now, you are ready to create _Tasks_:
 
 Tasks can also be created in bulk using the advanced CSV text input. Not recommended for beginners.
 
-![Create a Task](./images/tasks_task.jpeg)
+![Create a Task](../images/tasks_task.jpeg)
 
 **Note that you need to specify required _Experiences_ for a _Task_. Your _Task_ can only be assigned if there are users that have the required _Experience_ assigned to them. You can assign an Experience to a user on the `Users` screen.**
 
-![Assigning Experiences to users](./images/users_experience.jpeg)
+![Assigning Experiences to users](../images/users_experience.jpeg)
 
 After your _Task_ is created, other users in your organization can request _Tasks_ from their dashboard (_Tasks_ tab).
 If there are no other projects with high priorities, they will eventually get your _Task_ assigned.
 Alternatively, you can manually assign a task to individual users (see below).
 Once a user is done working on a task, they can mark the task as `Finished`.
 
-![Requesting Tasks in the Dashboard](./images/dashboard_tasks.jpeg)
+![Requesting Tasks in the Dashboard](../images/dashboard_tasks.jpeg)
 
 Finally, you can collect and review the completed data of all annotations within a project:
 
 1. Navigate to the `Project` page
 2. Select to _View_ or _Download_ all the combined annotations.
 
-![Download all Tasks of a Project](./images/tasks_download.jpeg)
+![Download all Tasks of a Project](../images/tasks_download.jpeg)
 
 ![youtube-video](https://www.youtube.com/embed/2A3en7Kxl3M)
 
@@ -87,4 +87,4 @@ Existing, active and finished task instances can also be transferred to other us
 5. Select a user for the task transferal from the dropdown
 6. Confirm the task transfer with "ok"
 
-![Transfer a task instance to a new user and additional task administration actions.](./images/task_instance_actions.jpg)
+![Transfer a task instance to a new user and additional task administration actions.](../images/task_instance_actions.jpg)

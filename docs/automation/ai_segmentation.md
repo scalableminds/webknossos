@@ -16,8 +16,8 @@ Computation time for this analysis depends directly on the size of your dataset.
 Expect a few hours for medium-sized volumetric EM datasets. 
 The finished analysis will be available as a new dataset from your dashboard. You can monitor the status and progress of the analysis job from the [`Processing Jobs` page](./jobs.md) or wait for the email notification.
 
-![Starting a new neuron segmentation.](images/neuron_segmentation_start.jpeg)
-![Monitor the segmentation progress from the Jobs page.](images/nuclei_segmentation_job.jpeg)
+![Starting a new neuron segmentation.](../images/neuron_segmentation_start.jpeg)
+![Monitor the segmentation progress from the Jobs page.](../images/nuclei_segmentation_job.jpeg)
 
 ## Custom Analysis
 At the moment, WEBKNOSSOS can not be used to train custom classifiers. This might be something that we add in the future if there is enough interest in this.

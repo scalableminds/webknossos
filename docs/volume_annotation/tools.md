@@ -25,9 +25,9 @@ The following interactions and modifiers are available when working with the vol
 - `Only Overwrite Empty Areas`: In contrast to the `Overwrite Everything` modifier, the forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
 - `2D Fill`/ `3D Fill`: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labeling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about flood fills below.
 
-![Adding labels with the Trace tool](./images/volume_trace.gif)
-![Adding labels with the Brush tool](./images/volume_brush.gif)
-![Removing labels with the Brush tool](./images/volume_delete.gif)
+![Adding labels with the Trace tool](../images/volume_trace.gif)
+![Adding labels with the Brush tool](../images/volume_brush.gif)
+![Removing labels with the Brush tool](../images/volume_delete.gif)
 
 In the `Segmentation` tab on the right-hand side panel, you can see the segment IDs which are available in your annotation. You can rename segments as needed.
 

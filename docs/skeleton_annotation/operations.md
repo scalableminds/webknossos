@@ -12,7 +12,7 @@ This action can be applied to multiple trees by selecting them with Ctrl + Left 
 Right-click on an existing tree group to bring up a menu for creating new (sub-)groups or to delete a group.
 Renaming of a group can be done by selecting a group and then entering a new name into the input above the tree hierarchy structure view.
 
-![Organize your skeleton annotation's trees to remember important structures for later reference](images/tracing_ui_trees.jpeg)
+![Organize your skeleton annotation's trees to remember important structures for later reference](../images/tracing_ui_trees.jpeg)
 
 ## Merging / Splitting Trees
 
@@ -25,7 +25,7 @@ Common tree operations include splitting and merging trees.
 
 - `Tree merging` works similarly to edge deletion but will create a new edge between two previously unconnected trees. Select the first node and right-click on a second one to choose _Create Edge & Merge with this Tree_. When using _Classic Controls_, the second node needs to be selected with _SHIFT + ALT + Left Click_ to create an edge between the two.
 
-![Trees can split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.](images/tracing_ui_tree_merge_split.gif)
+![Trees can split by deleting the edge between two nodes or deleting a node. Two trees can be merged again by creating a new edge between them.](../images/tracing_ui_tree_merge_split.gif)
 
 ## Tree Colors
 
@@ -37,7 +37,7 @@ All nodes have the same color as their parent tree and can not be changed indivi
 The active node, branch points, and nodes that have comments assigned to them are highlighted with a slight variation of the tree's color.
 
 ![Trees are randomly assigned colors upon creation.
-Users can assign new random colors to a single tree or all trees at once.](images/tracing_ui_tree_color.jpeg)
+Users can assign new random colors to a single tree or all trees at once.](../images/tracing_ui_tree_color.jpeg)
 
 ## Skeleton & Tree Visibility
 
@@ -53,13 +53,13 @@ There are also keyboard shortcuts to quickly toggle the visibility:
 | 1           | Toggle Visibility of all Trees      |
 | 2           | Toggle Visibility of Inactive Trees |
 
-![Trees can be hidden for a better overview of the data. Toggle the visibility of an individual tree using the checkbox in front of the tree's name or use the button to toggle all (inactive) trees at once.](images/tracing_ui_tree_visibility.jpeg)
+![Trees can be hidden for a better overview of the data. Toggle the visibility of an individual tree using the checkbox in front of the tree's name or use the button to toggle all (inactive) trees at once.](../images/tracing_ui_tree_visibility.jpeg)
 
 ## The Context Menu for Easy Access to Functionalities
 
 WEBKNOSSOS has a context menu that can be opened via _Right Click_ (or _Shift + Right Click_ if _Classic Controls_ are enabled). This context menu offers useful context-sensitive information and most operations should be available through it:
 
-![Example of the context menu](./images/context_menu.jpeg)
+![Example of the context menu](../images/context_menu.jpeg)
 
 Example operations include (but are not limited to):
 

@@ -29,7 +29,7 @@ To share a dataset privately, follow these steps:
 2. Select the dataset that you want to share and click on `Settings`.
 3. Under the `Sharing & Permissions` tab, scroll down to the `Sharing Link` and copy it.
 
-![Configure the Dataset Sharing](images/dataset_general.jpeg)
+![Configure the Dataset Sharing](../images/dataset_general.jpeg)
 
 To revoke a sharing link in the future, click the `Revoke` button on the right-hand side of the link.
 
@@ -41,7 +41,7 @@ Public access rights are not required for private sharing.**
 Public sharing provides access to your dataset to the general public.
 Anyone can access the shared dataset and view it on your WEBKNOSSOS instance without the need for an account.
 
-![The Featured Publications tab provides a public showcase of selected published, community datasets. ](images/getting_started-datasets.jpeg)
+![The Featured Publications tab provides a public showcase of selected published, community datasets. ](../images/getting_started-datasets.jpeg)
 
 Public datasets provide an easy and convenient way of sharing your data with outside users after you have successfully published them.
 Outside users can explore your data from the comfort of their browser without needing to sign up for an account.
@@ -54,7 +54,7 @@ To share a dataset publicly, follow these steps:
 4. Copy the sharing link and distribute it to your colleagues through email, social media, messengers, etc.
 5. (Recommended. From the `Metadata` tab, add/edit the dataset's description and give it a more appropriate title (`Display name`)).
 
-![The Metadata tab overview](images/metadata_tab.jpeg)
+![The Metadata tab overview](../images/metadata_tab.jpeg)
 
 **We recommend giving your datasets a meaningful display name and description. Both are featured next to the data viewport in the `Info` tab in the main WEBKNOSSOS UI.**
 

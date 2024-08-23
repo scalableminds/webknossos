@@ -6,4 +6,4 @@ All new organization members are assigned to that team by default.
 
 An organization can contain as many teams as you like. Users can be assigned to multiple teams.
 
-![All users, annotations, and datasets belong to an organization. All users are assigned to a default team. Further teams can be created for fine-grained access permissions.](images/teams.jpeg)
+![All users, annotations, and datasets belong to an organization. All users are assigned to a default team. Further teams can be created for fine-grained access permissions.](../images/teams.jpeg)

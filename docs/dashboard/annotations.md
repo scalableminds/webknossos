@@ -6,8 +6,8 @@ Annotations can be resumed, archived (like delete, but reversible), and download
 You can also add custom tags to annotations to organize and group them. Click on one or multiple of your tags if you want to filter a particular group of annotations.
 Each annotation can be renamed to reflect its content.
 
-![Manage and resume your skeleton and volume annotations.](./images/dashboard_annotations.jpeg)
-![Annotations can archived to declutter your dashboard.](./images/dashboard_archive.jpeg)
+![Manage and resume your skeleton and volume annotations.](../images/dashboard_annotations.jpeg)
+![Annotations can archived to declutter your dashboard.](../images/dashboard_archive.jpeg)
 
 ## Shared Annotations
 

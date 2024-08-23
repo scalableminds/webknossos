@@ -18,7 +18,7 @@ To change the visibility of an annotation, follow these steps:
 2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Select the desired permission level from the three available options.
 
-![Configure the Annotation Permissions](images/sharing_modal_visibility.jpeg)
+![Configure the Annotation Permissions](../images/sharing_modal_visibility.jpeg)
 
 Additionally, you can control whether other users, who can see your annotation, may also edit your annotation.
 Use this setting to enable collaborative work within your annotation.
@@ -53,7 +53,7 @@ To get the sharing link of an annotation, follow the same steps as for changing 
 2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Copy the sharing URL.
 
-![Get the Annotation Sharing Link](images/sharing_modal_link.jpeg)
+![Get the Annotation Sharing Link](../images/sharing_modal_link.jpeg)
 
 ### Sharing Link Format
 
@@ -138,7 +138,7 @@ To share an annotation with a certain team, follow these steps:
 2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
 3. Under *Team Sharing*, select the teams from the dropdown menu.
 
-![Enable Team Sharing for your annotation](images/sharing_modal_team.jpeg)
+![Enable Team Sharing for your annotation](../images/sharing_modal_team.jpeg)
 
 Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](./dashboard.md#shared-annotations). By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.
 

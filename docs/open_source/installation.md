@@ -13,5 +13,5 @@ When activating new users, a popup opens for
   - team assignment
   - access role assignment
 
-![Activate new users](./images/users_activate1.jpeg)
-![Assign roles to new users](./images/users_activate2.jpeg)
+![Activate new users](../images/users_activate1.jpeg)
+![Assign roles to new users](../images/users_activate2.jpeg)

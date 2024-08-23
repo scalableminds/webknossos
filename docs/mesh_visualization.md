@@ -6,7 +6,7 @@ WEBKNOSSOS offers two different methods to render and visualize volumetric segme
 
 Mesh will always be rendered in the 3D viewport in the lower right. 
 
-![Mesh in the 3D Viewport](images/mesh_3D_viewport.jpeg)
+![Mesh in the 3D Viewport](../images/mesh_3D_viewport.jpeg)
 
 
 

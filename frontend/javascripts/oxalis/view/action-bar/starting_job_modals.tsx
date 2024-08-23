@@ -343,13 +343,11 @@ export function StartAIJobModal({ aIJobModalState }: StartAIJobModalProps) {
           children: <TrainAiModelTab onClose={onClose} />,
         }
       : null,
-    isSuperUser
-      ? {
-          label: "Alignment",
-          key: "alignment",
-          children: <AlignmentTab />,
-        }
-      : null,
+    {
+      label: "Alignment",
+      key: "alignment",
+      children: <AlignmentTab />,
+    },
   ]);
   return aIJobModalState !== "invisible" ? (
     <Modal

@@ -182,37 +182,22 @@ const alignBanner = (
       }}
     />
     <p>
-      <a href="#">Single-tile alignment</a> of image stacks can be done directly in WEBKNOSSOS.
+      <a
+        href="https://docs.webknossos.org/webknossos/automated_analysis.html"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Single-tile alignment
+      </a>{" "}
+      of image stacks can be done directly in WEBKNOSSOS.
     </p>
     <p>
-      For multi-tile stacks, learn about our <a href="#">alignment service</a>.
+      For multi-tile stacks, learn about our{" "}
+      <a href="https://webknossos.org/services/alignment" target="_blank" rel="noopener noreferrer">
+        alignment service
+      </a>
+      .
     </p>
-    {/*<div style={{ display: "flex", flexDirection: "row", gap: 4 }}>
-      <Button
-        href="https://webknossos.org/services/alignment"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "block",
-          margin: "10px auto",
-          width: "50%",
-        }}
-      >
-        Single-Tile
-      </Button>
-      <Button
-        href="https://webknossos.org/services/alignment"
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: "block",
-          margin: "10px auto",
-          width: "50%",
-        }}
-      >
-        Multi-Tile
-      </Button>
-    </div>*/}
   </div>
 );
 const manualAnnotationBanner = (

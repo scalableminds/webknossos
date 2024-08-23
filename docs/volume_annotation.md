@@ -5,55 +5,9 @@ This annotation type lets you label voxel groups using efficient drawing tools.
 
 ![youtube-video](https://www.youtube.com/embed/iw2C7XB6wP4?start=120)
 
-### Tools
 
-Choose a drawing tool from the toolbar or press _W_ to switch between them.
 
-- `Move`: Navigate around the dataset.
-- `Trace`: Draw an outline around the voxel you want to label.
-- `Brush`: Paint over the voxels you would like to label. Use _SHIFT + Mousewheel_ to change the brush size.
-- `Erase (Trace/Brush)`: Erase voxels by drawing over them. Use _SHIFT + Mousewheel_ to change the brush size.
-- `Fill Tool`: Fill the clicked region with a volume annotation up to the next segment boundary (or the edge of your viewport). All neighboring voxels with the same voxel id as the clicked voxel will be labelled with the active segment ID. This is useful for filling a hole in a segment or relabeling a segment with a different ID/color.
-- `Segment Picker`: Click a segment to use its label ID as the active segment ID and keep annotating with that ID.
-- `Quick Select`: Annotate a segment automatically by drawing a rectangular selection over it. The tool operates in two different modes. 
-When the "AI" button in the toolbar is activated, a machine-learning model is used to infer the selection. When the AI button is disabled, the tool operates on the intensity data of the visible color layer and automatically fills out the segment starting from the center of the rectangle. Next to the tool, there is a settings button which allows to enable a preview mode and to tweak some other parameters. When the preview is enabled, you can fine-tuned the parameters and see the preview update instantly.
-- `Proof Reading`: Fix merge and split errors in automated segmentation. Read more about [proofreading](./proof_reading.md#proofreading-tool).
 
-When using the trace or brush tool, a label can be added with _Left Mouse Drag_.
-Erasing is possible with the dedicated erase tools or with _CTRL + Shift + Left Mouse Drag_.
-
-If you have enabled _Classic Controls_ in the settings sidebar, erasing is also possible with _Right Mouse Drag_ within the brush and trace tool (otherwise, right-clicking is mapped to open a context menu).
-
-The following interactions and modifiers are available when working with the volume annotation tools:
-
-- `Create New Segment ID`: Creates a new segment ID for labeling. Note the little color indicator in the top right corner of the button visualizing the current color of the active segment ID. Read the explanation for the largest segment id [here](datasets.md#configuring-datasets) to understand how new IDs are generated.
-- `Change Brush Size`: Changes the size of the brushing tool.
-- `Overwrite Everything`: When labeling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labeled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
-- `Only Overwrite Empty Areas`: In contrast to the `Overwrite Everything` modifier, the forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
-- `2D Fill`/ `3D Fill`: Modifies the flood filling tool to work in 2D (in-plane only) or 3D (volumetric fill/re-labeling). 3D flood fill is constrained to a small, regional bounding box for performance reasons. Read more about flood fills below.
-
-![Adding labels with the Trace tool](./images/volume_trace.gif)
-![Adding labels with the Brush tool](./images/volume_brush.gif)
-![Removing labels with the Brush tool](./images/volume_delete.gif)
-
-In the `Segmentation` tab on the right-hand side panel, you can see the segment IDs which are available in your annotation. You can rename segments as needed.
-
-The active segment ID under the cursor can be found in the status bar at the bottom of the screen or through the context-sensitive menu on right-click.
-
-### Segments List
-
-The right-hand side panel offers a `Segments` tab that lists segments and allows to edit these.
-A segment is added to the list as soon as it was clicked in the data viewport.
-The following functionality is available for each segment:
-
-- jumping to the segment (via left-click; this uses the position at which the segment was initially registered)
-- naming the segment
-- loading [3D meshes](./mesh_visualization.md) for the segments (ad-hoc and precomputed if available)
-- download of 3D meshes
-- changing the color of the segment
-- activating the segment id (so that you can annotate with that id)
-
-![Segments Tab](images/segments_tab2.jpeg)
 
 ### Merging volume annotation with fallback data
 
@@ -108,30 +62,7 @@ WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new 
 Note that due to performance reasons, 3D flood-fills only work in a small, local bounding box.
 For larger areas we recommend working with the [proofreading tool](./proof_reading.md) instead.
 
-### Segment Statistics
-WEBKNOSSOS provides handy statistics about your labelled segments, such as the volume and bounding box of a segment.
 
-There is several ways to access this information: 
-1. Right-click any segment to bring up the context menu. The segment statistics are listed at the end of the context menu.
-2. In the `Segments` tab in the right-hand panel, right-click on any group of segments (or the "Root" group) to bring up a context menu. Select `Show Segment Statistics` to access a summary table with statistics for a whole group of labelled segments. These can be exported as CSV files for further analysis outside of WEBKNOSSOS.
-
-In cases, where you only wish to measure a simple distance or surface area, use the [`Measurement Tool`](./tracing_ui.md#the-toolbar) instead.
-
-![youtube-video](https://www.youtube.com/embed/PsvC4vNyxJM)
-
-### Mappings / On-Demand Agglomeration
-
-With WEBKNOSSOS it is possible to apply a precomputed agglomeration file to re-map/combine over-segmented volume annotations on-demand. Instead of having to materialize one or more agglomeration results as separate segmentation layers, ID mappings allow researchers to apply and compare different agglomeration strategies of their data for experimentation.
-
-This feature works well with automated machine learning segmentation workflows. We typically produce several agglomeration results based on different prediction and size thresholds leading to several possible segmentations based on one initial over-segmentation. We load these ID maps into WEBKNOSSOS to quickly review these results in an interactive session.
-
-![youtube-video](https://www.youtube.com/embed/ZmUqyIoA9Gw)
-
-Mapping files are automatically identified by WEBKNOSSOS when being placed in a `agglomerates` folder within the [segmentation folder](./data_formats.md#wkw-folder-structure). All available mappings can be activated from a dropdown under each `Segmentation` layer. Users can easily switch between several mappings and WEBKNOSSOS will update accordingly.
-
-Mapping files are stored as HDF5 files. [Read the section on data formats for more information on the file formats](./data_formats.md#id_mappings).
-
-<!-- ![An example of applying a mapping file to agglomerate individual segments from an automated over-segmentation. WEBKNOSSOS applies the agglomeration on-demand and allows for quick reviews of different agglomeration strategies.](videos/11_mapping.mp4) -->
 
 
 ## Hybrid Annotations

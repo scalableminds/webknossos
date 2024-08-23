@@ -167,6 +167,9 @@ export type MutableAPIDatasetId = {
   owningOrganization: string;
   name: string;
 };
+export function areDatasetsIdentical(a: APIDatasetId, b: APIDatasetId) {
+  return a.owningOrganization === b.owningOrganization && a.name === b.name;
+}
 export type APIDatasetId = Readonly<MutableAPIDatasetId>;
 
 export enum APIMetadataType {

@@ -1,7 +1,7 @@
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'saxo... Remove this comment to see the full error message
 import Saxophone from "saxophone";
 import _ from "lodash";
-import type { APIBuildInfo } from "types/api_flow_types";
+import type { APIBuildInfo, UserDefinedProperty } from "types/api_flow_types";
 import {
   getMaximumGroupId,
   getMaximumTreeId,
@@ -378,6 +378,7 @@ function serializeTrees(
           "<edges>",
           ...indent(serializeEdges(tree.edges)),
           "</edges>",
+          ...serializeUserDefinedProperties(tree.userDefinedProperties),
         ],
       ),
     ),
@@ -454,6 +455,25 @@ function serializeEdges(edges: EdgeCollection): Array<string> {
       target: edge.target,
     }),
   );
+}
+
+function serializeUserDefinedProperties(userDefinedProperties: UserDefinedProperty[]): string[] {
+  return userDefinedProperties.map((prop) => {
+    const values: any = {};
+    if (prop.stringValue != null) {
+      values.stringValue = prop.stringValue;
+    } else if (prop.boolValue != null) {
+      values.boolValue = prop.boolValue ? "true" : "false";
+    } else if (prop.numberValue != null) {
+      values.numberValue = `${prop.numberValue}`;
+    } else if (prop.stringListValue != null) {
+      for (let i = 0; i < prop.stringListValue.length; i++) {
+        values[`stringListValue-${i}`] = prop.stringListValue[i];
+      }
+    }
+
+    return serializeTag("userDefinedProperty", { key: prop.key, ...values });
+  });
 }
 
 function serializeBranchPoints(trees: Array<Tree>): Array<string> {
@@ -769,6 +789,18 @@ function parseBoundingBoxObject(attr: Record<any, any>): BoundingBoxObject {
   return boundingBoxObject;
 }
 
+function parseUserDefinedProperty(attr: Record<any, any>): UserDefinedProperty {
+  return {
+    key: _parseEntities(attr, "key"),
+    stringValue: _parseEntities(attr, "stringValue", undefined),
+    boolValue: _parseBool(attr, "boolValue", undefined),
+    numberValue: _parseFloat(attr, "numberValue", undefined),
+    // todop:
+    // @ts-ignore
+    stringListValue: _parseArray(attr, "stringListValue", undefined),
+  };
+}
+
 export function parseNml(nmlString: string): Promise<{
   trees: MutableTreeMap;
   treeGroups: Array<TreeGroup>;
@@ -866,6 +898,14 @@ export function parseNml(nmlString: string): Promise<{
             currentTree.nodes.mutableSet(currentNode.id, currentNode);
             existingNodeIds.add(currentNode.id);
             break;
+          }
+
+          case "userDefinedProperty": {
+            if (currentTree == null) {
+              throw new NmlParseError(messages["nml.user_defined_property_outside_tree"]);
+            }
+
+            currentTree.userDefinedProperties.push(parseUserDefinedProperty(attr));
           }
 
           case "edge": {

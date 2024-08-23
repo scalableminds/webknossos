@@ -1930,35 +1930,37 @@ class SegmentsView extends React.Component<Props, State> {
       }
       return (
         <table className="segment-details-table">
-          <tr>
-            <td>ID</td>
-            <td>{segment.id}</td>
-          </tr>
-          <tr>
-            <td>Name</td>
-            <td>
-              <InputWithUpdateOnBlur
-                value={segment.name || ""}
-                onChange={(newValue) => {
-                  if (this.props.visibleSegmentationLayer == null) {
-                    return;
-                  }
-                  this.props.updateSegment(
-                    segment.id,
-                    { name: newValue },
-                    this.props.visibleSegmentationLayer.name,
-                    true,
-                  );
-                }}
-              />
-            </td>
-          </tr>
-          <UserDefinedTableRows
-            userDefinedProperties={segment.userDefinedProperties}
-            onChange={(oldKey: string, propPartial: Partial<UserDefinedProperty>) => {
-              this.updateUserDefinedProperty(segment, oldKey, propPartial);
-            }}
-          />
+          <tbody>
+            <tr>
+              <td>ID</td>
+              <td>{segment.id}</td>
+            </tr>
+            <tr>
+              <td>Name</td>
+              <td>
+                <InputWithUpdateOnBlur
+                  value={segment.name || ""}
+                  onChange={(newValue) => {
+                    if (this.props.visibleSegmentationLayer == null) {
+                      return;
+                    }
+                    this.props.updateSegment(
+                      segment.id,
+                      { name: newValue },
+                      this.props.visibleSegmentationLayer.name,
+                      true,
+                    );
+                  }}
+                />
+              </td>
+            </tr>
+            <UserDefinedTableRows
+              userDefinedProperties={segment.userDefinedProperties}
+              onChange={(oldKey: string, propPartial: Partial<UserDefinedProperty>) => {
+                this.updateUserDefinedProperty(segment, oldKey, propPartial);
+              }}
+            />
+          </tbody>
         </table>
       );
     }

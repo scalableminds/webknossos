@@ -7,7 +7,8 @@ import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { batchActions } from "redux-batched-actions";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import { type AdditionalCoordinate, type UserDefinedProperty } from "types/api_flow_types";
+import _ from "lodash";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
@@ -238,11 +239,17 @@ export const updateSegmentAction = (
   if (segmentId == null) {
     throw new Error("Segment ID must not be null.");
   }
+  const { userDefinedProperties, ...restSegment } = segment;
+  const sanitizedUserDefinedProperties =
+    userDefinedProperties !== undefined
+      ? _.uniqBy(userDefinedProperties, (el: UserDefinedProperty) => el.key)
+      : undefined;
+
   return {
     type: "UPDATE_SEGMENT",
     // TODO: Proper 64 bit support (#6921)
     segmentId: Number(segmentId),
-    segment,
+    segment: { ...restSegment, sanitizedUserDefinedProperties },
     layerName,
     timestamp,
     createsNewUndoState,

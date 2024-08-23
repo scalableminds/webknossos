@@ -15,6 +15,7 @@ import renderIndependently from "libs/render_independently";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import { batchActions } from "redux-batched-actions";
 import { type AdditionalCoordinate } from "types/api_flow_types";
+import _ from "lodash";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;
@@ -431,7 +432,7 @@ export const setTreeUserDefinedPropertiesAction = (
 ) =>
   ({
     type: "SET_TREE_USER_DEFINED_PROPERTIES",
-    userDefinedProperties,
+    userDefinedProperties: _.uniqBy(userDefinedProperties, (el: UserDefinedProperty) => el.key),
     treeId,
   }) as const;
 

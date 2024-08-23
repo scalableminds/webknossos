@@ -356,25 +356,27 @@ function DetailsForSelection({
     }
     return (
       <table className="segment-details-table">
-        <tr>
-          <td>ID</td>
-          <td>{tree.treeId}</td>
-        </tr>
-        <tr>
-          <td>Name</td>
-          <td>
-            <InputWithUpdateOnBlur
-              value={tree.name || ""}
-              onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
-            />
-          </td>
-        </tr>
-        <UserDefinedTableRows
-          userDefinedProperties={tree.userDefinedProperties}
-          onChange={(oldKey: string, propPartial: Partial<UserDefinedProperty>) => {
-            updateUserDefinedProperty(tree, oldKey, propPartial);
-          }}
-        />
+        <tbody>
+          <tr>
+            <td>ID</td>
+            <td>{tree.treeId}</td>
+          </tr>
+          <tr>
+            <td>Name</td>
+            <td>
+              <InputWithUpdateOnBlur
+                value={tree.name || ""}
+                onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
+              />
+            </td>
+          </tr>
+          <UserDefinedTableRows
+            userDefinedProperties={tree.userDefinedProperties}
+            onChange={(oldKey: string, propPartial: Partial<UserDefinedProperty>) => {
+              updateUserDefinedProperty(tree, oldKey, propPartial);
+            }}
+          />
+        </tbody>
       </table>
     );
   }

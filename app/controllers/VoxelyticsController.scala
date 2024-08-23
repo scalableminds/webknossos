@@ -1,13 +1,13 @@
 package controllers
 
-import play.silhouette.api.Silhouette
-import play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.organization.OrganizationDAO
 import models.voxelytics._
 import play.api.libs.json._
 import play.api.mvc._
+import play.silhouette.api.Silhouette
+import play.silhouette.api.actions.SecuredRequest
 import security.WkEnv
 import utils.{ObjectId, WkConf}
 
@@ -138,7 +138,7 @@ class VoxelyticsController @Inject()(
         combinedTaskRuns <- voxelyticsDAO.findCombinedTaskRuns(sortedRuns.map(_.id), conf.staleTimeout)
 
         // Fetch artifact data for task runs
-        artifacts <- voxelyticsDAO.findArtifacts(sortedRuns.map(_.id), conf.staleTimeout)
+        artifacts <- voxelyticsDAO.findArtifacts(request.identity, sortedRuns.map(_.id), conf.staleTimeout)
 
         // Fetch task configs
         tasks <- voxelyticsDAO.findTasks(mostRecentRun.id)

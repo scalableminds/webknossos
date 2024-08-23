@@ -14,5 +14,5 @@ To access and share a dataset through Zarr streaming, follow these steps:
 
 ![The Zarr Link dialog for sharing a dataset/annotation as a Zarr source for streaming to third-party services.](../images/zarr_links.jpeg)
 
-A unique aspect of WEBKNOSSOS is private Zarr links. Any annotation shared through Zarr generates a web link containing a unique access token for authentication such that only allowed users and collaborators may access this data. This is akin to WEBKNOSSOS ability to [privately share annotations through web URLs](./sharing.md#annotation-sharing). Zarr links can be revoked/deleted at any time (or time-limited by default) to retain control over your data.
+A unique aspect of WEBKNOSSOS is private Zarr links. Any annotation shared through Zarr generates a web link containing a unique access token for authentication such that only allowed users and collaborators may access this data. This is akin to WEBKNOSSOS ability to [privately share annotations through web URLs](../sharing/annotation_sharing.md). Zarr links can be revoked/deleted at any time (or time-limited by default) to retain control over your data.
 

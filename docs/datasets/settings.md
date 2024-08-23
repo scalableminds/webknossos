@@ -4,7 +4,7 @@ You can configure the metadata, permission, and other properties of a dataset at
 Note, any changes made to a dataset may influence the user experience of all users in your organization working with that dataset, e.g., removing access rights working, adding/removing layers, or setting default values for rendering the data.
 
 To make changes, click on the "Settings" action next to a dataset in the "Datasets" tab of your dashboard.
-Editing these settings requires your account to have enough access rights and permissions. [Read more about this.](./users.md)
+Editing these settings requires your account to have enough access rights and permissions. [Read more about this.](../users/access_rights.md)
 
 ## Data Tab
 The *Data* tab contains the settings for correctly reading the dataset as the correct data type (e.g., `uint8`), setting up, and configuring any layers.
@@ -25,9 +25,9 @@ WEBKNOSSOS automatically periodically checks and detects changes to a dataset's 
 
 ## Sharing & Permissions Tab
 - `Make dataset publicly accessible`: By default, a dataset can only be accessed by users from your organization with the correct access permissions. Turning a dataset to *public* will allow anyone in the general public to view the dataset when sharing a link to the dataset without the need for a WEBKNOSSOS account. Anyone can start using this dataset to create annotations. Enable this setting if you want to share a dataset in a publication, social media, or any other public website.
-- `Teams allowed to access this dataset`: Defines which [teams of your organization](./users.md) have permission to work with this dataset. By default, no team has access, but users with *admin* and *team manager* roles can see and edit the dataset.
+- `Teams allowed to access this dataset`: Defines which [teams of your organization](../users/teams.md.md) have permission to work with this dataset. By default, no team has access, but users with *admin* and *team manager* roles can see and edit the dataset.
 - `Sharing Link`: A web URL pointing to this dataset for easy sharing that allows any user to view your dataset. The URL contains an access token to allow people to view the dataset without a WEBKNOSSOS account. The access token is random, and therefore the URL cannot be guessed by visitors. You may also revoke the access token to create a new one. Anyone with a URL containing a revoked token will no longer have access to this dataset. 
-Read more in [the Sharing guide](./sharing.md).
+Read more in [the Sharing guide](../sharing/dataset_sharing.md).
 
 ![Dataset Editing: Sharing Tab](../images/sharing_tab.jpeg)
 

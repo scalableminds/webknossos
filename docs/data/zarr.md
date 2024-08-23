@@ -4,11 +4,11 @@ WEBKNOSSOS works great with [OME-Zarr datasets](https://ngff.openmicroscopy.org/
 
 We strongly believe in this community-driven, cloud-native data format for n-dimensional datasets. Zarr is a first-class citizen in WEBKNOSSOS and will likely replace [WKW](./wkw.md) long term.
 
-Zarr datasets can both be uploaded to WEBKNOSSOS through the [web uploader](./datasets.md#uploading-through-the-web-browser) or [streamed from a remote server or the cloud](./datasets.md#streaming-from-remote-servers-and-the-cloud). When streaming and using several layers, import the first Zarr group and then use the UI to add more URIs/groups.
+Zarr datasets can both be uploaded to WEBKNOSSOS through the [web uploader](./upload_ui.md) or [streamed from a remote server or the cloud](./streaming.md). When streaming and using several layers, import the first Zarr group and then use the UI to add more URIs/groups.
 
 ## Examples
 
-You can try the OME-Zarr support with the following datasets. Load them in WEBKNOSSOS as a [remote dataset](./datasets.md#streaming-from-remote-servers-and-the-cloud): 
+You can try the OME-Zarr support with the following datasets. Load them in WEBKNOSSOS as a [remote dataset](./streaming.md): 
 
 
 - Mouse Cortex Layer 4 EM Cutout over HTTPs

@@ -2,11 +2,11 @@
 
 WEBKNOSSOS can read [Neuroglancer precomputed datasets](https://github.com/google/neuroglancer/tree/master/src/neuroglancer/datasource/precomputed).
 
-Neuroglancer Precomputed datasets can both be uploaded to WEBKNOSSOS through the [web uploader](./datasets.md#uploading-through-the-web-browser) or [streamed from a remote server or the cloud](./datasets.md#streaming-from-remote-servers-and-the-cloud).
+Neuroglancer Precomputed datasets can both be uploaded to WEBKNOSSOS through the [web uploader](./upload_ui.md) or [streamed from a remote server or the cloud](./streaming.md).
 
 ## Examples
 
-You can try the Neuroglancer Precomputed support with the following datasets. Load them in WEBKNOSSOS as a [remote dataset](./datasets.md#streaming-from-remote-servers-and-the-cloud): 
+You can try the Neuroglancer Precomputed support with the following datasets. Load them in WEBKNOSSOS as a [remote dataset](./streaming.md): 
 
 
 - Mouse Cortex EM data hosted on Google Cloud Storage

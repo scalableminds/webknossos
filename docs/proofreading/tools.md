@@ -9,13 +9,13 @@ To use the proofreading tool you need to enable an [ID mapping for your segmenta
 3. [Optional] Shift + middle-click on any segment to load and display its super-voxel graph
 4. Proceed to fix split and merge errors:
 
-To fix a split error:
+## Fixing Split Errors
 
 1. Left-click on any part of the source segment. It will be marked with a white crosshair
 2. Right-click on the target segment to bring up the context menu. Select `Merge With Active Segment`
 3. WEBKNOSSOS will merge both segments and reload the updated segmentation and 3D meshes
 
-To fix a merge error:
+## Fixing Merge Errors
 
 1. Left-click on any part of the source segment. It will be marked with a white crosshair
 2. Right-click on the part of the source segment that you would like to split off to bring up the context menu. Select `Split from active segment (Min-Cut)`
@@ -28,7 +28,8 @@ If case you want to reload, hide or remove a 3D mesh during proofreading, you ca
 
 In addition to the handy shortcuts available from the right-click context menu, users can also directly modify the super-voxel graph like any other skeleton to manually add/remove nodes and edges for fine-grained control.
 
--- The proofreading tool requires a super-voxel graph representation of a segmentation to work. At this time, these can only be obtained from the [Voxelytics AI segmentation pipeline](https://voxelytics.com). We are actively working to make this available for more users, so please reach out to us to get you started and provide feedback: [hello@webknossos.org](mailto:hello@webknossos.org) --
+!!!info 
+    The proofreading tool requires a super-voxel graph representation of a segmentation to work. At this time, these can only be obtained from the [Voxelytics AI segmentation pipeline](https://voxelytics.com). We are actively working to make this available for more users, so please reach out to us to get you started and provide feedback: [hello@webknossos.org](mailto:hello@webknossos.org)
 
 ## Proofreading with Skeletons and Custom Scripting
 

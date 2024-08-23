@@ -6,7 +6,7 @@ The following functionality is available for each segment:
 
 - jumping to the segment (via left-click; this uses the position at which the segment was initially registered)
 - naming the segment
-- loading [3D meshes](./mesh_visualization.md) for the segments (ad-hoc and precomputed if available)
+- [loading 3D meshes](../meshes/loading_meshes.md) for the segments (ad-hoc and precomputed if available)
 - download of 3D meshes
 - changing the color of the segment
 - activating the segment id (so that you can annotate with that id)

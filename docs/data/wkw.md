@@ -14,7 +14,7 @@ Each layer of a WKW dataset may contain one of the following:
 
 ## Examples
 
-You can try the WKW support with the following datasets. Upload them to WEBKNOSSOS using the [web uploader](./datasets.md#uploading-through-the-web-browser): 
+You can try the WKW support with the following datasets. Upload them to WEBKNOSSOS using the [web uploader](./upload_ui.md): 
 
 - Mouse Retina SBEM and segmentation (sample cutout, 120MB)
     - [https://static.webknossos.org/data/e2006_wkw.zip](https://static.webknossos.org/data/e2006_wkw.zip)  

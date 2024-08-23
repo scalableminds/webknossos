@@ -6,7 +6,7 @@ There are four different roles for WEBKNOSSOS users divided into global, organiz
 
 *On a per team basis:*
 
-  - __Member:__ A regular wK user account. Members are only able to access datasets of their respective teams and can create annotations for those. Further, they can work on tasks created by their `Team Manager` or an `Admin`. They are only able to access their own annotations or [annotations shared with them](./sharing.md).
+  - __Member:__ A regular wK user account. Members are only able to access datasets of their respective teams and can create annotations for those. Further, they can work on tasks created by their `Team Manager` or an `Admin`. They are only able to access their own annotations or [annotations shared with them](./sharing/annotation_sharing.md).
 
   - __Team Manager:__ Manage a specific team. Team Managers can administrate and create [Tasks, Task Types, and Projects](./tasks.md) belonging to their respective teams. They also can activate newly registered users and assign/remove users to/from their teams. Team managers can access all annotations belonging to users of their respective teams. Similarly to regular `Members`, they are only able to access datasets of their respective teams and can create annotations for those.
 
@@ -22,7 +22,7 @@ Only *Admins* and *Team Managers* can see/access the `Admin` menu options in the
 
 By default, each newly uploaded datasets can only be accessed by `Admins` and `Dataset Managers` without any restrictions. Make sure to add or remove one or more teams to a dataset for fine-grained access controls while/after uploading. Otherwise, regular `Members` or `Team Managers` might not be able to see a dataset in their dashboard, let alone create annotations for them. `Team Managers` can also upload datasets via the UI and assign teams during this step. 
 
-For more information regarding (public) dataset sharing and access rights (especially with outside collaborators), [see the dataset guide](./sharing.md#general)
+For more information regarding (public) dataset sharing and access rights (especially with outside collaborators), [see the guide on sharing datasets](../sharing/dataset_sharing.md)
 
 
 | Action                                           	| Admin 	| Dataset Manager 	| Team Manager 	| Team Member 	|

@@ -6,12 +6,12 @@ WEBKNOSSOS will notify you via email upon completion or failure of any job.
 
 Example workflows:
 
-- [converting datasets on upload](./datasets.md#uploading-through-the-web-browser)
-- [automated analysis](./automated_analysis.md), e.g., nuclei inferral 
-- [mesh file (pre)-computation](./mesh_visualization.md)
-- [applying a merger mode annotation](./volume_annotation.md#proof_reading_and_merging_segments)
+- [AI segmentation](./ai_segmentation.md), e.g., nuclei inferral 
+- [converting datasets on upload](./upload_ui.md)
+- [mesh file (pre)-computation](../meshes/precomputed_meshes.md)
+- [applying a merger mode annotation](../proofreading/merger_mode.md)
 - automatic inference of a segmentation layer's large segment ID
-- [dataset & annotation export as Tiff files](./export.md#data-export-through-the-ui)
+- [dataset & annotation export as Tiff files](../data/export_ui.md)
 - [creating engaging animations of datasets](./animations.md)
 - downsampling volume annotations
 
@@ -26,7 +26,7 @@ A list of all past and currently running jobs can be found in the administration
 Depending on the job workflow you may:
 
 - view the resulting resource, e.g., a new segmentation 
-- download the data, e.g., [Tiff export](./export.md#data-export-through-the-ui)
+- download the data, e.g., [Tiff export](../data/export_ui.md)
 
 ![Overview of the Jobs page](../images/jobs.jpeg)
 

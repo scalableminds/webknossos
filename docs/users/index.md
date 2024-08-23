@@ -4,22 +4,8 @@ WEBKNOSSOS offers a built-in user management system to administer different user
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 # Experience Levels
-For a fine-grained assignment to [annotation tasks](./tasks.md), each user can have one or more experience levels assigned to them. Based on their respective experience level, tasks may or may not be distributed to them.
+For a fine-grained assignment to [annotation tasks](../tasks_projects/tasks.md), each user can have one or more experience levels assigned to them. Based on their respective experience level, tasks may or may not be distributed to them.
 
 Assign/Remove experience levels by selecting one/several users and clicking on the `Change Experience` button. In the pop-up window, you can select any existing experience from the dropdown or type the domain name of a new experience domain in the dropdown input. 
 

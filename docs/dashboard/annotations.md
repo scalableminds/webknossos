@@ -11,6 +11,6 @@ Each annotation can be renamed to reflect its content.
 
 ## Shared Annotations
 
-The annotations tab also shows all annotations that were shared by other collaborators of your organization. Only annotations shared through the "Team Sharing" mechanic will be listed provided your user account is part of the respective team. Read more about sharing your own annotations in the [Sharing guide](./sharing.md#annotation-sharing).
+The annotations tab also shows all annotations that were shared by other collaborators of your organization. Only annotations shared through the "Team Sharing" mechanic will be listed provided your user account is part of the respective team. Read more about sharing your own annotations in the [Sharing guide](./sharing/annotation_sharing.md).
 
 You can view the linked annotations (read-only) or copy them to your account for modification.

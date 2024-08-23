@@ -1291,6 +1291,7 @@ type ReserveUploadInformation = {
   organization: string;
   name: string;
   totalFileCount: number;
+  filePaths: Array<string>;
   initialTeams: Array<string>;
   folderId: string | null;
 };
@@ -1312,6 +1313,7 @@ export type UnfinishedUpload = {
   datasetId: { name: string; organizationName: string };
   folderId: string;
   created: number;
+  filePaths: Array<string> | null | undefined;
   allowedTeams: Array<string>;
 };
 

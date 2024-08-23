@@ -8,6 +8,7 @@ case class UnfinishedUpload(uploadId: String,
                             dataSourceId: DataSourceId,
                             folderId: String,
                             created: Instant,
+                            filePaths: Option[List[String]],
                             allowedTeams: List[String])
 
 object UnfinishedUpload {

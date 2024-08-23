@@ -101,7 +101,7 @@ type State = {
   selectedTeams: APITeam | Array<APITeam>;
   possibleTeams: Array<APITeam>;
   uploadId: string | undefined;
-  continuingUnfinishedUpload: boolean;
+  unfinishedUploadToContinue: UnfinishedUpload | null;
   resumableUpload: any;
   datastoreUrl: string;
   unfinishedUploads: UnfinishedUpload[];
@@ -190,7 +190,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     resumableUpload: {},
     datastoreUrl: "",
     unfinishedUploads: [],
-    continuingUnfinishedUpload: false,
+    unfinishedUploadToContinue: null,
   };
 
   unblock: ((...args: Array<any>) => any) | null | undefined;
@@ -297,6 +297,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
       return;
     };
+    const { unfinishedUploadToContinue } = this.state;
 
     this.unblock = this.props.history.block(beforeUnload);
     // @ts-ignore
@@ -311,14 +312,16 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       return Array.from(randomBytes, (byte) => `0${byte.toString(16)}`.slice(-2)).join("");
     };
 
-    const uploadId =
-      this.state.uploadId ||
-      `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${datasetId.name}__${getRandomString()}`;
+    const uploadId = unfinishedUploadToContinue
+      ? unfinishedUploadToContinue.uploadId
+      : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${datasetId.name}__${getRandomString()}`;
+    const filePaths = formValues.zipFile.map((file) => file.path || "");
     const reserveUploadInformation = {
       uploadId,
       organization: datasetId.owningOrganization,
       name: datasetId.name,
       totalFileCount: formValues.zipFile.length,
+      filePaths: filePaths,
       layersToLink: [],
       initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
       folderId: formValues.targetFolderId,
@@ -391,7 +394,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
           this.setState({
             isUploading: false,
             isFinishing: false,
-            continuingUnfinishedUpload: false,
+            unfinishedUploadToContinue: null,
             uploadId: undefined,
           });
 
@@ -416,7 +419,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             isUploading: false,
             isFinishing: false,
             isRetrying: false,
-            continuingUnfinishedUpload: false,
+            unfinishedUploadToContinue: null,
             uploadId: undefined,
             uploadProgress: 0,
           });
@@ -698,13 +701,14 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     const { activeUser, withoutCard, datastores } = this.props;
     const isDatasetManagerOrAdmin = Utils.isUserAdminOrDatasetManager(this.props.activeUser);
 
-    const { needsConversion, continuingUnfinishedUpload } = this.state;
+    const { needsConversion, unfinishedUploadToContinue } = this.state;
     const uploadableDatastores = datastores.filter((datastore) => datastore.allowsUpload);
     const hasOnlyOneDatastoreOrNone = uploadableDatastores.length <= 1;
 
     const unfinishedAndNotSelectedUploads = this.state.unfinishedUploads.filter(
-      (unfinishedUploads) => unfinishedUploads.uploadId !== this.state.uploadId,
+      (unfinishedUploads) => unfinishedUploads.uploadId !== unfinishedUploadToContinue?.uploadId,
     );
+    const continuingUnfinishedUpload = unfinishedUploadToContinue != null;
 
     return (
       <div
@@ -769,8 +773,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                               ),
                             });
                             this.setState({
-                              uploadId: unfinishedUpload.uploadId,
-                              continuingUnfinishedUpload: true,
+                              unfinishedUploadToContinue: unfinishedUpload,
                             });
                             Toast.info(
                               "To continue the selected upload please make sure to select the same file(s) as before. Otherwise, the upload may be corrupted.",
@@ -1010,6 +1013,22 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     );
                     return wkwFiles.length === 0 || imageFiles.length === 0;
                   }, "WKW files should not be mixed with image files."),
+                },
+                {
+                  validator: syncValidator((files: FileWithPath[]) => {
+                    const { unfinishedUploadToContinue } = this.state;
+                    if (
+                      !unfinishedUploadToContinue ||
+                      unfinishedUploadToContinue.filePaths == null
+                    ) {
+                      return true;
+                    }
+                    const filePaths = files.map((file) => file.path || "");
+                    return (
+                      unfinishedUploadToContinue.filePaths.length === filePaths.length &&
+                      _.isEqual(unfinishedUploadToContinue.filePaths, filePaths)
+                    );
+                  }, "The selected files do not match the files of the unfinished upload. Please select the same files as before."),
                 },
               ]}
               valuePropName="fileList"

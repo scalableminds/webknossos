@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.services.uploading
 import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils.ensureDirectoryBox
 import com.scalableminds.util.io.{PathUtils, ZipIO}
-import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
+import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.layers.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header.FILENAME_ATTRIBUTES_JSON
@@ -33,6 +33,7 @@ case class ReserveUploadInformation(
     name: String, // dataset name
     organization: String,
     totalFileCount: Long,
+    filePaths: List[String],
     layersToLink: Option[List[LinkedLayerIdentifier]],
     initialTeams: List[String], // team ids
     folderId: Option[String])
@@ -108,6 +109,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     s"upload___${uploadId}___file___${fileName}___chunkCount"
   private def redisKeyForFileChunkSet(uploadId: String, fileName: String): String =
     s"upload___${uploadId}___file___${fileName}___chunkSet"
+  private def redisKeyForUploadId(datasourceId: DataSourceId): String =
+    s"upload___${Json.stringify(Json.toJson(datasourceId))}___datasourceId"
+  private def redisKeyForFilePaths(uploadId: String): String =
+    s"upload___${uploadId}___filePaths"
 
   cleanUpOrphanUploads()
 
@@ -135,9 +140,11 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         Json.stringify(Json.toJson(DataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization)))
       )
       _ <- runningUploadMetadataStore.insert(
-        Json.stringify(Json.toJson(DataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization))),
+        redisKeyForUploadId(DataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization)),
         reserveUploadInformation.uploadId
       )
+      filePaths = Json.stringify(Json.toJson(reserveUploadInformation.filePaths))
+      _ <- runningUploadMetadataStore.insert(redisKeyForFilePaths(reserveUploadInformation.uploadId), filePaths)
       _ <- runningUploadMetadataStore.insert(
         redisKeyForLinkedLayerIdentifier(reserveUploadInformation.uploadId),
         Json.stringify(Json.toJson(LinkedLayerIdentifiers(reserveUploadInformation.layersToLink)))
@@ -149,14 +156,21 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   def addUploadIdsToUnfinishedUploads(
       unfinishedUploadsWithoutIds: List[UnfinishedUpload]): Fox[List[UnfinishedUpload]] =
     for {
-      maybeUnfinishedUploads: List[Box[Option[UnfinishedUpload]]] <- Fox.sequence(
+      maybeUnfinishedUploads: List[Box[UnfinishedUpload]] <- Fox.sequence(
         unfinishedUploadsWithoutIds.map(
-          upload =>
-            runningUploadMetadataStore
-              .find(Json.stringify(Json.toJson(upload.dataSourceId)))
-              .map(uploadIdOpt => uploadIdOpt.map(uploadId => upload.copy(uploadId = uploadId)))
+          unfinishedUpload => {
+            for {
+              uploadIdOpt <- runningUploadMetadataStore.find(redisKeyForUploadId(unfinishedUpload.dataSourceId))
+              maybeUpdateUpload = uploadIdOpt
+                .map(uploadId => unfinishedUpload.copy(uploadId = uploadId))
+                .getOrElse(unfinishedUpload)
+              filePathsStringOpt <- runningUploadMetadataStore.find(redisKeyForFilePaths(maybeUpdateUpload.uploadId))
+              filePathsOpt <- filePathsStringOpt.map(JsonHelper.parseAndValidateJson[List[String]])
+              uploadUpdated <- filePathsOpt.map(filePaths => maybeUpdateUpload.copy(filePaths = Some(filePaths)))
+            } yield uploadUpdated
+          }
         ))
-      foundUnfinishedUploads = maybeUnfinishedUploads.collect { case Full(Some(value)) => value }
+      foundUnfinishedUploads = maybeUnfinishedUploads.flatten
     } yield foundUnfinishedUploads
 
   private def isOutsideUploadDir(uploadDir: Path, filePath: String): Boolean =

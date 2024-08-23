@@ -106,6 +106,7 @@ class WKRemoteDataStoreController @Inject()(
                                    d.dataSourceId,
                                    d.folderId.toString,
                                    d.created,
+                                   None, // Filled by datastore.
                                    teamIds.map(_.toString))
           }
         } yield Ok(Json.toJson(unfinishedUploads))

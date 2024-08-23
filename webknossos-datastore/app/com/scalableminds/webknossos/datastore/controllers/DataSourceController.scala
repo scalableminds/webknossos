@@ -128,6 +128,7 @@ class DataSourceController @Inject()(
               request.body.datasetName,
               request.body.organization,
               0,
+              List.empty,
               None,
               request.body.initialTeamIds,
               request.body.folderId
@@ -421,6 +422,7 @@ class DataSourceController @Inject()(
       }
     }
 
+  // Stores a remote dataset in the database.
   def add(token: Option[String],
           organizationName: String,
           datasetName: String,
@@ -436,6 +438,7 @@ class DataSourceController @Inject()(
               name = datasetName,
               organization = organizationName,
               totalFileCount = 1,
+              filePaths = List.empty,
               layersToLink = None,
               initialTeams = List.empty,
               folderId = folderId,

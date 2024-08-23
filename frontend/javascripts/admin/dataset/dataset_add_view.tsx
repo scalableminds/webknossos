@@ -181,18 +181,38 @@ const alignBanner = (
         width: "100%",
       }}
     />
-    <Button
-      href="https://webknossos.org/services/alignment"
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{
-        display: "block",
-        margin: "10px auto",
-        width: "50%",
-      }}
-    >
-      Learn More
-    </Button>
+    <p>
+      <a href="#">Single-tile alignment</a> of image stacks can be done directly in WEBKNOSSOS.
+    </p>
+    <p>
+      For multi-tile stacks, learn about our <a href="#">alignment service</a>.
+    </p>
+    {/*<div style={{ display: "flex", flexDirection: "row", gap: 4 }}>
+      <Button
+        href="https://webknossos.org/services/alignment"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "block",
+          margin: "10px auto",
+          width: "50%",
+        }}
+      >
+        Single-Tile
+      </Button>
+      <Button
+        href="https://webknossos.org/services/alignment"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: "block",
+          margin: "10px auto",
+          width: "50%",
+        }}
+      >
+        Multi-Tile
+      </Button>
+    </div>*/}
   </div>
 );
 const manualAnnotationBanner = (
@@ -238,15 +258,19 @@ const manualAnnotationBanner = (
     </div>
   </div>
 );
-const banners = [segmentationBanner, alignBanner, manualAnnotationBanner];
+const banners = [
+  // segmentationBanner,
+  alignBanner,
+  // manualAnnotationBanner
+];
 
 function VoxelyticsBanner() {
   const [bannerIndex] = useState(Math.floor(Math.random() * banners.length));
   const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
 
-  if (!features().isWkorgInstance) {
-    return null;
-  }
+  // if (!features().isWkorgInstance) {
+  //   return null;
+  // }
 
   return (
     <Sider className="hide-on-small-screen" width={300} theme={theme}>
@@ -303,7 +327,6 @@ const getPostUploadModal = (
         <div
           style={{
             display: "flex",
-            justifyContent: "center",
           }}
         >
           <div

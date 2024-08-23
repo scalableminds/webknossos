@@ -12,7 +12,7 @@ Note, the `Merger Mode` is a rather light-way tool. WEBKNOSSOS will not directly
 
 ![youtube-video](https://www.youtube.com/embed/Sq4AuWanK14)
 
-After finishing the proofreading, a [long-running job](./jobs.md) can be started to apply the merging of segments into a new dataset with the same layers. The job can be started by clicking the "Materialize" button next to the merger mode button in the toolbar.
+After finishing the proofreading, a [long-running job](../automation/jobs.md) can be started to apply the merging of segments into a new dataset with the same layers. The job can be started by clicking the "Materialize" button next to the merger mode button in the toolbar.
 
 ![Button to open the Merger mode long-running job modal](../images/start_merger_mode_job_modal_button.jpg)
 ![Modal to start the Merger mode long-running job](../images/start_merger_mode_job_modal.jpg)

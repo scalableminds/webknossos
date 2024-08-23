@@ -1,6 +1,6 @@
 # Importing & Exporting Skeletons as NML Files
 
-WEBKNOSSOS makes it easy to import or export skeleton annotations as [NML files](./data_formats.md#nml).
+WEBKNOSSOS makes it easy to import or export skeleton annotations as [NML files](../data_formats.md#nml).
 There are several ways for downloading your annotations:
 
 1. There is a `Download` button in the overflow menu next to the prominent `Save` button in the toolbar at the top of the screen.

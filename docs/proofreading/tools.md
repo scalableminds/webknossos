@@ -1,8 +1,8 @@
 # Proofreading Tool
 
-The proofreading tool enables users to fix merge and split errors in a segmentation generated from an automated workflow (outside of WEBKNOSSOS), e.g. from a machine learning system such as [Voxelytics](https://voxelytics.com). Split and merge operations are directly executed on the underlying [super-voxel graph structure](./terminology.md#agglomerates) of a segmentation.
+The proofreading tool enables users to fix merge and split errors in a segmentation generated from an automated workflow (outside of WEBKNOSSOS), e.g. from a machine learning system such as [Voxelytics](https://voxelytics.com). Split and merge operations are directly executed on the underlying [super-voxel graph structure](../terminology.md#agglomerates) of a segmentation.
 
-To use the proofreading tool you need to enable an [ID mapping for your segmentation](./volume_annotation.md#mappings--on-demand-agglomeration) to load the super-voxel graph. Once, WEBKNOSSOS detects this the proofreading tool can be activated on the toolbar (clipboard icon):
+To use the proofreading tool you need to enable an [ID mapping for your segmentation](./segmentation_mappings.md) to load the super-voxel graph. Once, WEBKNOSSOS detects this the proofreading tool can be activated on the toolbar (clipboard icon):
 
 1. Select an ID mapping for a segmentation layer from the left-hand side panel
 2. From the toolbar, switch to the proofreading tool (clipboard icon)

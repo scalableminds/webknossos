@@ -25,8 +25,8 @@ Create a free account on [https://webknossos.org/](https://webknossos.org/) and 
 - [Fine-grained access permission](./users.md) and and user roles for secure collaboration
 - [AI Quick Select tool](./volume_annotation.md#ai-quick-select) to speed up segmentation
 - [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
-- [Supported dataset formats: Zarr, WKW (Optimized), KNOSSOS cubes, Neuroglancer Precomputed, N5, and image stacks](./data_formats.md) (some formats will be converted on upload)
-- [Supported image formats](./data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel
+- [Supported dataset formats: Zarr, WKW (Optimized), KNOSSOS cubes, Neuroglancer Precomputed, N5, and image stacks](../data_formats.md) (some formats will be converted on upload)
+- [Supported image formats](../data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel
 - Supports Time Series datasets
 - [3D Mesh Visualization](./mesh_visualization.md)
 - [Integrated Synapse and Connectome Viewer](./connectome_viewer.md)
@@ -37,13 +37,13 @@ Create a free account on [https://webknossos.org/](https://webknossos.org/) and 
 
 ## Screenshots
 
-![Skeleton Annotations](../images/tracing_ui_skeleton.jpeg)
-![Volume Annotations](../images/tracing_ui_volume.jpeg)
-![Flight Mode](../images/tracing_ui_flight.jpeg)
+![Skeleton Annotations](./images/tracing_ui_skeleton.jpeg)
+![Volume Annotations](./images/tracing_ui_volume.jpeg)
+![Flight Mode](./images/tracing_ui_flight.jpeg)
 
-![Managing Datasets](../images/dashboard_datasets.jpeg)
-![Working on Tasks](../images/dashboard_tasks.jpeg)
-![Showcasing Datasets](../images/dashboard_featured_publications.jpeg)
+![Managing Datasets](./images/dashboard_datasets.jpeg)
+![Working on Tasks](./images/dashboard_tasks.jpeg)
+![Showcasing Datasets](./images/dashboard_featured_publications.jpeg)
 
 # Built for Science
 

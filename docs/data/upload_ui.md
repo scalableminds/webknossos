@@ -17,7 +17,7 @@ If your data is not in WKW, you can either:
 
 - upload the data in a supported file format and WEBKNOSSOS will automatically import or convert it ([webknossos.org](https://webknossos.org) only). 
 Depending on the size of the dataset, the conversion will take some time. 
-You can check the progress at the [`Jobs`](./jobs.md) page or the "Datasets" tab in the dashboard.
+You can check the progress at the [`Jobs`](../automation/jobs.md) page or the "Datasets" tab in the dashboard.
 WEBKNOSSOS will also send you an email notification.
 - [Convert](#converting-datasets) your data manually to WKW.
 
@@ -25,10 +25,10 @@ In particular, the following file formats are supported for uploading (and conve
 
 - [WKW dataset](./wkw.md)
 - [OME-Zarr datasets](./zarr.md)
-- [Image file sequence](#Single-Layer-Image-File-Sequence) in one folder (TIFF, JPEG, PNG, DM3, DM4)
-- [Multi Layer file sequence](#Multi-Layer-Image-File-Sequence) containing multiple folders with image sequences that are interpreted as separate layers
-- [Single-file images](#single-file-images) (OME-Tiff, TIFF, PNG, czi, raw, etc)
+- [Image file sequence](./image_stacks.md#single-layer-image-file-sequence) in one folder (TIFF, JPEG, PNG, DM3, DM4)
+- [Multi Layer file sequence](./image_stacks.md#multi-layer-image-file-sequence) containing multiple folders with image sequences that are interpreted as separate layers
+- [Single-file images](-image_stacks.md#single-file-images) (OME-Tiff, TIFF, PNG, czi, raw, etc)
 - [Neuroglancer Precomputed datasets](./neuroglancer_precomputed.md)
 - [N5 datasets](./n5.md)
 
-Once the data is uploaded (and potentially converted), you can further configure a dataset's [Settings](#configuring-datasets) and double-check layer properties, fine tune access rights & permissions, or set default values for rendering.
+Once the data is uploaded (and potentially converted), you can further configure a dataset's [Settings](../datasets/settings.md) and double-check layer properties, fine tune access rights & permissions, or set default values for rendering.

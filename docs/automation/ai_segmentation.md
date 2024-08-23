@@ -1,16 +1,16 @@
 # AI Segmentation
 
-TODO add intro
-TODO add mito<>
-TODO add custom classification
-TODO revise custom analysis; advertise commercial services
+- TODO add intro
+- TODO add mito<>
+- TODO add custom classification
+- TODO revise custom analysis; advertise commercial services
 
 ## Neuron Segmentation
 As a first trial, WEBKNOSSOS includes neuron segmentation. This analysis is designed to work with serial block-face electron microscopy (SBEM) data of neural tissue (brain/cortex) and will segment all neurons within the dataset.
 
 You can launch the AI analysis modal using the `AI Analysis` button in the toolbar at the top. Use the `Start AI neuron segmentation` button in the modal to start the analysis.
 
-![Neuron segmentations can be launched from the tool bar.](images/process_dataset.jpg)
+![Neuron segmentations can be launched from the tool bar.](../images/process_dataset.jpg)
 
 Computation time for this analysis depends directly on the size of your dataset. 
 Expect a few hours for medium-sized volumetric EM datasets. 

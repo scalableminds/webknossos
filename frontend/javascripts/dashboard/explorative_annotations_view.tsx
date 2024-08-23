@@ -793,7 +793,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
   render() {
     return (
-      <div className="TestExplorativeAnnotationsView">
+      <div>
         <TopBar
           isAdminView={this.props.isAdminView}
           handleOnSearch={this.handleOnSearch}
@@ -804,7 +804,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           archiveAll={this.archiveAll}
         />
         {this.renderSearchTags()}
-        <Spin spinning={this.state.isLoading} size="large">
+        <Spin spinning={this.state.isLoading} size="large" style={{ marginTop: 4 }}>
           {this.renderTable()}
         </Spin>
         <div

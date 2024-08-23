@@ -24,7 +24,7 @@ import type {
   UnitLong,
 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { EmptyObject } from "./globals";
+import { EmptyObject, ValueOf } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -172,11 +172,12 @@ export function areDatasetsIdentical(a: APIDatasetId, b: APIDatasetId) {
 }
 export type APIDatasetId = Readonly<MutableAPIDatasetId>;
 
-export enum APIMetadataType {
+export enum APIMetadataEnum {
   STRING = "string",
   NUMBER = "number",
   STRING_ARRAY = "string[]",
 }
+type APIMetadataType = ValueOf<APIMetadataEnum>;
 export type APIMetadata = {
   type: APIMetadataType;
   key: string;

@@ -10,7 +10,7 @@ import {
 import Request from "libs/request";
 import * as foldersApi from "admin/api/folders";
 import test from "ava";
-import { APIMetadataType } from "types/api_flow_types";
+import { APIMetadataEnum } from "types/api_flow_types";
 test.before("Reset database and change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);
@@ -71,7 +71,7 @@ test("addAllowedTeamToFolder", async (t) => {
     id: subFolderId,
     allowedTeams: [teamId],
     name: "A subfolder!",
-    metadata: [{ type: APIMetadataType.STRING, key: "foo", value: "bar" }],
+    metadata: [{ type: APIMetadataEnum.STRING, key: "foo", value: "bar" }],
   });
 
   t.snapshot(updatedFolderWithTeam, {

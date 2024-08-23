@@ -24,7 +24,7 @@ import Toast from "libs/toast";
 import _ from "lodash";
 import React, { useEffect } from "react";
 import { useState } from "react";
-import { APIDataset, Folder, APIMetadata, APIMetadataType } from "types/api_flow_types";
+import { APIDataset, Folder, APIMetadata, APIMetadataEnum } from "types/api_flow_types";
 
 type APIMetadataWithError = APIMetadata & { error?: string | null };
 type IndexedMetadataEntries = APIMetadataWithError[];
@@ -106,7 +106,7 @@ const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
   };
 
   switch (record.type) {
-    case APIMetadataType.NUMBER:
+    case APIMetadataEnum.NUMBER:
       return (
         <InputNumber
           value={record.value as number}
@@ -114,7 +114,7 @@ const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
           {...sharedProps}
         />
       );
-    case APIMetadataType.STRING:
+    case APIMetadataEnum.STRING:
       return (
         <Input
           value={record.value}
@@ -122,7 +122,7 @@ const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
           {...sharedProps}
         />
       );
-    case APIMetadataType.STRING_ARRAY:
+    case APIMetadataEnum.STRING_ARRAY:
       return (
         <Select
           mode="tags"
@@ -317,7 +317,7 @@ export default function MetadataTable({
       const newEntry: APIMetadataWithError = {
         key: "",
         value:
-          type === APIMetadataType.STRING_ARRAY ? [] : type === APIMetadataType.NUMBER ? 0 : "",
+          type === APIMetadataEnum.STRING_ARRAY ? [] : type === APIMetadataEnum.NUMBER ? 0 : "",
         type,
         error: "Enter a property name.",
       };
@@ -339,14 +339,14 @@ export default function MetadataTable({
   };
 
   const availableStrArrayTagOptions = _.uniq(
-    metadata.flatMap((entry) => (entry.type === APIMetadataType.STRING_ARRAY ? entry.value : [])),
+    metadata.flatMap((entry) => (entry.type === APIMetadataEnum.STRING_ARRAY ? entry.value : [])),
   ).map((tag) => ({ value: tag, label: tag })) as {
     value: string;
     label: string;
   }[];
 
   const getTypeSelectDropdownMenu: () => MenuProps = () => ({
-    items: Object.values(APIMetadataType).map((type) => {
+    items: Object.values(APIMetadataEnum).map((type) => {
       return {
         key: type,
         label: getMetadataTypeLabel(type as APIMetadata["type"]),

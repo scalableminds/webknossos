@@ -25,7 +25,7 @@ WEBKNOSSOS automatically periodically checks and detects changes to a dataset's 
 
 ## Sharing & Permissions Tab
 - `Make dataset publicly accessible`: By default, a dataset can only be accessed by users from your organization with the correct access permissions. Turning a dataset to *public* will allow anyone in the general public to view the dataset when sharing a link to the dataset without the need for a WEBKNOSSOS account. Anyone can start using this dataset to create annotations. Enable this setting if you want to share a dataset in a publication, social media, or any other public website.
-- `Teams allowed to access this dataset`: Defines which [teams of your organization](../users/teams.md.md) have permission to work with this dataset. By default, no team has access, but users with *admin* and *team manager* roles can see and edit the dataset.
+- `Teams allowed to access this dataset`: Defines which [teams of your organization](../users/teams.md) have permission to work with this dataset. By default, no team has access, but users with *admin* and *team manager* roles can see and edit the dataset.
 - `Sharing Link`: A web URL pointing to this dataset for easy sharing that allows any user to view your dataset. The URL contains an access token to allow people to view the dataset without a WEBKNOSSOS account. The access token is random, and therefore the URL cannot be guessed by visitors. You may also revoke the access token to create a new one. Anyone with a URL containing a revoked token will no longer have access to this dataset. 
 Read more in [the Sharing guide](../sharing/dataset_sharing.md).
 

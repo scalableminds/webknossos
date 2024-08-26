@@ -20,6 +20,7 @@ import { MenuProps, Modal, Typography } from "antd";
 import { useState } from "react";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { useQueryClient } from "@tanstack/react-query";
+import { getNoActionsAvailableMenu } from "oxalis/view/context_menu";
 
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
@@ -303,20 +304,7 @@ export function getDatasetActionContextMenu({
   hideContextMenu: () => void;
 }): MenuProps {
   if (datasets.length !== 1) {
-    return {
-      onClick: hideContextMenu,
-      style: {
-        borderRadius: 6,
-      },
-      mode: "vertical",
-      items: [
-        {
-          key: "view",
-          disabled: true,
-          label: "No actions available.",
-        },
-      ],
-    };
+    return getNoActionsAvailableMenu(hideContextMenu);
   }
   const dataset = datasets[0];
 

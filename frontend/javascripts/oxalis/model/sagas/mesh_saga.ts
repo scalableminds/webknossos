@@ -58,7 +58,6 @@ import { Model } from "oxalis/singletons";
 import ThreeDMap from "libs/ThreeDMap";
 import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import window from "libs/window";
 import {
   getActiveSegmentationTracing,
   getEditableMappingForVolumeTracingId,
@@ -82,6 +81,7 @@ import Zip from "libs/zipjs_wrapper";
 import { FlycamAction } from "../actions/flycam_actions";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { BufferGeometryWithInfo } from "oxalis/controller/segment_mesh_controller";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -105,10 +105,9 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
 // Maps from additional coordinates, layerName and segmentId to a ThreeDMap that stores for each chunk
 // (at x, y, z) position whether the mesh chunk was loaded.
 const adhocMeshesMapByLayer: Record<string, Record<string, Map<number, ThreeDMap<boolean>>>> = {};
+
 function marchingCubeSizeInTargetMag(): Vector3 {
-  return (window as any).__marchingCubeSizeInTargetMag != null
-    ? (window as any).__marchingCubeSizeInTargetMag
-    : [64, 64, 64];
+  return WkDevFlags.meshing.marchingCubeSizeInTargetMag;
 }
 const modifiedCells: Set<number> = new Set();
 export function isMeshSTL(buffer: ArrayBuffer): boolean {

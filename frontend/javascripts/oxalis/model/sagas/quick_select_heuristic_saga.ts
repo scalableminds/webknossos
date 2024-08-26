@@ -22,11 +22,11 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   CancelQuickSelectAction,
+  ComputeQuickSelectForPointAction,
   ComputeQuickSelectForRectAction,
   ConfirmQuickSelectAction,
   FineTuneQuickSelectAction,
   finishAnnotationStrokeAction,
-  MaybePrefetchEmbeddingAction,
   registerLabelPointAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -74,7 +74,7 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
 let wasPreviewModeToastAlreadyShown = false;
 
 export function* prepareQuickSelect(
-  action: ComputeQuickSelectForRectAction | MaybePrefetchEmbeddingAction,
+  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction,
 ): Saga<{
   labeledZoomStep: number;
   firstDim: DimensionIndices;
@@ -92,10 +92,8 @@ export function* prepareQuickSelect(
   if (activeViewport === "TDView") {
     // Can happen when the user ends the drag action in the 3D viewport
     console.warn("Ignoring quick select when mouse is in 3D viewport");
-    if ("quickSelectGeometry" in action) {
-      const { quickSelectGeometry } = action;
-      quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
-    }
+    const { quickSelectGeometry } = action;
+    quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
     return null;
   }
   const [firstDim, secondDim, thirdDim] = Dimensions.getIndices(activeViewport);
@@ -167,9 +165,11 @@ export function* prepareQuickSelect(
   };
 }
 
-export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
+export default function* performQuickSelect(
+  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction,
+): Saga<void> {
   const preparation = yield* call(prepareQuickSelect, action);
-  if (preparation == null) {
+  if (preparation == null || action.type === "COMPUTE_QUICK_SELECT_FOR_POINT") {
     return;
   }
   const {
@@ -200,9 +200,9 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
   const inclusiveMaxW = map3((el, idx) => (idx === thirdDim ? el - 1 : el), boundingBoxMag1.max);
   quickSelectGeometry.setCoordinates(boundingBoxMag1.min, inclusiveMaxW);
 
-  const boundingBoxTarget = boundingBoxMag1.fromMag1ToMag(labeledResolution);
+  const boundingBoxInMag = boundingBoxMag1.fromMag1ToMag(labeledResolution);
 
-  if (boundingBoxTarget.getVolume() === 0) {
+  if (boundingBoxInMag.getVolume() === 0) {
     Toast.warning("The drawn rectangular had a width or height of zero.");
     return;
   }
@@ -214,7 +214,7 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     labeledZoomStep,
     additionalCoordinates,
   );
-  const size = boundingBoxTarget.getSize();
+  const size = boundingBoxInMag.getSize();
   const stride = [1, size[0], size[0] * size[1]];
 
   if (inputDataRaw instanceof BigUint64Array) {
@@ -280,16 +280,13 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
 
   if (!quickSelectConfig.showPreview) {
     sendAnalyticsEvent("used_quick_select_without_preview");
-    yield* finalizeQuickSelect(
+    yield* finalizeQuickSelectForSlice(
       quickSelectGeometry,
       volumeTracing,
       activeViewport,
       labeledResolution,
       boundingBoxMag1,
-      thirdDim,
-      size,
-      firstDim,
-      secondDim,
+      boundingBoxMag1.min[thirdDim],
       thresholdField,
       overwriteMode,
       labeledZoomStep,
@@ -353,16 +350,13 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     } else if (confirm || enter) {
       sendAnalyticsEvent("confirmed_quick_select_preview");
 
-      yield* finalizeQuickSelect(
+      yield* finalizeQuickSelectForSlice(
         quickSelectGeometry,
         volumeTracing,
         activeViewport,
         labeledResolution,
         boundingBoxMag1,
-        thirdDim,
-        size,
-        firstDim,
-        secondDim,
+        boundingBoxMag1.min[thirdDim],
         thresholdField,
         overwriteMode,
         labeledZoomStep,
@@ -447,7 +441,7 @@ function getCenterSubview(inputNdUvw: ndarray.NdArray<Uint8Array>) {
 
 function processBinaryMaskInPlaceAndAttach(
   mask: ndarray.NdArray<Uint8Array>,
-  quickSelectConfig: Omit<QuickSelectConfig, "showPreview" | "useHeuristic">,
+  quickSelectConfig: Omit<QuickSelectConfig, "showPreview" | "useHeuristic" | "predictionDepth">,
   quickSelectGeometry: QuickSelectGeometry,
 ) {
   fillHolesInPlace(mask);
@@ -499,19 +493,17 @@ function normalizeToUint8(
   return inputData;
 }
 
-export function* finalizeQuickSelect(
+export function* finalizeQuickSelectForSlice(
   quickSelectGeometry: QuickSelectGeometry,
   volumeTracing: VolumeTracing,
   activeViewport: OrthoView,
   labeledResolution: Vector3,
   boundingBoxMag1: BoundingBox,
-  thirdDim: number,
-  size: Vector3,
-  firstDim: number,
-  secondDim: number,
+  w: number,
   mask: ndarray.NdArray<TypedArrayWithoutBigInt>,
   overwriteMode: OverwriteMode,
   labeledZoomStep: number,
+  skipFinishAnnotationStroke: boolean = false,
 ) {
   quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
   const volumeLayer = yield* call(
@@ -519,16 +511,19 @@ export function* finalizeQuickSelect(
     volumeTracing,
     activeViewport,
     labeledResolution,
-    boundingBoxMag1.min[thirdDim],
+    w,
   );
+  const sizeUVWInMag = mask.shape;
   const voxelBuffer2D = volumeLayer.createVoxelBuffer2D(
     V2.floor(volumeLayer.globalCoordToMag2DFloat(boundingBoxMag1.min)),
-    size[firstDim],
-    size[secondDim],
+    sizeUVWInMag[0],
+    sizeUVWInMag[1],
   );
 
-  for (let u = 0; u < size[firstDim]; u++) {
-    for (let v = 0; v < size[secondDim]; v++) {
+  for (let u = 0; u < sizeUVWInMag[0]; u++) {
+    for (let v = 0; v < sizeUVWInMag[1]; v++) {
+      // w = 0 is correct because the correct 3rd dim was already sliced
+      // by the caller.
       if (mask.get(u, v, 0) > 0) {
         voxelBuffer2D.setValue(u, v, 1);
       }
@@ -543,7 +538,12 @@ export function* finalizeQuickSelect(
     labeledZoomStep,
     activeViewport,
   );
-  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  if (boundingBoxMag1.getCenter().some((el) => el == null)) {
+    throw new Error("invalid bbox");
+  }
+  if (!skipFinishAnnotationStroke) {
+    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+  }
   yield* put(registerLabelPointAction(boundingBoxMag1.getCenter()));
   yield* put(
     updateSegmentAction(

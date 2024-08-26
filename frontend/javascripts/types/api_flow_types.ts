@@ -167,6 +167,9 @@ export type MutableAPIDatasetId = {
   owningOrganization: string;
   name: string;
 };
+export function areDatasetsIdentical(a: APIDatasetId, b: APIDatasetId) {
+  return a.owningOrganization === b.owningOrganization && a.name === b.name;
+}
 export type APIDatasetId = Readonly<MutableAPIDatasetId>;
 export type APIDatasetDetails = {
   readonly species?: string;
@@ -283,6 +286,7 @@ export type APIUserBase = APIUserCompact & {
 };
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
+  hasSeenSegmentAnythingWithDepth?: boolean;
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
@@ -900,6 +904,7 @@ export type VoxelyticsArtifactConfig = {
     iframes: Record<string, string>;
     links: Record<string, string>;
   };
+  foreignWorkflow: [string, string] | null;
 };
 
 export type VoxelyticsRunInfo = {
@@ -1074,7 +1079,7 @@ export type FlatFolderTreeItem = {
 // Frontend type
 export type FolderItem = {
   title: string;
-  key: string;
+  key: string; // folder id
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;

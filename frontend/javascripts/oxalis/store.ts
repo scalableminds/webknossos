@@ -135,8 +135,8 @@ export type MutableTree = {
   color: Vector3;
   name: string;
   timestamp: number;
-  comments: Array<MutableCommentType>;
-  branchPoints: Array<MutableBranchPoint>;
+  comments: MutableCommentType[];
+  branchPoints: MutableBranchPoint[];
   edges: EdgeCollection;
   isVisible: boolean;
   nodes: MutableNodeMap;
@@ -149,8 +149,8 @@ export type Tree = {
   readonly color: Vector3;
   readonly name: string;
   readonly timestamp: number;
-  readonly comments: Array<CommentType>;
-  readonly branchPoints: Array<BranchPoint>;
+  readonly comments: CommentType[];
+  readonly branchPoints: BranchPoint[];
   readonly edges: EdgeCollection;
   readonly isVisible: boolean;
   readonly nodes: NodeMap;
@@ -163,12 +163,12 @@ export type TreeGroupTypeFlat = {
   readonly isExpanded?: boolean;
 };
 export type TreeGroup = TreeGroupTypeFlat & {
-  readonly children: Array<TreeGroup>;
+  readonly children: TreeGroup[];
 };
 export type MutableTreeGroup = {
   name: string;
   groupId: number;
-  children: Array<MutableTreeGroup>;
+  children: MutableTreeGroup[];
 };
 
 export type SegmentGroupTypeFlat = TreeGroupTypeFlat;
@@ -336,6 +336,9 @@ export type PartialDatasetConfiguration = Partial<Omit<DatasetConfiguration, "la
 
 export type QuickSelectConfig = {
   readonly useHeuristic: boolean;
+  // Only relevant for useHeuristic=false:
+  readonly predictionDepth?: number;
+  // Only relevant for useHeuristic=true:
   readonly showPreview: boolean;
   readonly segmentMode: "dark" | "light";
   readonly threshold: number;
@@ -521,6 +524,7 @@ export type BusyBlockingInfo = {
   reason?: string;
 };
 type UiInformation = {
+  readonly globalProgress: number; // 0 to 1
   readonly showDropzoneModal: boolean;
   readonly showVersionRestore: boolean;
   readonly showDownloadModal: boolean;

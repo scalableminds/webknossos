@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(117);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(118);
 COMMIT TRANSACTION;
 
 
@@ -545,7 +545,6 @@ CREATE TABLE webknossos.emailVerificationKeys(
 CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei');
 
 CREATE TABLE webknossos.aiModels(
-   -- todo foreign keys
   _id CHAR(24) PRIMARY KEY,
   _organization CHAR(24) NOT NULL,
   _dataStore VARCHAR(256) NOT NULL, -- redundant to job, but must be available for jobless models
@@ -594,6 +593,7 @@ CREATE TABLE webknossos.voxelytics_artifacts(
     metadata JSONB,
     PRIMARY KEY (_id),
     UNIQUE (_task, name),
+    UNIQUE (_task, path),
     CONSTRAINT metadataIsJsonObject CHECK(jsonb_typeof(metadata) = 'object')
 );
 

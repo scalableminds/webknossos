@@ -539,7 +539,7 @@ export function CopyableSharingLink({
   const linkToCopy = showShortLink ? shortUrl || longUrl : longUrl;
 
   return (
-    <Space.Compact>
+    <Space.Compact block>
       <Tooltip title="When enabled, the link is shortened automatically.">
         <Button
           type={showShortLink ? "primary" : "default"}

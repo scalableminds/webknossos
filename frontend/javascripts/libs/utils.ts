@@ -669,10 +669,6 @@ export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
   return arr.filter((x) => !auxSet.has(x));
 }
 
-export function zipMaybe<T, U>(maybeA: Maybe<T>, maybeB: Maybe<U>): Maybe<[T, U]> {
-  return maybeA.chain((valueA) => maybeB.map((valueB) => [valueA, valueB]));
-}
-
 // Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
 // you can't do getOrElse(null) without flow complaining
 export function toNullable<T>(_maybe: Maybe<T>): T | null | undefined {
@@ -1284,4 +1280,23 @@ export function encodeToBase62(numberToEncode: number): string {
     num = Math.floor(num / 62);
   }
   return encoded;
+}
+
+export function safeNumberToStr(num: number): string {
+  if (typeof num === "number") {
+    return `${num}`;
+  }
+  return "NaN";
+}
+
+export function generateRandomId(length: number) {
+  let result = "";
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const charactersLength = characters.length;
+  let counter = 0;
+  while (counter < length) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+    counter += 1;
+  }
+  return result;
 }

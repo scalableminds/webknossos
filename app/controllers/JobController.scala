@@ -130,7 +130,8 @@ class JobController @Inject()(
             "organization_name" -> organizationName,
             "organization_display_name" -> organization.displayName,
             "dataset_name" -> datasetName,
-            "scale" -> voxelSize.toNanometer.toUriLiteral
+            "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
+            "voxel_size_unit" -> voxelSize.unit
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunCubing"
           js <- jobService.publicWrites(job)
@@ -222,7 +223,6 @@ class JobController @Inject()(
                          datasetName: String,
                          layerName: String,
                          bbox: String,
-                         outputSegmentationLayerName: String,
                          newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
@@ -234,7 +234,6 @@ class JobController @Inject()(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
           _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- Fox.runIf(!multiUser.isSuperUser)(jobService.assertBoundingBoxLimits(bbox, None))
@@ -244,7 +243,6 @@ class JobController @Inject()(
             "dataset_name" -> datasetName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
-            "output_segmentation_layer_name" -> outputSegmentationLayerName,
             "bbox" -> bbox,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunNeuronInferral"
@@ -257,7 +255,6 @@ class JobController @Inject()(
                               datasetName: String,
                               layerName: String,
                               bbox: String,
-                              outputSegmentationLayerName: String,
                               newDatasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
@@ -269,7 +266,6 @@ class JobController @Inject()(
             "dataset.notFound",
             datasetName) ~> NOT_FOUND
           _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.inferMitochondria.notAllowed.onlySuperUsers"
@@ -280,7 +276,6 @@ class JobController @Inject()(
             "dataset_name" -> datasetName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
-            "output_segmentation_layer_name" -> outputSegmentationLayerName,
             "bbox" -> bbox,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunInferMitochondria"
@@ -292,7 +287,8 @@ class JobController @Inject()(
   def runAlignSectionsJob(organizationName: String,
                           datasetName: String,
                           layerName: String,
-                          newDatasetName: String): Action[AnyContent] =
+                          newDatasetName: String,
+                          annotationId: Option[String] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
@@ -304,6 +300,7 @@ class JobController @Inject()(
             datasetName) ~> NOT_FOUND
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
+          _ <- Fox.runOptional(annotationId)(ObjectId.fromString)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           _ <- bool2Fox(multiUser.isSuperUser) ?~> "job.alignSections.notAllowed.onlySuperUsers"
           command = JobCommand.align_sections
@@ -312,6 +309,7 @@ class JobController @Inject()(
             "dataset_name" -> datasetName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
+            "annotation_id" -> annotationId
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunAlignSections"
           js <- jobService.publicWrites(job)

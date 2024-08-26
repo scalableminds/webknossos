@@ -424,7 +424,9 @@ class DatasetController @Inject()(userService: UserService,
           datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           targetMagSelectedBbox: BoundingBox = request.body.surroundingBoundingBox / request.body.mag
           _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z <= 1024 && targetMagSelectedBbox.size.sorted.y <= 1024) ?~> s"Target-mag selected bbox must be smaller than 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
-          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.x <= 12) ?~> s"Target-mag selected bbox depth must be at most 12"
+          // The maximum depth of 16 also needs to be adapted in the front-end
+          // (at the time of writing, in MAX_DEPTH_FOR_SAM in quick_select_settings.tsx).
+          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.x <= 16) ?~> s"Target-mag selected bbox depth must be at most 16"
           _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z == targetMagSelectedBbox.size.sorted.y) ?~> s"Target-mag selected bbox must equally sized long edges, got ${targetMagSelectedBbox.size}"
           _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.BOUNDING_BOX)(
             bool2Fox(request.body.selectionTopLeftX.isDefined &&

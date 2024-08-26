@@ -1,4 +1,4 @@
-## Skeleton Annotations
+# Skeleton Annotations
 
 Skeleton annotations are typically used to reconstruct structures that span across multiple data slices as graphs of connected nodes.
 For example, you can analyze nerve cells by placing nodes along their pat/circuitry through the dataset (see image below).
@@ -17,8 +17,7 @@ This article shows you how to view, edit, or create skeleton annotations in WEBK
 
 
 
-
-### Nodes and Trees
+## Nodes and Trees
 
 A skeleton annotation is a graph of connected nodes.
 Edges connect the nodes and form trees.
@@ -45,7 +44,7 @@ All branch points are stored as a first-in, first-out (FIFO) stack. Press "J" to
 
 
 
-### Merging Skeleton Annotations
+## Merging Skeleton Annotations
 
 There are two ways for merging annotations:
 

@@ -3,8 +3,8 @@
 The WEBKNOSSOS UI comes with a fully featured `Download` panel offering a wide variety of download export options:
 
 - Export cutouts of the data as OME-TIFF or TIFF stack (uses [long-running jobs](../automation/jobs.md) for export)
-- Download skeleton annotation as [NML files](../data_formats.md#nml-files)
-- Download volume annotations as [WKW files](../data_formats.md#wkw-datasets)
+- Download skeleton annotation as [NML files](../data/concepts.md#nml-files)
+- Download volume annotations as [WKW files](../data/concepts.md)
 - Instructions for using the WEBKNOSSOS Python library for download (see below)
 
 To access the download panel:

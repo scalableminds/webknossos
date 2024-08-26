@@ -19,7 +19,7 @@ If your data is not in WKW, you can either:
 Depending on the size of the dataset, the conversion will take some time. 
 You can check the progress at the [`Jobs`](../automation/jobs.md) page or the "Datasets" tab in the dashboard.
 WEBKNOSSOS will also send you an email notification.
-- [Convert](#converting-datasets) your data manually to WKW.
+- [Convert](../datasets/converting.md) your data manually to WKW.
 
 In particular, the following file formats are supported for uploading (and conversion):
 
@@ -27,7 +27,7 @@ In particular, the following file formats are supported for uploading (and conve
 - [OME-Zarr datasets](./zarr.md)
 - [Image file sequence](./image_stacks.md#single-layer-image-file-sequence) in one folder (TIFF, JPEG, PNG, DM3, DM4)
 - [Multi Layer file sequence](./image_stacks.md#multi-layer-image-file-sequence) containing multiple folders with image sequences that are interpreted as separate layers
-- [Single-file images](-image_stacks.md#single-file-images) (OME-Tiff, TIFF, PNG, czi, raw, etc)
+- [Single-file images](./image_stacks.md#single-file-images) (OME-Tiff, TIFF, PNG, czi, raw, etc)
 - [Neuroglancer Precomputed datasets](./neuroglancer_precomputed.md)
 - [N5 datasets](./n5.md)
 

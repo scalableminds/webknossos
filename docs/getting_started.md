@@ -25,13 +25,13 @@ To get started, navigate to the `Featured Publications` tab on your [dashboard](
 There, you find a list of all available public datasets.
 Click on the dataset name to open the dataset.
 
-![The list of available datasets](../images/getting_started-datasets.jpeg)
+![The list of available datasets](./images/getting_started-datasets.jpeg)
 
 You can open any WEBKNOSSOS dataset for read-only viewing (“View” mode) or in editor-mode to create a new skeleton and/or volume annotation.
 Three orthogonal viewports slicing the data along the major axis and a 3D viewport make up the main WEBKNOSSOS user interface.
 Read more [about the user interface](./ui/index.md).
 
-![The WEBKNOSSOS user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](../images/main_ui.jpeg)
+![The WEBKNOSSOS user interface consisting of three orthogonal viewports slicing the data along the major axis and a 3D viewport.](./images/main_ui.jpeg)
 
 You can use the following shortcuts to navigate the data.
 See the full list of [gestures and keyboard shortcuts](./ui/keyboard_shortcuts.md) for advanced use.
@@ -49,7 +49,7 @@ See the full list of [gestures and keyboard shortcuts](./ui/keyboard_shortcuts.m
 
 You can also change the size of the viewports to see more details in your data and customize your layout.
 
-![Explore datasets with customized viewport layouts](../images/getting_started-viewports.jpeg)
+![Explore datasets with customized viewport layouts](./images/getting_started-viewports.jpeg)
 
 ## Your First Annotation
 
@@ -69,7 +69,7 @@ Use the mouse wheel or press the spacebar keyboard shortcut to move along the 3r
 
 Read the guides about the [annotation UI](./ui/index.md), [skeleton annotation](./skeleton_annotation/index.md), or [volume annotation](./volume_annotation/index.md) for more details.
 
-![Editing skeleton and volume annotations in the Annotation UI](../images/tracing_ui.jpeg)
+![Editing skeleton and volume annotations in the Annotation UI](./images/tracing_ui.jpeg)
 
 ## Tutorials
 We have tutorials on a wide range of topics to get you started. Also check out our [YouTube channel](https://www.youtube.com/@webknossos) for video guides. 
@@ -90,7 +90,7 @@ Feel free to explore more features of WEBKNOSSOS in this documentation.
 - [Keyboard Shortcuts](./ui/keyboard_shortcuts.md)
 - [Collaboration & Sharing](./sharing/index.md)
 - [Data Export and Interoperability](./data/export_ui.md)
-- [Datasets](./datasets/index.md) and [Data Formats](../data_formats.md)
+- [Datasets](./datasets/index.md) and [Data Formats](./data_formats.md)
 - [User and Permission Management](./users/index.md)
 - [Task and Project Management](./tasks_projects/index.md)
 - [FAQ](./faq.md)

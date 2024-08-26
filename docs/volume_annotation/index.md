@@ -1,6 +1,6 @@
 ## Volume Annotations & Proof-Reading
 
-In addition to [skeleton annotations](./skeleton_annotation.md), WEBKNOSSOS also supports volume/segmentation annotations.
+In addition to [skeleton annotations](../skeleton_annotation/index.md.md), WEBKNOSSOS also supports volume/segmentation annotations.
 This annotation type lets you label voxel groups using efficient drawing tools.
 
 ![youtube-video](https://www.youtube.com/embed/iw2C7XB6wP4?start=120)
@@ -19,7 +19,7 @@ This button opens up a modal that starts a long-running job which will materiali
 
 ### Proof-Reading and Merging Segments
 
-See the section on [proofreading](./proof_reading.md).
+See the section on [proofreading](../proof_reading/tools.md).
 
 ### AI Quick Select
 The built-in quick select tools allows you draw a selection around a cell or object and WEBKNOSSOS will use machine-learning to automatically do the segmentation for you.
@@ -60,7 +60,7 @@ WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new 
 - For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply it to one of the partial segments that you just divided.
 
 Note that due to performance reasons, 3D flood-fills only work in a small, local bounding box.
-For larger areas we recommend working with the [proofreading tool](./proof_reading.md) instead.
+For larger areas we recommend working with the [proofreading tool](../proof_reading/tools.md) instead.
 
 
 

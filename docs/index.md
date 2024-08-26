@@ -18,17 +18,17 @@ Create a free account on [https://webknossos.org/](https://webknossos.org/) and 
 - Exploration of large 2D, 3D, 4D image datasets as found in electron-microscopy, synchrotron, CT, MRI, Micro/Nano-CT, and light microscopy
 - Fully browser-based user experience. No installation required
 - Efficient 3D data streaming for quick loading speeds
-- Creation/editing of [skeleton (line-segments)](./skeleton_annotation.md) and [3D volumetric annotations](./volume_annotation.md)
+- Creation/editing of [skeleton (line-segments)](./skeleton_annotation/index.md.md) and [3D volumetric annotations](./volume_annotation/index.md.md)
 - [Innovative flight mode for fast skeleton annotation](https://www.nature.com/articles/nmeth.4331)
 - User and task management for high-throughput collaboration in the lab or crowdsourcing
-- [Easy Sharing](./sharing.md). Share your datasets and annotations securely with others using web links
-- [Fine-grained access permission](./users.md) and and user roles for secure collaboration
+- Easy Sharing. Share your [datasets](./sharing/dataset_sharing.md) and [annotations](./sharing/annotation_sharing.md) securely with others using web links
+- [Fine-grained access permission](./users/access_rights.md.md) and and user roles for secure collaboration
 - [AI Quick Select tool](./volume_annotation.md#ai-quick-select) to speed up segmentation
 - [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
-- [Supported dataset formats: Zarr, WKW (Optimized), KNOSSOS cubes, Neuroglancer Precomputed, N5, and image stacks](../data_formats.md) (some formats will be converted on upload)
-- [Supported image formats](../data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel
+- [Supported dataset formats: Zarr, WKW (Optimized), KNOSSOS cubes, Neuroglancer Precomputed, N5, and image stacks](./data_formats.md) (some formats will be converted on upload)
+- [Supported image formats](./data_formats.md): Grayscale, Segmentation Maps, RGB, Multi-Channel
 - Supports Time Series datasets
-- [3D Mesh Visualization](./mesh_visualization.md)
+- [3D Mesh Visualization](./meshes/index.md)
 - [Integrated Synapse and Connectome Viewer](./connectome_viewer.md)
 - [Python library with documentation for API access and integration in custom analysis workflows](https://docs.webknossos.org/webknossos-py/index.html)
 - [Frontend API for user scripting](https://webknossos.org/assets/docs/frontend-api/index.html)

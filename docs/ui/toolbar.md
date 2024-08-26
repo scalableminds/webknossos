@@ -12,13 +12,13 @@ The most common buttons are:
   - `Share`: Create a customizable, shareable link to your dataset containing the current position, rotation, zoom level etc. with fine-grained access controls. Use this to collaboratively work with colleagues. Read more about [data sharing](../sharing/annotation_sharing.md).
   - `Duplicate`: Create a duplicate of this annotation. The duplicate will be created in your account, even if the original annotation belongs to somebody else.
   - `Screenshot`: Takes a screenshot of current datasets/annotation from each of the three viewports and downloads them as PNG files.
-  - `Create Animation`: Creates an eye-catching animation of the dataset as a video clip. [Read more about animations](../automations/animations.md).
+  - `Create Animation`: Creates an eye-catching animation of the dataset as a video clip. [Read more about animations](../automation/animations.md).
   - `Merge Annotations`: Combines the skeletons and segments from one or more individual annotations into a new annotation.
   - `Add Script`: Using the [WEBKNOSSOS frontend API](https://webknossos.org/assets/docs/frontend-api/index.html) users can script and automate WEBKNOSSOS interactions. Enter and execute your user scripts (Javascript) from here. Admins can curate a collection of frequently used scripts for your organization and make them available for quick selection to all users.
   - `Restore Older Version`: Opens a window that shows all previous versions of an annotation. WEBKNOSSOS keeps a complete version history of all your changes to an annotation (separate for skeleton/volume). From this window, any older version can be selected, previewed, and restored.
   - `Layout`: The WK annotation user interface can be resized, reordered, and customized to suite your workflows. Use the mouse to drag, move and resize any viewport. You can safe these layout arrangements or restore the default viewport state.
 - `Quick Share`: Create a shareable link to your dataset containing the current position, rotation, zoom level etc. Use this to collaboratively work with colleagues. Read more about [data sharing](../sharing/annotation_sharing.md).
-- `AI Analysis`: Starts an AI segmentation of the datasets. Choose between several automated analysis workflows. Read more about [AI analysis](../automations/ai_segmentation.md).
+- `AI Analysis`: Starts an AI segmentation of the datasets. Choose between several automated analysis workflows. Read more about [AI analysis](../automation/ai_segmentation.md).
 
 A user can directly jump to any position within their datasets by entering them in the position input field.
 The same is true for the camera rotation in flight/oblique modes.

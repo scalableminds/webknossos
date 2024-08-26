@@ -15,7 +15,7 @@ There are three options to control who can see an annotation if they know the an
 To change the visibility of an annotation, follow these steps:
 
 1. Open your annotation from the dashboard
-2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
+2. From the [toolbar](../ui/toolbar.md) select `Share` from the overflow menu next to the `Save` button.
 3. Select the desired permission level from the three available options.
 
 ![Configure the Annotation Permissions](../images/sharing_modal_visibility.jpeg)
@@ -32,7 +32,7 @@ Annotations can be shared via a link. People, who obtain the link, must have acc
 `Public` annotations do not require any user authentication and are a great option for sharing a link to your annotation from social media or your website.
 For public annotations to work properly, the underlying dataset must also be shared publicly or privately (via token URL).
 Otherwise, the annotation and data cannot be loaded by WEBKNOSSOS, and an error will occur.
-[Learn how to share datasets publicly above.](#public-sharing)
+[Learn how to share datasets publicly.](./dataset_sharing.md#public-sharing)
 
 `Internal` annotations require the recipient of a link to log in with his WEBKNOSSOS account.
 This is primarily used for sharing annotations with your co-workers, e.g. for highlighting interesting positions in your work.
@@ -50,7 +50,7 @@ Think of this feature as GitHub forks. Changes made to a copy are not automatica
 To get the sharing link of an annotation, follow the same steps as for changing the viewing permissions:
 
 1. Open your annotation
-2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
+2. From the [toolbar](../ui/toolbar.md) select `Share` from the overflow menu next to the `Save` button.
 3. Copy the sharing URL.
 
 ![Get the Annotation Sharing Link](../images/sharing_modal_link.jpeg)
@@ -135,12 +135,12 @@ This is the simplest way to share an annotation with a whole team both for revie
 To share an annotation with a certain team, follow these steps:
 
 1. Open your annotation
-2. From the [toolbar](./tracing_ui.md#the-toolbar) select `Share` from the overflow menu next to the `Save` button.
+2. From the [toolbar](../ui/toolbar.md) select `Share` from the overflow menu next to the `Save` button.
 3. Under *Team Sharing*, select the teams from the dropdown menu.
 
 ![Enable Team Sharing for your annotation](../images/sharing_modal_team.jpeg)
 
-Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](./dashboard.md#shared-annotations). By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.
+Any annotation shared this way will be listed in your personal and any team member's [Annotations Dashboard Tab](../dashboard/annotations.md). By default team sharing is read-only, i.e. other team members can not make modifications to your annotation.
 
 To collaboratively work on the same annotation with multiple users from your team, you can share an annotation and allow modifications. Select "Yes, allow editing" from the sharing UI.
 

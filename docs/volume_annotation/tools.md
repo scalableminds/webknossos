@@ -10,7 +10,7 @@ Choose a drawing tool from the toolbar or press _W_ to switch between them.
 - `Segment Picker`: Click a segment to use its label ID as the active segment ID and keep annotating with that ID.
 - `Quick Select`: Annotate a segment automatically by drawing a rectangular selection over it. The tool operates in two different modes. 
 When the "AI" button in the toolbar is activated, a machine-learning model is used to infer the selection. When the AI button is disabled, the tool operates on the intensity data of the visible color layer and automatically fills out the segment starting from the center of the rectangle. Next to the tool, there is a settings button which allows to enable a preview mode and to tweak some other parameters. When the preview is enabled, you can fine-tuned the parameters and see the preview update instantly.
-- `Proof Reading`: Fix merge and split errors in automated segmentation. Read more about [proofreading](./proof_reading.md#proofreading-tool).
+- `Proof Reading`: Fix merge and split errors in automated segmentation. Read more about [proofreading](../proofreading/tools.md).
 
 When using the trace or brush tool, a label can be added with _Left Mouse Drag_.
 Erasing is possible with the dedicated erase tools or with _CTRL + Shift + Left Mouse Drag_.
@@ -19,7 +19,7 @@ If you have enabled _Classic Controls_ in the settings sidebar, erasing is also 
 
 The following interactions and modifiers are available when working with the volume annotation tools:
 
-- `Create New Segment ID`: Creates a new segment ID for labeling. Note the little color indicator in the top right corner of the button visualizing the current color of the active segment ID. Read the explanation for the largest segment id [here](datasets.md#configuring-datasets) to understand how new IDs are generated.
+- `Create New Segment ID`: Creates a new segment ID for labeling. Note the little color indicator in the top right corner of the button visualizing the current color of the active segment ID. Read the explanation for the largest segment id [here](../datasets/settings.md) to understand how new IDs are generated.
 - `Change Brush Size`: Changes the size of the brushing tool.
 - `Overwrite Everything`: When labeling with the brush/trace tool, you can annotate every available voxel without any regard if it was already labeled as a different segment or whether it is unlabelled. This allows you to draw over existing segments.
 - `Only Overwrite Empty Areas`: In contrast to the `Overwrite Everything` modifier, the forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.

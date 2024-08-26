@@ -11,4 +11,4 @@ CTRL + Click on any mesh will unload that mesh.
 
 Additionally, hiding, removing, reloading a mesh or jumping to its hovered position can be done with the context menu in the 3d viewport via right-click on a hovered mesh.
 
-You can also include meshes in [WEBKNOSSOS animations](./animations.md).
+You can also include meshes in [WEBKNOSSOS animations](../automation/animations.md).

@@ -1,24 +1,7 @@
-# Supported Data Formats
 
-WEBKNOSSOS uses several file formats for reading large-scale volumetric image data and storing skeleton and volume annotations. The section will provide technical backgrounds on these file formats, list examples, and explain concepts and details.
+# High-Level Concepts
 
-WEBKNOSSOS natively supports loading and streaming data in the following formats:
-
-- [WEBKNOSSOS-wrap (WKW)](./wkw.md)
-- [OME-Zarr / NGFF](./zarr.md)
-- [Neuroglancer precomputed](./neuroglancer_precomputed.md)
-- [N5](./n5.md)
-- [Image Stacks (through Conversion)](./image_stacks.md)
-
-The WEBKNOSSOS-wrap (WKW) container format is used for all internal voxel data representations - both for the raw (microscopy) image datasets and segmentations. Skeleton annotations are saved as NML files. 
-
-Any dataset uploaded to webknossos.org will automatically be converted to WKW on upload - given its source file format is supported by WEBKNOSSOS. Alternatively, you can manually convert your datasets using the [WEBKNOSSOS CLI tool](https://docs.webknossos.org/cli) or use a custom script based on the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/index.html).
-
-Read more about uploading and configuring datasets on the [datasets page](./datasets.md).
-
-## High-Level Concepts
-
-### Datasets, Cubes, and Buckets
+## Datasets, Cubes, and Buckets
 
 A *dataset* consists of [one or more layers](#layers).
 Since WEBKNOSSOS deals with 3D imagery, the data is organized in *cubes*.
@@ -28,7 +11,7 @@ This is the unit in which the data is streamed to a user's browser.
 
 ![Datasets, Cubes, and Buckets](../images/cubes-and-buckets.jpeg)
 
-### Layers
+## Layers
 
 A dataset consists of one or more layers.
 
@@ -39,7 +22,7 @@ A WEBKNOSSOS dataset can contain several `color` and `segmentation` layers which
 
 ![Color and Segmentation Layers](../images/datalayers.jpeg)
 
-### Magnification Steps and Downsampling
+## Magnification Steps and Downsampling
 
 To enable zooming within huge datasets in WEBKNOSSOS, dataset layers usually contain multiple magnification steps (also called mipmaps or image pyramids or resolutions).
 `1` is the magnification step with the finest resolution, i.e. the original data.
@@ -51,7 +34,7 @@ WEBKNOSSOS also supports non-uniform (anisotropic) downsampling. For example, `[
 ![Downsampling the data to improve zooming](../images/downsampling.jpeg)
 
 
-### Segmentation
+## Segmentation
 
 Segmentations in WEBKNOSSOS are represented by ID maps.
 Every segment or component has its own ID.
@@ -67,7 +50,7 @@ The underlying data type limits the maximum number of IDs:
 | `uint64`  | 18,446,744,073,709,551,615 |
 
 
-### Dataset Metadata
+## Dataset Metadata
 For each dataset, we stored metadata in a `datasource-properties.json` file.
 See below for the [full specification](#dataset-metadata-specification).
 This is an example:
@@ -131,7 +114,7 @@ During the data import process, WEBKNOSSOS will ask for the necessary properties
 
 [See below for the full specification](#dataset-metadata-specification).
 
-#### Dataset Metadata Specification
+### Dataset Metadata Specification
 WEBKNOSSOS requires several metadata properties for each dataset to properly display it. We refer to this as a WEBKNOSSOS `datasource`, in reference to the `datasource-properties.json` file for local datasets.
 
 - `id`: This section contains information about the name and corresponding team of the dataset. However, this information is not used by WEBKNOSSOS because it will be replaced by more accurate runtime information.
@@ -151,7 +134,7 @@ WEBKNOSSOS requires several metadata properties for each dataset to properly dis
   + `dataLayers.largestSegmentId`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
   + `dataLayers.dataFormat`: Should be `wkw`.
 
-### NML Files
+## NML Files
 When working with skeleton annotation data, WEBKNOSSOS uses the NML format.
 It can be [downloaded](./export.md#data-export-and-interoperability) from and uploaded to WEBKNOSSOS, and used for processing in your scripts.
 NML is an XML-based, human-readable file format.
@@ -200,9 +183,9 @@ The structure of the tree groups is listed inside the `<groups>`-tag.
 Groups can be freely nested inside each other.
 
 
-### ID Mapping Files
+## ID Mapping Files
 
-WEBKNOSSOS supports [dynamic, on-demand re-mapping of the segmentation IDs](./volume_annotation.md#mappings-on-demand-agglomeration), allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These mapping files, also known as agglomerate files, need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for WEBKNOSSOS to identify and read them (self-hosted instance only).
+WEBKNOSSOS supports [dynamic, on-demand re-mapping of the segmentation IDs](../proofreading/segmentation_mappings.md), allowing you to quickly toggle between different agglomeration strategies for a segmentation layer. These mapping files, also known as agglomerate files, need to be pre-computed and put into the correct (sub)-directory inside a segmentation layer for WEBKNOSSOS to identify and read them (self-hosted instance only).
 
 WEBKNOSSOS expects hdf5 agglomerate files in the `agglomerates` directory of the segmentation layer.
 

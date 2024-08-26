@@ -1,16 +1,16 @@
 # Importing & Exporting Skeletons as NML Files
 
-WEBKNOSSOS makes it easy to import or export skeleton annotations as [NML files](../data_formats.md#nml).
+WEBKNOSSOS makes it easy to import or export skeleton annotations as [NML files](../data/concepts.md#nml-files).
 
 ## Export Skeleton Annotations
 
 There are several ways for downloading your annotations:
 
 1. There is a `Download` button in the overflow menu next to the prominent `Save` button in the toolbar at the top of the screen.
-
-![Download of skeleton annotations via the ´Download´ button in the toolbar.](../images/tracing_ui_download_tooolbar.jpeg)
+  ![Download of skeleton annotations via the ´Download´ button in the toolbar.](../images/tracing_ui_download_tooolbar.jpeg)
 
 2. If you need more fine-grained control over which trees to download, use the `Download Selected Trees` option. From the `Skeleton` Tab, click on `More` and select `Download Selected Trees` from the menu. All visible trees (checkmark in front of the name) will be downloaded as an NML file. This is especially useful if you need to only download a single tree of an otherwise much larger annotation.
+  ![Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.](../images/tracing_ui_download.jpeg)
 
 ![Skeletons can be exported and downloaded as NML files from the annotation view. Either download all or only selected trees.](../images/tracing_ui_download.jpeg)
 

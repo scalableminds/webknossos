@@ -11,7 +11,7 @@ WEBKNOSSOS supports volume/segmentation annotations. This annotation type lets y
 Watch this tutorial to get started: 
 ![youtube-video](https://www.youtube.com/embed/iw2C7XB6wP4?start=120)
 
-### Merging volume annotation with fallback data
+## Merging volume annotation with fallback data
 
 After finishing the annotation of a volume layer with a fallback layer, the combined state of these layers can be materialized into a new dataset. For this, go to the layer settings in the left border tab. On the top right of the volume layer is the following button:
 

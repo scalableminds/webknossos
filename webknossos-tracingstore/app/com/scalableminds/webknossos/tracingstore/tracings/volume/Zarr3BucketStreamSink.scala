@@ -5,6 +5,7 @@ import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
 import com.scalableminds.util.tools.ByteUtils
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.Zarr3SegmentationLayer
+import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.zarr3._
 import com.scalableminds.webknossos.datastore.datareaders.{
   AxisOrder,
@@ -28,6 +29,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLayer: Boolean)
     extends ProtoGeometryImplicits
     with VolumeBucketReversionHelper
+    with Zarr3OutputHelper
     with ByteUtils {
 
   private lazy val defaultLayerName = "volumeAnnotationData"
@@ -67,8 +69,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
 
   private def createVolumeDataSource(voxelSize: Option[VoxelSize]): GenericDataSource[DataLayer] = {
     val magLocators = layer.tracing.resolutions.map { mag =>
-      MagLocator(mag = vec3IntToProto(mag),
-                 axisOrder = Some(AxisOrder(c = Some(0), x = rank - 3, y = rank - 2, z = Some(rank - 1))))
+      MagLocator(mag = vec3IntToProto(mag), axisOrder = Some(AxisOrder.cAdditionalxyz(rank)))
     }
     GenericDataSource(
       id = DataSourceId("", ""),
@@ -84,14 +85,6 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
         )),
       scale = voxelSize.getOrElse(VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)) // Download should still be available if the dataset no longer exists. In that case, the voxel size is unknown
     )
-  }
-
-  private def reorderAdditionalAxes(additionalAxes: Seq[AdditionalAxis]): Seq[AdditionalAxis] = {
-    val additionalAxesStartIndex = 1 // channel comes first
-    val sorted = additionalAxes.sortBy(_.index)
-    sorted.zipWithIndex.map {
-      case (axis, index) => axis.copy(index = index + additionalAxesStartIndex)
-    }
   }
 
   private def reorderAdditionalCoordinates(additionalCoordinates: Seq[AdditionalCoordinate],

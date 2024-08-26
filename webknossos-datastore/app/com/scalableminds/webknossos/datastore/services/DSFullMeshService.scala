@@ -137,7 +137,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         omitMissing = false,
         token
       )
-      chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegments(organizationName,
+      chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsMerged(organizationName,
                                                                                      datasetName,
                                                                                      layerName,
                                                                                      meshFileName,

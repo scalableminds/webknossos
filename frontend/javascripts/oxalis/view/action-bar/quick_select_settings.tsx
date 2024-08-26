@@ -17,6 +17,10 @@ import features from "features";
 import FastTooltip from "components/fast_tooltip";
 import { QuestionCircleOutlined } from "@ant-design/icons";
 
+// The maximum depth of 16 also needs to be adapted in the back-end
+// (at the time of writing, in segmentAnythingMask in DatasetController.scala).
+const MAX_DEPTH_FOR_SAM = 16;
+
 const OPTIONS_WITH_DISABLED = [
   { label: "Dark Segment", value: "dark" },
   { label: "Light Segment", value: "light" },
@@ -73,7 +77,7 @@ export function AiQuickSelectControls() {
         label="Prediction Depth"
         min={1}
         value={quickSelectConfig.predictionDepth || 1}
-        max={5}
+        max={MAX_DEPTH_FOR_SAM}
         step={1}
         onChange={onChangePredictionDepth}
       />

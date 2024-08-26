@@ -396,18 +396,6 @@ function _DownloadModalView({
           </Text>
         </Row>
       ) : null;
-    const ndVolumeWarning = isVolumeNDimensional ? (
-      <Row key="unsupported-nd">
-        <Text
-          style={{
-            margin: "0 6px 12px",
-          }}
-          type="warning"
-        >
-          Downloading/exporting n-dimensional volume data is not yet supported.
-        </Text>
-      </Row>
-    ) : null;
     const pythonTokenWarning =
       activeTabKey === "python" ? (
         <Row key="python-token-warning">
@@ -424,7 +412,7 @@ function _DownloadModalView({
         </Row>
       ) : null;
 
-    return [volumeFallbackWarning, ndVolumeWarning, pythonTokenWarning];
+    return [volumeFallbackWarning, pythonTokenWarning];
   };
 
   const handleTabChange = (key: string) => {

@@ -1026,7 +1026,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                     const filePaths = files.map((file) => file.path || "");
                     return (
                       unfinishedUploadToContinue.filePaths.length === filePaths.length &&
-                      _.isEqual(unfinishedUploadToContinue.filePaths, filePaths)
+                      _.difference(unfinishedUploadToContinue.filePaths, filePaths).length === 0
                     );
                   }, "The selected files do not match the files of the unfinished upload. Please select the same files as before."),
                 },

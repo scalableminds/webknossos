@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
-import com.scalableminds.webknossos.datastore.dataformats.zarr.ZarrCoordinatesParser
+import com.scalableminds.webknossos.datastore.dataformats.zarr.{Zarr3OutputHelper, ZarrCoordinatesParser}
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffGroupHeader,
   NgffMetadata,
@@ -51,7 +51,8 @@ class VolumeTracingZarrStreamingController @Inject()(
     remoteWebknossosClient: TSRemoteWebknossosClient)(implicit ec: ExecutionContext)
     extends ExtendedController
     with ProtoGeometryImplicits
-    with FoxImplicits {
+    with FoxImplicits
+    with Zarr3OutputHelper {
 
   override def defaultErrorCode: Int = NOT_FOUND
 
@@ -291,8 +292,10 @@ class VolumeTracingZarrStreamingController @Inject()(
             magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
             _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
 
-            (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(coordinates) ?~> Messages(
-              "zarr.invalidChunkCoordinates") ~> NOT_FOUND
+            reorderedAdditionalAxes = reorderAdditionalAxes(AdditionalAxis.fromProtos(tracing.additionalAxes))
+            (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
+              coordinates,
+              Some(reorderedAdditionalAxes)) ?~> Messages("zarr.invalidChunkCoordinates") ~> NOT_FOUND
             cubeSize = DataLayer.bucketLength
             wkRequest = WebknossosDataRequest(
               position = Vec3Int(x, y, z) * cubeSize * magParsed,

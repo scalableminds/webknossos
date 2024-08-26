@@ -78,7 +78,7 @@ export function askUserForLockingActiveMapping(
         cancelText: "Abort Annotation Action",
         width: 600,
         onOk: lockMapping,
-        onCancel: async () => {
+        onCancel: () => {
           reject({ isMappingLockedIfNeeded: false, reason: "User aborted." });
         },
       });

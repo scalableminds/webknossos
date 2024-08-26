@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.services._

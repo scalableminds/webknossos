@@ -1,7 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.layers.ZarrSegmentationLayer
@@ -11,8 +10,6 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json, OFormat}
-
-import scala.concurrent.ExecutionContext
 
 case class EditableMappingSegmentListResult(
     segmentIds: List[Long],
@@ -99,19 +96,13 @@ class DSRemoteTracingstoreClient @Inject()(
       .addQueryStringOptional("token", token)
       .getWithJsonResponse[JsObject]
 
-  def getEditableMappingSegmentIdsForAgglomerate(
-      tracingStoreUri: String,
-      tracingId: String,
-      agglomerateId: Long,
-      token: Option[String])(implicit ec: ExecutionContext): Fox[EditableMappingSegmentListResult] =
-    for {
-      before <- Fox.successful(Instant.now)
-      res <- rpc(s"$tracingStoreUri/tracings/mapping/$tracingId/segmentsForAgglomerate")
-        .addQueryString("agglomerateId" -> agglomerateId.toString)
-        .addQueryStringOptional("token", token)
-        .silent
-        .getWithJsonResponse[EditableMappingSegmentListResult]
-      _ = Instant.logSince(before, "getEditableMappingSegmentIdsForAgglomerate")
-    } yield res
-
+  def getEditableMappingSegmentIdsForAgglomerate(tracingStoreUri: String,
+                                                 tracingId: String,
+                                                 agglomerateId: Long,
+                                                 token: Option[String]): Fox[EditableMappingSegmentListResult] =
+    rpc(s"$tracingStoreUri/tracings/mapping/$tracingId/segmentsForAgglomerate")
+      .addQueryString("agglomerateId" -> agglomerateId.toString)
+      .addQueryStringOptional("token", token)
+      .silent
+      .getWithJsonResponse[EditableMappingSegmentListResult]
 }

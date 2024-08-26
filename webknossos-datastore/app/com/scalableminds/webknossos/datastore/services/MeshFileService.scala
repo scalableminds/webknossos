@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.services
 import com.google.common.io.LittleEndianDataInputStream
 import com.scalableminds.util.geometry.{Vec3Float, Vec3Int}
 import com.scalableminds.util.io.PathUtils
-import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{ByteUtils, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.storage.CachedHdf5Utils.executeWithCachedHdf5
@@ -247,18 +246,14 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       dataLayerName: String,
       meshFileName: String,
       segmentIds: Seq[Long])(implicit m: MessagesProvider): Fox[WebknossosSegmentInfo] = {
-    val before = Instant.now
     val meshChunksForUnmappedSegments =
       listMeshChunksForSegmentsNested(organizationName, datasetName, dataLayerName, meshFileName, segmentIds)
-    Instant.logSince(before, s"listMeshChunksForSegment, meshFileCache = $meshFileCache")
     for {
       _ <- bool2Fox(meshChunksForUnmappedSegments.nonEmpty) ?~> "zero chunks" ?~> Messages(
         "mesh.file.listChunks.failed",
         segmentIds.mkString(","),
         meshFileName)
-      beforeMerge = Instant.now
       chunkInfos = meshChunksForUnmappedSegments.reduce(_.merge(_))
-      _ = Instant.logSince(beforeMerge, "merge chunk infos")
     } yield chunkInfos
   }
 

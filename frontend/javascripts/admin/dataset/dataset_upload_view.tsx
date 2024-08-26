@@ -1015,20 +1015,27 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   }, "WKW files should not be mixed with image files."),
                 },
                 {
-                  validator: syncValidator((files: FileWithPath[]) => {
-                    const { unfinishedUploadToContinue } = this.state;
-                    if (
-                      !unfinishedUploadToContinue ||
-                      unfinishedUploadToContinue.filePaths == null
-                    ) {
-                      return true;
-                    }
-                    const filePaths = files.map((file) => file.path || "");
-                    return (
-                      unfinishedUploadToContinue.filePaths.length === filePaths.length &&
-                      _.difference(unfinishedUploadToContinue.filePaths, filePaths).length === 0
-                    );
-                  }, "The selected files do not match the files of the unfinished upload. Please select the same files as before."),
+                  validator: syncValidator(
+                    (files: FileWithPath[]) => {
+                      const { unfinishedUploadToContinue } = this.state;
+                      if (
+                        !unfinishedUploadToContinue ||
+                        unfinishedUploadToContinue.filePaths == null
+                      ) {
+                        return true;
+                      }
+                      const filePaths = files.map((file) => file.path || "");
+                      return (
+                        unfinishedUploadToContinue.filePaths.length === filePaths.length &&
+                        _.difference(unfinishedUploadToContinue.filePaths, filePaths).length === 0
+                      );
+                    },
+                    "The selected files do not match the files of the unfinished upload. Please select the same files as before." +
+                      unfinishedUploadToContinue?.filePaths !=
+                      null
+                      ? `The file names are ${unfinishedUploadToContinue?.filePaths?.join(", ")}.`
+                      : "",
+                  ),
                 },
               ]}
               valuePropName="fileList"

@@ -40,6 +40,9 @@ object AxisOrder {
       AxisOrder(rank - 3, rank - 2, Some(rank - 1), Some(rank - 4))
 
   def cxyz: AxisOrder = asCxyzFromRank(rank = 4)
+
+  // Additional coordinates are inserted between c and xyz
+  def cAdditionalxyz(rank: Int): AxisOrder = AxisOrder(c = Some(0), x = rank - 3, y = rank - 2, z = Some(rank - 1))
   implicit val jsonFormat: OFormat[AxisOrder] = Json.format[AxisOrder]
 }
 

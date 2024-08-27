@@ -149,7 +149,7 @@ class AnnotationService @Inject()(
   ): Fox[VolumeTracing] = {
     val resolutions = VolumeTracingDownsampling.magsForVolumeTracing(dataSource, fallbackLayer)
     val resolutionsRestricted = resolutionRestrictions.filterAllowed(resolutions)
-    val additionalCoordinates =
+    val additionalAxes =
       fallbackLayer.map(_.additionalAxes).getOrElse(dataSource.additionalAxesUnion)
     for {
       _ <- bool2Fox(resolutionsRestricted.nonEmpty) ?~> "annotation.volume.resolutionRestrictionsTooTight"
@@ -177,7 +177,7 @@ class AnnotationService @Inject()(
         mappingName = mappingName,
         resolutions = resolutionsRestricted.map(vec3IntToProto),
         hasSegmentIndex = Some(fallbackLayer.isEmpty || fallbackLayerHasSegmentIndex),
-        additionalAxes = AdditionalAxis.toProto(additionalCoordinates)
+        additionalAxes = AdditionalAxis.toProto(additionalAxes)
       )
   }
 

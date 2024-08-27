@@ -23,18 +23,14 @@ test("getFolderTree", async (t) => {
   writeTypeCheckingFile(folderTree, "folderTree", "FlatFolderTreeItem", {
     isArray: true,
   });
-  t.snapshot(folderTree, {
-    id: "folders-getFolderTree()",
-  });
+  t.snapshot(folderTree);
 });
 const organizationXRootFolderId = "570b9f4e4bb848d0885ea917";
 test("getFolder", async (t) => {
   const folder = await foldersApi.getFolder(organizationXRootFolderId);
 
   writeTypeCheckingFile(folder, "folder", "Folder");
-  t.snapshot(folder, {
-    id: "folders-getFolder()",
-  });
+  t.snapshot(folder);
 });
 test("updateFolder", async (t) => {
   const newName = "renamed organization x root folder";
@@ -45,18 +41,14 @@ test("updateFolder", async (t) => {
   });
   t.is(updatedFolder.name, newName);
 
-  t.snapshot(updatedFolder, {
-    id: "folders-updatedFolder()",
-  });
+  t.snapshot(updatedFolder);
 });
 test("createFolder", async (t) => {
   const newName = "a newly created folder!";
   const folder = await foldersApi.createFolder(organizationXRootFolderId, newName);
   t.is(folder.name, newName);
 
-  t.snapshot(replaceVolatileValues(folder), {
-    id: "folders-createFolder()",
-  });
+  t.snapshot(replaceVolatileValues(folder));
 });
 test("addAllowedTeamToFolder", async (t) => {
   const subFolderId = "570b9f4e4bb848d08880712a";
@@ -71,9 +63,7 @@ test("addAllowedTeamToFolder", async (t) => {
     name: "A subfolder!",
   });
 
-  t.snapshot(updatedFolderWithTeam, {
-    id: "folders-updatedWithTeam",
-  });
+  t.snapshot(updatedFolderWithTeam);
 
   setCurrToken(tokenUserC);
   /*
@@ -83,9 +73,7 @@ test("addAllowedTeamToFolder", async (t) => {
 
   const subFolderSeenByUserC = await foldersApi.getFolder(subFolderId);
 
-  t.snapshot(subFolderSeenByUserC, {
-    id: "folders-folderAfterUpdateTeamsSeenByUserC",
-  });
+  t.snapshot(subFolderSeenByUserC);
 
   await t.throwsAsync(async () => {
     try {

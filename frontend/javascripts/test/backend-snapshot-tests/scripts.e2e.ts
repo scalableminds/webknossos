@@ -14,18 +14,14 @@ test.before("Change token", async () => {
 });
 test("getScripts()", async (t) => {
   const scripts = await api.getScripts();
-  t.snapshot(scripts, {
-    id: "scripts-getScripts",
-  });
+  t.snapshot(scripts);
 });
 test("getScript()", async (t) => {
   const scripts = await api.getScripts();
   const firstScript = scripts[0];
   const script = await api.getScript(firstScript.id);
   writeTypeCheckingFile(script, "script", "APIScript");
-  t.snapshot(script, {
-    id: "scripts-getScript",
-  });
+  t.snapshot(script);
 });
 test("createScript(), updateScript(), and deleteScript()", async (t) => {
   const activeUser = await api.getActiveUser();
@@ -39,27 +35,17 @@ test("createScript(), updateScript(), and deleteScript()", async (t) => {
   const createdScript = await api.createScript(data);
   // Since the id will change after re-runs, we fix it here for easy
   // snapshotting
-  const createdScriptWithFixedId = Object.assign({}, createdScript, {
-    id: "fixed-script-id",
-  });
-  t.snapshot(createdScriptWithFixedId, {
-    id: "scripts-createScript",
-  });
+  const createdScriptWithFixedId = Object.assign({}, createdScript);
+  t.snapshot(createdScriptWithFixedId);
   // Update Script
   const newData = Object.assign({}, createdScript, {
     name: "MegaScript",
     owner: activeUser.id,
   });
   const updatedScript = await api.updateScript(createdScript.id, newData);
-  const updatedScriptWithFixedId = Object.assign({}, updatedScript, {
-    id: "fixed-script-id",
-  });
-  t.snapshot(updatedScriptWithFixedId, {
-    id: "scripts-updatedScript",
-  });
+  const updatedScriptWithFixedId = Object.assign({}, updatedScript);
+  t.snapshot(updatedScriptWithFixedId);
   // Delete Script
   const response = await api.deleteScript(createdScript.id);
-  t.snapshot(response, {
-    id: "scripts-deleteScript",
-  });
+  t.snapshot(response);
 });

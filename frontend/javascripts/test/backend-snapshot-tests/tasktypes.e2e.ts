@@ -16,16 +16,12 @@ test("getTaskTypes()", async (t) => {
   writeTypeCheckingFile(taskTypes, "task-type", "APITaskType", {
     isArray: true,
   });
-  t.snapshot(taskTypes, {
-    id: "taskTypes-getTaskTypes",
-  });
+  t.snapshot(taskTypes);
 });
 test("getTaskType()", async (t) => {
   const taskTypes = await api.getTaskTypes();
   const taskType = await api.getTaskType(taskTypes[0].id);
-  t.snapshot(taskType, {
-    id: "taskTypes-getTaskType",
-  });
+  t.snapshot(taskType);
 });
 test("createTaskType and deleteTaskType", async (t) => {
   const activeUser = await api.getActiveUser();
@@ -49,16 +45,10 @@ test("createTaskType and deleteTaskType", async (t) => {
   const createdTaskType = await api.createTaskType(newTaskType);
   // Since the id will change after re-runs, we fix it here for easy
   // snapshotting
-  const createdTaskTypeWithFixedId = Object.assign({}, createdTaskType, {
-    id: "fixed-id",
-  });
-  t.snapshot(createdTaskTypeWithFixedId, {
-    id: "taskTypes-createdTaskType",
-  });
+  const createdTaskTypeWithFixedId = Object.assign({}, createdTaskType);
+  t.snapshot(createdTaskTypeWithFixedId);
   const response = await api.deleteTaskType(createdTaskType.id);
-  t.snapshot(response, {
-    id: "taskTypes-deleteTaskType",
-  });
+  t.snapshot(response);
 });
 test("updateTaskType()", async (t) => {
   const taskTypes = await api.getTaskTypes();
@@ -69,12 +59,8 @@ test("updateTaskType()", async (t) => {
       summary: "new-test-summary",
     }),
   );
-  t.snapshot(updatedTaskType, {
-    id: "taskTypes-updateTaskType",
-  });
+  t.snapshot(updatedTaskType);
   // Change back
   const revertedTaskType = await api.updateTaskType(taskType.id, taskType);
-  t.snapshot(revertedTaskType, {
-    id: "taskTypes-revertedTaskType",
-  });
+  t.snapshot(revertedTaskType);
 });

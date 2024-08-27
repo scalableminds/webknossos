@@ -15,21 +15,15 @@ test("datastores()", async (t) => {
   writeTypeCheckingFile(datastores, "datastore", "APIDataStore", {
     isArray: true,
   });
-  t.snapshot(datastores, {
-    id: "misc-datastores",
-  });
+  t.snapshot(datastores);
 });
 test("activeUser()", async (t) => {
   const activeUser = await api.getActiveUser();
   writeTypeCheckingFile(activeUser, "user", "APIUser");
-  t.snapshot(activeUser, {
-    id: "misc-activeUser",
-  });
+  t.snapshot(activeUser);
 });
 test("getFeatureToggles()", async (t) => {
   const features = await api.getFeatureToggles();
   writeTypeCheckingFile(features, "feature-toggles", "APIFeatureToggles");
-  t.snapshot(features, {
-    id: "misc-getFeatureToggles",
-  });
+  t.snapshot(features);
 });

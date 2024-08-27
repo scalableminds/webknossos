@@ -34,9 +34,7 @@ test("getTimeTrackingForUserSpans", async (t) => {
     "Task",
   );
   t.true(timeTrackingForUser.length > 0);
-  t.snapshot(replaceVolatileValues(timeTrackingForUser), {
-    id: "timetracking-timeTrackingForUser",
-  });
+  t.snapshot(replaceVolatileValues(timeTrackingForUser));
 });
 
 test("getTimeTrackingForUser for a user other than the active user", async (t) => {
@@ -48,9 +46,7 @@ test("getTimeTrackingForUser for a user other than the active user", async (t) =
     "Task",
   );
   t.true(timeTrackingForUser.length > 0);
-  t.snapshot(replaceVolatileValues(timeTrackingForUser), {
-    id: "timetracking-timeTrackingForUser-C",
-  });
+  t.snapshot(replaceVolatileValues(timeTrackingForUser));
 });
 
 test("getProjectProgressReport", async (t) => {
@@ -58,9 +54,7 @@ test("getProjectProgressReport", async (t) => {
   writeTypeCheckingFile(projectProgressReport, "project-progress", "APIProjectProgressReport", {
     isArray: true,
   });
-  t.snapshot(projectProgressReport, {
-    id: "timetracking-projectProgressReport",
-  });
+  t.snapshot(projectProgressReport);
 });
 
 test("getAvailableTasksReport", async (t) => {
@@ -68,7 +62,5 @@ test("getAvailableTasksReport", async (t) => {
   writeTypeCheckingFile(availableTasksReport, "available-tasks", "APIAvailableTasksReport", {
     isArray: true,
   });
-  t.snapshot(availableTasksReport, {
-    id: "timetracking-availableTasksReport",
-  });
+  t.snapshot(availableTasksReport);
 });

@@ -15,7 +15,7 @@ import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";
 import mockRequire from "mock-require";
-import anyTest, { ExecutionContext, TestInterface } from "ava";
+import anyTest, { ExecutionContext, TestFn } from "ava";
 import { V3 } from "libs/mjs";
 import dummyUser from "test/fixtures/dummy_user";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
@@ -58,7 +58,7 @@ type Context = {
   setSlowCompression: (b: boolean) => void;
   api: ApiInterface;
 };
-const test: TestInterface<Context> = anyTest as any;
+const test = anyTest as TestFn<Context>;
 
 test.beforeEach(async (t) => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.

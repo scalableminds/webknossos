@@ -31,6 +31,7 @@ const {
 const { initializeAnnotationAction } = mockRequire.reRequire(
   "oxalis/model/actions/annotation_actions",
 );
+
 test.before((t) => {
   const rotation = [0.5, 0.5, 0.5];
   const viewport = 0;

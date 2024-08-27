@@ -32,6 +32,7 @@ class TSAnnotationController @Inject()(
           for {
             // TODO assert id does not already exist
             _ <- tracingDataStore.annotations.put(annotationId, 0L, request.body)
+            _ = logger.info(s"stored annotationProto for $annotationId")
           } yield Ok
         }
       }

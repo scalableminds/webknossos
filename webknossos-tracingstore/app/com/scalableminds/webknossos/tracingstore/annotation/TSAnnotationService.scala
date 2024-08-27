@@ -19,8 +19,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ApplyableVolumeUpdateAction,
-  BucketMutatingVolumeUpdateAction,
-  UpdateBucketVolumeAction,
   VolumeTracingService,
   VolumeUpdateAction
 }
@@ -33,8 +31,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosClient,
-                                    tracingDataStore: TracingDataStore,
-                                    volumeTracingService: VolumeTracingService)
+                                    tracingDataStore: TracingDataStore)
     extends KeyValueStoreImplicits {
 
   def reportUpdates(annotationId: String, updateGroups: List[UpdateActionGroup], userToken: Option[String]): Fox[Unit] =
@@ -52,37 +49,6 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
 
   def currentMaterializableVersion(annotationId: String): Fox[Long] =
     tracingDataStore.annotations.getVersion(annotationId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
-
-  def handleUpdateGroup(annotationId: String, updateActionGroup: UpdateActionGroup, userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[Unit] =
-    for {
-      _ <- tracingDataStore.annotationUpdates.put(annotationId,
-                                                  updateActionGroup.version,
-                                                  preprocessActionsForStorage(updateActionGroup))
-      bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
-      _ <- Fox.runIf(bucketMutatingActions.nonEmpty)(
-        volumeTracingService
-          .applyBucketMutatingActions(annotationId, bucketMutatingActions, updateActionGroup.version, userToken))
-    } yield ()
-
-  private def findBucketMutatingActions(updateActionGroup: UpdateActionGroup): List[BucketMutatingVolumeUpdateAction] =
-    updateActionGroup.actions.flatMap {
-      case a: BucketMutatingVolumeUpdateAction => Some(a)
-      case _                                   => None
-    }
-
-  private def preprocessActionsForStorage(updateActionGroup: UpdateActionGroup): List[UpdateAction] = {
-    val actionsWithInfo = updateActionGroup.actions.map(
-      _.addTimestamp(updateActionGroup.timestamp).addAuthorId(updateActionGroup.authorId)) match {
-      case Nil => List[UpdateAction]()
-      //to the first action in the group, attach the group's info
-      case first :: rest => first.addInfo(updateActionGroup.info) :: rest
-    }
-    actionsWithInfo.map {
-      case a: UpdateBucketVolumeAction => a.transformToCompact // TODO or not?
-      case a                           => a
-    }
-  }
 
   private def findPendingUpdates(annotationId: String, existingVersion: Long, desiredVersion: Long)(
       implicit ec: ExecutionContext): Fox[List[UpdateAction]] =
@@ -144,42 +110,55 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
   def get(annotationId: String, version: Option[Long], userToken: Option[String])(
       implicit ec: ExecutionContext): Fox[AnnotationProto] =
     for {
-      withTracings <- getWithTracings(annotationId, version, List.empty, userToken)
+      withTracings <- getWithTracings(annotationId, version, List.empty, List.empty, userToken)
     } yield withTracings.annotation
 
   def getWithTracings(annotationId: String,
                       version: Option[Long],
-                      requestedTracingIds: List[String],
+                      requestedSkeletonTracingIds: List[String],
+                      requestedVolumeTracingIds: List[String],
                       userToken: Option[String])(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       annotationWithVersion <- tracingDataStore.annotations.get(annotationId, version)(fromProtoBytes[AnnotationProto])
       annotation = annotationWithVersion.value
-      updated <- applyPendingUpdates(annotation, annotationId, version, requestedTracingIds, userToken)
+      updated <- applyPendingUpdates(annotation,
+                                     annotationId,
+                                     version,
+                                     requestedSkeletonTracingIds,
+                                     requestedVolumeTracingIds,
+                                     userToken)
     } yield updated
 
   private def applyPendingUpdates(
       annotation: AnnotationProto,
       annotationId: String,
       targetVersionOpt: Option[Long],
-      requestedTracingIds: List[String],
+      requestedSkeletonTracingIds: List[String],
+      requestedVolumeTracingIds: List[String],
       userToken: Option[String])(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       targetVersion <- determineTargetVersion(annotation, annotationId, targetVersionOpt)
       updates <- findPendingUpdates(annotationId, annotation.version, targetVersion)
-      annotationWithTracings <- findTracingsForUpdates(annotation, updates) // TODO pass requested tracing ids
+      annotationWithTracings <- findTracingsForUpdates(annotation,
+                                                       updates,
+                                                       requestedSkeletonTracingIds,
+                                                       requestedVolumeTracingIds)
       updated <- applyUpdates(annotationWithTracings, annotationId, updates, targetVersion, userToken)
     } yield updated
 
-  private def findTracingsForUpdates(annotation: AnnotationProto, updates: List[UpdateAction])(
-      implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
-    val skeletonTracingIds = updates.flatMap {
+  private def findTracingsForUpdates(
+      annotation: AnnotationProto,
+      updates: List[UpdateAction],
+      requestedSkeletonTracingIds: List[String],
+      requestedVolumeTracingIds: List[String])(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
+    val skeletonTracingIds = (updates.flatMap {
       case u: SkeletonUpdateAction => Some(u.actionTracingId)
       case _                       => None
-    }
-    val volumeTracingIds = updates.flatMap {
+    } ++ requestedSkeletonTracingIds).distinct
+    val volumeTracingIds = (updates.flatMap {
       case u: VolumeUpdateAction => Some(u.actionTracingId)
       case _                     => None
-    }
+    } ++ requestedVolumeTracingIds).distinct
     // TODO fetch editable mappings + instantiate editableMappingUpdaters/buffers if there are updates for them
     val editableMappingsMap: Map[String, (EditableMappingInfo, EditableMappingUpdater)] = Map.empty
     for {

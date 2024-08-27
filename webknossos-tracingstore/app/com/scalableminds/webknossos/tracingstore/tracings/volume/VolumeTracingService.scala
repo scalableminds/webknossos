@@ -193,8 +193,20 @@ class VolumeTracingService @Inject()(
       }
     } yield volumeTracing
 
-  protected def takeTracing(annotation: AnnotationWithTracings, tracingId: String): Box[VolumeTracing] =
-    annotation.getVolume(tracingId)
+  def find(annotationId: String,
+           tracingId: String,
+           version: Option[Long] = None,
+           useCache: Boolean = true,
+           applyUpdates: Boolean = false,
+           userToken: Option[String]): Fox[VolumeTracing] =
+    if (tracingId == TracingIds.dummyTracingId)
+      Fox.successful(dummyTracing)
+    else {
+      for {
+        annotation <- annotationService.getWithTracings(annotationId, version, List.empty, List(tracingId), userToken) // TODO is applyUpdates still needed?
+        tracing <- annotation.getVolume(tracingId)
+      } yield tracing
+    }
 
   override def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String] =
     if (tracing.getHasEditableMapping) Some(tracingId) else None

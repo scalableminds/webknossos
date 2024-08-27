@@ -117,22 +117,12 @@ trait TracingService[T <: GeneratedMessage]
 
   def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] = Fox.successful(tracing)
 
-  protected def takeTracing(annotation: AnnotationWithTracings, tracingId: String): Box[T]
-
   def find(annotationId: String,
            tracingId: String,
            version: Option[Long] = None,
            useCache: Boolean = true,
            applyUpdates: Boolean = false,
-           userToken: Option[String]): Fox[T] =
-    if (tracingId == TracingIds.dummyTracingId)
-      Fox.successful(dummyTracing)
-    else {
-      for {
-        annotation <- annotationService.getWithTracings(annotationId, version, List(tracingId), userToken) // TODO is applyUpdates still needed?
-        tracing <- takeTracing(annotation, annotationId)
-      } yield tracing
-    }
+           userToken: Option[String]): Fox[T]
 
   def findMultiple(selectors: List[Option[TracingSelector]],
                    useCache: Boolean = true,

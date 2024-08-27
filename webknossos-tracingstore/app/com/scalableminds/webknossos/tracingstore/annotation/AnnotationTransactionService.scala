@@ -3,6 +3,12 @@ package com.scalableminds.webknossos.tracingstore.annotation
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.volume.{
+  BucketMutatingVolumeUpdateAction,
+  UpdateBucketVolumeAction,
+  VolumeTracingService
+}
 import play.api.http.Status.CONFLICT
 import play.api.libs.json.Json
 
@@ -13,7 +19,10 @@ import scala.concurrent.duration._
 class AnnotationTransactionService @Inject()(
     handledGroupIdStore: TracingStoreRedisStore, // TODO: instantiate here rather than with injection, give fix namespace prefix?
     uncommittedUpdatesStore: TracingStoreRedisStore,
-    annotationService: TSAnnotationService) {
+    volumeTracingService: VolumeTracingService,
+    tracingDataStore: TracingDataStore,
+    annotationService: TSAnnotationService)
+    extends KeyValueStoreImplicits {
 
   private val transactionGroupExpiry: FiniteDuration = 24 hours
   private val handledGroupCacheExpiry: FiniteDuration = 24 hours
@@ -156,7 +165,7 @@ class AnnotationTransactionService @Inject()(
         previousVersion.flatMap { prevVersion: Long =>
           if (prevVersion + 1 == updateGroup.version) {
             for {
-              _ <- annotationService.handleUpdateGroup(annotationId, updateGroup, userToken)
+              _ <- handleUpdateGroup(annotationId, updateGroup, userToken)
               _ <- saveToHandledGroupIdStore(annotationId,
                                              updateGroup.transactionId,
                                              updateGroup.version,
@@ -166,6 +175,37 @@ class AnnotationTransactionService @Inject()(
         }
       }
     } yield newVersion
+
+  def handleUpdateGroup(annotationId: String, updateActionGroup: UpdateActionGroup, userToken: Option[String])(
+      implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- tracingDataStore.annotationUpdates.put(annotationId,
+                                                  updateActionGroup.version,
+                                                  preprocessActionsForStorage(updateActionGroup))
+      bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
+      _ <- Fox.runIf(bucketMutatingActions.nonEmpty)(
+        volumeTracingService
+          .applyBucketMutatingActions(annotationId, bucketMutatingActions, updateActionGroup.version, userToken))
+    } yield ()
+
+  private def findBucketMutatingActions(updateActionGroup: UpdateActionGroup): List[BucketMutatingVolumeUpdateAction] =
+    updateActionGroup.actions.flatMap {
+      case a: BucketMutatingVolumeUpdateAction => Some(a)
+      case _                                   => None
+    }
+
+  private def preprocessActionsForStorage(updateActionGroup: UpdateActionGroup): List[UpdateAction] = {
+    val actionsWithInfo = updateActionGroup.actions.map(
+      _.addTimestamp(updateActionGroup.timestamp).addAuthorId(updateActionGroup.authorId)) match {
+      case Nil => List[UpdateAction]()
+      //to the first action in the group, attach the group's info
+      case first :: rest => first.addInfo(updateActionGroup.info) :: rest
+    }
+    actionsWithInfo.map {
+      case a: UpdateBucketVolumeAction => a.transformToCompact // TODO or not?
+      case a                           => a
+    }
+  }
 
   /* If this update group has already been “handled” (successfully saved as either committed or uncommitted),
    * ignore it silently. This is in case the frontend sends a retry if it believes a save to be unsuccessful

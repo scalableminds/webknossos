@@ -84,10 +84,10 @@ class WKRemoteTracingStoreClient(
 
   def saveAnnotationProto(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] = {
     logger.debug("Called to save AnnotationProto." + baseInfo)
-    rpc(s"${tracingStore.url}/annotations/save")
+    rpc(s"${tracingStore.url}/tracings/annotation/save")
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .addQueryString("annotationId" -> annotationId.toString)
-      .postProto[AnnotationProto](annotationProto)
+      .postProto[AnnotationProto](annotationProto) // TODO why didn’t the failure bubble up?
   }
 
   def duplicateSkeletonTracing(skeletonTracingId: String,

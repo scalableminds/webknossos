@@ -40,8 +40,20 @@ class SkeletonTracingService @Inject()(
 
   def currentVersion(tracing: SkeletonTracing): Long = tracing.version
 
-  protected def takeTracing(annotation: AnnotationWithTracings, tracingId: String): Box[SkeletonTracing] =
-    annotation.getSkeleton(tracingId)
+  def find(annotationId: String,
+           tracingId: String,
+           version: Option[Long] = None,
+           useCache: Boolean = true,
+           applyUpdates: Boolean = false,
+           userToken: Option[String]): Fox[SkeletonTracing] =
+    if (tracingId == TracingIds.dummyTracingId)
+      Fox.successful(dummyTracing)
+    else {
+      for {
+        annotation <- annotationService.getWithTracings(annotationId, version, List(tracingId), List.empty, userToken) // TODO is applyUpdates still needed?
+        tracing <- annotation.getSkeleton(tracingId)
+      } yield tracing
+    }
 
   def duplicate(tracing: SkeletonTracing,
                 fromTask: Boolean,

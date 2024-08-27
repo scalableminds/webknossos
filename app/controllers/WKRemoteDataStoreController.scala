@@ -88,12 +88,12 @@ class WKRemoteDataStoreController @Inject()(
   def getUnfinishedUploadsForUser(name: String,
                                   key: String,
                                   token: String,
-                                  organizationName: String): Action[AnyContent] =
+                                  organizationId: String): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token)
-          organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> Messages(
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             user._organization) ~> NOT_FOUND
           _ <- bool2Fox(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN

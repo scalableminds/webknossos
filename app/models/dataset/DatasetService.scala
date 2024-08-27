@@ -70,19 +70,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     createDataset(dataStore, organizationId, unreportedDatasource)
   }
 
-  def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
-    datasetDAO.findAllCompactWithSearch(
-      uploaderIdOpt = Some(userId),
-      organizationIdOpt = Some(organizationId),
-      isActiveOpt = Some(false),
-      includeSubfolders = true,
-      statusOpt = Some(notYetUploadedStatus),
-      // Only list pending uploads since the two last weeks.
-      createdSinceOpt = Some(Instant.now - (14 days))
-    ) ?~> "dataset.list.fetchFailed"
-
-  def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: ObjectId)(
+  def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     datasetDAO.findAllCompactWithSearch(
       uploaderIdOpt = Some(userId),

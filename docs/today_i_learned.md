@@ -1,3 +1,9 @@
+---
+hide:
+  - navigation
+  - toc
+---
+
 # Today I learned
 
 We regularly publish tips and tricks videos for beginners and pros on YouTube to share new features, highlight efficient workflows, and show you hidden gems.

@@ -1,11 +1,13 @@
 package controllers
 
-import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, TristateOptionJsonHelper}
+import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
+import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
 import models.dataset._
 import models.dataset.explore.{
@@ -13,6 +15,7 @@ import models.dataset.explore.{
   WKExploreRemoteLayerParameters,
   WKExploreRemoteLayerService
 }
+import models.folder.FolderService
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
@@ -20,14 +23,12 @@ import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.silhouette.api.Silhouette
+import security.{URLSharing, WkEnv}
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
-import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
-import mail.{MailchimpClient, MailchimpTag}
-import models.folder.FolderService
-import security.{URLSharing, WkEnv}
 
 case class DatasetUpdateParameters(
     description: Option[Option[String]] = Some(None),
@@ -43,14 +44,28 @@ object DatasetUpdateParameters extends TristateOptionJsonHelper {
     Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
 }
 
-case class SegmentAnythingEmbeddingParameters(
+object SAMInteractionType extends ExtendedEnumeration {
+  type SAMInteractionType = Value
+  val BOUNDING_BOX, POINT = Value
+}
+
+case class SegmentAnythingMaskParameters(
     mag: Vec3Int,
-    boundingBox: BoundingBox,
-    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None
+    surroundingBoundingBox: BoundingBox, // in mag1 (when converted to target mag, size must be 1024×1024×depth with depth <= 12)
+    additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
+    interactionType: SAMInteractionType.SAMInteractionType,
+    // selectionTopLeft and selectionBottomRight are required as input in case of bounding box interaction type.
+    // Else pointX and pointY are required.
+    selectionTopLeftX: Option[Int], // in target-mag, relative to paddedBoundingBox topleft
+    selectionTopLeftY: Option[Int],
+    selectionBottomRightX: Option[Int],
+    selectionBottomRightY: Option[Int],
+    pointX: Option[Int], // in target-mag, relative to paddedBoundingBox topleft
+    pointY: Option[Int],
 )
 
-object SegmentAnythingEmbeddingParameters {
-  implicit val jsonFormat: Format[SegmentAnythingEmbeddingParameters] = Json.format[SegmentAnythingEmbeddingParameters]
+object SegmentAnythingMaskParameters {
+  implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
 class DatasetController @Inject()(userService: UserService,
@@ -385,12 +400,12 @@ class DatasetController @Inject()(userService: UserService,
       case _             => Messages("dataset.notFoundConsiderLogin", datasetName)
     }
 
-  def segmentAnythingEmbedding(organizationName: String,
-                               datasetName: String,
-                               dataLayerName: String,
-                               intensityMin: Option[Float],
-                               intensityMax: Option[Float]): Action[SegmentAnythingEmbeddingParameters] =
-    sil.SecuredAction.async(validateJson[SegmentAnythingEmbeddingParameters]) { implicit request =>
+  def segmentAnythingMask(organizationName: String,
+                          datasetName: String,
+                          dataLayerName: String,
+                          intensityMin: Option[Float],
+                          intensityMax: Option[Float]): Action[SegmentAnythingMaskParameters] =
+    sil.SecuredAction.async(validateJson[SegmentAnythingMaskParameters]) { implicit request =>
       log() {
         for {
           _ <- bool2Fox(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
@@ -401,26 +416,49 @@ class DatasetController @Inject()(userService: UserService,
           usableDataSource <- dataSource.toUsable ?~> "dataset.notImported"
           dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName) ?~> "dataset.noLayers"
           datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
-          targetMagBbox: BoundingBox = request.body.boundingBox / request.body.mag
-          _ <- bool2Fox(targetMagBbox.size.sorted == Vec3Int(1, 1024, 1024)) ?~> s"Target-mag bbox must be sized 1024×1024×1 (or transposed), got ${targetMagBbox.size}"
-          data <- datastoreClient.getLayerData(organizationName,
-                                               dataset,
-                                               dataLayer.name,
-                                               request.body.boundingBox,
-                                               request.body.mag,
-                                               request.body.additionalCoordinates) ?~> "segmentAnything.getData.failed"
+          targetMagSelectedBbox: BoundingBox = request.body.surroundingBoundingBox / request.body.mag
+          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z <= 1024 && targetMagSelectedBbox.size.sorted.y <= 1024) ?~> s"Target-mag selected bbox must be smaller than 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
+          // The maximum depth of 16 also needs to be adapted in the front-end
+          // (at the time of writing, in MAX_DEPTH_FOR_SAM in quick_select_settings.tsx).
+          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.x <= 16) ?~> s"Target-mag selected bbox depth must be at most 16"
+          _ <- bool2Fox(targetMagSelectedBbox.size.sorted.z == targetMagSelectedBbox.size.sorted.y) ?~> s"Target-mag selected bbox must equally sized long edges, got ${targetMagSelectedBbox.size}"
+          _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.BOUNDING_BOX)(
+            bool2Fox(request.body.selectionTopLeftX.isDefined &&
+              request.body.selectionTopLeftY.isDefined && request.body.selectionBottomRightX.isDefined && request.body.selectionBottomRightY.isDefined)) ?~> "Missing selectionTopLeft and selectionBottomRight parameters for bounding box interaction."
+          _ <- Fox.runIf(request.body.interactionType == SAMInteractionType.POINT)(bool2Fox(
+            request.body.pointX.isDefined && request.body.pointY.isDefined)) ?~> "Missing pointX and pointY parameters for point interaction."
+          beforeDataLoading = Instant.now
+          data <- datastoreClient.getLayerData(
+            organizationName,
+            dataset,
+            dataLayer.name,
+            request.body.surroundingBoundingBox,
+            request.body.mag,
+            request.body.additionalCoordinates
+          ) ?~> "segmentAnything.getData.failed"
+          _ = logger.info(s"Data loading for SAM took ${Instant.since(beforeDataLoading)}")
           _ = logger.debug(
             s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax...")
           _ <- bool2Fox(
             !(dataLayer.elementClass == ElementClass.float || dataLayer.elementClass == ElementClass.double) || (intensityMin.isDefined && intensityMax.isDefined)) ?~> "For float and double data, a supplied intensity range is required."
-          embedding <- wKRemoteSegmentAnythingClient.getEmbedding(
+          beforeMask = Instant.now
+          mask <- wKRemoteSegmentAnythingClient.getMask(
             data,
             dataLayer.elementClass,
+            request.body.interactionType,
+            request.body.selectionTopLeftX,
+            request.body.selectionTopLeftY,
+            request.body.selectionBottomRightX,
+            request.body.selectionBottomRightY,
+            request.body.pointX,
+            request.body.pointY,
+            targetMagSelectedBbox.size,
             intensityMin,
-            intensityMax) ?~> "segmentAnything.getEmbedding.failed"
-          _ = logger.debug(
-            s"Received ${embedding.length} bytes of embedding from SAM server, forwarding to front-end...")
-        } yield Ok(embedding)
+            intensityMax
+          ) ?~> "segmentAnything.getMask.failed"
+          _ = logger.info(s"Fetching SAM masks from torchserve took ${Instant.since(beforeMask)}")
+          _ = logger.debug(s"Received ${mask.length} bytes of mask from SAM server, forwarding to front-end...")
+        } yield Ok(mask)
       }
     }
 

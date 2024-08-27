@@ -303,7 +303,7 @@ export class OxalisModel {
     );
   }
 
-  getPushQueueStats() {
+  getPushQueueStats = () => {
     const compressingBucketCount = _.sum(
       Utils.values(this.dataLayers).map((dataLayer) =>
         dataLayer.pushQueue.getCompressingBucketCount(),
@@ -325,7 +325,7 @@ export class OxalisModel {
       waitingForCompressionBucketCount,
       outstandingBucketDownloadCount,
     };
-  }
+  };
 
   forceSave = () => {
     // In contrast to the save function, this method will trigger exactly one saveNowAction

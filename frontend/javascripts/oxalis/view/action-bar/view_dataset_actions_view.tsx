@@ -17,7 +17,7 @@ import {
   setRenderAnimationModalVisibilityAction,
 } from "oxalis/model/actions/ui_actions";
 import Store, { OxalisState } from "oxalis/store";
-import { MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import { MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import DownloadModalView from "./download_modal_view";
 import CreateAnimationModal from "./create_animation_modal";
 

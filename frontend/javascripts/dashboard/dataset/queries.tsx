@@ -1,5 +1,5 @@
 import _ from "lodash";
-import React, { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Utils from "libs/utils";
 import {
   DatasetUpdater,
@@ -16,7 +16,7 @@ import {
   updateFolder,
 } from "admin/api/folders";
 import Toast from "libs/toast";
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   APIDatasetId,
   APIDatasetCompact,

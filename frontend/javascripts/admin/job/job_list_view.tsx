@@ -336,7 +336,7 @@ function JobListView() {
       return (
         <span>
           {job.state === "SUCCESS" &&
-            "The model may now be selected from the &quot;AI Analysis&quot; button when viewing a dataset."}
+            "The model may now be selected from the “AI Analysis“ button when viewing a dataset."}
         </span>
       );
     } else {

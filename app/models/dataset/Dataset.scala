@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   Category,
   CoordinateTransformation,
   CoordinateTransformationType,
+  DataSourceId,
   ElementClass,
   ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer
@@ -79,7 +80,9 @@ case class DatasetCompactInfo(
     isUnreported: Boolean,
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
-)
+) {
+  def dataSourceId = new DataSourceId(name, owningOrganization)
+}
 
 object DatasetCompactInfo {
   implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
@@ -211,21 +214,26 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                                                       folderIdOpt,
                                                       uploaderIdOpt,
                                                       searchQuery,
-                                                      includeSubfolders)
+                                                      includeSubfolders,
+                                                      None,
+                                                      None)
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery".as[DatasetsRow])
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAllCompactWithSearch(isActiveOpt: Option[Boolean],
-                               isUnreported: Option[Boolean],
-                               organizationIdOpt: Option[String],
-                               folderIdOpt: Option[ObjectId],
-                               uploaderIdOpt: Option[ObjectId],
-                               searchQuery: Option[String],
-                               requestingUserIdOpt: Option[ObjectId],
-                               includeSubfolders: Boolean,
-                               limitOpt: Option[Int])(implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
+  def findAllCompactWithSearch(isActiveOpt: Option[Boolean] = None,
+                               isUnreported: Option[Boolean] = None,
+                               organizationIdOpt: Option[String] = None,
+                               folderIdOpt: Option[ObjectId] = None,
+                               uploaderIdOpt: Option[ObjectId] = None,
+                               searchQuery: Option[String] = None,
+                               requestingUserIdOpt: Option[ObjectId] = None,
+                               includeSubfolders: Boolean = false,
+                               statusOpt: Option[String] = None,
+                               createdSinceOpt: Option[Instant] = None,
+                               limitOpt: Option[Int] = None,
+  )(implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(isActiveOpt,
                                                       isUnreported,
@@ -233,7 +241,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                                                       folderIdOpt,
                                                       uploaderIdOpt,
                                                       searchQuery,
-                                                      includeSubfolders)
+                                                      includeSubfolders,
+                                                      statusOpt,
+                                                      createdSinceOpt)
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
       query = q"""
             SELECT
@@ -325,7 +335,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                                        folderIdOpt: Option[ObjectId],
                                        uploaderIdOpt: Option[ObjectId],
                                        searchQuery: Option[String],
-                                       includeSubfolders: Boolean)(implicit ctx: DBAccessContext): Fox[SqlToken] =
+                                       includeSubfolders: Boolean,
+                                       statusOpt: Option[String],
+                                       createdSinceOpt: Option[Instant])(implicit ctx: DBAccessContext): Fox[SqlToken] =
     for {
       accessQuery <- readAccessQuery
       folderPredicate = folderIdOpt match {
@@ -339,6 +351,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       organizationPredicate = organizationIdOpt
         .map(organizationId => q"_organization = $organizationId")
         .getOrElse(q"TRUE")
+      statusPredicate = statusOpt.map(status => q"status = $status").getOrElse(q"TRUE")
+      createdSincePredicate = createdSinceOpt.map(createdSince => q"created >= $createdSince").getOrElse(q"TRUE")
       searchPredicate = buildSearchPredicate(searchQuery)
       isUnreportedPredicate = buildIsUnreportedPredicate(isUnreported)
     } yield q"""
@@ -348,6 +362,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         AND ($isActivePredicate)
         AND ($isUnreportedPredicate)
         AND ($organizationPredicate)
+        AND ($statusPredicate)
+        AND ($createdSincePredicate)
         AND $accessQuery
        """
 

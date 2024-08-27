@@ -103,6 +103,18 @@ class DataSourceController @Inject()(
       }
     }
 
+  def getUnfinishedUploads(token: Option[String], organizationName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
+                                        urlOrHeaderToken(token, request)) {
+        for {
+          unfinishedUploads <- remoteWebknossosClient.getUnfinishedUploadsForUser(urlOrHeaderToken(token, request),
+                                                                                  organizationName)
+          unfinishedUploadsWithUploadIds <- uploadService.addUploadIdsToUnfinishedUploads(unfinishedUploads)
+        } yield Ok(Json.toJson(unfinishedUploadsWithUploadIds))
+      }
+    }
+
   // To be called by people with disk access but not DatasetManager role. This way, they can upload a dataset manually on disk,
   // and it can be put in a webknossos folder where they have access
   def reserveManualUpload(token: Option[String]): Action[ReserveManualUploadInformation] =
@@ -116,6 +128,7 @@ class DataSourceController @Inject()(
               request.body.datasetName,
               request.body.organization,
               0,
+              List.empty,
               None,
               request.body.initialTeamIds,
               request.body.folderId
@@ -175,6 +188,22 @@ class DataSourceController @Inject()(
               } yield result
           }
         )
+    }
+
+  def testChunk(token: Option[String], resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      for {
+        dataSourceId <- uploadService.getDataSourceIdByUploadId(
+          uploadService.extractDatasetUploadId(resumableIdentifier)) ?~> "dataset.upload.validation.failed"
+        result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
+                                                    urlOrHeaderToken(token, request)) {
+          for {
+            isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier)
+            _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
+            isPresent <- uploadService.isChunkPresent(resumableIdentifier, resumableChunkNumber)
+          } yield if (isPresent) Ok else NoContent
+        }
+      } yield result
     }
 
   def finishUpload(token: Option[String]): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {
@@ -393,6 +422,7 @@ class DataSourceController @Inject()(
       }
     }
 
+  // Stores a remote dataset in the database.
   def add(token: Option[String],
           organizationId: String,
           datasetName: String,
@@ -408,6 +438,7 @@ class DataSourceController @Inject()(
               name = datasetName,
               organization = organizationId,
               totalFileCount = 1,
+              filePaths = List.empty,
               layersToLink = None,
               initialTeams = List.empty,
               folderId = folderId,

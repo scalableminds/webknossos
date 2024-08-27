@@ -84,7 +84,7 @@ function TreeHierarchyView(props: Props) {
     if (treeRef.current && props.activeTreeId) {
       const activeTreeKey = getNodeKey(GroupTypeEnum.TREE, props.activeTreeId);
 
-      // For some React rendering/timing reasons, the target element might not be rendered yet. That messes with calculcating the offsets for srolling. Hence delay this a bit
+      // For some React rendering/timing reasons, the target element might not be rendered yet. That messes with calculating the offsets for scrolling. Hence delay this a bit
       setTimeout(() => {
         if (treeRef.current) treeRef.current.scrollTo({ key: activeTreeKey, align: "auto" });
       }, 30);

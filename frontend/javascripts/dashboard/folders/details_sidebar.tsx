@@ -23,6 +23,7 @@ import { useSelector } from "react-redux";
 import { OxalisState } from "oxalis/store";
 import { getOrganization } from "admin/admin_rest_api";
 import { useQuery } from "@tanstack/react-query";
+import Markdown from "libs/markdown_adapter";
 
 export function DetailsSidebar({
   selectedDatasets,
@@ -148,7 +149,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
 
         <div style={{ marginBottom: 4 }}>
           <div className="sidebar-label">Description</div>
-          <div>{fullDataset?.description}</div>
+          <Markdown>{fullDataset?.description}</Markdown>
         </div>
 
         <div style={{ marginBottom: 4 }}>

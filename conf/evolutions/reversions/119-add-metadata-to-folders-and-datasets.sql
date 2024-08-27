@@ -14,7 +14,7 @@ ALTER TABLE webknossos.datasets ADD CONSTRAINT detailsIsJsonObject CHECK(jsonb_t
 
 -- Add existing info on species of metadata to details
 UPDATE webknossos.datasets
-SET details = jsonb_set(details, '{species}', (
+SET details = jsonb_set(COALESCE(details, '{}'), '{species}', (
     SELECT to_jsonb(m.value)
     FROM jsonb_to_recordset(metadata) AS m(key text, value text)
     WHERE m.key = 'species'
@@ -29,7 +29,7 @@ WHERE EXISTS (
 
 -- Add existing info on species of brainRegion to details
 UPDATE webknossos.datasets
-SET details = jsonb_set(details, '{brainRegion}', (
+SET details = jsonb_set(COALESCE(details, '{}'), '{brainRegion}', (
     SELECT to_jsonb(m.value)
     FROM jsonb_to_recordset(metadata) AS m(key text, value text)
     WHERE m.key = 'brainRegion'
@@ -44,7 +44,7 @@ WHERE EXISTS (
 
 -- Add existing info on species of acquisition to details
 UPDATE webknossos.datasets
-SET details = jsonb_set(details, '{acquisition}', (
+SET details = jsonb_set(COALESCE(details, '{}'), '{acquisition}', (
     SELECT to_jsonb(m.value)
     FROM jsonb_to_recordset(metadata) AS m(key text, value text)
     WHERE m.key = 'acquisition'

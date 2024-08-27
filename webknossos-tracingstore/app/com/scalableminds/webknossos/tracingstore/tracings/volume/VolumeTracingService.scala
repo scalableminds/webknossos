@@ -275,6 +275,7 @@ class VolumeTracingService @Inject()(
       bool2Fox(mag.isIsotropic)
     }
 
+  // TODO
   private def revertToVolumeVersion(annotationId: String,
                                     tracingId: String,
                                     sourceVersion: Long,

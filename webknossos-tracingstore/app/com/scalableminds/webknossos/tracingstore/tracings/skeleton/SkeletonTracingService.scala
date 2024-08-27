@@ -8,15 +8,10 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
-import com.scalableminds.webknossos.tracingstore.annotation.{
-  AnnotationWithTracings,
-  LayerUpdateAction,
-  TSAnnotationService
-}
+import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationWithTracings, TSAnnotationService}
 import com.scalableminds.webknossos.tracingstore.tracings._
-import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
-import net.liftweb.common.{Box, Empty, Full}
+import net.liftweb.common.{Box, Full}
 import play.api.i18n.MessagesProvider
 
 import scala.concurrent.ExecutionContext
@@ -47,25 +42,6 @@ class SkeletonTracingService @Inject()(
 
   protected def takeTracing(annotation: AnnotationWithTracings, tracingId: String): Box[SkeletonTracing] =
     annotation.getSkeleton(tracingId)
-
-  private def findDesiredOrNewestPossibleVersion(tracing: SkeletonTracing,
-                                                 tracingId: String,
-                                                 desiredVersion: Option[Long]): Fox[Long] =
-    /*
-     * Determines the newest saved version from the updates column.
-     * if there are no updates at all, assume tracing is brand new (possibly created from NML,
-     * hence the emptyFallbck tracing.version)
-     */
-    for {
-      newestUpdateVersion <- tracingDataStore.skeletonUpdates.getVersion(tracingId,
-                                                                         mayBeEmpty = Some(true),
-                                                                         emptyFallback = Some(tracing.version))
-    } yield {
-      desiredVersion match {
-        case None              => newestUpdateVersion
-        case Some(desiredSome) => math.min(desiredSome, newestUpdateVersion)
-      }
-    }
 
   def duplicate(tracing: SkeletonTracing,
                 fromTask: Boolean,

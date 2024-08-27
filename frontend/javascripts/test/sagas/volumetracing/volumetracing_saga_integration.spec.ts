@@ -176,9 +176,6 @@ test.serial("Executing a floodfill in mag 1", async (t) => {
         min: [32, 32, 32],
         max: [64, 64, 64],
       }),
-      {
-        id: `floodfill_mag1_${zoomStep}`,
-      },
     );
   }
 });
@@ -422,9 +419,6 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
       min: [0, 0, 0],
       max: [32, 32, 32],
     }),
-    {
-      id: "volumetracing_brush_without_fallback_data",
-    },
   );
 });
 test.serial("Brushing/Tracing with already existing backend data", async (t) => {
@@ -467,9 +461,6 @@ test.serial("Brushing/Tracing with already existing backend data", async (t) => 
       min: [0, 0, 0],
       max: [32, 32, 32],
     }),
-    {
-      id: "volumetracing_brush_with_fallback_data",
-    },
   );
 });
 // The binary parameters control whether the test will assert additional

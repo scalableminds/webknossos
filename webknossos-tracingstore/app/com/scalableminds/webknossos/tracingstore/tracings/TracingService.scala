@@ -136,11 +136,14 @@ trait TracingService[T <: GeneratedMessage]
 
   def findMultiple(selectors: List[Option[TracingSelector]],
                    useCache: Boolean = true,
-                   applyUpdates: Boolean = false): Fox[List[Option[T]]] =
+                   applyUpdates: Boolean = false,
+                   userToken: Option[String]): Fox[List[Option[T]]] =
     Fox.combined {
       selectors.map {
-        case Some(selector) => find(selector.tracingId, selector.version, useCache, applyUpdates).map(Some(_))
-        case None           => Fox.successful(None)
+        case Some(selector) =>
+          find("dummyAnnotationid", selector.tracingId, selector.version, useCache, applyUpdates, userToken = userToken)
+            .map(Some(_))
+        case None => Fox.successful(None)
       }
     }
 

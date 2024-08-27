@@ -33,13 +33,13 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     with FullMeshHelper
     with LazyLogging {
 
-  def loadFor(token: Option[String], tracingId: String, fullMeshRequest: FullMeshRequest)(
+  def loadFor(token: Option[String], annotationId: String, tracingId: String, fullMeshRequest: FullMeshRequest)(
       implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
-      tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
+      tracing <- volumeTracingService.find(annotationId, tracingId, userToken = token) ?~> "tracing.notFound"
       data <- if (fullMeshRequest.meshFileName.isDefined)
         loadFullMeshFromMeshfile(token, tracing, tracingId, fullMeshRequest)
-      else loadFullMeshFromAdHoc(token, tracing, tracingId, fullMeshRequest)
+      else loadFullMeshFromAdHoc(token, tracing, annotationId, tracingId, fullMeshRequest)
     } yield data
 
   private def loadFullMeshFromMeshfile(
@@ -60,6 +60,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
 
   private def loadFullMeshFromAdHoc(token: Option[String],
                                     tracing: VolumeTracing,
+                                    annotationId: String,
                                     tracingId: String,
                                     fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
@@ -68,16 +69,19 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       before = Instant.now
       voxelSize <- remoteDatastoreClient.voxelSizeForTracingWithCache(tracingId, token) ?~> "voxelSize.failedToFetch"
       verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
-        getAllAdHocChunksWithSegmentIndex(token, tracing, tracingId, mag, voxelSize, fullMeshRequest)
+        getAllAdHocChunksWithSegmentIndex(token, annotationId, tracing, tracingId, mag, voxelSize, fullMeshRequest)
       else
-        getAllAdHocChunksWithNeighborLogic(token,
-                                           tracing,
-                                           tracingId,
-                                           mag,
-                                           voxelSize,
-                                           fullMeshRequest,
-                                           fullMeshRequest.seedPosition.map(sp => VoxelPosition(sp.x, sp.y, sp.z, mag)),
-                                           adHocChunkSize)
+        getAllAdHocChunksWithNeighborLogic(
+          token,
+          tracing,
+          annotationId,
+          tracingId,
+          mag,
+          voxelSize,
+          fullMeshRequest,
+          fullMeshRequest.seedPosition.map(sp => VoxelPosition(sp.x, sp.y, sp.z, mag)),
+          adHocChunkSize
+        )
       encoded = verticesForChunks.map(adHocMeshToStl)
       array = combineEncodedChunksToStl(encoded)
       _ = logMeshingDuration(before, "ad-hoc meshing (tracingstore)", array.length)
@@ -85,13 +89,14 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
 
   private def getAllAdHocChunksWithSegmentIndex(
       token: Option[String],
+      annotationId: String,
       tracing: VolumeTracing,
       tracingId: String,
       mag: Vec3Int,
       voxelSize: VoxelSize,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext): Fox[List[Array[Float]]] =
     for {
-      fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId)
+      fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracingId, userToken = token)
       mappingName <- volumeTracingService.baseMappingName(tracing)
       bucketPositionsRaw: ListOfVec3IntProto <- volumeSegmentIndexService
         .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(
@@ -124,13 +129,14 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
             fullMeshRequest.additionalCoordinates,
             findNeighbors = false
           )
-          loadMeshChunkFromAdHoc(token, tracing, adHocMeshRequest, tracingId)
+          loadMeshChunkFromAdHoc(token, tracing, adHocMeshRequest, annotationId, tracingId)
       }
       allVertices = vertexChunksWithNeighbors.map(_._1)
     } yield allVertices
 
   private def getAllAdHocChunksWithNeighborLogic(token: Option[String],
                                                  tracing: VolumeTracing,
+                                                 annotationId: String,
                                                  tracingId: String,
                                                  mag: Vec3Int,
                                                  voxelSize: VoxelSize,
@@ -153,12 +159,17 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         fullMeshRequest.additionalCoordinates
       )
       _ = visited += topLeft
-      (vertices: Array[Float], neighbors) <- loadMeshChunkFromAdHoc(token, tracing, adHocMeshRequest, tracingId)
+      (vertices: Array[Float], neighbors) <- loadMeshChunkFromAdHoc(token,
+                                                                    tracing,
+                                                                    adHocMeshRequest,
+                                                                    annotationId,
+                                                                    tracingId)
       nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
       _ = visited ++= nextPositions
       neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
         getAllAdHocChunksWithNeighborLogic(token,
                                            tracing,
+                                           annotationId,
                                            tracingId,
                                            mag,
                                            voxelSize,
@@ -173,8 +184,9 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
   private def loadMeshChunkFromAdHoc(token: Option[String],
                                      tracing: VolumeTracing,
                                      adHocMeshRequest: WebknossosAdHocMeshRequest,
+                                     annotationId: String,
                                      tracingId: String): Fox[(Array[Float], List[Int])] =
     if (tracing.getHasEditableMapping)
       editableMappingService.createAdHocMesh(tracing, tracingId, adHocMeshRequest, token)
-    else volumeTracingService.createAdHocMesh(tracingId, adHocMeshRequest, token)
+    else volumeTracingService.createAdHocMesh(annotationId, tracingId, adHocMeshRequest, token)
 }

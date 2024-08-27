@@ -21,7 +21,8 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
     with SegmentStatistics {
 
   // Returns the segment volume (=number of voxels) in the target mag
-  def getSegmentVolume(tracingId: String,
+  def getSegmentVolume(annotationId: String,
+                       tracingId: String,
                        segmentId: Long,
                        mag: Vec3Int,
                        mappingName: Option[String],
@@ -31,11 +32,12 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       segmentId,
       mag,
       additionalCoordinates,
-      getBucketPositions(tracingId, mappingName, additionalCoordinates, userToken),
-      getTypedDataForBucketPosition(tracingId, userToken)
+      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates, userToken),
+      getTypedDataForBucketPosition(annotationId, tracingId, userToken)
     )
 
-  def getSegmentBoundingBox(tracingId: String,
+  def getSegmentBoundingBox(annotationId: String,
+                            tracingId: String,
                             segmentId: Long,
                             mag: Vec3Int,
                             mappingName: Option[String],
@@ -45,16 +47,16 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       segmentId,
       mag,
       additionalCoordinates,
-      getBucketPositions(tracingId, mappingName, additionalCoordinates, userToken),
-      getTypedDataForBucketPosition(tracingId, userToken)
+      getBucketPositions(annotationId, tracingId, mappingName, additionalCoordinates, userToken),
+      getTypedDataForBucketPosition(annotationId, tracingId, userToken)
     )
 
-  private def getTypedDataForBucketPosition(tracingId: String, userToken: Option[String])(
+  private def getTypedDataForBucketPosition(annotationId: String, tracingId: String, userToken: Option[String])(
       bucketPosition: Vec3Int,
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]]) =
     for {
-      tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
+      tracing <- volumeTracingService.find(annotationId, tracingId, userToken = userToken) ?~> "tracing.notFound"
       bucketData <- getVolumeDataForPositions(tracing,
                                               tracingId,
                                               mag,
@@ -67,13 +69,14 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
     } yield dataTyped
 
   private def getBucketPositions(
+      annotationId: String,
       tracingId: String,
       mappingName: Option[String],
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
       userToken: Option[String])(segmentId: Long, mag: Vec3Int)(implicit ec: ExecutionContext) =
     for {
-      fallbackLayer <- volumeTracingService.getFallbackLayer(tracingId)
-      tracing <- volumeTracingService.find(tracingId) ?~> "tracing.notFound"
+      fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracingId, userToken)
+      tracing <- volumeTracingService.find(annotationId, tracingId, userToken = userToken) ?~> "tracing.notFound"
       additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes)
       allBucketPositions: ListOfVec3IntProto <- volumeSegmentIndexService
         .getSegmentToBucketIndexWithEmptyFallbackWithoutBuffer(

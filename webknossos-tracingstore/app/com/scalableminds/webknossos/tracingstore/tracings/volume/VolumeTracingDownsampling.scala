@@ -77,7 +77,8 @@ trait VolumeTracingDownsampling
 
   protected def volumeSegmentIndexClient: FossilDBClient
 
-  protected def downsampleWithLayer(tracingId: String,
+  protected def downsampleWithLayer(annotationId: String,
+                                    tracingId: String,
                                     oldTracingId: String,
                                     tracing: VolumeTracing,
                                     dataLayer: VolumeTracingLayer,
@@ -105,8 +106,8 @@ trait VolumeTracingDownsampling
                              dataLayer)
         requiredMag
       }
-      fallbackLayer <- tracingService.getFallbackLayer(oldTracingId) // remote wk does not know the new id yet
-      tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
+      fallbackLayer <- tracingService.getFallbackLayer(annotationId, oldTracingId, userToken) // remote wk does not know the new id yet
+      tracing <- tracingService.find(annotationId, tracingId, userToken = userToken) ?~> "tracing.notFound"
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                         volumeSegmentIndexClient,
                                                         tracing.version,

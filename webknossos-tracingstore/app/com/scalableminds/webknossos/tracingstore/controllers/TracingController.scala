@@ -93,7 +93,9 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           for {
-            tracings <- tracingService.findMultiple(request.body, applyUpdates = true)
+            tracings <- tracingService.findMultiple(request.body,
+                                                    applyUpdates = true,
+                                                    userToken = urlOrHeaderToken(token, request))
           } yield {
             Ok(tracings.toByteArray).as(protobufMimeType)
           }
@@ -115,7 +117,9 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           for {
-            tracingOpts <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages(
+            tracingOpts <- tracingService.findMultiple(request.body,
+                                                       applyUpdates = true,
+                                                       userToken = urlOrHeaderToken(token, request)) ?~> Messages(
               "tracing.notFound")
             tracingsWithIds = tracingOpts.zip(request.body).flatMap {
               case (Some(tracing), Some(selector)) => Some((tracing, selector.tracingId))

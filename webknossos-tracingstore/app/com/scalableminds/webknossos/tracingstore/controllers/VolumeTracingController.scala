@@ -244,7 +244,8 @@ class VolumeTracingController @Inject()(
               newEditableMappingId,
               userToken
             )
-            _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(newId, tracingId, newTracing, userToken))
+            _ <- Fox.runIfOptionTrue(downsample)(
+              tracingService.downsample(annotationId, newId, tracingId, newTracing, userToken))
           } yield Ok(Json.toJson(newId))
         }
       }
@@ -342,11 +343,11 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def loadFullMeshStl(token: Option[String], tracingId: String): Action[FullMeshRequest] =
+  def loadFullMeshStl(token: Option[String], annotationId: String, tracingId: String): Action[FullMeshRequest] =
     Action.async(validateJson[FullMeshRequest]) { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          data: Array[Byte] <- fullMeshService.loadFor(token: Option[String], tracingId, request.body) ?~> "mesh.file.loadChunk.failed"
+          data: Array[Byte] <- fullMeshService.loadFor(token: Option[String], annotationId, tracingId, request.body) ?~> "mesh.file.loadChunk.failed"
         } yield Ok(data)
       }
     }
@@ -583,7 +584,8 @@ class VolumeTracingController @Inject()(
           tracing <- tracingService.find(annotationId, tracingId, userToken = urlOrHeaderToken(token, request))
           mappingName <- tracingService.baseMappingName(tracing)
           segmentVolumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
-            volumeSegmentStatisticsService.getSegmentVolume(tracingId,
+            volumeSegmentStatisticsService.getSegmentVolume(annotationId,
+                                                            tracingId,
                                                             segmentId,
                                                             request.body.mag,
                                                             mappingName,
@@ -603,7 +605,8 @@ class VolumeTracingController @Inject()(
           tracing <- tracingService.find(annotationId, tracingId, userToken = urlOrHeaderToken(token, request))
           mappingName <- tracingService.baseMappingName(tracing)
           segmentBoundingBoxes: List[BoundingBox] <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
-            volumeSegmentStatisticsService.getSegmentBoundingBox(tracingId,
+            volumeSegmentStatisticsService.getSegmentBoundingBox(annotationId,
+                                                                 tracingId,
                                                                  segmentId,
                                                                  request.body.mag,
                                                                  mappingName,

@@ -6,7 +6,6 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
@@ -651,12 +650,14 @@ class VolumeTracingService @Inject()(
                  toCache)
     } yield id
 
-  def downsample(tracingId: String,
+  def downsample(annotationId: String,
+                 tracingId: String,
                  oldTracingId: String,
                  tracing: VolumeTracing,
                  userToken: Option[String]): Fox[Unit] =
     for {
-      resultingResolutions <- downsampleWithLayer(tracingId,
+      resultingResolutions <- downsampleWithLayer(annotationId,
+                                                  tracingId,
                                                   oldTracingId,
                                                   tracing,
                                                   volumeTracingLayer(tracingId, tracing),

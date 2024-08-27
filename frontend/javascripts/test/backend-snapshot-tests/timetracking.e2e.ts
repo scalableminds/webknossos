@@ -6,7 +6,7 @@ import {
   resetDatabase,
   writeTypeCheckingFile,
   replaceVolatileValues,
-} from "test/enzyme/e2e-setup";
+} from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
 import { APITeam, APIUser } from "types/api_flow_types";

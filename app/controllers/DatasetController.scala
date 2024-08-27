@@ -189,7 +189,7 @@ class DatasetController @Inject()(userService: UserService,
             searchQuery,
             request.identity.map(_._id),
             recursive.getOrElse(false),
-            limit
+            limitOpt = limit
           )
         } yield Json.toJson(datasetInfos)
       } else {

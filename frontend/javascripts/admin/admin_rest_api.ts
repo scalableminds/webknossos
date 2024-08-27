@@ -896,7 +896,7 @@ export async function getTracingForAnnotationType(
   const possibleVersionString = version != null ? `&version=${version}` : "";
   const tracingArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${annotation.tracingStore.url}/tracings/${tracingType}/${tracingId}?token=${token}${possibleVersionString}`,
+      `${annotation.tracingStore.url}/tracings/${tracingType}/${annotation.id}/${tracingId}?token=${token}${possibleVersionString}`,
       {
         headers: {
           Accept: "application/x-protobuf",

@@ -24,6 +24,7 @@ import security.RandomIDGenerator
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class DatasetService @Inject()(organizationDAO: OrganizationDAO,
@@ -69,6 +70,18 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     createDataset(dataStore, organizationName, unreportedDatasource)
   }
 
+  def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
+    datasetDAO.findAllCompactWithSearch(
+      uploaderIdOpt = Some(userId),
+      organizationIdOpt = Some(organizationId),
+      isActiveOpt = Some(false),
+      includeSubfolders = true,
+      statusOpt = Some(notYetUploadedStatus),
+      // Only list pending uploads since the two last weeks.
+      createdSinceOpt = Some(Instant.now - (14 days))
+    ) ?~> "dataset.list.fetchFailed"
+
   private def createDataset(
       dataStore: DataStore,
       owningOrganization: String,
@@ -82,14 +95,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
       organization <- organizationDAO.findOneByName(owningOrganization)
-      orbanizationRootFolder <- folderDAO.findOne(organization._rootFolder)
+      organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
       dataset = Dataset(
         newId,
         dataStore.name,
         organization._id,
         publication,
         None,
-        orbanizationRootFolder._id,
+        organizationRootFolder._id,
         dataSourceHash,
         dataSource.defaultViewConfiguration,
         adminViewConfiguration = None,

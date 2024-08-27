@@ -61,7 +61,8 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
                                                   preprocessActionsForStorage(updateActionGroup))
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
       _ <- Fox.runIf(bucketMutatingActions.nonEmpty)(
-        volumeTracingService.applyBucketMutatingActions(bucketMutatingActions, updateActionGroup.version, userToken))
+        volumeTracingService
+          .applyBucketMutatingActions(annotationId, bucketMutatingActions, updateActionGroup.version, userToken))
     } yield ()
 
   private def findBucketMutatingActions(updateActionGroup: UpdateActionGroup): List[BucketMutatingVolumeUpdateAction] =
@@ -140,25 +141,34 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     } yield Json.toJson(updateActionGroupsJs)
   }
 
-  def get(annotationId: String, version: Option[Long], applyUpdates: Boolean, userToken: Option[String])(
+  def get(annotationId: String, version: Option[Long], userToken: Option[String])(
       implicit ec: ExecutionContext): Fox[AnnotationProto] =
+    for {
+      withTracings <- getWithTracings(annotationId, version, List.empty, userToken)
+    } yield withTracings.annotation
+
+  def getWithTracings(annotationId: String,
+                      version: Option[Long],
+                      requestedTracingIds: List[String],
+                      userToken: Option[String])(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       annotationWithVersion <- tracingDataStore.annotations.get(annotationId, version)(fromProtoBytes[AnnotationProto])
       annotation = annotationWithVersion.value
-      updated <- if (applyUpdates) applyPendingUpdates(annotation, annotationId, version, userToken)
-      else Fox.successful(annotation)
+      updated <- applyPendingUpdates(annotation, annotationId, version, requestedTracingIds, userToken)
     } yield updated
 
-  private def applyPendingUpdates(annotation: AnnotationProto,
-                                  annotationId: String,
-                                  targetVersionOpt: Option[Long],
-                                  userToken: Option[String])(implicit ec: ExecutionContext): Fox[AnnotationProto] =
+  private def applyPendingUpdates(
+      annotation: AnnotationProto,
+      annotationId: String,
+      targetVersionOpt: Option[Long],
+      requestedTracingIds: List[String],
+      userToken: Option[String])(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {
       targetVersion <- determineTargetVersion(annotation, annotationId, targetVersionOpt)
       updates <- findPendingUpdates(annotationId, annotation.version, targetVersion)
-      annotationWithTracings <- findTracingsForUpdates(annotation, updates)
+      annotationWithTracings <- findTracingsForUpdates(annotation, updates) // TODO pass requested tracing ids
       updated <- applyUpdates(annotationWithTracings, annotationId, updates, targetVersion, userToken)
-    } yield updated.annotation
+    } yield updated
 
   private def findTracingsForUpdates(annotation: AnnotationProto, updates: List[UpdateAction])(
       implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {

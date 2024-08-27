@@ -25,12 +25,13 @@ class TSAnnotationController @Inject()(
     extends Controller
     with KeyValueStoreImplicits {
 
-  def initialize(token: Option[String], annotationId: String): Action[AnyContent] =
-    Action.async { implicit request =>
+  def save(token: Option[String], annotationId: String): Action[AnnotationProto] =
+    Action.async(validateProto[AnnotationProto]) { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           for {
-            _ <- tracingDataStore.annotations.put(annotationId, 0L, AnnotationProto(version = 0L))
+            // TODO assert id does not already exist
+            _ <- tracingDataStore.annotations.put(annotationId, 0L, request.body)
           } yield Ok
         }
       }
@@ -84,10 +85,7 @@ class TSAnnotationController @Inject()(
           accessTokenService.validateAccess(UserAccessRequest.readAnnotation(annotationId),
                                             urlOrHeaderToken(token, request)) {
             for {
-              annotationProto <- annotationService.get(annotationId,
-                                                       version,
-                                                       applyUpdates = false,
-                                                       urlOrHeaderToken(token, request))
+              annotationProto <- annotationService.get(annotationId, version, urlOrHeaderToken(token, request))
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }
         }

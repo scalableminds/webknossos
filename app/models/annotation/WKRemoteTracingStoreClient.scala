@@ -6,6 +6,7 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
+import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -23,6 +24,7 @@ import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import models.dataset.Dataset
 import net.liftweb.common.Box
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -33,7 +35,7 @@ class WKRemoteTracingStoreClient(
     tracingDataSourceTemporaryStore: TracingDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
+  private def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
 
   def getSkeletonTracing(annotationLayer: AnnotationLayer, version: Option[Long]): Fox[FetchedAnnotationLayer] = {
     logger.debug("Called to get SkeletonTracing." + baseInfo)
@@ -78,6 +80,14 @@ class WKRemoteTracingStoreClient(
     rpc(s"${tracingStore.url}/tracings/skeleton/saveMultiple").withLongTimeout
       .addQueryString("token" -> RpcTokenHolder.webknossosToken)
       .postProtoWithJsonResponse[SkeletonTracings, List[Box[Option[String]]]](tracings)
+  }
+
+  def saveAnnotationProto(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] = {
+    logger.debug("Called to save AnnotationProto." + baseInfo)
+    rpc(s"${tracingStore.url}/annotations/save")
+      .addQueryString("token" -> RpcTokenHolder.webknossosToken)
+      .addQueryString("annotationId" -> annotationId.toString)
+      .postProto[AnnotationProto](annotationProto)
   }
 
   def duplicateSkeletonTracing(skeletonTracingId: String,

@@ -7,6 +7,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, AnnotationProto}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.{
@@ -205,6 +206,7 @@ class AnnotationService @Inject()(
       newAnnotationLayers <- createTracingsForExplorational(
         dataset,
         dataSource,
+        annotation._id,
         List(annotationLayerParameters),
         organizationName,
         annotation.annotationLayers) ?~> "annotation.createTracings.failed"
@@ -218,6 +220,7 @@ class AnnotationService @Inject()(
 
   private def createTracingsForExplorational(dataset: Dataset,
                                              dataSource: DataSource,
+                                             annotationId: ObjectId,
                                              allAnnotationLayerParameters: List[AnnotationLayerParameters],
                                              datasetOrganizationName: String,
                                              existingAnnotationLayers: List[AnnotationLayer] = List())(
@@ -351,6 +354,22 @@ class AnnotationService @Inject()(
           )
       }
 
+    def createAndSaveAnnotationProto(annotationId: ObjectId, annotationLayers: List[AnnotationLayer]): Fox[Unit] = {
+      val layersProto = annotationLayers.map { l =>
+        AnnotationLayerProto(
+          l.tracingId,
+          l.name,
+          AnnotationLayerType.toProto(l.typ)
+        )
+      }
+      // todo pass right name, description here
+      val annotationProto = AnnotationProto(name = None, description = None, version = 0L, layers = layersProto)
+      for {
+        tracingStoreClient <- tracingStoreService.clientFor(dataset)
+        _ <- tracingStoreClient.saveAnnotationProto(annotationId, annotationProto)
+      } yield ()
+    }
+
     for {
       /*
         Note that the tracings have redundant properties, with a precedence logic selecting a layer
@@ -366,6 +385,7 @@ class AnnotationService @Inject()(
       precedenceProperties = oldPrecedenceLayer.map(extractPrecedenceProperties)
       newAnnotationLayers <- Fox.serialCombined(allAnnotationLayerParameters)(p =>
         createAndSaveAnnotationLayer(p, precedenceProperties, dataStore))
+      _ <- createAndSaveAnnotationProto(annotationId, newAnnotationLayers)
     } yield newAnnotationLayers
   }
 
@@ -393,13 +413,15 @@ class AnnotationService @Inject()(
       dataSource <- datasetService.dataSourceFor(dataset)
       datasetOrganization <- organizationDAO.findOne(dataset._organization)
       usableDataSource <- dataSource.toUsable ?~> Messages("dataset.notImported", dataSource.id.name)
+      newAnnotationId = ObjectId.generate
       annotationLayers <- createTracingsForExplorational(
         dataset,
         usableDataSource,
+        newAnnotationId,
         annotationLayerParameters,
         datasetOrganization.name) ?~> "annotation.createTracings.failed"
       teamId <- selectSuitableTeam(user, dataset) ?~> "annotation.create.forbidden"
-      annotation = Annotation(ObjectId.generate, datasetId, None, teamId, user._id, annotationLayers)
+      annotation = Annotation(newAnnotationId, datasetId, None, teamId, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
 

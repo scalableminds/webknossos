@@ -8,7 +8,11 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
-import com.scalableminds.webknossos.tracingstore.annotation.LayerUpdateAction
+import com.scalableminds.webknossos.tracingstore.annotation.{
+  AnnotationWithTracings,
+  LayerUpdateAction,
+  TSAnnotationService
+}
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
@@ -23,6 +27,7 @@ class SkeletonTracingService @Inject()(
     val handledGroupIdStore: TracingStoreRedisStore,
     val temporaryTracingIdStore: TracingStoreRedisStore,
     val uncommittedUpdatesStore: TracingStoreRedisStore,
+    val annotationService: TSAnnotationService,
     val tracingMigrationService: SkeletonTracingMigrationService)(implicit val ec: ExecutionContext)
     extends TracingService[SkeletonTracing]
     with KeyValueStoreImplicits
@@ -40,22 +45,8 @@ class SkeletonTracingService @Inject()(
 
   def currentVersion(tracing: SkeletonTracing): Long = tracing.version
 
-  override def applyPendingUpdates(tracing: SkeletonTracing,
-                                   tracingId: String,
-                                   desiredVersion: Option[Long]): Fox[SkeletonTracing] = {
-    val existingVersion = tracing.version
-    findDesiredOrNewestPossibleVersion(tracing, tracingId, desiredVersion).flatMap { newVersion =>
-      if (newVersion > existingVersion) {
-        for {
-          pendingUpdates <- findPendingUpdates(tracingId, existingVersion, newVersion)
-          updatedTracing <- update(tracing, tracingId, pendingUpdates, newVersion)
-          _ <- save(updatedTracing, Some(tracingId), newVersion)
-        } yield updatedTracing
-      } else {
-        Full(tracing)
-      }
-    }
-  }
+  protected def takeTracing(annotation: AnnotationWithTracings, tracingId: String): Box[SkeletonTracing] =
+    annotation.getSkeleton(tracingId)
 
   private def findDesiredOrNewestPossibleVersion(tracing: SkeletonTracing,
                                                  tracingId: String,
@@ -75,40 +66,6 @@ class SkeletonTracingService @Inject()(
         case Some(desiredSome) => math.min(desiredSome, newestUpdateVersion)
       }
     }
-
-  private def findPendingUpdates(tracingId: String,
-                                 existingVersion: Long,
-                                 desiredVersion: Long): Fox[List[SkeletonUpdateAction]] = ???
-
-  private def applyUpdateOn(tracing: SkeletonTracing, update: LayerUpdateAction): SkeletonTracing = ???
-
-  private def update(tracing: SkeletonTracing,
-                     tracingId: String,
-                     updates: List[SkeletonUpdateAction],
-                     newVersion: Long): Fox[SkeletonTracing] = {
-    def updateIter(tracingFox: Fox[SkeletonTracing],
-                   remainingUpdates: List[SkeletonUpdateAction]): Fox[SkeletonTracing] =
-      tracingFox.futureBox.flatMap {
-        case Empty => Fox.empty
-        case Full(tracing) =>
-          remainingUpdates match {
-            case List() => Fox.successful(tracing)
-            case RevertToVersionSkeletonAction(sourceVersion, tracingId, _, _, _) :: tail =>
-              val sourceTracing = find(tracingId, Some(sourceVersion), useCache = false, applyUpdates = true)
-              updateIter(sourceTracing, tail)
-            case update :: tail => updateIter(Full(applyUpdateOn(tracing, update)), tail)
-          }
-        case _ => tracingFox
-      }
-
-    updates match {
-      case List() => Full(tracing)
-      case _ :: _ =>
-        for {
-          updated <- updateIter(Some(tracing), updates)
-        } yield updated.withVersion(newVersion)
-    }
-  }
 
   def duplicate(tracing: SkeletonTracing,
                 fromTask: Boolean,

@@ -1,8 +1,13 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
-import com.scalableminds.webknossos.tracingstore.annotation.UpdateActionGroup
+import com.scalableminds.webknossos.tracingstore.annotation.{
+  AnnotationWithTracings,
+  TSAnnotationService,
+  UpdateActionGroup
+}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import com.typesafe.scalalogging.LazyLogging
@@ -38,6 +43,8 @@ trait TracingService[T <: GeneratedMessage]
   def temporaryTracingIdStore: TracingStoreRedisStore
 
   def tracingMigrationService: TracingMigrationService[T]
+
+  def annotationService: TSAnnotationService
 
   def dummyTracing: T
 
@@ -110,27 +117,21 @@ trait TracingService[T <: GeneratedMessage]
 
   def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] = Fox.successful(tracing)
 
-  def find(tracingId: String,
+  protected def takeTracing(annotation: AnnotationWithTracings, tracingId: String): Box[T]
+
+  def find(annotationId: String,
+           tracingId: String,
            version: Option[Long] = None,
            useCache: Boolean = true,
-           applyUpdates: Boolean = false): Fox[T] =
+           applyUpdates: Boolean = false,
+           userToken: Option[String]): Fox[T] =
     if (tracingId == TracingIds.dummyTracingId)
       Fox.successful(dummyTracing)
     else {
-      val tracingFox = tracingStore.get(tracingId, version)(fromProtoBytes[T]).map(_.value)
-      tracingFox.flatMap { tracing =>
-        val updatedTracing = if (applyUpdates) {
-          applyPendingUpdates(tracing, tracingId, version)
-        } else {
-          Fox.successful(tracing)
-        }
-        migrateTracing(updatedTracing, tracingId)
-      }.orElse {
-        if (useCache)
-          temporaryTracingStore.find(tracingId)
-        else
-          tracingFox
-      }
+      for {
+        annotation <- annotationService.getWithTracings(annotationId, version, List(tracingId), userToken) // TODO is applyUpdates still needed?
+        tracing <- takeTracing(annotation, annotationId)
+      } yield tracing
     }
 
   def findMultiple(selectors: List[Option[TracingSelector]],

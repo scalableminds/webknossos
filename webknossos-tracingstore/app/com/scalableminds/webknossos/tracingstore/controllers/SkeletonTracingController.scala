@@ -50,6 +50,7 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
     }
 
   def duplicate(token: Option[String],
+                annotationId: String,
                 tracingId: String,
                 version: Option[Long],
                 fromTask: Option[Boolean],
@@ -60,7 +61,12 @@ class SkeletonTracingController @Inject()(val tracingService: SkeletonTracingSer
       log() {
         accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
           for {
-            tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
+            tracing <- tracingService.find(annotationId,
+                                           tracingId,
+                                           version,
+                                           applyUpdates = true,
+                                           userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+              "tracing.notFound")
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)

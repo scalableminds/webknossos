@@ -72,18 +72,21 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
     }
   }
 
-  def get(token: Option[String], tracingId: String, version: Option[Long]): Action[AnyContent] = Action.async {
-    implicit request =>
+  def get(token: Option[String], annotationId: String, tracingId: String, version: Option[Long]): Action[AnyContent] =
+    Action.async { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
-            tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
-          } yield {
-            Ok(tracing.toByteArray).as(protobufMimeType)
-          }
+            tracing <- tracingService.find(annotationId,
+                                           tracingId,
+                                           version,
+                                           applyUpdates = true,
+                                           userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+              "tracing.notFound")
+          } yield Ok(tracing.toByteArray).as(protobufMimeType)
         }
       }
-  }
+    }
 
   def getMultiple(token: Option[String]): Action[List[Option[TracingSelector]]] =
     Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
@@ -98,127 +101,13 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       }
     }
 
-  def newestVersion(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    log() {
-      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
-        for {
-          newestVersion <- tracingService.currentVersion(tracingId) ?~> "annotation.getNewestVersion.failed"
-        } yield {
-          JsonOk(Json.obj("version" -> newestVersion))
-        }
-      }
-    }
-  }
-
-  def update(token: Option[String], tracingId: String): Action[List[UpdateActionGroup]] =
-    Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
+  def newestVersion(token: Option[String], annotationId: String, tracingId: String): Action[AnyContent] = Action.async {
+    implicit request =>
       log() {
-        logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccess(UserAccessRequest.writeTracing(tracingId), urlOrHeaderToken(token, request)) {
-            val updateGroups = request.body
-            if (updateGroups.forall(_.transactionGroupCount == 1)) {
-              commitUpdates(tracingId, updateGroups, urlOrHeaderToken(token, request)).map(_ => Ok)
-            } else {
-              updateGroups
-                .foldLeft(tracingService.currentVersion(tracingId)) { (currentCommittedVersionFox, updateGroup) =>
-                  handleUpdateGroupForTransaction(tracingId,
-                                                  currentCommittedVersionFox,
-                                                  updateGroup,
-                                                  urlOrHeaderToken(token, request))
-                }
-                .map(_ => Ok)
-            }
-          }
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
+          Fox.successful(JsonOk(Json.obj("version" -> 0L))) // TODO remove in favor of annotation-wide
         }
       }
-    }
-
-  private val transactionGroupExpiry: FiniteDuration = 24 hours
-
-  private def handleUpdateGroupForTransaction(tracingId: String,
-                                              previousVersionFox: Fox[Long],
-                                              updateGroup: UpdateActionGroup,
-                                              userToken: Option[String]): Fox[Long] =
-    for {
-      previousCommittedVersion: Long <- previousVersionFox
-      result <- if (previousCommittedVersion + 1 == updateGroup.version) {
-        if (updateGroup.transactionGroupCount == updateGroup.transactionGroupIndex + 1) {
-          // Received the last group of this transaction
-          commitWithPending(tracingId, updateGroup, userToken)
-        } else {
-          tracingService
-            .saveUncommitted(tracingId,
-                             updateGroup.transactionId,
-                             updateGroup.transactionGroupIndex,
-                             updateGroup.version,
-                             updateGroup,
-                             transactionGroupExpiry)
-            .flatMap(
-              _ =>
-                tracingService.saveToHandledGroupIdStore(tracingId,
-                                                         updateGroup.transactionId,
-                                                         updateGroup.version,
-                                                         updateGroup.transactionGroupIndex))
-            .map(_ => previousCommittedVersion) // no updates have been committed, do not yield version increase
-        }
-      } else {
-        failUnlessAlreadyHandled(updateGroup, tracingId, previousCommittedVersion)
-      }
-    } yield result
-
-  // For an update group (that is the last of a transaction), fetch all previous uncommitted for the same transaction
-  // and commit them all.
-  private def commitWithPending(tracingId: String,
-                                updateGroup: UpdateActionGroup,
-                                userToken: Option[String]): Fox[Long] =
-    for {
-      previousActionGroupsToCommit <- tracingService.getAllUncommittedFor(tracingId, updateGroup.transactionId)
-      _ <- bool2Fox(
-        previousActionGroupsToCommit
-          .exists(_.transactionGroupIndex == 0) || updateGroup.transactionGroupCount == 1) ?~> s"Trying to commit a transaction without a group that has transactionGroupIndex 0."
-      concatenatedGroup = concatenateUpdateGroupsOfTransaction(previousActionGroupsToCommit, updateGroup)
-      commitResult <- commitUpdates(tracingId, List(concatenatedGroup), userToken)
-      _ <- tracingService.removeAllUncommittedFor(tracingId, updateGroup.transactionId)
-    } yield commitResult
-
-  private def concatenateUpdateGroupsOfTransaction(previousActionGroups: List[UpdateActionGroup],
-                                                   lastActionGroup: UpdateActionGroup): UpdateActionGroup =
-    if (previousActionGroups.isEmpty) lastActionGroup
-    else {
-      val allActionGroups = previousActionGroups :+ lastActionGroup
-      UpdateActionGroup(
-        version = lastActionGroup.version,
-        timestamp = lastActionGroup.timestamp,
-        authorId = lastActionGroup.authorId,
-        actions = allActionGroups.flatMap(_.actions),
-        stats = lastActionGroup.stats, // the latest stats do count
-        info = lastActionGroup.info, // frontend sets this identically for all groups of transaction
-        transactionId = f"${lastActionGroup.transactionId}-concatenated",
-        transactionGroupCount = 1,
-        transactionGroupIndex = 0,
-      )
-    }
-
-  // Perform version check and commit the passed updates
-  private def commitUpdates(tracingId: String,
-                            updateGroups: List[UpdateActionGroup],
-                            userToken: Option[String]): Fox[Long] = ???
-
-  /* If this update group has already been “handled” (successfully saved as either committed or uncommitted),
-   * ignore it silently. This is in case the frontend sends a retry if it believes a save to be unsuccessful
-   * despite the backend receiving it just fine.
-   */
-  private def failUnlessAlreadyHandled(updateGroup: UpdateActionGroup,
-                                       tracingId: String,
-                                       previousVersion: Long): Fox[Long] = {
-    val errorMessage = s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}"
-    for {
-      _ <- Fox.assertTrue(
-        tracingService.handledGroupIdStoreContains(tracingId,
-                                                   updateGroup.transactionId,
-                                                   updateGroup.version,
-                                                   updateGroup.transactionGroupIndex)) ?~> errorMessage ~> CONFLICT
-    } yield updateGroup.version
   }
 
   def mergedFromIds(token: Option[String], persist: Boolean): Action[List[Option[TracingSelector]]] =

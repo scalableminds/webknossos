@@ -167,6 +167,12 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     performRequest
   }
 
+  def postProto[T <: GeneratedMessage](body: T): Fox[Unit] = {
+    request =
+      request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> protobufMimeType).withBody(body.toByteArray).withMethod("POST")
+    performRequest.map(_ => ())
+  }
+
   def postProtoWithJsonResponse[T <: GeneratedMessage, J: Reads](body: T): Fox[J] = {
     request =
       request.addHttpHeaders(HeaderNames.CONTENT_TYPE -> protobufMimeType).withBody(body.toByteArray).withMethod("POST")

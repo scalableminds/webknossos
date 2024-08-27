@@ -62,7 +62,6 @@
         "pngjs": "^3.3.3",
         "proto-loader6": "^0.4.0",
         "puppeteer": "^19.7.2",
-        "react-test-renderer": "^17.0.0",
         "redux-mock-store": "^1.2.2",
         "shelljs": "^0.8.5",
         "sinon": "^12.0.1",

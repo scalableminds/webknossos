@@ -29,6 +29,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The AI-based Quick Select can now be triggered with a single click. Drawing a rectangle is still supported. [#7993](https://github.com/scalableminds/webknossos/pull/7993)
 - To improve performance, only the visible bounding boxes are rendered in the bounding box tab (so-called virtualization). [#7974](https://github.com/scalableminds/webknossos/pull/7974)
 - Added support for reading zstd-compressed zarr2 datasets [#7964](https://github.com/scalableminds/webknossos/pull/7964)
+- Added the option to resume an unfinished upload event after browser restarts. [#7981](https://github.com/scalableminds/webknossos/pull/7981)
 - The alignment job is in a separate tab of the "AI Tools" now. The "Align Sections" AI job now supports including manually created matches between adjacent section given as skeletons. [#7967](https://github.com/scalableminds/webknossos/pull/7967)  
 - Added `api.tracing.createNode(position, options)`` to the front-end API. [#7998](https://github.com/scalableminds/webknossos/pull/7998)
 - Added a feature to register all segments for a given bounding box at once via the context menu of the bounding box. [#7979](https://github.com/scalableminds/webknossos/pull/7979)

@@ -10,9 +10,9 @@ The main WEBKNOSSOS user interface for viewing and annotating datasets is divide
 
 ![An overview of the WEBKNOSSOS annotation UI highlighting the 4 main sections of the interface](../images/tracing_ui_overview.jpeg)
 
-Read More About [Skeleton Annotation](./skeleton_annotation.md)
+Read More About [Skeleton Annotation](../skeleton_annotation/index.md)
 
-Read More About [Volume Annotation](./volume_annotation.md)
+Read More About [Volume Annotation](../volume_annotation/index.md)
 
 
 

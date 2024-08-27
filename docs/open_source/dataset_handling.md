@@ -5,7 +5,7 @@
 On self-hosted instances, large datasets can be efficiently imported by placing them directly on the file system (WKW-format or Zarr only):
 
 * Place the dataset at `<WEBKNOSSOS directory>/binaryData/<Organization name>/<Dataset name>`. For example `/opt/webknossos/binaryData/Springfield_University/great_dataset`.
-* Go to the [dataset view on the dashboard](./dashboard/datasets.md)
+* Go to the [dataset view on the dashboard](../dashboard/datasets.md)
 * Use the `Scan disk for new dataset` from the dropdown menu next to the `Refresh` button on the dashboard or wait for WEBKNOSSOS to detect the dataset (up to 10min)
 
 Typically, WEBKNOSSOS can infer all the required metadata for a dataset automatically and import datasets automatically on refresh. In some cases, you will need to manually import a dataset and provide more information:

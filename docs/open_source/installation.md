@@ -71,9 +71,9 @@ Once you've completed the onboarding, you can also import your own datasets.
 
 For small datasets (max. 1GB), you can use the upload functionality provided in the web interface.
 For larger datasets, we recommend the file system upload.
-Read more about the import functionality in the [Datasets guide](./datasets.md).
+Read more about the import functionality in the [Datasets guide](../datasets/index.md).
 
-If you do not have a compatible dataset available, you can convert your own data using [the WEBKNOSSOS CLI](https://docs.webknossos.org/cli/) or use one of the [sample datasets](./datasets.md#sample-datasets) for testing purposes.
+If you do not have a compatible dataset available, you can convert your own data using [the WEBKNOSSOS CLI](https://docs.webknossos.org/cli/) or use one of the [sample datasets](../datasets/index.md#sample-datasets) for testing purposes.
 
 By default, datasets are visible to all users in your organization.
 However, WEBKNOSSOS includes fine-grained permissions to assign datasets to groups of users.

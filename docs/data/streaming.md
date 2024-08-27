@@ -13,7 +13,7 @@ With other converters, you may need to add the layers separately.
     - a URL or domain/collection identifier to locate the dataset on the remote service (supported protocols are HTTPS, Amazon S3 and Google Cloud Storage).
     - authentication credentials for accessing the resources on the remote service (optional)
 4. Click the *Add Layer* button
-5. WEBKNOSSOS will automatically try to infer as many dataset properties (voxel size, bounding box, etc.) as possible and preview a [WEBKNOSSOS `datasource` configuration](../data_formats.md#dataset-metadata-specification) for your to review. 
+5. WEBKNOSSOS will automatically try to infer as many dataset properties (voxel size, bounding box, etc.) as possible and preview a [WEBKNOSSOS `datasource` configuration](../data/concepts.md#dataset-metadata-specification) for your to review. 
   Consider setting the dataset `name` property and double-check all other properties for correctness.
 6. Click `Import` to finish
 

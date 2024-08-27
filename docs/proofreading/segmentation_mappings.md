@@ -6,7 +6,7 @@ This feature works well with automated machine learning segmentation workflows. 
 
 ![youtube-video](https://www.youtube.com/embed/ZmUqyIoA9Gw)
 
-Mapping files are automatically identified by WEBKNOSSOS when being placed in a `agglomerates` folder within the [segmentation folder](../data_formats.md#wkw-folder-structure). All available mappings can be activated from a dropdown under each `Segmentation` layer. Users can easily switch between several mappings and WEBKNOSSOS will update accordingly.
+Mapping files are automatically identified by WEBKNOSSOS when being placed in a `agglomerates` folder within the [segmentation folder](../data/wkw.md#wkw-folder-structure). All available mappings can be activated from a dropdown under each `Segmentation` layer. Users can easily switch between several mappings and WEBKNOSSOS will update accordingly.
 
 Mapping files are stored as HDF5 files. [Read the section on data formats for more information on the file formats](../data/concepts.md#id-mapping-files).
 

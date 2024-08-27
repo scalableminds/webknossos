@@ -14,9 +14,9 @@ You can customize the interface to your liking. Toggle the left and right sideba
 
 ![Customizing the layout](../images/customize_layout.gif)
 
-Read More About [Skeleton Annotation](./skeleton_annotation.md)
+Read More About [Skeleton Annotation](../skeleton_annotation/index.md)
 
-Read More About [Volume Annotation](./volume_annotation.md)
+Read More About [Volume Annotation](../volume_annotation/index.md)
 
 
 

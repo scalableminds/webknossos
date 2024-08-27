@@ -6,7 +6,7 @@ For example, you can analyze nerve cells by placing nodes along their path/circu
 Commonly, skeleton annotations contain reconstructions of one or more structures, sometimes thousands of nodes.
 Each connected group of nodes form a tree, i.e., an undirected graph.
 
-WEBKNOSSOS skeleton annotations can be downloaded, modified, and imported using a human-readable XML-based file format called [NML](../data_formats.md#nml).
+WEBKNOSSOS skeleton annotations can be downloaded, modified, and imported using a human-readable XML-based file format called [NML](../data/concepts.md#nml-files).
 
 The following pages explain: 
 

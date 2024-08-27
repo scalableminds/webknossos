@@ -14,4 +14,4 @@ The WEBKNOSSOS-wrap (WKW) container format is used for all internal voxel data r
 
 Any dataset uploaded to webknossos.org will automatically be converted to WKW on upload - given its source file format is supported by WEBKNOSSOS. Alternatively, you can manually convert your datasets using the [WEBKNOSSOS CLI tool](https://docs.webknossos.org/cli) or use a custom script based on the [WEBKNOSSOS Python library](https://docs.webknossos.org/webknossos-py/index.html).
 
-Read more about uploading and configuring datasets on the [datasets page](./datasets.md).
+Read more about uploading and configuring datasets on the [datasets page](../datasets/settings.md).

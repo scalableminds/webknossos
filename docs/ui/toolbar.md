@@ -10,7 +10,7 @@ Here is a list of the buttons and their functionality:
 - `Save`: Saves your annotation work. WEBKNOSSOS automatically saves every 30 seconds.
 - `Menu`: 
     - `Archive`: Closes the annotation and archives it, removing it from a user's dashboard. Archived annotations can be found on a user's dashboard under "Annotations" and by clicking on "Show Archived Annotations". Use this to declutter your dashboard. (Not available for tasks)
-    - `Download`: Starts a download of the current annotation including any skeleton and volume data. Skeleton annotations are downloaded as [NML](../data_formats.md#nml) files. Volume annotation downloads contain the raw segmentation data as [WKW](../data_formats.md#wkw) files.
+    - `Download`: Starts a download of the current annotation including any skeleton and volume data. Skeleton annotations are downloaded as [NML](../data/concepts.md#nml-files) files. Volume annotation downloads contain the raw segmentation data as [WKW](../data/wkw.md) files.
     - `Share`: Create a customizable, shareable link to your dataset containing the current position, rotation, zoom level etc. with fine-grained access controls. Use this to collaboratively work with colleagues. Read more about [data sharing](../sharing/annotation_sharing.md).
     - `Zarr Links`: Create Zarr streaming links to allow other tools to load the image data of the annotation.
     - `Duplicate`: Create a duplicate of this annotation. The duplicate will be created in your account, even if the original annotation belongs to somebody else.
@@ -38,4 +38,4 @@ The toolbar further features all available navigation and annotation tools for q
 - `Bounding Box`: Creates and resizes any bounding box. See also the [Bounding Box (BB) panel](../ui/object_info.md) below.
 - `Measurement Tool`: Measure distances between structures or the surface areas of segments by placing waypoints with the mouse.
 
-Please see the detailed documentation on [skeleton](../skeleton_annotation/tools.md) and [volume annotation](./volume_annotation/tools.md) tools for a for explanation of all context-sensitve modifiers that are available to some tools.
+Please see the detailed documentation on [skeleton](../skeleton_annotation/tools.md) and [volume annotation](../volume_annotation/tools.md) tools for a for explanation of all context-sensitve modifiers that are available to some tools.

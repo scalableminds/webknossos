@@ -31,7 +31,7 @@ WEBKNOSSOS does not allow you to run custom machine learning models on your data
 
 ## How can I use my dataset with WEBKNOSSOS?
 
-WEBKNOSSOS supports [WKW (optimized), OME-Zarr (NGFF), Neuroglancer Precomputed, N5, KNOSSOS cubes](./data.md), and image stacks (converted on upload). You can also connect to Neuroglancer Precomputed, N5, and Zarr datasets hosted in the cloud (Google Cloud Storage, AWS S3).
+WEBKNOSSOS supports [WKW (optimized), OME-Zarr (NGFF), Neuroglancer Precomputed, N5, KNOSSOS cubes](./data/index.md), and image stacks (converted on upload). You can also connect to Neuroglancer Precomputed, N5, and Zarr datasets hosted in the cloud (Google Cloud Storage, AWS S3).
 
 Smaller datasets (up to multiple GB) can be uploaded directly through the web interface. For larger datasets, we recommend converting them to the standard WKW format using the [WEBKNOSSOS CLI](https://docs.webknossos.org/cli) CLI tool and uploading it via the [WEBKNOSSOS Python package](https://docs.webknossos.org/webknossos-py/examples/upload_image_data.html).
 

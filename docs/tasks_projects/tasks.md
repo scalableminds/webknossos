@@ -9,11 +9,11 @@ First, a _Task Type_ needs to be created:
 1. Open the `Task Types` screen of the administration section and click on `Add Task Type`.
 2. Fill out the form to create the Task Type:
    - Note that the `Description` field supports Markdown formatting.
-   - If you don't have a sophisticated team structure, select the [default Team](./users.md#organizations).
+   - If you don't have a sophisticated team structure, select the [default Team](../users/organizations.md).
 
 ![Create a Task Type](../images/tasks_tasktype.jpeg)
 
-Next, you need to set up a [Project](./projects.md). Once you have created your project, you are ready to create _Tasks_:
+Next, you need to set up a [Project](../tasks_projects/projects.md). Once you have created your project, you are ready to create _Tasks_:
 
 ## Creating a Task
 

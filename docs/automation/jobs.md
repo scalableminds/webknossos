@@ -7,7 +7,7 @@ WEBKNOSSOS will notify you via email upon completion or failure of any job.
 Example workflows:
 
 - [AI segmentation](./ai_segmentation.md), e.g., nuclei inferral 
-- [converting datasets on upload](./upload_ui.md)
+- [converting datasets on upload](../data/upload_ui.md)
 - [mesh file (pre)-computation](../meshes/precomputed_meshes.md)
 - [applying a merger mode annotation](../proofreading/merger_mode.md)
 - automatic inference of a segmentation layer's large segment ID

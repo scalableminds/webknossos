@@ -136,7 +136,7 @@ WEBKNOSSOS requires several metadata properties for each dataset to properly dis
 
 ## NML Files
 When working with skeleton annotation data, WEBKNOSSOS uses the NML format.
-It can be [downloaded](./export.md#data-export-and-interoperability) from and uploaded to WEBKNOSSOS, and used for processing in your scripts.
+It can be downloaded and uploaded to WEBKNOSSOS. Advanced users integrate the skeleton data (e.g. nodes positions to mark objects or tree groups to cluster cells) as part of their analysis workflow and custom scripting.
 NML is an XML-based, human-readable file format.
 See the following example for reference:
 

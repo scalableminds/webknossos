@@ -58,7 +58,7 @@ webknossos convert-knossos --layer-name color --voxel-size 11.24,11.24,25 data/s
 
 ## Download "Volume Annotation" File Format
 
-Volume annotations can be downloaded and imported using ZIP files that contain [WKW](../data_formats.md#wkw-datasets) datasets.
+Volume annotations can be downloaded and imported using ZIP files that contain [WKW](../data/wkw.md) datasets.
 The ZIP archive contains one NML file that holds meta information including the dataset name and the user's position.
 Additionally, there is another embedded ZIP file that contains the volume annotations in WKW file format.
 

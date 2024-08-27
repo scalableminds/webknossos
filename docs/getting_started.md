@@ -1,7 +1,7 @@
 # Getting Started
 
 Welcome to the WEBKNOSSOS documentation.
-WEBKNOSSOS is a platform for [exploring large-scale 3D image datasets](./ui/index.md), [creating skeleton annotations](./skeleton_annotation/skeleton_annotation/index.md) and [3D volume segmentations](./volume_annotation/index.md).
+WEBKNOSSOS is a platform for [exploring large-scale 3D image datasets](./ui/index.md), [creating skeleton annotations](./skeleton_annotation/index.md) and [3D volume segmentations](./volume_annotation/index.md).
 Since it is a web app, you can easily [collaborate](./sharing/index.md), [crowdsource](./tasks_projects/tasks.md) and [publish](https://webknossos.org) your work.
 
 [Contact us](mailto:hello@webknossos.org) or create a [pull request](https://github.com/scalableminds/webknossos/pulls) to suggest improvements to the documentation.
@@ -81,14 +81,14 @@ We have tutorials on a wide range of topics to get you started. Also check out o
 Now you know the basics of WEBKNOSSOS.
 Feel free to explore more features of WEBKNOSSOS in this documentation.
 
-- [Dashboard](./dashboard/index.md.md)
+- [Dashboard](./dashboard/index.md)
 - [Volume Annotations & Proof-Reading](./volume_annotation/index.md)
 - [Skeleton Annotations](./skeleton_annotation/index.md)
 - [Understanding the User Interface](./ui/index.md)
 - [Keyboard Shortcuts](./ui/keyboard_shortcuts.md)
 - [Collaboration & Sharing](./sharing/index.md)
 - [Data Export and Interoperability](./data/export_ui.md)
-- [Datasets](./datasets/index.md) and [Data Formats](./data_formats.md)
+- [Datasets](./datasets/index.md) and [Data Formats](./data/index.md)
 - [User and Permission Management](./users/index.md)
 - [Task and Project Management](./tasks_projects/index.md)
 - [FAQ](./faq.md)

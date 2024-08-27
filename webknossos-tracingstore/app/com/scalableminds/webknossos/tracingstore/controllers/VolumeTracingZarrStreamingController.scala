@@ -56,11 +56,15 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   override def defaultErrorCode: Int = NOT_FOUND
 
-  def volumeTracingFolderContent(token: Option[String], tracingId: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingFolderContent(token: Option[String],
+                                 annotationId: String,
+                                 tracingId: String,
+                                 zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          tracing <- tracingService.find(annotationId, tracingId, userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+            "tracing.notFound") ~> NOT_FOUND
           existingMags = tracing.resolutions.map(vec3IntFromProto)
           additionalFiles = if (zarrVersion == 2)
             List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
@@ -75,11 +79,15 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def volumeTracingFolderContentJson(token: Option[String], tracingId: String, zarrVersion: Int): Action[AnyContent] =
+  def volumeTracingFolderContentJson(token: Option[String],
+                                     annotationId: String,
+                                     tracingId: String,
+                                     zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          tracing <- tracingService.find(annotationId, tracingId, userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+            "tracing.notFound") ~> NOT_FOUND
           existingMags = tracing.resolutions.map(vec3IntFromProto(_).toMagLiteral(allowScalar = true))
           additionalFiles = if (zarrVersion == 2)
             List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
@@ -89,13 +97,15 @@ class VolumeTracingZarrStreamingController @Inject()(
     }
 
   def volumeTracingMagFolderContent(token: Option[String],
+                                    annotationId: String,
                                     tracingId: String,
                                     mag: String,
                                     zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          tracing <- tracingService.find(annotationId, tracingId, userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+            "tracing.notFound") ~> NOT_FOUND
 
           existingMags = tracing.resolutions.map(vec3IntFromProto)
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
@@ -112,14 +122,15 @@ class VolumeTracingZarrStreamingController @Inject()(
     }
 
   def volumeTracingMagFolderContentJson(token: Option[String],
+                                        annotationId: String,
                                         tracingId: String,
                                         mag: String,
                                         zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-
+          tracing <- tracingService.find(annotationId, tracingId, userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+            "tracing.notFound") ~> NOT_FOUND
           existingMags = tracing.resolutions.map(vec3IntFromProto)
           magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
@@ -128,15 +139,14 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def zArray(token: Option[String], tracingId: String, mag: String): Action[AnyContent] = Action.async {
-    implicit request =>
+  def zArray(token: Option[String], annotationId: String, tracingId: String, mag: String): Action[AnyContent] =
+    Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-
+          tracing <- tracingService.find(annotationId, tracingId, userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+            "tracing.notFound") ~> NOT_FOUND
           existingMags = tracing.resolutions.map(vec3IntFromProto)
-          magParsed <- Vec3Int
-            .fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
 
           cubeLength = DataLayer.bucketLength
@@ -162,17 +172,17 @@ class VolumeTracingZarrStreamingController @Inject()(
                                   order = ArrayOrder.F)
         } yield Ok(Json.toJson(zarrHeader))
       }
-  }
+    }
 
-  def zarrJsonForMag(token: Option[String], tracingId: String, mag: String): Action[AnyContent] = Action.async {
-    implicit request =>
+  def zarrJsonForMag(token: Option[String], annotationId: String, tracingId: String, mag: String): Action[AnyContent] =
+    Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          tracing <- tracingService.find(annotationId, tracingId, userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+            "tracing.notFound") ~> NOT_FOUND
 
           existingMags = tracing.resolutions.map(vec3IntFromProto)
-          magParsed <- Vec3Int
-            .fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
           _ <- bool2Fox(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
 
           additionalAxes = AdditionalAxis.fromProtos(tracing.additionalAxes)
@@ -209,12 +219,13 @@ class VolumeTracingZarrStreamingController @Inject()(
           )
         } yield Ok(Json.toJson(zarrHeader))
       }
-  }
-
-  def zGroup(token: Option[String], tracingId: String): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
-      Future(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
     }
+
+  def zGroup(token: Option[String], annotationId: String, tracingId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        Future(Ok(Json.toJson(NgffGroupHeader(zarr_format = 2))))
+      }
   }
 
   /**
@@ -224,11 +235,13 @@ class VolumeTracingZarrStreamingController @Inject()(
     */
   def zAttrs(
       token: Option[String],
+      annotationId: String,
       tracingId: String,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
       for {
-        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+        tracing <- tracingService.find(annotationId, tracingId, userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+          "tracing.notFound") ~> NOT_FOUND
 
         existingMags = tracing.resolutions.map(vec3IntFromProto)
         dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
@@ -241,11 +254,13 @@ class VolumeTracingZarrStreamingController @Inject()(
 
   def zarrJson(
       token: Option[String],
+      annotationId: String,
       tracingId: String,
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
       for {
-        tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+        tracing <- tracingService.find(annotationId, tracingId, userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+          "tracing.notFound") ~> NOT_FOUND
 
         existingMags = tracing.resolutions.map(vec3IntFromProto)
         dataSource <- remoteWebknossosClient.getDataSourceForTracing(tracingId) ~> NOT_FOUND
@@ -259,13 +274,15 @@ class VolumeTracingZarrStreamingController @Inject()(
   }
 
   def zarrSource(token: Option[String],
+                 annotationId: String,
                  tracingId: String,
                  tracingName: Option[String],
                  zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          tracing <- tracingService.find(annotationId, tracingId, userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+            "tracing.notFound") ~> NOT_FOUND
 
           zarrLayer = ZarrSegmentationLayer(
             name = tracingName.getOrElse(tracingId),
@@ -281,12 +298,17 @@ class VolumeTracingZarrStreamingController @Inject()(
       }
     }
 
-  def rawZarrCube(token: Option[String], tracingId: String, mag: String, coordinates: String): Action[AnyContent] =
+  def rawZarrCube(token: Option[String],
+                  annotationId: String,
+                  tracingId: String,
+                  mag: String,
+                  coordinates: String): Action[AnyContent] =
     Action.async { implicit request =>
       {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
-            tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+            tracing <- tracingService.find(annotationId, tracingId, userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+              "tracing.notFound") ~> NOT_FOUND
 
             existingMags = tracing.resolutions.map(vec3IntFromProto)
             magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true) ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND

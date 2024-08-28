@@ -29,25 +29,19 @@ test.serial("getDatasets", async (t) => {
   writeTypeCheckingFile(datasets, "dataset", "APIDatasetCompact", {
     isArray: true,
   });
-  t.snapshot(datasets, {
-    id: "datasets-getDatasets",
-  });
+  t.snapshot(datasets);
 });
 test("getActiveDatasets", async (t) => {
   let datasets = await api.getActiveDatasetsOfMyOrganization();
   datasets = _.sortBy(datasets, (d) => d.name);
-  t.snapshot(datasets, {
-    id: "datasets-getActiveDatasets",
-  });
+  t.snapshot(datasets);
 });
 test("getDatasetAccessList", async (t) => {
   const dataset = await getFirstDataset();
 
   const accessList = _.sortBy(await api.getDatasetAccessList(dataset), (user) => user.id);
 
-  t.snapshot(accessList, {
-    id: "dataset-getDatasetAccessList",
-  });
+  t.snapshot(accessList);
 });
 test("updateDatasetTeams", async (t) => {
   const [dataset, newTeams] = await Promise.all([getFirstDataset(), api.getEditableTeams()]);
@@ -55,9 +49,7 @@ test("updateDatasetTeams", async (t) => {
     dataset,
     newTeams.map((team) => team.id),
   );
-  t.snapshot(updatedDataset, {
-    id: "dataset-updateDatasetTeams",
-  });
+  t.snapshot(updatedDataset);
   // undo the Change
   await api.updateDatasetTeams(
     dataset,
@@ -66,7 +58,7 @@ test("updateDatasetTeams", async (t) => {
 }); // test("getDatasetSharingToken and revokeDatasetSharingToken", async t => {
 //   const dataset = await getFirstDataset();
 //   const sharingToken = api.getDatasetSharingToken(dataset.name);
-//   t.snapshot(sharingToken, { id: "dataset-sharingToken" });
+//   t.snapshot(sharingToken);
 //   await api.revokeDatasetSharingToken(dataset.name);
 //   t.pass();
 // });

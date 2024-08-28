@@ -1,7 +1,6 @@
-
 export function generateRandomCuckooEntrySet<K, V>(
   generateEntry: () => [K, V],
-  count: number = 1600
+  count: number = 1600,
 ) {
   const set = new Set();
   const entries = [];

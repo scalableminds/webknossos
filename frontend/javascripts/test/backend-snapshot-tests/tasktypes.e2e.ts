@@ -45,7 +45,9 @@ test("createTaskType and deleteTaskType", async (t) => {
   const createdTaskType = await api.createTaskType(newTaskType);
   // Since the id will change after re-runs, we fix it here for easy
   // snapshotting
-  const createdTaskTypeWithFixedId = Object.assign({}, createdTaskType);
+  const createdTaskTypeWithFixedId = Object.assign({}, createdTaskType, {
+    id: "fixed-id",
+  });
   t.snapshot(createdTaskTypeWithFixedId);
   const response = await api.deleteTaskType(createdTaskType.id);
   t.snapshot(response);

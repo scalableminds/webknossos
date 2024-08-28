@@ -35,7 +35,9 @@ test("createScript(), updateScript(), and deleteScript()", async (t) => {
   const createdScript = await api.createScript(data);
   // Since the id will change after re-runs, we fix it here for easy
   // snapshotting
-  const createdScriptWithFixedId = Object.assign({}, createdScript);
+  const createdScriptWithFixedId = Object.assign({}, createdScript, {
+    id: "fixed-script-id",
+  });
   t.snapshot(createdScriptWithFixedId);
   // Update Script
   const newData = Object.assign({}, createdScript, {
@@ -43,7 +45,9 @@ test("createScript(), updateScript(), and deleteScript()", async (t) => {
     owner: activeUser.id,
   });
   const updatedScript = await api.updateScript(createdScript.id, newData);
-  const updatedScriptWithFixedId = Object.assign({}, updatedScript);
+  const updatedScriptWithFixedId = Object.assign({}, updatedScript, {
+    id: "fixed-script-id",
+  });
   t.snapshot(updatedScriptWithFixedId);
   // Delete Script
   const response = await api.deleteScript(createdScript.id);

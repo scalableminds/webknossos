@@ -238,7 +238,8 @@ const DraggableDatasetRow = ({
 
   const datasetName = restProps["data-row-key"];
   const [, drag, preview] = useDrag({
-    item: { type: DraggableDatasetType, index, datasetName },
+    item: { index, datasetName },
+    type: DraggableDatasetType,
     canDrag: () => isADataset,
   });
   const [collectedProps, drop] = useDatasetDrop(rowKey, !isADataset);

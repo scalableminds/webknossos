@@ -76,7 +76,7 @@ class AnnotationController @Inject()(
            // For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id
            id: String,
            // Timestamp in milliseconds (time at which the request is sent)
-           timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+           timestamp: Option[Long]): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     log() {
       val notFoundMessage =
         if (request.identity.isEmpty) "annotation.notFound.considerLoggingIn" else "annotation.notFound"
@@ -89,10 +89,14 @@ class AnnotationController @Inject()(
         js <- annotationService
           .publicWrites(annotation, request.identity, Some(restrictions)) ?~> "annotation.write.failed"
         _ <- Fox.runOptional(request.identity) { user =>
-          if (typedTyp == AnnotationType.Task || typedTyp == AnnotationType.Explorational) {
-            timeSpanService
-              .logUserInteractionIfTheyArePotentialContributor(Instant(timestamp), user, annotation) // log time when a user starts working
-          } else Fox.successful(())
+          Fox.runOptional(timestamp) { timestampDefined =>
+            if (typedTyp == AnnotationType.Task || typedTyp == AnnotationType.Explorational) {
+              timeSpanService.logUserInteractionIfTheyArePotentialContributor(
+                Instant(timestampDefined),
+                user,
+                annotation) // log time when a user starts working
+            } else Fox.successful(())
+          }
         }
         _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
         _ = request.identity.foreach { user =>
@@ -104,7 +108,7 @@ class AnnotationController @Inject()(
 
   def infoWithoutType(id: String,
                       // Timestamp in milliseconds (time at which the request is sent
-                      timestamp: Long): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+                      timestamp: Option[Long]): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     log() {
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND

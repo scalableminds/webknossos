@@ -107,7 +107,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     } yield adaptedResult
   }
 
-  def annotationInfoV4(typ: String, id: String, timestamp: Long): Action[AnyContent] = sil.SecuredAction.async {
+  def annotationInfoV4(typ: String, id: String, timestamp: Option[Long]): Action[AnyContent] = sil.SecuredAction.async {
     implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))

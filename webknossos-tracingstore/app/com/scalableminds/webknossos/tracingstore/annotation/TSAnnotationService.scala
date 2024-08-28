@@ -40,7 +40,7 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
         TracingUpdatesReport(
           annotationId,
           timestamps = updateGroups.map(g => Instant(g.timestamp)),
-          statistics = updateGroups.flatMap(_.stats).lastOption,
+          statistics = updateGroups.flatMap(_.stats).lastOption, // TODO statistics per tracing/layer
           significantChangesCount = updateGroups.map(_.significantChangesCount).sum,
           viewChangesCount = updateGroups.map(_.viewChangesCount).sum,
           userToken

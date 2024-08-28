@@ -19,7 +19,8 @@ import play.api.libs.ws.WSResponse
 
 import scala.concurrent.ExecutionContext
 
-case class TracingUpdatesReport(tracingId: String,
+case class TracingUpdatesReport(annotationId: String,
+                                // TODO stats per tracing id?
                                 timestamps: List[Instant],
                                 statistics: Option[JsObject],
                                 significantChangesCount: Int,

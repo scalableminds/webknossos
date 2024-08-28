@@ -477,7 +477,7 @@ class VolumeTracingController @Inject()(
           updateGroup <- request.body.headOption.toFox
           _ <- bool2Fox(updateGroup.version == currentVersion + 1) ?~> "version mismatch"
           report = TracingUpdatesReport(
-            tracingId,
+            annotationId, // TODO integrate all of this into annotation update
             timestamps = List(Instant(updateGroup.timestamp)),
             statistics = None,
             significantChangesCount = updateGroup.actions.length,

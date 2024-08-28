@@ -38,7 +38,7 @@ GET      /v4/datasets/:organizationName/:datasetName                          co
 GET      /v4/datasets/:organizationName/:datasetName/isValidNewName           controllers.LegacyApiController.assertValidNewNameV5(organizationName: String, datasetName: String)
 
 # v4: support changes to v5
-GET      /v4/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfoV4(typ: String, id: String, timestamp: Long)
+GET      /v4/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfoV4(typ: String, id: String, timestamp: Option[Long])
 PATCH    /v4/annotations/:typ/:id/finish                                      controllers.LegacyApiController.annotationFinishV4(typ: String, id: String, timestamp: Long)
 POST     /v4/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.annotationMergeV4(typ: String, id: String, mergedTyp: String, mergedId: String)
 PATCH    /v4/annotations/:typ/:id/edit                                        controllers.LegacyApiController.annotationEditV4(typ: String, id: String)
@@ -64,7 +64,7 @@ GET      /v3/datasets/:organizationName/:datasetName/isValidNewName           co
 
 # v3: support changes to v5
 PATCH    /v3/annotations/:typ/:id/finish                                      controllers.LegacyApiController.annotationFinishV4(typ: String, id: String, timestamp: Long)
-GET      /v3/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfoV4(typ: String, id: String, timestamp: Long)
+GET      /v3/annotations/:typ/:id/info                                        controllers.LegacyApiController.annotationInfoV4(typ: String, id: String, timestamp: Option[Long])
 POST     /v3/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.LegacyApiController.annotationMergeV4(typ: String, id: String, mergedTyp: String, mergedId: String)
 PATCH    /v3/annotations/:typ/:id/edit                                        controllers.LegacyApiController.annotationEditV4(typ: String, id: String)
 POST     /v3/annotations/:typ/:id/duplicate                                   controllers.LegacyApiController.annotationDuplicateV4(typ: String, id: String)

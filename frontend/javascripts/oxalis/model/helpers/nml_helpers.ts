@@ -21,6 +21,7 @@ import type {
   MutableTree,
   TreeGroup,
   BoundingBoxObject,
+  MutableNode,
 } from "oxalis/store";
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import messages from "messages";
@@ -361,8 +362,12 @@ function serializeTrees(
   applyTransform: boolean,
 ): Array<string> {
   return _.flatten(
-    trees.map((tree) =>
-      serializeTagWithChildren(
+    trees.map((tree) => {
+      const userDefinedPropertiesString = serializeUserDefinedProperties(
+        tree.userDefinedProperties,
+      );
+
+      return serializeTagWithChildren(
         "thing",
         {
           id: tree.treeId,
@@ -378,10 +383,16 @@ function serializeTrees(
           "<edges>",
           ...indent(serializeEdges(tree.edges)),
           "</edges>",
-          ...serializeUserDefinedProperties(tree.userDefinedProperties),
+          ...(userDefinedPropertiesString.length > 0
+            ? [
+                "<userDefinedProperties>",
+                ...indent(userDefinedPropertiesString),
+                "</userDefinedProperties>",
+              ]
+            : []),
         ],
-      ),
-    ),
+      );
+    }),
   );
 }
 
@@ -537,32 +548,66 @@ export class NmlParseError extends Error {
   name = "NmlParseError";
 }
 
-function _parseInt(obj: Record<string, string>, key: string, defaultValue?: number): number {
+function _parseInt<T>(
+  obj: Record<string, string>,
+  key: string,
+  options?: {
+    defaultValue: number | T;
+  },
+): number | T {
   if (obj[key] == null || obj[key].length === 0) {
-    if (defaultValue == null) {
+    if (options == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
-      return defaultValue;
+      return options.defaultValue;
     }
   }
 
   return Number.parseInt(obj[key], 10);
 }
 
-function _parseFloat(obj: Record<string, string>, key: string, defaultValue?: number): number {
+function _parseFloat<T>(
+  obj: Record<string, string>,
+  key: string,
+  options?: {
+    defaultValue: number | T;
+  },
+): number | T {
   if (obj[key] == null || obj[key].length === 0) {
-    if (defaultValue == null) {
+    if (options == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
-      return defaultValue;
+      return options.defaultValue;
     }
   }
 
   return Number.parseFloat(obj[key]);
 }
 
+function _parseStringArray(
+  obj: Record<string, string>,
+  prefix: string,
+  options?: {
+    defaultValue: string[] | undefined;
+  },
+): string[] | undefined {
+  const indices = Object.keys(obj)
+    .map((key) => key.split(`${prefix}-`))
+    .filter((splitElements) => splitElements.length === 2)
+    .map((splitElements) => parseInt(splitElements[1], 10));
+  if (indices.length === 0) {
+    if (options) {
+      return options.defaultValue;
+    } else {
+      throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${prefix}`);
+    }
+  }
+  indices.sort((a, b) => a - b);
+  return indices.map((idx) => obj[`${prefix}-${idx}`]);
+}
+
 function _parseTimestamp(obj: Record<string, string>, key: string, defaultValue?: number): number {
-  const timestamp = _parseInt(obj, key, defaultValue);
+  const timestamp = _parseInt(obj, key, defaultValue != null ? { defaultValue } : undefined);
 
   const isValid = new Date(timestamp).getTime() > 0;
 
@@ -577,12 +622,18 @@ function _parseTimestamp(obj: Record<string, string>, key: string, defaultValue?
   return timestamp;
 }
 
-function _parseBool(obj: Record<string, string>, key: string, defaultValue?: boolean): boolean {
+function _parseBool<T>(
+  obj: Record<string, string>,
+  key: string,
+  options?: {
+    defaultValue: boolean | T;
+  },
+): boolean | T {
   if (obj[key] == null || obj[key].length === 0) {
-    if (defaultValue == null) {
+    if (options == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
-      return defaultValue;
+      return options.defaultValue;
     }
   }
 
@@ -591,9 +642,9 @@ function _parseBool(obj: Record<string, string>, key: string, defaultValue?: boo
 
 function _parseColor(obj: Record<string, string>, defaultColor: Vector3): Vector3 {
   const color = [
-    _parseFloat(obj, "color.r", defaultColor[0]),
-    _parseFloat(obj, "color.g", defaultColor[1]),
-    _parseFloat(obj, "color.b", defaultColor[2]),
+    _parseFloat(obj, "color.r", { defaultValue: defaultColor[0] }),
+    _parseFloat(obj, "color.g", { defaultValue: defaultColor[1] }),
+    _parseFloat(obj, "color.b", { defaultValue: defaultColor[2] }),
   ];
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
   return color;
@@ -621,12 +672,18 @@ function _parseTreeType(
   }
 }
 
-function _parseEntities(obj: Record<string, string>, key: string, defaultValue?: string): string {
+function _parseEntities<T>(
+  obj: Record<string, string>,
+  key: string,
+  options?: {
+    defaultValue: string | T;
+  },
+): string | T {
   if (obj[key] == null) {
-    if (defaultValue == null) {
+    if (options == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
-      return defaultValue;
+      return options.defaultValue;
     }
   }
 
@@ -790,15 +847,29 @@ function parseBoundingBoxObject(attr: Record<any, any>): BoundingBoxObject {
 }
 
 function parseUserDefinedProperty(attr: Record<any, any>): UserDefinedProperty {
-  return {
+  const stringValue = _parseEntities(attr, "stringValue", { defaultValue: undefined });
+  const boolValue = _parseBool(attr, "boolValue", { defaultValue: undefined });
+  const numberValue = _parseFloat(attr, "numberValue", { defaultValue: undefined });
+  const stringListValue = _parseStringArray(attr, "stringListValue", { defaultValue: undefined });
+  const prop: UserDefinedProperty = {
     key: _parseEntities(attr, "key"),
-    stringValue: _parseEntities(attr, "stringValue", undefined),
-    boolValue: _parseBool(attr, "boolValue", undefined),
-    numberValue: _parseFloat(attr, "numberValue", undefined),
-    // todop:
-    // @ts-ignore
-    stringListValue: _parseArray(attr, "stringListValue", undefined),
+    stringValue,
+    boolValue,
+    numberValue,
+    stringListValue,
   };
+  const compactProp = Object.fromEntries(
+    Object.entries(prop).filter(([_k, v]) => v !== undefined),
+  ) as UserDefinedProperty;
+  if (Object.entries(compactProp).length !== 2) {
+    throw new NmlParseError(
+      `Could not parse user-defined property. Expected exactly one key and one value. Got: ${Object.keys(
+        compactProp,
+      )}`,
+    );
+  }
+
+  return compactProp;
 }
 
 export function parseNml(nmlString: string): Promise<{
@@ -817,6 +888,7 @@ export function parseNml(nmlString: string): Promise<{
     const existingEdges = new Set();
     let currentTree: MutableTree | null | undefined = null;
     let currentTreeGroup: TreeGroup | null | undefined = null;
+    let currentNode: MutableNode | null | undefined = null;
     let containedVolumes = false;
     let isParsingVolumeTag = false;
 
@@ -835,13 +907,15 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           case "thing": {
-            const groupId = _parseInt(attr, "groupId", -1);
+            const groupId = _parseInt(attr, "groupId", { defaultValue: -1 });
 
             currentTree = {
               treeId: _parseInt(attr, "id"),
               color: _parseColor(attr, DEFAULT_COLOR),
               // In Knossos NMLs, there is usually a tree comment instead of a name
-              name: _parseEntities(attr, "name", "") || _parseEntities(attr, "comment", ""),
+              name:
+                _parseEntities(attr, "name", { defaultValue: "" }) ||
+                _parseEntities(attr, "comment", { defaultValue: "" }),
               comments: [],
               nodes: new DiffableMap(),
               branchPoints: [],
@@ -850,8 +924,7 @@ export function parseNml(nmlString: string): Promise<{
               isVisible: _parseFloat(attr, "color.a") !== 0,
               groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
               type: _parseTreeType(attr, "type", TreeTypeEnum.DEFAULT),
-              edgesAreVisible: _parseBool(attr, "edgesAreVisible", true),
-              // todop
+              edgesAreVisible: _parseBool(attr, "edgesAreVisible", { defaultValue: true }),
               userDefinedProperties: [],
             };
             if (trees[currentTree.treeId] != null)
@@ -861,9 +934,9 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           case "node": {
-            const nodeId = _parseInt(attr, "id");
+            const nodeId = _parseInt<never>(attr, "id");
 
-            const currentNode = {
+            currentNode = {
               id: nodeId,
               untransformedPosition: [
                 Math.trunc(_parseFloat(attr, "x")),
@@ -876,18 +949,20 @@ export function parseNml(nmlString: string): Promise<{
                 .filter(([_key, name]) => name != null)
                 .map(([key, name]) => ({
                   name,
-                  value: _parseFloat(attr, key, 0),
+                  value: _parseFloat(attr, key, { defaultValue: 0 }),
                 })) as AdditionalCoordinate[],
               rotation: [
-                _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),
-                _parseFloat(attr, "rotY", DEFAULT_ROTATION[1]),
-                _parseFloat(attr, "rotZ", DEFAULT_ROTATION[2]),
+                _parseFloat(attr, "rotX", { defaultValue: DEFAULT_ROTATION[0] }),
+                _parseFloat(attr, "rotY", { defaultValue: DEFAULT_ROTATION[1] }),
+                _parseFloat(attr, "rotZ", { defaultValue: DEFAULT_ROTATION[2] }),
               ] as Vector3,
-              interpolation: _parseBool(attr, "interpolation", DEFAULT_INTERPOLATION),
-              bitDepth: _parseInt(attr, "bitDepth", DEFAULT_BITDEPTH),
-              viewport: _parseInt(attr, "inVp", DEFAULT_VIEWPORT),
-              resolution: _parseInt(attr, "inMag", DEFAULT_RESOLUTION),
-              radius: _parseFloat(attr, "radius", Constants.DEFAULT_NODE_RADIUS),
+              interpolation: _parseBool(attr, "interpolation", {
+                defaultValue: DEFAULT_INTERPOLATION,
+              }),
+              bitDepth: _parseInt(attr, "bitDepth", { defaultValue: DEFAULT_BITDEPTH }),
+              viewport: _parseInt(attr, "inVp", { defaultValue: DEFAULT_VIEWPORT }),
+              resolution: _parseInt(attr, "inMag", { defaultValue: DEFAULT_RESOLUTION }),
+              radius: _parseFloat(attr, "radius", { defaultValue: Constants.DEFAULT_NODE_RADIUS }),
               timestamp: _parseTimestamp(attr, "time", DEFAULT_TIMESTAMP),
             };
             if (currentTree == null)
@@ -897,6 +972,10 @@ export function parseNml(nmlString: string): Promise<{
             nodeIdToTreeId[nodeId] = currentTree.treeId;
             currentTree.nodes.mutableSet(currentNode.id, currentNode);
             existingNodeIds.add(currentNode.id);
+
+            if (node.isSelfClosing) {
+              currentNode = null;
+            }
             break;
           }
 
@@ -904,14 +983,18 @@ export function parseNml(nmlString: string): Promise<{
             if (currentTree == null) {
               throw new NmlParseError(messages["nml.user_defined_property_outside_tree"]);
             }
-
-            currentTree.userDefinedProperties.push(parseUserDefinedProperty(attr));
+            if (currentNode == null) {
+              currentTree.userDefinedProperties.push(parseUserDefinedProperty(attr));
+            } else {
+              // todop: also handle for nodes in this PR?
+            }
+            break;
           }
 
           case "edge": {
             const currentEdge = {
-              source: _parseInt(attr, "source"),
-              target: _parseInt(attr, "target"),
+              source: _parseInt<never>(attr, "source"),
+              target: _parseInt<never>(attr, "target"),
             };
             const edgeHash = getEdgeHash(currentEdge.source, currentEdge.target);
             if (currentTree == null)
@@ -942,8 +1025,8 @@ export function parseNml(nmlString: string): Promise<{
 
           case "comment": {
             const currentComment = {
-              nodeId: _parseInt(attr, "node"),
-              content: _parseEntities(attr, "content"),
+              nodeId: _parseInt<never>(attr, "node"),
+              content: _parseEntities<never>(attr, "content"),
             };
             const tree = trees[nodeIdToTreeId[currentComment.nodeId]];
             if (tree == null)
@@ -956,8 +1039,8 @@ export function parseNml(nmlString: string): Promise<{
 
           case "branchpoint": {
             const currentBranchpoint = {
-              nodeId: _parseInt(attr, "id"),
-              timestamp: _parseInt(attr, "time", DEFAULT_TIMESTAMP),
+              nodeId: _parseInt<never>(attr, "id"),
+              timestamp: _parseInt(attr, "time", { defaultValue: DEFAULT_TIMESTAMP }),
             };
             const tree = trees[nodeIdToTreeId[currentBranchpoint.nodeId]];
             if (tree == null)
@@ -973,9 +1056,9 @@ export function parseNml(nmlString: string): Promise<{
               return;
             }
             const newGroup = {
-              groupId: _parseInt(attr, "id"),
-              name: _parseEntities(attr, "name"),
-              isExpanded: _parseBool(attr, "isExpanded", true),
+              groupId: _parseInt<never>(attr, "id"),
+              name: _parseEntities<never>(attr, "name"),
+              isExpanded: _parseBool(attr, "isExpanded", { defaultValue: true }),
               children: [],
             };
             if (existingTreeGroupIds.has(newGroup.groupId)) {
@@ -1000,7 +1083,7 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           case "userBoundingBox": {
-            const parsedUserBoundingBoxId = _parseInt(attr, "id", 0);
+            const parsedUserBoundingBoxId = _parseInt(attr, "id", { defaultValue: 0 });
 
             const userBoundingBoxId = getUnusedUserBoundingBoxId(
               userBoundingBoxes,
@@ -1011,8 +1094,12 @@ export function parseNml(nmlString: string): Promise<{
               boundingBox: Utils.computeBoundingBoxFromBoundingBoxObject(boundingBoxObject),
               color: _parseColor(attr, DEFAULT_COLOR),
               id: userBoundingBoxId,
-              isVisible: _parseBool(attr, "isVisible", DEFAULT_USER_BOUNDING_BOX_VISIBILITY),
-              name: _parseEntities(attr, "name", `user bounding box ${userBoundingBoxId}`),
+              isVisible: _parseBool(attr, "isVisible", {
+                defaultValue: DEFAULT_USER_BOUNDING_BOX_VISIBILITY,
+              }),
+              name: _parseEntities(attr, "name", {
+                defaultValue: `user bounding box ${userBoundingBoxId}`,
+              }),
             };
             userBoundingBoxes.push(userBoundingBox);
             break;
@@ -1054,6 +1141,11 @@ export function parseNml(nmlString: string): Promise<{
             }
 
             currentTree = null;
+            break;
+          }
+
+          case "node": {
+            currentNode = null;
             break;
           }
 

@@ -68,9 +68,9 @@ class DSMeshController @Inject()(
             omitMissing = false,
             urlOrHeaderToken(token, request)
           )
-          chunkInfos <- meshFileService.listMeshChunksForSegments(organizationId,
-                                                                  datasetName,
-                                                                  dataLayerName,
+          chunkInfos <- meshFileService.listMeshChunksForSegmentsMerged(organizationId,
+                                                                        datasetName,
+                                                                        dataLayerName,
                                                                   request.body.meshFile,
                                                                   segmentIds)
         } yield Ok(Json.toJson(chunkInfos))

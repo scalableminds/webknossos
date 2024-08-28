@@ -112,12 +112,7 @@ import {
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import {
-  ItemType,
-  MenuItemGroupType,
-  MenuItemType,
-  SubMenuType,
-} from "antd/lib/menu/hooks/useItems";
+import { ItemType, MenuItemGroupType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
@@ -1558,7 +1553,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     nodeContextMenuNode != null && clickedNodesPosition != null
       ? positionToString(clickedNodesPosition, nodeContextMenuNode.additionalCoordinates)
       : "";
-  const infoRows = [];
+  const infoRows: ItemType[] = [];
 
   if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
     infoRows.push(

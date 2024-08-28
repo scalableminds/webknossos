@@ -77,7 +77,7 @@ import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
-import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import { ItemType, SubMenuType } from "antd/es/menu/interface";
 import CreateAnimationModal from "./create_animation_modal";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(

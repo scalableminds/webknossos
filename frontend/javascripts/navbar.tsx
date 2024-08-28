@@ -59,7 +59,7 @@ import { HelpModal } from "oxalis/view/help_modal";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import messages from "messages";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
-import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";

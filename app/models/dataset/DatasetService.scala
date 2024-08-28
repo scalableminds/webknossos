@@ -90,8 +90,15 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     val newId = ObjectId.generate
-    val details =
-      Json.obj("species" -> "species name", "brainRegion" -> "brain region", "acquisition" -> "acquisition method")
+    val metadata =
+      if (publication.isDefined)
+        Json.arr(
+          Json.obj("type" -> "string", "key" -> "species", "value" -> "species name"),
+          Json.obj("type" -> "string", "key" -> "brainRegion", "value" -> "brain region"),
+          Json.obj("type" -> "string", "key" -> "acquisition", "value" -> "acquisition method")
+        )
+      else Json.arr()
+
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
       organization <- organizationDAO.findOne(owningOrganization)
@@ -115,7 +122,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         sharingToken = None,
         status = dataSource.statusOpt.getOrElse(""),
         logoUrl = None,
-        details = publication.map(_ => details)
+        metadata = metadata
       )
       _ <- datasetDAO.insertOne(dataset)
       _ <- datasetDataLayerDAO.updateLayers(newId, dataSource)
@@ -366,7 +373,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "lastUsedByUser" -> lastUsedByUser,
         "logoUrl" -> logoUrl,
         "sortingKey" -> dataset.sortingKey,
-        "details" -> dataset.details,
+        "metadata" -> dataset.metadata,
         "isUnreported" -> Json.toJson(isUnreported(dataset)),
         "tags" -> dataset.tags,
         "folderId" -> dataset._folder,

@@ -6,10 +6,11 @@ import {
   resetDatabase,
   replaceVolatileValues,
   writeTypeCheckingFile,
-} from "test/enzyme/e2e-setup";
+} from "test/e2e-setup";
 import Request from "libs/request";
 import * as foldersApi from "admin/api/folders";
 import test from "ava";
+import { APIMetadataEnum } from "types/api_flow_types";
 test.before("Reset database and change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);
@@ -42,6 +43,7 @@ test("updateFolder", async (t) => {
     id: organizationXRootFolderId,
     allowedTeams: [],
     name: newName,
+    metadata: [],
   });
   t.is(updatedFolder.name, newName);
 
@@ -69,6 +71,7 @@ test("addAllowedTeamToFolder", async (t) => {
     id: subFolderId,
     allowedTeams: [teamId],
     name: "A subfolder!",
+    metadata: [{ type: APIMetadataEnum.STRING, key: "foo", value: "bar" }],
   });
 
   t.snapshot(updatedFolderWithTeam, {

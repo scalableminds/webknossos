@@ -194,7 +194,7 @@ export function CollapsibleWorkflowYamlEditor({
     <Collapse
       style={{ marginBottom: 8 }}
       onChange={() => setActive(!isActive)}
-      expandIcon={() => <Checkbox checked={isActive} onChange={() => setActive(!isActive)} />}
+      expandIcon={() => <Checkbox checked={isActive} />}
       items={[
         {
           key: "advanced",

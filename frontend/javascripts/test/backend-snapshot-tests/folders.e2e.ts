@@ -6,7 +6,7 @@ import {
   resetDatabase,
   replaceVolatileValues,
   writeTypeCheckingFile,
-} from "test/enzyme/e2e-setup";
+} from "test/e2e-setup";
 import Request from "libs/request";
 import * as foldersApi from "admin/api/folders";
 import test from "ava";

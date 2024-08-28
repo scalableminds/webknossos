@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { resetDatabase, replaceVolatileValues, writeTypeCheckingFile } from "test/enzyme/e2e-setup";
+import { resetDatabase, replaceVolatileValues, writeTypeCheckingFile } from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
 test.before("Reset database", async () => {

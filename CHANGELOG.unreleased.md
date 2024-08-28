@@ -48,6 +48,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Upgraded ant icons to version 5.4. [#8007](https://github.com/scalableminds/webknossos/pull/8007)
 - Increased maximum depth for ai-based quick select from 5 to 16. [#8021](https://github.com/scalableminds/webknossos/pull/8021)
 - Zarr-streaming now uses the new unit-aware voxel size. This means that [wk-libs client v0.14.25 or newer](https://github.com/scalableminds/webknossos-libs/releases) is needed for dataset zarr streaming. [#8012](https://github.com/scalableminds/webknossos/pull/8012)
+- Updated React to version 17. [#7765](https://github.com/scalableminds/webknossos/pull/7765)
 
 ### Fixed
 - Fixed a bug that allowed the default newly created bounding box to appear outside the dataset. In case the whole bounding box would be outside it is created regardless. [#7892](https://github.com/scalableminds/webknossos/pull/7892)

@@ -115,7 +115,6 @@ import {
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
 import { ChangeColorMenuItemContent } from "components/color_picker";
-import { ItemType } from "antd/lib/menu/hooks/useItems";
 import { pluralize } from "libs/utils";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -127,6 +126,7 @@ import { ValueOf } from "types/globals";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 import FastTooltip from "components/fast_tooltip";
 import { ContextMenuContainer } from "../sidebar_context_menu";
+import { ItemType } from "antd/es/menu/interface";
 
 const { confirm } = Modal;
 const { Option } = Select;

@@ -1,10 +1,8 @@
 // @ts-nocheck
 import { createNanoEvents } from "nanoevents";
 import { ExecutionContext } from "ava";
-import Maybe from "data.maybe";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
-import { type Tracing, type VolumeTracing } from "oxalis/store";
 import { sleep } from "libs/utils";
 import mockRequire from "mock-require";
 import sinon from "sinon";
@@ -151,13 +149,6 @@ setStore(Store);
 setupApi();
 startSagas(rootSaga);
 
-export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
-  if (tracing.volumes.length > 0) {
-    return Maybe.Just(tracing.volumes[0]);
-  }
-
-  throw new Error("Annotation is not of type volume!");
-}
 const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
 let counter = 0;

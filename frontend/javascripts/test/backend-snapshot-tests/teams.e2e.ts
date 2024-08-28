@@ -12,16 +12,12 @@ test("getTeams()", async (t) => {
   writeTypeCheckingFile(teams, "team", "APITeam", {
     isArray: true,
   });
-  t.snapshot(teams, {
-    id: "teams-getTeams()",
-  });
+  t.snapshot(teams);
 });
 test("getEditableTeams()", async (t) => {
   const editableTeams = _.sortBy(await api.getEditableTeams(), (team) => team.name);
 
-  t.snapshot(editableTeams, {
-    id: "teams-getEditableTeams()",
-  });
+  t.snapshot(editableTeams);
 });
 test("createTeam and deleteTeam", async (t) => {
   const newTeam = {
@@ -33,11 +29,7 @@ test("createTeam and deleteTeam", async (t) => {
   const createdTeamWithFixedId = Object.assign({}, createdTeam, {
     id: "fixed-team-id",
   });
-  t.snapshot(createdTeamWithFixedId, {
-    id: "teams-createTeam(newTeam: NewTeamType)",
-  });
+  t.snapshot(createdTeamWithFixedId);
   const response = await api.deleteTeam(createdTeam.id);
-  t.snapshot(response, {
-    id: "teams-deleteTeam(teamId: string)",
-  });
+  t.snapshot(response);
 });

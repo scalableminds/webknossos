@@ -42,6 +42,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - The warning about a mismatch between the scale of a pre-computed mesh and the dataset scale's factor now also considers all supported mags of the active segmentation layer. This reduces the false posive rate regarding this warning. [#7921](https://github.com/scalableminds/webknossos/pull/7921/)
 - It is no longer allowed to edit annotations of other organizations, even if they are set to public and to others-may-edit. [#7923](https://github.com/scalableminds/webknossos/pull/7923)
 - When proofreading segmentations, the user can now interact with super-voxels directly in the data viewports. Additionally, proofreading is significantly faster because the segmentation data doesn't have to be re-downloaded after each merge/split operation. [#7654](https://github.com/scalableminds/webknossos/pull/7654)
+- Changed internal data model changing an organization's name to id and its displayName to name. The previously existing id was removed. [#7386](https://github.com/scalableminds/webknossos/pull/7386)
 - Because of the way our models are trained, AI analysis and training is disabled for 2D and ND datasets, as well as for color layers with data type uInt24. [#7957](https://github.com/scalableminds/webknossos/pull/7957)
 - The overall performance was improved (especially for the segments tab). [#7958](https://github.com/scalableminds/webknossos/pull/7958)
 - The performance for the skeleton tab was improved. [#7989](https://github.com/scalableminds/webknossos/pull/7989)

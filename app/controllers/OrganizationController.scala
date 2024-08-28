@@ -66,9 +66,7 @@ class OrganizationController @Inject()(
     } yield Ok(Json.toJson(js))
   }
 
-  case class OrganizationCreationParameters(organization: Option[String],
-                                            organizationName: String,
-                                            ownerEmail: String)
+  case class OrganizationCreationParameters(organization: Option[String], organizationName: String, ownerEmail: String)
   object OrganizationCreationParameters {
     implicit val jsonFormat: OFormat[OrganizationCreationParameters] = Json.format[OrganizationCreationParameters]
   }

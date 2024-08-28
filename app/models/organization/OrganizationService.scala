@@ -10,7 +10,7 @@ import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsArray, JsObject, Json}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -111,7 +111,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
-      organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName)
+      organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)
 
       organization = Organization(
         ObjectId.generate,

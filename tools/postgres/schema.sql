@@ -20,7 +20,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(118);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(119);
 COMMIT TRANSACTION;
 
 
@@ -123,14 +123,14 @@ CREATE TABLE webknossos.datasets(
   sharingToken CHAR(256),
   logoUrl VARCHAR(2048),
   sortingKey TIMESTAMPTZ NOT NULL,
-  details JSONB,
+  metadata JSONB NOT NULL DEFAULT '[]',
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization),
   CONSTRAINT defaultViewConfigurationIsJsonObject CHECK(jsonb_typeof(defaultViewConfiguration) = 'object'),
   CONSTRAINT adminViewConfigurationIsJsonObject CHECK(jsonb_typeof(adminViewConfiguration) = 'object'),
-  CONSTRAINT detailsIsJsonObject CHECK(jsonb_typeof(details) = 'object')
+  CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array')
 );
 
 CREATE TYPE webknossos.DATASET_LAYER_CATEGORY AS ENUM ('color', 'mask', 'segmentation');
@@ -517,7 +517,9 @@ CREATE TABLE webknossos.credentials(
 CREATE TABLE webknossos.folders(
     _id CHAR(24) PRIMARY KEY,
     name TEXT NOT NULL CHECK (name !~ '/'),
-    isDeleted BOOLEAN NOT NULL DEFAULT false
+    isDeleted BOOLEAN NOT NULL DEFAULT false,
+    metadata JSONB  NOT NULL DEFAULT '[]',
+    CONSTRAINT metadataIsJsonArray CHECK(jsonb_typeof(metadata) = 'array')
 );
 
 CREATE TABLE webknossos.folder_paths(

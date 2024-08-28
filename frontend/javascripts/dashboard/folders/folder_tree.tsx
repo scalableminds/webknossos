@@ -88,6 +88,7 @@ export function FolderTreeSidebar({
       const doesEventReferToTreeUi = event.nativeEvent.target.closest(".ant-tree") != null;
       if (keys.length > 0 && doesEventReferToTreeUi) {
         context.setActiveFolderId(keys[0] as string);
+        context.setSelectedDatasets([]);
       }
     },
     [context],

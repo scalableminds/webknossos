@@ -279,7 +279,7 @@ export function useCreateFolderMutation() {
       queryClient.setQueryData(
         mutationKey,
         transformHierarchy((oldItems: FlatFolderTreeItem[] | undefined) =>
-          (oldItems || []).concat([{ ...newFolder, parent: parentId }]),
+          (oldItems || []).concat([{ ...newFolder, parent: parentId, metadata: [] }]),
         ),
       );
     },
@@ -421,6 +421,12 @@ export function useUpdateDatasetMutation(folderId: string | null) {
             })
             .filter((dataset: APIDatasetCompact) => dataset.folderId === folderId),
         );
+        const updatedDatasetId = {
+          name: updatedDataset.name,
+          owningOrganization: updatedDataset.owningOrganization,
+        };
+        // Also update the cached dataset under the key "datasetById".
+        queryClient.setQueryData(["datasetById", updatedDatasetId], updatedDataset);
         const targetFolderId = updatedDataset.folderId;
         if (targetFolderId !== folderId) {
           // The dataset was moved to another folder. Add the dataset to that target folder
@@ -585,6 +591,7 @@ export function getFolderHierarchy(folderTree: FlatFolderTreeItem[]): FolderHier
       title: folderTreeItem.name,
       isEditable: folderTreeItem.isEditable,
       parent: folderTreeItem.parent,
+      metadata: folderTreeItem.metadata,
       children: [],
     };
     if (folderTreeItem.parent == null) {

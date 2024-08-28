@@ -6,7 +6,7 @@ import {
   PlusOutlined,
   ShrinkOutlined,
 } from "@ant-design/icons";
-import { MenuProps, notification } from "antd";
+import { type MenuProps, notification } from "antd";
 import _ from "lodash";
 import {
   LongUnitToShortUnitMap,
@@ -15,7 +15,7 @@ import {
   type Vector3,
 } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
-import React from "react";
+import type React from "react";
 import { batchActions } from "redux-batched-actions";
 
 import { ChangeColorMenuItemContent } from "components/color_picker";
@@ -48,7 +48,7 @@ import {
   GroupTypeEnum,
   makeBasicGroupObject,
   MISSING_GROUP_ID,
-  TreeNode,
+  type TreeNode,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { HideTreeEdgesIcon } from "./hide_tree_eges_icon";
 import { ColoredDotIcon } from "./segments_tab/segment_list_item";

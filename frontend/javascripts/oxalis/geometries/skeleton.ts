@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import Maybe from "data.maybe";
+import type Maybe from "data.maybe";
 import type { Tree, Node, Edge, OxalisState, SkeletonTracing } from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import { cachedDiffTrees } from "oxalis/model/sagas/skeletontracing_saga";
@@ -12,8 +12,8 @@ import NodeShader, {
 } from "oxalis/geometries/materials/node_shader";
 import Store from "oxalis/throttled_store";
 import * as Utils from "libs/utils";
-import { type AdditionalCoordinate } from "types/api_flow_types";
-import { UpdateActionNode } from "oxalis/model/sagas/update_actions";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { UpdateActionNode } from "oxalis/model/sagas/update_actions";
 
 const MAX_CAPACITY = 1000;
 

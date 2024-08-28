@@ -1,3 +1,5 @@
+import type React from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Avatar,
   Button,
@@ -9,7 +11,7 @@ import {
   type SubMenuProps,
   Tag,
   Input,
-  InputRef,
+  type InputRef,
   ConfigProvider,
 } from "antd";
 import _ from "lodash";
@@ -24,10 +26,9 @@ import {
   BellOutlined,
 } from "@ant-design/icons";
 import { useHistory, Link } from "react-router-dom";
-
 import classnames from "classnames";
 import { connect, useSelector } from "react-redux";
-import React, { useState, useEffect, useRef } from "react";
+
 import Toast from "libs/toast";
 import type {
   APIOrganizationCompact,
@@ -59,8 +60,8 @@ import { HelpModal } from "oxalis/view/help_modal";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import messages from "messages";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
-import { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
-import { MenuClickEventHandler } from "rc-menu/lib/interface";
+import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
+import type { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import { getAntdTheme, getSystemColorTheme } from "theme";

@@ -1,5 +1,5 @@
 import "test/mocks/lz4";
-import path from "path";
+import path from "node:path";
 import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 import {
   test,

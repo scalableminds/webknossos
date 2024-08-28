@@ -2,7 +2,7 @@ import _ from "lodash";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Utils from "libs/utils";
 import {
-  DatasetUpdater,
+  type DatasetUpdater,
   getDataset,
   getDatasets,
   updateDatasetPartial,
@@ -18,14 +18,14 @@ import {
 import Toast from "libs/toast";
 import React, { useEffect, useRef } from "react";
 import {
-  APIDatasetId,
-  APIDatasetCompact,
-  FlatFolderTreeItem,
-  Folder,
-  FolderItem,
-  FolderUpdater,
+  type APIDatasetId,
+  type APIDatasetCompact,
+  type FlatFolderTreeItem,
+  type Folder,
+  type FolderItem,
+  type FolderUpdater,
   convertDatasetToCompact,
-  APIDataset,
+  type APIDataset,
 } from "types/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
 

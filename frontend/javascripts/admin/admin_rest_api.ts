@@ -97,13 +97,13 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
-import { SaveQueueType } from "oxalis/model/actions/save_actions";
-import { DatasourceConfiguration } from "types/schemas/datasource.types";
+import type { SaveQueueType } from "oxalis/model/actions/save_actions";
+import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { doWithToken } from "./api/token";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import { ArbitraryObject } from "types/globals";
+import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type { ArbitraryObject } from "types/globals";
 import { assertResponseLimit } from "./api/api_utils";
-import { AnnotationTypeFilterEnum } from "admin/statistic/project_and_annotation_type_dropdown";
+import type { AnnotationTypeFilterEnum } from "admin/statistic/project_and_annotation_type_dropdown";
 
 export * from "./api/token";
 export * from "./api/jobs";

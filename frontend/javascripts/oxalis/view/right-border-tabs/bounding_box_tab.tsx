@@ -4,7 +4,12 @@ import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useRef, useState } from "react";
 import _ from "lodash";
 import UserBoundingBoxInput from "oxalis/view/components/setting_input_views";
-import { Vector3, Vector6, BoundingBoxType, ControlModeEnum } from "oxalis/constants";
+import {
+  type Vector3,
+  type Vector6,
+  type BoundingBoxType,
+  ControlModeEnum,
+} from "oxalis/constants";
 import {
   changeUserBoundingBoxAction,
   addUserBoundingBoxAction,
@@ -14,7 +19,7 @@ import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import * as Utils from "libs/utils";
-import { OxalisState, UserBoundingBox } from "oxalis/store";
+import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
 import { AutoSizer } from "react-virtualized";

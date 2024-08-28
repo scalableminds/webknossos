@@ -16,7 +16,7 @@ import {
   getAreasFromState,
 } from "oxalis/model/accessors/flycam_accessor";
 import { isLayerVisible, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import DataLayer from "oxalis/model/data_layer";
+import type DataLayer from "oxalis/model/data_layer";
 import { Model } from "oxalis/singletons";
 import type { Vector3 } from "oxalis/constants";
 import constants from "oxalis/constants";

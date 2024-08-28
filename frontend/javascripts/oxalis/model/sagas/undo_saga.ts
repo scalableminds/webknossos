@@ -24,17 +24,17 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import {
-  AddBucketToUndoAction,
-  BatchUpdateGroupsAndSegmentsAction,
+  type AddBucketToUndoAction,
+  type BatchUpdateGroupsAndSegmentsAction,
   cancelQuickSelectAction,
-  FinishAnnotationStrokeAction,
-  ImportVolumeTracingAction,
-  MaybeUnmergedBucketLoadedPromise,
-  RemoveSegmentAction,
+  type FinishAnnotationStrokeAction,
+  type ImportVolumeTracingAction,
+  type MaybeUnmergedBucketLoadedPromise,
+  type RemoveSegmentAction,
   setSegmentGroupsAction,
-  SetSegmentGroupsAction,
+  type SetSegmentGroupsAction,
   setSegmentsAction,
-  UpdateSegmentAction,
+  type UpdateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import type { BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import {
@@ -46,7 +46,7 @@ import { select } from "oxalis/model/sagas/effect-generators";
 import { UNDO_HISTORY_SIZE } from "oxalis/model/sagas/save_saga_constants";
 import { Model } from "oxalis/singletons";
 import type { SegmentGroup, SegmentMap, SkeletonTracing, UserBoundingBox } from "oxalis/store";
-import { Task } from "redux-saga";
+import type { Task } from "redux-saga";
 import { actionChannel, all, call, delay, fork, join, put, take } from "typed-redux-saga";
 
 const UndoRedoRelevantBoundingBoxActions = AllUserBoundingBoxActions.filter(

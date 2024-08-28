@@ -67,7 +67,6 @@ test.serial(
     );
     // Reset the info field which is just for debugging purposes
     const actualSaveQueue = state.save.queue.skeleton.map((entry) => {
-      // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
       const { info, ...rest } = entry;
       return { ...rest, info: "[]" };
     });

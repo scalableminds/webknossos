@@ -16,10 +16,10 @@ import Toast from "libs/toast";
 import {
   Button,
   DatePicker,
-  DatePickerProps,
+  type DatePickerProps,
   Dropdown,
   Input,
-  MenuProps,
+  type MenuProps,
   Modal,
   Popover,
   Space,
@@ -35,13 +35,13 @@ import {
   InfoCircleOutlined,
   PlusOutlined,
 } from "@ant-design/icons";
-import { ZarrPrivateLink } from "types/api_flow_types";
+import type { ZarrPrivateLink } from "types/api_flow_types";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import dayjs from "dayjs";
 import FormattedDate from "components/formatted_date";
-import { ColumnsType } from "antd/lib/table";
+import type { ColumnsType } from "antd/lib/table";
 import { makeComponentLazy } from "libs/react_helpers";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
 import { getDataLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";

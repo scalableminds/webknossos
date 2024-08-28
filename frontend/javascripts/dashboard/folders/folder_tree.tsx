@@ -1,18 +1,19 @@
-import React, { Key, useCallback, useEffect, useRef, useState } from "react";
-import { ConnectDropTarget, DropTargetMonitor, useDrop } from "react-dnd";
+import type React from "react";
+import { type Key, useCallback, useEffect, useRef, useState } from "react";
+import { type ConnectDropTarget, type DropTargetMonitor, useDrop } from "react-dnd";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
 import {
-  DatasetCollectionContextValue,
+  type DatasetCollectionContextValue,
   useDatasetCollectionContext,
 } from "../dataset/dataset_collection_context";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Dropdown, Modal, MenuProps, Tree } from "antd";
+import { Dropdown, Modal, type MenuProps, Tree } from "antd";
 import Toast from "libs/toast";
-import { DataNode, DirectoryTreeProps } from "antd/lib/tree";
+import type { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
-import { FolderItem } from "types/api_flow_types";
+import type { FolderItem } from "types/api_flow_types";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 

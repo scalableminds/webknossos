@@ -15,7 +15,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-import React, { Key, useEffect, useState } from "react";
+import React, { type Key, useEffect, useState } from "react";
 import _ from "lodash";
 import dayjs from "dayjs";
 import { location } from "libs/window";

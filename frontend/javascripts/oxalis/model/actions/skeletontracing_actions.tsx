@@ -1,5 +1,5 @@
 import { Modal } from "antd";
-import React, { Key } from "react";
+import React, { type Key } from "react";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
 import type { Vector3, TreeType } from "oxalis/constants";
 import {
@@ -14,7 +14,7 @@ import messages from "messages";
 import renderIndependently from "libs/render_independently";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import { batchActions } from "redux-batched-actions";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;

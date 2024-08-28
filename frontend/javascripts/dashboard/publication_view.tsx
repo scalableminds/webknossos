@@ -1,6 +1,7 @@
-import React, { memo, useState, useEffect } from "react";
+import type React from "react";
+import { memo, useState, useEffect } from "react";
 import { List, Input, Spin } from "antd";
-import { APIPublication } from "types/api_flow_types";
+import type { APIPublication } from "types/api_flow_types";
 import PublicationCard from "dashboard/publication_card";
 import * as Utils from "libs/utils";
 import { getPublications } from "admin/admin_rest_api";

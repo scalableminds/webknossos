@@ -1,10 +1,10 @@
 // @ts-nocheck
 import { createNanoEvents } from "nanoevents";
-import { ExecutionContext } from "ava";
+import type { ExecutionContext } from "ava";
 import Maybe from "data.maybe";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
-import { type Tracing, type VolumeTracing } from "oxalis/store";
+import type { Tracing, VolumeTracing } from "oxalis/store";
 import { sleep } from "libs/utils";
 import mockRequire from "mock-require";
 import sinon from "sinon";

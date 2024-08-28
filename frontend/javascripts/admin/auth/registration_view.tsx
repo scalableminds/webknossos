@@ -7,7 +7,7 @@ import { getDefaultOrganization } from "admin/admin_rest_api";
 import features from "features";
 import RegistrationFormWKOrg from "admin/auth/registration_form_wkorg";
 import RegistrationFormGeneric from "admin/auth/registration_form_generic";
-import { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_flow_types";
 
 function RegistrationViewGeneric() {
   const history = useHistory();

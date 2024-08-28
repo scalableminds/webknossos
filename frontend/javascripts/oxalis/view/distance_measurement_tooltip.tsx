@@ -6,7 +6,7 @@ import {
   AnnotationToolEnum,
   MeasurementTools,
   LongUnitToShortUnitMap,
-  Vector3,
+  type Vector3,
 } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";

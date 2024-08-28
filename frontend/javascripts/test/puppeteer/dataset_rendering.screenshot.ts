@@ -1,6 +1,6 @@
 import "test/mocks/lz4";
 import type { PartialDatasetConfiguration } from "oxalis/store";
-import path from "path";
+import path from "node:path";
 import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
 import {
   test,

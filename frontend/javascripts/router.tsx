@@ -53,12 +53,12 @@ import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import React from "react";
 import { connect } from "react-redux";
 // @ts-expect-error ts-migrate(2305) FIXME: Module '"react-router-dom"' has no exported member... Remove this comment to see the full error message
-import { ContextRouter, Link, RouteProps } from "react-router-dom";
+import { type ContextRouter, Link, type RouteProps } from "react-router-dom";
 import { Redirect, Route, Router, Switch } from "react-router-dom";
 import {
   APICompoundTypeEnum,
-  APIResolutionRestrictions,
-  APIUser,
+  type APIResolutionRestrictions,
+  type APIUser,
   TracingTypeEnum,
 } from "types/api_flow_types";
 
@@ -67,7 +67,7 @@ import { Store } from "oxalis/singletons";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import TimeTrackingOverview from "admin/statistic/time_tracking_overview";
 import loadable from "libs/lazy_loader";
-import { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/globals";
 import { DatasetURLImport } from "admin/dataset/dataset_url_import";
 import AiModelListView from "admin/voxelytics/ai_model_list_view";
 
@@ -118,7 +118,7 @@ function PageNotFoundView() {
           }
           style={{ height: "100%" }}
           extra={[
-            <Link to="/">
+            <Link to="/" key="return-to-dashboard">
               <Button>Back to Dashboard</Button>
             </Link>,
           ]}
@@ -650,7 +650,7 @@ class ReactRouter extends React.Component<Props> {
                       const resolutionRestrictions: APIResolutionRestrictions = {};
 
                       if (getParams.minRes !== undefined) {
-                        resolutionRestrictions.min = parseInt(getParams.minRes);
+                        resolutionRestrictions.min = Number.parseInt(getParams.minRes);
 
                         if (!_.isNumber(resolutionRestrictions.min)) {
                           throw new Error("Invalid minRes parameter");
@@ -658,7 +658,7 @@ class ReactRouter extends React.Component<Props> {
                       }
 
                       if (getParams.maxRes !== undefined) {
-                        resolutionRestrictions.max = parseInt(getParams.maxRes);
+                        resolutionRestrictions.max = Number.parseInt(getParams.maxRes);
 
                         if (!_.isNumber(resolutionRestrictions.max)) {
                           throw new Error("Invalid maxRes parameter");

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import app from "app";
-import Maybe from "data.maybe";
+import type Maybe from "data.maybe";
 import { V3 } from "libs/mjs";
 import * as Utils from "libs/utils";
 import window from "libs/window";
@@ -19,7 +19,7 @@ import constants, {
 } from "oxalis/constants";
 import { getRenderer } from "oxalis/controller/renderer";
 import { setSceneController } from "oxalis/controller/scene_controller_provider";
-import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
+import type ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Cube from "oxalis/geometries/cube";
 import {
   ContourGeometry,

@@ -10,7 +10,7 @@ import { convertServerAnnotationToFrontendAnnotation } from "oxalis/model/reduce
 import _ from "lodash";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { getMeshesForAdditionalCoordinates } from "../accessors/volumetracing_accessor";
-import { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getDatasetBoundingBox } from "../accessors/dataset_accessor";
 import BoundingBox from "../bucket_data_handling/bounding_box";
 

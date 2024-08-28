@@ -45,9 +45,9 @@ import { getBaseVoxelFactorsInUnit } from "oxalis/model/scaleinfo";
 import Dimensions from "oxalis/model/dimensions";
 import { getClosestHoveredBoundingBox } from "oxalis/controller/combinations/bounding_box_handlers";
 import { getEnabledColorLayers } from "oxalis/model/accessors/dataset_accessor";
-import ArbitraryView from "oxalis/view/arbitrary_view";
+import type ArbitraryView from "oxalis/view/arbitrary_view";
 import { showContextMenuAction } from "oxalis/model/actions/ui_actions";
-import { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 const OrthoViewToNumber: OrthoViewMap<number> = {
   [OrthoViews.PLANE_XY]: 0,
   [OrthoViews.PLANE_YZ]: 1,

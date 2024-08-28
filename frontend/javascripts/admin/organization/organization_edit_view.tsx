@@ -17,7 +17,7 @@ import {
   getPricingPlanStatus,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
+import type { APIOrganization, APIPricingPlanStatus } from "types/api_flow_types";
 import {
   PlanAboutToExceedAlert,
   PlanDashboardCard,

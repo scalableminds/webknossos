@@ -10,7 +10,7 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
+import type DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
 import { assertNonNullBucket } from "oxalis/model/bucket_data_handling/bucket";
 
 const StoreMock = {

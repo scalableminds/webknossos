@@ -10,9 +10,9 @@ import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type { Vector3, Vector4 } from "oxalis/constants";
-import { assertNonNullBucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { assertNonNullBucket, type DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
+import type DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
 
 const StoreMock = {
   getState: () => ({

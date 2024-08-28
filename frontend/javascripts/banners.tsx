@@ -13,10 +13,11 @@ import constants from "oxalis/constants";
 import { setNavbarHeightAction } from "oxalis/model/actions/ui_actions";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { Store } from "oxalis/singletons";
-import { OxalisState } from "oxalis/store";
-import React, { useEffect, useState } from "react";
+import type { OxalisState } from "oxalis/store";
+import type React from "react";
+import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
-import { MaintenanceInfo } from "types/api_flow_types";
+import type { MaintenanceInfo } from "types/api_flow_types";
 import * as Utils from "libs/utils";
 
 const INITIAL_DELAY = 5000;

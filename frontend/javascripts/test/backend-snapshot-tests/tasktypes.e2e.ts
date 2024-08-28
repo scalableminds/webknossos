@@ -1,7 +1,7 @@
 import { tokenUserA, setCurrToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
-import { APIAllowedMode } from "types/api_flow_types";
+import type { APIAllowedMode } from "types/api_flow_types";
 test.before("Change token", async () => {
   resetDatabase();
   setCurrToken(tokenUserA);

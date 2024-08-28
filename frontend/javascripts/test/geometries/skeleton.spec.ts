@@ -7,8 +7,8 @@ import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_acces
 import * as Utils from "libs/utils";
 import mockRequire from "mock-require";
 import test from "ava";
-import { Vector3 } from "oxalis/constants";
-import { OxalisState } from "oxalis/store";
+import type { Vector3 } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
 
 mockRequire("app", {

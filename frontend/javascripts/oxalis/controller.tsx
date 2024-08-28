@@ -1,10 +1,10 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
-import { Location as HistoryLocation, Action as HistoryAction } from "history";
+import type { Location as HistoryLocation, Action as HistoryAction } from "history";
 import * as React from "react";
 import _ from "lodash";
-import { APIAnnotationTypeEnum, APICompoundType } from "types/api_flow_types";
+import { APIAnnotationTypeEnum, type APICompoundType } from "types/api_flow_types";
 import { HANDLED_ERROR } from "oxalis/model_initialization";
 import { InputKeyboardNoLoop } from "libs/input";
 import { fetchGistContent } from "libs/gist";
@@ -29,7 +29,7 @@ import type { ViewMode } from "oxalis/constants";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import messages from "messages";
 import window, { document, location } from "libs/window";
-import DataLayer from "./model/data_layer";
+import type DataLayer from "./model/data_layer";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {
@@ -93,7 +93,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
     const versions = Utils.hasUrlParam("showVersionRestore")
       ? {
           skeleton: Utils.hasUrlParam("skeletonVersion")
-            ? parseInt(Utils.getUrlParamValue("skeletonVersion"))
+            ? Number.parseInt(Utils.getUrlParamValue("skeletonVersion"))
             : 1,
         }
       : undefined;
@@ -192,6 +192,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       const content = await fetchGistContent(script.gist, script.name);
 
       try {
+        // biome-ignore lint/security/noGlobalEval: This is loads a user provided frontend API script.
         eval(content);
       } catch (error) {
         Toast.error(

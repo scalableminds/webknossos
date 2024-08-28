@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+import type React from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SyncOutlined } from "@ant-design/icons";
 import { Table, Progress, Tooltip, Button, Input } from "antd";
 import { Link } from "react-router-dom";
 import { getVoxelyticsWorkflows } from "admin/admin_rest_api";
 import {
-  VoxelyticsWorkflowListingRun,
+  type VoxelyticsWorkflowListingRun,
   VoxelyticsRunState,
-  VoxelyticsWorkflowListing,
+  type VoxelyticsWorkflowListing,
 } from "types/api_flow_types";
 import { usePolling } from "libs/react_hooks";
 import { formatCountToDataAmountUnit, formatDateMedium, formatNumber } from "libs/format_utils";
@@ -122,7 +123,7 @@ export default function WorkflowListView() {
           ...run,
         })),
       })),
-    [workflows, getUserDisplayName],
+    [workflows],
   );
 
   function renderProgress(run: RenderRunInfo) {
@@ -257,14 +258,16 @@ export default function WorkflowListView() {
             key: "begin",
             defaultSortOrder: "descend",
             sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              (a.beginTime?.getTime() ?? Infinity) - (b.beginTime?.getTime() ?? Infinity),
+              (a.beginTime?.getTime() ?? Number.POSITIVE_INFINITY) -
+              (b.beginTime?.getTime() ?? Number.POSITIVE_INFINITY),
             render: (run: RenderRunInfo) => run.beginTime && formatDateMedium(run.beginTime),
           },
           {
             title: "End",
             key: "end",
             sorter: (a: RenderRunInfo, b: RenderRunInfo) =>
-              (a.endTime?.getTime() ?? Infinity) - (b.endTime?.getTime() ?? Infinity),
+              (a.endTime?.getTime() ?? Number.POSITIVE_INFINITY) -
+              (b.endTime?.getTime() ?? Number.POSITIVE_INFINITY),
             render: (run: RenderRunInfo) => run.endTime && formatDateMedium(run.endTime),
           },
         ]}

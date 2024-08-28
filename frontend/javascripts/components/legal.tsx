@@ -3,7 +3,7 @@ import Markdown from "libs/markdown_adapter";
 import React from "react";
 import type { APIOrganization } from "types/api_flow_types";
 import { getOperatorData, getDefaultOrganization } from "admin/admin_rest_api";
-import { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/globals";
 type Props = EmptyObject;
 type State = {
   operatorData: string;

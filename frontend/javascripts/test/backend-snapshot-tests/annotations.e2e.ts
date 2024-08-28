@@ -4,7 +4,7 @@ import {
   setCurrToken,
   tokenUserA,
   writeTypeCheckingFile,
-} from "test/enzyme/e2e-setup";
+} from "test/e2e-setup";
 import type { APIAnnotation } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";

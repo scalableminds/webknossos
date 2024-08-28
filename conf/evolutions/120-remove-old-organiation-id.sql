@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 118, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
+do $$ begin ASSERT (select schemaVersion from webknossos.releaseInformation) = 119, 'Previous schema version mismatch'; end; $$ LANGUAGE plpgsql;
 
 
 -- Drop views
@@ -178,6 +178,6 @@ JOIN webknossos.organizations_ o ON u._organization = o._id
 JOIN webknossos.multiUsers_ m on u._multiUser = m._id;
 
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 119;
+UPDATE webknossos.releaseInformation SET schemaVersion = 120;
 
 COMMIT TRANSACTION;

@@ -572,14 +572,14 @@ function LoggedInAvatar({
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
   const activeOrganization = usersOrganizations.find((org) => org.id === organizationId);
   const switchableOrganizations = usersOrganizations.filter((org) => org.id !== organizationId);
-  const orgDisplayName =
+  const orgName =
     activeOrganization != null ? activeOrganization.name || activeOrganization.id : organizationId;
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
   const filteredOrganizations = Utils.filterWithSearchQueryAND(
     switchableOrganizations,
-    ["displayName", "id"],
+    ["name", "id"],
     organizationFilter,
   );
   const onEnterOrganization = () => {
@@ -642,7 +642,7 @@ function LoggedInAvatar({
             },
             {
               key: "organization",
-              label: orgDisplayName,
+              label: orgName,
               disabled: true,
             },
             activeOrganization && Utils.isUserAdmin(activeUser)

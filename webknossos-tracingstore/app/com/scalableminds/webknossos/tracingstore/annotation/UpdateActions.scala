@@ -93,7 +93,8 @@ object UpdateAction {
         case "updateUserBoundingBoxVisibility" => deserialize[UpdateUserBoundingBoxVisibilityVolumeAction](jsonValue)
         case "removeFallbackLayer"             => deserialize[RemoveFallbackLayerVolumeAction](jsonValue)
         case "importVolumeTracing"             => deserialize[ImportVolumeDataVolumeAction](jsonValue)
-        case "updateTdCamera"                  => deserialize[UpdateTdCameraVolumeAction](jsonValue)
+        case "updateTdCameraSkeleton"          => deserialize[UpdateTdCameraSkeletonAction](jsonValue) // TODO deduplicate?
+        case "updateTdCameraVolume"            => deserialize[UpdateTdCameraVolumeAction](jsonValue)
         case "createSegment"                   => deserialize[CreateSegmentVolumeAction](jsonValue)
         case "updateSegment"                   => deserialize[UpdateSegmentVolumeAction](jsonValue)
         case "updateSegmentGroups"             => deserialize[UpdateSegmentGroupsVolumeAction](jsonValue)
@@ -150,7 +151,7 @@ object UpdateAction {
       case s: UpdateTreeGroupsSkeletonAction =>
         Json.obj("name" -> "updateTreeGroups", "value" -> Json.toJson(s)(UpdateTreeGroupsSkeletonAction.jsonFormat))
       case s: UpdateTracingSkeletonAction =>
-        Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
+        Json.obj("name" -> "updateSkeletonTracing", "value" -> Json.toJson(s)(UpdateTracingSkeletonAction.jsonFormat))
       case s: RevertToVersionSkeletonAction =>
         Json.obj("name" -> "revertToVersion", "value" -> Json.toJson(s)(RevertToVersionSkeletonAction.jsonFormat))
       case s: UpdateTreeVisibilitySkeletonAction =>
@@ -169,13 +170,13 @@ object UpdateAction {
         Json.obj("name" -> "updateUserBoundingBoxVisibility",
                  "value" -> Json.toJson(s)(UpdateUserBoundingBoxVisibilitySkeletonAction.jsonFormat))
       case s: UpdateTdCameraSkeletonAction =>
-        Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s)(UpdateTdCameraSkeletonAction.jsonFormat))
+        Json.obj("name" -> "updateTdCameraSkeleton", "value" -> Json.toJson(s)(UpdateTdCameraSkeletonAction.jsonFormat))
 
       // Volume
       case s: UpdateBucketVolumeAction =>
         Json.obj("name" -> "updateBucket", "value" -> Json.toJson(s)(UpdateBucketVolumeAction.jsonFormat))
       case s: UpdateTracingVolumeAction =>
-        Json.obj("name" -> "updateTracing", "value" -> Json.toJson(s)(UpdateTracingVolumeAction.jsonFormat))
+        Json.obj("name" -> "updateVolumeTracing", "value" -> Json.toJson(s)(UpdateTracingVolumeAction.jsonFormat))
       case s: UpdateUserBoundingBoxesVolumeAction =>
         Json.obj("name" -> "updateUserBoundingBoxes",
                  "value" -> Json.toJson(s)(UpdateUserBoundingBoxesVolumeAction.jsonFormat))
@@ -187,7 +188,7 @@ object UpdateAction {
       case s: ImportVolumeDataVolumeAction =>
         Json.obj("name" -> "importVolumeTracing", "value" -> Json.toJson(s)(ImportVolumeDataVolumeAction.jsonFormat))
       case s: UpdateTdCameraVolumeAction =>
-        Json.obj("name" -> "updateTdCamera", "value" -> Json.toJson(s)(UpdateTdCameraVolumeAction.jsonFormat))
+        Json.obj("name" -> "updateTdCameraVolume", "value" -> Json.toJson(s)(UpdateTdCameraVolumeAction.jsonFormat))
       case s: CreateSegmentVolumeAction =>
         Json.obj("name" -> "createSegment", "value" -> Json.toJson(s)(CreateSegmentVolumeAction.jsonFormat))
       case s: UpdateSegmentVolumeAction =>

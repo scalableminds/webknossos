@@ -138,10 +138,10 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
         token
       )
       chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsMerged(organizationId,
-                                                                                     datasetName,
-                                                                                     layerName,
-                                                                                     meshFileName,
-                                                                                     segmentIds)
+                                                                                           datasetName,
+                                                                                           layerName,
+                                                                                           meshFileName,
+                                                                                           segmentIds)
       allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
         readMeshChunkAsStl(organizationId, datasetName, layerName, meshFileName, chunkRange, chunkInfos.transform)

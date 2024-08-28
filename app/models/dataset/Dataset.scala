@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   Category,
   CoordinateTransformation,
   CoordinateTransformationType,
+  DataSourceId,
   ElementClass,
   ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer
@@ -54,7 +55,7 @@ case class Dataset(_id: ObjectId,
                    status: String,
                    logoUrl: Option[String],
                    sortingKey: Instant = Instant.now,
-                   details: Option[JsObject] = None,
+                   metadata: JsArray = JsArray.empty,
                    tags: List[String] = List.empty,
                    created: Instant = Instant.now,
                    isDeleted: Boolean = false)
@@ -79,7 +80,9 @@ case class DatasetCompactInfo(
     isUnreported: Boolean,
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
-)
+) {
+  def dataSourceId = new DataSourceId(name, owningOrganization)
+}
 
 object DatasetCompactInfo {
   implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
@@ -116,7 +119,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
       adminViewConfigurationOpt <- Fox.runOptional(r.adminviewconfiguration)(
         JsonHelper.parseAndValidateJson[DatasetViewConfiguration](_))
-      details <- Fox.runOptional(r.details)(JsonHelper.parseAndValidateJson[JsObject](_))
+      metadata <- JsonHelper.parseAndValidateJson[JsArray](r.metadata)
     } yield {
       Dataset(
         ObjectId(r._Id),
@@ -138,7 +141,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         r.status,
         r.logourl,
         Instant.fromSql(r.sortingkey),
-        details,
+        metadata,
         parseArrayLiteral(r.tags).sorted,
         Instant.fromSql(r.created),
         r.isdeleted
@@ -211,21 +214,26 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                                                       folderIdOpt,
                                                       uploaderIdOpt,
                                                       searchQuery,
-                                                      includeSubfolders)
+                                                      includeSubfolders,
+                                                      None,
+                                                      None)
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $selectionPredicates $limitQuery".as[DatasetsRow])
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAllCompactWithSearch(isActiveOpt: Option[Boolean],
-                               isUnreported: Option[Boolean],
-                               organizationIdOpt: Option[ObjectId],
-                               folderIdOpt: Option[ObjectId],
-                               uploaderIdOpt: Option[ObjectId],
-                               searchQuery: Option[String],
-                               requestingUserIdOpt: Option[ObjectId],
-                               includeSubfolders: Boolean,
-                               limitOpt: Option[Int])(implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
+  def findAllCompactWithSearch(isActiveOpt: Option[Boolean] = None,
+                               isUnreported: Option[Boolean] = None,
+                               organizationIdOpt: Option[ObjectId] = None,
+                               folderIdOpt: Option[ObjectId] = None,
+                               uploaderIdOpt: Option[ObjectId] = None,
+                               searchQuery: Option[String] = None,
+                               requestingUserIdOpt: Option[ObjectId] = None,
+                               includeSubfolders: Boolean = false,
+                               statusOpt: Option[String] = None,
+                               createdSinceOpt: Option[Instant] = None,
+                               limitOpt: Option[Int] = None,
+  )(implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(isActiveOpt,
                                                       isUnreported,
@@ -233,7 +241,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                                                       folderIdOpt,
                                                       uploaderIdOpt,
                                                       searchQuery,
-                                                      includeSubfolders)
+                                                      includeSubfolders,
+                                                      statusOpt,
+                                                      createdSinceOpt)
       limitQuery = limitOpt.map(l => q"LIMIT $l").getOrElse(q"")
       query = q"""
             SELECT
@@ -325,7 +335,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                                        folderIdOpt: Option[ObjectId],
                                        uploaderIdOpt: Option[ObjectId],
                                        searchQuery: Option[String],
-                                       includeSubfolders: Boolean)(implicit ctx: DBAccessContext): Fox[SqlToken] =
+                                       includeSubfolders: Boolean,
+                                       statusOpt: Option[String],
+                                       createdSinceOpt: Option[Instant])(implicit ctx: DBAccessContext): Fox[SqlToken] =
     for {
       accessQuery <- readAccessQuery
       folderPredicate = folderIdOpt match {
@@ -339,6 +351,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       organizationPredicate = organizationIdOpt
         .map(organizationId => q"_organization = $organizationId")
         .getOrElse(q"TRUE")
+      statusPredicate = statusOpt.map(status => q"status = $status").getOrElse(q"TRUE")
+      createdSincePredicate = createdSinceOpt.map(createdSince => q"created >= $createdSince").getOrElse(q"TRUE")
       searchPredicate = buildSearchPredicate(searchQuery)
       isUnreportedPredicate = buildIsUnreportedPredicate(isUnreported)
     } yield q"""
@@ -348,6 +362,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         AND ($isActivePredicate)
         AND ($isUnreportedPredicate)
         AND ($organizationPredicate)
+        AND ($statusPredicate)
+        AND ($createdSincePredicate)
         AND $accessQuery
        """
 
@@ -477,6 +493,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       params.isPublic.map(v => q"isPublic = $v"),
       params.tags.map(v => q"tags = $v"),
       params.folderId.map(v => q"_folder = $v"),
+      params.metadata.map(v => q"metadata = $v"),
     ).flatten
     if (setQueries.isEmpty) {
       Fox.successful(())
@@ -493,18 +510,24 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     }
   }
 
-  def updateFields(_id: ObjectId,
+  def updateFields(datasetId: ObjectId,
                    description: Option[String],
                    displayName: Option[String],
                    sortingKey: Instant,
                    isPublic: Boolean,
+                   tags: List[String],
+                   metadata: JsArray,
                    folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val query = for { row <- Datasets if notdel(row) && row._Id === _id.id } yield
-      (row.description, row.displayname, row.sortingkey, row.ispublic, row._Folder)
-    for {
-      _ <- assertUpdateAccess(_id)
-      _ <- run(query.update(description, displayName, sortingKey.toSql, isPublic, folderId.toString))
-    } yield ()
+    val updateParameters = new DatasetUpdateParameters(
+      description = Some(description),
+      displayName = Some(displayName),
+      sortingKey = Some(sortingKey),
+      isPublic = Some(isPublic),
+      tags = Some(tags),
+      metadata = Some(metadata),
+      folderId = Some(folderId)
+    )
+    updatePartial(datasetId, updateParameters)
   }
 
   def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -548,7 +571,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      inboxSourceHash, defaultViewConfiguration, adminViewConfiguration,
                      description, displayName, isPublic, isUsable,
                      name, voxelSizeFactor, voxelSizeUnit, status,
-                     sharingToken, sortingKey, details, tags,
+                     sharingToken, sortingKey, metadata, tags,
                      created, isDeleted
                    )
                    VALUES(
@@ -557,7 +580,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      ${d.inboxSourceHash}, $defaultViewConfiguration, $adminViewConfiguration,
                      ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
-                     ${d.sharingToken}, ${d.sortingKey}, ${d.details}, ${d.tags},
+                     ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags},
                      ${d.created}, ${d.isDeleted}
                    )""".asUpdate)
     } yield ()

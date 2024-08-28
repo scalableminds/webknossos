@@ -24,6 +24,7 @@ import security.RandomIDGenerator
 import utils.{ObjectId, WkConf}
 
 import javax.inject.Inject
+import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 
 class DatasetService @Inject()(organizationDAO: OrganizationDAO,
@@ -69,6 +70,18 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     createDataset(dataStore, organizationName, unreportedDatasource)
   }
 
+  def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: ObjectId)(
+      implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
+    datasetDAO.findAllCompactWithSearch(
+      uploaderIdOpt = Some(userId),
+      organizationIdOpt = Some(organizationId),
+      isActiveOpt = Some(false),
+      includeSubfolders = true,
+      statusOpt = Some(notYetUploadedStatus),
+      // Only list pending uploads since the two last weeks.
+      createdSinceOpt = Some(Instant.now - (14 days))
+    ) ?~> "dataset.list.fetchFailed"
+
   private def createDataset(
       dataStore: DataStore,
       owningOrganization: String,
@@ -77,19 +90,26 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     val newId = ObjectId.generate
-    val details =
-      Json.obj("species" -> "species name", "brainRegion" -> "brain region", "acquisition" -> "acquisition method")
+    val metadata =
+      if (publication.isDefined)
+        Json.arr(
+          Json.obj("type" -> "string", "key" -> "species", "value" -> "species name"),
+          Json.obj("type" -> "string", "key" -> "brainRegion", "value" -> "brain region"),
+          Json.obj("type" -> "string", "key" -> "acquisition", "value" -> "acquisition method")
+        )
+      else Json.arr()
+
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
       organization <- organizationDAO.findOneByName(owningOrganization)
-      orbanizationRootFolder <- folderDAO.findOne(organization._rootFolder)
+      organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
       dataset = Dataset(
         newId,
         dataStore.name,
         organization._id,
         publication,
         None,
-        orbanizationRootFolder._id,
+        organizationRootFolder._id,
         dataSourceHash,
         dataSource.defaultViewConfiguration,
         adminViewConfiguration = None,
@@ -102,7 +122,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         sharingToken = None,
         status = dataSource.statusOpt.getOrElse(""),
         logoUrl = None,
-        details = publication.map(_ => details)
+        metadata = metadata
       )
       _ <- datasetDAO.insertOne(dataset)
       _ <- datasetDataLayerDAO.updateLayers(newId, dataSource)
@@ -353,7 +373,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "lastUsedByUser" -> lastUsedByUser,
         "logoUrl" -> logoUrl,
         "sortingKey" -> dataset.sortingKey,
-        "details" -> dataset.details,
+        "metadata" -> dataset.metadata,
         "isUnreported" -> Json.toJson(isUnreported(dataset)),
         "tags" -> dataset.tags,
         "folderId" -> dataset._folder,

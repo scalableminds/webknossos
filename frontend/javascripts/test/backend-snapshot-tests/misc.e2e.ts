@@ -1,6 +1,7 @@
 import {
   tokenUserA,
   setCurrToken,
+  replaceVolatileValues,
   resetDatabase,
   writeTypeCheckingFile,
 } from "test/enzyme/e2e-setup";
@@ -20,7 +21,10 @@ test("datastores()", async (t) => {
 test("activeUser()", async (t) => {
   const activeUser = await api.getActiveUser();
   writeTypeCheckingFile(activeUser, "user", "APIUser");
-  t.snapshot(activeUser);
+  // replaceVolatileValues should not be needed here since the database is freshly reset
+  // and the tests are executed serially. However, for unknown reasons the lastActivity
+  // property still varies since ava was upgraded from v3 to v4.
+  t.snapshot(replaceVolatileValues(activeUser));
 });
 test("getFeatureToggles()", async (t) => {
   const features = await api.getFeatureToggles();

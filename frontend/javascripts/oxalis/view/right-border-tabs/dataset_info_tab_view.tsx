@@ -47,7 +47,7 @@ type DispatchProps = {
 };
 type Props = StateProps & DispatchProps;
 type State = {
-  owningOrganizationDisplayName: string | null;
+  owningOrganizationName: string | null;
   isMarkdownModalOpen: boolean;
 };
 const shortcuts = [
@@ -251,7 +251,7 @@ export function AnnotationStats({
 export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     isMarkdownModalOpen: false,
-    owningOrganizationDisplayName: null,
+    owningOrganizationName: null,
   };
 
   setAnnotationName = (newName: string) => {
@@ -265,7 +265,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   async fetchData(): Promise<void> {
     const organization = await getOrganization(this.props.dataset.owningOrganization);
     this.setState({
-      owningOrganizationDisplayName: organization.name,
+      owningOrganizationName: organization.name,
     });
   }
 
@@ -478,7 +478,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const { activeUser, dataset } = this.props;
     const owningOrganization = dataset.owningOrganization;
     if (activeUser?.organization === owningOrganization) return;
-    return <OwningOrganizationRow organizationId={this.state.owningOrganizationDisplayName} />;
+    return <OwningOrganizationRow organizationId={this.state.owningOrganizationName} />;
   };
 
   maybePrintOwnerAndContributors() {

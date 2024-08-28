@@ -1866,13 +1866,13 @@ export async function deleteOrganization(organizationId: string): Promise<void> 
 
 export async function updateOrganization(
   organizationId: string,
-  displayName: string,
+  name: string,
   newUserMailingList: string,
 ): Promise<APIOrganization> {
   return Request.sendJSONReceiveJSON(`/api/organizations/${organizationId}`, {
     method: "PATCH",
     data: {
-      displayName,
+      name,
       newUserMailingList,
     },
   });

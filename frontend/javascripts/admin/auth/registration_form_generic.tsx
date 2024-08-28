@@ -99,7 +99,7 @@ function RegistrationFormGeneric(props: Props) {
           style={{
             display: "none",
           }}
-          name="organizationDisplayName"
+          name="organizationName"
         >
           <Input type="text" />
         </FormItem>
@@ -121,7 +121,7 @@ function RegistrationFormGeneric(props: Props) {
     organizationIdToCreate || (targetOrganization != null ? targetOrganization.id : null) || "";
   const defaultValues: Record<string, any> = {
     organization: targetOrganizationId,
-    organizationDisplayName: targetOrganizationId,
+    organizationName: targetOrganizationId,
   };
 
   if (inviteToken) {

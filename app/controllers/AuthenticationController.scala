@@ -604,7 +604,7 @@ class AuthenticationController @Inject()(
                     _ <- initialDataService.insertLocalDataStoreIfEnabled()
                     organization <- organizationService.createOrganization(
                       Option(signUpData.organization).filter(_.trim.nonEmpty),
-                      signUpData.organizationDisplayName) ?~> "organization.create.failed"
+                      signUpData.organizationName) ?~> "organization.create.failed"
                     user <- userService.insert(
                       organization._id,
                       email,
@@ -725,7 +725,7 @@ trait AuthForms {
 
   // Sign up
   case class SignUpData(organization: String,
-                        organizationDisplayName: String,
+                        organizationName: String,
                         email: String,
                         firstName: String,
                         lastName: String,
@@ -736,7 +736,7 @@ trait AuthForms {
     Form(
       mapping(
         "organization" -> text,
-        "organizationDisplayName" -> text,
+        "organizationName" -> text,
         "email" -> email,
         "password" -> tuple(
           "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
@@ -745,12 +745,12 @@ trait AuthForms {
         "firstName" -> nonEmptyText,
         "lastName" -> nonEmptyText,
         "inviteToken" -> optional(nonEmptyText),
-      )((organization, organizationDisplayName, email, password, firstName, lastName, inviteToken) =>
-        SignUpData(organization, organizationDisplayName, email, firstName, lastName, password._1, inviteToken))(
+      )((organization, organizationName, email, password, firstName, lastName, inviteToken) =>
+        SignUpData(organization, organizationName, email, firstName, lastName, password._1, inviteToken))(
         signUpData =>
           Some(
             (signUpData.organization,
-             signUpData.organizationDisplayName,
+             signUpData.organizationName,
              signUpData.email,
              ("", ""),
              signUpData.firstName,

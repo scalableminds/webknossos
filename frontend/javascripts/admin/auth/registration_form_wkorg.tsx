@@ -42,7 +42,7 @@ function RegistrationFormWKOrg(props: Props) {
           password2: formValues.password.password1,
         },
         organization: organizationId.current,
-        organizationDisplayName: `${formValues.firstName.trim()} ${formValues.lastName.trim()} Lab`,
+        organizationName: `${formValues.firstName.trim()} ${formValues.lastName.trim()} Lab`,
       },
     });
     const [user, organization] = await loginUser({

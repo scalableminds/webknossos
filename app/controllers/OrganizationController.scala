@@ -67,7 +67,7 @@ class OrganizationController @Inject()(
   }
 
   case class OrganizationCreationParameters(organization: Option[String],
-                                            organizationDisplayName: String,
+                                            organizationName: String,
                                             ownerEmail: String)
   object OrganizationCreationParameters {
     implicit val jsonFormat: OFormat[OrganizationCreationParameters] = Json.format[OrganizationCreationParameters]
@@ -77,7 +77,7 @@ class OrganizationController @Inject()(
       for {
         _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
         owner <- multiUserDAO.findOneByEmail(request.body.ownerEmail) ?~> "user.notFound"
-        org <- organizationService.createOrganization(request.body.organization, request.body.organizationDisplayName)
+        org <- organizationService.createOrganization(request.body.organization, request.body.organizationName)
         user <- userDAO.findFirstByMultiUser(owner._id)
         _ <- userService.joinOrganization(user,
                                           org._id,
@@ -152,12 +152,12 @@ class OrganizationController @Inject()(
 
   def update(organizationId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(organizationUpdateReads) {
-      case (displayName, newUserMailingList) =>
+      case (name, newUserMailingList) =>
         for {
           organization <- organizationDAO
             .findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
           _ <- bool2Fox(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- organizationDAO.updateFields(organization._id, displayName, newUserMailingList)
+          _ <- organizationDAO.updateFields(organization._id, name, newUserMailingList)
           updated <- organizationDAO.findOne(organization._id)
           organizationJson <- organizationService.publicWrites(updated)
         } yield Ok(organizationJson)
@@ -189,7 +189,7 @@ class OrganizationController @Inject()(
     }
 
   private val organizationUpdateReads =
-    ((__ \ "displayName").read[String] and
+    ((__ \ "name").read[String] and
       (__ \ "newUserMailingList").read[String]).tupled
 
   def sendExtendPricingPlanEmail(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

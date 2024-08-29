@@ -178,6 +178,7 @@ export function* sendRequestToServer(
   const { version, type } = yield* select((state) =>
     selectTracing(state, saveQueueType, tracingId),
   );
+  const annotationId = yield* select((state) => state.tracing.annotationId);
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   let versionIncrement;
   [compactedSaveQueue, versionIncrement] = addVersionNumbers(compactedSaveQueue, version);
@@ -191,7 +192,8 @@ export function* sendRequestToServer(
       const startTime = Date.now();
       yield* call(
         sendRequestWithToken,
-        `${tracingStoreUrl}/tracings/${type}/${tracingId}/update?token=`,
+
+        `${tracingStoreUrl}/tracings/annotation/${annotationId}/update?token=`,
         {
           method: "POST",
           data: compactedSaveQueue,

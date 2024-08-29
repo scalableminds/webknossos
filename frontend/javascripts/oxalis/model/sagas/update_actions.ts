@@ -78,6 +78,13 @@ export type UpdateAction =
   | UpdateMappingNameUpdateAction
   | SplitAgglomerateUpdateAction
   | MergeAgglomerateUpdateAction;
+
+export type UpdateActionWithTracingId = UpdateAction & {
+  value: UpdateAction["value"] & {
+    actionTracingId: string;
+  };
+};
+
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {
   name: "createTracing";
@@ -107,6 +114,8 @@ type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
 
 type AsServerAction<A extends { value: any }> = ReturnType<AddServerValuesFn<A>>;
 
+// When the server delivers update actions (e.g., when requesting the version history
+// of an annotation), ServerUpdateActions are sent which include some additional information.
 export type ServerUpdateAction = AsServerAction<
   | UpdateAction
   // These two actions are never sent by the frontend and, therefore, don't exist in the UpdateAction type
@@ -260,7 +269,7 @@ export function updateSkeletonTracing(
   zoomLevel: number,
 ) {
   return {
-    name: "updateTracing",
+    name: "updateSkeletonTracing",
     value: {
       activeNode: tracing.activeNodeId,
       editPosition,
@@ -411,7 +420,7 @@ export function removeFallbackLayer() {
 }
 export function updateTdCamera() {
   return {
-    name: "updateTdCamera",
+    name: "updateTdCameraSkeleton",
     value: {},
   } as const;
 }

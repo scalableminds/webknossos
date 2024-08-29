@@ -18,6 +18,7 @@ import {
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import Date from "libs/date";
 import * as Utils from "libs/utils";
+import { UpdateActionWithTracingId } from "../sagas/update_actions";
 
 // These update actions are not idempotent. Having them
 // twice in the save queue causes a corruption of the current annotation.
@@ -164,7 +165,16 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
           transactionGroupIndex,
           timestamp: Date.now(),
           authorId: activeUser.id,
-          actions,
+          actions: actions.map(
+            (innerAction) =>
+              ({
+                ...innerAction,
+                value: {
+                  ...innerAction.value,
+                  actionTracingId: action.tracingId,
+                },
+              }) as UpdateActionWithTracingId,
+          ),
           stats,
           // Redux Action Log context for debugging purposes.
           info: actionLogInfo,

@@ -133,7 +133,7 @@ class AiModelController @Inject()(
         jobCommand = JobCommand.train_model
         commandArgs = Json.obj(
           "training_annotations" -> Json.toJson(trainingAnnotations),
-          "organization" -> organization._id,
+          "organization_name" -> organization._id,
           "model_id" -> modelId,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml
         )
@@ -171,7 +171,7 @@ class AiModelController @Inject()(
         jobCommand = JobCommand.infer_with_model
         boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
-          "organization" -> organization._id,
+          "organization_name" -> organization._id,
           "dataset_name" -> dataset.name,
           "color_layer_name" -> request.body.colorLayerName,
           "bounding_box" -> boundingBox.toLiteral,

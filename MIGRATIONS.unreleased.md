@@ -12,4 +12,4 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions:
 - [119-add-metadata-to-folders-and-datasets.sql](conf/evolutions/119-add-metadata-to-folders-and-datasets.sql)
-- [120-remove-old-organiation-id.sql](conf/evolutions/120-remove-old-organiation-id.sql)
+- [120-remove-old-organization-id.sql](conf/evolutions/120-remove-old-organization-id.sql)

@@ -686,7 +686,7 @@ CREATE TABLE webknossos.analyticsEvents(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   sessionId BIGINT NOT NULL,
   eventType VARCHAR(512) NOT NULL,
-  eventProperties JSONB NOT NULL, -- TODO migrate user json from old to new organization id
+  eventProperties JSONB NOT NULL,
   _user CHAR(24) NOT NULL,
   _organization VARCHAR(256) NOT NULL,
   isOrganizationAdmin BOOLEAN NOT NULL,

@@ -16,6 +16,7 @@
 
 # v7: support changes to v8
 GET      /v7/datasets                                                         controllers.LegacyApiController.listDatasetsV7(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
+->       /v7/                                                                 webknossos.latest.Routes
 
 # v6: support changes to v7
 GET      /v6/datasets                                                         controllers.LegacyApiController.listDatasetsV6(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationName: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[String], folderId: Option[String], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])

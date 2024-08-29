@@ -162,8 +162,7 @@ jobs:
             .circleci/not-on-master.sh docker-compose run base yarn typecheck
       - run:
           name: Start webknossos, datastore and tracingstore
-          background: true
-          command: docker-compose up webknossos && docker-compose up webknossos-datastore && docker-compose up webknossos-tracingstore
+          command: docker-compose up -d webknossos && docker-compose up -d webknossos-datastore && docker-compose up -d webknossos-tracingstore
 
       - run:
           name: Run webknossos smoke test

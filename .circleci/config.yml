@@ -55,11 +55,6 @@ jobs:
       - run:
           name: Assert unique evolution numbers
           command: docker-compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
-      # - restore_cache:
-      #     name: Restore webpack cache
-      #     keys:
-      #       - webpack-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
-      #       - webpack-cache-{{ checksum ".circleci/cache_version" }}-master
       - run:
           name: Assert schema.sql and evolutions are equal
           command: |
@@ -110,12 +105,6 @@ jobs:
           key: yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
           paths:
             - "~/.cache/yarn"
-
-      # - save_cache:
-      #     name: Save webpack cache
-      #     key: webpack-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
-      #     paths:
-      #       - "node_modules/.cache/webpack"
 
       - run:
           name: Build webknossos docker image

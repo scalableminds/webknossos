@@ -9,7 +9,6 @@ import {
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { Dropdown, Modal, MenuProps, Tree } from "antd";
 import Toast from "libs/toast";
-import { DragObjectWithType } from "react-dnd";
 import { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
@@ -89,6 +88,7 @@ export function FolderTreeSidebar({
       const doesEventReferToTreeUi = event.nativeEvent.target.closest(".ant-tree") != null;
       if (keys.length > 0 && doesEventReferToTreeUi) {
         context.setActiveFolderId(keys[0] as string);
+        context.setSelectedDatasets([]);
       }
     },
     [context],
@@ -296,9 +296,9 @@ export function useDatasetDrop(
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
   const [collectedProps, drop] = useDrop<
-    DragObjectWithType & {
+    Partial<{
       datasetName: string;
-    },
+    }>,
     void,
     {
       canDrop: boolean;
@@ -306,7 +306,7 @@ export function useDatasetDrop(
     }
   >({
     accept: DraggableDatasetType,
-    drop: (item: DragObjectWithType & { datasetName: string }) => {
+    drop: (item: Partial<{ datasetName: string }>) => {
       if (selectedDatasets.length > 1) {
         if (selectedDatasets.every((ds) => ds.folderId === folderId)) {
           Toast.warning(

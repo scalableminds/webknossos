@@ -8,7 +8,6 @@ import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
 import models.annotation._
-import models.organization.{OrganizationDAO, OrganizationService}
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
@@ -24,9 +23,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 userService: UserService,
                                 taskDAO: TaskDAO,
                                 annotationService: AnnotationService,
-                                organizationService: OrganizationService,
                                 projectDAO: ProjectDAO,
-                                organizationDAO: OrganizationDAO,
                                 timeSpanDAO: TimeSpanDAO,
                                 defaultMails: DefaultMails,
                                 conf: WkConf,

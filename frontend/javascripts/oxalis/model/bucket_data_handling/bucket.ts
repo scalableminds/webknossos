@@ -30,18 +30,6 @@ export type BucketDataArray =
   | Uint32Array
   | Float32Array
   | BigUint64Array;
-export const bucketDebuggingFlags = {
-  // For visualizing buckets which are passed to the GPU
-  visualizeBucketsOnGPU: false,
-  // For visualizing buckets which are prefetched
-  visualizePrefetchedBuckets: false,
-  // For enforcing fallback rendering. enforcedZoomDiff == 2, means
-  // that buckets of currentZoomStep + 2 are rendered.
-  enforcedZoomDiff: undefined,
-};
-// Exposing this variable allows debugging on deployed systems
-// @ts-ignore
-window.bucketDebuggingFlags = bucketDebuggingFlags;
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
 

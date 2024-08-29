@@ -38,7 +38,7 @@ import Toast from "libs/toast";
 import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
-import { MenuItemType } from "antd/lib/menu/hooks/useItems";
+import { MenuItemType } from "antd/es/menu/interface";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";

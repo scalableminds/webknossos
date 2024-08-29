@@ -682,7 +682,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           return (
             <>
               <div>
-                <UserOutlined />
+                <UserOutlined className="icon-margin-right" />
                 {ownerName}
               </div>
               <div className="flex-container">

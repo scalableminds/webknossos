@@ -406,9 +406,7 @@ test("NML serializer should produce correct NMLs", (t) => {
     BUILD_INFO,
     false,
   );
-  t.snapshot(serializedNml, {
-    id: "nml",
-  });
+  t.snapshot(serializedNml);
 });
 test("NML serializer should produce correct NMLs with additional coordinates", (t) => {
   let adaptedState = update(initialState, {
@@ -451,9 +449,7 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
     BUILD_INFO,
     false,
   );
-  t.snapshot(serializedNml, {
-    id: "nml-with-additional-coordinates",
-  });
+  t.snapshot(serializedNml);
 });
 
 test("NML serializer should produce correct NMLs with userDefinedProperties for trees", async (t) => {
@@ -557,9 +553,7 @@ test("NML serializer should escape special characters and multilines", (t) => {
       "Hello&quot;a&apos;b&lt;c&gt;d&amp;e&quot;f&apos;g&lt;h&gt;i&amp;j&#xa;with&#xa;new&#xa;lines",
     ) > -1,
   );
-  t.snapshot(serializedNml, {
-    id: "nml-special-chars",
-  });
+  t.snapshot(serializedNml);
 });
 test("Serialized nml should be correctly named", async (t) => {
   t.is(getNmlName(initialState), "Test Dataset__5b1fd1cb97000027049c67ec__sboy__tionId.nml");

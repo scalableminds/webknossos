@@ -26,5 +26,6 @@ class DataStoreModule extends AbstractModule {
     bind(classOf[AdHocMeshServiceHolder]).asEagerSingleton()
     bind(classOf[ApplicationHealthService]).asEagerSingleton()
     bind(classOf[DatasetErrorLoggingService]).asEagerSingleton()
+    bind(classOf[MeshFileService]).asEagerSingleton()
   }
 }

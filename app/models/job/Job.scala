@@ -53,37 +53,42 @@ case class Job(
 
   private def argAsStringOpt(key: String) = (commandArgs \ key).toOption.flatMap(_.asOpt[String])
 
-  def resultLink(organizationName: String): Option[String] =
+  def resultLink(organizationId: String): Option[String] =
     if (effectiveState != JobState.SUCCESS) None
     else {
       command match {
         case JobCommand.convert_to_wkw | JobCommand.compute_mesh_file =>
           datasetName.map { dsName =>
-            s"/datasets/$organizationName/$dsName/view"
+            s"/datasets/$organizationId/$dsName/view"
           }
         case JobCommand.export_tiff | JobCommand.render_animation =>
           Some(s"/api/jobs/${this._id}/export")
         case JobCommand.infer_nuclei | JobCommand.infer_neurons | JobCommand.materialize_volume_annotation |
             JobCommand.infer_with_model | JobCommand.infer_mitochondria | JobCommand.align_sections =>
           returnValue.map { resultDatasetName =>
-            s"/datasets/$organizationName/$resultDatasetName/view"
+            s"/datasets/$organizationId/$resultDatasetName/view"
           }
         case _ => None
       }
     }
 
-  def resultLinkPublic(organizationName: String, webknossosPublicUrl: String): Option[String] =
+  def resultLinkPublic(organizationId: String, webknossosPublicUrl: String): Option[String] =
     for {
-      resultLink <- resultLink(organizationName)
+      resultLink <- resultLink(organizationId)
       resultLinkPublic = if (resultLink.startsWith("/")) s"$webknossosPublicUrl$resultLink"
       else s"$resultLink"
     } yield resultLinkPublic
 
-  def resultLinkSlackFormatted(organizationName: String, webknossosPublicUrl: String): Option[String] =
-    for {
-      resultLink <- resultLinkPublic(organizationName, webknossosPublicUrl)
+  def resultLinkSlackFormatted(organizationId: String, webknossosPublicUrl: String): String =
+    (for {
+      resultLink <- resultLinkPublic(organizationId, webknossosPublicUrl)
       resultLinkFormatted = s" <$resultLink|Result>"
-    } yield resultLinkFormatted
+    } yield resultLinkFormatted).getOrElse("")
+
+  def workflowLinkSlackFormatted(webknossosPublicUrl: String): String =
+    _voxelyticsWorkflowHash.map { hash =>
+      s" <$webknossosPublicUrl/workflows/$hash|Workflow Report>"
+    }.getOrElse("")
 }
 
 class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -205,13 +210,13 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def organizationIdForJobId(jobId: ObjectId): Fox[ObjectId] =
+  def organizationIdForJobId(jobId: ObjectId): Fox[String] =
     for {
       r <- run(q"""SELECT u._organization
            FROM webknossos.users u
            JOIN webknossos.jobs j ON j._owner = u._id
            WHERE j._id = $jobId
-           """.as[ObjectId])
+           """.as[String])
       firstRow <- r.headOption
     } yield firstRow
 

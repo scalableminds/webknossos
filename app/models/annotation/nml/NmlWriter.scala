@@ -22,7 +22,7 @@ import scala.concurrent.ExecutionContext
 
 case class NmlParameters(
     datasetName: String,
-    organizationName: String,
+    organizationId: String,
     description: Option[String],
     wkUrl: String,
     voxelSize: Option[VoxelSize],
@@ -45,7 +45,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                   annotation: Option[Annotation],
                   scale: Option[VoxelSize],
                   volumeFilename: Option[String],
-                  organizationName: String,
+                  organizationId: String,
                   wkUrl: String,
                   datasetName: String,
                   annotationOwner: Option[User],
@@ -63,7 +63,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
                                          annotation,
                                          scale,
                                          volumeFilename,
-                                         organizationName,
+                                         organizationId,
                                          wkUrl,
                                          datasetName,
                                          annotationOwner,
@@ -79,7 +79,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
       annotation: Option[Annotation],
       voxelSize: Option[VoxelSize],
       volumeFilename: Option[String],
-      organizationName: String,
+      organizationId: String,
       wkUrl: String,
       datasetName: String,
       annotationOwner: Option[User],
@@ -97,7 +97,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           parameters <- extractTracingParameters(skeletonLayers,
                                                  volumeLayers,
                                                  annotation: Option[Annotation],
-                                                 organizationName,
+                                                 organizationId,
                                                  wkUrl,
                                                  datasetName,
                                                  voxelSize)
@@ -124,7 +124,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
   private def extractTracingParameters(skeletonLayers: List[FetchedAnnotationLayer],
                                        volumeLayers: List[FetchedAnnotationLayer],
                                        annotation: Option[Annotation],
-                                       organizationName: String,
+                                       organizationId: String,
                                        wkUrl: String,
                                        datasetName: String,
                                        voxelSize: Option[VoxelSize]): Fox[NmlParameters] =
@@ -134,7 +134,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         case Left(s) =>
           NmlParameters(
             datasetName,
-            organizationName,
+            organizationId,
             annotation.map(_.description),
             wkUrl,
             voxelSize,
@@ -151,7 +151,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         case Right(v) =>
           NmlParameters(
             datasetName,
-            organizationName,
+            organizationId,
             annotation.map(_.description),
             wkUrl,
             voxelSize,
@@ -181,7 +181,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
     Xml.withinElementSync("parameters") {
       Xml.withinElementSync("experiment") {
         writer.writeAttribute("name", parameters.datasetName)
-        writer.writeAttribute("organization", parameters.organizationName)
+        writer.writeAttribute("organization", parameters.organizationId)
         parameters.description.foreach(writer.writeAttribute("description", _))
         writer.writeAttribute("wkUrl", parameters.wkUrl)
       }

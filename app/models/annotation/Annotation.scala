@@ -82,7 +82,7 @@ case class AnnotationCompactInfo(id: ObjectId,
                                  othersMayEdit: Boolean,
                                  teamIds: Seq[ObjectId],
                                  teamNames: Seq[String],
-                                 teamOrganizationIds: Seq[ObjectId],
+                                 teamOrganizationIds: Seq[String],
                                  modified: Instant,
                                  tags: Set[String],
                                  state: AnnotationState.Value = Active,
@@ -90,7 +90,7 @@ case class AnnotationCompactInfo(id: ObjectId,
                                  dataSetName: String,
                                  visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
                                  tracingTime: Option[Long] = None,
-                                 organizationName: String,
+                                 organization: String,
                                  tracingIds: Seq[String],
                                  annotationLayerNames: Seq[String],
                                  annotationLayerTypes: Seq[String],
@@ -335,7 +335,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val othersMayEdit = <<[Boolean]
     val teamIds = parseArrayLiteral(<<[String]).map(ObjectId(_))
     val teamNames = parseArrayLiteral(<<[String])
-    val teamOrganizationIds = parseArrayLiteral(<<[String]).map(ObjectId(_))
+    val teamOrganizationIds = parseArrayLiteral(<<[String])
     val modified = <<[Instant]
     val tags = parseArrayLiteral(<<[String]).toSet
     val state = AnnotationState.fromString(<<[String]).getOrElse(AnnotationState.Active)
@@ -344,7 +344,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     val typ = AnnotationType.fromString(<<[String]).getOrElse(AnnotationType.Explorational)
     val visibility = AnnotationVisibility.fromString(<<[String]).getOrElse(AnnotationVisibility.Internal)
     val tracingTime = Option(<<[Long])
-    val organizationName = <<[String]
+    val organizationId = <<[String]
     val tracingIds = parseArrayLiteral(<<[String])
     val annotationLayerNames = parseArrayLiteral(<<[String])
     val annotationLayerTypes = parseArrayLiteral(<<[String])
@@ -354,7 +354,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     // format: off
     AnnotationCompactInfo(id, typ, name,description,ownerId,ownerFirstName,ownerLastName, othersMayEdit,teamIds,
       teamNames,teamOrganizationIds,modified,tags,state,isLockedByOwner,dataSetName,visibility,tracingTime,
-      organizationName,tracingIds,annotationLayerNames,annotationLayerTypes,annotationLayerStatistics
+      organizationId,tracingIds,annotationLayerNames,annotationLayerTypes,annotationLayerStatistics
     )
     // format: on
   }
@@ -408,7 +408,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                     a.typ,
                     a.visibility,
                     a.tracingtime,
-                    o.name,
+                    o._id,
                     ARRAY_REMOVE(ARRAY_AGG(al.tracingid), null) AS tracing_ids,
                     ARRAY_REMOVE(ARRAY_AGG(al.name), null) AS tracing_names,
                     ARRAY_REMOVE(ARRAY_AGG(al.typ :: varchar), null) AS tracing_typs,
@@ -425,7 +425,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                     a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
                     u.firstname, u.lastname,
                     teams_agg.team_ids, teams_agg.team_names, teams_agg.team_organization_ids,
-                    d.name, o.name
+                    d.name, o._id
                   ORDER BY a._id DESC
                   LIMIT $limit
                   OFFSET ${pageNumber * limit}"""
@@ -570,7 +570,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       count <- countList.headOption
     } yield count
 
-  def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
+  def countAllForOrganization(organizationId: String): Fox[Int] =
     for {
       countList <- run(q"""SELECT COUNT(*)
                            FROM $existingCollectionName a

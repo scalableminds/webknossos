@@ -1,8 +1,7 @@
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";
 import sinon from "sinon";
-import type { TestInterface } from "ava";
-import anyTest from "ava";
+import anyTest, { TestFn } from "ava";
 import "test/mocks/lz4";
 
 mockRequire("oxalis/model/sagas/root_saga", function* () {
@@ -14,9 +13,10 @@ const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/
 const TemporalBucketManager = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/temporal_bucket_manager",
 ).default;
-// Ava's recommendation for Flow types
-// https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
-const test: TestInterface<{
+
+// Ava's recommendation for Typescript types
+// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
+const test = anyTest as TestFn<{
   cube: {
     isSegmentation: boolean;
     pushQueue: any;
@@ -24,7 +24,8 @@ const test: TestInterface<{
     triggerBucketDataChanged: () => void;
   };
   manager: typeof TemporalBucketManager;
-}> = anyTest as any;
+}>;
+
 test.beforeEach((t) => {
   const pullQueue = {
     add: sinon.stub(),

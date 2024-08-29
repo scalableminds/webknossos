@@ -13,6 +13,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Added
 - WEBKNOSSOS now automatically searches in subfolder / sub-collection identifiers for valid datasets in case a provided link to a remote dataset does not directly point to a dataset. [#7912](https://github.com/scalableminds/webknossos/pull/7912)
 - Added the option to move a bounding box via dragging while pressing ctrl / meta. [#7892](https://github.com/scalableminds/webknossos/pull/7892)
+- Added the option to add metadata entries to datasets and folders. The metadata can be viewed and edited in the dashboard in the right details tab.[#7886](https://github.com/scalableminds/webknossos/pull/7886)
 - Added route `/import?url=<url_to_datasource>` to automatically import and view remote datasets. [#7844](https://github.com/scalableminds/webknossos/pull/7844)
 - Added that newly created, modified and clicked on bounding boxes are now highlighted and scrolled into view, while the bounding box tool is active. [#7935](https://github.com/scalableminds/webknossos/pull/7935)
 - The configured unit in the dataset upload view is now passed to the convert_to_wkw worker job. [#7970](https://github.com/scalableminds/webknossos/pull/7970)
@@ -26,30 +27,42 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - In the proofreading mode, you can enable/disable that only the active segment and the hovered segment are rendered. [#7654](https://github.com/scalableminds/webknossos/pull/7654)
 - Upgraded s3 client for improved performance when loading remote datasets. [#7936](https://github.com/scalableminds/webknossos/pull/7936)
 - The AI-based Quick Select can now be run on multiple sections at once. This can be configured in the tool settings. Also, the underlying model now uses Segment Anything 2. [#7965](https://github.com/scalableminds/webknossos/pull/7965)
+- The AI-based Quick Select can now be triggered with a single click. Drawing a rectangle is still supported. [#7993](https://github.com/scalableminds/webknossos/pull/7993)
 - To improve performance, only the visible bounding boxes are rendered in the bounding box tab (so-called virtualization). [#7974](https://github.com/scalableminds/webknossos/pull/7974)
 - Added support for reading zstd-compressed zarr2 datasets [#7964](https://github.com/scalableminds/webknossos/pull/7964)
+- Added the option to resume an unfinished upload event after browser restarts. [#7981](https://github.com/scalableminds/webknossos/pull/7981)
 - The alignment job is in a separate tab of the "AI Tools" now. The "Align Sections" AI job now supports including manually created matches between adjacent section given as skeletons. [#7967](https://github.com/scalableminds/webknossos/pull/7967)  
 - Added `api.tracing.createNode(position, options)`` to the front-end API. [#7998](https://github.com/scalableminds/webknossos/pull/7998)
 - Added a feature to register all segments for a given bounding box at once via the context menu of the bounding box. [#7979](https://github.com/scalableminds/webknossos/pull/7979)
+- Added links in the workflow report for skipped tasks to the corresponding workflow view. [#8006](https://github.com/scalableminds/webknossos/pull/8006)
+- Upgraded backend dependencies for improved performance and stability, including a memory leak fix for FossilDB. [#8014](https://github.com/scalableminds/webknossos/pull/8014)
 
 ### Changed
 - Replaced skeleton tab component with antd's `<Tree />`component. Added support for selecting tree ranges with SHIFT. [#7819](https://github.com/scalableminds/webknossos/pull/7819) 
 - The warning about a mismatch between the scale of a pre-computed mesh and the dataset scale's factor now also considers all supported mags of the active segmentation layer. This reduces the false posive rate regarding this warning. [#7921](https://github.com/scalableminds/webknossos/pull/7921/)
 - It is no longer allowed to edit annotations of other organizations, even if they are set to public and to others-may-edit. [#7923](https://github.com/scalableminds/webknossos/pull/7923)
 - When proofreading segmentations, the user can now interact with super-voxels directly in the data viewports. Additionally, proofreading is significantly faster because the segmentation data doesn't have to be re-downloaded after each merge/split operation. [#7654](https://github.com/scalableminds/webknossos/pull/7654)
+- Changed internal data model changing an organization's name to id and its displayName to name. The previously existing id was removed. [#7386](https://github.com/scalableminds/webknossos/pull/7386)
 - Because of the way our models are trained, AI analysis and training is disabled for 2D and ND datasets, as well as for color layers with data type uInt24. [#7957](https://github.com/scalableminds/webknossos/pull/7957)
 - The overall performance was improved (especially for the segments tab). [#7958](https://github.com/scalableminds/webknossos/pull/7958)
 - The performance for the skeleton tab was improved. [#7989](https://github.com/scalableminds/webknossos/pull/7989)
+- Upgraded ant icons to version 5.4. [#8007](https://github.com/scalableminds/webknossos/pull/8007)
+- Increased maximum depth for ai-based quick select from 5 to 16. [#8021](https://github.com/scalableminds/webknossos/pull/8021)
+- Zarr-streaming now uses the new unit-aware voxel size. This means that [wk-libs client v0.14.25 or newer](https://github.com/scalableminds/webknossos-libs/releases) is needed for dataset zarr streaming. [#8012](https://github.com/scalableminds/webknossos/pull/8012)
+- Updated React to version 17. [#7765](https://github.com/scalableminds/webknossos/pull/7765)
 
 ### Fixed
 - Fixed a bug that allowed the default newly created bounding box to appear outside the dataset. In case the whole bounding box would be outside it is created regardless. [#7892](https://github.com/scalableminds/webknossos/pull/7892)
 - Fixed a rare bug that could cause hanging dataset uploads. [#7932](https://github.com/scalableminds/webknossos/pull/7932)
+- Fixed that comments of the active tree were not scrolled into view in some cases when switching to the comments tab. [8022](https://github.com/scalableminds/webknossos/pull/8022)
 - Fixed that trashcan icons to remove layers during remote dataset upload were floating above the navbar. [#7954](https://github.com/scalableminds/webknossos/pull/7954)
 - Fixed that the flood-filling action was available in the context menu although an editable mapping is active. Additionally volume related actions were removed from the context menu if only a skeleton layer is visible. [#7975](https://github.com/scalableminds/webknossos/pull/7975)
 - Fixed that activating the skeleton tab would always change the active position to the active node. [#7958](https://github.com/scalableminds/webknossos/pull/7958)
 - Fixed that skeleton groups couldn't be collapsed or expanded in locked annotations. [#7988](https://github.com/scalableminds/webknossos/pull/7988)
+- Fixed that the dashboard didn't notify the user about new datasets in the table. [#8025](https://github.com/scalableminds/webknossos/pull/8025)
 - Fixed that registering segments for a bounding box did only work if the segmentation had mag 1. [#8009](https://github.com/scalableminds/webknossos/pull/8009)
 - Fixed uploading datasets in neuroglancer precomputed and n5 data format. [#8008](https://github.com/scalableminds/webknossos/pull/8008)
+- Various fixes for composing datasets with landmarks. Note that the interpretation of correspondence points was inverted for thin plate splines. [#7992](https://github.com/scalableminds/webknossos/pull/7992)
 
 ### Removed
 

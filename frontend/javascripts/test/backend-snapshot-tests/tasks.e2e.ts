@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { resetDatabase, replaceVolatileValues, writeTypeCheckingFile } from "test/enzyme/e2e-setup";
+import { resetDatabase, replaceVolatileValues, writeTypeCheckingFile } from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
 test.before("Reset database", async () => {
@@ -12,9 +12,7 @@ test("getTasks()", async (t) => {
   writeTypeCheckingFile(allTasks, "task", "APITask", {
     isArray: true,
   });
-  t.snapshot(allTasks, {
-    id: "tasks-getTasks",
-  });
+  t.snapshot(allTasks);
   const complexQueriedTasks = await api.getTasks({
     taskType: "570b9f4c2a7c0e4c008da6ee",
   });
@@ -23,28 +21,20 @@ test("getTasks()", async (t) => {
     complexQueriedTasks.map((task) => task.id).sort(),
     ["58135c192faeb34c0081c058", "581367a82faeb37a008a5352"].sort(),
   );
-  t.snapshot(complexQueriedTasks, {
-    id: "tasks-getTasks-complex-query",
-  });
+  t.snapshot(complexQueriedTasks);
 });
 test("peekNextTasks()", async (t) => {
   const peekedTasks = await api.peekNextTasks();
-  t.snapshot(peekedTasks, {
-    id: "tasks-peekNextTasks",
-  });
+  t.snapshot(peekedTasks);
 });
 test("getTask()", async (t) => {
   const task = await api.getTask("58135c192faeb34c0081c058");
-  t.snapshot(task, {
-    id: "tasks-getTask",
-  });
+  t.snapshot(task);
 });
 test("getAnnotationsForTask()", async (t) => {
   const annotations = await api.getAnnotationsForTask("581367a82faeb37a008a5352");
   t.is(annotations.length, 1);
-  t.snapshot(annotations, {
-    id: "tasks-getAnnotationsForTask",
-  });
+  t.snapshot(annotations);
 });
 test.serial("updateTask()", async (t) => {
   const taskBase = await api.getTask("58135c192faeb34c0081c058");
@@ -64,9 +54,7 @@ test.serial("updateTask()", async (t) => {
   // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | number | string[] | API... Remove this comment to see the full error message
   const updatedTask = await api.updateTask(task.id, newTask);
   t.deepEqual(updatedTask.status.pending, newTask.pendingInstances);
-  t.snapshot(updatedTask, {
-    id: "tasks-updatedTask",
-  });
+  t.snapshot(updatedTask);
   // Reset task to original state
   // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'string | number | string[] | API... Remove this comment to see the full error message
   const revertedTask = await api.updateTask(task.id, task);
@@ -105,9 +93,7 @@ test.serial("createTasks() and deleteTask()", async (t) => {
 
   if (createdTaskWrapper.success != null) {
     const createdTask = createdTaskWrapper.success;
-    t.snapshot(replaceVolatileValues(createdTask), {
-      id: "task-createTasks",
-    });
+    t.snapshot(replaceVolatileValues(createdTask));
     await api.deleteTask(createdTask.id);
   } else {
     t.fail("Task creation failed.");
@@ -123,9 +109,7 @@ test.serial("requestTask()", async (t) => {
   const createdTaskWrapper = createdTaskWrappers[0];
   const newTaskAnnotation = await api.requestTask();
   writeTypeCheckingFile(newTaskAnnotation, "annotation-with-task", "APIAnnotationWithTask");
-  t.snapshot(replaceVolatileValues(newTaskAnnotation), {
-    id: "task-requestTask",
-  });
+  t.snapshot(replaceVolatileValues(newTaskAnnotation));
 
   if (createdTaskWrapper.success != null) {
     await api.deleteTask(createdTaskWrapper.success.id);

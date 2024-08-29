@@ -48,6 +48,7 @@ export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappin
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
+export type ComputeQuickSelectForPointAction = ReturnType<typeof computeQuickSelectForPointAction>;
 export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
 export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
@@ -95,6 +96,7 @@ export type VolumeTracingAction =
   | SetMappingIsLockedAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
+  | ComputeQuickSelectForPointAction
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
@@ -401,6 +403,16 @@ export const computeQuickSelectForRectAction = (
     type: "COMPUTE_QUICK_SELECT_FOR_RECT",
     startPosition,
     endPosition,
+    quickSelectGeometry,
+  }) as const;
+
+export const computeQuickSelectForPointAction = (
+  position: Vector3,
+  quickSelectGeometry: QuickSelectGeometry,
+) =>
+  ({
+    type: "COMPUTE_QUICK_SELECT_FOR_POINT",
+    position,
     quickSelectGeometry,
   }) as const;
 

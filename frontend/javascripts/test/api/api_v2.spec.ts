@@ -109,17 +109,17 @@ test("User Api: setConfiguration should set and get a user configuration value",
   api.user.setConfiguration("moveValue", MOVE_VALUE);
   t.is(api.user.getConfiguration("moveValue"), MOVE_VALUE);
 });
-test.serial.cb("Utils Api: sleep should sleep", (t) => {
+test.serial("Utils Api: sleep should sleep", async (t) => {
   const api = t.context.api;
   let bool = false;
-  api.utils.sleep(200).then(() => {
+  const startTime = Date.now();
+  const sleepPromise = api.utils.sleep(200).then(() => {
     bool = true;
   });
   t.false(bool);
-  setTimeout(() => {
-    t.true(bool);
-    t.end();
-  }, 400);
+  await sleepPromise;
+  t.true(Date.now() - startTime >= 200);
+  t.true(bool);
 });
 test("registerKeyHandler should register a key handler and return a handler to unregister it again", (t) => {
   const api = t.context.api;

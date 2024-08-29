@@ -104,7 +104,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
       refetchOnWindowFocus: false,
     },
   );
-  const owningOrganizationDisplayName = owningOrganization?.displayName;
+  const owningOrganizationName = owningOrganization?.name;
 
   const renderOrganization = () => {
     if (activeUser?.organization === selectedDataset.owningOrganization) return;
@@ -112,9 +112,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
       <table>
         <tbody>
           <OwningOrganizationRow
-            organizationName={
-              owningOrganizationDisplayName != null ? owningOrganizationDisplayName : ""
-            }
+            organizationId={owningOrganizationName != null ? owningOrganizationName : ""}
           />
         </tbody>
       </table>

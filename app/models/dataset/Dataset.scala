@@ -1,6 +1,6 @@
 package models.dataset
 
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
@@ -38,7 +38,7 @@ import scala.concurrent.ExecutionContext
 
 case class Dataset(_id: ObjectId,
                    _dataStore: String,
-                   _organization: ObjectId,
+                   _organization: String,
                    _publication: Option[ObjectId],
                    _uploader: Option[ObjectId],
                    _folder: ObjectId,
@@ -124,7 +124,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       Dataset(
         ObjectId(r._Id),
         r._Datastore.trim,
-        ObjectId(r._Organization),
+        r._Organization.trim,
         r._Publication.map(ObjectId(_)),
         r._Uploader.map(ObjectId(_)),
         ObjectId(r._Folder),
@@ -201,7 +201,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   def findAllWithSearch(isActiveOpt: Option[Boolean],
                         isUnreported: Option[Boolean],
-                        organizationIdOpt: Option[ObjectId],
+                        organizationIdOpt: Option[String],
                         folderIdOpt: Option[ObjectId],
                         uploaderIdOpt: Option[ObjectId],
                         searchQuery: Option[String],
@@ -224,7 +224,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   def findAllCompactWithSearch(isActiveOpt: Option[Boolean] = None,
                                isUnreported: Option[Boolean] = None,
-                               organizationIdOpt: Option[ObjectId] = None,
+                               organizationIdOpt: Option[String] = None,
                                folderIdOpt: Option[ObjectId] = None,
                                uploaderIdOpt: Option[ObjectId] = None,
                                searchQuery: Option[String] = None,
@@ -249,7 +249,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             SELECT
               d._id,
               d.name,
-              o.name,
+              o._id,
               d._folder,
               d.isUsable,
               d.displayName,
@@ -331,7 +331,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   private def buildSelectionPredicates(isActiveOpt: Option[Boolean],
                                        isUnreported: Option[Boolean],
-                                       organizationIdOpt: Option[ObjectId],
+                                       organizationIdOpt: Option[String],
                                        folderIdOpt: Option[ObjectId],
                                        uploaderIdOpt: Option[ObjectId],
                                        searchQuery: Option[String],
@@ -394,21 +394,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       firstRow <- r.headOption
     } yield firstRow == 0
 
-  def countAllForOrganization(organizationId: ObjectId): Fox[Int] =
+  def countAllForOrganization(organizationId: String): Fox[Int] =
     for {
       rList <- run(q"SELECT COUNT(*) FROM $existingCollectionName WHERE _organization = $organizationId".as[Int])
       r <- rList.headOption
     } yield r
 
-  def findOneByNameAndOrganizationName(name: String, organizationName: String)(
-      implicit ctx: DBAccessContext): Fox[Dataset] =
-    for {
-      organization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext) ?~> ("organization.notFound " + organizationName)
-      dataset <- findOneByNameAndOrganization(name, organization._id)
-    } yield dataset
-
-  def findOneByNameAndOrganization(name: String, organizationId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[Dataset] =
+  def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
@@ -419,7 +411,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       parsed <- parseFirst(r, s"$organizationId/$name")
     } yield parsed
 
-  def findAllByNamesAndOrganization(names: List[String], organizationId: ObjectId)(
+  def findAllByNamesAndOrganization(names: List[String], organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[Dataset]] =
     for {
       accessQuery <- readAccessQuery
@@ -443,7 +435,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   /* Disambiguation method for legacy URLs and NMLs: if the user has access to multiple datasets of the same name, use the oldest.
    * This is reasonable, because the legacy URL/NML was likely created before this ambiguity became possible */
-  def getOrganizationForDataset(datasetName: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+  def getOrganizationIdForDataset(datasetName: String)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(q"""SELECT _organization
@@ -452,8 +444,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                        AND $accessQuery
                        ORDER BY created ASC""".as[String])
       r <- rList.headOption.toFox
-      parsed <- ObjectId.fromString(r)
-    } yield parsed
+    } yield r
 
   def getNameById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
     for {
@@ -462,8 +453,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- rList.headOption.toFox
     } yield r
 
-  def getSharingTokenByName(name: String, organizationId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[Option[String]] =
+  def getSharingTokenByName(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Option[String]] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(q"""SELECT sharingToken
@@ -474,7 +464,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- rList.headOption.toFox
     } yield r
 
-  def updateSharingTokenByName(name: String, organizationId: ObjectId, sharingToken: Option[String])(
+  def updateSharingTokenByName(name: String, organizationId: String, sharingToken: Option[String])(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       accessQuery <- readAccessQuery
@@ -586,13 +576,13 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     } yield ()
   }
 
-  def updateDataSourceByNameAndOrganizationName(id: ObjectId,
-                                                dataStoreName: String,
-                                                inboxSourceHash: Int,
-                                                source: InboxDataSource,
-                                                isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateDataSourceByNameAndOrganization(id: ObjectId,
+                                            dataStoreName: String,
+                                            inboxSourceHash: Int,
+                                            source: InboxDataSource,
+                                            isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOneByName(source.id.team)
+      organization <- organizationDAO.findOne(source.id.team)
       defaultViewConfiguration: Option[JsValue] = source.defaultViewConfiguration.map(Json.toJson(_))
       _ <- run(q"""UPDATE webknossos.datasets
                    SET

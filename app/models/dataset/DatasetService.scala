@@ -62,15 +62,15 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(!name.startsWith(".")) ?~> "dataset.layer.name.invalid.startsWithDot"
     } yield ()
 
-  def assertNewDatasetName(name: String, organizationId: ObjectId): Fox[Unit] =
+  def assertNewDatasetName(name: String, organizationId: String): Fox[Unit] =
     datasetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
-  def createPreliminaryDataset(datasetName: String, organizationName: String, dataStore: DataStore): Fox[Dataset] = {
-    val unreportedDatasource = UnusableDataSource(DataSourceId(datasetName, organizationName), notYetUploadedStatus)
-    createDataset(dataStore, organizationName, unreportedDatasource)
+  def createPreliminaryDataset(datasetName: String, organizationId: String, dataStore: DataStore): Fox[Dataset] = {
+    val unreportedDatasource = UnusableDataSource(DataSourceId(datasetName, organizationId), notYetUploadedStatus)
+    createDataset(dataStore, organizationId, unreportedDatasource)
   }
 
-  def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: ObjectId)(
+  def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     datasetDAO.findAllCompactWithSearch(
       uploaderIdOpt = Some(userId),
@@ -101,7 +101,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
     for {
-      organization <- organizationDAO.findOneByName(owningOrganization)
+      organization <- organizationDAO.findOne(owningOrganization)
       organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
       dataset = Dataset(
         newId,
@@ -137,7 +137,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     Fox
       .serialCombined(groupedByOrga) { orgaTuple: (String, List[InboxDataSource]) =>
         organizationDAO
-          .findOneByName(orgaTuple._1)
+          .findOne(orgaTuple._1)
           .futureBox
           .flatMap {
             case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
@@ -184,11 +184,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     else
       for {
         _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-        _ <- datasetDAO.updateDataSourceByNameAndOrganizationName(foundDataset._id,
-                                                                  dataStore.name,
-                                                                  dataSource.hashCode,
-                                                                  dataSource,
-                                                                  dataSource.isUsable)
+        _ <- datasetDAO.updateDataSourceByNameAndOrganization(foundDataset._id,
+                                                              dataStore.name,
+                                                              dataSource.hashCode,
+                                                              dataSource,
+                                                              dataSource.isUsable)
       } yield foundDataset._id
 
   private def updateDataSourceDifferentDataStore(
@@ -205,11 +205,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         )
         for {
           _ <- thumbnailCachingService.removeFromCache(foundDataset._id)
-          _ <- datasetDAO.updateDataSourceByNameAndOrganizationName(foundDataset._id,
-                                                                    dataStore.name,
-                                                                    dataSource.hashCode,
-                                                                    dataSource,
-                                                                    dataSource.isUsable)(GlobalAccessContext)
+          _ <- datasetDAO.updateDataSourceByNameAndOrganization(foundDataset._id,
+                                                                dataStore.name,
+                                                                dataSource.hashCode,
+                                                                dataSource,
+                                                                dataSource.isUsable)(GlobalAccessContext)
         } yield Some(foundDataset._id)
       } else {
         logger.info(
@@ -236,7 +236,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def deactivateUnreportedDataSources(existingDatasetIds: List[ObjectId], dataStore: DataStore): Fox[Unit] =
     datasetDAO.deactivateUnreported(existingDatasetIds, dataStore.name, unreportedStatus, inactiveStatusList)
 
-  def getSharingToken(datasetName: String, organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
+  def getSharingToken(datasetName: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[String] = {
 
     def createAndSaveSharingToken(datasetName: String)(implicit ctx: DBAccessContext): Fox[String] =
       for {
@@ -256,7 +256,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
       }
       dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-      dataSourceId = DataSourceId(dataset.name, organization.name)
+      dataSourceId = DataSourceId(dataset.name, organization._id)
     } yield {
       if (dataset.isUsable)
         for {
@@ -361,7 +361,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "name" -> dataset.name,
         "dataSource" -> dataSource,
         "dataStore" -> dataStoreJs,
-        "owningOrganization" -> organization.name,
+        "owningOrganization" -> organization._id,
         "allowedTeams" -> teamsJs,
         "allowedTeamsCumulative" -> teamsCumulativeJs,
         "isActive" -> dataset.isUsable,

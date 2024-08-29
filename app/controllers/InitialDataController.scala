@@ -69,7 +69,6 @@ Samplecountry
   private val organizationTeamId = ObjectId.generate
   private val defaultOrganization =
     Organization(
-      ObjectId.generate,
       "sample_organization",
       additionalInformation,
       "/assets/images/logo.svg",
@@ -214,7 +213,7 @@ Samplecountry
 
   private def insertOrganization(): Fox[Unit] =
     organizationDAO
-      .findOneByName(defaultOrganization.name)
+      .findOne(defaultOrganization._id)
       .futureBox
       .flatMap {
         case Full(_) => Fox.successful(())
@@ -324,5 +323,5 @@ Samplecountry
     } else Fox.successful(())
 
   private def createOrganizationDirectory(): Fox[Unit] =
-    organizationService.createOrganizationDirectory(defaultOrganization.name, RpcTokenHolder.webknossosToken) ?~> "organization.directoryCreation.failed"
+    organizationService.createOrganizationDirectory(defaultOrganization._id, RpcTokenHolder.webknossosToken) ?~> "organization.directoryCreation.failed"
 }

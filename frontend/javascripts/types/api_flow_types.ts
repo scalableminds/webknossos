@@ -601,7 +601,6 @@ export type APIAvailableTasksReport = {
 export type APIOrganizationCompact = {
   readonly id: string;
   readonly name: string;
-  readonly displayName: string;
 };
 export type APIOrganization = APIOrganizationCompact & {
   readonly additionalInformation: string;
@@ -703,7 +702,7 @@ export type APIJob = {
   readonly tracingId: string | null | undefined;
   readonly annotationId: string | null | undefined;
   readonly annotationType: string | null | undefined;
-  readonly organizationName: string | null | undefined;
+  readonly organizationId: string | null | undefined;
   readonly boundingBox: string | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;

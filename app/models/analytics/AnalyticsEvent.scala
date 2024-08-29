@@ -49,12 +49,7 @@ object AnalyticsEventJsonUserProperties {
     override def reads(json: JsValue): JsResult[AnalyticsEventJsonUserProperties] = {
       val organizationIdLookup = (json \ "organization_id").orElse(json \ "organizationId")
       for {
-        organizationIdObj <- organizationIdLookup.validateOpt[ObjectId]
-        organizationIdStr <- organizationIdLookup.validateOpt[String]
-        isOrganizationIdDefined = (organizationIdObj.isDefined || organizationIdStr.isDefined)
-        organizationId = organizationIdObj.map(_.id).getOrElse(organizationIdStr.getOrElse(""))
-        _ <- if (isOrganizationIdDefined) JsSuccess(())
-        else JsError("organization_id or organizationId must be defined")
+        organizationId <- organizationIdLookup.validate[String]
         isOrganizationAdmin <- (json \ "is_organization_admin").orElse(json \ "isOrganizationAdmin").validate[Boolean]
         isSuperUser <- (json \ "is_superuser").orElse(json \ "isSuperUser").validate[Boolean]
         webknossosUri <- (json \ "webknossos_uri").orElse(json \ "webknossosUri").validate[String]

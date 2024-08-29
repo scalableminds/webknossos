@@ -2,11 +2,7 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { applyState } from "oxalis/model_initialization";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getSkeletonTracing,
-  getActiveNode,
-  enforceSkeletonTracing,
-} from "oxalis/model/accessors/skeletontracing_accessor";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { OxalisState, MappingType, MeshInformation } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
@@ -246,12 +242,8 @@ class UrlManager {
           rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotation(state.flycam)),
         }
       : {};
-    const activeNodeOptional = getSkeletonTracing(state.tracing)
-      .chain((skeletonTracing) => getActiveNode(skeletonTracing))
-      .map((node) => ({
-        activeNode: node.id,
-      }))
-      .getOrElse({});
+    const activeNode = state.tracing.skeleton?.activeNodeId;
+    const activeNodeOptional = activeNode != null ? { activeNode } : {};
     const stateByLayer: UrlStateByLayer = {};
 
     for (const layerName of Object.keys(state.temporaryConfiguration.activeMappingByLayer)) {

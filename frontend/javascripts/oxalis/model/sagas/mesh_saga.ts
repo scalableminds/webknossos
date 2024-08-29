@@ -6,6 +6,7 @@ import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeBufferGeometries } from "libs/BufferGeometryUtils";
 import Deferred from "libs/async/deferred";
+import { ActionPattern } from "redux-saga/effects";
 
 import Store from "oxalis/store";
 import {
@@ -57,7 +58,6 @@ import { Model } from "oxalis/singletons";
 import ThreeDMap from "libs/ThreeDMap";
 import exportToStl from "libs/stl_exporter";
 import getSceneController from "oxalis/controller/scene_controller_provider";
-import window from "libs/window";
 import {
   getActiveSegmentationTracing,
   getEditableMappingForVolumeTracingId,
@@ -81,6 +81,7 @@ import Zip from "libs/zipjs_wrapper";
 import { FlycamAction } from "../actions/flycam_actions";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
 import { BufferGeometryWithInfo } from "oxalis/controller/segment_mesh_controller";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 
 export const NO_LOD_MESH_INDEX = -1;
 const MAX_RETRY_COUNT = 5;
@@ -104,10 +105,9 @@ const MESH_CHUNK_THROTTLE_LIMIT = 50;
 // Maps from additional coordinates, layerName and segmentId to a ThreeDMap that stores for each chunk
 // (at x, y, z) position whether the mesh chunk was loaded.
 const adhocMeshesMapByLayer: Record<string, Record<string, Map<number, ThreeDMap<boolean>>>> = {};
+
 function marchingCubeSizeInTargetMag(): Vector3 {
-  return (window as any).__marchingCubeSizeInTargetMag != null
-    ? (window as any).__marchingCubeSizeInTargetMag
-    : [64, 64, 64];
+  return WkDevFlags.meshing.marchingCubeSizeInTargetMag;
 }
 const modifiedCells: Set<number> = new Set();
 export function isMeshSTL(buffer: ArrayBuffer): boolean {
@@ -293,10 +293,10 @@ function* loadAdHocMesh(
       removeExistingMesh,
     ),
     cancel: take(
-      (action: Action) =>
+      ((action: Action) =>
         action.type === "REMOVE_MESH" &&
         action.segmentId === segmentId &&
-        action.layerName === layer.name,
+        action.layerName === layer.name) as ActionPattern,
     ),
   });
   removeMeshWithoutVoxels(segmentId, layer.name, seedAdditionalCoordinates);
@@ -351,7 +351,7 @@ function* loadFullAdHocMesh(
   if (meshExtraInfo.useDataStore != null) {
     // ... except if the caller specified whether to use the data store ...
     useDataStore = meshExtraInfo.useDataStore;
-  } else if (volumeTracing?.mappingIsEditable) {
+  } else if (volumeTracing?.hasEditableMapping) {
     // ... or if an editable mapping is active.
     useDataStore = false;
   }
@@ -360,7 +360,7 @@ function* loadFullAdHocMesh(
   // and that don't have editable mappings.
   const usePositionsFromSegmentIndex =
     volumeTracing?.hasSegmentIndex &&
-    !volumeTracing.mappingIsEditable &&
+    !volumeTracing.hasEditableMapping &&
     visibleSegmentationLayer?.tracingId != null;
   let positionsToRequest = usePositionsFromSegmentIndex
     ? yield* getChunkPositionsFromSegmentIndex(
@@ -754,10 +754,10 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
       mergeChunks,
     ),
     cancel: take(
-      (otherAction: Action) =>
+      ((otherAction: Action) =>
         otherAction.type === "REMOVE_MESH" &&
         otherAction.segmentId === segmentId &&
-        otherAction.layerName === layer.name,
+        otherAction.layerName === layer.name) as ActionPattern,
     ),
   });
 }

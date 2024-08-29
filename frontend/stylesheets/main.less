@@ -1,16 +1,7 @@
 @import "../../node_modules/@fortawesome/fontawesome-free/css/all.min.css";
-@import "../../node_modules/react-sortable-tree/style.css";
 @import "../../node_modules/flexlayout-react/style/light.css";
 @import "../../node_modules/antd/dist/reset.css";
-
-// To update the antd iconfont:
-// * Go to https://ant.design/
-// * Find the iconfont in the network tab (host: at.alicdn.com)
-// * Download .eot,.woff,.ttf,.svg to ./iconfont
-// * Rename to iconfont.*
-
-// Path is relative to the node_modules/antd/lib/style/themes/
-@icon-url: "../../../../../frontend/stylesheets/iconfont/iconfont";
+@import "../../node_modules/react-tooltip/dist/react-tooltip.css";
 
 @import "_variables.less";
 @import "_utils.less";
@@ -24,7 +15,6 @@
 @import "_help.less";
 @import "antd_overwrites.less";
 @import "olvy_overwrites.less";
-@import "react_sortable_tree_overwrites.less";
 @import "_admin.less";
 @import "flex_layout_overwrites.less";
 @import "_drawings.less";
@@ -437,10 +427,6 @@ button.narrow {
 .voxelytics-view {
   min-width: 1300px;
 
-  .tasks-header {
-    border-bottom: 1px solid var(--ant-color-border);
-  }
-
   .task-panel {
     height: calc(100vh - 100px);
     position: relative;
@@ -669,4 +655,23 @@ button.narrow {
   .ant-row {
     margin-left: 20px;
   }
+}
+
+.global-progress-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background-color: var(--color-wk-blue);
+  transition: width 0.3s ease-in-out;
+}
+
+.hidden-global-progress-bar {
+  width: 0 !important;
+  transition: none !important;
+}
+
+.max-z-index {
+  z-index: 10000000000;
 }

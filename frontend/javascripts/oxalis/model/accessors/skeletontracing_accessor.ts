@@ -16,6 +16,7 @@ import type {
   TreeGroupTypeFlat,
   Node,
   OxalisState,
+  NumberLike,
 } from "oxalis/store";
 import {
   findGroup,
@@ -35,6 +36,7 @@ export function getSkeletonTracing(tracing: Tracing): Maybe<SkeletonTracing> {
 
   return Maybe.Nothing();
 }
+
 export function getSkeletonDescriptor(
   annotation: APIAnnotation,
 ): AnnotationLayerDescriptor | null | undefined {
@@ -48,6 +50,7 @@ export function getSkeletonDescriptor(
 
   return null;
 }
+
 export function getNullableSkeletonTracing(
   tracings: Array<ServerTracing> | null | undefined,
 ): ServerSkeletonTracing | null | undefined {
@@ -60,27 +63,34 @@ export function getNullableSkeletonTracing(
 
   return null;
 }
+
 export function enforceSkeletonTracing(tracing: Tracing): SkeletonTracing {
   return getSkeletonTracing(tracing).get();
 }
-export function getActiveNode(skeletonTracing: SkeletonTracing): Maybe<Node> {
+
+export function getActiveNode(skeletonTracing: SkeletonTracing): Node | null {
   const { activeTreeId, activeNodeId } = skeletonTracing;
 
   if (activeTreeId != null && activeNodeId != null) {
-    return Maybe.Just(skeletonTracing.trees[activeTreeId].nodes.getOrThrow(activeNodeId));
+    return skeletonTracing.trees[activeTreeId].nodes.getOrThrow(activeNodeId);
   }
 
-  return Maybe.Nothing();
+  return null;
 }
-export function getActiveTree(skeletonTracing: SkeletonTracing): Maybe<Tree> {
+
+export function getActiveTree(skeletonTracing: SkeletonTracing | null | undefined): Tree | null {
+  if (skeletonTracing == null) {
+    return null;
+  }
   const { activeTreeId } = skeletonTracing;
 
   if (activeTreeId != null) {
-    return Maybe.Just(skeletonTracing.trees[activeTreeId]);
+    return skeletonTracing.trees[activeTreeId];
   }
 
-  return Maybe.Nothing();
+  return null;
 }
+
 export function getActiveTreeGroup(skeletonTracing: SkeletonTracing): Maybe<TreeGroup> {
   const { activeGroupId } = skeletonTracing;
 
@@ -91,6 +101,7 @@ export function getActiveTreeGroup(skeletonTracing: SkeletonTracing): Maybe<Tree
 
   return Maybe.Nothing();
 }
+
 export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tree): Maybe<Node> {
   const { activeNodeId } = skeletonTracing;
 
@@ -100,12 +111,15 @@ export function getActiveNodeFromTree(skeletonTracing: SkeletonTracing, tree: Tr
 
   return Maybe.Nothing();
 }
+
 export function findTreeByNodeId(trees: TreeMap, nodeId: number): Tree | undefined {
   return _.values(trees).find((tree) => tree.nodes.has(nodeId));
 }
+
 export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefined {
   return _.values(trees).find((tree: Tree) => tree.name === treeName);
 }
+
 export function getTreesWithType(
   skeletonTracing: SkeletonTracing,
   type?: TreeType | null | undefined,
@@ -114,6 +128,7 @@ export function getTreesWithType(
     ? _.pickBy(skeletonTracing.trees, (tree) => tree.type === type)
     : skeletonTracing.trees;
 }
+
 export function getTree(
   skeletonTracing: SkeletonTracing,
   treeId?: number | null | undefined,
@@ -133,6 +148,7 @@ export function getTree(
 
   return Maybe.Nothing();
 }
+
 export function getNodeAndTree(
   skeletonTracing: SkeletonTracing,
   nodeId?: number | null | undefined,
@@ -175,6 +191,7 @@ export function getNodeAndTree(
 
   return Maybe.Nothing();
 }
+
 export function getNodeAndTreeOrNull(
   skeletonTracing: SkeletonTracing,
   nodeId?: number | null | undefined,
@@ -237,15 +254,14 @@ export function getMaxNodeIdInTree(tree: Tree): Maybe<number> {
 
   return maxNodeId === -Infinity ? Maybe.Nothing() : Maybe.Just(maxNodeId);
 }
-export function getMaxNodeId(skeletonTracing: SkeletonTracing): Maybe<number> {
+export function getMaxNodeId(skeletonTracing: SkeletonTracing): number | null {
   const maxNodeId = _.reduce(
     skeletonTracing.trees,
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Tree' is not assignable to param... Remove this comment to see the full error message
-    (r, tree) => Math.max(r, getMaxNodeId(tree).getOrElse(-Infinity)),
+    (r, tree) => Math.max(r, getMaxNodeIdInTree(tree).getOrElse(-Infinity)),
     -Infinity,
   );
 
-  return maxNodeId === -Infinity ? Maybe.Nothing() : Maybe.Just(maxNodeId);
+  return maxNodeId === -Infinity ? null : maxNodeId;
 }
 export function getBranchPoints(tracing: Tracing): Maybe<Array<BranchPoint>> {
   return getSkeletonTracing(tracing).map((skeletonTracing) =>
@@ -270,7 +286,7 @@ export function getTreeGroupsMap(
 }
 // This is the pattern for the automatically assigned names for agglomerate skeletons
 export const getTreeNameForAgglomerateSkeleton = (
-  agglomerateId: number,
+  agglomerateId: NumberLike,
   mappingName: string,
 ): string => `agglomerate ${agglomerateId} (${mappingName})`;
 

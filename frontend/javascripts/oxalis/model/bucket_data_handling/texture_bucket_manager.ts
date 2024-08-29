@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import { DataBucket, bucketDebuggingFlags } from "oxalis/model/bucket_data_handling/bucket";
+import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import {
   getBucketCapacity,
@@ -13,8 +13,9 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import constants from "oxalis/constants";
 import window from "libs/window";
 import type { ElementClass } from "types/api_flow_types";
-import { CuckooTableVec5 } from "./cuckoo_table_vec5";
+import { CuckooTableVec5 } from "libs/cuckoo/cuckoo_table_vec5";
 import app from "app";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 
 // A TextureBucketManager instance is responsible for making buckets available
 // to the GPU.
@@ -126,7 +127,7 @@ export default class TextureBucketManager {
       return;
     }
 
-    if (bucketDebuggingFlags.visualizeBucketsOnGPU) {
+    if (WkDevFlags.bucketDebugging.visualizeBucketsOnGPU) {
       bucket.unvisualize();
     }
 
@@ -209,7 +210,7 @@ export default class TextureBucketManager {
         continue;
       }
 
-      if (bucketDebuggingFlags.visualizeBucketsOnGPU) {
+      if (WkDevFlags.bucketDebugging.visualizeBucketsOnGPU) {
         bucket.visualize();
       }
 

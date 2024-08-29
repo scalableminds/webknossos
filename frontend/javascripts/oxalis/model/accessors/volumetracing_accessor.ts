@@ -45,9 +45,13 @@ import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
 import { ResolutionInfo } from "../helpers/resolution_info";
 import messages from "messages";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import {
+  MISSING_GROUP_ID,
+  getGroupByIdWithSubgroups,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { Store } from "oxalis/singletons";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
+import _ from "lodash";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -396,9 +400,10 @@ function _getSelectedIds(state: OxalisState): [
   const currentSegmentIds = new Set(currentVisibleSegments?.segments?.map((segment) => segment.id));
   let cleanedSelectedGroup = null;
   if (group != null) {
-    const availableGroups = currentVisibleSegments.segmentGroups
-      .map((group) => group.groupId)
-      .concat(MISSING_GROUP_ID);
+    const availableGroups = currentVisibleSegments.segmentGroups.flatMap((group) =>
+      getGroupByIdWithSubgroups(currentVisibleSegments.segmentGroups, group.groupId),
+    );
+    availableGroups.push(MISSING_GROUP_ID);
     cleanedSelectedGroup = availableGroups.includes(group) ? group : null;
   }
   const selectedIds = {
@@ -522,9 +527,9 @@ export const getRenderableResolutionForActiveSegmentationTracing = reuseInstance
 
 export function getMappingInfoForVolumeTracing(
   state: OxalisState,
-  tracingId: string | null | undefined,
+  tracingIdOrLayerName: string | null | undefined,
 ): ActiveMappingInfo {
-  return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
+  return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingIdOrLayerName);
 }
 
 function getVolumeTracingForLayerName(
@@ -554,7 +559,7 @@ export function hasEditableMapping(
 
   if (volumeTracing == null) return false;
 
-  return !!volumeTracing.mappingIsEditable;
+  return !!volumeTracing.hasEditableMapping;
 }
 
 export function isMappingLocked(
@@ -782,6 +787,52 @@ export function getMeshInfoForSegment(
   if (meshesForAddCoords == null) return null;
   return meshesForAddCoords[segmentId];
 }
+
+export function needsLocalHdf5Mapping(state: OxalisState, layerName: string) {
+  const volumeTracing = getVolumeTracingByLayerName(state.tracing, layerName);
+  if (volumeTracing == null) {
+    return false;
+  }
+
+  return (
+    // An annotation that has an editable mapping is likely proofread a lot.
+    // Switching between tools should not require a reload which is why
+    // needsLocalHdf5Mapping() will always return true in that case.
+    volumeTracing.hasEditableMapping ||
+    state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD
+  );
+}
+
+export type BucketRetrievalSource =
+  | ["REQUESTED-WITHOUT-MAPPING", "NO-LOCAL-MAPPING-APPLIED"]
+  | ["REQUESTED-WITHOUT-MAPPING", "LOCAL-MAPPING-APPLIED", string]
+  | ["REQUESTED-WITH-MAPPING", string];
+
+export const getBucketRetrievalSourceFn =
+  // The function that is passed to memoize will only be executed once
+  // per layerName. This is important since the function uses reuseInstanceOnEquality
+  // to create a function that ensures that identical BucketRetrievalSource tuples will be re-used between
+  // consecutive calls.
+  _.memoize((layerName: string) =>
+    reuseInstanceOnEquality((state: OxalisState): BucketRetrievalSource => {
+      const usesLocalHdf5Mapping = needsLocalHdf5Mapping(state, layerName);
+
+      const mappingInfo = getMappingInfoForVolumeTracing(state, layerName);
+
+      if (
+        mappingInfo.mappingStatus === MappingStatusEnum.DISABLED ||
+        mappingInfo.mappingName == null
+      ) {
+        return ["REQUESTED-WITHOUT-MAPPING", "NO-LOCAL-MAPPING-APPLIED"];
+      }
+
+      if (usesLocalHdf5Mapping || mappingInfo.mappingType === "JSON") {
+        return ["REQUESTED-WITHOUT-MAPPING", "LOCAL-MAPPING-APPLIED", mappingInfo.mappingName];
+      }
+
+      return ["REQUESTED-WITH-MAPPING", mappingInfo.mappingName];
+    }),
+  );
 
 export function getReadableNameOfVolumeLayer(
   layer: APIDataLayer,

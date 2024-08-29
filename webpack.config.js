@@ -38,7 +38,6 @@ module.exports = function (env = {}) {
     new CopyPlugin({
       patterns: [
         // Use copy plugin to copy *.wasm to output folder.
-        { from: "node_modules/onnxruntime-web/dist/*.wasm", to: "[name][ext]" },
         { from: "public/models/*.*", to: "models/[name][ext]" },
         // For CSP, see https://gildas-lormeau.github.io/zip.js/api/interfaces/Configuration.html#workerScripts
         { from: "node_modules/@zip.js/zip.js/dist/z-worker.js", to: "[name][ext]" },
@@ -170,11 +169,6 @@ module.exports = function (env = {}) {
         // Use a consistent name for the vendors chunk
         name: "vendors~main",
         cacheGroups: {
-          onnx: {
-            test: /[\\/]node_modules[\\/](onnx.*)[\\/]/,
-            chunks: "all",
-            name: "vendors~onnx",
-          },
           html2canvas: {
             test: /[\\/]node_modules[\\/](html2canvas)[\\/]/,
             chunks: "all",

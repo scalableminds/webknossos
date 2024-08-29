@@ -179,6 +179,17 @@ function UiReducer(state: OxalisState, action: Action): OxalisState {
         unmappedSegmentId: null,
       });
     }
+    case "SET_ACTIVE_USER_BOUNDING_BOX_ID": {
+      return updateKey(state, "uiInformation", {
+        activeUserBoundingBoxId: action.id,
+      });
+    }
+
+    case "SET_GLOBAL_PROGRESS": {
+      return updateKey(state, "uiInformation", {
+        globalProgress: action.value,
+      });
+    }
 
     default:
       return state;

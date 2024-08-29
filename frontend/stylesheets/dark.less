@@ -20,6 +20,13 @@
     }
   }
 
+  // virtualized Ant <Tree> components draw a scrollbar drag handle using some div
+  // The default color values are not visible in dark mode, so we override them
+  // Remove after https://github.com/ant-design/ant-design/issues/47565 is fixed
+  .ant-tree-list-scrollbar .ant-tree-list-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.5) !important
+  }
+
   // Change the bright versions to dark, too
   .icon-sidebar-hide-left-bright {
     background-image: url(/assets/images/icon-sidebar-hide-left-dark.svg);

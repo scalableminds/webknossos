@@ -17,7 +17,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     id: job.id,
     type: job.command,
     datasetName: job.commandArgs.dataset_name,
-    organizationName: job.commandArgs.organization_name,
+    organizationId: job.commandArgs.organization_name,
     layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
     annotationLayerName: job.commandArgs.annotation_layer_name,
     boundingBox: job.commandArgs.bbox,
@@ -71,12 +71,12 @@ export async function cancelJob(jobId: string): Promise<APIJob> {
 
 export async function startConvertToWkwJob(
   datasetName: string,
-  organizationName: string,
+  organizationId: string,
   scale: Vector3,
   unit: UnitLong,
 ): Promise<APIJob> {
   return Request.receiveJSON(
-    `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}&unit=${unit}`,
+    `/api/jobs/run/convertToWkw/${organizationId}/${datasetName}?scale=${scale.toString()}&unit=${unit}`,
     {
       method: "POST",
     },
@@ -85,11 +85,11 @@ export async function startConvertToWkwJob(
 
 export async function startFindLargestSegmentIdJob(
   datasetName: string,
-  organizationName: string,
+  organizationId: string,
   layerName: string,
 ): Promise<APIJob> {
   return Request.receiveJSON(
-    `/api/jobs/run/findLargestSegmentId/${organizationName}/${datasetName}?layerName=${layerName}`,
+    `/api/jobs/run/findLargestSegmentId/${organizationId}/${datasetName}?layerName=${layerName}`,
     {
       method: "POST",
     },
@@ -98,7 +98,7 @@ export async function startFindLargestSegmentIdJob(
 
 export async function startExportTiffJob(
   datasetName: string,
-  organizationName: string,
+  organizationId: string,
   bbox: Vector6,
   layerName: string | null | undefined,
   mag: string | null | undefined,
@@ -120,7 +120,7 @@ export async function startExportTiffJob(
     params.append("annotationLayerName", annotationLayerName);
   }
   return Request.receiveJSON(
-    `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?${params}`,
+    `/api/jobs/run/exportTiff/${organizationId}/${datasetName}?${params}`,
     {
       method: "POST",
     },
@@ -128,7 +128,7 @@ export async function startExportTiffJob(
 }
 
 export function startComputeMeshFileJob(
-  organizationName: string,
+  organizationId: string,
   datasetName: string,
   layerName: string,
   mag: Vector3,
@@ -143,7 +143,7 @@ export function startComputeMeshFileJob(
   }
 
   return Request.receiveJSON(
-    `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?${params}`,
+    `/api/jobs/run/computeMeshFile/${organizationId}/${datasetName}?${params}`,
     {
       method: "POST",
     },
@@ -151,7 +151,7 @@ export function startComputeMeshFileJob(
 }
 
 export function startComputeSegmentIndexFileJob(
-  organizationName: string,
+  organizationId: string,
   datasetName: string,
   layerName: string,
 ): Promise<APIJob> {
@@ -159,7 +159,7 @@ export function startComputeSegmentIndexFileJob(
   params.append("layerName", layerName);
 
   return Request.receiveJSON(
-    `/api/jobs/run/computeSegmentIndexFile/${organizationName}/${datasetName}?${params}`,
+    `/api/jobs/run/computeSegmentIndexFile/${organizationId}/${datasetName}?${params}`,
     {
       method: "POST",
     },
@@ -167,13 +167,13 @@ export function startComputeSegmentIndexFileJob(
 }
 
 export function startNucleiInferralJob(
-  organizationName: string,
+  organizationId: string,
   datasetName: string,
   layerName: string,
   newDatasetName: string,
 ): Promise<APIJob> {
   return Request.receiveJSON(
-    `/api/jobs/run/inferNuclei/${organizationName}/${datasetName}?layerName=${layerName}&newDatasetName=${newDatasetName}`,
+    `/api/jobs/run/inferNuclei/${organizationId}/${datasetName}?layerName=${layerName}&newDatasetName=${newDatasetName}`,
     {
       method: "POST",
     },
@@ -181,21 +181,19 @@ export function startNucleiInferralJob(
 }
 
 export function startNeuronInferralJob(
-  organizationName: string,
+  organizationId: string,
   datasetName: string,
   layerName: string,
   bbox: Vector6,
-  outputSegmentationLayerName: string,
   newDatasetName: string,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,
     bbox: bbox.join(","),
-    outputSegmentationLayerName,
     newDatasetName,
   });
   return Request.receiveJSON(
-    `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?${urlParams.toString()}`,
+    `/api/jobs/run/inferNeurons/${organizationId}/${datasetName}?${urlParams.toString()}`,
     {
       method: "POST",
     },
@@ -203,12 +201,12 @@ export function startNeuronInferralJob(
 }
 
 export function startRenderAnimationJob(
-  organizationName: string,
+  organizationId: string,
   datasetName: string,
   animationOptions: RenderAnimationOptions,
 ): Promise<APIJob> {
   return Request.sendJSONReceiveJSON(
-    `/api/jobs/run/renderAnimation/${organizationName}/${datasetName}`,
+    `/api/jobs/run/renderAnimation/${organizationId}/${datasetName}`,
     {
       data: animationOptions,
     },
@@ -217,18 +215,17 @@ export function startRenderAnimationJob(
 
 function startSegmentationAnnotationDependentJob(
   jobURLPath: string,
-  organizationName: string,
+  organizationId: string,
   datasetName: string,
   fallbackLayerName: string,
   volumeLayerName: string | null | undefined,
   newDatasetName: string,
   annotationId: string,
   annotationType: APIAnnotationType,
-  outputSegmentationLayerName?: string,
   mergeSegments?: boolean,
 ): Promise<APIJob> {
   const requestURL = new URL(
-    `/api/jobs/run/${jobURLPath}/${organizationName}/${datasetName}`,
+    `/api/jobs/run/${jobURLPath}/${organizationId}/${datasetName}`,
     location.origin,
   );
   if (volumeLayerName != null) {
@@ -238,9 +235,6 @@ function startSegmentationAnnotationDependentJob(
   requestURL.searchParams.append("annotationId", annotationId);
   requestURL.searchParams.append("annotationType", annotationType);
   requestURL.searchParams.append("newDatasetName", newDatasetName);
-  if (outputSegmentationLayerName != null) {
-    requestURL.searchParams.append("outputSegmentationLayerName", outputSegmentationLayerName);
-  }
   if (mergeSegments != null) {
     requestURL.searchParams.append("mergeSegments", mergeSegments.toString());
   }
@@ -250,46 +244,42 @@ function startSegmentationAnnotationDependentJob(
 }
 
 export function startMaterializingVolumeAnnotationJob(
-  organizationName: string,
+  organizationId: string,
   datasetName: string,
   fallbackLayerName: string,
   volumeLayerName: string | null | undefined,
   newDatasetName: string,
-  outputSegmentationLayerName: string,
   annotationId: string,
   annotationType: APIAnnotationType,
   mergeSegments: boolean,
 ): Promise<APIJob> {
   return startSegmentationAnnotationDependentJob(
     "materializeVolumeAnnotation",
-    organizationName,
+    organizationId,
     datasetName,
     fallbackLayerName,
     volumeLayerName,
     newDatasetName,
     annotationId,
     annotationType,
-    outputSegmentationLayerName,
     mergeSegments,
   );
 }
 
 export function startMitochondriaInferralJob(
-  organizationName: string,
+  organizationId: string,
   datasetName: string,
   layerName: string,
   bbox: Vector6,
-  outputSegmentationLayerName: string,
   newDatasetName: string,
 ): Promise<APIJob> {
   const urlParams = new URLSearchParams({
     layerName,
     bbox: bbox.join(","),
-    outputSegmentationLayerName,
     newDatasetName,
   });
   return Request.receiveJSON(
-    `/api/jobs/run/inferMitochondria/${organizationName}/${datasetName}?${urlParams.toString()}`,
+    `/api/jobs/run/inferMitochondria/${organizationId}/${datasetName}?${urlParams.toString()}`,
     {
       method: "POST",
     },
@@ -297,17 +287,24 @@ export function startMitochondriaInferralJob(
 }
 
 export function startAlignSectionsJob(
-  organizationName: string,
+  organizationId: string,
   datasetName: string,
   layerName: string,
   newDatasetName: string,
+  annotationId?: string,
 ): Promise<APIJob> {
-  const urlParams = new URLSearchParams({
-    layerName,
-    newDatasetName,
-  });
+  const urlParams = annotationId
+    ? new URLSearchParams({
+        layerName,
+        newDatasetName,
+        annotationId,
+      })
+    : new URLSearchParams({
+        layerName,
+        newDatasetName,
+      });
   return Request.receiveJSON(
-    `/api/jobs/run/alignSections/${organizationName}/${datasetName}?${urlParams.toString()}`,
+    `/api/jobs/run/alignSections/${organizationId}/${datasetName}?${urlParams.toString()}`,
     {
       method: "POST",
     },
@@ -344,8 +341,8 @@ type RunInferenceParameters = {
   datasetName: string;
   colorLayerName: string;
   boundingBox: Vector6;
-  newSegmentationLayerName: string;
   newDatasetName: string;
+  workflowYaml?: string;
   // maskAnnotationLayerName?: string | null
 };
 

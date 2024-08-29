@@ -59,7 +59,7 @@ import { HelpModal } from "oxalis/view/help_modal";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import messages from "messages";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
-import { ItemType, MenuItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MenuClickEventHandler } from "rc-menu/lib/interface";
 import constants from "oxalis/constants";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
@@ -508,7 +508,7 @@ function NotificationIcon({
 }
 
 export const switchTo = async (org: APIOrganizationCompact) => {
-  Toast.info(`Switching to ${org.displayName || org.name}`);
+  Toast.info(`Switching to ${org.name || org.id}`);
 
   // If the user is currently at the datasets tab, the active folder is encoded
   // in the URI. Switching to another organization means that the folder id
@@ -519,7 +519,7 @@ export const switchTo = async (org: APIOrganizationCompact) => {
     window.history.replaceState({}, "", "/dashboard/datasets/");
   }
 
-  await switchToOrganization(org.name);
+  await switchToOrganization(org.id);
 };
 
 function OrganizationFilterInput({
@@ -568,20 +568,18 @@ function LoggedInAvatar({
   handleLogout: (event: React.SyntheticEvent) => void;
   navbarHeight: number;
 } & SubMenuProps) {
-  const { firstName, lastName, organization: organizationName, selectedTheme } = activeUser;
+  const { firstName, lastName, organization: organizationId, selectedTheme } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
-  const activeOrganization = usersOrganizations.find((org) => org.name === organizationName);
-  const switchableOrganizations = usersOrganizations.filter((org) => org.name !== organizationName);
-  const orgDisplayName =
-    activeOrganization != null
-      ? activeOrganization.displayName || activeOrganization.name
-      : organizationName;
+  const activeOrganization = usersOrganizations.find((org) => org.id === organizationId);
+  const switchableOrganizations = usersOrganizations.filter((org) => org.id !== organizationId);
+  const orgName =
+    activeOrganization != null ? activeOrganization.name || activeOrganization.id : organizationId;
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
 
   const filteredOrganizations = Utils.filterWithSearchQueryAND(
     switchableOrganizations,
-    ["displayName", "name"],
+    ["name", "id"],
     organizationFilter,
   );
   const onEnterOrganization = () => {
@@ -644,16 +642,14 @@ function LoggedInAvatar({
             },
             {
               key: "organization",
-              label: orgDisplayName,
+              label: orgName,
               disabled: true,
             },
             activeOrganization && Utils.isUserAdmin(activeUser)
               ? {
                   key: "manage-organization",
                   label: (
-                    <Link to={`/organizations/${activeOrganization.name}`}>
-                      Manage Organization
-                    </Link>
+                    <Link to={`/organizations/${activeOrganization.id}`}>Manage Organization</Link>
                   ),
                 }
               : null,
@@ -665,9 +661,9 @@ function LoggedInAvatar({
                   children: [
                     ...maybeOrganizationFilterInput,
                     ...filteredOrganizations.slice(0, MAX_RENDERED_ORGANIZATION).map((org) => ({
-                      key: org.name,
+                      key: org.id,
                       onClick: () => switchTo(org),
-                      label: org.displayName || org.name,
+                      label: org.name || org.id,
                     })),
                   ],
                 }
@@ -946,6 +942,7 @@ function Navbar({
         "collapsed-nav-header": collapseAllNavItems,
       })}
     >
+      <GlobalProgressBar />
       <MaintenanceBanner />
       <ConfigProvider theme={{ ...getAntdTheme("light") }}>
         <UpgradeVersionBanner />
@@ -992,6 +989,17 @@ function Navbar({
         {trailingNavItems}
       </div>
     </Header>
+  );
+}
+
+function GlobalProgressBar() {
+  const globalProgress = useSelector((state: OxalisState) => state.uiInformation.globalProgress);
+  const hide = globalProgress === 0;
+  return (
+    <div
+      className={`global-progress-bar ${hide ? "hidden-global-progress-bar" : ""}`}
+      style={{ width: `${Math.round(globalProgress * 100)}%` }}
+    />
   );
 }
 

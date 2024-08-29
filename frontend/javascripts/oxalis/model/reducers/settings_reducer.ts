@@ -222,6 +222,16 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "FINISH_MAPPING_INITIALIZATION": {
+      const { layerName } = action;
+      return updateActiveMapping(
+        state,
+        {
+          mappingStatus: MappingStatusEnum.ENABLED,
+        },
+        layerName,
+      );
+    }
     case "SET_MAPPING_ENABLED": {
       const { isMappingEnabled, layerName } = action;
 
@@ -267,10 +277,21 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
           mapping,
           mappingColors,
           mappingType,
-          mappingSize: mapping != null ? mapping.size : 0,
           hideUnmappedIds,
           mappingStatus:
             mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,
+        },
+        layerName,
+      );
+    }
+
+    case "CLEAR_MAPPING": {
+      const { layerName } = action;
+
+      return updateActiveMapping(
+        state,
+        {
+          mapping: undefined,
         },
         layerName,
       );

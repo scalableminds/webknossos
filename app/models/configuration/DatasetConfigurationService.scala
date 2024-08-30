@@ -23,9 +23,9 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
       requestedVolumeIds: List[String],
       user: User,
       datasetName: String,
-      organizationName: String)(implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
+      organizationId: String)(implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
+      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
 
       datasetViewConfiguration <- userDatasetConfigurationDAO.findOneForUserAndDataset(user._id, dataset._id)
 
@@ -36,9 +36,9 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
   def getDatasetViewConfigurationForDataset(
       requestedVolumeIds: List[String],
       datasetName: String,
-      organizationName: String)(implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
+      organizationId: String)(implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
+      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
 
       datasetViewConfiguration = getDatasetViewConfigurationFromDefaultAndAdmin(dataset)
 
@@ -52,12 +52,11 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
     defaultVC ++ adminVC
   }
 
-  def getCompleteAdminViewConfiguration(datasetName: String, organizationName: String)(
+  def getCompleteAdminViewConfiguration(datasetName: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
+      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
       datasetViewConfiguration = getDatasetViewConfigurationFromDefaultAndAdmin(dataset)
-
       datasetLayers <- datasetService.allLayersFor(dataset)
       layerConfigurations = getAllLayerAdminViewConfigForDataset(datasetLayers).view.mapValues(Json.toJson(_)).toMap
     } yield buildCompleteDatasetConfiguration(datasetViewConfiguration, layerConfigurations)

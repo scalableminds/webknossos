@@ -41,7 +41,7 @@ import classNames from "classnames";
 import type { EmptyObject } from "types/globals";
 
 type FolderItemWithName = FolderItem & { name: string };
-type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
+export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
 
 const { ThinSpace } = Unicode;
@@ -392,7 +392,7 @@ class FolderRenderer {
 class DatasetTable extends React.PureComponent<Props, State> {
   state: State = {
     sortedInfo: {
-      columnKey: useLruRank ? "" : "created",
+      columnKey: useLruRank ? undefined : "created",
       order: "descend",
     },
     prevSearchQuery: "",

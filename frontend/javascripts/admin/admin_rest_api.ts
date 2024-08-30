@@ -917,10 +917,10 @@ export async function getTracingForAnnotationType(
   // on the tracing's structure.
   tracing.typ = typ;
 
-  // @ts-ignore Remove datasetName and organizationName as these should not be used in the front-end, anymore.
+  // @ts-ignore Remove datasetName and organizationId as these should not be used in the front-end, anymore.
   delete tracing.datasetName;
   // @ts-ignore
-  delete tracing.organizationName;
+  delete tracing.organizationId;
 
   return tracing;
 }
@@ -963,11 +963,11 @@ export function hasSegmentIndexInDataStore(
   dataStoreUrl: string,
   dataSetName: string,
   dataLayerName: string,
-  organizationName: string,
+  organizationId: string,
 ) {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${organizationName}/${dataSetName}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${organizationId}/${dataSetName}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
     ),
   );
 }
@@ -1170,6 +1170,7 @@ export type DatasetUpdater = {
   isPublic?: boolean;
   tags?: string[];
   folderId?: string;
+  metadata?: APIDataset["metadata"];
 };
 
 export function updateDatasetPartial(
@@ -1243,7 +1244,7 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
 type DatasetCompositionArgs = {
   newDatasetName: string;
   targetFolderId: string;
-  organizationName: string;
+  organizationId: string;
   voxelSize: VoxelSize;
   layers: LayerLink[];
 };
@@ -1403,7 +1404,7 @@ export async function exploreRemoteDataset(
 export async function storeRemoteDataset(
   datastoreUrl: string,
   datasetName: string,
-  organizationName: string,
+  organizationId: string,
   datasource: string,
   folderId: string | null,
 ): Promise<void> {
@@ -1415,7 +1416,7 @@ export async function storeRemoteDataset(
     }
 
     return Request.sendJSONReceiveJSON(
-      `${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?${params}`,
+      `${datastoreUrl}/data/datasets/${organizationId}/${datasetName}?${params}`,
       {
         method: "PUT",
         data: datasource,
@@ -1534,10 +1535,10 @@ export async function revokeDatasetSharingToken(datasetId: APIDatasetId): Promis
 }
 
 export async function getOrganizationForDataset(datasetName: string): Promise<string> {
-  const { organizationName } = await Request.receiveJSON(
+  const { organizationId } = await Request.receiveJSON(
     `/api/datasets/disambiguate/${datasetName}/toNew`,
   );
-  return organizationName;
+  return organizationId;
 }
 
 export async function findDataPositionForLayer(
@@ -1804,8 +1805,8 @@ export function joinOrganization(inviteToken: string): Promise<void> {
   });
 }
 
-export async function switchToOrganization(organizationName: string): Promise<void> {
-  await Request.triggerRequest(`/api/auth/switchOrganization/${organizationName}`, {
+export async function switchToOrganization(organizationId: string): Promise<void> {
+  await Request.triggerRequest(`/api/auth/switchOrganization/${organizationId}`, {
     method: "POST",
   });
   location.reload();
@@ -1815,7 +1816,7 @@ export async function getUsersOrganizations(): Promise<Array<APIOrganizationComp
   const organizations: APIOrganizationCompact[] = await Request.receiveJSON(
     "/api/organizations?compact=true",
   );
-  const scmOrganization = organizations.find((org) => org.name === "scalable_minds");
+  const scmOrganization = organizations.find((org) => org.id === "scalable_minds");
   if (scmOrganization == null) {
     return organizations;
   }
@@ -1843,8 +1844,8 @@ export function sendInvitesForOrganization(
   });
 }
 
-export async function getOrganization(organizationName: string): Promise<APIOrganization> {
-  const organization = await Request.receiveJSON(`/api/organizations/${organizationName}`);
+export async function getOrganization(organizationId: string): Promise<APIOrganization> {
+  const organization = await Request.receiveJSON(`/api/organizations/${organizationId}`);
   return {
     ...organization,
     paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
@@ -1857,21 +1858,21 @@ export async function checkAnyOrganizationExists(): Promise<boolean> {
   return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
 }
 
-export async function deleteOrganization(organizationName: string): Promise<void> {
-  return Request.triggerRequest(`/api/organizations/${organizationName}`, {
+export async function deleteOrganization(organizationId: string): Promise<void> {
+  return Request.triggerRequest(`/api/organizations/${organizationId}`, {
     method: "DELETE",
   });
 }
 
 export async function updateOrganization(
-  organizationName: string,
-  displayName: string,
+  organizationId: string,
+  name: string,
   newUserMailingList: string,
 ): Promise<APIOrganization> {
-  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationName}`, {
+  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationId}`, {
     method: "PATCH",
     data: {
-      displayName,
+      name,
       newUserMailingList,
     },
   });
@@ -1889,7 +1890,7 @@ export async function isDatasetAccessibleBySwitching(
     );
   } else {
     return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?organizationName=${commandType.owningOrganization}&datasetName=${commandType.name}`,
+      `/api/auth/accessibleBySwitching?organizationId=${commandType.owningOrganization}&datasetName=${commandType.name}`,
       {
         showErrorToast: false,
       },

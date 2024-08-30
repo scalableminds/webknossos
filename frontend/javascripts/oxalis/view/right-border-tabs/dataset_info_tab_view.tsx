@@ -47,7 +47,7 @@ type DispatchProps = {
 };
 type Props = StateProps & DispatchProps;
 type State = {
-  owningOrganizationDisplayName: string | null;
+  owningOrganizationName: string | null;
   isMarkdownModalOpen: boolean;
 };
 const shortcuts = [
@@ -163,13 +163,13 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
   );
 }
 
-export function OwningOrganizationRow({ organizationName }: { organizationName: string | null }) {
+export function OwningOrganizationRow({ organizationId }: { organizationId: string | null }) {
   return (
     <FastTooltip title="Organization" placement="left">
       <div className="info-tab-block">
         <p className="sidebar-label">Organization</p>
         <p>
-          <Tag color="blue">{organizationName === null ? <i>loading...</i> : organizationName}</Tag>
+          <Tag color="blue">{organizationId === null ? <i>loading...</i> : organizationId}</Tag>
         </p>
       </div>
     </FastTooltip>
@@ -251,7 +251,7 @@ export function AnnotationStats({
 export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     isMarkdownModalOpen: false,
-    owningOrganizationDisplayName: null,
+    owningOrganizationName: null,
   };
 
   setAnnotationName = (newName: string) => {
@@ -265,7 +265,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   async fetchData(): Promise<void> {
     const organization = await getOrganization(this.props.dataset.owningOrganization);
     this.setState({
-      owningOrganizationDisplayName: organization.displayName,
+      owningOrganizationName: organization.name,
     });
   }
 
@@ -478,7 +478,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const { activeUser, dataset } = this.props;
     const owningOrganization = dataset.owningOrganization;
     if (activeUser?.organization === owningOrganization) return;
-    return <OwningOrganizationRow organizationName={this.state.owningOrganizationDisplayName} />;
+    return <OwningOrganizationRow organizationId={this.state.owningOrganizationName} />;
   };
 
   maybePrintOwnerAndContributors() {

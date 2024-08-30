@@ -175,7 +175,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       await createDatasetComposition(datastoreToUse.url, {
         newDatasetName,
         targetFolderId: form.getFieldValue(["targetFolderId"]),
-        organizationName: activeUser.organization,
+        organizationId: activeUser.organization,
         voxelSize: linkedDatasets.slice(-1)[0].dataSource.scale,
         layers: layersWithTransforms,
       });

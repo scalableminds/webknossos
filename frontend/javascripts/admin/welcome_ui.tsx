@@ -108,10 +108,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                 icon={<i className="icon-invite-colleagues" />}
                 onClick={() => {
                   renderIndependently((destroy) => (
-                    <InviteUsersModal
-                      organizationName={activeUser.organization}
-                      destroy={destroy}
-                    />
+                    <InviteUsersModal organizationId={activeUser.organization} destroy={destroy} />
                   ));
                 }}
               />

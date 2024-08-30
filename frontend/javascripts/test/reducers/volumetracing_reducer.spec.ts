@@ -1,7 +1,7 @@
 import "test/mocks/lz4";
 import update from "immutability-helper";
-import { getFirstVolumeTracingOrFail } from "test/helpers/apiHelpers";
-import { AnnotationToolEnum, type Vector3 } from "oxalis/constants";
+import Maybe from "data.maybe";
+import { AnnotationToolEnum, Vector3 } from "oxalis/constants";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import * as UiActions from "oxalis/model/actions/ui_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
@@ -9,8 +9,17 @@ import UiReducer from "oxalis/model/reducers/ui_reducer";
 import mockRequire from "mock-require";
 import test from "ava";
 import { initialState } from "test/fixtures/volumetracing_object";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, Tracing, VolumeTracing } from "oxalis/store";
+import { OxalisState } from "oxalis/store";
 import { getActiveMagIndexForLayer } from "oxalis/model/accessors/flycam_accessor";
+
+export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
+  if (tracing.volumes.length > 0) {
+    return Maybe.Just(tracing.volumes[0]);
+  }
+
+  throw new Error("Annotation is not of type volume!");
+}
 
 mockRequire("app", {
   currentUser: {

@@ -725,9 +725,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <>
                   Your organization has exceeded the available storage. Uploading new datasets is
                   disabled. Visit the{" "}
-                  <Link to={`/organizations/${this.props.organization.name}`}>
-                    organization page
-                  </Link>{" "}
+                  <Link to={`/organizations/${this.props.organization.id}`}>organization page</Link>{" "}
                   for details.
                 </>
               }

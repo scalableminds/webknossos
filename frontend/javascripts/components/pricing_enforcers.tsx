@@ -246,7 +246,7 @@ export function PageUnavailableForYourPlanView({
 
   const linkToOrganizationSettings =
     activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
-      <Link to={`/organizations/${activeOrganization.name}`}>
+      <Link to={`/organizations/${activeOrganization.id}`}>
         <Button>Go to Organization Settings</Button>
       </Link>
     ) : undefined;

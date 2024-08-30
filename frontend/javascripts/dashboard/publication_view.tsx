@@ -74,7 +74,7 @@ function PublicationView(props: Props) {
       (model) => model.description,
       (model) => model.title,
       (model) =>
-        model.datasets.flatMap((dataset) => [dataset.name, dataset.description, dataset.details]),
+        model.datasets.flatMap((dataset) => [dataset.name, dataset.description, dataset.metadata]),
     ],
     props.searchQuery,
   ).sort(Utils.compareBy<APIPublication>((publication) => publication.publicationDate, false));

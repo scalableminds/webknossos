@@ -177,8 +177,8 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
 
   private lazy val meshFileCache = new Hdf5FileCache(30)
 
-  def exploreMeshFiles(organizationName: String, datasetName: String, dataLayerName: String): Fox[Set[MeshFileInfo]] = {
-    val layerDir = dataBaseDir.resolve(organizationName).resolve(datasetName).resolve(dataLayerName)
+  def exploreMeshFiles(organizationId: String, datasetName: String, dataLayerName: String): Fox[Set[MeshFileInfo]] = {
+    val layerDir = dataBaseDir.resolve(organizationId).resolve(datasetName).resolve(dataLayerName)
     val meshFileNames = PathUtils
       .listFiles(layerDir.resolve(meshesDir), silent = true, PathUtils.fileExtensionFilter(hdf5FileExtension))
       .map { paths =>
@@ -217,13 +217,13 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
   }
 
   // Same as above but this variant constructs the meshFilePath itself and converts null to None
-  def mappingNameForMeshFile(organizationName: String,
+  def mappingNameForMeshFile(organizationId: String,
                              datasetName: String,
                              dataLayerName: String,
                              meshFileName: String): Option[String] = {
     val meshFilePath =
       dataBaseDir
-        .resolve(organizationName)
+        .resolve(organizationId)
         .resolve(datasetName)
         .resolve(dataLayerName)
         .resolve(meshesDir)
@@ -241,13 +241,13 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     }.toOption.getOrElse(0)
 
   def listMeshChunksForSegmentsMerged(
-      organizationName: String,
+      organizationId: String,
       datasetName: String,
       dataLayerName: String,
       meshFileName: String,
       segmentIds: Seq[Long])(implicit m: MessagesProvider): Fox[WebknossosSegmentInfo] = {
     val meshChunksForUnmappedSegments =
-      listMeshChunksForSegmentsNested(organizationName, datasetName, dataLayerName, meshFileName, segmentIds)
+      listMeshChunksForSegmentsNested(organizationId, datasetName, dataLayerName, meshFileName, segmentIds)
     for {
       _ <- bool2Fox(meshChunksForUnmappedSegments.nonEmpty) ?~> "zero chunks" ?~> Messages(
         "mesh.file.listChunks.failed",
@@ -257,14 +257,14 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     } yield chunkInfos
   }
 
-  private def listMeshChunksForSegmentsNested(organizationName: String,
+  private def listMeshChunksForSegmentsNested(organizationId: String,
                                               datasetName: String,
                                               dataLayerName: String,
                                               meshFileName: String,
                                               segmentIds: Seq[Long]): Seq[WebknossosSegmentInfo] = {
     val meshFilePath =
       dataBaseDir
-        .resolve(organizationName)
+        .resolve(organizationId)
         .resolve(datasetName)
         .resolve(dataLayerName)
         .resolve(meshesDir)
@@ -368,7 +368,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
     (neuroglancerStart, neuroglancerEnd)
   }
 
-  def readMeshChunk(organizationName: String,
+  def readMeshChunk(organizationId: String,
                     datasetName: String,
                     dataLayerName: String,
                     meshChunkDataRequests: MeshChunkDataRequestList,
@@ -380,7 +380,7 @@ class MeshFileService @Inject()(config: DataStoreConfig)(implicit ec: ExecutionC
       )(requestAndIndex => {
         val meshChunkDataRequest = requestAndIndex._1
         val meshFilePath = dataBaseDir
-          .resolve(organizationName)
+          .resolve(organizationId)
           .resolve(datasetName)
           .resolve(dataLayerName)
           .resolve(meshesDir)

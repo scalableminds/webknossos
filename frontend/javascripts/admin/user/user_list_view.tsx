@@ -349,7 +349,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
           currentUserCount={getActiveUserCount(users)}
           maxUserCountPerOrganization={activeOrganization.includedUsers}
           isOpen={isInviteModalOpen}
-          organizationName={activeUser.organization}
+          organizationId={activeUser.organization}
           handleVisibleChange={(visible) => {
             setIsInviteModalOpen(visible);
           }}

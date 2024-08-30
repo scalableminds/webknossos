@@ -142,6 +142,7 @@ export function MaintenanceBanner() {
     }
   }, [currentMaintenance, closestUpcomingMaintenance, shouldShowUpcomingMaintenanceBanner]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(pollMaintenances):
   useEffect(() => {
     // Do an initial fetch of the maintenance status so that users are notified
     // quickly in case of ongoing maintenances.

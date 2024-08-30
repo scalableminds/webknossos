@@ -13,6 +13,7 @@ import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import dummyUser from "test/fixtures/dummy_user";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
+import { omit } from "lodash";
 
 const {
   createTreeMapFromTreeArray,
@@ -67,8 +68,7 @@ test.serial(
     );
     // Reset the info field which is just for debugging purposes
     const actualSaveQueue = state.save.queue.skeleton.map((entry) => {
-      const { info, ...rest } = entry;
-      return { ...rest, info: "[]" };
+      return { ...omit(entry, "info"), info: "[]" };
     });
     // Once the updateTree update action is in the save queue, we're good.
     // This means the setTreeName action was dispatched, the diffing ran, and the change will be persisted.

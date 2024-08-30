@@ -2,7 +2,7 @@ import "test/mocks/lz4";
 import _ from "lodash";
 import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 import { sleep } from "libs/utils";
-import anyTest, { TestFn } from "ava";
+import anyTest, { type TestFn } from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import runAsync from "test/helpers/run-async";

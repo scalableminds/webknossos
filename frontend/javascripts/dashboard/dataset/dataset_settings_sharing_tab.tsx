@@ -46,6 +46,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
     setSharingToken(newSharingToken);
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetch):
   useEffect(() => {
     fetch();
   }, []);

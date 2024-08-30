@@ -108,7 +108,9 @@ jobs:
 
       - run:
           name: Build webknossos docker image
-          command: docker-compose build --pull webknossos
+          command: |
+            docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
+            DEV_CACHE=$NORMALIZED_BRANCH docker-compose build --pull webknossos
 
       - run:
           name: Build webknossos-datastore docker image

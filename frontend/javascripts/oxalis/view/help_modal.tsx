@@ -45,9 +45,7 @@ function HelpButton() {
         closable
         onClose={discardButton}
         onClick={() => setModalOpen(true)}
-      >
-        Help
-      </Alert>
+      />
       <HelpModal
         isModalOpen={isModalOpen}
         onCancel={() => setModalOpen(false)}

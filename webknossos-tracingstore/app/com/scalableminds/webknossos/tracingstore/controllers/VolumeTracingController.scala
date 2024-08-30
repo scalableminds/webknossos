@@ -6,6 +6,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
+import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.ListOfVec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
@@ -178,7 +179,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-            (data, indices) <- if (tracing.mappingIsEditable.getOrElse(false))
+            (data, indices) <- if (tracing.getHasEditableMapping)
               editableMappingService.volumeData(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
             else tracingService.data(tracingId, tracing, request.body)
           } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
@@ -213,9 +214,9 @@ class VolumeTracingController @Inject()(
             editPositionParsed <- Fox.runOptional(editPosition)(Vec3Int.fromUriLiteral)
             editRotationParsed <- Fox.runOptional(editRotation)(Vec3Double.fromUriLiteral)
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
-            remoteFallbackLayerOpt <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
+            remoteFallbackLayerOpt <- Fox.runIf(tracing.getHasEditableMapping)(
               tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId))
-            newEditableMappingId <- Fox.runIf(tracing.mappingIsEditable.contains(true))(
+            newEditableMappingId <- Fox.runIf(tracing.getHasEditableMapping)(
               editableMappingService.duplicate(tracing.mappingName, version = None, remoteFallbackLayerOpt, userToken))
             (newId, newTracing) <- tracingService.duplicate(
               tracingId,
@@ -303,7 +304,7 @@ class VolumeTracingController @Inject()(
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          (vertices, neighbors) <- if (tracing.mappingIsEditable.getOrElse(false))
+          (vertices, neighbors) <- if (tracing.getHasEditableMapping)
             editableMappingService.createAdHocMesh(tracing, tracingId, request.body, urlOrHeaderToken(token, request))
           else tracingService.createAdHocMesh(tracingId, request.body, urlOrHeaderToken(token, request))
         } yield {
@@ -345,7 +346,7 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
         for {
           tracing <- tracingService.find(tracingId)
-          _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Cannot query agglomerate skeleton for volume annotation"
+          _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Cannot query agglomerate skeleton for volume annotation"
           mappingName <- tracing.mappingName ?~> "annotation.agglomerateSkeleton.noMappingSet"
           remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
           agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(
@@ -404,7 +405,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId)
-            _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+            _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Mapping is not editable"
             remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             edges <- editableMappingService.agglomerateGraphMinCut(request.body, remoteFallbackLayer, token)
           } yield Ok(Json.toJson(edges))
@@ -418,7 +419,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId)
-            _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+            _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Mapping is not editable"
             remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
             (segmentId, edges) <- editableMappingService.agglomerateGraphNeighbors(request.body,
                                                                                    remoteFallbackLayer,
@@ -434,7 +435,7 @@ class VolumeTracingController @Inject()(
         for {
           tracing <- tracingService.find(tracingId)
           mappingName <- tracing.mappingName.toFox
-          _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+          _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Mapping is not editable"
           currentVersion <- editableMappingService.getClosestMaterializableVersionOrZero(mappingName, None)
           _ <- bool2Fox(request.body.length == 1) ?~> "Editable mapping update request must contain exactly one update group"
           updateGroup <- request.body.headOption.toFox
@@ -448,7 +449,12 @@ class VolumeTracingController @Inject()(
             urlOrHeaderToken(token, request)
           )
           _ <- remoteWebknossosClient.reportTracingUpdates(report)
-          _ <- editableMappingService.update(mappingName, updateGroup, updateGroup.version)
+          remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
+          _ <- editableMappingService.update(mappingName,
+                                             updateGroup,
+                                             updateGroup.version,
+                                             remoteFallbackLayer,
+                                             urlOrHeaderToken(token, request))
         } yield Ok
       }
     }
@@ -460,7 +466,7 @@ class VolumeTracingController @Inject()(
           for {
             tracing <- tracingService.find(tracingId)
             mappingName <- tracing.mappingName.toFox
-            _ <- bool2Fox(tracing.getMappingIsEditable) ?~> "Mapping is not editable"
+            _ <- bool2Fox(tracing.getHasEditableMapping) ?~> "Mapping is not editable"
             updateLog <- editableMappingService.updateActionLog(mappingName)
           } yield Ok(updateLog)
         }
@@ -488,21 +494,28 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def editableMappingAgglomerateIdForSegmentId(token: Option[String],
-                                               tracingId: String,
-                                               segmentId: Long): Action[AnyContent] =
-    Action.async { implicit request =>
+  def editableMappingAgglomerateIdsForSegments(token: Option[String], tracingId: String): Action[ListOfLong] =
+    Action.async(validateProto[ListOfLong]) { implicit request =>
       log() {
         accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
           for {
             tracing <- tracingService.find(tracingId)
-            mappingName <- tracing.mappingName.toFox
+            editableMappingId <- tracing.mappingName.toFox
             remoteFallbackLayer <- tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId)
-            agglomerateId <- editableMappingService.agglomerateIdForSegmentId(mappingName,
-                                                                              segmentId,
-                                                                              remoteFallbackLayer,
-                                                                              urlOrHeaderToken(token, request))
-          } yield Ok(Json.obj("agglomerateId" -> agglomerateId))
+            (editableMappingInfo, editableMappingVersion) <- editableMappingService.getInfoAndActualVersion(
+              editableMappingId,
+              requestedVersion = None,
+              remoteFallbackLayer = remoteFallbackLayer,
+              userToken = urlOrHeaderToken(token, request))
+            relevantMapping: Map[Long, Long] <- editableMappingService.generateCombinedMappingForSegmentIds(
+              request.body.items.toSet,
+              editableMappingInfo,
+              editableMappingVersion,
+              editableMappingId,
+              remoteFallbackLayer,
+              urlOrHeaderToken(token, request))
+            agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)
+          } yield Ok(ListOfLong(agglomerateIdsSorted).toByteArray)
         }
       }
     }

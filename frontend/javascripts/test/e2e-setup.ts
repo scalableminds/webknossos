@@ -2,8 +2,6 @@ import "test/mocks/lz4";
 import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'deep... Remove this comment to see the full error message
 import deepForEach from "deep-for-each";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'enzy... Remove this comment to see the full error message
-import { configure } from "enzyme";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import fs from "fs";
@@ -138,12 +136,6 @@ const a: ${fullTypeAnnotation} = ${JSON.stringify(object)}`,
   );
 }
 
-// The adapter tries to access document when importing it, so we need to import it down here
-const Adapter = require("enzyme-adapter-react-16");
-
-configure({
-  adapter: new Adapter(),
-});
 export function resetDatabase() {
   console.log("Resetting test database...");
   // The parameter needs to be set globally here.

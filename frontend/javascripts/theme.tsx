@@ -40,6 +40,8 @@ export function getAntdTheme(userTheme: Theme) {
     Tree: {
       colorBgContainer: "transparent",
       directoryNodeSelectedBg: ColorWKBlue,
+      titleHeight: 20, // default is 24px,
+      marginXXS: 2, // default is 4px; adjust to match checkboxes because of smaller titleHeight
     },
   };
 
@@ -57,6 +59,11 @@ export function getAntdTheme(userTheme: Theme) {
 
   if (userTheme === "dark") {
     algorithm = theme.darkAlgorithm;
+    components.Tree = {
+      ...components.Tree,
+      nodeSelectedBg: ColorWKBlue,
+      nodeHoverBg: ColorWKDarkGrey,
+    };
   }
   return { algorithm, token: globalDesignToken, components };
 }

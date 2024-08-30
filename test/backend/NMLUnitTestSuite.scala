@@ -48,7 +48,7 @@ class NMLUnitTestSuite extends PlaySpec {
     NmlParser.parse("",
                     new ByteArrayInputStream(array),
                     overwritingDatasetName = None,
-                    overwritingOrganizationName = None,
+                    overwritingOrganizationId = None,
                     isTaskUpload = true,
                     basePath = None)
   }
@@ -69,6 +69,28 @@ class NMLUnitTestSuite extends PlaySpec {
   "NML writing and parsing" should {
     "yield the same state" in {
       writeAndParseTracing(dummyTracing) match {
+        case Full(tuple) =>
+          tuple match {
+            case (Some(tracing), _, _, _) =>
+              assert(tracing == dummyTracing)
+            case _ => throw new Exception
+          }
+        case _ => throw new Exception
+      }
+    }
+  }
+
+  "NML writing and parsing" should {
+    "should add missing isExpanded props with a default of true" in {
+      val treeGroupsWithOmittedIsExpanded = dummyTracing.treeGroups.map(
+        treeGroup =>
+          new TreeGroup(name = treeGroup.name,
+                        groupId = treeGroup.groupId,
+                        children = treeGroup.children,
+                        isExpanded = if (treeGroup.isExpanded.getOrElse(true)) None else Some(false)))
+      val dummyTracingWithOmittedIsExpandedTreeGroupProp =
+        dummyTracing.copy(treeGroups = treeGroupsWithOmittedIsExpanded)
+      writeAndParseTracing(dummyTracingWithOmittedIsExpandedTreeGroupProp) match {
         case Full(tuple) =>
           tuple match {
             case (Some(tracing), _, _, _) =>

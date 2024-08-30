@@ -56,6 +56,7 @@ message TreeGroup {
   required string name = 1;
   required int32 groupId = 2;
   repeated TreeGroup children = 3;
+  optional bool isExpanded = 4;
 }
 
 message SkeletonTracing {
@@ -71,7 +72,7 @@ message SkeletonTracing {
     optional BoundingBoxProto userBoundingBox = 10;
     repeated TreeGroup treeGroups = 11;
     repeated NamedBoundingBoxProto userBoundingBoxes = 12;
-    optional string organizationName = 13; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
+    optional string organizationId = 13; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
     repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
     repeated AdditionalAxisProto additionalAxes = 22; // Additional axes for which this tracing is defined
 }

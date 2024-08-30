@@ -24,7 +24,7 @@ import type {
   UnitLong,
 } from "oxalis/constants";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { EmptyObject } from "./globals";
+import { EmptyObject, ValueOf } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -167,12 +167,23 @@ export type MutableAPIDatasetId = {
   owningOrganization: string;
   name: string;
 };
+export function areDatasetsIdentical(a: APIDatasetId, b: APIDatasetId) {
+  return a.owningOrganization === b.owningOrganization && a.name === b.name;
+}
 export type APIDatasetId = Readonly<MutableAPIDatasetId>;
-export type APIDatasetDetails = {
-  readonly species?: string;
-  readonly brainRegion?: string;
-  readonly acquisition?: string;
+
+export enum APIMetadataEnum {
+  STRING = "string",
+  NUMBER = "number",
+  STRING_ARRAY = "string[]",
+}
+type APIMetadataType = ValueOf<APIMetadataEnum>;
+export type APIMetadata = {
+  type: APIMetadataType;
+  key: string;
+  value: string | number | string[];
 };
+export type APIMetadataEntries = APIMetadata[];
 
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
@@ -182,7 +193,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   created: number;
   dataStore: APIDataStore;
   description: string | null | undefined;
-  details: APIDatasetDetails | null | undefined;
+  metadata: APIMetadataEntries | null | undefined;
   isEditable: boolean;
   isPublic: boolean;
   displayName: string | null | undefined;
@@ -234,7 +245,7 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
-  const [colorLayerNames, segmentationLayerNames] = _.partition(
+  const [segmentationLayerNames, colorLayerNames] = _.partition(
     dataset.dataSource.dataLayers,
     (layer) => layer.category === "segmentation",
   ).map((layers) => layers.map((layer) => layer.name).sort());
@@ -283,6 +294,7 @@ export type APIUserBase = APIUserCompact & {
 };
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
+  hasSeenSegmentAnythingWithDepth?: boolean;
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
@@ -589,7 +601,6 @@ export type APIAvailableTasksReport = {
 export type APIOrganizationCompact = {
   readonly id: string;
   readonly name: string;
-  readonly displayName: string;
 };
 export type APIOrganization = APIOrganizationCompact & {
   readonly additionalInformation: string;
@@ -691,7 +702,7 @@ export type APIJob = {
   readonly tracingId: string | null | undefined;
   readonly annotationId: string | null | undefined;
   readonly annotationType: string | null | undefined;
-  readonly organizationName: string | null | undefined;
+  readonly organizationId: string | null | undefined;
   readonly boundingBox: string | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
@@ -818,7 +829,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // https://github.com/scalableminds/webknossos/pull/4755
   resolutions?: Array<Point3>;
   mappingName?: string | null | undefined;
-  mappingIsEditable?: boolean;
+  hasEditableMapping?: boolean;
   mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
 };
@@ -900,6 +911,7 @@ export type VoxelyticsArtifactConfig = {
     iframes: Record<string, string>;
     links: Record<string, string>;
   };
+  foreignWorkflow: [string, string] | null;
 };
 
 export type VoxelyticsRunInfo = {
@@ -1063,21 +1075,23 @@ export type VoxelyticsLogLine = {
   wk_url: string;
 };
 
-// Backend type
+// Backend type returned by the getFolderTree api method.
 export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent: string | null;
+  metadata: APIMetadataEntries;
   isEditable: boolean;
 };
 
-// Frontend type
+// Frontend type of FlatFolderTreeItem with inferred nested structure.
 export type FolderItem = {
   title: string;
-  key: string;
+  key: string; // folder id
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;
+  metadata: APIMetadataEntries;
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1088,6 +1102,7 @@ export type Folder = {
   id: string;
   allowedTeams: APITeam[];
   allowedTeamsCumulative: APITeam[];
+  metadata: APIMetadataEntries;
   isEditable: boolean;
 };
 
@@ -1095,6 +1110,7 @@ export type FolderUpdater = {
   id: string;
   name: string;
   allowedTeams: string[];
+  metadata: APIMetadataEntries;
 };
 
 export enum CAMERA_POSITIONS {

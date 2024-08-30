@@ -41,7 +41,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   def parse(name: String,
             nmlInputStream: InputStream,
             overwritingDatasetName: Option[String],
-            overwritingOrganizationName: Option[String],
+            overwritingOrganizationId: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None)(
       implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
@@ -63,8 +63,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
         additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
         datasetName = overwritingDatasetName.getOrElse(parseDatasetName(parameters \ "experiment"))
-        organizationName = if (overwritingDatasetName.isDefined) overwritingOrganizationName
-        else parseOrganizationName(parameters \ "experiment")
+        organizationId = if (overwritingDatasetName.isDefined) overwritingOrganizationId
+        else parseOrganizationId(parameters \ "experiment")
       } yield {
         val description = parseDescription(parameters \ "experiment")
         val wkUrl = parseWkUrl(parameters \ "experiment")
@@ -100,7 +100,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 zoomLevel = zoomLevel,
                 userBoundingBox = None,
                 userBoundingBoxes = userBoundingBoxes,
-                organizationName = organizationName,
+                organizationId = organizationId,
                 segments = v.segments,
                 mappingName = v.mappingName,
                 mappingIsLocked = v.mappingIsLocked,
@@ -131,7 +131,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 None,
                 treeGroupsAfterSplit,
                 userBoundingBoxes,
-                organizationName,
+                organizationId,
                 editPositionAdditionalCoordinates,
                 additionalAxes = additionalAxisProtos
               )
@@ -165,7 +165,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       id <- idText.toIntOpt ?~ Messages("nml.treegroup.id.invalid", idText)
       children <- (node \ "group").map(parseTreeGroup).toList.toSingleBox("")
       name = getSingleAttribute(node, "name")
-    } yield TreeGroup(name, id, children)
+      isExpanded = getSingleAttribute(node, "isExpanded").toBooleanOpt.getOrElse(true)
+    } yield TreeGroup(name, id, children, isExpanded = Some(isExpanded))
   }
 
   private def extractVolumes(volumeNodes: NodeSeq)(implicit m: MessagesProvider): immutable.Seq[NmlVolumeTag] =
@@ -305,7 +306,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private def parseWkUrl(nodes: NodeSeq): Option[String] =
     nodes.headOption.map(node => getSingleAttribute(node, "wkUrl"))
 
-  private def parseOrganizationName(nodes: NodeSeq): Option[String] =
+  private def parseOrganizationId(nodes: NodeSeq): Option[String] =
     nodes.headOption.flatMap(node => getSingleAttributeOpt(node, "organization"))
 
   private def parseActiveNode(nodes: NodeSeq): Option[Int] =

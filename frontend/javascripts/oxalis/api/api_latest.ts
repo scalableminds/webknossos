@@ -26,6 +26,7 @@ import {
   setTreeGroupAction,
   setTreeGroupsAction,
   setTreeEdgeVisibilityAction,
+  createTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   bucketPositionToGlobalAddress,
@@ -40,7 +41,7 @@ import {
   moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
+import { disableSavingAction, discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
   finishAnnotation,
@@ -145,7 +146,7 @@ import Constants, {
 } from "oxalis/constants";
 import DataLayer from "oxalis/model/data_layer";
 import type { OxalisModel } from "oxalis/model";
-import { Model } from "oxalis/singletons";
+import { Model, api } from "oxalis/singletons";
 import Request from "libs/request";
 import type {
   MappingType,
@@ -177,6 +178,10 @@ import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { type AdditionalCoordinate } from "types/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import {
+  createSkeletonNode,
+  getOptionsForCreateSkeletonNode,
+} from "oxalis/controller/combinations/skeleton_handlers";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -247,9 +252,7 @@ class TracingApi {
    */
   getActiveNodeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveNode(tracing)
-      .map((node) => node.id)
-      .getOrElse(null);
+    return getActiveNode(tracing)?.id ?? null;
   }
 
   /**
@@ -257,9 +260,7 @@ class TracingApi {
    */
   getActiveTreeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveTree(tracing)
-      .map((tree) => tree.treeId)
-      .getOrElse(null);
+    return getActiveTree(tracing)?.treeId ?? null;
   }
 
   /**
@@ -321,11 +322,60 @@ class TracingApi {
   }
 
   /**
+   * Creates a new and empty tree. Returns the
+   * id of that tree.
+   */
+  createTree() {
+    assertSkeleton(Store.getState().tracing);
+    let treeId = null;
+    Store.dispatch(
+      createTreeAction((id) => {
+        treeId = id;
+      }),
+    );
+    if (treeId == null) {
+      throw new Error("Could not create tree.");
+    }
+    return treeId;
+  }
+
+  /**
    * Deletes the tree with the given treeId.
    */
   deleteTree(treeId: number) {
     assertSkeleton(Store.getState().tracing);
     Store.dispatch(deleteTreeAction(treeId));
+  }
+
+  /**
+   * Creates a new node in the current tree. If the active tree
+   * is not empty, the node will be connected with an edge to
+   * the currently active node.
+   */
+  createNode(
+    position: Vector3,
+    options?: {
+      additionalCoordinates?: AdditionalCoordinate[];
+      rotation?: Vector3;
+      center?: boolean;
+      branchpoint?: boolean;
+      activate?: boolean;
+      skipCenteringAnimationInThirdDimension?: boolean;
+    },
+  ) {
+    assertSkeleton(Store.getState().tracing);
+    const defaultOptions = getOptionsForCreateSkeletonNode();
+    createSkeletonNode(
+      position,
+      options?.additionalCoordinates ?? defaultOptions.additionalCoordinates,
+      options?.rotation ?? defaultOptions.rotation,
+      options?.center ?? defaultOptions.center,
+      options?.branchpoint ?? defaultOptions.branchpoint,
+      options?.activate ?? defaultOptions.activate,
+      // This is the only parameter where we don't fall back to the default option,
+      // as the parameter mostly makes sense when the user creates a node *manually*.
+      options?.skipCenteringAnimationInThirdDimension ?? false,
+    );
   }
 
   /**
@@ -589,6 +639,95 @@ class TracingApi {
       clickSegmentAction(segmentId, somePosition, someAdditionalCoordinates, layerName),
     );
   }
+
+  /**
+   * Registers all segments that exist at least partially in the given bounding box.
+   *
+   * @example
+   * api.tracing.registerSegmentsForBoundingBox(
+   *   [0, 0, 0],
+   *   [10, 10, 10],
+   *   "My Bounding Box"
+   * );
+   */
+  registerSegmentsForBoundingBox = async (
+    min: Vector3,
+    max: Vector3,
+    bbName: string,
+    options?: { maximumSegmentCount?: number; maximumVolume?: number },
+  ) => {
+    const maximumVolume = options?.maximumVolume ?? Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
+    const maximumSegmentCount =
+      options?.maximumSegmentCount ?? Constants.REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT;
+    const shape = Utils.computeShapeFromBoundingBox({ min, max });
+    const volume = Math.ceil(shape[0] * shape[1] * shape[2]);
+    if (volume > maximumVolume) {
+      Toast.error(
+        `The volume of the bounding box exceeds ${maximumVolume} Vx, please make it smaller.`,
+      );
+      return;
+    } else if (volume > maximumVolume / 8) {
+      Toast.warning(
+        "The volume of the bounding box is very large, registering all segments might take a while.",
+      );
+    }
+
+    const segmentationLayerName = api.data.getSegmentationLayerNames()[0];
+    const layer = getLayerByName(Store.getState().dataset, segmentationLayerName);
+
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const finestResolution = resolutionInfo.getFinestResolution();
+    // By default, getDataForBoundingBox uses the finest existing magnification.
+    // We use that as strides to traverse the data array properly.
+    const [dx, dy, dz] = finestResolution;
+
+    const data = await api.data.getDataForBoundingBox(segmentationLayerName, {
+      min,
+      max,
+    });
+
+    const segmentIdToPosition = new Map();
+    let idx = 0;
+    for (let z = min[2]; z < max[2]; z += dz) {
+      for (let y = min[1]; y < max[1]; y += dy) {
+        for (let x = min[0]; x < max[0]; x += dx) {
+          const id = data[idx];
+          if (id !== 0 && !segmentIdToPosition.has(id)) {
+            segmentIdToPosition.set(id, [x, y, z]);
+          }
+          idx++;
+        }
+      }
+    }
+
+    const segmentIdCount = Array.from(segmentIdToPosition.entries()).length;
+    const halfMaxNoSegments = maximumSegmentCount / 2;
+    if (segmentIdCount > maximumSegmentCount) {
+      Toast.error(
+        `The given bounding box contains ${segmentIdCount} segments, but only ${maximumSegmentCount} segments can be registered at once. Please reduce the size of the bounding box.`,
+      );
+      return;
+    } else if (segmentIdCount > halfMaxNoSegments) {
+      Toast.warning(
+        `The bounding box contains more than ${halfMaxNoSegments} segments. Registering all segments might take a while.`,
+      );
+    }
+
+    const groupId = api.tracing.createSegmentGroup(
+      `Segments for ${bbName}`,
+      -1,
+      segmentationLayerName,
+    );
+    const updateSegmentActions: BatchableUpdateSegmentAction[] = [];
+    for (const [segmentId, position] of segmentIdToPosition.entries()) {
+      api.tracing.registerSegment(segmentId, position, undefined, segmentationLayerName);
+      updateSegmentActions.push(
+        updateSegmentAction(segmentId, { groupId, id: segmentId }, segmentationLayerName),
+      );
+    }
+    if (updateSegmentActions.length > 0)
+      Store.dispatch(batchUpdateGroupsAndSegmentsAction(updateSegmentActions));
+  };
 
   /**
    * Gets a segment object within the referenced volume layer. Note that this object
@@ -1206,20 +1345,23 @@ class TracingApi {
    * Starts an animation to center the given position. See setCameraPosition for a non-animated version of this function.
    *
    * @param position - Vector3
-   * @param skipDimensions - Boolean which decides whether the third dimension shall also be animated (defaults to true)
+   * @param skipCenteringAnimationInThirdDimension -
+   *        Boolean which decides whether the third dimension shall also be animated (defaults to true)
+   *        When true, this lets the user still manipulate the "third dimension"
+   *        during the animation (important because otherwise the user cannot continue to trace until
+   *        the animation is over).
    * @param rotation - Vector3 (optional) - Will only be noticeable in flight or oblique mode.
    * @example
    * api.tracing.centerPositionAnimated([0, 0, 0])
    */
   centerPositionAnimated(
     position: Vector3,
-    skipDimensions: boolean = true,
+    skipCenteringAnimationInThirdDimension: boolean = true,
     rotation?: Vector3,
   ): void {
-    // Let the user still manipulate the "third dimension" during animation
     const { activeViewport } = Store.getState().viewModeData.plane;
     const dimensionToSkip =
-      skipDimensions && activeViewport !== OrthoViews.TDView
+      skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView
         ? dimensions.thirdDimensionForPlane(activeViewport)
         : null;
     const curPosition = getPosition(Store.getState().flycam);
@@ -1363,6 +1505,14 @@ class TracingApi {
     await this.save();
     await downsampleSegmentation(annotationId, annotationType, volumeTracingId);
     await this.hardReload();
+  }
+
+  /**
+   * Disables the saving for the current annotation.
+   * WARNING: Cannot be undone. Only do this if you know what you are doing.
+   */
+  disableSaving() {
+    Store.dispatch(disableSavingAction());
   }
 }
 /**
@@ -1524,7 +1674,7 @@ class DataApi {
     const mappingProperties = {
       mapping:
         mapping instanceof Map
-          ? new Map(mapping)
+          ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
           : new Map(Object.entries(mapping).map(([key, value]) => [parseInt(key, 10), value])),
       mappingColors,
       hideUnmappedIds,

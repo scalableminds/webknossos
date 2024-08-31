@@ -194,7 +194,7 @@ jobs:
             (exit $s)
       - run:
           name: Stop webknossos, datastore and tracingstore
-          command: docker-compose down --volumes --remove-orphans & docker-compose down --volumes --remove-orphans & docker-compose down --volumes --remove-orphans
+          command: docker-compose down --volumes --remove-orphans
 
       - run:
           name: Push docker images

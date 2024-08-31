@@ -101,7 +101,7 @@ jobs:
           command: |
             wget https://github.com/MShekow/directory-checksum/releases/download/v1.4.5/directory-checksum_1.4.5_linux_amd64v3
             chmod +x directory-checksum_1.4.5_linux_amd64v3
-            ./directory-checksum_1.4.5_linux_amd64v3 project/target/universal/stage
+            ./directory-checksum_1.4.5_linux_amd64v3 target/universal/stage
 
 
       # - run:

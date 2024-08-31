@@ -87,6 +87,10 @@ jobs:
           command: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
 
       - run:
+          name: Fix timestamps
+          command: find target/universal/stage -exec touch -t 197001010000 {} +
+
+      - run:
           name: Checksum App Dirs
           command: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 

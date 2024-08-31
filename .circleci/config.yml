@@ -95,7 +95,7 @@ jobs:
           command: tar -czvf target.tar target/universal/stage
 
       - store_artifacts:
-          path: target/universal/stage
+          path: target.tar
 
       # - run:
       #     name: Checksum App Dirs

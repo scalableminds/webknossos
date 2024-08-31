@@ -86,9 +86,13 @@ jobs:
           name: Build webknossos-tracingstore (sbt)
           command: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
 
+      - run:
+          name: Checksum App Dirs
+          command: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
+
       - save_cache:
           name: Save target cache
-          key: target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
+          key: target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ checksum "app_checksum.txt" }}
           paths:
             - "project/target"
             - "target"

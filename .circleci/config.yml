@@ -88,7 +88,7 @@ jobs:
 
       - run:
           name: Fix timestamps
-          command: find target/universal/stage -exec touch -t 197001010000 {} +
+          command: find target/universal/stage -exec touch -t 197001010000 {} + && touch -t 197001010000 target/universal && touch -t 197001010000 target
 
       - run:
           name: Bundle target/universal/stage
@@ -121,11 +121,11 @@ jobs:
       #     paths:
       #       - "~/.cache/yarn"
 
-      # - run:
-      #     name: Build webknossos docker image
-      #     command: |
-      #       docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
-      #       DEV_CACHE=$NORMALIZED_BRANCH docker-compose build --pull webknossos
+      - run:
+          name: Build webknossos docker image
+          command: |
+            docker pull scalableminds/webknossos:$NORMALIZED_BRANCH || true
+            DEV_CACHE=$NORMALIZED_BRANCH docker-compose build --pull webknossos
 
       # - run:
       #     name: Build webknossos-datastore docker image

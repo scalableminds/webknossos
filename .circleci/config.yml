@@ -90,12 +90,19 @@ jobs:
           name: Fix timestamps
           command: find target/universal/stage -exec touch -t 197001010000 {} + && touch -t 197001010000 target/universal && touch -t 197001010000 target
 
-      - run:
-          name: Bundle target/universal/stage
-          command: tar -czvf target.tar target/universal/stage
+      # - run:
+      #     name: Bundle target/universal/stage
+      #     command: tar -czvf target.tar target/universal/stage
 
-      - store_artifacts:
-          path: target.tar
+      # - store_artifacts:
+      #     path: target.tar
+      - run:
+          name: print checksums for target/universal/stage
+          command: |
+            wget https://github.com/MShekow/directory-checksum/releases/download/v1.4.5/directory-checksum_1.4.5_linux_amd64v3
+            chmod +x directory-checksum_1.4.5_linux_amd64v3
+            ./directory-checksum_1.4.5_linux_amd64v3 project/target/universal/stage
+
 
       # - run:
       #     name: Checksum App Dirs

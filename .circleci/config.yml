@@ -95,11 +95,11 @@ jobs:
       #     command: tar -czvf target.tar target/universal/stage
 
       - store_artifacts:
-          path: lib/webknossos-datastore.webknossos-datastore-wk.jar
+          path: target/universal/stage/lib/webknossos-datastore.webknossos-datastore-wk.jar
       - store_artifacts:
-          path: lib/webknossos-tracingstore.webknossos-tracingstore-wk.jar
+          path: target/universal/stage/lib/webknossos-tracingstore.webknossos-tracingstore-wk.jar
       - store_artifacts:
-          path: lib/webknossos.webknossos-wk-sans-externalized.jar
+          path: target/universal/stage/lib/webknossos.webknossos-wk-sans-externalized.jar
 
       - run:
           name: print checksums for target/universal/stage

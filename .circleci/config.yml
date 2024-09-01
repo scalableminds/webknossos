@@ -74,9 +74,9 @@ jobs:
           name: Build webknossos (sbt)
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              docker-compose run compile sbt -no-colors clean compile stage
+              docker-compose run compile sbt -no-colors -XDsortfiles clean compile stage
             else
-              docker-compose run compile sbt -no-colors -DfailOnWarning compile stage
+              docker-compose run compile sbt -no-colors -XDsortfiles -DfailOnWarning compile stage
             fi
       - run:
           name: Build webknossos-datastore (sbt)

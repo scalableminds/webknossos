@@ -80,11 +80,11 @@ jobs:
             fi
       - run:
           name: Build webknossos-datastore (sbt)
-          command: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
+          command: docker-compose run base sbt -no-colors -DfailOnWarning -Dsortfiles "project webknossosDatastore" copyMessages compile stage
 
       - run:
           name: Build webknossos-tracingstore (sbt)
-          command: docker-compose run base sbt -no-colors -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
+          command: docker-compose run base sbt -no-colors -DfailOnWarning -Dsortfiles "project webknossosTracingstore" copyMessages compile stage
 
       - run:
           name: Fix timestamps

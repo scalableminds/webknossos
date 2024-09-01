@@ -94,8 +94,13 @@ jobs:
       #     name: Bundle target/universal/stage
       #     command: tar -czvf target.tar target/universal/stage
 
-      # - store_artifacts:
-      #     path: target.tar
+      - store_artifacts:
+          path: lib/webknossos-datastore.webknossos-datastore-wk.jar
+      - store_artifacts:
+          path: lib/webknossos-tracingstore.webknossos-tracingstore-wk.jar
+      - store_artifacts:
+          path: lib/webknossos.webknossos-wk-sans-externalized.jar
+
       - run:
           name: print checksums for target/universal/stage
           command: |

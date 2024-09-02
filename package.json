@@ -107,7 +107,7 @@
     "stash-pop-cmake-cache": "[ -f webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt.bak ] && mv webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt.bak webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt || true",
     "refresh-e2e-snapshots": "yarn remove-e2e-snapshots && mkdir -p frontend/javascripts/test/snapshots/type-check && yarn stash-cmake-cache && docker compose down && docker compose up e2e-tests && yarn stash-pop-cmake-cache",
     "refresh-all-snapshots": "yarn remove-all-snapshots && yarn test && yarn refresh-e2e-snapshots",
-    "check-frontend": "yarn run biome check frontend --organize-imports-enabled=false && tools/assert-no-test-only.sh",
+    "check-frontend": "yarn run biome check frontend package.json --organize-imports-enabled=false && tools/assert-no-test-only.sh",
     "fix-frontend": "yarn run biome check frontend package.json --write --organize-imports-enabled=false && echo Please proofread the applied suggestions, as they may not be safe.",
     "format-backend": "sbt \";scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt\"",
     "lint-backend": "sbt \";scapegoat\"",
@@ -143,7 +143,7 @@
     "@tanstack/react-query-persist-client": "^4.14.1",
     "@zip.js/zip.js": "^2.7.32",
     "ansi-to-react": "^6.1.6",
-    "antd": "^5.16.5",
+    "antd": "5.17.4",
     "ball-morphology": "^0.1.0",
     "base64-js": "^1.2.1",
     "beautiful-react-hooks": "^3.11.1",
@@ -185,7 +185,6 @@
     "pretty-bytes": "^5.1.0",
     "process": "^0.11.10",
     "protobufjs": "^6.11.4",
-    "rc-util": "^5.24.4",
     "react": "^18.3.1",
     "react-colorful": "^5.6.1",
     "react-debounce-render": "^8.0.1",
@@ -216,7 +215,6 @@
   "resolutions": {
     "**/mini-store": "^1.1.0",
     "**/redux": "3.7.2"
-
   },
   "ava": {
     "files": [

@@ -15,7 +15,7 @@ export default function renderIndependently(
     import("oxalis/throttled_store").then((_Store) => {
       const Store = _Store.default;
       const div = document.createElement("div");
-      const react_root = createRoot(div); 
+      const react_root = createRoot(div);
 
       if (!document.body) {
         resolve();
@@ -25,7 +25,7 @@ export default function renderIndependently(
       document.body.appendChild(div);
 
       function destroy() {
-         react_root.unmount();
+        react_root.unmount();
 
         if (div.parentNode) {
           div.parentNode.removeChild(div);
@@ -33,7 +33,7 @@ export default function renderIndependently(
 
         resolve();
       }
-      
+
       react_root.render(
         // @ts-ignore
         <Provider store={Store}>

@@ -1,5 +1,5 @@
 import { Provider } from "react-redux";
-import { createRoot } from 'react-dom/client';
+import { createRoot } from "react-dom/client";
 import window, { document } from "libs/window";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import UnthrottledStore, { startSagas } from "oxalis/store";
@@ -102,9 +102,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   await Promise.all([loadOrganization()]);
   const containerElement = document.getElementById("main-container");
 
-  
   if (containerElement) {
-    const react_root = createRoot(containerElement); 
+    const react_root = createRoot(containerElement);
     react_root.render(
       <ErrorBoundary>
         {/* @ts-ignore */}

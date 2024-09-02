@@ -33,7 +33,6 @@ import {
 } from "types/api_flow_types";
 
 export type APIMetadataWithError = APIMetadata & { error?: string | null };
-type IndexedMetadataEntries = APIMetadataWithError[];
 
 function getMetadataTypeLabel(type: APIMetadata["type"]) {
   switch (type) {
@@ -146,7 +145,7 @@ const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
 
 const saveCurrentMetadata = async (
   datasetOrFolderToUpdate: APIDataset | Folder,
-  metadata: IndexedMetadataEntries,
+  metadata: APIMetadataWithError[],
   context: DatasetCollectionContextValue,
   setIsSaving: (isSaving: boolean) => void,
   setHasUnsavedChanges: (hasUnsavedChanges: boolean) => void,
@@ -227,7 +226,7 @@ export default function MetadataTable({
   datasetOrFolder,
 }: { datasetOrFolder: APIDataset | Folder }) {
   const context = useDatasetCollectionContext();
-  const [metadata, metadataRef, setMetadata] = useStateWithRef<IndexedMetadataEntries>(
+  const [metadata, metadataRef, setMetadata] = useStateWithRef<APIMetadataWithError[]>(
     datasetOrFolder?.metadata?.map((entry) => ({ ...entry, error: null })) || [],
   );
   const [focusedRow, focusedRowRef, setFocusedRow] = useStateWithRef<number | null>(null);
@@ -445,7 +444,7 @@ export function InnerMetadataTable({
   getDeleteEntryButton,
   addNewEntryMenuItems,
 }: {
-  metadata: IndexedMetadataEntries;
+  metadata: APIMetadataWithError[];
   getKeyInput: (record: APIMetadataWithError, index: number) => JSX.Element;
   focusedRow: number | null;
   setFocusedRow: (newState: number | ((prevState: number | null) => number | null) | null) => void;

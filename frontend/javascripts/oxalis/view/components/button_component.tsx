@@ -1,7 +1,7 @@
-import { Button, ButtonProps } from "antd";
+import { Button, type ButtonProps } from "antd";
 import * as React from "react";
 import _ from "lodash";
-import FastTooltip, { FastTooltipPlacement } from "components/fast_tooltip";
+import FastTooltip, { type FastTooltipPlacement } from "components/fast_tooltip";
 
 type ButtonComponentProp = ButtonProps & {
   faIcon?: string;

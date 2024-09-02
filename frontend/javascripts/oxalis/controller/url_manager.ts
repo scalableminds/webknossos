@@ -13,9 +13,9 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
 import { validateUrlStateJSON } from "types/validation";
-import { APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
+import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
 import { coalesce } from "libs/utils";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import {
   additionalCoordinateToKeyValue,
   parseAdditionalCoordinateKey,
@@ -215,7 +215,7 @@ class UrlManager {
       if (coordinateName != null) {
         additionalCoordinates.push({
           name: coordinateName,
-          value: parseFloat(value),
+          value: Number.parseFloat(value),
         });
       }
     }

@@ -21,7 +21,13 @@ import type {
   Tracing,
   VolumeTracing,
 } from "oxalis/store";
-import { AnnotationTool, ContourMode, MappingStatusEnum, Vector3, Vector4 } from "oxalis/constants";
+import {
+  type AnnotationTool,
+  type ContourMode,
+  MappingStatusEnum,
+  type Vector3,
+  type Vector4,
+} from "oxalis/constants";
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import {
   getMappingInfo,

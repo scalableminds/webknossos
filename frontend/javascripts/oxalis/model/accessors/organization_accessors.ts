@@ -1,4 +1,4 @@
-import { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_flow_types";
 import messages from "messages";
 
 export function enforceActiveOrganization(

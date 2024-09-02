@@ -1,7 +1,7 @@
 import { MenuOutlined, InfoCircleOutlined } from "@ant-design/icons";
-import { List, Collapse, Tooltip, CollapseProps } from "antd";
+import { List, Collapse, Tooltip, type CollapseProps } from "antd";
 import React from "react";
-import { SortEnd } from "react-sortable-hoc";
+import type { SortEnd } from "react-sortable-hoc";
 import { SortableContainer, SortableElement, SortableHandle } from "react-sortable-hoc";
 import { settings, settingsTooltips } from "messages";
 

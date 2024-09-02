@@ -2,14 +2,12 @@ import "test/mocks/lz4";
 import _ from "lodash";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'deep... Remove this comment to see the full error message
 import deepForEach from "deep-for-each";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'enzy... Remove this comment to see the full error message
-import { configure } from "enzyme";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
-import fs from "fs";
+import fs from "node:fs";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'shel... Remove this comment to see the full error message
 import shell from "shelljs";
-import { ArbitraryObject } from "types/globals";
+import type { ArbitraryObject } from "types/globals";
 const requests = [];
 const tokenUserA =
   "1b88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21761e";
@@ -138,12 +136,6 @@ const a: ${fullTypeAnnotation} = ${JSON.stringify(object)}`,
   );
 }
 
-// The adapter tries to access document when importing it, so we need to import it down here
-const Adapter = require("enzyme-adapter-react-16");
-
-configure({
-  adapter: new Adapter(),
-});
 export function resetDatabase() {
   console.log("Resetting test database...");
   // The parameter needs to be set globally here.

@@ -7,8 +7,8 @@ import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_acces
 import * as Utils from "libs/utils";
 import mockRequire from "mock-require";
 import test from "ava";
-import { Vector3 } from "oxalis/constants";
-import { OxalisState } from "oxalis/store";
+import type { Vector3 } from "oxalis/constants";
+import type { OxalisState } from "oxalis/store";
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
 
 mockRequire("app", {
@@ -31,6 +31,7 @@ const {
 const { initializeAnnotationAction } = mockRequire.reRequire(
   "oxalis/model/actions/annotation_actions",
 );
+
 test.before((t) => {
   const rotation = [0.5, 0.5, 0.5];
   const viewport = 0;
@@ -172,36 +173,31 @@ test.serial("Skeleton should update node types for branchpoints", async (t) => {
     NodeShader.NodeTypes.BRANCH_POINT,
   );
 });
-test.serial.cb("Skeleton should update node radius", (t) => {
+test.serial("Skeleton should update node radius", async (t) => {
   const skeleton = skeletonCreator();
-  getSkeletonTracing(Store.getState().tracing).map(async (skeletonTracing) => {
-    const { activeNodeId, activeTreeId } = skeletonTracing;
-    Store.dispatch(setNodeRadiusAction(2));
-    await Utils.sleep(50);
-    const id = skeleton.combineIds(activeNodeId, activeTreeId);
-    const index = skeleton.nodes.idToBufferPosition.get(id).index;
-    t.is(skeleton.nodes.buffers[0].geometry.attributes.radius.array[index], 2);
-    t.end();
-  });
+  const skeletonTracing = getSkeletonTracing(Store.getState().tracing).get();
+  const { activeNodeId, activeTreeId } = skeletonTracing;
+  Store.dispatch(setNodeRadiusAction(2));
+  await Utils.sleep(50);
+  const id = skeleton.combineIds(activeNodeId, activeTreeId);
+  const index = skeleton.nodes.idToBufferPosition.get(id).index;
+  t.is(skeleton.nodes.buffers[0].geometry.attributes.radius.array[index], 2);
 });
-test.serial.cb("Skeleton should update tree colors upon tree creation", (t) => {
+test.serial("Skeleton should update tree colors upon tree creation", async (t) => {
   const skeleton = skeletonCreator();
   Store.dispatch(createTreeAction());
-  getSkeletonTracing(Store.getState().tracing).map(async (skeletonTracing) => {
-    const { activeTreeId, trees } = skeletonTracing;
+  const skeletonTracing = getSkeletonTracing(Store.getState().tracing).get();
+  const { activeTreeId, trees } = skeletonTracing;
 
-    if (activeTreeId != null) {
-      const activeTree = trees[activeTreeId];
+  if (activeTreeId != null) {
+    const activeTree = trees[activeTreeId];
 
-      await Utils.sleep(50);
-      t.deepEqual(
-        skeleton.treeColorTexture.image.data.subarray(activeTreeId * 4, (activeTreeId + 1) * 4),
-        new Float32Array(
-          skeleton.getTreeRGBA(activeTree.color, activeTree.isVisible, activeTree.edgesAreVisible),
-        ),
-      );
-    }
-
-    t.end();
-  });
+    await Utils.sleep(50);
+    t.deepEqual(
+      skeleton.treeColorTexture.image.data.subarray(activeTreeId * 4, (activeTreeId + 1) * 4),
+      new Float32Array(
+        skeleton.getTreeRGBA(activeTree.color, activeTree.isVisible, activeTree.edgesAreVisible),
+      ),
+    );
+  }
 });

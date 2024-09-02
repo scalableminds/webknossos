@@ -5,7 +5,18 @@ import {
   DatasetNameFormItem,
   layerNameRules,
 } from "admin/dataset/dataset_components";
-import { Button, Checkbox, Col, Form, FormInstance, Input, List, Modal, Row, Tooltip } from "antd";
+import {
+  Button,
+  Checkbox,
+  Col,
+  Form,
+  type FormInstance,
+  Input,
+  List,
+  Modal,
+  Row,
+  Tooltip,
+} from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
@@ -14,23 +25,23 @@ import * as Utils from "libs/utils";
 import _ from "lodash";
 import messages from "messages";
 import { flatToNestedMatrix } from "oxalis/model/accessors/dataset_accessor";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import {
-  APIDataLayer,
-  APIDataset,
-  APIDatasetId,
-  APITeam,
+  type APIDataLayer,
+  type APIDataset,
+  type APIDatasetId,
+  type APITeam,
   areDatasetsIdentical,
-  LayerLink,
+  type LayerLink,
 } from "types/api_flow_types";
 import { syncValidator } from "types/validation";
-import { WizardComponentProps } from "./common";
+import type { WizardComponentProps } from "./common";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { formatNumber } from "libs/format_utils";
 import { checkLandmarksForThinPlateSpline } from "oxalis/model/helpers/transformation_helpers";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import { WkDevFlags } from "oxalis/api/wk_dev";
 
 const FormItem = Form.Item;
@@ -164,7 +175,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       await createDatasetComposition(datastoreToUse.url, {
         newDatasetName,
         targetFolderId: form.getFieldValue(["targetFolderId"]),
-        organizationName: activeUser.organization,
+        organizationId: activeUser.organization,
         voxelSize: linkedDatasets.slice(-1)[0].dataSource.scale,
         layers: layersWithTransforms,
       });

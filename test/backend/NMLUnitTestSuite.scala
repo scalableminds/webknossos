@@ -48,7 +48,7 @@ class NMLUnitTestSuite extends PlaySpec {
     NmlParser.parse("",
                     new ByteArrayInputStream(array),
                     overwritingDatasetName = None,
-                    overwritingOrganizationName = None,
+                    overwritingOrganizationId = None,
                     isTaskUpload = true,
                     basePath = None)
   }

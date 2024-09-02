@@ -12,3 +12,5 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - For self-hosted versions of WEBKNOSSOS, you can choose whether switching to webknossos.org will be recommended to you, e.g. when uploading a dataset. To configure this, change `recommendWkorgInstance` in your `application.conf`.
 
 ### Postgres Evolutions:
+- [119-add-metadata-to-folders-and-datasets.sql](conf/evolutions/119-add-metadata-to-folders-and-datasets.sql)
+- [120-remove-old-organization-id.sql](conf/evolutions/120-remove-old-organization-id.sql)

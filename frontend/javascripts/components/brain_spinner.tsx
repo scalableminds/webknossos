@@ -59,7 +59,7 @@ export function BrainSpinnerWithError({
       type="primary"
       onClick={async () => {
         if (organizationToSwitchTo != null) {
-          await switchToOrganization(organizationToSwitchTo.name);
+          await switchToOrganization(organizationToSwitchTo.id);
         }
       }}
     >
@@ -69,7 +69,7 @@ export function BrainSpinnerWithError({
 
   const message =
     organizationToSwitchTo != null
-      ? `This ${entity} belongs to the organization ${organizationToSwitchTo.displayName} which is currently not your active organization. Do you want to switch to that organization?`
+      ? `This ${entity} belongs to the organization ${organizationToSwitchTo.name} which is currently not your active organization. Do you want to switch to that organization?`
       : `Either the ${entity} does not exist or you do not have the necessary access rights.`;
   return (
     <BrainSpinner

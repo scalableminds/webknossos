@@ -118,7 +118,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, id.toString)
     } yield parsed
 
-  def findOneBySummaryAndOrganization(summary: String, organizationId: ObjectId)(
+  def findOneBySummaryAndOrganization(summary: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
@@ -137,7 +137,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def insertOne(t: TaskType, organizationId: ObjectId): Fox[Unit] =
+  def insertOne(t: TaskType, organizationId: String): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.taskTypes(
                           _id, _organization, _team, summary, description, settings_allowedModes, settings_preferredMode,

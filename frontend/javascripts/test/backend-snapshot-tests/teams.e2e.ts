@@ -1,10 +1,5 @@
 import _ from "lodash";
-import {
-  tokenUserA,
-  setCurrToken,
-  resetDatabase,
-  writeTypeCheckingFile,
-} from "test/enzyme/e2e-setup";
+import { tokenUserA, setCurrToken, resetDatabase, writeTypeCheckingFile } from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
 test.before("Reset database and change token", async () => {
@@ -17,16 +12,12 @@ test("getTeams()", async (t) => {
   writeTypeCheckingFile(teams, "team", "APITeam", {
     isArray: true,
   });
-  t.snapshot(teams, {
-    id: "teams-getTeams()",
-  });
+  t.snapshot(teams);
 });
 test("getEditableTeams()", async (t) => {
   const editableTeams = _.sortBy(await api.getEditableTeams(), (team) => team.name);
 
-  t.snapshot(editableTeams, {
-    id: "teams-getEditableTeams()",
-  });
+  t.snapshot(editableTeams);
 });
 test("createTeam and deleteTeam", async (t) => {
   const newTeam = {
@@ -38,11 +29,7 @@ test("createTeam and deleteTeam", async (t) => {
   const createdTeamWithFixedId = Object.assign({}, createdTeam, {
     id: "fixed-team-id",
   });
-  t.snapshot(createdTeamWithFixedId, {
-    id: "teams-createTeam(newTeam: NewTeamType)",
-  });
+  t.snapshot(createdTeamWithFixedId);
   const response = await api.deleteTeam(createdTeam.id);
-  t.snapshot(response, {
-    id: "teams-deleteTeam(teamId: string)",
-  });
+  t.snapshot(response);
 });

@@ -98,7 +98,7 @@ import {
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { roundTo, hexToRgb, rgbToHex, truncateStringToLength } from "libs/utils";
-import { setWaypoint } from "oxalis/controller/combinations/skeleton_handlers";
+import { handleCreateNodeFromGlobalPosition } from "oxalis/controller/combinations/skeleton_handlers";
 import Shortcut from "libs/shortcut_component";
 import Toast from "libs/toast";
 import { api } from "oxalis/singletons";
@@ -112,12 +112,7 @@ import {
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import {
-  ItemType,
-  MenuItemGroupType,
-  MenuItemType,
-  SubMenuType,
-} from "antd/lib/menu/hooks/useItems";
+import { ItemType, MenuItemGroupType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
@@ -1031,7 +1026,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
       ? [
           {
             key: "create-node",
-            onClick: () => setWaypoint(globalPosition, viewport, false),
+            onClick: () => handleCreateNodeFromGlobalPosition(globalPosition, viewport, false),
             label: "Create Node here",
             disabled: isSkeletonLayerTransformed(state),
           },
@@ -1039,7 +1034,7 @@ function getNoNodeContextMenuOptions(props: NoNodeContextMenuProps): ItemType[] 
             key: "create-node-with-tree",
             onClick: () => {
               Store.dispatch(createTreeAction());
-              setWaypoint(globalPosition, viewport, false);
+              handleCreateNodeFromGlobalPosition(globalPosition, viewport, false);
             },
             label: (
               <>
@@ -1558,7 +1553,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     nodeContextMenuNode != null && clickedNodesPosition != null
       ? positionToString(clickedNodesPosition, nodeContextMenuNode.additionalCoordinates)
       : "";
-  const infoRows = [];
+  const infoRows: ItemType[] = [];
 
   if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
     infoRows.push(

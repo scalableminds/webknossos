@@ -41,7 +41,7 @@ import classNames from "classnames";
 import { EmptyObject } from "types/globals";
 
 type FolderItemWithName = FolderItem & { name: string };
-type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
+export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
 
 const { ThinSpace } = Unicode;
@@ -238,7 +238,8 @@ const DraggableDatasetRow = ({
 
   const datasetName = restProps["data-row-key"];
   const [, drag, preview] = useDrag({
-    item: { type: DraggableDatasetType, index, datasetName },
+    item: { index, datasetName },
+    type: DraggableDatasetType,
     canDrag: () => isADataset,
   });
   const [collectedProps, drop] = useDatasetDrop(rowKey, !isADataset);
@@ -391,7 +392,7 @@ class FolderRenderer {
 class DatasetTable extends React.PureComponent<Props, State> {
   state: State = {
     sortedInfo: {
-      columnKey: useLruRank ? "" : "created",
+      columnKey: useLruRank ? undefined : "created",
       order: "descend",
     },
     prevSearchQuery: "",

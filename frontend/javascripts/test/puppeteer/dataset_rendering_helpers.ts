@@ -3,8 +3,7 @@ import urljoin from "url-join";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import type { Browser } from "puppeteer";
-import type { TestInterface } from "ava";
-import anyTest from "ava";
+import anyTest, { TestFn } from "ava";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
@@ -350,9 +349,9 @@ export async function withRetry(
 
 // Ava's recommendation for Typescript types
 // https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
-export const test: TestInterface<{
+export const test = anyTest as TestFn<{
   browser: Browser;
-}> = anyTest as any;
+}>;
 
 export function setupBeforeEachAndAfterEach() {
   test.beforeEach(async (t) => {

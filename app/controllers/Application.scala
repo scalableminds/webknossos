@@ -64,8 +64,7 @@ class Application @Inject()(actorSystem: ActorSystem,
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
       userEmail <- userService.emailFor(request.identity)
-      _ = Mailer ! Send(
-        defaultMails.helpMail(request.identity, userEmail, organization.displayName, message, currentUrl))
+      _ = Mailer ! Send(defaultMails.helpMail(request.identity, userEmail, organization.name, message, currentUrl))
     } yield Ok
   }
 

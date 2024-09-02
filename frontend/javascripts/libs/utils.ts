@@ -669,10 +669,6 @@ export function withoutValues<T>(arr: Array<T>, elements: Array<T>): Array<T> {
   return arr.filter((x) => !auxSet.has(x));
 }
 
-export function zipMaybe<T, U>(maybeA: Maybe<T>, maybeB: Maybe<U>): Maybe<[T, U]> {
-  return maybeA.chain((valueA) => maybeB.map((valueB) => [valueA, valueB]));
-}
-
 // Maybes getOrElse is defined as getOrElse(defaultValue: T): T, which is why
 // you can't do getOrElse(null) without flow complaining
 export function toNullable<T>(_maybe: Maybe<T>): T | null | undefined {

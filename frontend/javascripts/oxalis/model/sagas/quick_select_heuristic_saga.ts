@@ -22,6 +22,7 @@ import {
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
   CancelQuickSelectAction,
+  ComputeQuickSelectForPointAction,
   ComputeQuickSelectForRectAction,
   ConfirmQuickSelectAction,
   FineTuneQuickSelectAction,
@@ -72,7 +73,9 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
 
 let wasPreviewModeToastAlreadyShown = false;
 
-export function* prepareQuickSelect(action: ComputeQuickSelectForRectAction): Saga<{
+export function* prepareQuickSelect(
+  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction,
+): Saga<{
   labeledZoomStep: number;
   firstDim: DimensionIndices;
   secondDim: DimensionIndices;
@@ -162,9 +165,11 @@ export function* prepareQuickSelect(action: ComputeQuickSelectForRectAction): Sa
   };
 }
 
-export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
+export default function* performQuickSelect(
+  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction,
+): Saga<void> {
   const preparation = yield* call(prepareQuickSelect, action);
-  if (preparation == null) {
+  if (preparation == null || action.type === "COMPUTE_QUICK_SELECT_FOR_POINT") {
     return;
   }
   const {

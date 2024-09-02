@@ -45,7 +45,7 @@ import {
 import { PricingEnforcedButton } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { MenuProps } from "rc-menu";
-import { ItemType } from "antd/lib/menu/hooks/useItems";
+import { ItemType } from "antd/es/menu/interface";
 
 type Props = {
   user: APIUser;

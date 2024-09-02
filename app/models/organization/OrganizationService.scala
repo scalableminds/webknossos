@@ -10,7 +10,7 @@ import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{PricingPlan, Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsArray, JsObject, Json}
 import utils.{ObjectId, WkConf}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -32,8 +32,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def compactWrites(organization: Organization): JsObject =
     Json.obj(
       "id" -> organization._id,
-      "name" -> organization.name,
-      "displayName" -> organization.displayName
+      "name" -> organization.name
     )
 
   def publicWrites(organization: Organization, requestingUser: Option[User] = None): Fox[JsObject] = {
@@ -51,11 +50,11 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
     } yield
       Json.obj(
-        "id" -> organization._id.toString,
-        "name" -> organization.name,
+        "id" -> organization._id,
+        "name" -> organization._id, // Included for backwards compatibility
         "additionalInformation" -> organization.additionalInformation,
         "enableAutoVerify" -> organization.enableAutoVerify,
-        "displayName" -> organization.displayName,
+        "name" -> organization.name,
         "pricingPlan" -> organization.pricingPlan,
         "paidUntil" -> organization.paidUntil,
         "includedUsers" -> organization.includedUsers,
@@ -65,13 +64,13 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       ) ++ adminOnlyInfo
   }
 
-  def findOneByInviteByNameOrDefault(inviteOpt: Option[Invite], organizationNameOpt: Option[String])(
+  def findOneByInviteByIdOrDefault(inviteOpt: Option[Invite], organizationIdOpt: Option[String])(
       implicit ctx: DBAccessContext): Fox[Organization] =
     inviteOpt match {
       case Some(invite) => organizationDAO.findOne(invite._organization)
       case None =>
-        organizationNameOpt match {
-          case Some(organizationName) => organizationDAO.findOneByName(organizationName)
+        organizationIdOpt match {
+          case Some(organizationId) => organizationDAO.findOne(organizationId)
           case None =>
             for {
               allOrganizations <- organizationDAO.findAll
@@ -100,25 +99,24 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- bool2Fox(organizations.isEmpty) ?~> "organizationsNotEmpty"
     } yield ()
 
-  def createOrganization(organizationNameOpt: Option[String], organizationDisplayName: String): Fox[Organization] =
+  def createOrganization(organizationIdOpt: Option[String], organizationName: String): Fox[Organization] =
     for {
-      normalizedDisplayName <- TextUtils.normalizeStrong(organizationDisplayName).toFox ?~> "organization.name.invalid"
-      organizationName = organizationNameOpt
+      normalizedName <- TextUtils.normalizeStrong(organizationName).toFox ?~> "organization.id.invalid"
+      organizationId = organizationIdOpt
         .flatMap(TextUtils.normalizeStrong)
-        .getOrElse(normalizedDisplayName)
+        .getOrElse(normalizedName)
         .replaceAll(" ", "_")
-      existingOrganization <- organizationDAO.findOneByName(organizationName)(GlobalAccessContext).futureBox
-      _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.name.alreadyInUse"
+      existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).futureBox
+      _ <- bool2Fox(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Basic, Some(3), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
-      organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName)
+      organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)
 
       organization = Organization(
-        ObjectId.generate,
+        organizationId,
+        "",
+        "",
         organizationName,
-        "",
-        "",
-        organizationDisplayName,
         initialPricingParameters._1,
         None,
         initialPricingParameters._2,
@@ -131,10 +129,10 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- teamDAO.insertOne(organizationTeam)
     } yield organization
 
-  def createOrganizationDirectory(organizationName: String, dataStoreToken: String): Fox[Unit] = {
+  def createOrganizationDirectory(organizationId: String, dataStoreToken: String): Fox[Unit] = {
     def sendRPCToDataStore(dataStore: DataStore) =
       rpc(s"${dataStore.url}/data/triggers/createOrganizationDirectory")
-        .addQueryString("token" -> dataStoreToken, "organizationName" -> organizationName)
+        .addQueryString("token" -> dataStoreToken, "organizationId" -> organizationId)
         .post()
         .futureBox
 
@@ -144,8 +142,8 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
   }
 
-  def assertUsersCanBeAdded(organizationId: ObjectId, usersToAddCount: Int = 1)(implicit ctx: DBAccessContext,
-                                                                                ec: ExecutionContext): Fox[Unit] =
+  def assertUsersCanBeAdded(organizationId: String, usersToAddCount: Int = 1)(implicit ctx: DBAccessContext,
+                                                                              ec: ExecutionContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(organizationId)
       userCount <- userDAO.countAllForOrganization(organizationId)

@@ -103,6 +103,7 @@ function CommentTabView(props: Props) {
   const [collapsedTreeIds, setCollapsedTreeIds] = useState<React.Key[]>([]);
   const [highlightedNodeIds, setHighlightedNodeIds] = useState<React.Key[]>([]);
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
+  const [isVisibleInDom, setIsVisibleInDom] = useState(true);
 
   const [keyboard, setKeyboard] = useState<InputKeyboard | null>(null);
   const nextCommentRef = useRef<(arg0?: boolean) => void>();
@@ -159,8 +160,10 @@ function CommentTabView(props: Props) {
   useEffect(() => {
     // If the activeNode has a comment, scroll to it,
     // otherwise scroll to the activeTree
-    scrollToActiveCommentOrTree(activeComment, props.skeletonTracing.activeTreeId);
-  }, [activeComment, props.skeletonTracing.activeTreeId]);
+    if (isVisibleInDom) {
+      scrollToActiveCommentOrTree(activeComment, props.skeletonTracing.activeTreeId);
+    }
+  }, [activeComment, props.skeletonTracing.activeTreeId, isVisibleInDom]);
 
   function scrollToActiveCommentOrTree(
     activeComment: MutableCommentType | undefined,
@@ -177,13 +180,13 @@ function CommentTabView(props: Props) {
       if (treeRef.current)
         if (activeComment) {
           const commentNodeKey = `comment-${activeComment.nodeId}`;
-          treeRef.current.scrollTo({ key: commentNodeKey, align: "auto" });
+          treeRef.current.scrollTo({ key: commentNodeKey, align: "top" });
           setHighlightedNodeIds([commentNodeKey]);
         } else if (activeTreeId) {
           const treeNodeKey = activeTreeId.toString();
           treeRef.current.scrollTo({
             key: treeNodeKey,
-            align: "auto",
+            align: "top",
           });
           setHighlightedNodeIds([treeNodeKey]);
         }
@@ -191,7 +194,8 @@ function CommentTabView(props: Props) {
   }
 
   function nextComment(forward: boolean = true) {
-    getActiveNode(props.skeletonTracing).map((activeNode) => {
+    const activeNode = getActiveNode(props.skeletonTracing);
+    if (activeNode != null) {
       const sortAscending = forward ? isSortedAscending : !isSortedAscending;
       const { trees } = props.skeletonTracing;
 
@@ -211,7 +215,7 @@ function CommentTabView(props: Props) {
       if (nextCommentIndex >= 0 && nextCommentIndex < sortedComments.length) {
         setActiveNode(sortedComments[nextCommentIndex].nodeId);
       }
-    });
+    }
   }
   nextCommentRef.current = nextComment;
 
@@ -413,8 +417,8 @@ function CommentTabView(props: Props) {
   // Replace line breaks as they will otherwise be stripped when shown in an input field
   const activeCommentContent = activeComment?.content.replace(/\r?\n/g, "\\n");
   const isMultilineComment = activeCommentContent?.indexOf("\\n") !== -1;
-  const activeNodeMaybe = getActiveNode(props.skeletonTracing);
-  const isEditingDisabled = activeNodeMaybe.isNothing || !allowUpdate;
+  const activeNode = getActiveNode(props.skeletonTracing);
+  const isEditingDisabled = activeNode == null || !allowUpdate;
 
   const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
     isAnnotationLockedByUser,
@@ -429,7 +433,12 @@ function CommentTabView(props: Props) {
         height: "inherit",
       }}
     >
-      <DomVisibilityObserver targetId={commentTabId}>
+      <DomVisibilityObserver
+        targetId={commentTabId}
+        onChange={(isVisible) => {
+          setIsVisibleInDom(isVisible);
+        }}
+      >
         {(isVisibleInDom) => {
           if (!isVisibleInDom && !isMarkdownModalOpen) {
             return null;

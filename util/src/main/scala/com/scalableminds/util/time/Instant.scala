@@ -69,6 +69,8 @@ object Instant extends FoxImplicits with LazyLogging {
 
   def since(before: Instant): FiniteDuration = now - before
 
+  def nowFox(implicit ec: ExecutionContext): Fox[Instant] = Fox.successful(Instant.now)
+
   def logSince(before: Instant, label: String): Unit = logger.info(f"$label took ${Instant.since(before)}")
 
   private def fromStringSync(instantLiteral: String): Option[Instant] =

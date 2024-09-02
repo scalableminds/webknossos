@@ -4,6 +4,7 @@ import * as React from "react";
 // This allows to not render performance-heavy components or to disable shortcuts if their flex layout tab is not visible.
 type Props = {
   targetId: string;
+  onChange?: (isVisibleInDom: boolean, wasEverVisibleInDom: boolean) => void;
   children: (isVisibleInDom: boolean, wasEverVisibleInDom: boolean) => React.ReactNode;
 };
 type State = {
@@ -47,6 +48,7 @@ export default class DomVisibilityObserver extends React.Component<Props, State>
           isVisibleInDom,
           wasEverVisibleInDom: oldState.wasEverVisibleInDom || isVisibleInDom,
         }));
+        this.props.onChange?.(isVisibleInDom, this.state.wasEverVisibleInDom);
       };
 
       this.observer = new IntersectionObserver(callback, {});

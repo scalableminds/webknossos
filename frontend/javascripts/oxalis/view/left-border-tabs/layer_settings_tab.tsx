@@ -1152,9 +1152,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const skeletonTracing = enforceSkeletonTracing(tracing);
     const isOnlyAnnotationLayer = tracing.annotationLayers.length === 1;
     const { showSkeletons } = skeletonTracing;
-    const activeNodeRadius = getActiveNode(skeletonTracing)
-      .map((activeNode) => activeNode.radius)
-      .getOrElse(0);
+    const activeNodeRadius = getActiveNode(skeletonTracing)?.radius ?? 0;
     return (
       <React.Fragment>
         <div

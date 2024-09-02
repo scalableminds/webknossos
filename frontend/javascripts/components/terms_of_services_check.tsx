@@ -95,9 +95,9 @@ function OrganizationSwitchMenu({
   activeUser: APIUser;
   style?: React.CSSProperties;
 }) {
-  const { organization: organizationName } = activeUser;
+  const { organization: organizationId } = activeUser;
   const usersOrganizations = useFetch(getUsersOrganizations, [], []);
-  const switchableOrganizations = usersOrganizations.filter((org) => org.name !== organizationName);
+  const switchableOrganizations = usersOrganizations.filter((org) => org.id !== organizationId);
   const isMultiMember = switchableOrganizations.length > 0;
 
   if (!isMultiMember) {
@@ -105,9 +105,9 @@ function OrganizationSwitchMenu({
   }
 
   const items: MenuProps["items"] = switchableOrganizations.map((org) => ({
-    key: org.name,
+    key: org.id,
     onClick: () => switchTo(org),
-    label: org.displayName || org.name,
+    label: org.name || org.id,
   }));
 
   return (

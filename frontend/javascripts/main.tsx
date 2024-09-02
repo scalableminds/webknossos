@@ -42,7 +42,7 @@ startSagas(rootSaga);
 const reactQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      cacheTime: Infinity,
+      cacheTime: Number.POSITIVE_INFINITY,
     },
   },
 });

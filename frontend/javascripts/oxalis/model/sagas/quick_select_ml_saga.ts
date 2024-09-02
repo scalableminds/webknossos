@@ -1,19 +1,19 @@
 import _ from "lodash";
-import ndarray, { NdArray } from "ndarray";
-import { OrthoView, TypedArrayWithoutBigInt, Vector2, Vector3 } from "oxalis/constants";
+import ndarray, { type NdArray } from "ndarray";
+import type { OrthoView, TypedArrayWithoutBigInt, Vector2, Vector3 } from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, cancel, fork, put } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
-import {
+import type {
   ComputeQuickSelectForPointAction,
   ComputeQuickSelectForRectAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { map3, sleep } from "libs/utils";
-import { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
+import type { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
 import { getSamMask, sendAnalyticsEvent } from "admin/admin_rest_api";
 import Dimensions from "../dimensions";
 import { finalizeQuickSelectForSlice, prepareQuickSelect } from "./quick_select_heuristic_saga";

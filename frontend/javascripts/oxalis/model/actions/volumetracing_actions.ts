@@ -5,7 +5,7 @@ import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "oxalis/store
 import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
-import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import type { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { batchActions } from "redux-batched-actions";
 import { type AdditionalCoordinate, type UserDefinedProperty } from "types/api_flow_types";
 import _ from "lodash";

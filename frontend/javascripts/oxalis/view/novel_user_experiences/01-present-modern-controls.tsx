@@ -3,7 +3,7 @@ import * as React from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { updateNovelUserExperienceInfos } from "admin/admin_rest_api";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 
 export default function PresentModernControls() {
   const dispatch = useDispatch();

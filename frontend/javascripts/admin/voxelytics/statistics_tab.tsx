@@ -10,8 +10,8 @@ import {
   formatDurationStrict,
   formatNumber,
 } from "libs/format_utils";
-import { VoxelyticsChunkStatistics } from "types/api_flow_types";
-import { Result } from "./utils";
+import type { VoxelyticsChunkStatistics } from "types/api_flow_types";
+import type { Result } from "./utils";
 import dayjs from "dayjs";
 import { pluralize } from "libs/utils";
 

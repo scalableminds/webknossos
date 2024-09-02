@@ -1,4 +1,4 @@
-import { createStore, applyMiddleware, Middleware } from "redux";
+import { createStore, applyMiddleware, type Middleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
 import type {

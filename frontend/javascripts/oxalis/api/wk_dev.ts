@@ -1,9 +1,9 @@
 import { Store } from "oxalis/singletons";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
 import type ApiLoader from "./api_loader";
-import { type ApiInterface } from "./api_latest";
+import type { ApiInterface } from "./api_latest";
 import showFpsMeter from "libs/fps_meter";
 
 // Can be accessed via window.webknossos.DEV.flags. Only use this

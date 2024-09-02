@@ -7,7 +7,7 @@ import {
   Modal,
   Tooltip,
   notification,
-  MenuProps,
+  type MenuProps,
   Space,
 } from "antd";
 import type { Dispatch } from "redux";
@@ -22,7 +22,7 @@ import {
 import { batchActions } from "redux-batched-actions";
 import { connect } from "react-redux";
 import { saveAs } from "file-saver";
-import { BlobReader, BlobWriter, ZipReader, Entry } from "@zip.js/zip.js";
+import { BlobReader, BlobWriter, ZipReader, type Entry } from "@zip.js/zip.js";
 import * as React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -75,7 +75,7 @@ import {
   setTreeGroupAction,
   setTreeGroupsAction,
   addTreesAndGroupsAction,
-  BatchableUpdateTreeAction,
+  type BatchableUpdateTreeAction,
   batchUpdateGroupsAndTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setVersionNumberAction } from "oxalis/model/actions/save_actions";

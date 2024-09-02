@@ -26,13 +26,12 @@ import {
   ConfigProvider,
   Divider,
   Empty,
-  MenuProps,
   Modal,
   Popover,
   Select,
   Tree,
+  type MenuProps,
 } from "antd";
-import { ItemType } from "antd/lib/menu/hooks/useItems";
 import { DataNode } from "antd/lib/tree";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
@@ -86,7 +85,7 @@ import {
   setSelectedSegmentsOrGroupAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { api } from "oxalis/singletons";
 import type {
   ActiveMappingInfo,
@@ -106,7 +105,7 @@ import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import {
   getBaseSegmentationName,
-  SegmentHierarchyNode,
+  type SegmentHierarchyNode,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import type RcTree from "rc-tree";
 import React, { Key } from "react";
@@ -135,6 +134,7 @@ import {
 } from "../tree_hierarchy_view_helpers";
 import { InputWithUpdateOnBlur, UserDefinedTableRows } from "../user_defined_properties_table";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
+import { ItemType } from "antd/lib/menu/interface";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -1459,14 +1459,14 @@ class SegmentsView extends React.Component<Props, State> {
       if (key.startsWith(groupPrefix)) {
         // Note that negative ids can be found here, which is why Group- is used as a splitter
         const idWithSign = key.split(groupPrefix)[1];
-        if (isNumber(parseInt(idWithSign))) {
-          selectedIds.group = parseInt(idWithSign);
+        if (isNumber(Number.parseInt(idWithSign))) {
+          selectedIds.group = Number.parseInt(idWithSign);
         }
       } else if (key.startsWith("segment-")) {
         // there should be no negative segment IDs
         const regexSplit = key.split("-");
-        if (isNumber(parseInt(regexSplit[1]))) {
-          selectedIds.segments.push(parseInt(regexSplit[1]));
+        if (isNumber(Number.parseInt(regexSplit[1]))) {
+          selectedIds.segments.push(Number.parseInt(regexSplit[1]));
         }
       }
     });

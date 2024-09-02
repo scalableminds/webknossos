@@ -1,10 +1,10 @@
 import React from "react";
 import _ from "lodash";
 import type { Vector4 } from "oxalis/constants";
-import {
-  type DatasetConfiguration,
-  type UserConfiguration,
-  type DatasetLayerConfiguration,
+import type {
+  DatasetConfiguration,
+  UserConfiguration,
+  DatasetLayerConfiguration,
 } from "oxalis/store";
 
 export type RecommendedConfiguration = Partial<

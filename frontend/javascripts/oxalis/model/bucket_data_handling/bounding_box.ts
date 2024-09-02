@@ -12,9 +12,9 @@ class BoundingBox {
 
   constructor(boundingBox: BoundingBoxType | null | undefined) {
     // Min is including
-    this.min = [-Infinity, -Infinity, -Infinity];
+    this.min = [Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NEGATIVE_INFINITY];
     // Max is excluding
-    this.max = [Infinity, Infinity, Infinity];
+    this.max = [Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY];
 
     if (boundingBox != null) {
       for (const i of Vector3Indicies) {

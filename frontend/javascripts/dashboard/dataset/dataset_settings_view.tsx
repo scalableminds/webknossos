@@ -1,4 +1,4 @@
-import { Button, Spin, Alert, Form, Card, Tabs, Tooltip, FormInstance } from "antd";
+import { Button, Spin, Alert, Form, Card, Tabs, Tooltip, type FormInstance } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -6,7 +6,11 @@ import dayjs from "dayjs";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter, Link } from "react-router-dom";
-import { UnregisterCallback, Location as HistoryLocation, Action as HistoryAction } from "history";
+import type {
+  UnregisterCallback,
+  Location as HistoryLocation,
+  Action as HistoryAction,
+} from "history";
 import type {
   APIDataSource,
   APIDataset,

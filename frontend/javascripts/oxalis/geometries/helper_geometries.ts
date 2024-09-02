@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { OrthoView, OrthoViews, Vector3 } from "oxalis/constants";
+import { type OrthoView, OrthoViews, type Vector3 } from "oxalis/constants";
 import ResizableBuffer from "libs/resizable_buffer";
 import app from "app";
 import { V3 } from "libs/mjs";

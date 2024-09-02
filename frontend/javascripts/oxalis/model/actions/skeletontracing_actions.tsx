@@ -1,21 +1,21 @@
 import { Modal } from "antd";
-import React, { Key } from "react";
-import type { ServerSkeletonTracing, UserDefinedProperty } from "types/api_flow_types";
-import type { Vector3, TreeType } from "oxalis/constants";
+import renderIndependently from "libs/render_independently";
+import _ from "lodash";
+import messages from "messages";
+import type { TreeType, Vector3 } from "oxalis/constants";
 import {
   enforceSkeletonTracing,
   getNodeAndTree,
   getTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import RemoveTreeModal from "oxalis/view/remove_tree_modal";
-import type { OxalisState, SkeletonTracing, TreeGroup, MutableTreeMap } from "oxalis/store";
-import Store from "oxalis/store";
-import messages from "messages";
-import renderIndependently from "libs/render_independently";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
+import type { MutableTreeMap, OxalisState, SkeletonTracing, TreeGroup } from "oxalis/store";
+import Store from "oxalis/store";
+import RemoveTreeModal from "oxalis/view/remove_tree_modal";
+import { Key } from "react";
 import { batchActions } from "redux-batched-actions";
+import type { ServerSkeletonTracing, UserDefinedProperty } from "types/api_flow_types";
 import { type AdditionalCoordinate } from "types/api_flow_types";
-import _ from "lodash";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;

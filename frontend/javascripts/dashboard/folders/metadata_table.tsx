@@ -26,7 +26,7 @@ import React, { useEffect } from "react";
 import { useState } from "react";
 import { APIDataset, Folder, APIMetadata, APIMetadataEnum } from "types/api_flow_types";
 
-type APIMetadataWithError = APIMetadata & { error?: string | null };
+export type APIMetadataWithError = APIMetadata & { error?: string | null };
 type IndexedMetadataEntries = APIMetadataWithError[];
 
 function getMetadataTypeLabel(type: APIMetadata["type"]) {
@@ -409,60 +409,93 @@ export default function MetadataTable({
       <div className="ant-tag antd-app-theme metadata-table-wrapper">
         {/* Not using AntD Table to have more control over the styling. */}
         {metadata.length > 0 ? (
-          <table className="ant-tag antd-app-theme metadata-table">
-            {/* Each row except the last row has a custom horizontal divider created via a css pseudo element. */}
-            <thead>
-              <tr>
-                <th>Property</th>
-                <th />
-                <th>Value</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {metadata.map((record, index) => (
-                <tr key={index}>
-                  <td>{getKeyInput(record, index)}</td>
-                  <td>:</td>
-                  <td>
-                    <MetadataValueInput
-                      record={record}
-                      index={index}
-                      focusedRow={focusedRow}
-                      setFocusedRow={setFocusedRow}
-                      updateMetadataValue={updateMetadataValue}
-                      isSaving={isSaving}
-                      availableStrArrayTagOptions={availableStrArrayTagOptions}
-                    />
-                  </td>
-                  <td>{getDeleteEntryButton(record, index)}</td>
-                </tr>
-              ))}
-              <tr>
-                <td colSpan={3}>
-                  <div className="flex-center-child">
-                    <Dropdown
-                      menu={addNewEntryMenuItems}
-                      placement="bottom"
-                      trigger={["click"]}
-                      autoFocus
-                    >
-                      <Button ghost size="small" style={{ border: "none" }}>
-                        <PlusOutlined
-                          size={18}
-                          style={{ color: "var(--ant-color-text-tertiary)" }}
-                        />
-                      </Button>
-                    </Dropdown>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+          <InnerMetadataTable
+            metadata={metadata}
+            getKeyInput={getKeyInput}
+            focusedRow={focusedRow}
+            setFocusedRow={setFocusedRow}
+            updateMetadataValue={updateMetadataValue}
+            isSaving={isSaving}
+            availableStrArrayTagOptions={availableStrArrayTagOptions}
+            getDeleteEntryButton={getDeleteEntryButton}
+            addNewEntryMenuItems={addNewEntryMenuItems}
+          />
         ) : (
           <EmptyMetadataPlaceholder addNewEntryMenuItems={addNewEntryMenuItems} />
         )}
       </div>
     </div>
+  );
+}
+
+export function InnerMetadataTable({
+  metadata,
+  getKeyInput,
+  focusedRow,
+  setFocusedRow,
+  updateMetadataValue,
+  isSaving,
+  availableStrArrayTagOptions,
+  getDeleteEntryButton,
+  addNewEntryMenuItems,
+}: {
+  metadata: IndexedMetadataEntries;
+  getKeyInput: (record: APIMetadataWithError, index: number) => JSX.Element;
+  focusedRow: number | null;
+  setFocusedRow: (newState: number | ((prevState: number | null) => number | null) | null) => void;
+  updateMetadataValue: (indexToUpdate: number, newValue: number | string | string[]) => void;
+  isSaving: boolean;
+  availableStrArrayTagOptions: { value: string; label: string }[];
+  getDeleteEntryButton: (_: APIMetadataWithError, index: number) => JSX.Element;
+  addNewEntryMenuItems: MenuProps;
+}): React.ReactElement {
+  return (
+    <table className="ant-tag antd-app-theme metadata-table">
+      {/* Each row except the last row has a custom horizontal divider created via a css pseudo element. */}
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th />
+          <th>Value</th>
+          <th />
+        </tr>
+      </thead>
+      <tbody>
+        {metadata.map((record, index) => (
+          <tr key={index}>
+            <td>{getKeyInput(record, index)}</td>
+            <td>:</td>
+            <td>
+              <MetadataValueInput
+                record={record}
+                index={index}
+                focusedRow={focusedRow}
+                setFocusedRow={setFocusedRow}
+                updateMetadataValue={updateMetadataValue}
+                isSaving={isSaving}
+                availableStrArrayTagOptions={availableStrArrayTagOptions}
+              />
+            </td>
+            <td>{getDeleteEntryButton(record, index)}</td>
+          </tr>
+        ))}
+        <tr>
+          <td colSpan={3}>
+            <div className="flex-center-child">
+              <Dropdown
+                menu={addNewEntryMenuItems}
+                placement="bottom"
+                trigger={["click"]}
+                autoFocus
+              >
+                <Button ghost size="small" style={{ border: "none" }}>
+                  <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
+                </Button>
+              </Dropdown>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
   );
 }

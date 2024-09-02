@@ -1,5 +1,5 @@
 import { DownOutlined } from "@ant-design/icons";
-import { Tree as AntdTree, GetRef, MenuProps, Modal, TreeProps } from "antd";
+import { Tree as AntdTree, GetRef, Input, MenuProps, Modal, TreeProps } from "antd";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AutoSizer } from "react-virtualized";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -38,6 +38,7 @@ import {
 import { ResizableSplitPane } from "./resizable_split_pane";
 import { InputWithUpdateOnBlur, UserDefinedTableRows } from "./user_defined_properties_table";
 import { UserDefinedProperty } from "types/api_flow_types";
+import { APIMetadataWithError, InnerMetadataTable } from "dashboard/folders/metadata_table";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
   const { id, type } = info.node;
@@ -354,30 +355,74 @@ function DetailsForSelection({
     if (tree == null) {
       return <>Cannot find details for selected tree.</>;
     }
+
+    // todop
+    const getKeyInput = (record: APIMetadataWithError, _index: number) => {
+      return (
+        <Input
+          className={"transparent-input"}
+          // onFocus={() => setFocusedRow(index)}
+          // onBlur={() => setFocusedRow(null)}
+          value={record.key}
+          // onChange={(evt) => updateMetadataKey(index, evt.target.value)}
+          placeholder="Property"
+          size="small"
+          // disabled={isSaving}
+          // id={getKeyInputIdForIndex(index)}
+        />
+      );
+    };
+
     return (
-      <table className="segment-details-table">
-        <tbody>
-          <tr>
-            <td>ID</td>
-            <td>{tree.treeId}</td>
-          </tr>
-          <tr>
-            <td>Name</td>
-            <td>
-              <InputWithUpdateOnBlur
-                value={tree.name || ""}
-                onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
-              />
-            </td>
-          </tr>
-          <UserDefinedTableRows
-            userDefinedProperties={tree.userDefinedProperties}
-            onChange={(oldKey: string, propPartial: Partial<UserDefinedProperty>) => {
-              updateUserDefinedProperty(tree, oldKey, propPartial);
-            }}
-          />
-        </tbody>
-      </table>
+      <div>
+        <table className="segment-details-table">
+          <tbody>
+            <tr>
+              <td>ID</td>
+              <td>{tree.treeId}</td>
+            </tr>
+            <tr>
+              <td>Name</td>
+              <td>
+                <InputWithUpdateOnBlur
+                  value={tree.name || ""}
+                  onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
+                />
+              </td>
+            </tr>
+            <UserDefinedTableRows
+              userDefinedProperties={tree.userDefinedProperties}
+              onChange={(oldKey: string, propPartial: Partial<UserDefinedProperty>) => {
+                updateUserDefinedProperty(tree, oldKey, propPartial);
+              }}
+            />
+          </tbody>
+        </table>
+
+        {/*
+        // todop
+        export type APIMetadata = {
+          type: APIMetadataType;
+          key: string;
+          value: string | number | string[];
+        };*/}
+
+        <InnerMetadataTable
+          metadata={tree.userDefinedProperties.map((prop) => ({
+            key: prop.key,
+            type: "string",
+            value: prop.stringValue || "",
+          }))}
+          getKeyInput={getKeyInput}
+          focusedRow={null}
+          setFocusedRow={() => {}}
+          updateMetadataValue={() => {}}
+          isSaving={false}
+          availableStrArrayTagOptions={[]}
+          getDeleteEntryButton={() => <div />}
+          addNewEntryMenuItems={{}}
+        />
+      </div>
     );
   }
   return null;

@@ -6,7 +6,7 @@ import {
   AnnotationToolEnum,
   MeasurementTools,
   LongUnitToShortUnitMap,
-  Vector3,
+  type Vector3,
 } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { hideMeasurementTooltipAction } from "oxalis/model/actions/ui_actions";
@@ -67,6 +67,13 @@ export default function DistanceMeasurementTooltip() {
   const orthoView = activeGeometry.viewport;
   // When the flycam is moved into the third dimension, the tooltip should be hidden.
   const thirdDim = dimensions.thirdDimensionForPlane(orthoView);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies(thirdDim): thirdDim is more or less a constant
+  // biome-ignore lint/correctness/useExhaustiveDependencies(position[thirdDim]):
+  // biome-ignore lint/correctness/useExhaustiveDependencies(hideMeasurementTooltipAction): constant
+  // biome-ignore lint/correctness/useExhaustiveDependencies(dispatch): constant
+  // biome-ignore lint/correctness/useExhaustiveDependencies(position):
+  // biome-ignore lint/correctness/useExhaustiveDependencies(activeGeometry.resetAndHide):
   useEffect(() => {
     if (
       position != null &&
@@ -76,12 +83,15 @@ export default function DistanceMeasurementTooltip() {
       activeGeometry.resetAndHide();
     }
   }, [currentPosition[thirdDim]]);
+
   if (position == null || !MeasurementTools.includes(activeTool)) {
     return null;
   }
+
   let valueInVx = "";
   let valueInMetricUnit = "";
   const notScalingFactor = [1, 1, 1] as Vector3;
+
   if (activeTool === AnnotationToolEnum.LINE_MEASUREMENT) {
     const { lineMeasurementGeometry } = getSceneController();
     valueInVx = formatLengthAsVx(lineMeasurementGeometry.getDistance(notScalingFactor), 1);
@@ -97,6 +107,7 @@ export default function DistanceMeasurementTooltip() {
       LongUnitToShortUnitMap[voxelSize.unit],
     );
   }
+
   const {
     left: viewportLeft,
     top: viewportTop,
@@ -104,6 +115,7 @@ export default function DistanceMeasurementTooltip() {
     height: viewportHeight,
   } = getInputCatcherRect(state, orthoView);
   const tooltipPosition = calculateMaybePlaneScreenPos(state, position, orthoView);
+
   if (tooltipPosition == null) {
     return null;
   }
@@ -119,6 +131,7 @@ export default function DistanceMeasurementTooltip() {
     tooltipPosition.y - TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
     viewportTop + viewportHeight + TOOLTIP_HEIGHT - ADDITIONAL_OFFSET,
   );
+
   return (
     <div
       ref={tooltipRef}

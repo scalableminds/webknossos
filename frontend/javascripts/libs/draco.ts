@@ -1,4 +1,4 @@
-import { BufferGeometry } from "three";
+import type { BufferGeometry } from "three";
 import { DRACOLoader } from "libs/DRACOLoader";
 
 let _dracoLoader: CustomDRACOLoader | null;

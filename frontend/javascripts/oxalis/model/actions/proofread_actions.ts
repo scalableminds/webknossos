@@ -1,5 +1,5 @@
-import { Vector3 } from "oxalis/constants";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { Vector3 } from "oxalis/constants";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import type { Tree } from "oxalis/store";
 
 export type ProofreadAtPositionAction = ReturnType<typeof proofreadAtPosition>;

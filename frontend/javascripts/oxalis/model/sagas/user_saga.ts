@@ -1,4 +1,4 @@
-import { SetActiveUser } from "../actions/user_actions";
+import type { SetActiveUser } from "../actions/user_actions";
 import { showVerificationReminderToast } from "admin/auth/verify_email_view";
 import { takeEvery } from "typed-redux-saga";
 

@@ -7,7 +7,7 @@ import {
   FillModeEnum,
   OrthoViews,
   OverwriteModeEnum,
-  Vector3,
+  type Vector3,
 } from "oxalis/constants";
 import { __setupOxalis, createBucketResponseFunction } from "test/helpers/apiHelpers";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
@@ -15,7 +15,7 @@ import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";
 import mockRequire from "mock-require";
-import anyTest, { ExecutionContext, TestFn } from "ava";
+import anyTest, { type ExecutionContext, type TestFn } from "ava";
 import { V3 } from "libs/mjs";
 import dummyUser from "test/fixtures/dummy_user";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
@@ -26,10 +26,10 @@ import {
   setSegmentGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { type ModelType } from "oxalis/model";
-import { type RequestType } from "libs/request";
-import { type ApiInterface } from "oxalis/api/api_latest";
-import { type DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import type { ModelType } from "oxalis/model";
+import type { RequestType } from "libs/request";
+import type { ApiInterface } from "oxalis/api/api_latest";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 
 const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(

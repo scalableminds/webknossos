@@ -22,12 +22,12 @@ import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
-import PlaneView from "oxalis/view/plane_view";
+import type PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import {
   createBoundingBoxAndGetEdges,
   handleMovingBoundingBox,
-  SelectedEdge,
+  type SelectedEdge,
 } from "oxalis/controller/combinations/bounding_box_handlers";
 import {
   getClosestHoveredBoundingBox,
@@ -53,7 +53,7 @@ import {
   setIsMeasuringAction,
   setActiveUserBoundingBoxId,
 } from "oxalis/model/actions/ui_actions";
-import ArbitraryView from "oxalis/view/arbitrary_view";
+import type ArbitraryView from "oxalis/view/arbitrary_view";
 import features from "features";
 
 export type ActionDescriptor = {

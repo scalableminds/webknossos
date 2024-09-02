@@ -19,7 +19,7 @@ import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import type { TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
-import { APICompoundType } from "types/api_flow_types";
+import type { APICompoundType } from "types/api_flow_types";
 
 import { initialize } from "./model_initialization";
 

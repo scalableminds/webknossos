@@ -35,7 +35,7 @@ import {
 } from "admin/admin_rest_api";
 import type { APIDataLayer, APIMapping } from "types/api_flow_types";
 import {
-  EnsureLayerMappingsAreLoadedAction,
+  type EnsureLayerMappingsAreLoadedAction,
   setLayerMappingsAction,
 } from "oxalis/model/actions/dataset_actions";
 import {
@@ -62,16 +62,16 @@ import {
   getEditableMappingForVolumeTracingId,
   needsLocalHdf5Mapping as getNeedsLocalHdf5Mapping,
   getBucketRetrievalSourceFn,
-  BucketRetrievalSource,
+  type BucketRetrievalSource,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import Toast from "libs/toast";
 import { jsHsv2rgb } from "oxalis/shaders/utils.glsl";
 import { updateSegmentAction } from "../actions/volumetracing_actions";
 import { MappingStatusEnum } from "oxalis/constants";
-import DataCube from "../bucket_data_handling/data_cube";
+import type DataCube from "../bucket_data_handling/data_cube";
 import { fastDiffSetAndMap, sleep } from "libs/utils";
-import { Action } from "../actions/actions";
-import { ActionPattern } from "redux-saga/effects";
+import type { Action } from "../actions/actions";
+import type { ActionPattern } from "redux-saga/effects";
 import { listenToStoreProperty } from "../helpers/listener_helpers";
 
 type APIMappings = Record<string, APIMapping>;

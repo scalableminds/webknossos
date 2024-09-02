@@ -9,14 +9,14 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import window from "libs/window";
-import { Link, LinkProps } from "react-router-dom";
-import * as React from "react";
+import { Link, type LinkProps } from "react-router-dom";
+import type * as React from "react";
 import type { APIDatasetId, APIDataset, APIDatasetCompact } from "types/api_flow_types";
 import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
-import { MenuProps, Modal, Typography } from "antd";
+import { type MenuProps, Modal, Typography } from "antd";
 import { useState } from "react";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { useQueryClient } from "@tanstack/react-query";

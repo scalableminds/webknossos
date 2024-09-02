@@ -58,6 +58,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed that trashcan icons to remove layers during remote dataset upload were floating above the navbar. [#7954](https://github.com/scalableminds/webknossos/pull/7954)
 - Fixed that the flood-filling action was available in the context menu although an editable mapping is active. Additionally volume related actions were removed from the context menu if only a skeleton layer is visible. [#7975](https://github.com/scalableminds/webknossos/pull/7975)
 - Fixed that activating the skeleton tab would always change the active position to the active node. [#7958](https://github.com/scalableminds/webknossos/pull/7958)
+- Made the newly added `filePaths` argument of the reserve upload route (see [#7981](https://github.com/scalableminds/webknossos/pull/7981)) optional to be backwards compatible with wklibs. [#8045](https://github.com/scalableminds/webknossos/pull/8045)
 - Fixed that skeleton groups couldn't be collapsed or expanded in locked annotations. [#7988](https://github.com/scalableminds/webknossos/pull/7988)
 - Fixed that the dashboard didn't notify the user about new datasets in the table. [#8025](https://github.com/scalableminds/webknossos/pull/8025)
 - Fixed that registering segments for a bounding box did only work if the segmentation had mag 1. [#8009](https://github.com/scalableminds/webknossos/pull/8009)

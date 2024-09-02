@@ -23,6 +23,7 @@ ALTER TABLE webknossos.teams DROP CONSTRAINT organization_ref;
 ALTER TABLE webknossos.users DROP CONSTRAINT organization_ref;
 ALTER TABLE webknossos.experienceDomains DROP CONSTRAINT organization_ref;
 ALTER TABLE webknossos.voxelytics_runs DROP CONSTRAINT voxelytics_runs__organization_fkey;
+ALTER TABLE webknossos.voxelytics_runs DROP CONSTRAINT voxelytics_runs__organization_workflow_hash_fkey;
 ALTER TABLE webknossos.voxelytics_workflows DROP CONSTRAINT voxelytics_workflows__organization_fkey;
 ALTER TABLE webknossos.aiModels DROP CONSTRAINT aimodels__organization_fkey;
 ALTER TABLE webknossos.aiInferences DROP CONSTRAINT aiinferences__organization_fkey;
@@ -148,7 +149,9 @@ ALTER TABLE webknossos.datasets ADD CONSTRAINT organization_ref FOREIGN KEY(_org
 ALTER TABLE webknossos.teams ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE;
 ALTER TABLE webknossos.users ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE;
 ALTER TABLE webknossos.experienceDomains ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id) DEFERRABLE;
-ALTER TABLE webknossos.voxelytics_runs ADD CONSTRAINT organization_ref FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.voxelytics_runs
+  ADD CONSTRAINT organization_ref FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE,
+  ADD CONSTRAINT voxelytics_runs__organization_workflow_hash_fkey FOREIGN KEY (_organization, workflow_hash) REFERENCES webknossos.voxelytics_workflows(_organization, hash) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.voxelytics_workflows ADD CONSTRAINT organization_ref FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.aiModels ADD CONSTRAINT organization_ref FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.aiInferences ADD CONSTRAINT organization_ref FOREIGN KEY (_organization) REFERENCES webknossos.organizations(_id) ON DELETE CASCADE ON UPDATE CASCADE DEFERRABLE;

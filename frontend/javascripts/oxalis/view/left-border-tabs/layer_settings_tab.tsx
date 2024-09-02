@@ -13,7 +13,6 @@ import {
   EllipsisOutlined,
   SaveOutlined,
   MenuOutlined,
-  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import ErrorHandling from "libs/error_handling";
 import { connect, useDispatch, useSelector } from "react-redux";
@@ -950,14 +949,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { isDisabled, isInEditMode } = layerConfiguration;
     const lastLayerMarginBottom = isLastLayer ? { marginBottom: 30 } : {};
     const betweenLayersMarginBottom = isLastLayer ? {} : { marginBottom: 30 };
-    const warning =
+    const opacityLabel =
       layerConfiguration.alpha === 0 ? (
-        <div style={{ color: "yellow" }}>
+        <div>
           <FastTooltip title="The current opacity is zero!">
-            <ExclamationCircleOutlined />
+            Opacity <WarningOutlined style={{ color: "orange" }} />
           </FastTooltip>
         </div>
-      ) : null;
+      ) : (
+        <>Opacity</>
+      );
     return (
       <div key={layerName} style={lastLayerMarginBottom}>
         {this.getLayerSettingsHeader(
@@ -979,7 +980,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               ? this.getHistogram(layerName, layerConfiguration)
               : null}
             <NumberSliderSetting
-              label={<>Opacity{warning}</>}
+              label={opacityLabel}
               min={0}
               max={100}
               value={layerConfiguration.alpha}

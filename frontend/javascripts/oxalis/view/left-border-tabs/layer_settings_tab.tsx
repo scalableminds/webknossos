@@ -952,7 +952,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const opacityLabel =
       layerConfiguration.alpha === 0 ? (
         <div>
-          <FastTooltip title="The current opacity is zero!">
+          <FastTooltip title="The current opacity is zero">
             Opacity <WarningOutlined style={{ color: "orange" }} />
           </FastTooltip>
         </div>

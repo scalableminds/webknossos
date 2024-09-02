@@ -1,71 +1,45 @@
-import { TagsOutlined } from "@ant-design/icons";
-import React, { useEffect, useState } from "react";
-import type { UserDefinedProperty } from "types/api_flow_types";
+import { Input, type InputProps } from "antd";
+import type React from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export function InputWithUpdateOnBlur({
   value,
   onChange,
-}: { value: string; onChange: (value: string) => void }) {
+  onBlur,
+  ...props
+}: { value: string; onChange: (value: string) => void } & InputProps) {
   const [localValue, setLocalValue] = useState(value);
+
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === "Enter") {
+        onChange(localValue);
+      } else if (event.key === "Escape") {
+        document.activeElement ? (document.activeElement as HTMLElement).blur() : null;
+      }
+      if (props.onKeyDown) {
+        return props.onKeyDown(event);
+      }
+    },
+    [onChange, props.onKeyDown, localValue],
+  );
 
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
 
   return (
-    <input
-      type="text"
+    <Input
       value={localValue}
-      onBlur={() => onChange(localValue)}
+      onBlur={(event) => {
+        if (onBlur) onBlur(event);
+        onChange(localValue);
+      }}
       onChange={(event) => {
         setLocalValue(event.currentTarget.value);
       }}
+      onKeyDown={onKeyDown}
+      {...props}
     />
-  );
-}
-
-export function UserDefinedTableRows({
-  userDefinedProperties,
-  onChange,
-}: {
-  userDefinedProperties: UserDefinedProperty[] | null;
-  onChange: (oldKey: string, propPartial: Partial<UserDefinedProperty>) => void;
-}) {
-  if (userDefinedProperties == null || userDefinedProperties.length === 0) {
-    return null;
-  }
-  return (
-    <>
-      <tr className={"divider-row"}>
-        <td colSpan={2}>
-          User-defined Properties <TagsOutlined />
-        </td>
-      </tr>
-      {userDefinedProperties.map((prop) => (
-        <tr key={prop.key}>
-          <td>
-            <InputWithUpdateOnBlur
-              value={prop.key}
-              onChange={(newKey) =>
-                onChange(prop.key, {
-                  key: newKey,
-                })
-              }
-            />
-          </td>
-
-          <td>
-            <InputWithUpdateOnBlur
-              value={prop.stringValue || ""}
-              onChange={(newValue) => {
-                onChange(prop.key, {
-                  stringValue: newValue,
-                });
-              }}
-            />
-          </td>
-        </tr>
-      ))}
-    </>
   );
 }

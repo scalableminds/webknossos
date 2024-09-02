@@ -1,11 +1,16 @@
 import { Divider } from "antd";
-import React, { useEffect, useRef, useState } from "react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
+
+// todop: change back to 100?
+// should this be memorized per user? local storage maybe? then, it's sync and device specific
+const INITIAL_HEIGHT = 400;
 
 export function ResizableSplitPane({
   firstChild,
   secondChild,
 }: { firstChild: React.ReactElement; secondChild: React.ReactElement | null }) {
-  const [heightForSecondChild, setHeightForSecondChild] = useState(100);
+  const [heightForSecondChild, setHeightForSecondChild] = useState(INITIAL_HEIGHT);
   const dividerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isResizingRef = useRef(false);

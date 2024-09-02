@@ -22,6 +22,7 @@ import {
 import { useIsMounted, useStateWithRef } from "libs/react_hooks";
 import Toast from "libs/toast";
 import _ from "lodash";
+import { InputWithUpdateOnBlur } from "oxalis/view/right-border-tabs/user_defined_properties_table";
 import type React from "react";
 import { useEffect } from "react";
 import { useState } from "react";
@@ -121,9 +122,9 @@ const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
       );
     case APIMetadataEnum.STRING:
       return (
-        <Input
-          value={record.value}
-          onChange={(evt) => updateMetadataValue(index, evt.target.value)}
+        <InputWithUpdateOnBlur
+          value={record.value as string}
+          onChange={(newValue) => updateMetadataValue(index, newValue as string)}
           {...sharedProps}
         />
       );
@@ -443,6 +444,8 @@ export function InnerMetadataTable({
   availableStrArrayTagOptions,
   getDeleteEntryButton,
   addNewEntryMenuItems,
+  isVisualStudioTheme,
+  onlyReturnRows
 }: {
   metadata: APIMetadataWithError[];
   getKeyInput: (record: APIMetadataWithError, index: number) => JSX.Element;
@@ -453,53 +456,67 @@ export function InnerMetadataTable({
   availableStrArrayTagOptions: { value: string; label: string }[];
   getDeleteEntryButton: (_: APIMetadataWithError, index: number) => JSX.Element;
   addNewEntryMenuItems: MenuProps;
+  isVisualStudioTheme?: boolean;
+  onlyReturnRows?: boolean;
 }): React.ReactElement {
+  const rows = <>
+    {metadata.map((record, index) => (
+      <tr key={index}>
+        <td>{getKeyInput(record, index)}</td>
+        {isVisualStudioTheme ? null : <td>:</td>}
+        <td>
+          <MetadataValueInput
+            record={record}
+            index={index}
+            focusedRow={focusedRow}
+            setFocusedRow={setFocusedRow}
+            updateMetadataValue={updateMetadataValue}
+            isSaving={isSaving}
+            availableStrArrayTagOptions={availableStrArrayTagOptions}
+          />
+        </td>
+        <td>{getDeleteEntryButton(record, index)}</td>
+      </tr>
+    ))}
+    <tr>
+      <td colSpan={3}>
+        <div className="flex-center-child">
+          <Dropdown
+            menu={addNewEntryMenuItems}
+            placement="bottom"
+            trigger={["click"]}
+            autoFocus
+          >
+            <Button ghost size="small" style={{ border: "none" }}>
+              <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
+            </Button>
+          </Dropdown>
+        </div>
+      </td>
+    </tr>
+  </>;
+
+  if (onlyReturnRows) {
+    return rows;
+  }
+
   return (
-    <table className="ant-tag antd-app-theme metadata-table">
+    <table
+      className={
+        isVisualStudioTheme ? "segment-details-table" : "ant-tag antd-app-theme metadata-table"
+      }
+    >
       {/* Each row except the last row has a custom horizontal divider created via a css pseudo element. */}
       <thead>
         <tr>
           <th>Property</th>
-          <th />
+          {isVisualStudioTheme ? null : <th />}
           <th>Value</th>
           <th />
         </tr>
       </thead>
       <tbody>
-        {metadata.map((record, index) => (
-          <tr key={index}>
-            <td>{getKeyInput(record, index)}</td>
-            <td>:</td>
-            <td>
-              <MetadataValueInput
-                record={record}
-                index={index}
-                focusedRow={focusedRow}
-                setFocusedRow={setFocusedRow}
-                updateMetadataValue={updateMetadataValue}
-                isSaving={isSaving}
-                availableStrArrayTagOptions={availableStrArrayTagOptions}
-              />
-            </td>
-            <td>{getDeleteEntryButton(record, index)}</td>
-          </tr>
-        ))}
-        <tr>
-          <td colSpan={3}>
-            <div className="flex-center-child">
-              <Dropdown
-                menu={addNewEntryMenuItems}
-                placement="bottom"
-                trigger={["click"]}
-                autoFocus
-              >
-                <Button ghost size="small" style={{ border: "none" }}>
-                  <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
-                </Button>
-              </Dropdown>
-            </div>
-          </td>
-        </tr>
+        {rows}
       </tbody>
     </table>
   );

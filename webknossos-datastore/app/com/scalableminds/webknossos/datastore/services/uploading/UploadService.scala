@@ -33,7 +33,7 @@ case class ReserveUploadInformation(
     name: String, // dataset name
     organization: String,
     totalFileCount: Long,
-    filePaths: List[String],
+    filePaths: Option[List[String]],
     layersToLink: Option[List[LinkedLayerIdentifier]],
     initialTeams: List[String], // team ids
     folderId: Option[String])
@@ -154,7 +154,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
         redisKeyForUploadId(DataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization)),
         reserveUploadInformation.uploadId
       )
-      filePaths = Json.stringify(Json.toJson(reserveUploadInformation.filePaths))
+      filePaths = Json.stringify(Json.toJson(reserveUploadInformation.filePaths.getOrElse(List.empty)))
       _ <- runningUploadMetadataStore.insert(redisKeyForFilePaths(reserveUploadInformation.uploadId), filePaths)
       _ <- runningUploadMetadataStore.insert(
         redisKeyForLinkedLayerIdentifier(reserveUploadInformation.uploadId),

@@ -71,7 +71,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
                                                    composeRequest.newDatasetName,
                                                    composeRequest.organizationId,
                                                    1,
-                                                   List.empty,
+                                                   None,
                                                    None,
                                                    List(),
                                                    Some(composeRequest.targetFolderId))

@@ -1162,6 +1162,7 @@ function FileUploadArea({
             textAlign: "center",
             display: "inline-block",
             marginTop: 8,
+            lineHeight: "1.7em",
           }}
         >
           {features().recommendWkorgInstance && !isDatasetConversionEnabled ? (

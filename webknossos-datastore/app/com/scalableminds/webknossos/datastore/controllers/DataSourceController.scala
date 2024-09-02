@@ -438,7 +438,7 @@ class DataSourceController @Inject()(
               name = datasetName,
               organization = organizationId,
               totalFileCount = 1,
-              filePaths = List.empty,
+              filePaths = None,
               layersToLink = None,
               initialTeams = List.empty,
               folderId = folderId,

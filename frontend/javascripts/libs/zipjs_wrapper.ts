@@ -1,4 +1,4 @@
-import * as ZipType from "@zip.js/zip.js";
+import type * as ZipType from "@zip.js/zip.js";
 
 class TransFormStream {}
 

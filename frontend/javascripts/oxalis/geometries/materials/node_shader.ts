@@ -14,7 +14,7 @@ import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
 } from "oxalis/shaders/thin_plate_spline.glsl";
-import TPS3D from "libs/thin_plate_spline";
+import type TPS3D from "libs/thin_plate_spline";
 
 export const NodeTypes = {
   INVALID: 0.0,
@@ -66,10 +66,10 @@ class NodeShader {
         value: true,
       },
       activeTreeId: {
-        value: NaN,
+        value: Number.NaN,
       },
       activeNodeId: {
-        value: NaN,
+        value: Number.NaN,
       },
       treeColors: {
         value: treeColorTexture,

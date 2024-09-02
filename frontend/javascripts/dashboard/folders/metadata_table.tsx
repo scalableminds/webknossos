@@ -6,8 +6,8 @@ import {
   TagsOutlined,
 } from "@ant-design/icons";
 import {
-  MenuProps,
-  InputNumberProps,
+  type MenuProps,
+  type InputNumberProps,
   InputNumber,
   Input,
   Select,
@@ -16,15 +16,21 @@ import {
   Button,
 } from "antd";
 import {
-  DatasetCollectionContextValue,
+  type DatasetCollectionContextValue,
   useDatasetCollectionContext,
 } from "dashboard/dataset/dataset_collection_context";
 import { useIsMounted, useStateWithRef } from "libs/react_hooks";
 import Toast from "libs/toast";
 import _ from "lodash";
-import React, { useEffect } from "react";
+import type React from "react";
+import { useEffect } from "react";
 import { useState } from "react";
-import { APIDataset, Folder, APIMetadata, APIMetadataEnum } from "types/api_flow_types";
+import {
+  type APIDataset,
+  type Folder,
+  type APIMetadata,
+  APIMetadataEnum,
+} from "types/api_flow_types";
 
 type APIMetadataWithError = APIMetadata & { error?: string | null };
 type IndexedMetadataEntries = APIMetadataWithError[];

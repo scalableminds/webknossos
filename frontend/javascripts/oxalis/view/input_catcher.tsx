@@ -1,5 +1,5 @@
 import _ from "lodash";
-import * as React from "react";
+import type * as React from "react";
 import type { Rect, Viewport } from "oxalis/constants";
 import {
   AnnotationToolEnum,

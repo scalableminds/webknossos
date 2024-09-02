@@ -1,5 +1,5 @@
-import * as React from "react";
-import { Form, Input, Select, Card, FormInstance } from "antd";
+import type * as React from "react";
+import { Form, Input, Select, Card, type FormInstance } from "antd";
 import messages from "messages";
 import { isDatasetNameValid } from "admin/admin_rest_api";
 import type { APIDataStore, APITeam, APIUser } from "types/api_flow_types";

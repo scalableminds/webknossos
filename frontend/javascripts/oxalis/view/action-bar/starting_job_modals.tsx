@@ -14,7 +14,7 @@ import {
   Alert,
   Tabs,
   Switch,
-  FormInstance,
+  type FormInstance,
   Checkbox,
 } from "antd";
 import {
@@ -46,7 +46,7 @@ import {
 } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { V3 } from "libs/mjs";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";

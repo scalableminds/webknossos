@@ -1,5 +1,5 @@
-import { ExecutionContext } from "ava";
-import { Vector3 } from "oxalis/constants";
+import type { ExecutionContext } from "ava";
+import type { Vector3 } from "oxalis/constants";
 
 export function almostEqual(
   t: ExecutionContext,

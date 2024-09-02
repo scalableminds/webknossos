@@ -9,7 +9,7 @@ import {
 } from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
-import { APITeam, APIUser } from "types/api_flow_types";
+import type { APITeam, APIUser } from "types/api_flow_types";
 
 let activeUser: APIUser;
 let firstTeam: APITeam;

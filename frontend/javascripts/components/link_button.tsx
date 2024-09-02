@@ -1,4 +1,4 @@
-import { Button, ButtonProps } from "antd";
+import { Button, type ButtonProps } from "antd";
 import * as React from "react";
 
 // This component should be used instead of <a href="#" onClick={} />.

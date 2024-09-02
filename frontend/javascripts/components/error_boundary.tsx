@@ -1,7 +1,7 @@
 import { Alert } from "antd";
 import ErrorHandling from "libs/error_handling";
-import React, { ErrorInfo } from "react";
-import { ArbitraryObject } from "types/globals";
+import React, { type ErrorInfo } from "react";
+import type { ArbitraryObject } from "types/globals";
 
 type ErrorBoundaryProps = ArbitraryObject;
 

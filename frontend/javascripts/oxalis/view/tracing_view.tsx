@@ -1,4 +1,4 @@
-import * as React from "react";
+import type * as React from "react";
 import Toast from "libs/toast";
 import messages from "messages";
 import ErrorHandling from "libs/error_handling";

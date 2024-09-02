@@ -14,8 +14,8 @@ import {
   QuestionCircleTwoTone,
   InfoCircleOutlined,
 } from "@ant-design/icons";
-import * as React from "react";
-import { APIJob, APIJobType } from "types/api_flow_types";
+import type * as React from "react";
+import { type APIJob, APIJobType } from "types/api_flow_types";
 import { getJobs, cancelJob } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import * as Utils from "libs/utils";

@@ -1,13 +1,13 @@
 import React from "react";
 import { JSONTree } from "react-json-tree";
-import { Progress, Tabs, TabsProps, Tooltip } from "antd";
+import { Progress, Tabs, type TabsProps, Tooltip } from "antd";
 import Markdown from "libs/markdown_adapter";
 import {
-  VoxelyticsArtifactConfig,
+  type VoxelyticsArtifactConfig,
   VoxelyticsRunState,
-  VoxelyticsTaskConfig,
-  VoxelyticsTaskInfo,
-  VoxelyticsWorkflowDagEdge,
+  type VoxelyticsTaskConfig,
+  type VoxelyticsTaskInfo,
+  type VoxelyticsWorkflowDagEdge,
 } from "types/api_flow_types";
 import ArtifactsViewer from "./artifacts_view";
 import LogTab from "./log_tab";

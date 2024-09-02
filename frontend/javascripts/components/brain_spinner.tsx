@@ -1,5 +1,5 @@
-import * as React from "react";
-import { APIOrganization } from "types/api_flow_types";
+import type * as React from "react";
+import type { APIOrganization } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
 import { switchToOrganization } from "admin/admin_rest_api";
 import messages from "messages";

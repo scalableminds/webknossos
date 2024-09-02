@@ -15,12 +15,12 @@ import {
   VoxelSizeRow,
 } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 import React, { useEffect } from "react";
-import { APIDatasetCompact, Folder } from "types/api_flow_types";
+import type { APIDatasetCompact, Folder } from "types/api_flow_types";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
 import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { getOrganization } from "admin/admin_rest_api";
 import { useQuery } from "@tanstack/react-query";
 import MetadataTable from "./metadata_table";

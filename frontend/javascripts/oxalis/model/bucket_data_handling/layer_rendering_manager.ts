@@ -1,8 +1,8 @@
-import * as THREE from "three";
+import type * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
-import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import { M4x4, Matrix4x4 } from "libs/mjs";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import { M4x4, type Matrix4x4 } from "libs/mjs";
 import { createWorker } from "oxalis/workers/comlink_wrapper";
 import { map3 } from "libs/utils";
 import {
@@ -18,9 +18,9 @@ import AsyncBucketPickerWorker from "oxalis/workers/async_bucket_picker.worker";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import LatestTaskExecutor, { SKIPPED_TASK_REASON } from "libs/async/latest_task_executor";
 import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import Store, { PlaneRects, SegmentMap } from "oxalis/store";
+import Store, { type PlaneRects, type SegmentMap } from "oxalis/store";
 import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
-import UpdatableTexture from "libs/UpdatableTexture";
+import type UpdatableTexture from "libs/UpdatableTexture";
 import type { ViewMode, Vector3, Vector4, BucketAddress } from "oxalis/constants";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import DiffableMap from "libs/diffable_map";
@@ -30,7 +30,7 @@ import { listenToStoreProperty } from "../helpers/listener_helpers";
 import { cachedDiffSegmentLists } from "../sagas/volumetracing_saga";
 import { getSegmentsForLayer } from "../accessors/volumetracing_accessor";
 import { getViewportRects } from "../accessors/view_mode_accessor";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import app from "app";
 
 const CUSTOM_COLORS_TEXTURE_WIDTH = 512;

@@ -1,5 +1,5 @@
 import { DownOutlined } from "@ant-design/icons";
-import { Tree as AntdTree, GetRef, MenuProps, Modal, TreeProps } from "antd";
+import { Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AutoSizer } from "react-virtualized";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -20,13 +20,13 @@ import {
   insertTreesAndTransform,
   MISSING_GROUP_ID,
   moveGroupsHelper,
-  TreeNode,
+  type TreeNode,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { getContextMenuPositionFromEvent } from "../context_menu";
 import { ContextMenuContainer } from "./sidebar_context_menu";
 import {
   onBatchActions,
-  Props,
+  type Props,
   renderGroupNode,
   renderTreeNode,
   selectGroupById,

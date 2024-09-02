@@ -88,5 +88,13 @@
       "libs/trackball_controls.ts",
       "*.d.ts"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "include": ["**/package.json"],
+      "formatter": {
+        "lineWidth": 1
+      }
+    }
+  ]
 }

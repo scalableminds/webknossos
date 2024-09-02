@@ -192,7 +192,7 @@ class Controller extends React.PureComponent<PropsWithRouter, State> {
       const content = await fetchGistContent(script.gist, script.name);
 
       try {
-        // biome-ignore lint/security/noGlobalEval: This is loads a user provided frontend API script.
+        // biome-ignore lint/security/noGlobalEval: This loads a user provided frontend API script.
         eval(content);
       } catch (error) {
         Toast.error(

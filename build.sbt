@@ -117,6 +117,13 @@ lazy val webknossos = (project in file("."))
     libraryDependencies ++= Dependencies.webknossosDependencies,
     dependencyOverrides ++= Dependencies.dependencyOverrides,
     Assets / sourceDirectory := file("none"),
+    // The following two assignments avoid that the public assets
+    // appear in two output jars. Namely, target/universal/stage/lib/webknossos.webknossos-wk-sans-externalized.jar
+    // does not need to contain them. Might be fixed automatically with Play 2.9.4 and 3.0.4
+    // See this discussion for context:
+    // https://github.com/playframework/playframework/issues/5765#issuecomment-1996991474
+    Assets / WebKeys.exportedMappings := Seq(),
+    TestAssets / WebKeys.exportedMappings := Seq(),
     updateOptions := updateOptions.value.withLatestSnapshots(true),
     Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"

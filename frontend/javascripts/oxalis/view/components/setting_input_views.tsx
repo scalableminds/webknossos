@@ -543,10 +543,18 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           disabled: this.props.visibleSegmentationLayer == null || disabled,
         },
         {
-          key: "goToCenter",
-          label: "Go to center",
-          icon: <BorderInnerOutlined />,
-          onClick: onGoToBoundingBox,
+          key: "setColor",
+          label: (
+            <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
+              <ColorSetting
+                value={Utils.rgbToHex(upscaledColor)}
+                onChange={this.handleColorChange}
+                disabled={disabled}
+                label="Change color"
+                style={{ marginRight: 7 }}
+              />
+            </FastTooltip>
+          ),
         },
         {
           key: "export",
@@ -645,13 +653,8 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
             </FastTooltip>
           </Col>
           <Col span={2}>
-            <FastTooltip title={disabled ? editingDisallowedExplanation : null}>
-              <ColorSetting
-                value={Utils.rgbToHex(upscaledColor)}
-                onChange={this.handleColorChange}
-                style={marginLeftStyle}
-                disabled={disabled}
-              />
+            <FastTooltip title="Go to center">
+              <BorderInnerOutlined style={marginLeftStyle} onClick={onGoToBoundingBox} />
             </FastTooltip>
           </Col>
         </Row>
@@ -672,6 +675,7 @@ type ColorSettingPropTypes = {
   onChange: (value: Vector3) => void;
   disabled: boolean;
   style?: Record<string, any>;
+  label?: string;
 };
 export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
   static defaultProps = {
@@ -683,31 +687,33 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
   };
 
   render() {
-    const { value, disabled } = this.props;
+    const { value, disabled, label } = this.props;
     let { style } = this.props;
     style = style || {};
     return (
-      <div
-        className="color-display-wrapper"
-        style={{
-          backgroundColor: value,
-          ...style,
-        }}
-      >
-        <input
-          type="color"
+      <div onChange={this.onColorChange}>
+        <div
+          className="color-display-wrapper"
           style={{
-            opacity: 0,
-            display: "block",
-            border: "none",
-            cursor: disabled ? "not-allowed" : "pointer",
-            width: "100%",
-            height: "100%",
+            backgroundColor: value,
+            ...style,
           }}
-          onChange={this.onColorChange}
-          value={value}
-          disabled={disabled}
-        />
+        >
+          <input
+            type="color"
+            style={{
+              opacity: 0,
+              display: "block",
+              border: "none",
+              cursor: disabled ? "not-allowed" : "pointer",
+              width: "100%",
+              height: "100%",
+            }}
+            value={value}
+            disabled={disabled}
+          />
+        </div>
+        {label}
       </div>
     );
   }

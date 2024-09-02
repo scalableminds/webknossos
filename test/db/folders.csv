@@ -1,5 +1,5 @@
-_id,name,isDeleted
-'570b9f4e4bb848d0885ea917','Organization_X',f
-'570b9f4e4bb848d08880712a','A subfolder!',f
-'570b9f4e4bb848d08880712b','Another subfolder!',f
-'570b9f4e4bb848d088a83aef','Organization_Y',f
+_id,name,isDeleted,metadata
+'570b9f4e4bb848d0885ea917','Organization_X',f,'[{"key": "key","type": "number","value": 10}]'
+'570b9f4e4bb848d08880712a','A subfolder!',f,'[]'
+'570b9f4e4bb848d08880712b','Another subfolder!',f,'[]'
+'570b9f4e4bb848d088a83aef','Organization_Y',f,'[]'

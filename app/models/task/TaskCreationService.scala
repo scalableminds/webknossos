@@ -57,7 +57,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   // Used in create (without files) in case of base annotation
   // Note that the requested task’s tracingType is always fulfilled here,
   // either by duplicating the base annotation’s tracings or creating new tracings
-  def createTracingsFromBaseAnnotations(taskParametersList: List[TaskParameters], organizationId: ObjectId)(
+  def createTracingsFromBaseAnnotations(taskParametersList: List[TaskParameters], organizationId: String)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[List[TaskParameters]] =
     Fox.serialCombined(taskParametersList)(
@@ -70,7 +70,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
   private def createTracingsFromBaseAnnotation(
       baseAnnotation: BaseAnnotation,
       taskParameters: TaskParameters,
-      organizationId: ObjectId)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
+      organizationId: String)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[BaseAnnotation] =
     for {
       taskTypeIdValidated <- ObjectId.fromString(taskParameters.taskTypeId) ?~> "taskType.id.invalid"
       taskType <- taskTypeDAO.findOne(taskTypeIdValidated) ?~> "taskType.notFound"
@@ -145,7 +145,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
       baseAnnotation: Annotation,
       params: TaskParameters,
       tracingStoreClient: WKRemoteTracingStoreClient,
-      organizationId: ObjectId,
+      organizationId: String,
       resolutionRestrictions: ResolutionRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[String] =
     for {
       volumeTracingOpt <- baseAnnotation.volumeTracingId
@@ -185,7 +185,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     }
 
   // Used in create (without files). If base annotations were used, this does nothing.
-  def createTaskVolumeTracingBases(paramsList: List[TaskParameters], organizationId: ObjectId)(
+  def createTaskVolumeTracingBases(paramsList: List[TaskParameters], organizationId: String)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[List[Option[(VolumeTracing, Option[File])]]] =
     Fox.serialCombined(paramsList) { params =>
@@ -220,7 +220,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
 
   // Used in createFromFiles. For all volume tracings that have an empty bounding box, reset it to the dataset bounding box
   def addVolumeFallbackBoundingBoxes(tracingBoxes: List[TracingBoxContainer],
-                                     organizationId: ObjectId): Fox[List[TracingBoxContainer]] =
+                                     organizationId: String): Fox[List[TracingBoxContainer]] =
     Fox.serialCombined(tracingBoxes) { tracingBox: TracingBoxContainer =>
       tracingBox.volume match {
         case Full(v) =>
@@ -231,7 +231,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
     }
 
   // Used in createFromFiles. Called once per requested task if volume tracing is passed
-  private def addVolumeFallbackBoundingBox(volume: VolumeTracing, organizationId: ObjectId): Fox[VolumeTracing] =
+  private def addVolumeFallbackBoundingBox(volume: VolumeTracing, organizationId: String): Fox[VolumeTracing] =
     if (volume.boundingBox.isEmpty) {
       for {
         dataset <- datasetDAO.findOneByNameAndOrganization(volume.datasetName, organizationId)(GlobalAccessContext)
@@ -283,7 +283,7 @@ class TaskCreationService @Inject()(taskTypeService: TaskTypeService,
                             volumes: List[Box[(VolumeTracing, Option[File])]],
                             fullParams: List[Box[TaskParameters]],
                             taskType: TaskType,
-                            organizationId: ObjectId)(
+                            organizationId: String)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[(List[Box[SkeletonTracing]], List[Box[(VolumeTracing, Option[File])]])] =
     if (taskType.tracingType == TracingType.skeleton) {

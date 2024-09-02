@@ -47,11 +47,11 @@ function RegistrationViewGeneric() {
             marginBottom: 24,
           }}
         >
-          You are about to join the organization &ldquo;{organization.displayName}&rdquo;!
+          You are about to join the organization &ldquo;{organization.name}&rdquo;!
         </Card>
-        <RegistrationFormGeneric // The key is used to enforce a remount in case the organizationName changes.
+        <RegistrationFormGeneric // The key is used to enforce a remount in case the organizationId changes.
           // That way, we ensure that the organization field is cleared.
-          key={organization.name}
+          key={organization.id}
           targetOrganization={organization}
           onRegistered={(isUserLoggedIn?: boolean) => {
             if (isUserLoggedIn) {

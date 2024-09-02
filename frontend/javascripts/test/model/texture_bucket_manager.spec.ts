@@ -1,7 +1,7 @@
 import mock from "mock-require";
 import "test/mocks/lz4";
-import test, { ExecutionContext } from "ava";
-import { Vector4 } from "oxalis/constants";
+import test, { type ExecutionContext } from "ava";
+import type { Vector4 } from "oxalis/constants";
 
 import "test/mocks/globals.mock";
 import "test/mocks/updatable_texture.mock";

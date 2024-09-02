@@ -1,4 +1,4 @@
-import { type DataNode } from "antd/es/tree";
+import type { DataNode } from "antd/es/tree";
 import _ from "lodash";
 import { mapGroupsWithRoot } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Tree, TreeGroup, SegmentMap, Segment, TreeMap, SegmentGroup } from "oxalis/store";

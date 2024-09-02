@@ -1,9 +1,9 @@
 import _ from "lodash";
 import ErrorHandling from "libs/error_handling";
 
-import { Saga, select } from "oxalis/model/sagas/effect-generators";
+import { type Saga, select } from "oxalis/model/sagas/effect-generators";
 import { call, put, takeEvery } from "typed-redux-saga";
-import {
+import type {
   ComputeQuickSelectForPointAction,
   ComputeQuickSelectForRectAction,
 } from "oxalis/model/actions/volumetracing_actions";
@@ -15,7 +15,7 @@ import performQuickSelectHeuristic from "./quick_select_heuristic_saga";
 import performQuickSelectML from "./quick_select_ml_saga";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { getActiveSegmentationTracing } from "../accessors/volumetracing_accessor";
-import { VolumeTracing } from "oxalis/store";
+import type { VolumeTracing } from "oxalis/store";
 import { ensureMaybeActiveMappingIsLocked } from "./saga_helpers";
 
 function* shouldUseHeuristic() {

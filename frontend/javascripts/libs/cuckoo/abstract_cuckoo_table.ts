@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import UpdatableTexture from "libs/UpdatableTexture";
+import type UpdatableTexture from "libs/UpdatableTexture";
 import { getRenderer } from "oxalis/controller/renderer";
 import { createUpdatableTexture } from "oxalis/geometries/materials/plane_material_factory_helpers";
 import _ from "lodash";

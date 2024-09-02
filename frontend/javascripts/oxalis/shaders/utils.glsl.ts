@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import type { ShaderModule } from "./shader_module_system";
 export const hsvToRgb: ShaderModule = {
   requirements: [],

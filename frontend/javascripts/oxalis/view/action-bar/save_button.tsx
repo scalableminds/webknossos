@@ -1,7 +1,7 @@
 import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
-import Store, { SaveState } from "oxalis/store";
+import Store, { type SaveState } from "oxalis/store";
 import type { OxalisState, IsBusyInfo } from "oxalis/store";
 import { isBusy } from "oxalis/model/accessors/save_accessor";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -184,7 +184,7 @@ function getOldestUnsavedTimestamp(saveQueue: SaveState["queue"]): number | null
     if (volumeQueue.length > 0) {
       const oldestVolumeTimestamp = volumeQueue[0].timestamp;
       oldestUnsavedTimestamp = Math.min(
-        oldestUnsavedTimestamp != null ? oldestUnsavedTimestamp : Infinity,
+        oldestUnsavedTimestamp != null ? oldestUnsavedTimestamp : Number.POSITIVE_INFINITY,
         oldestVolumeTimestamp,
       );
     }

@@ -1,5 +1,5 @@
-import { Button, Table, TableProps } from "antd";
-import { ColumnsType, GetRowKey } from "antd/lib/table/interface";
+import { Button, Table, type TableProps } from "antd";
+import type { ColumnsType, GetRowKey } from "antd/lib/table/interface";
 import React from "react";
 
 type State = {

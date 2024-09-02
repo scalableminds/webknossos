@@ -19,7 +19,7 @@ import { Vector3Input } from "libs/vector_input";
 import { validateLayerViewConfigurationObjectJSON, syncValidator } from "types/validation";
 import { getDefaultLayerViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import messages, {
-  RecommendedConfiguration,
+  type RecommendedConfiguration,
   layerViewConfigurations,
   settings,
   settingsTooltips,
@@ -28,7 +28,7 @@ import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/sto
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 import { BLEND_MODES } from "oxalis/constants";
 import ColorLayerOrderingTable from "./color_layer_ordering_component";
-import { APIDatasetId } from "types/api_flow_types";
+import type { APIDatasetId } from "types/api_flow_types";
 import { getAgglomeratesForDatasetLayer, getMappingsForDatasetLayer } from "admin/admin_rest_api";
 
 const FormItem = Form.Item;
@@ -42,7 +42,6 @@ export default function DatasetSettingsViewConfigTab(props: {
     Record<string, [string[], string[]]>
   >({});
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Update is not necessary when availableMappingsPerLayer[layerName] changes.
   const validateDefaultMappings = useMemo(
     () => async (configStr: string, dataStoreURL: string, datasetId: APIDatasetId) => {
       let config = {} as DatasetConfiguration["layers"];

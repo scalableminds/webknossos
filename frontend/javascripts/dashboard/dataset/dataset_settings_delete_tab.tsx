@@ -24,6 +24,7 @@ const DatasetSettingsDeleteTab = ({ datasetId, history }: Props) => {
     setDataset(newDataset);
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetch):
   useEffect(() => {
     fetch();
   }, []);

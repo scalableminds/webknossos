@@ -7,7 +7,7 @@
     "sourceMap": true,
     "moduleResolution": "node",
     "outDir": "build",
-    "jsx": "react",
+    "jsx": "react-jsx",
     "strict": true,
     "target": "es2021",
     "types": [], //reconsider this later

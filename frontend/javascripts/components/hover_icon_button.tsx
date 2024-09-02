@@ -1,4 +1,4 @@
-import { ButtonProps } from "antd";
+import type { ButtonProps } from "antd";
 import * as React from "react";
 const { useState } = React;
 

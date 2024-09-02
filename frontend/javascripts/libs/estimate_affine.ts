@@ -1,7 +1,7 @@
 import _ from "lodash";
-import { Matrix4x4 } from "mjs";
+import type { Matrix4x4 } from "mjs";
 import { Matrix, solve } from "ml-matrix";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 
 export default function estimateAffine(
   sourcePoints: Vector3[],

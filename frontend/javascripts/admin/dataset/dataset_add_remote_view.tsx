@@ -6,7 +6,7 @@ import {
   Radio,
   Row,
   Collapse,
-  FormInstance,
+  type FormInstance,
   Modal,
   Divider,
   List,
@@ -25,19 +25,19 @@ import Toast from "libs/toast";
 import _ from "lodash";
 import { Hint } from "oxalis/view/action-bar/download_modal_view";
 import { formatScale } from "libs/format_utils";
-import { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
+import type { DataLayer, DatasourceConfiguration } from "types/schemas/datasource.types";
 import DatasetSettingsDataTab, {
   // Sync simple with advanced and get newest datasourceJson
   syncDataSourceFields,
 } from "dashboard/dataset/dataset_settings_data_tab";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
-import { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
+import type { RcFile, UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { UnlockOutlined } from "@ant-design/icons";
 import { Unicode } from "oxalis/constants";
 import { readFileAsText } from "libs/read_file";
 import * as Utils from "libs/utils";
-import { ArbitraryObject } from "types/globals";
+import type { ArbitraryObject } from "types/globals";
 import BrainSpinner from "components/brain_spinner";
 import { useHistory } from "react-router-dom";
 

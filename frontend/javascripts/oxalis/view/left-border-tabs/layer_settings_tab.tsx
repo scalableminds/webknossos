@@ -1,4 +1,4 @@
-import { Button, Col, Divider, Dropdown, MenuProps, Modal, Row, Switch } from "antd";
+import { Button, Col, Divider, Dropdown, type MenuProps, Modal, Row, Switch } from "antd";
 import type { Dispatch } from "redux";
 import {
   EditOutlined,
@@ -23,13 +23,13 @@ import update from "immutability-helper";
 import { SortableContainer, SortableElement, SortableHandle } from "react-sortable-hoc";
 import {
   APIAnnotationTypeEnum,
-  APIDataLayer,
-  APIDataset,
-  APISkeletonLayer,
+  type APIDataLayer,
+  type APIDataset,
+  type APISkeletonLayer,
   APIJobType,
-  EditableLayerProperties,
+  type EditableLayerProperties,
 } from "types/api_flow_types";
-import { ValueOf } from "types/globals";
+import type { ValueOf } from "types/globals";
 import { HoverIconButton } from "components/hover_icon_button";
 import {
   SwitchSetting,
@@ -109,7 +109,7 @@ import { api } from "oxalis/singletons";
 import {
   layerViewConfigurations,
   layerViewConfigurationTooltips,
-  RecommendedConfiguration,
+  type RecommendedConfiguration,
   settings,
   settingsTooltips,
 } from "messages";
@@ -307,7 +307,6 @@ function LayerInfoIconWithTooltip({
   layer,
   dataset,
 }: { layer: APIDataLayer; dataset: APIDataset }) {
-  // biome-ignore lint/correctness/useExhaustiveDependencies: dataset and layer don't change often
   const renderTooltipContent = useCallback(() => {
     const elementClass = getElementClass(dataset, layer.name);
     const resolutionInfo = getResolutionInfo(layer.resolutions);
@@ -1344,7 +1343,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             return field.description ? (
               <>
                 {field.name}{" "}
-                <FastTooltip title={field.description}>
+                <FastTooltip title={field.description} key={`tooltip_${field.name}`}>
                   <InfoCircleOutlined style={{ color: "gray", marginRight: 0 }} />
                 </FastTooltip>
                 {delimiter}

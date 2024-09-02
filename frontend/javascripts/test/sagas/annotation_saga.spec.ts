@@ -1,7 +1,7 @@
-import test, { ExecutionContext } from "ava";
+import test, { type ExecutionContext } from "ava";
 import _ from "lodash";
 import mockRequire from "mock-require";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { createMockTask } from "@redux-saga/testing-utils";
 import { take, put } from "redux-saga/effects";
 import dummyUser from "test/fixtures/dummy_user";

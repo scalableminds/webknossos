@@ -948,6 +948,16 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const { isDisabled, isInEditMode } = layerConfiguration;
     const lastLayerMarginBottom = isLastLayer ? { marginBottom: 30 } : {};
     const betweenLayersMarginBottom = isLastLayer ? {} : { marginBottom: 30 };
+    const opacityLabel =
+      layerConfiguration.alpha === 0 ? (
+        <div>
+          <FastTooltip title="The current opacity is zero">
+            Opacity <WarningOutlined style={{ color: "orange" }} />
+          </FastTooltip>
+        </div>
+      ) : (
+        <>Opacity</>
+      );
     return (
       <div key={layerName} style={lastLayerMarginBottom}>
         {this.getLayerSettingsHeader(
@@ -969,7 +979,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               ? this.getHistogram(layerName, layerConfiguration)
               : null}
             <NumberSliderSetting
-              label="Opacity"
+              label={opacityLabel}
               min={0}
               max={100}
               value={layerConfiguration.alpha}

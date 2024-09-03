@@ -8,10 +8,9 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/24.08.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/24.08.1...HEAD)
 
 ### Added
-- If the opacity of a volume layer is zero, a warning is now shown in the layer settings tab. [#8003](https://github.com/scalableminds/webknossos/pull/8003)
 
 ### Changed
 

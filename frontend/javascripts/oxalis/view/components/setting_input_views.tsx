@@ -573,9 +573,11 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
       ];
 
       return (
-        <Dropdown menu={{ items }}>
-          <EllipsisOutlined style={marginLeftStyle} onClick={(e) => e.stopPropagation()} />
-        </Dropdown>
+        <div onClick={(e) => e.stopPropagation()}>
+          <Dropdown menu={{ items }}>
+            <EllipsisOutlined style={marginLeftStyle} />
+          </Dropdown>
+        </div>
       );
     };
 

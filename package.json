@@ -195,7 +195,7 @@
     "react-json-tree": "^0.17.0",
     "react-markdown": "^8.0.7",
     "react-redux": "^8.1.0",
-    "react-router-dom": "^5.1.2",
+    "react-router-dom": "5.3.4",
     "react-sortable-hoc": "^2.0.0",
     "react-tooltip": "^5.27.1",
     "react-virtualized": "^9.22.4",
@@ -213,7 +213,6 @@
   },
   "resolutions": {
     "**/mini-store": "^1.1.0"
-    
   },
   "ava": {
     "files": [

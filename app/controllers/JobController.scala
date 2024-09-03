@@ -63,7 +63,8 @@ class JobController @Inject()(
     slackNotificationService: SlackNotificationService,
     organizationDAO: OrganizationDAO,
     dataStoreDAO: DataStoreDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
-    extends Controller with Zarr3OutputHelper {
+    extends Controller
+    with Zarr3OutputHelper {
 
   def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
@@ -334,14 +335,19 @@ class JobController @Inject()(
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
           _ <- jobService.assertBoundingBoxLimits(bbox, mag)
-          additionalAxesOpt <- Fox.runOptional(layerName)(layerName => datasetLayerAdditionalAxesDAO.findAllForDatasetAndDataLayerName(dataset._id, layerName))
+          additionalAxesOpt <- Fox.runOptional(layerName)(layerName =>
+            datasetLayerAdditionalAxesDAO.findAllForDatasetAndDataLayerName(dataset._id, layerName))
           additionalAxesOpt <- Fox.runOptional(additionalAxesOpt)(a => Fox.successful(reorderAdditionalAxes(a)))
           rank = additionalAxesOpt.map(_.length).getOrElse(0) + 4
-          axisOrder = FullAxisOrder.fromAxisOrderAndAdditionalAxes(rank, AxisOrder.cAdditionalxyz(rank), additionalAxesOpt)
+          axisOrder = FullAxisOrder.fromAxisOrderAndAdditionalAxes(rank,
+                                                                   AxisOrder.cAdditionalxyz(rank),
+                                                                   additionalAxesOpt)
           threeDBBox <- BoundingBox.fromLiteral(bbox).toFox ~> "job.invalidBoundingBox"
-          parsedAdditionalCoordinatesOpt <- Fox.runOptional(additionalCoordinates)(coords => Json.parse(coords).validate[Seq[AdditionalCoordinate]]) ~> "job.additionalCoordinates.invalid"
+          parsedAdditionalCoordinatesOpt <- Fox.runOptional(additionalCoordinates)(coords =>
+            Json.parse(coords).validate[Seq[AdditionalCoordinate]]) ~> "job.additionalCoordinates.invalid"
           parsedAdditionalCoordinates = parsedAdditionalCoordinatesOpt.getOrElse(Seq.empty)
-          additionalAxesOfNdBBox = additionalAxesOpt.map(additionalAxes => additionalAxes.map(_.enclosingAdditionalCoordinates(parsedAdditionalCoordinates)))
+          additionalAxesOfNdBBox = additionalAxesOpt.map(additionalAxes =>
+            additionalAxes.map(_.enclosingAdditionalCoordinates(parsedAdditionalCoordinates)))
           ndBoundingBox = NDBoundingBox(threeDBBox, additionalAxesOfNdBBox.getOrElse(Seq.empty), axisOrder)
           command = JobCommand.export_tiff
           exportFileName = if (asOmeTiff)

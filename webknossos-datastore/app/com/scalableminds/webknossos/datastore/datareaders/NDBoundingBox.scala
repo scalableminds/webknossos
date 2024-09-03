@@ -6,7 +6,7 @@ import play.api.libs.json.{JsValue, Json}
 
 case class NDBoundingBox(boundingBox: BoundingBox, additionalAxes: Seq[AdditionalAxis], fullAxisOrder: FullAxisOrder) {
 
-  def toWkLibsDict: JsValue= {
+  def toWkLibsDict: JsValue = {
     val additionalAxesDict = Json.toJson(additionalAxes)
     val axisOrderDict = fullAxisOrder.toWkLibsDictObject
     boundingBox.toWkLibsDict ++ Json.obj("additionalAxes" -> additionalAxesDict, "axisOrder" -> axisOrderDict)

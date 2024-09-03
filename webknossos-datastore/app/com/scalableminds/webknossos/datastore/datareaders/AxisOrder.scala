@@ -97,12 +97,11 @@ case class FullAxisOrder(axes: Seq[Axis]) {
   def permuteIndicesArrayToWk(indices: Array[Int]): Array[Int] =
     arrayToWkPermutation.map(indices(_))
 
-  def toWkLibsDictObject: JsValue = {
+  def toWkLibsDictObject: JsValue =
     Json.toJson(axes.zipWithIndex.collect {
       case (axis, index) if axis.name == "x" || axis.name == "y" || axis.name == "z" =>
         axis.name -> index
     }.toMap)
-  }
 
 }
 

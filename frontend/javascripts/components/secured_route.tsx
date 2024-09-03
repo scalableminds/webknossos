@@ -4,9 +4,9 @@ import { connect } from "react-redux";
 import LoginView from "admin/auth/login_view";
 import {
   isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
+  type PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
-import { APIOrganization, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIUser } from "types/api_flow_types";
 import { PageUnavailableForYourPlanView } from "components/pricing_enforcers";
 import type { ComponentType } from "react";
 import { isUserAdminOrManager } from "libs/utils";

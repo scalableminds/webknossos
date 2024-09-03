@@ -1,4 +1,4 @@
-import { Button, ButtonProps } from "antd";
+import { Button, type ButtonProps } from "antd";
 import { LoadingOutlined } from "@ant-design/icons";
 import * as React from "react";
 import FastTooltip from "./fast_tooltip";

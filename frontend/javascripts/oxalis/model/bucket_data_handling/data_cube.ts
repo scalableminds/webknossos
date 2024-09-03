@@ -1,5 +1,5 @@
 import _ from "lodash";
-import { createNanoEvents, Emitter } from "nanoevents";
+import { createNanoEvents, type Emitter } from "nanoevents";
 import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
@@ -20,8 +20,8 @@ import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { DimensionMap } from "oxalis/model/dimensions";
 import Dimensions from "oxalis/model/dimensions";
 import ErrorHandling from "libs/error_handling";
-import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import type PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import type { Mapping } from "oxalis/store";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
@@ -33,8 +33,8 @@ import type {
   BucketAddress,
 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =

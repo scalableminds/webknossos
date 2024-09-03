@@ -10,14 +10,15 @@ import {
   Radio,
   Alert,
   Tooltip,
-  TabsProps,
+  type TabsProps,
 } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
 import {
   APIJobType,
-  VoxelSize,
+  type VoxelSize,
   type AdditionalAxis,
   type APIDataLayer,
   type APIDataset,
@@ -54,7 +55,7 @@ import {
   computeShapeFromBoundingBox,
 } from "libs/utils";
 import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
-import { BoundingBoxType, Vector3 } from "oxalis/constants";
+import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import { useStartAndPollJob } from "admin/job/job_hooks";
 import { LayerSelection } from "components/layer_selection";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";

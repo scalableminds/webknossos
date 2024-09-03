@@ -28,7 +28,7 @@ import {
   ConfigProvider,
   Divider,
   Empty,
-  MenuProps,
+  type MenuProps,
   Modal,
   Popover,
   Select,
@@ -82,7 +82,7 @@ import {
   setSelectedSegmentsOrGroupAction,
   setExpandedSegmentGroupsAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import type {
   ActiveMappingInfo,
   MeshInformation,
@@ -97,11 +97,11 @@ import Store from "oxalis/store";
 import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observer";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import {
-  SegmentHierarchyNode,
+  type SegmentHierarchyNode,
   getBaseSegmentationName,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
-import React, { Key } from "react";
+import React, { type Key } from "react";
 import { connect, useSelector } from "react-redux";
 import { AutoSizer } from "react-virtualized";
 import type { Dispatch } from "redux";
@@ -115,18 +115,18 @@ import {
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
 import { ChangeColorMenuItemContent } from "components/color_picker";
-import { ItemType } from "antd/lib/menu/hooks/useItems";
 import { pluralize } from "libs/utils";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
-import { DataNode } from "antd/lib/tree";
+import type { DataNode } from "antd/lib/tree";
 import { ensureSegmentIndexIsLoadedAction } from "oxalis/model/actions/dataset_actions";
-import { ValueOf } from "types/globals";
+import type { ValueOf } from "types/globals";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
 import FastTooltip from "components/fast_tooltip";
 import { ContextMenuContainer } from "../sidebar_context_menu";
+import type { ItemType } from "antd/es/menu/interface";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -1451,14 +1451,14 @@ class SegmentsView extends React.Component<Props, State> {
       if (key.startsWith(groupPrefix)) {
         // Note that negative ids can be found here, which is why Group- is used as a splitter
         const idWithSign = key.split(groupPrefix)[1];
-        if (isNumber(parseInt(idWithSign))) {
-          selectedIds.group = parseInt(idWithSign);
+        if (isNumber(Number.parseInt(idWithSign))) {
+          selectedIds.group = Number.parseInt(idWithSign);
         }
       } else if (key.startsWith("segment-")) {
         // there should be no negative segment IDs
         const regexSplit = key.split("-");
-        if (isNumber(parseInt(regexSplit[1]))) {
-          selectedIds.segments.push(parseInt(regexSplit[1]));
+        if (isNumber(Number.parseInt(regexSplit[1]))) {
+          selectedIds.segments.push(Number.parseInt(regexSplit[1]));
         }
       }
     });

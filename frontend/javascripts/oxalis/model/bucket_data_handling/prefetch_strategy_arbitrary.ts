@@ -5,14 +5,14 @@ import { M4x4, V3 } from "libs/mjs";
 import type { PullQueueItem } from "oxalis/model/bucket_data_handling/pullqueue";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
-  velocityRangeEnd = Infinity;
+  velocityRangeEnd = Number.POSITIVE_INFINITY;
   roundTripTimeRangeStart = 0;
-  roundTripTimeRangeEnd = Infinity;
+  roundTripTimeRangeEnd = Number.POSITIVE_INFINITY;
   name = "ARBITRARY";
   // @ts-expect-error ts-migrate(2702) FIXME: 'PolyhedronRasterizer' only refers to a type, but ... Remove this comment to see the full error message
   prefetchPolyhedron: PolyhedronRasterizer.Master = PolyhedronRasterizer.Master.squareFrustum(

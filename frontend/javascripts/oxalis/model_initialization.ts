@@ -95,7 +95,7 @@ import Toast from "libs/toast";
 import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
 import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
-import constants, { ControlModeEnum, AnnotationToolEnum, Vector3 } from "oxalis/constants";
+import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";
 import messages from "messages";
 import {
   setActiveConnectomeAgglomerateIdsAction,

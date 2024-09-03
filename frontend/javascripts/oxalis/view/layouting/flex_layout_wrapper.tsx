@@ -1,7 +1,7 @@
 import type { Dispatch } from "redux";
 import { Layout } from "antd";
 import { connect } from "react-redux";
-import FlexLayout, { BorderNode, TabNode, TabSetNode } from "flexlayout-react";
+import FlexLayout, { type BorderNode, type TabNode, type TabSetNode } from "flexlayout-react";
 import * as React from "react";
 import _ from "lodash";
 import features from "features";

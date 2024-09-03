@@ -6,8 +6,6 @@ This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/24.07.0...HEAD)
-
-- If Segment Anything was already configured, it needs to be pointed to an endpoint that works with SAM 2. [#7965](https://github.com/scalableminds/webknossos/pull/7965)
+[Commits](https://github.com/scalableminds/webknossos/compare/24.08.0...HEAD)
 
 ### Postgres Evolutions:

@@ -2,7 +2,7 @@ import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
-import { Matrix4x4 } from "libs/mjs";
+import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
@@ -34,9 +34,9 @@ import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
-import { SmallerOrHigherInfo } from "../helpers/resolution_info";
+import type { SmallerOrHigherInfo } from "../helpers/resolution_info";
 import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
-import { AdditionalCoordinate, VoxelSize } from "types/api_flow_types";
+import type { AdditionalCoordinate, VoxelSize } from "types/api_flow_types";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -429,7 +429,10 @@ export function getValidTaskZoomRange(
   state: OxalisState,
   respectRestriction: boolean = false,
 ): [number, number] {
-  const defaultRange = [baseDatasetViewConfiguration.zoom.minimum, Infinity] as Vector2;
+  const defaultRange = [
+    baseDatasetViewConfiguration.zoom.minimum,
+    Number.POSITIVE_INFINITY,
+  ] as Vector2;
   const { resolutionRestrictions } = state.tracing.restrictions;
   // We use the first color layer as a heuristic to check the validity of the zoom range,
   // as we don't know to which layer a restriction is meant to be applied.

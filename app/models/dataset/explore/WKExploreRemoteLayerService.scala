@@ -76,7 +76,7 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       client: WKRemoteDataStoreClient = new WKRemoteDataStoreClient(datastore, rpc)
       organization <- organizationDAO.findOne(requestingUser._organization)(GlobalAccessContext)
       userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(requestingUser)
-      exploreResponse <- client.exploreRemoteDataset(parametersWithCredentialId, organization.name, userToken)
+      exploreResponse <- client.exploreRemoteDataset(parametersWithCredentialId, organization._id, userToken)
     } yield exploreResponse
 
   private def selectDataStore(dataStoreNames: List[Option[String]])(implicit ec: ExecutionContext): Fox[DataStore] =
@@ -114,7 +114,7 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
       client = new WKRemoteDataStoreClient(dataStore, rpc)
       userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(user)
-      _ <- client.addDataSource(organization.name, datasetName, dataSource, folderId, userToken)
+      _ <- client.addDataSource(organization._id, datasetName, dataSource, folderId, userToken)
     } yield ()
 
 }

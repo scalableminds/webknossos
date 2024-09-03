@@ -1,10 +1,13 @@
-import React from "react";
+import type React from "react";
 import { Table } from "antd";
 import _ from "lodash";
 
-import { VoxelyticsArtifactConfig, VoxelyticsTaskConfigWithHierarchy } from "types/api_flow_types";
+import type {
+  VoxelyticsArtifactConfig,
+  VoxelyticsTaskConfigWithHierarchy,
+} from "types/api_flow_types";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
-import { ColumnsType } from "antd/lib/table";
+import type { ColumnsType } from "antd/lib/table";
 import { renderArtifactPath } from "./artifacts_view";
 import { localeCompareBy } from "libs/utils";
 

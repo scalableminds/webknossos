@@ -13,7 +13,7 @@ import {
   Select,
   Tooltip,
 } from "antd";
-import { Location as HistoryLocation, Action as HistoryAction } from "history";
+import type { Location as HistoryLocation, Action as HistoryAction } from "history";
 import {
   InfoCircleOutlined,
   FileOutlined,
@@ -27,9 +27,9 @@ import dayjs from "dayjs";
 
 import classnames from "classnames";
 import _ from "lodash";
-import { useDropzone, FileWithPath } from "react-dropzone";
+import { useDropzone, type FileWithPath } from "react-dropzone";
 import ErrorHandling from "libs/error_handling";
-import { Link, RouteComponentProps } from "react-router-dom";
+import { Link, type RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
 import {
   type APITeam,
@@ -49,7 +49,7 @@ import {
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
   getUnfinishedUploads,
-  UnfinishedUpload,
+  type UnfinishedUpload,
 } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
@@ -65,7 +65,7 @@ import {
 import { Vector3Input } from "libs/vector_input";
 import features from "features";
 import { syncValidator } from "types/validation";
-import { FormInstance } from "antd/lib/form";
+import type { FormInstance } from "antd/lib/form";
 import { AllUnits, UnitLong, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import { FormItemWithInfo, confirmAsync } from "../../dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
@@ -725,9 +725,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                 <>
                   Your organization has exceeded the available storage. Uploading new datasets is
                   disabled. Visit the{" "}
-                  <Link to={`/organizations/${this.props.organization.name}`}>
-                    organization page
-                  </Link>{" "}
+                  <Link to={`/organizations/${this.props.organization.id}`}>organization page</Link>{" "}
                   for details.
                 </>
               }

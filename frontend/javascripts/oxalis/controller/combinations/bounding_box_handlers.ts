@@ -5,7 +5,7 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import _ from "lodash";
 import type { OrthoView, Point2, Vector3, BoundingBoxType, Vector2 } from "oxalis/constants";
-import Store, { OxalisState, UserBoundingBox } from "oxalis/store";
+import Store, { type OxalisState, type UserBoundingBox } from "oxalis/store";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import type { DimensionMap, DimensionIndices } from "oxalis/model/dimensions";
 import Dimension from "oxalis/model/dimensions";

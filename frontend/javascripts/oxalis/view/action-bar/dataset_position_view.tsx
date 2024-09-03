@@ -1,7 +1,8 @@
 import { Space } from "antd";
 import { PushpinOutlined, ReloadOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
-import React, { PureComponent } from "react";
+import type React from "react";
+import { PureComponent } from "react";
 import type { APIDataset } from "types/api_flow_types";
 import { V3 } from "libs/mjs";
 import { Vector3Input } from "libs/vector_input";

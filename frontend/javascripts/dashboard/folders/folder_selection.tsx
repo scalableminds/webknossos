@@ -3,7 +3,7 @@ import { TreeSelect } from "antd";
 import React, { useState, useEffect } from "react";
 
 import { useFolderHierarchyQuery } from "dashboard/dataset/queries";
-import { FolderItem } from "types/api_flow_types";
+import type { FolderItem } from "types/api_flow_types";
 
 function addDisabledProperty(tree: FolderItem[]) {
   const newTree = _.cloneDeep(tree);

@@ -445,7 +445,7 @@ export function InnerMetadataTable({
   getDeleteEntryButton,
   addNewEntryMenuItems,
   isVisualStudioTheme,
-  onlyReturnRows
+  onlyReturnRows,
 }: {
   metadata: APIMetadataWithError[];
   getKeyInput: (record: APIMetadataWithError, index: number) => JSX.Element;
@@ -459,42 +459,39 @@ export function InnerMetadataTable({
   isVisualStudioTheme?: boolean;
   onlyReturnRows?: boolean;
 }): React.ReactElement {
-  const rows = <>
-    {metadata.map((record, index) => (
-      <tr key={index}>
-        <td>{getKeyInput(record, index)}</td>
-        {isVisualStudioTheme ? null : <td>:</td>}
-        <td>
-          <MetadataValueInput
-            record={record}
-            index={index}
-            focusedRow={focusedRow}
-            setFocusedRow={setFocusedRow}
-            updateMetadataValue={updateMetadataValue}
-            isSaving={isSaving}
-            availableStrArrayTagOptions={availableStrArrayTagOptions}
-          />
+  const rows = (
+    <>
+      {metadata.map((record, index) => (
+        <tr key={index}>
+          <td>{getKeyInput(record, index)}</td>
+          {isVisualStudioTheme ? null : <td>:</td>}
+          <td>
+            <MetadataValueInput
+              record={record}
+              index={index}
+              focusedRow={focusedRow}
+              setFocusedRow={setFocusedRow}
+              updateMetadataValue={updateMetadataValue}
+              isSaving={isSaving}
+              availableStrArrayTagOptions={availableStrArrayTagOptions}
+            />
+          </td>
+          <td>{getDeleteEntryButton(record, index)}</td>
+        </tr>
+      ))}
+      <tr>
+        <td colSpan={3}>
+          <div className="flex-center-child">
+            <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
+              <Button ghost size="small" style={{ border: "none" }}>
+                <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
+              </Button>
+            </Dropdown>
+          </div>
         </td>
-        <td>{getDeleteEntryButton(record, index)}</td>
       </tr>
-    ))}
-    <tr>
-      <td colSpan={3}>
-        <div className="flex-center-child">
-          <Dropdown
-            menu={addNewEntryMenuItems}
-            placement="bottom"
-            trigger={["click"]}
-            autoFocus
-          >
-            <Button ghost size="small" style={{ border: "none" }}>
-              <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
-            </Button>
-          </Dropdown>
-        </div>
-      </td>
-    </tr>
-  </>;
+    </>
+  );
 
   if (onlyReturnRows) {
     return rows;
@@ -515,9 +512,7 @@ export function InnerMetadataTable({
           <th />
         </tr>
       </thead>
-      <tbody>
-        {rows}
-      </tbody>
+      <tbody>{rows}</tbody>
     </table>
   );
 }

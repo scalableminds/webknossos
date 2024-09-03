@@ -12,10 +12,10 @@ import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actio
 import type { MutableTreeMap, OxalisState, SkeletonTracing, TreeGroup } from "oxalis/store";
 import Store from "oxalis/store";
 import RemoveTreeModal from "oxalis/view/remove_tree_modal";
-import { Key } from "react";
+import type { Key } from "react";
 import { batchActions } from "redux-batched-actions";
 import type { ServerSkeletonTracing, UserDefinedProperty } from "types/api_flow_types";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;

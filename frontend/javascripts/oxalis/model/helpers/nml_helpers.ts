@@ -594,7 +594,7 @@ function _parseStringArray(
   const indices = Object.keys(obj)
     .map((key) => key.split(`${prefix}-`))
     .filter((splitElements) => splitElements.length === 2)
-    .map((splitElements) => parseInt(splitElements[1], 10));
+    .map((splitElements) => Number.parseInt(splitElements[1], 10));
   if (indices.length === 0) {
     if (options) {
       return options.defaultValue;

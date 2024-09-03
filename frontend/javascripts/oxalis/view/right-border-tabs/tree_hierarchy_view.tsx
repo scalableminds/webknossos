@@ -1,5 +1,13 @@
 import { DeleteOutlined, DownOutlined, TagsOutlined } from "@ant-design/icons";
-import { Tree as AntdTree, Button, type GetRef, Input, type MenuProps, Modal, type TreeProps } from "antd";
+import {
+  Tree as AntdTree,
+  Button,
+  type GetRef,
+  Input,
+  type MenuProps,
+  Modal,
+  type TreeProps,
+} from "antd";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AutoSizer } from "react-virtualized";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -36,9 +44,12 @@ import {
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
 import { ResizableSplitPane } from "./resizable_split_pane";
-import { InputWithUpdateOnBlur } from "./user_defined_properties_table";
-import { UserDefinedProperty } from "types/api_flow_types";
-import { APIMetadataWithError, InnerMetadataTable } from "dashboard/folders/metadata_table";
+import {
+  InputWithUpdateOnBlur,
+  UserDefinedPropertyTableRows,
+} from "./user_defined_properties_table";
+import type { UserDefinedProperty } from "types/api_flow_types";
+import { APIMetadataWithError } from "dashboard/folders/metadata_table";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
   const { id, type } = info.node;
@@ -285,12 +296,12 @@ function TreeHierarchyView(props: Props) {
                     node.type === GroupTypeEnum.TREE
                       ? renderTreeNode(props, onOpenContextMenu, hideContextMenu, node)
                       : renderGroupNode(
-                        props,
-                        onOpenContextMenu,
-                        hideContextMenu,
-                        node,
-                        expandedNodeKeys,
-                      )
+                          props,
+                          onOpenContextMenu,
+                          hideContextMenu,
+                          node,
+                          expandedNodeKeys,
+                        )
                   }
                   switcherIcon={<DownOutlined />}
                   onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
@@ -326,26 +337,6 @@ function TreeHierarchyView(props: Props) {
   );
 }
 
-const updateUserDefinedProperty = (
-  tree: Tree,
-  oldPropKey: string,
-  newPropPartial: Partial<UserDefinedProperty>,
-) => {
-  Store.dispatch(
-    setTreeUserDefinedPropertiesAction(
-      tree.userDefinedProperties.map((element) =>
-        element.key === oldPropKey
-          ? {
-            ...element,
-            ...newPropPartial,
-          }
-          : element,
-      ),
-      tree.treeId,
-    ),
-  );
-};
-
 const updateUserDefinedPropertyByIndex = (
   tree: Tree,
   index: number,
@@ -356,9 +347,9 @@ const updateUserDefinedPropertyByIndex = (
       tree.userDefinedProperties.map((element, idx) =>
         idx === index
           ? {
-            ...element,
-            ...newPropPartial,
-          }
+              ...element,
+              ...newPropPartial,
+            }
           : element,
       ),
       tree.treeId,
@@ -375,46 +366,6 @@ function DetailsForSelection({
     if (tree == null) {
       return <>Cannot find details for selected tree.</>;
     }
-    // todop
-    const isReadOnly = false;
-
-    const getDeleteEntryButton = (_: APIMetadataWithError, index: number) => (
-      <div className="flex-center-child">
-        <Button
-          type="text"
-          disabled={isReadOnly}
-          style={{ width: 16, height: 19 }}
-          icon={
-            <DeleteOutlined
-              style={{
-                color: "var(--ant-color-text-tertiary)",
-                width: 16,
-              }}
-            />
-          }
-          onClick={() => {
-            // todop
-          }}
-        />
-      </div>
-    );
-
-    // todop
-    const getKeyInput = (record: APIMetadataWithError, index: number) => {
-      return (
-        <InputWithUpdateOnBlur
-          className="transparent-input"
-          // onFocus={() => setFocusedRow(index)}
-          // onBlur={() => setFocusedRow(null)}
-          value={record.key}
-          onChange={(value) => updateUserDefinedPropertyByIndex(tree, index, { key: value })}
-          placeholder="Property"
-          size="small"
-        // disabled={isSaving}
-        // id={getKeyInputIdForIndex(index)}
-        />
-      );
-    };
 
     return (
       <div>
@@ -433,43 +384,12 @@ function DetailsForSelection({
                 />
               </td>
             </tr>
-            <tr className="divider-row">
-              <td colSpan={3}>
-                User-defined Properties <TagsOutlined />
-              </td>
-            </tr>
-            {/*
-            // todop
-            export type APIMetadata = {
-              type: APIMetadataType;
-              key: string;
-              value: string | number | string[];
-            };*/}
-            <InnerMetadataTable
-              onlyReturnRows
-              isVisualStudioTheme
-              metadata={tree.userDefinedProperties.map((prop) => ({
-                key: prop.key,
-                type: "string",
-                value: prop.stringValue || "",
-              }))}
-              getKeyInput={getKeyInput}
-              focusedRow={null}
-              setFocusedRow={() => {}}
-              updateMetadataValue={
-                (indexToUpdate: number, newValue: number | string | string[]) => {
-                  updateUserDefinedPropertyByIndex(tree, indexToUpdate, { stringValue: newValue as string })
-                }
-              }
-              isSaving={false}
-              availableStrArrayTagOptions={[]}
-              getDeleteEntryButton={getDeleteEntryButton}
-              addNewEntryMenuItems={{}}
+            <UserDefinedPropertyTableRows
+              item={tree}
+              updateUserDefinedPropertyByIndex={updateUserDefinedPropertyByIndex}
             />
           </tbody>
         </table>
-
-
       </div>
     );
   }

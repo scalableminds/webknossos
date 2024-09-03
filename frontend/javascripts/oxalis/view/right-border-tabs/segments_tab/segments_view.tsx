@@ -32,7 +32,7 @@ import {
   Tree,
   type MenuProps,
 } from "antd";
-import { DataNode } from "antd/lib/tree";
+import type { DataNode } from "antd/lib/tree";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
 import Toast from "libs/toast";
@@ -108,7 +108,7 @@ import {
   type SegmentHierarchyNode,
 } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import type RcTree from "rc-tree";
-import React, { Key } from "react";
+import React, { type Key } from "react";
 import { connect, useSelector } from "react-redux";
 import { AutoSizer } from "react-virtualized";
 import type { Dispatch } from "redux";
@@ -120,7 +120,7 @@ import type {
   UserDefinedProperty,
 } from "types/api_flow_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
-import { ValueOf } from "types/globals";
+import type { ValueOf } from "types/globals";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
 import { ResizableSplitPane } from "../resizable_split_pane";
@@ -132,9 +132,12 @@ import {
   getGroupNodeKey,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
-import { InputWithUpdateOnBlur, UserDefinedTableRows } from "../user_defined_properties_table";
+import {
+  InputWithUpdateOnBlur,
+  UserDefinedPropertyTableRows,
+} from "../user_defined_properties_table";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
-import { ItemType } from "antd/lib/menu/interface";
+import type { ItemType } from "antd/lib/menu/interface";
 
 const { confirm } = Modal;
 const { Option } = Select;
@@ -1954,11 +1957,9 @@ class SegmentsView extends React.Component<Props, State> {
                 />
               </td>
             </tr>
-            <UserDefinedTableRows
-              userDefinedProperties={segment.userDefinedProperties}
-              onChange={(oldKey: string, propPartial: Partial<UserDefinedProperty>) => {
-                this.updateUserDefinedProperty(segment, oldKey, propPartial);
-              }}
+            <UserDefinedPropertyTableRows
+              item={segment}
+              updateUserDefinedPropertyByIndex={this.updateUserDefinedPropertyByIndex}
             />
           </tbody>
         </table>
@@ -1967,9 +1968,9 @@ class SegmentsView extends React.Component<Props, State> {
     return null;
   }
 
-  updateUserDefinedProperty = (
+  updateUserDefinedPropertyByIndex = (
     segment: Segment,
-    oldPropKey: string,
+    index: number,
     newPropPartial: Partial<UserDefinedProperty>,
   ) => {
     if (this.props.visibleSegmentationLayer == null) {
@@ -1978,8 +1979,8 @@ class SegmentsView extends React.Component<Props, State> {
     this.props.updateSegment(
       segment.id,
       {
-        userDefinedProperties: segment.userDefinedProperties.map((element) =>
-          element.key === oldPropKey
+        userDefinedProperties: segment.userDefinedProperties.map((element, idx) =>
+          idx === index
             ? {
                 ...element,
                 ...newPropPartial,

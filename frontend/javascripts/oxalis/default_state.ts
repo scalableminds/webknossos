@@ -9,7 +9,11 @@ import Constants, {
   InterpolationModeEnum,
   UnitLong,
 } from "oxalis/constants";
-import { APIAllowedMode, APIAnnotationType, APIAnnotationVisibility } from "types/api_flow_types";
+import type {
+  APIAllowedMode,
+  APIAnnotationType,
+  APIAnnotationVisibility,
+} from "types/api_flow_types";
 import constants from "oxalis/constants";
 import { getSystemColorTheme } from "theme";
 

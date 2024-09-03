@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { RouteComponentProps, withRouter } from "react-router-dom";
+import type React from "react";
+import { useState, useEffect } from "react";
+import { type RouteComponentProps, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
-import { Button, Input, Checkbox, Tooltip, FormInstance, Collapse, Space } from "antd";
+import { Button, Input, Checkbox, Tooltip, type FormInstance, Collapse, Space } from "antd";
 import { CopyOutlined, InfoCircleOutlined, RetweetOutlined } from "@ant-design/icons";
 import type { APIDataset, APIDatasetId, APIUser } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
@@ -10,7 +11,7 @@ import Toast from "libs/toast";
 import window from "libs/window";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { isUserAdminOrDatasetManager, isUserAdminOrTeamManager } from "libs/utils";
 import { FormItemWithInfo } from "./helper_components";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
@@ -45,6 +46,7 @@ function DatasetSettingsSharingTab({ form, datasetId, dataset, activeUser }: Pro
     setSharingToken(newSharingToken);
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetch):
   useEffect(() => {
     fetch();
   }, []);

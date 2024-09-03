@@ -3,7 +3,7 @@ import _ from "lodash";
 import { WarningOutlined } from "@ant-design/icons";
 import { getUnrenderableLayerInfosForCurrentZoom } from "oxalis/model/accessors/flycam_accessor";
 import { usePolledState } from "libs/react_helpers";
-import { SmallerOrHigherInfo } from "oxalis/model/helpers/resolution_info";
+import type { SmallerOrHigherInfo } from "oxalis/model/helpers/resolution_info";
 import FastTooltip from "components/fast_tooltip";
 
 const { useState } = React;

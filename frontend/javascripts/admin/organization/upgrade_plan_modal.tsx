@@ -1,4 +1,5 @@
-import React, { useRef } from "react";
+import type React from "react";
+import { useRef } from "react";
 import { Button, Divider, InputNumber, Modal } from "antd";
 import dayjs from "dayjs";
 import {
@@ -7,7 +8,7 @@ import {
   RocketOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_flow_types";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import {
   sendExtendPricingPlanEmail,
@@ -75,7 +76,7 @@ function UpgradeUserQuotaModal({ destroy }: { destroy: () => void }) {
 
   const handleUserUpgrade = async () => {
     if (userInputRef.current) {
-      const requestedUsers = parseInt(userInputRef.current.value);
+      const requestedUsers = Number.parseInt(userInputRef.current.value);
       await sendUpgradePricingPlanUserEmail(requestedUsers);
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     }
@@ -119,7 +120,7 @@ function UpgradeStorageQuotaModal({ destroy }: { destroy: () => void }) {
 
   const handleStorageUpgrade = async () => {
     if (storageInputRef.current) {
-      const requestedStorage = parseInt(storageInputRef.current.value);
+      const requestedStorage = Number.parseInt(storageInputRef.current.value);
       await sendUpgradePricingPlanStorageEmail(requestedStorage);
       Toast.success(messages["organization.plan.upgrage_request_sent"]);
     }

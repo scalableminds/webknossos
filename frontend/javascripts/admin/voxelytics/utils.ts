@@ -1,5 +1,5 @@
 import { message } from "antd";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { useSelector } from "react-redux";
 import { VoxelyticsRunState } from "types/api_flow_types";
 

@@ -26,8 +26,8 @@ import type { BucketAddress, Vector3 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import window from "libs/window";
 import { getGlobalDataConnectionInfo } from "../data_connection_info";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { AdditionalCoordinate } from "types/api_flow_types";
+import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import _ from "lodash";
 
 const decodeFourBit = createWorker(DecodeFourBitWorker);

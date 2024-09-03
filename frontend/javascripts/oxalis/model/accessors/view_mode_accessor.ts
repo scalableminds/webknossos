@@ -1,6 +1,6 @@
 import memoizeOne from "memoize-one";
 import _ from "lodash";
-import { type Flycam, OxalisState } from "oxalis/store";
+import type { Flycam, OxalisState } from "oxalis/store";
 import type {
   OrthoViewExtents,
   Rect,

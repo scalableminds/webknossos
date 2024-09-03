@@ -1,4 +1,5 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type React from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
   APIDatasetId,
   APIDatasetCompact,
@@ -6,7 +7,7 @@ import type {
   FolderItem,
   APIDataset,
 } from "types/api_flow_types";
-import { DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
+import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
 import {
@@ -199,6 +200,9 @@ export default function DatasetCollectionContextProvider({
         datasetsInFolderQuery.isFetching ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): <explanation>
   const value: DatasetCollectionContextValue = useMemo(
     () => ({
       supportsFolders: true as const,
@@ -273,7 +277,9 @@ export default function DatasetCollectionContextProvider({
       updateDatasetMutation,
       selectedDatasets,
       globalSearchQuery,
+      // biome-ignore lint/correctness/useExhaustiveDependencies:
       getActiveSubfolders,
+      // biome-ignore lint/correctness/useExhaustiveDependencies:
       getBreadcrumbs,
       selectedFolder,
       setGlobalSearchQuery,

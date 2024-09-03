@@ -1,6 +1,6 @@
 import _ from "lodash";
 import { Matrix, solve } from "ml-matrix";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import { V3 } from "./mjs";
 
 class TPS1d {

@@ -63,7 +63,7 @@ export function renderUsersForTeam(
   return (
     <ul>
       {teamMembers.map((teamMember) => (
-        <li>
+        <li key={`team_member_${teamMember.id}`}>
           {teamMember.firstName} {teamMember.lastName} ({teamMember.email}){" "}
           {renderTeamRolesForUser(teamMember, team)}
           {renderAdditionalContent(teamMember, team)}

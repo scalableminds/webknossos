@@ -1,5 +1,10 @@
 import update from "immutability-helper";
-import { ContourMode, OrthoViews, OrthoViewWithoutTD, Vector3 } from "oxalis/constants";
+import {
+  type ContourMode,
+  OrthoViews,
+  type OrthoViewWithoutTD,
+  type Vector3,
+} from "oxalis/constants";
 import type {
   EditableMapping,
   MappingType,

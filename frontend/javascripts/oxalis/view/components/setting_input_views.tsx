@@ -7,9 +7,9 @@ import {
   Input,
   Select,
   Popover,
-  PopoverProps,
+  type PopoverProps,
   Dropdown,
-  MenuProps,
+  type MenuProps,
 } from "antd";
 import {
   BorderInnerOutlined,
@@ -22,13 +22,13 @@ import {
 } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
-import { type Vector3, type Vector6 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import { getVisibleSegmentationLayer } from "oxalis/model/accessors/dataset_accessor";
 import { connect } from "react-redux";
-import { OxalisState } from "oxalis/store";
-import { APISegmentationLayer } from "types/api_flow_types";
+import type { OxalisState } from "oxalis/store";
+import type { APISegmentationLayer } from "types/api_flow_types";
 import { api } from "oxalis/singletons";
 import FastTooltip from "components/fast_tooltip";
 

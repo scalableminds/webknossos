@@ -23,6 +23,7 @@ import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
 import { AutoSizer } from "react-virtualized";
+import { setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
 
 const ADD_BBOX_BUTTON_HEIGHT = 32;
 
@@ -133,6 +134,7 @@ export default function BoundingBoxTab() {
           onDelete={_.partial(deleteBoundingBox, bb.id)}
           onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
           onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
+          setActiveUserBBox={() => dispatch(setActiveUserBoundingBoxId(bb.id))}
           onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
           onNameChange={_.partial(setBoundingBoxName, bb.id)}
           onColorChange={_.partial(setBoundingBoxColor, bb.id)}

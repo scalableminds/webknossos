@@ -10,6 +10,17 @@ case class AdditionalAxis(name: String, bounds: Array[Int], index: Int) {
   lazy val lowerBound: Int = bounds(0)
   lazy val upperBound: Int = bounds(1)
   lazy val highestValue: Int = upperBound - 1
+
+  def enclosingAdditionalCoordinates(additionalCoordinates: Seq[AdditionalCoordinate]): AdditionalAxis = {
+    val matchingCoordinate = additionalCoordinates.find(ac => ac.name == name)
+    matchingCoordinate match {
+      case Some(ac) =>
+        AdditionalAxis(name, Array(ac.value, ac.value + 1), index)
+      case None =>
+        // Use the lower bound as fallback
+        AdditionalAxis(name, Array(lowerBound, lowerBound + 1), index)
+    }
+  }
 }
 
 object AdditionalAxis {
@@ -112,5 +123,4 @@ object AdditionalAxis {
         }
       case None => Seq.empty
     }
-
 }

@@ -1179,7 +1179,7 @@ function FileUploadArea({
                 Need to upload files in other formats? Switch to{" "}
                 <a href="https://webknossos.org">webknossos.org</a> for more file types support and
                 automatic conversion.
-                <a href="webknossos.org/self-hosted-upgrade"> Learn more!</a>
+                <a href="https://webknossos.org/self-hosted-upgrade"> Learn more!</a>
               </div>
             </>
           ) : (

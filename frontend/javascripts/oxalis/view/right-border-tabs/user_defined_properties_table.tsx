@@ -134,9 +134,6 @@ export function UserDefinedPropertyTableRows<
       <MetadataValueInput
         record={record}
         index={index}
-        // todop: make props optional
-        focusedRow={null}
-        setFocusedRow={() => {}}
         updateMetadataValue={(
           indexToUpdate: number,
           newValue: number | string | string[],
@@ -150,9 +147,12 @@ export function UserDefinedPropertyTableRows<
             // todop: support bool?
           });
         }}
-        isSaving={false}
         // todop: provide availableStrArrayTagOptions
         availableStrArrayTagOptions={[]}
+        // todop: make props optional
+        focusedRow={null}
+        setFocusedRow={() => {}}
+        isSaving={false}
       />
     );
   };

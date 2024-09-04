@@ -217,7 +217,8 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     );
   }
 }
-export type SwitchSettingProps = {
+
+type SwitchSettingProps = React.PropsWithChildren<{
   onChange: (value: boolean) => void | Promise<void>;
   value: boolean;
   label: string | React.ReactNode;
@@ -227,7 +228,8 @@ export type SwitchSettingProps = {
   labelSpan?: number | null;
   postSwitchIcon: React.ReactNode | null | undefined;
   disabledReason?: string | null;
-};
+}>;
+
 export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
   static defaultProps = {
     disabled: false,

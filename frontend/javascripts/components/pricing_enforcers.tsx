@@ -16,6 +16,7 @@ import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
 import type { APIOrganization, APIUser } from "types/api_flow_types";
 import type { TooltipPlacement } from "antd/lib/tooltip";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
+import type { PopoverProps } from "antd/lib";
 
 const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
 
@@ -50,20 +51,21 @@ const useActiveUserAndOrganization = (): [APIUser | null | undefined, APIOrganiz
   return [activeUser, activeOrganization];
 };
 
-type PopoverEnforcedProps = RequiredPricingProps & {
-  activeUser: APIUser | null | undefined;
-  activeOrganization: APIOrganization | null;
-  placement?: TooltipPlacement;
-  zIndex?: number;
-};
-const PricingEnforcedPopover: React.FunctionComponent<PopoverEnforcedProps> = ({
+type PopoverEnforcedProps = RequiredPricingProps &
+  PopoverProps & {
+    activeUser: APIUser | null | undefined;
+    activeOrganization: APIOrganization | null;
+    placement?: TooltipPlacement;
+    zIndex?: number;
+  };
+const PricingEnforcedPopover = function ({
   children,
   requiredPricingPlan,
   activeUser,
   activeOrganization,
   placement,
   zIndex,
-}) => {
+}: PopoverEnforcedProps) {
   return (
     <Popover
       color={PRIMARY_COLOR_HEX}
@@ -82,10 +84,10 @@ const PricingEnforcedPopover: React.FunctionComponent<PopoverEnforcedProps> = ({
   );
 };
 
-export const PricingEnforcedSpan: React.FunctionComponent<RequiredPricingProps> = ({
+export const PricingEnforcedSpan = function ({
   children,
   requiredPricingPlan,
-}) => {
+}: RequiredPricingProps & { children: React.ReactNode }) {
   const [activeUser, activeOrganization] = useActiveUserAndOrganization();
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
@@ -173,11 +175,11 @@ export const PricingEnforcedSwitchSetting: React.FunctionComponent<
   );
 };
 
-export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> = ({
+export const PricingEnforcedBlur = function ({
   children,
   requiredPricingPlan,
   ...restProps
-}) => {
+}: RequiredPricingProps & { children: React.ReactNode }) {
   const [activeUser, activeOrganization] = useActiveUserAndOrganization();
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 

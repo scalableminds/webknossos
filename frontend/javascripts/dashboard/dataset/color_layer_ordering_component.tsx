@@ -84,7 +84,7 @@ export default function ColorLayerOrderingTable({
       }}
       onDragEnd={onSortEnd}
     >
-      <SortableContext items={sortingItems} strategy={verticalListSortingStrategy} >
+      <SortableContext items={sortingItems} strategy={verticalListSortingStrategy}>
         <Collapse
           defaultActiveKey={[]}
           collapsible={isSettingEnabled ? "header" : "disabled"}

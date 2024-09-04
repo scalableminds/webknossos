@@ -16,6 +16,7 @@ import classNames from "classnames";
 import type { FolderItem } from "types/api_flow_types";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { AntTreeNodeBaseEvent } from "antd/es/tree/Tree";
 
 const { DirectoryTree } = Tree;
 
@@ -78,7 +79,7 @@ export function FolderTreeSidebar({
   });
 
   const onSelect: DirectoryTreeProps["onSelect"] = useCallback(
-    (keys: React.Key[], info: AntTreeNodeBaseEvent) => {
+    (keys: React.Key[], {nativeEvent}: {nativeEvent:React.MouseEvent<HTMLElement>}) => {
       // Without the following check, the onSelect callback would also be called by antd
       // when the user clicks on a menu entry in the context menu (e.g., deleting a folder
       // would directly select it afterwards).
@@ -86,7 +87,7 @@ export function FolderTreeSidebar({
       // the ant-tree container. Therefore, we can use this property to filter out those
       // click events.
       // The classic preventDefault() didn't work as an alternative workaround.
-      const doesEventReferToTreeUi = info.nativeEvent.target.closest(".ant-tree") != null;
+      const doesEventReferToTreeUi = nativeEvent.target.closest(".ant-tree") != null;
       if (keys.length > 0 && doesEventReferToTreeUi) {
         context.setActiveFolderId(keys[0] as string);
         context.setSelectedDatasets([]);

@@ -58,6 +58,18 @@ function getMetadataTypeLabel(type: APIMetadata["type"]) {
   }
 }
 
+export function getTypeSelectDropdownMenu(addNewEntryWithType: (type: APIMetadata["type"]) => void): MenuProps {
+  return {
+    items: Object.values(APIMetadataEnum).map((type) => {
+      return {
+        key: type,
+        label: getMetadataTypeLabel(type as APIMetadata["type"]),
+        onClick: () => addNewEntryWithType(type as APIMetadata["type"]),
+      };
+    }),
+  }
+};
+
 type EmptyMetadataPlaceholderProps = {
   addNewEntryMenuItems: MenuProps;
 };
@@ -351,15 +363,7 @@ export default function MetadataTable({
     label: string;
   }[];
 
-  const getTypeSelectDropdownMenu: () => MenuProps = () => ({
-    items: Object.values(APIMetadataEnum).map((type) => {
-      return {
-        key: type,
-        label: getMetadataTypeLabel(type as APIMetadata["type"]),
-        onClick: () => addNewEntryWithType(type as APIMetadata["type"]),
-      };
-    }),
-  });
+
 
   const getKeyInput = (record: APIMetadataWithError, index: number) => {
     const isFocused = index === focusedRow;
@@ -407,7 +411,7 @@ export default function MetadataTable({
     </div>
   );
 
-  const addNewEntryMenuItems = getTypeSelectDropdownMenu();
+  const addNewEntryMenuItems = getTypeSelectDropdownMenu(addNewEntryWithType);
 
   return (
     <div style={{ marginBottom: 16 }}>
@@ -483,7 +487,7 @@ export function InnerMetadataTable({
         <td colSpan={3}>
           <div className="flex-center-child">
             <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
-              <Button ghost size="small" style={{ border: "none" }}>
+              <Button className="add-property-button" ghost size="small" style={{ border: "none" }}>
                 <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
               </Button>
             </Dropdown>

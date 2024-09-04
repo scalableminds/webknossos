@@ -296,12 +296,12 @@ function TreeHierarchyView(props: Props) {
                     node.type === GroupTypeEnum.TREE
                       ? renderTreeNode(props, onOpenContextMenu, hideContextMenu, node)
                       : renderGroupNode(
-                          props,
-                          onOpenContextMenu,
-                          hideContextMenu,
-                          node,
-                          expandedNodeKeys,
-                        )
+                        props,
+                        onOpenContextMenu,
+                        hideContextMenu,
+                        node,
+                        expandedNodeKeys,
+                      )
                   }
                   switcherIcon={<DownOutlined />}
                   onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
@@ -337,25 +337,18 @@ function TreeHierarchyView(props: Props) {
   );
 }
 
-const updateUserDefinedPropertyByIndex = (
+const setUserDefinedProperties = (
   tree: Tree,
-  index: number,
-  newPropPartial: Partial<UserDefinedProperty>,
+  newProperties: UserDefinedProperty[],
 ) => {
   Store.dispatch(
     setTreeUserDefinedPropertiesAction(
-      tree.userDefinedProperties.map((element, idx) =>
-        idx === index
-          ? {
-              ...element,
-              ...newPropPartial,
-            }
-          : element,
-      ),
+      newProperties,
       tree.treeId,
     ),
   );
 };
+
 
 function DetailsForSelection({
   trees,
@@ -386,7 +379,7 @@ function DetailsForSelection({
             </tr>
             <UserDefinedPropertyTableRows
               item={tree}
-              updateUserDefinedPropertyByIndex={updateUserDefinedPropertyByIndex}
+              setUserDefinedProperties={setUserDefinedProperties}
             />
           </tbody>
         </table>

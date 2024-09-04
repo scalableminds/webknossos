@@ -1,9 +1,13 @@
-import { DeleteOutlined, TagsOutlined } from "@ant-design/icons";
+import { CloseOutlined, TagsOutlined } from "@ant-design/icons";
 import { Button, Input, type InputProps } from "antd";
-import { type APIMetadataWithError, InnerMetadataTable } from "dashboard/folders/metadata_table";
+import {
+  type APIMetadataWithError,
+  getTypeSelectDropdownMenu,
+  InnerMetadataTable,
+} from "dashboard/folders/metadata_table";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
-import type { UserDefinedProperty } from "types/api_flow_types";
+import { type APIMetadata, APIMetadataEnum, type UserDefinedProperty } from "types/api_flow_types";
 
 export function InputWithUpdateOnBlur({
   value,
@@ -51,26 +55,49 @@ export function UserDefinedPropertyTableRows<
   ItemType extends { userDefinedProperties: UserDefinedProperty[] },
 >({
   item,
-  updateUserDefinedPropertyByIndex,
+  setUserDefinedProperties,
 }: {
   item: ItemType;
-  updateUserDefinedPropertyByIndex: (
-    item: ItemType,
-    index: number,
-    newPropPartial: Partial<UserDefinedProperty>,
-  ) => void;
+  setUserDefinedProperties: (item: ItemType, newProperties: UserDefinedProperty[]) => void;
 }) {
   // todop
   const isReadOnly = false;
 
-  const getDeleteEntryButton = (_: APIMetadataWithError, _index: number) => (
+  const updateUserDefinedPropertyByIndex = (
+    item: ItemType,
+    index: number,
+    newPropPartial: Partial<UserDefinedProperty>,
+  ) => {
+    const newProps = item.userDefinedProperties.map((element, idx) =>
+      idx === index
+        ? {
+            ...element,
+            ...newPropPartial,
+          }
+        : element,
+    );
+
+    setUserDefinedProperties(item, newProps);
+  };
+
+  const removeUserDefinedPropertyByIndex = (item: ItemType, index: number) => {
+    const newProps = item.userDefinedProperties.filter((_element, idx) => idx !== index);
+    setUserDefinedProperties(item, newProps);
+  };
+
+  const addUserDefinedProperty = (item: ItemType, newProp: UserDefinedProperty) => {
+    const newProps = item.userDefinedProperties.concat([newProp]);
+    setUserDefinedProperties(item, newProps);
+  };
+
+  const getDeleteEntryButton = (_: APIMetadataWithError, index: number) => (
     <div className="flex-center-child">
       <Button
         type="text"
         disabled={isReadOnly}
         style={{ width: 16, height: 19 }}
         icon={
-          <DeleteOutlined
+          <CloseOutlined
             style={{
               color: "var(--ant-color-text-tertiary)",
               width: 16,
@@ -78,7 +105,7 @@ export function UserDefinedPropertyTableRows<
           />
         }
         onClick={() => {
-          // todop
+          removeUserDefinedPropertyByIndex(item, index);
         }}
       />
     </div>
@@ -101,6 +128,23 @@ export function UserDefinedPropertyTableRows<
     );
   };
 
+  const addNewEntryWithType = (type: APIMetadata["type"]) => {
+    // const indexOfNewEntry = prev.length;
+    // Auto focus the key input of the new entry.
+    // setTimeout(
+    //   () => document.getElementById(getKeyInputIdForIndex(indexOfNewEntry))?.focus(),
+    //   50,
+    // );
+    addUserDefinedProperty(item, {
+      key: "",
+      stringValue: type === APIMetadataEnum.STRING ? "" : undefined,
+      numberValue: type === APIMetadataEnum.NUMBER ? 0 : undefined,
+      stringListValue: type === APIMetadataEnum.STRING_ARRAY ? [] : undefined,
+    });
+  };
+
+  const addNewEntryMenuItems = getTypeSelectDropdownMenu(addNewEntryWithType);
+
   return (
     <>
       <tr className="divider-row">
@@ -108,7 +152,6 @@ export function UserDefinedPropertyTableRows<
           User-defined Properties <TagsOutlined />
         </td>
       </tr>
-      ;
       {/*
             // todop
             export type APIMetadata = {
@@ -135,7 +178,7 @@ export function UserDefinedPropertyTableRows<
         isSaving={false}
         availableStrArrayTagOptions={[]}
         getDeleteEntryButton={getDeleteEntryButton}
-        addNewEntryMenuItems={{}}
+        addNewEntryMenuItems={addNewEntryMenuItems}
       />
     </>
   );

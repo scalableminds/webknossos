@@ -1959,7 +1959,7 @@ class SegmentsView extends React.Component<Props, State> {
             </tr>
             <UserDefinedPropertyTableRows
               item={segment}
-              updateUserDefinedPropertyByIndex={this.updateUserDefinedPropertyByIndex}
+              setUserDefinedProperties={this.setUserDefinedProperties}
             />
           </tbody>
         </table>
@@ -1968,25 +1968,14 @@ class SegmentsView extends React.Component<Props, State> {
     return null;
   }
 
-  updateUserDefinedPropertyByIndex = (
-    segment: Segment,
-    index: number,
-    newPropPartial: Partial<UserDefinedProperty>,
-  ) => {
+  setUserDefinedProperties = (segment: Segment, newProperties: UserDefinedProperty[]) => {
     if (this.props.visibleSegmentationLayer == null) {
       return;
     }
     this.props.updateSegment(
       segment.id,
       {
-        userDefinedProperties: segment.userDefinedProperties.map((element, idx) =>
-          idx === index
-            ? {
-                ...element,
-                ...newPropPartial,
-              }
-            : element,
-        ),
+        userDefinedProperties: newProperties,
       },
       this.props.visibleSegmentationLayer.name,
       true,

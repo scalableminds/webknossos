@@ -587,6 +587,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
           onGoToBoundingBox();
           setActiveUserBBox();
         }}
+        style={{ cursor: "pointer" }}
       >
         <Row
           style={{

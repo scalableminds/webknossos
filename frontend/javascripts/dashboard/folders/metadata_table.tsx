@@ -58,7 +58,9 @@ function getMetadataTypeLabel(type: APIMetadata["type"]) {
   }
 }
 
-export function getTypeSelectDropdownMenu(addNewEntryWithType: (type: APIMetadata["type"]) => void): MenuProps {
+export function getTypeSelectDropdownMenu(
+  addNewEntryWithType: (type: APIMetadata["type"]) => void,
+): MenuProps {
   return {
     items: Object.values(APIMetadataEnum).map((type) => {
       return {
@@ -67,8 +69,8 @@ export function getTypeSelectDropdownMenu(addNewEntryWithType: (type: APIMetadat
         onClick: () => addNewEntryWithType(type as APIMetadata["type"]),
       };
     }),
-  }
-};
+  };
+}
 
 type EmptyMetadataPlaceholderProps = {
   addNewEntryMenuItems: MenuProps;
@@ -99,12 +101,16 @@ interface MetadataValueInputProps {
   index: number;
   focusedRow: number | null;
   setFocusedRow: (row: number | null) => void;
-  updateMetadataValue: (index: number, newValue: number | string | string[]) => void;
+  updateMetadataValue: (
+    index: number,
+    newValue: number | string | string[],
+    type: APIMetadataEnum,
+  ) => void;
   isSaving: boolean;
   availableStrArrayTagOptions: { value: string; label: string }[];
 }
 
-const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
+export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
   record,
   index,
   focusedRow,
@@ -128,7 +134,8 @@ const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
       return (
         <InputNumber
           value={record.value as number}
-          onChange={(newNum) => updateMetadataValue(index, newNum || 0)}
+          controls={false}
+          onChange={(newNum) => updateMetadataValue(index, newNum || 0, APIMetadataEnum.NUMBER)}
           {...sharedProps}
         />
       );
@@ -136,7 +143,9 @@ const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
       return (
         <InputWithUpdateOnBlur
           value={record.value as string}
-          onChange={(newValue) => updateMetadataValue(index, newValue as string)}
+          onChange={(newValue) =>
+            updateMetadataValue(index, newValue as string, APIMetadataEnum.STRING)
+          }
           {...sharedProps}
         />
       );
@@ -145,9 +154,10 @@ const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
         <Select
           mode="tags"
           value={record.value as string[]}
-          onChange={(values) => updateMetadataValue(index, values)}
+          onChange={(values) => updateMetadataValue(index, values, APIMetadataEnum.STRING_ARRAY)}
           options={availableStrArrayTagOptions}
           suffixIcon={null}
+          variant="filled"
           {...sharedProps}
         />
       );
@@ -315,7 +325,11 @@ export default function MetadataTable({
     });
   };
 
-  const updateMetadataValue = (indexToUpdate: number, newValue: number | string | string[]) => {
+  const updateMetadataValue = (
+    indexToUpdate: number,
+    newValue: number | string | string[],
+    _type: APIMetadataEnum,
+  ) => {
     setMetadata((prev) => {
       const entry = prev[indexToUpdate];
       if (!entry) {
@@ -363,8 +377,6 @@ export default function MetadataTable({
     label: string;
   }[];
 
-
-
   const getKeyInput = (record: APIMetadataWithError, index: number) => {
     const isFocused = index === focusedRow;
     return (
@@ -389,6 +401,20 @@ export default function MetadataTable({
           </>
         ) : null}
       </>
+    );
+  };
+
+  const getValueInput = (record: APIMetadataWithError, index: number) => {
+    return (
+      <MetadataValueInput
+        record={record}
+        index={index}
+        focusedRow={focusedRow}
+        setFocusedRow={setFocusedRow}
+        updateMetadataValue={updateMetadataValue}
+        isSaving={isSaving}
+        availableStrArrayTagOptions={availableStrArrayTagOptions}
+      />
     );
   };
 
@@ -422,11 +448,7 @@ export default function MetadataTable({
           <InnerMetadataTable
             metadata={metadata}
             getKeyInput={getKeyInput}
-            focusedRow={focusedRow}
-            setFocusedRow={setFocusedRow}
-            updateMetadataValue={updateMetadataValue}
-            isSaving={isSaving}
-            availableStrArrayTagOptions={availableStrArrayTagOptions}
+            getValueInput={getValueInput}
             getDeleteEntryButton={getDeleteEntryButton}
             addNewEntryMenuItems={addNewEntryMenuItems}
           />
@@ -441,11 +463,7 @@ export default function MetadataTable({
 export function InnerMetadataTable({
   metadata,
   getKeyInput,
-  focusedRow,
-  setFocusedRow,
-  updateMetadataValue,
-  isSaving,
-  availableStrArrayTagOptions,
+  getValueInput,
   getDeleteEntryButton,
   addNewEntryMenuItems,
   isVisualStudioTheme,
@@ -453,11 +471,7 @@ export function InnerMetadataTable({
 }: {
   metadata: APIMetadataWithError[];
   getKeyInput: (record: APIMetadataWithError, index: number) => JSX.Element;
-  focusedRow: number | null;
-  setFocusedRow: (newState: number | ((prevState: number | null) => number | null) | null) => void;
-  updateMetadataValue: (indexToUpdate: number, newValue: number | string | string[]) => void;
-  isSaving: boolean;
-  availableStrArrayTagOptions: { value: string; label: string }[];
+  getValueInput: (record: APIMetadataWithError, index: number) => JSX.Element;
   getDeleteEntryButton: (_: APIMetadataWithError, index: number) => JSX.Element;
   addNewEntryMenuItems: MenuProps;
   isVisualStudioTheme?: boolean;
@@ -469,17 +483,7 @@ export function InnerMetadataTable({
         <tr key={index}>
           <td>{getKeyInput(record, index)}</td>
           {isVisualStudioTheme ? null : <td>:</td>}
-          <td>
-            <MetadataValueInput
-              record={record}
-              index={index}
-              focusedRow={focusedRow}
-              setFocusedRow={setFocusedRow}
-              updateMetadataValue={updateMetadataValue}
-              isSaving={isSaving}
-              availableStrArrayTagOptions={availableStrArrayTagOptions}
-            />
-          </td>
+          <td>{getValueInput(record, index)}</td>
           <td>{getDeleteEntryButton(record, index)}</td>
         </tr>
       ))}

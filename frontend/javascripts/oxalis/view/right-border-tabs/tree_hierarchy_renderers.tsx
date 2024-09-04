@@ -133,6 +133,7 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         label: "Add Property",
         icon: <TagsOutlined />,
         onClick: () => {
+          // todop: remove this UI?
           const key = prompt("Please type in a key");
           const value = prompt("Please type in a value");
           if (key && value) {

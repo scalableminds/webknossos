@@ -262,11 +262,26 @@
     width: 100%;
   }
 
-  input {
-    background: transparent;
+  input, .ant-input-number {
+    &:not(:hover) {
+      background: transparent;
+    }
     border: 0;
     width: 100%;
     height: 100%;
     padding: 0;
+  }
+
+  .ant-input-number-input {
+    padding: 0 !important;
+  }
+
+  .ant-select {
+    width: 100%;
+    .ant-select-selector {
+      background: transparent;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
   }
 }

@@ -4,6 +4,7 @@ import {
   type APIMetadataWithError,
   getTypeSelectDropdownMenu,
   InnerMetadataTable,
+  MetadataValueInput,
 } from "dashboard/folders/metadata_table";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
@@ -111,19 +112,47 @@ export function UserDefinedPropertyTableRows<
     </div>
   );
 
-  // todop
   const getKeyInput = (record: APIMetadataWithError, index: number) => {
     return (
       <InputWithUpdateOnBlur
         className="transparent-input"
-        // onFocus={() => setFocusedRow(index)}
-        // onBlur={() => setFocusedRow(null)}
         value={record.key}
         onChange={(value) => updateUserDefinedPropertyByIndex(item, index, { key: value })}
         placeholder="Property"
         size="small"
+        // todop
+        // onFocus={() => setFocusedRow(index)}
+        // onBlur={() => setFocusedRow(null)}
         // disabled={isSaving}
         // id={getKeyInputIdForIndex(index)}
+      />
+    );
+  };
+
+  const getValueInput = (record: APIMetadataWithError, index: number) => {
+    return (
+      <MetadataValueInput
+        record={record}
+        index={index}
+        // todop: make props optional
+        focusedRow={null}
+        setFocusedRow={() => {}}
+        updateMetadataValue={(
+          indexToUpdate: number,
+          newValue: number | string | string[],
+          type: APIMetadataEnum,
+        ) => {
+          updateUserDefinedPropertyByIndex(item, indexToUpdate, {
+            stringValue: type === APIMetadataEnum.STRING ? (newValue as string) : undefined,
+            stringListValue:
+              type === APIMetadataEnum.STRING_ARRAY ? (newValue as string[]) : undefined,
+            numberValue: type === APIMetadataEnum.NUMBER ? (newValue as number) : undefined,
+            // todop: support bool?
+          });
+        }}
+        isSaving={false}
+        // todop: provide availableStrArrayTagOptions
+        availableStrArrayTagOptions={[]}
       />
     );
   };
@@ -152,31 +181,21 @@ export function UserDefinedPropertyTableRows<
           User-defined Properties <TagsOutlined />
         </td>
       </tr>
-      {/*
-            // todop
-            export type APIMetadata = {
-              type: APIMetadataType;
-              key: string;
-              value: string | number | string[];
-            };*/}
       <InnerMetadataTable
         onlyReturnRows
         isVisualStudioTheme
         metadata={item.userDefinedProperties.map((prop) => ({
           key: prop.key,
-          type: "string",
-          value: prop.stringValue || "",
+          type:
+            prop.stringValue != null
+              ? APIMetadataEnum.STRING
+              : prop.numberValue != null
+                ? APIMetadataEnum.NUMBER
+                : APIMetadataEnum.STRING_ARRAY,
+          value: prop.stringValue || prop.numberValue || prop.stringListValue || "",
         }))}
         getKeyInput={getKeyInput}
-        focusedRow={null}
-        setFocusedRow={() => {}}
-        updateMetadataValue={(indexToUpdate: number, newValue: number | string | string[]) => {
-          updateUserDefinedPropertyByIndex(item, indexToUpdate, {
-            stringValue: newValue as string,
-          });
-        }}
-        isSaving={false}
-        availableStrArrayTagOptions={[]}
+        getValueInput={getValueInput}
         getDeleteEntryButton={getDeleteEntryButton}
         addNewEntryMenuItems={addNewEntryMenuItems}
       />

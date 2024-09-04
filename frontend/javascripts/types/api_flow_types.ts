@@ -177,9 +177,8 @@ export enum APIMetadataEnum {
   NUMBER = "number",
   STRING_ARRAY = "string[]",
 }
-type APIMetadataType = ValueOf<APIMetadataEnum>;
 export type APIMetadata = {
-  type: APIMetadataType;
+  type: APIMetadataEnum;
   key: string;
   value: string | number | string[];
 };

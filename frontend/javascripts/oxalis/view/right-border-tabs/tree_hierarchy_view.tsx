@@ -44,12 +44,10 @@ import {
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
 import { ResizableSplitPane } from "./resizable_split_pane";
-import {
-  InputWithUpdateOnBlur,
-  UserDefinedPropertyTableRows,
-} from "./user_defined_properties_table";
+import { UserDefinedPropertyTableRows } from "./user_defined_properties_table";
 import type { UserDefinedProperty } from "types/api_flow_types";
 import { APIMetadataWithError } from "dashboard/folders/metadata_table";
+import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
   const { id, type } = info.node;

@@ -129,14 +129,13 @@ export class MoveTool {
           if (SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch)) {
             return;
           }
+          const currentlyHoveredEdge = getClosestHoveredBoundingBox(pos, planeId);
+          if (currentlyHoveredEdge) {
+            Store.dispatch(setActiveUserBoundingBoxId(currentlyHoveredEdge[0].boxId));
+            return;
+          }
         }
-
-        const currentlyHoveredEdge = getClosestHoveredBoundingBox(pos, planeId);
-        if (currentlyHoveredEdge) {
-          Store.dispatch(setActiveUserBoundingBoxId(currentlyHoveredEdge[0].boxId));
-        } else {
-          handleClickSegment(pos);
-        }
+        handleClickSegment(pos);
       },
       middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
         if (event.shiftKey) {

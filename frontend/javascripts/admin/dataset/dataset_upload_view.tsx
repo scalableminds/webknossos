@@ -1177,9 +1177,17 @@ function FileUploadArea({
                 }}
               >
                 Need to upload files in other formats? Switch to{" "}
-                <a href="https://webknossos.org">webknossos.org</a> for more file types support and
-                automatic conversion.
-                <a href="https://webknossos.org/self-hosted-upgrade"> Learn more!</a>
+                <a href="https://webknossos.org" onClick={(e) => e.stopPropagation()}>
+                  webknossos.org
+                </a>{" "}
+                for more file types support and automatic conversion.
+                <a
+                  href="https://webknossos.org/self-hosted-upgrade"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {" "}
+                  Learn more!
+                </a>
               </div>
             </>
           ) : (
@@ -1300,7 +1308,10 @@ function FileUploadArea({
                   <li>Single-file images (tif, czi, nifti, raw, ims etc.)</li>
                 </ul>
                 Have a look at{" "}
-                <a href="https://docs.webknossos.org/webknossos/data_formats.html">
+                <a
+                  href="https://docs.webknossos.org/webknossos/data_formats.html"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   our documentation
                 </a>{" "}
                 to learn more.

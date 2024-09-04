@@ -296,12 +296,12 @@ function TreeHierarchyView(props: Props) {
                     node.type === GroupTypeEnum.TREE
                       ? renderTreeNode(props, onOpenContextMenu, hideContextMenu, node)
                       : renderGroupNode(
-                        props,
-                        onOpenContextMenu,
-                        hideContextMenu,
-                        node,
-                        expandedNodeKeys,
-                      )
+                          props,
+                          onOpenContextMenu,
+                          hideContextMenu,
+                          node,
+                          expandedNodeKeys,
+                        )
                   }
                   switcherIcon={<DownOutlined />}
                   onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
@@ -337,18 +337,9 @@ function TreeHierarchyView(props: Props) {
   );
 }
 
-const setUserDefinedProperties = (
-  tree: Tree,
-  newProperties: UserDefinedProperty[],
-) => {
-  Store.dispatch(
-    setTreeUserDefinedPropertiesAction(
-      newProperties,
-      tree.treeId,
-    ),
-  );
+const setUserDefinedProperties = (tree: Tree, newProperties: UserDefinedProperty[]) => {
+  Store.dispatch(setTreeUserDefinedPropertiesAction(newProperties, tree.treeId));
 };
-
 
 function DetailsForSelection({
   trees,

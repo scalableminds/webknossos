@@ -22,7 +22,7 @@ import * as Utils from "libs/utils";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
-import { AutoSizer } from "react-virtualized";
+import AutoSizer from "react-virtualized-auto-sizer";
 
 const ADD_BBOX_BUTTON_HEIGHT = 32;
 

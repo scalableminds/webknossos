@@ -28,6 +28,4 @@ mockRequire("libs/toast", {
   success: _.noop,
 });
 
-mockRequire("libs/render_independently", {
-  renderIndependently: _.noop,
-});
+mockRequire("libs/render_independently", _.noop);

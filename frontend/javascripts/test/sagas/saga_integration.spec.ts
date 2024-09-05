@@ -25,6 +25,7 @@ const { addTreesAndGroupsAction, deleteNodeAction } = mockRequire.reRequire(
 );
 const { discardSaveQueuesAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
+
 test.beforeEach(async (t) => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
   Store.dispatch(restartSagaAction());
@@ -34,12 +35,14 @@ test.beforeEach(async (t) => {
   // Dispatch the wkReadyAction, so the sagas are started
   Store.dispatch(wkReadyAction());
 });
+
 test.afterEach(async (t) => {
   // Saving after each test and checking that the root saga didn't crash,
   // ensures that each test is cleanly exited. Without it weird output can
   // occur (e.g., a promise gets resolved which interferes with the next test).
   t.false(hasRootSagaCrashed());
 });
+
 test.serial(
   "watchTreeNames saga should rename empty trees in tasks and these updates should be persisted",
   (t) => {
@@ -75,6 +78,7 @@ test.serial(
     t.deepEqual(expectedSaveQueue, actualSaveQueue);
   },
 );
+
 test.serial("Save actions should not be chunked below the chunk limit (1/3)", (t) => {
   Store.dispatch(discardSaveQueuesAction());
   t.deepEqual(Store.getState().save.queue.skeleton, []);
@@ -86,6 +90,7 @@ test.serial("Save actions should not be chunked below the chunk limit (1/3)", (t
       MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton,
   );
 });
+
 test.serial("Save actions should be chunked above the chunk limit (2/3)", (t) => {
   Store.dispatch(discardSaveQueuesAction());
   t.deepEqual(Store.getState().save.queue.skeleton, []);
@@ -95,6 +100,7 @@ test.serial("Save actions should be chunked above the chunk limit (2/3)", (t) =>
   t.true(state.save.queue.skeleton.length > 1);
   t.is(state.save.queue.skeleton[0].actions.length, MAXIMUM_ACTION_COUNT_PER_BATCH.skeleton);
 });
+
 test.serial("Save actions should be chunked after compacting (3/3)", (t) => {
   const nodeCount = 20000;
   // Test that a tree split is detected even when the involved node count is above the chunk limit

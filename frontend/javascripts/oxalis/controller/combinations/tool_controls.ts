@@ -129,9 +129,9 @@ export class MoveTool {
           if (SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch)) {
             return;
           }
-          const currentlyHoveredEdge = getClosestHoveredBoundingBox(pos, planeId);
-          if (currentlyHoveredEdge) {
-            Store.dispatch(setActiveUserBoundingBoxId(currentlyHoveredEdge[0].boxId));
+          const clickedEdge = getClosestHoveredBoundingBox(pos, planeId);
+          if (clickedEdge) {
+            Store.dispatch(setActiveUserBoundingBoxId(clickedEdge[0].boxId));
             return;
           }
         }

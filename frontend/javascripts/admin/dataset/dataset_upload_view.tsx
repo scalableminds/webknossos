@@ -1159,21 +1159,50 @@ function FileUploadArea({
         />
         <div
           style={{
-            maxWidth: 800,
             textAlign: "center",
+            display: "inline-block",
             marginTop: 8,
+            lineHeight: "1.7em",
           }}
         >
-          Drag your file(s) to this area to upload them. Either add individual image files, a zip
-          archive or a folder.{" "}
+          {features().recommendWkorgInstance && !isDatasetConversionEnabled ? (
+            <>
+              Drag and drop your files in WKW format.
+              <div
+                style={{
+                  textAlign: "left",
+                  display: "list-item",
+                  maxWidth: 475,
+                  marginTop: 10,
+                }}
+              >
+                Need to upload files in other formats? Switch to{" "}
+                <a href="https://webknossos.org" onClick={(e) => e.stopPropagation()}>
+                  webknossos.org
+                </a>{" "}
+                for more file types support and automatic conversion.
+                <a
+                  href="https://webknossos.org/self-hosted-upgrade"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {" "}
+                  Learn more!
+                </a>
+              </div>
+            </>
+          ) : (
+            <div style={{ marginTop: 8 }}>
+              Drag your file(s) to this area to upload them. Either add individual image files, a
+              zip archive or a folder.
+            </div>
+          )}
           {isDatasetConversionEnabled ? (
             <>
-              <br />
-              <br />
               <div
                 style={{
                   textAlign: "left",
                   display: "inline-block",
+                  marginTop: 10,
                 }}
               >
                 The following file formats are supported:
@@ -1277,11 +1306,12 @@ function FileUploadArea({
                     </Popover>
                   </li>
                   <li>Single-file images (tif, czi, nifti, raw, ims etc.)</li>
-
-                  <li>KNOSSOS file hierarchy</li>
                 </ul>
                 Have a look at{" "}
-                <a href="https://docs.webknossos.org/webknossos/data_formats.html">
+                <a
+                  href="https://docs.webknossos.org/webknossos/data_formats.html"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   our documentation
                 </a>{" "}
                 to learn more.

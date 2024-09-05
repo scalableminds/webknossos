@@ -8,11 +8,12 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/24.08.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/24.08.1...HEAD)
 
 ### Added
 
 ### Changed
+- For self-hosted versions, the text in the data set upload view was updated to recommend switching to webknossos.org. [#7996](https://github.com/scalableminds/webknossos/pull/7996)
 
 ### Fixed
 

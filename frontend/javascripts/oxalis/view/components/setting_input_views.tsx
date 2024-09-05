@@ -393,6 +393,7 @@ type UserBoundingBoxInputProps = {
   isLockedByOwner: boolean;
   isOwner: boolean;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
+  onOpenContextMenu: (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => void;
 };
 type State = {
   isEditing: boolean;
@@ -499,6 +500,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
       disabled,
       isLockedByOwner,
       isOwner,
+      onOpenContextMenu,
     } = this.props;
     const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
     const marginRightStyle = {
@@ -570,11 +572,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
         },
       ];
 
-      return (
-        <Dropdown menu={{ items }}>
-          <EllipsisOutlined style={marginLeftStyle} />
-        </Dropdown>
-      );
+      return { items };
     };
 
     return (
@@ -614,7 +612,11 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
               </span>
             </FastTooltip>
           </Col>
-          <Col span={2}>{getContextMenu()}</Col>
+          <Col span={2}>
+            <div onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}>
+              <EllipsisOutlined style={marginLeftStyle} />
+            </div>
+          </Col>
         </Row>
         <Row
           style={{

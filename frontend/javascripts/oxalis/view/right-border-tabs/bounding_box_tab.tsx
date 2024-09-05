@@ -1,7 +1,8 @@
-import { Table, Tooltip, Typography } from "antd";
+import { type MenuProps, Table, Tooltip, Typography } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
-import React, { useEffect, useRef, useState } from "react";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import _ from "lodash";
 import UserBoundingBoxInput from "oxalis/view/components/setting_input_views";
 import {
@@ -23,8 +24,11 @@ import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
 import { AutoSizer } from "react-virtualized";
+import { ContextMenuContainer } from "./sidebar_context_menu";
+import { getContextMenuPositionFromEvent } from "../context_menu";
 
 const ADD_BBOX_BUTTON_HEIGHT = 32;
+const CONTEXT_MENU_CLASS = "bbox-list-context-menu-overlay";
 
 export default function BoundingBoxTab() {
   const bboxTableRef: Parameters<typeof Table>[0]["ref"] = useRef(null);
@@ -39,6 +43,8 @@ export default function BoundingBoxTab() {
     (state: OxalisState) => state.uiInformation.activeUserBoundingBoxId,
   );
   const { userBoundingBoxes } = getSomeTracing(tracing);
+  const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
+  const [menu, setMenu] = useState<MenuProps | null>(null);
   const dispatch = useDispatch();
 
   const setChangeBoundingBoxBounds = (id: number, boundingBox: BoundingBoxType) =>
@@ -139,6 +145,7 @@ export default function BoundingBoxTab() {
           disabled={!allowUpdate}
           isLockedByOwner={isLockedByOwner}
           isOwner={isOwner}
+          onOpenContextMenu={onOpenContextMenu}
         />
       ),
     },
@@ -158,6 +165,29 @@ export default function BoundingBoxTab() {
     </div>
   ) : null;
 
+  const onOpenContextMenu = (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+
+    const [x, y] = getContextMenuPositionFromEvent(event, CONTEXT_MENU_CLASS);
+    showContextMenuAt(x, y, menu);
+  };
+
+  const showContextMenuAt = useCallback((xPos: number, yPos: number, menu: MenuProps) => {
+    // On Windows the right click to open the context menu is also triggered for the overlay
+    // of the context menu. This causes the context menu to instantly close after opening.
+    // Therefore delay the state update to delay that the context menu is rendered.
+    // Thus the context overlay does not get the right click as an event and therefore does not close.
+    setTimeout(() => {
+      setContextMenuPosition([xPos, yPos]);
+      setMenu(menu);
+    }, 0);
+  }, []);
+
+  const hideContextMenu = useCallback(() => {
+    setContextMenuPosition(null);
+    setMenu(null);
+  }, []);
+
   return (
     <div
       className="padded-tab-content"
@@ -166,6 +196,12 @@ export default function BoundingBoxTab() {
         height: "100%",
       }}
     >
+      <ContextMenuContainer
+        hideContextMenu={hideContextMenu}
+        contextMenuPosition={contextMenuPosition}
+        menu={menu}
+        className={CONTEXT_MENU_CLASS}
+      />
       {/* Don't render a table in view mode. */}
       {isViewMode ? null : userBoundingBoxes.length > 0 ? (
         <AutoSizer defaultHeight={500}>

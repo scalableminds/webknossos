@@ -13,7 +13,13 @@ jobs:
     steps:
       - run:
           name: "Clone Repository"
-          command: git clone --depth 5 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH" --no-tags .
+          command: |
+            if [ -n "$CIRCLE_BRANCH" ]; then
+              git clone --depth 5 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH" --no-tags .
+            fi
+            if [ -n "$CIRCLE_TAG" ]; then
+              git clone --depth 5 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_TAG" .
+            fi
       - run:
           name: "Custom environment variables"
           command: |

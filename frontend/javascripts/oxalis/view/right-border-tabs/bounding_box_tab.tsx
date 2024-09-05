@@ -134,7 +134,6 @@ export default function BoundingBoxTab() {
           onDelete={_.partial(deleteBoundingBox, bb.id)}
           onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
           onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
-          setActiveUserBBox={() => dispatch(setActiveUserBoundingBoxId(bb.id))}
           onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
           onNameChange={_.partial(setBoundingBoxName, bb.id)}
           onColorChange={_.partial(setBoundingBoxColor, bb.id)}
@@ -194,6 +193,12 @@ export default function BoundingBoxTab() {
                 virtual
                 scroll={{ y: height - (allowUpdate ? ADD_BBOX_BUTTON_HEIGHT : 10) }} // If the scroll height is exactly
                 // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
+                onRow={(bb) => ({
+                  onClick: () => {
+                    handleGoToBoundingBox(bb.id);
+                    dispatch(setActiveUserBoundingBoxId(bb.id));
+                  },
+                })}
               />
             </div>
           )}

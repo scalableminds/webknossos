@@ -386,7 +386,6 @@ type UserBoundingBoxInputProps = {
   onDelete: () => void;
   onExport: () => void;
   onGoToBoundingBox: () => void;
-  setActiveUserBBox: () => void;
   onVisibilityChange: (arg0: boolean) => void;
   onNameChange: (arg0: string) => void;
   onColorChange: (arg0: Vector3) => void;
@@ -497,7 +496,6 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
       onExport,
       isExportEnabled,
       onGoToBoundingBox,
-      setActiveUserBBox,
       disabled,
       isLockedByOwner,
       isOwner,
@@ -582,13 +580,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
     };
 
     return (
-      <div
-        onClick={() => {
-          onGoToBoundingBox();
-          setActiveUserBBox();
-        }}
-        style={{ cursor: "pointer" }}
-      >
+      <div>
         <Row
           style={{
             marginTop: 10,

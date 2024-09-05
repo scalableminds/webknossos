@@ -326,14 +326,12 @@ workflows:
   version: 2
   circleci_build:
     jobs:
-      - nightly
-      - wkorg_nightly
-      # - build_test_deploy:
-      #     context:
-      #       - DockerHub
-      #     filters:
-      #       tags:
-      #         only: /.*/
+      - build_test_deploy:
+          context:
+            - DockerHub
+          filters:
+            tags:
+              only: /.*/
   circleci_nightly:
     jobs:
       - nightly

@@ -1922,6 +1922,27 @@ class SegmentsView extends React.Component<Props, State> {
     );
   }
 
+  renameActiveSegment = (newName: string) => {
+    if (this.props.visibleSegmentationLayer == null) {
+      return;
+    }
+    const { segments } = this.props.selectedIds;
+    if (segments.length !== 1) {
+      return;
+    }
+    const segment = this.props.segments?.getNullable(segments[0]);
+    if (segment == null) {
+      return;
+    }
+
+    this.props.updateSegment(
+      segment.id,
+      { name: newName },
+      this.props.visibleSegmentationLayer.name,
+      true,
+    );
+  };
+
   renderDetailsForSelection() {
     const { segments } = this.props.selectedIds;
     if (segments.length === 1) {
@@ -1941,17 +1962,7 @@ class SegmentsView extends React.Component<Props, State> {
               <td colSpan={2}>
                 <InputWithUpdateOnBlur
                   value={segment.name || ""}
-                  onChange={(newValue) => {
-                    if (this.props.visibleSegmentationLayer == null) {
-                      return;
-                    }
-                    this.props.updateSegment(
-                      segment.id,
-                      { name: newValue },
-                      this.props.visibleSegmentationLayer.name,
-                      true,
-                    );
-                  }}
+                  onChange={this.renameActiveSegment}
                 />
               </td>
             </tr>

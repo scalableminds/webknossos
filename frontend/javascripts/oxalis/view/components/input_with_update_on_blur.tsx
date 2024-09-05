@@ -1,12 +1,18 @@
 import { Input, type InputProps } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { useCallback, useEffect, useState } from "react";
 
 export function InputWithUpdateOnBlur({
   value,
   onChange,
   onBlur,
+  validate,
   ...props
-}: { value: string; onChange: (value: string) => void } & Omit<InputProps, "onChange">) {
+}: {
+  value: string;
+  validate?: (value: string) => string | null;
+  onChange: (value: string) => void;
+} & Omit<InputProps, "onChange">) {
   const [localValue, setLocalValue] = useState(value);
 
   const onKeyDown = useCallback(
@@ -27,18 +33,24 @@ export function InputWithUpdateOnBlur({
     setLocalValue(value);
   }, [value]);
 
+  const validationError = validate != null ? validate(localValue) : null;
+  const status = validationError != null ? "error" : undefined;
+
   return (
-    <Input
-      value={localValue}
-      onBlur={(event) => {
-        if (onBlur) onBlur(event);
-        onChange(localValue);
-      }}
-      onChange={(event) => {
-        setLocalValue(event.currentTarget.value);
-      }}
-      onKeyDown={onKeyDown}
-      {...props}
-    />
+    <FastTooltip title={validationError} placement="left" variant="error">
+      <Input
+        value={localValue}
+        onBlur={(event) => {
+          if (onBlur) onBlur(event);
+          onChange(localValue);
+        }}
+        onChange={(event) => {
+          setLocalValue(event.currentTarget.value);
+        }}
+        onKeyDown={onKeyDown}
+        status={status}
+        {...props}
+      />
+    </FastTooltip>
   );
 }

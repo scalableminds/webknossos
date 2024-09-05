@@ -8,7 +8,7 @@ import {
   Modal,
   type TreeProps,
 } from "antd";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { AutoSizer } from "react-virtualized";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
@@ -339,44 +339,45 @@ const setUserDefinedProperties = (tree: Tree, newProperties: UserDefinedProperty
   Store.dispatch(setTreeUserDefinedPropertiesAction(newProperties, tree.treeId));
 };
 
-function DetailsForSelection({
-  trees,
-  selectedTreeIds,
-}: { trees: TreeMap; selectedTreeIds: number[] }) {
-  if (selectedTreeIds.length === 1) {
-    const tree = trees[selectedTreeIds[0]];
-    if (tree == null) {
-      return <>Cannot find details for selected tree.</>;
-    }
+const DetailsForSelection = memo(
+  ({ trees, selectedTreeIds }: { trees: TreeMap; selectedTreeIds: number[] }) => {
+    if (selectedTreeIds.length === 1) {
+      const tree = trees[selectedTreeIds[0]];
+      if (tree == null) {
+        return <>Cannot find details for selected tree.</>;
+      }
 
-    return (
-      <div>
-        <table className="segment-details-table">
-          <tbody>
-            <tr>
-              <td>ID</td>
-              <td colSpan={2}>{tree.treeId}</td>
-            </tr>
-            <tr>
-              <td>Name</td>
-              <td colSpan={2}>
-                <InputWithUpdateOnBlur
-                  value={tree.name || ""}
-                  onChange={(newValue) => Store.dispatch(setTreeNameAction(newValue, tree.treeId))}
-                />
-              </td>
-            </tr>
-            <UserDefinedPropertyTableRows
-              item={tree}
-              setUserDefinedProperties={setUserDefinedProperties}
-            />
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-  return null;
-}
+      return (
+        <div>
+          <table className="segment-details-table">
+            <tbody>
+              <tr>
+                <td>ID</td>
+                <td colSpan={2}>{tree.treeId}</td>
+              </tr>
+              <tr>
+                <td>Name</td>
+                <td colSpan={2}>
+                  <InputWithUpdateOnBlur
+                    value={tree.name || ""}
+                    onChange={(newValue) =>
+                      Store.dispatch(setTreeNameAction(newValue, tree.treeId))
+                    }
+                  />
+                </td>
+              </tr>
+              <UserDefinedPropertyTableRows
+                item={tree}
+                setUserDefinedProperties={setUserDefinedProperties}
+              />
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+    return null;
+  },
+);
 
 // React.memo is used to prevent the component from re-rendering without the props changing
 export default React.memo(TreeHierarchyView);

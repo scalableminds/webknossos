@@ -230,6 +230,42 @@
   --compact-table-border: #e7e7e7;
 
   width: 100%;
+
+  .add-property-button {
+    width: 100%;
+  }
+
+  input, .ant-input-affix-wrapper, .ant-input-number {
+    &:not(:hover) {
+      background: transparent;
+    }
+    border: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+  }
+
+  .ant-input-status-error {
+    border: 0 !important;
+    input {
+      color: var(--ant-color-error);
+    }
+  }
+
+  .ant-input-number-input {
+    padding: 0 !important;
+  }
+
+  .ant-select {
+    width: 100%;
+    .ant-select-selector {
+      background: transparent;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+  }
+
+  // Table
   th, td {
     padding: 2px 4px;
     text-align: left;
@@ -253,33 +289,6 @@
 
   tr.divider-row {
     font-weight: bold;
-  }
-
-  .add-property-button {
-    width: 100%;
-  }
-
-  input, .ant-input-number {
-    &:not(:hover) {
-      background: transparent;
-    }
-    border: 0;
-    width: 100%;
-    height: 100%;
-    padding: 0;
-  }
-
-  .ant-input-number-input {
-    padding: 0 !important;
-  }
-
-  .ant-select {
-    width: 100%;
-    .ant-select-selector {
-      background: transparent;
-      padding-top: 0;
-      padding-bottom: 0;
-    }
   }
 
 

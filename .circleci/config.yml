@@ -278,7 +278,8 @@ jobs:
 
       - run:
         name: Zip screenshots
-        command: tar -czvf screenshots.tar frontend/javascripts/test/screenshots
+        command: |
+          tar -czvf screenshots.tar frontend/javascripts/test/screenshots
 
       - store_artifacts:
           path: screenshots.tar

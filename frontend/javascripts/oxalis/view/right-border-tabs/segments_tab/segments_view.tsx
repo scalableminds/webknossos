@@ -1934,11 +1934,11 @@ class SegmentsView extends React.Component<Props, State> {
           <tbody>
             <tr>
               <td>ID</td>
-              <td>{segment.id}</td>
+              <td colSpan={2}>{segment.id}</td>
             </tr>
             <tr>
               <td>Name</td>
-              <td>
+              <td colSpan={2}>
                 <InputWithUpdateOnBlur
                   value={segment.name || ""}
                   onChange={(newValue) => {

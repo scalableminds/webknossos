@@ -1,13 +1,11 @@
 import { CloseOutlined, TagsOutlined } from "@ant-design/icons";
-import { Button, Input, type InputProps } from "antd";
+import { Button } from "antd";
 import {
   type APIMetadataWithError,
   getTypeSelectDropdownMenu,
   InnerMetadataTable,
   MetadataValueInput,
 } from "dashboard/folders/metadata_table";
-import type React from "react";
-import { useCallback, useEffect, useState } from "react";
 import { type APIMetadata, APIMetadataEnum, type UserDefinedProperty } from "types/api_flow_types";
 import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
 
@@ -137,7 +135,7 @@ export function UserDefinedPropertyTableRows<
     <>
       <tr className="divider-row">
         <td colSpan={3}>
-          User-defined Properties <TagsOutlined />
+          Metadata <TagsOutlined />
         </td>
       </tr>
       <InnerMetadataTable

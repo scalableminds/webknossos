@@ -276,6 +276,13 @@ jobs:
       - store_artifacts:
           path: frontend/javascripts/test/snapshots/type-check
 
+      - run:
+        name: Zip screenshots
+        command: tar -czvf screenshots.tar frontend/javascripts/test/screenshots
+
+      - store_artifacts:
+          path: screenshots.tar
+
   wkorg_nightly:
     docker:
       - image: scalableminds/puppeteer:master

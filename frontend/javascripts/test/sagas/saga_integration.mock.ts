@@ -29,5 +29,5 @@ mockRequire("libs/toast", {
 });
 
 mockRequire("libs/render_independently", {
-  renderIndependently: _.noop
+  renderIndependently: _.noop,
 });

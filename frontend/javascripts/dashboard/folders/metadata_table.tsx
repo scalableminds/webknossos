@@ -1,5 +1,5 @@
 import {
-  DeleteOutlined,
+  CloseOutlined,
   FieldNumberOutlined,
   FieldStringOutlined,
   PlusOutlined,
@@ -424,7 +424,7 @@ export default function MetadataTable({
         type="text"
         disabled={isSaving}
         icon={
-          <DeleteOutlined
+          <CloseOutlined
             style={{
               color: "var(--ant-color-text-tertiary)",
               width: 16,

@@ -785,6 +785,7 @@ export type UserDefinedProperty = {
   stringValue?: string;
   boolValue?: boolean;
   numberValue?: number;
+  // todop: the server always sends an empty array
   stringListValue?: string[];
 };
 type ServerSegment = {

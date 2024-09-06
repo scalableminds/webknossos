@@ -263,7 +263,14 @@
       padding-top: 0;
       padding-bottom: 0;
     }
+    &:not(.ant-select-focused) {
+      .ant-select-selection-placeholder {
+        // Align the placeholder with the other inputs
+        margin-left: -8px;
+      }
+    }
   }
+
 
   // Table
   th, td {

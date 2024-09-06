@@ -3,6 +3,7 @@ import { Button } from "antd";
 import {
   type APIMetadataWithError,
   getTypeSelectDropdownMenu,
+  getUsedTagsWithinMetadata,
   InnerMetadataTable,
   MetadataValueInput,
 } from "dashboard/folders/metadata_table";
@@ -22,11 +23,6 @@ export const UserDefinedPropertyTableRows = memo(
     // todop
     const isReadOnly = false;
 
-    const keyCountByKey = _.countBy(
-      item.userDefinedProperties.map((prop) => prop.key),
-      (x) => x,
-    );
-
     const updateUserDefinedPropertyByIndex = (
       item: ItemType,
       index: number,
@@ -40,6 +36,18 @@ export const UserDefinedPropertyTableRows = memo(
             }
           : element,
       );
+
+      if (
+        newProps.some(
+          (el) =>
+            (el.stringValue != null && el.stringListValue != null) ||
+            (el.stringListValue as any) === "" ||
+            Array.isArray(el.stringValue),
+        )
+      ) {
+        console.error("invalid newprops?");
+        debugger;
+      }
 
       setUserDefinedProperties(item, newProps);
     };
@@ -85,7 +93,6 @@ export const UserDefinedPropertyTableRows = memo(
             onChange={(value) => updateUserDefinedPropertyByIndex(item, index, { key: value })}
             placeholder="Property"
             size="small"
-            // status={record.error != null ? "error" : undefined}
             validate={(value: string) => {
               if (
                 // If all items (except for the current one) have another key,
@@ -96,17 +103,25 @@ export const UserDefinedPropertyTableRows = memo(
               ) {
                 return null;
               }
-              return "Each key must only be used once.";
+              return "Each key must be unique and can only be used once.";
             }}
             // todop
-            // onFocus={() => setFocusedRow(index)}
-            // onBlur={() => setFocusedRow(null)}
-            // disabled={isSaving}
             // id={getKeyInputIdForIndex(index)}
           />
         </div>
       );
     };
+
+    const itemMetadata = item.userDefinedProperties.map((prop) => ({
+      key: prop.key,
+      type:
+        prop.stringValue != null
+          ? APIMetadataEnum.STRING
+          : prop.numberValue != null
+            ? APIMetadataEnum.NUMBER
+            : APIMetadataEnum.STRING_ARRAY,
+      value: prop.stringValue || prop.numberValue || prop.stringListValue || "",
+    }));
 
     const getValueInput = (record: APIMetadataWithError, index: number) => {
       return (
@@ -126,8 +141,7 @@ export const UserDefinedPropertyTableRows = memo(
               // todop: support bool?
             });
           }}
-          // todop: provide availableStrArrayTagOptions
-          availableStrArrayTagOptions={[]}
+          availableStrArrayTagOptions={getUsedTagsWithinMetadata(itemMetadata)}
           // todop: make props optional
           focusedRow={null}
           setFocusedRow={() => {}}
@@ -158,17 +172,7 @@ export const UserDefinedPropertyTableRows = memo(
         <InnerMetadataTable
           onlyReturnRows
           isVisualStudioTheme
-          metadata={item.userDefinedProperties.map((prop) => ({
-            key: prop.key,
-            type:
-              prop.stringValue != null
-                ? APIMetadataEnum.STRING
-                : prop.numberValue != null
-                  ? APIMetadataEnum.NUMBER
-                  : APIMetadataEnum.STRING_ARRAY,
-            value: prop.stringValue || prop.numberValue || prop.stringListValue || "",
-            error: keyCountByKey[prop.key] > 1 ? "Each key must only be used once." : undefined,
-          }))}
+          metadata={itemMetadata}
           getKeyInput={getKeyInput}
           getValueInput={getValueInput}
           getDeleteEntryButton={getDeleteEntryButton}

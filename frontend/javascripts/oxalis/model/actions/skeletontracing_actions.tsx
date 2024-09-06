@@ -432,7 +432,7 @@ export const setTreeUserDefinedPropertiesAction = (
 ) =>
   ({
     type: "SET_TREE_USER_DEFINED_PROPERTIES",
-    userDefinedProperties: _.uniqBy(userDefinedProperties, (el: UserDefinedProperty) => el.key),
+    userDefinedProperties,
     treeId,
   }) as const;
 

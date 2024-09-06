@@ -1237,6 +1237,19 @@ export function notEmpty<TValue>(value: TValue | null | undefined): value is TVa
   return value !== null && value !== undefined;
 }
 
+export function isStringNumeric(str: string) {
+  // Adapted from: https://stackoverflow.com/a/175787/896760
+  if (typeof str !== "string") {
+    return false;
+  }
+  return (
+    // Use type coercion to parse the _entirety_ of the
+    // string (`parseFloat` alone does not do this) and
+    // and ensure strings of whitespace fail
+    !isNaN(str as any as number) && !isNaN(Number.parseFloat(str))
+  );
+}
+
 export function isNumberMap(x: Map<NumberLike, NumberLike>): x is Map<number, number> {
   const { value } = x.entries().next();
   return value && typeof value[0] === "number";

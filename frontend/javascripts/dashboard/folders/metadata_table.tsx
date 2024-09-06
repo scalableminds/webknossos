@@ -15,14 +15,19 @@ import {
   Dropdown,
   Button,
 } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import {
   type DatasetCollectionContextValue,
   useDatasetCollectionContext,
 } from "dashboard/dataset/dataset_collection_context";
 import { useIsMounted, useStateWithRef } from "libs/react_hooks";
 import Toast from "libs/toast";
+import { isStringNumeric } from "libs/utils";
 import _ from "lodash";
-import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
+import {
+  InputNumberWithUpdateOnBlur,
+  InputWithUpdateOnBlur,
+} from "oxalis/view/components/input_with_update_on_blur";
 import type React from "react";
 import { useEffect } from "react";
 import { useState } from "react";
@@ -124,7 +129,6 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
     className: isFocused ? undefined : "transparent-input",
     onFocus: () => setFocusedRow(index),
     onBlur: () => setFocusedRow(null),
-    placeholder: "Value",
     size: "small" as InputNumberProps<number>["size"],
     disabled: isSaving,
   };
@@ -135,7 +139,19 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
         <InputNumber
           value={record.value as number}
           controls={false}
-          onChange={(newNum) => updateMetadataValue(index, newNum || 0, APIMetadataEnum.NUMBER)}
+          placeholder="Enter a number"
+          onChange={(newNum) => {
+            console.log("onChange was called with", newNum);
+            return updateMetadataValue(index, newNum || 0, APIMetadataEnum.NUMBER);
+          }}
+          // validate={(value: string) => {
+          //   if (isStringNumeric(value)) {
+          //     console.log("validating", value, ": okay");
+          //     return null;
+          //   }
+          //   console.log("validating", value, ": not okay");
+          //   return "The value must be a number.";
+          // }}
           {...sharedProps}
         />
       );
@@ -143,6 +159,7 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
       return (
         <InputWithUpdateOnBlur
           value={record.value as string}
+          placeholder="Enter text"
           onChange={(newValue) =>
             updateMetadataValue(index, newValue as string, APIMetadataEnum.STRING)
           }
@@ -153,6 +170,7 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
       return (
         <Select
           mode="tags"
+          placeholder="Enter multiple entries"
           value={record.value as string[]}
           onChange={(values) => updateMetadataValue(index, values, APIMetadataEnum.STRING_ARRAY)}
           options={availableStrArrayTagOptions}
@@ -370,12 +388,7 @@ export default function MetadataTable({
     });
   };
 
-  const availableStrArrayTagOptions = _.uniq(
-    metadata.flatMap((entry) => (entry.type === APIMetadataEnum.STRING_ARRAY ? entry.value : [])),
-  ).map((tag) => ({ value: tag, label: tag })) as {
-    value: string;
-    label: string;
-  }[];
+  const availableStrArrayTagOptions = getUsedTagsWithinMetadata(metadata);
 
   const getKeyInput = (record: APIMetadataWithError, index: number) => {
     const isFocused = index === focusedRow;
@@ -460,6 +473,15 @@ export default function MetadataTable({
   );
 }
 
+export function getUsedTagsWithinMetadata(metadata: APIMetadataWithError[]) {
+  return _.uniq(
+    metadata.flatMap((entry) => (entry.type === APIMetadataEnum.STRING_ARRAY ? entry.value : [])),
+  ).map((tag) => ({ value: tag, label: tag })) as {
+    value: string;
+    label: string;
+  }[];
+}
+
 export function InnerMetadataTable({
   metadata,
   getKeyInput,
@@ -490,11 +512,23 @@ export function InnerMetadataTable({
       <tr>
         <td colSpan={3}>
           <div className="flex-center-child">
-            <Dropdown menu={addNewEntryMenuItems} placement="bottom" trigger={["click"]} autoFocus>
-              <Button className="add-property-button" ghost size="small" style={{ border: "none" }}>
-                <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
-              </Button>
-            </Dropdown>
+            <FastTooltip title="Add a new metadata property">
+              <Dropdown
+                menu={addNewEntryMenuItems}
+                placement="bottom"
+                trigger={["click"]}
+                autoFocus
+              >
+                <Button
+                  className="add-property-button"
+                  ghost
+                  size="small"
+                  style={{ border: "none" }}
+                >
+                  <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
+                </Button>
+              </Dropdown>
+            </FastTooltip>
           </div>
         </td>
       </tr>

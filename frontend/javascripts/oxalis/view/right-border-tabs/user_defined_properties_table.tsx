@@ -172,7 +172,6 @@ export const UserDefinedPropertyTableRows = memo(
       <>
         <InnerMetadataTable
           onlyReturnRows
-          isVisualStudioTheme
           metadata={itemMetadata}
           getKeyInput={getKeyInput}
           getValueInput={getValueInput}

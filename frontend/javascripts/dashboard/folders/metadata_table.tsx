@@ -444,7 +444,7 @@ export default function MetadataTable({
             }}
           />
         }
-        style={{ width: 16 }}
+        style={{ width: 16, height: 19 }}
         onClick={() => deleteKey(index)}
       />
     </div>
@@ -488,7 +488,6 @@ export function InnerMetadataTable({
   getValueInput,
   getDeleteEntryButton,
   addNewEntryMenuItems,
-  isVisualStudioTheme,
   onlyReturnRows,
 }: {
   metadata: APIMetadataWithError[];
@@ -496,7 +495,6 @@ export function InnerMetadataTable({
   getValueInput: (record: APIMetadataWithError, index: number) => JSX.Element;
   getDeleteEntryButton: (_: APIMetadataWithError, index: number) => JSX.Element;
   addNewEntryMenuItems: MenuProps;
-  isVisualStudioTheme?: boolean;
   onlyReturnRows?: boolean;
 }): React.ReactElement {
   const rows = (
@@ -504,7 +502,6 @@ export function InnerMetadataTable({
       {metadata.map((record, index) => (
         <tr key={index}>
           <td>{getKeyInput(record, index)}</td>
-          {isVisualStudioTheme ? null : <td>:</td>}
           <td>{getValueInput(record, index)}</td>
           <td>{getDeleteEntryButton(record, index)}</td>
         </tr>
@@ -540,18 +537,11 @@ export function InnerMetadataTable({
   }
 
   return (
-    <table
-      className={
-        isVisualStudioTheme ? "segment-details-table" : "ant-tag antd-app-theme metadata-table"
-      }
-    >
-      {/* Each row except the last row has a custom horizontal divider created via a css pseudo element. */}
+    <table className="metadata-table">
       <thead>
         <tr>
           <th>Property</th>
-          {isVisualStudioTheme ? null : <th />}
-          <th>Value</th>
-          <th />
+          <th colSpan={2}>Value</th>
         </tr>
       </thead>
       <tbody>{rows}</tbody>

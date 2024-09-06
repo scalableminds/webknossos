@@ -1951,7 +1951,7 @@ class SegmentsView extends React.Component<Props, State> {
         return <>Cannot find details for selected segment.</>;
       }
       return (
-        <table className="segment-details-table">
+        <table className="metadata-table">
           <tbody>
             <tr>
               <td>ID</td>

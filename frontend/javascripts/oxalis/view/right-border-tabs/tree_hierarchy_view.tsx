@@ -340,12 +340,14 @@ const DetailsForSelection = memo(
 
       return (
         <div>
-          <table className="segment-details-table">
-            <tbody>
+          <table className="metadata-table">
+            <thead>
               <tr>
-                <td>ID</td>
-                <td colSpan={2}>{tree.treeId}</td>
+                <th>ID</th>
+                <th colSpan={2}>{tree.treeId}</th>
               </tr>
+            </thead>
+            <tbody>
               <tr>
                 <td>Name</td>
                 <td colSpan={2}>

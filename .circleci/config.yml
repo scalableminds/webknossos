@@ -284,6 +284,7 @@ jobs:
 
       - run:
           name: Zip screenshots
+          when: always
           command: |
             tar -czvf screenshots.tar frontend/javascripts/test/screenshots
 

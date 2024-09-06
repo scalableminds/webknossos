@@ -42,6 +42,7 @@ function _UserDefinedPropertyTableRows<
         : element,
     );
 
+    // todop: remove again?
     if (
       newProps.some(
         (el) =>
@@ -51,7 +52,6 @@ function _UserDefinedPropertyTableRows<
       )
     ) {
       console.error("invalid newprops?");
-      debugger;
     }
 
     setUserDefinedProperties(item, newProps);

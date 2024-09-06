@@ -47,7 +47,7 @@ import {
   GroupTypeEnum,
   getNodeKey,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import { UserDefinedProperty } from "types/api_flow_types";
+import type { UserDefinedProperty } from "types/api_flow_types";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {

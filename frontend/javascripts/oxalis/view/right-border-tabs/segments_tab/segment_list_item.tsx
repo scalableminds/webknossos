@@ -41,9 +41,13 @@ import { ChangeColorMenuItemContent } from "components/color_picker";
 import type { MenuItemType } from "antd/es/menu/interface";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
 import type { AdditionalCoordinate } from "types/api_flow_types";
-import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getAdditionalCoordinatesAsString,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
 import FastTooltip from "components/fast_tooltip";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";
+import { getSegmentIdForPosition } from "oxalis/controller/combinations/volume_handlers";
 
 const ALSO_DELETE_SEGMENT_FROM_LIST_KEY = "also-delete-segment-from-list";
 
@@ -190,7 +194,6 @@ const getMakeSegmentActiveMenuItem = (
 type Props = {
   segment: Segment;
   mappingInfo: ActiveMappingInfo;
-  isCentered: boolean;
   selectedSegmentIds: number[] | null | undefined;
   activeCellId: number | null | undefined;
   setHoveredSegmentId: (arg0: number | null | undefined) => void;
@@ -376,7 +379,6 @@ const MeshInfoItem = React.memo(_MeshInfoItem);
 function _SegmentListItem({
   segment,
   mappingInfo,
-  isCentered,
   selectedSegmentIds,
   activeCellId,
   setHoveredSegmentId,
@@ -410,6 +412,10 @@ function _SegmentListItem({
   const isHoveredSegmentId = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId === segment.id,
   );
+  const isCentered = useSelector((state: OxalisState) => {
+    const centeredSegmentId = getSegmentIdForPosition(getPosition(state.flycam));
+    return centeredSegmentId === segment.id;
+  });
 
   const createSegmentContextMenu = (): MenuProps => ({
     items: [

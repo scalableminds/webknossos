@@ -153,7 +153,6 @@ type StateProps = {
   meshes: Record<number, MeshInformation>;
   dataset: APIDataset;
   mappingInfo: ActiveMappingInfo;
-  centeredSegmentId: number;
   hasVolumeTracing: boolean | undefined;
   isSegmentIndexAvailable: boolean | undefined;
   segments: SegmentMap | null | undefined;
@@ -201,7 +200,6 @@ const mapStateToProps = (state: OxalisState): StateProps => {
     meshes: meshesForCurrentAdditionalCoordinates || EMPTY_OBJECT, // satisfy ts
     dataset: state.dataset,
     mappingInfo,
-    centeredSegmentId: getSegmentIdForPosition(getPosition(state.flycam)),
     hasVolumeTracing: state.tracing.volumes.length > 0,
     isSegmentIndexAvailable,
     segments,
@@ -1666,7 +1664,6 @@ class SegmentsView extends React.Component<Props, State> {
         <DomVisibilityObserver targetId={segmentsTabId}>
           {(isVisibleInDom) => {
             if (!isVisibleInDom) return null;
-            const { centeredSegmentId } = this.props;
             const allSegments = this.props.segments;
             const isSegmentHierarchyEmpty = !(
               allSegments?.size() || this.props.segmentGroups.length
@@ -1709,7 +1706,6 @@ class SegmentsView extends React.Component<Props, State> {
                     hideContextMenu={this.hideContextMenu}
                     key={segment.id}
                     segment={segment}
-                    isCentered={centeredSegmentId === segment.id}
                     selectedSegmentIds={this.props.selectedIds.segments}
                     onSelectSegment={this.onSelectSegment}
                     mesh={this.props.meshes[segment.id]}

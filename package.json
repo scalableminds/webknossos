@@ -73,7 +73,6 @@
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^5.0.2"
   },
-  "optionalDependencies": {},
   "scripts": {
     "start": "node tools/proxy/proxy.js",
     "build": "node --max-old-space-size=4096 node_modules/.bin/webpack --env production",
@@ -213,12 +212,6 @@
     "url-join": "^4.0.0",
     "worker-loader": "^3.0.8"
   },
-  "resolutions": {
-    "**/mini-store": "^1.1.0",
-    "**/redux": "3.7.2",
-    "**/rc-resize-observer": "^1.4.0",
-    "**/rc-util": "^5.39.1"
-  },
   "ava": {
     "files": [
       "./public-test/test-bundle/**/*.{js,jsx}"
@@ -241,5 +234,6 @@
       "frontend/javascripts/test/**/*.*"
     ],
     "reporter": "lcov"
-  }
+  },
+  "packageManager": "yarn@4.4.1"
 }

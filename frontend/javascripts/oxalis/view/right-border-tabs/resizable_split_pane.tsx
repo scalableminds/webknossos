@@ -1,16 +1,16 @@
 import { Divider } from "antd";
+import UserLocalStorage from "libs/user_local_storage";
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 
-// todop: change back to 100?
-// should this be memorized per user? local storage maybe? then, it's sync and device specific
-const INITIAL_HEIGHT = 400;
+const getInitialHeight = () =>
+  Number.parseInt(UserLocalStorage.getItem("lastPersistedHeightForResizableDetailsPane") ?? "200");
 
 export function ResizableSplitPane({
   firstChild,
   secondChild,
 }: { firstChild: React.ReactElement; secondChild: React.ReactElement | null }) {
-  const [heightForSecondChild, setHeightForSecondChild] = useState(INITIAL_HEIGHT);
+  const [heightForSecondChild, setHeightForSecondChild] = useState(getInitialHeight());
   const dividerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isResizingRef = useRef(false);
@@ -28,6 +28,10 @@ export function ResizableSplitPane({
 
       if (newHeightForFirstChild > 0 && newHeightForSecondChild > 0) {
         setHeightForSecondChild(newHeightForSecondChild);
+        UserLocalStorage.setItem(
+          "lastPersistedHeightForResizableDetailsPane",
+          `${newHeightForSecondChild}`,
+        );
       }
     };
 

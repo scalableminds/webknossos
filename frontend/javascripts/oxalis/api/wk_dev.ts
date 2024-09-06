@@ -5,6 +5,7 @@ import { roundTo, sleep } from "libs/utils";
 import type ApiLoader from "./api_loader";
 import type { ApiInterface } from "./api_latest";
 import showFpsMeter from "libs/fps_meter";
+import _ from "lodash";
 
 // Can be accessed via window.webknossos.DEV.flags. Only use this
 // for debugging or one off scripts.
@@ -37,6 +38,7 @@ export default class WkDev {
    */
   apiLoader: ApiLoader;
   _api!: ApiInterface;
+  benchmarkHistory: number[] = [];
 
   flags = WkDevFlags;
 
@@ -178,6 +180,14 @@ export default class WkDev {
         currentIteration++;
       }
     }
+    const duration = performance.now() - start;
     console.timeEnd("Move Benchmark");
+    if (this.benchmarkHistory.length > 0) {
+      console.log(
+        `Average of previous ${this.benchmarkHistory.length} benchmark runs:`,
+        _.mean(this.benchmarkHistory),
+      );
+    }
+    this.benchmarkHistory.push(duration);
   }
 }

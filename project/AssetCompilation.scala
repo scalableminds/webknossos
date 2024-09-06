@@ -88,7 +88,7 @@ object AssetCompilation {
       {
         val nodeSrc = baseDirectory.value / "node_modules"
         val nodeDest = target.value / "universal" / "stage" / "node_modules"
-        val tmpPath = baseDirectory.value / "tmp"
+        val tmpPath = Files.createTempDirectory("yarn-dir-for-commander")
         val streamsValue = streams.value.log
 
         tmpPath.mkdirs

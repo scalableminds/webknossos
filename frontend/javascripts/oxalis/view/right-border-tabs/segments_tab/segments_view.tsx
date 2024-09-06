@@ -1953,11 +1953,13 @@ class SegmentsView extends React.Component<Props, State> {
       }
       return (
         <table className="metadata-table">
-          <tbody>
+          <thead>
             <tr>
-              <td>ID</td>
-              <td colSpan={2}>{segment.id}</td>
+              <th>ID</th>
+              <th colSpan={2}>{segment.id}</th>
             </tr>
+          </thead>
+          <tbody>
             <tr>
               <td>Name</td>
               <td colSpan={2}>

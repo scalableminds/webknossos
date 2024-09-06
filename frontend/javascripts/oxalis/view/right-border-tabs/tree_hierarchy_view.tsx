@@ -11,6 +11,7 @@ import {
   toggleTreeAction,
   toggleTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import * as Utils from "libs/utils";
 import { Store } from "oxalis/singletons";
 import type { Tree, TreeGroup, TreeMap } from "oxalis/store";
 import {
@@ -365,6 +366,12 @@ const DetailsForSelection = memo(
               />
             </tbody>
           </table>
+        </div>
+      );
+    } else if (selectedTreeIds.length > 1) {
+      return (
+        <div>
+          {selectedTreeIds.length} {Utils.pluralize("Tree", selectedTreeIds.length)} selected.{" "}
         </div>
       );
     }

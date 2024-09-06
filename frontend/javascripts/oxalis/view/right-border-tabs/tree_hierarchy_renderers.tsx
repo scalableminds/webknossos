@@ -33,7 +33,6 @@ import {
   setTreeGroupAction,
   setTreeGroupsAction,
   setTreeTypeAction,
-  setTreeUserDefinedPropertiesAction,
   shuffleAllTreeColorsAction,
   shuffleTreeColorAction,
   toggleInactiveTreesAction,

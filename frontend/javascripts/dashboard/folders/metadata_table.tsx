@@ -2,6 +2,7 @@ import {
   CloseOutlined,
   FieldNumberOutlined,
   FieldStringOutlined,
+  InfoCircleOutlined,
   PlusOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
@@ -394,25 +395,23 @@ export default function MetadataTable({
     const isFocused = index === focusedRow;
     return (
       <>
-        <Input
-          className={isFocused ? undefined : "transparent-input"}
-          onFocus={() => setFocusedRow(index)}
-          onBlur={() => setFocusedRow(null)}
-          value={record.key}
-          onChange={(evt) => updateMetadataKey(index, evt.target.value)}
-          placeholder="Property"
-          size="small"
-          disabled={isSaving}
-          id={getKeyInputIdForIndex(index)}
-        />
-        {record.error != null ? (
-          <>
-            <br />
-            <Typography.Text type="warning" style={{ paddingLeft: 8, display: "inline-block" }}>
-              {record.error}
-            </Typography.Text>
-          </>
-        ) : null}
+        <FastTooltip title={record.error} placement="left" variant="warning">
+          <Input
+            className={isFocused ? undefined : "transparent-input"}
+            onFocus={() => setFocusedRow(index)}
+            onBlur={() => setFocusedRow(null)}
+            value={record.key}
+            onChange={(evt) => updateMetadataKey(index, evt.target.value)}
+            placeholder="Property"
+            size="small"
+            disabled={isSaving}
+            id={getKeyInputIdForIndex(index)}
+            status={record.error != null ? "warning" : undefined}
+            // Use a span as an empty prefix, because null would lose the focus
+            // when the prefix changes.
+            prefix={record.error != null ? <InfoCircleOutlined /> : <span />}
+          />
+        </FastTooltip>
       </>
     );
   };

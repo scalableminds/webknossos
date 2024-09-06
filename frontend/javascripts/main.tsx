@@ -27,6 +27,7 @@ import Model from "oxalis/model";
 import { setupApi } from "oxalis/api/internal_api";
 import { setActiveOrganizationAction } from "oxalis/model/actions/organization_actions";
 import checkBrowserFeatures from "libs/browser_feature_check";
+import { RootForFastTooltips } from "components/fast_tooltip";
 
 import "../stylesheets/main.less";
 import GlobalThemeProvider, { getThemeFromUser } from "theme";
@@ -115,6 +116,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         https://github.com/frontend-collective/react-sortable-tree/blob/9aeaf3d38b500d58e2bcc1d9b6febce12f8cc7b4/stories/barebones-no-context.js */}
             <DndProvider backend={HTML5Backend}>
               <GlobalThemeProvider>
+                <RootForFastTooltips />
                 <Router />
               </GlobalThemeProvider>
             </DndProvider>

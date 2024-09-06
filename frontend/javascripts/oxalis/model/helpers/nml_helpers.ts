@@ -986,7 +986,7 @@ export function parseNml(nmlString: string): Promise<{
             if (currentNode == null) {
               currentTree.userDefinedProperties.push(parseUserDefinedProperty(attr));
             } else {
-              // todop: also handle for nodes in this PR?
+              // todop: link follow-up issue for custom metadata in nodes
             }
             break;
           }

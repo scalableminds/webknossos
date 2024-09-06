@@ -95,6 +95,14 @@ export function renderTreeNode(
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
       {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
+      {(tree.userDefinedProperties || []).length > 0 ? (
+        <FastTooltip
+          className="deemphasized icon-margin-left"
+          title="This tree has assigned metadata properties."
+        >
+          <TagsOutlined />
+        </FastTooltip>
+      ) : null}
     </div>
   );
 }
@@ -127,25 +135,6 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         disabled: isEditingDisabled,
         icon: <i className="fas fa-adjust" />,
         label: "Shuffle Tree Color",
-      },
-      {
-        key: "addProperty",
-        label: "Add Property",
-        icon: <TagsOutlined />,
-        onClick: () => {
-          // todop: remove this UI?
-          const key = prompt("Please type in a key");
-          const value = prompt("Please type in a value");
-          if (key && value) {
-            Store.dispatch(
-              setTreeUserDefinedPropertiesAction(
-                [...tree.userDefinedProperties, { key, stringValue: value }],
-                tree.treeId,
-              ),
-            );
-          }
-          hideContextMenu();
-        },
       },
       {
         key: "deleteTree",

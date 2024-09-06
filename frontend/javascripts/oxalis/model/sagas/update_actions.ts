@@ -322,8 +322,6 @@ export function createSegmentVolumeAction(
   userDefinedProperties: UserDefinedProperty[],
   creationTime: number | null | undefined = Date.now(),
 ) {
-  // todop: validate here?
-
   return {
     name: "createSegment",
     value: {

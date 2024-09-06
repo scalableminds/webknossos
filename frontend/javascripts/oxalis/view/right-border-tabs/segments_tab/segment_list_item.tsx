@@ -458,31 +458,6 @@ function _SegmentListItem({
         ),
       },
       {
-        key: "addProperty",
-        label: "Add Property",
-        onClick: () => {
-          if (visibleSegmentationLayer == null) {
-            return;
-          }
-          const key = prompt("Please type in a key");
-          const value = prompt("Please type in a value");
-          if (key && value) {
-            updateSegment(
-              segment.id,
-              {
-                userDefinedProperties: [
-                  ...segment.userDefinedProperties,
-                  { key, stringValue: value },
-                ],
-              },
-              visibleSegmentationLayer.name,
-              true,
-            );
-          }
-          hideContextMenu();
-        },
-      },
-      {
         key: "resetSegmentColor",
         disabled: segment.color == null,
         onClick: () => {
@@ -623,10 +598,8 @@ function _SegmentListItem({
           />
           {(segment.userDefinedProperties || []).length > 0 ? (
             <FastTooltip
-              className="deemphasized"
-              title={segment.userDefinedProperties
-                .map((prop) => `${prop.key}: ${prop.stringValue}`)
-                .join(", ")}
+              className="deemphasized icon-margin-right"
+              title="This segment has assigned metadata properties."
             >
               <TagsOutlined />
             </FastTooltip>

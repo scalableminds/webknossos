@@ -241,20 +241,6 @@ export const updateSegmentAction = (
   if (segmentId == null) {
     throw new Error("Segment ID must not be null.");
   }
-  // todop
-  // const { userDefinedProperties, ...restSegment } = segment;
-  // const sanitizedUserDefinedProperties =
-  //   userDefinedProperties !== undefined
-  //     ? _.uniqBy(userDefinedProperties, (el: UserDefinedProperty) => el.key)
-  //     : undefined;
-
-  // const newSegment: Partial<Segment> =
-  //   sanitizedUserDefinedProperties != null
-  //     ? {
-  //         ...restSegment,
-  //         userDefinedProperties: sanitizedUserDefinedProperties,
-  //       }
-  //     : restSegment;
 
   return {
     type: "UPDATE_SEGMENT",

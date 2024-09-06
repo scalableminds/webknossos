@@ -1156,6 +1156,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 }
 
 export function sanitizeMetadata(userDefinedProperties: UserDefinedProperty[]) {
+  // todop: or should this happen in enforceValidMetadata when the update-actions for
+  // saving are crafted?
   return userDefinedProperties.map((prop) => {
     // If stringList value is defined, but it's an empty array, it should
     // be switched to undefined

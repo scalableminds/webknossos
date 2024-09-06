@@ -1,13 +1,5 @@
-import { DeleteOutlined, DownOutlined, TagsOutlined } from "@ant-design/icons";
-import {
-  Tree as AntdTree,
-  Button,
-  type GetRef,
-  Input,
-  type MenuProps,
-  Modal,
-  type TreeProps,
-} from "antd";
+import { DownOutlined, TagsOutlined } from "@ant-design/icons";
+import { Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import { AutoSizer } from "react-virtualized";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -46,7 +38,6 @@ import {
 import { ResizableSplitPane } from "./resizable_split_pane";
 import { UserDefinedPropertyTableRows } from "./user_defined_properties_table";
 import type { UserDefinedProperty } from "types/api_flow_types";
-import { APIMetadataWithError } from "dashboard/folders/metadata_table";
 import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {

@@ -339,7 +339,7 @@ function _MeshInfoItem(props: {
       >
         <div
           className={classnames("segment-list-item", {
-            "is-selected-cell": isSelectedInList,
+            "is-selected-segment": isSelectedInList,
           })}
         >
           {toggleVisibilityCheckbox}
@@ -562,7 +562,7 @@ function _SegmentListItem({
       style={{
         padding: "2px 5px",
       }}
-      className="segment-list-item"
+      className={`segment-list-item ${isHoveredSegmentId ? "is-hovered-segment" : ""}`}
       onMouseEnter={() => {
         setHoveredSegmentId(segment.id);
       }}

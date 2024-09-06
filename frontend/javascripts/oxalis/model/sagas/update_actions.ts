@@ -130,7 +130,7 @@ export function createTree(tree: Tree) {
       isVisible: tree.isVisible,
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
-      userDefinedProperties: tree.userDefinedProperties,
+      userDefinedProperties: enforceValidMetadata(tree.userDefinedProperties),
     },
   } as const;
 }
@@ -157,7 +157,7 @@ export function updateTree(tree: Tree) {
       isVisible: tree.isVisible,
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
-      userDefinedProperties: tree.userDefinedProperties,
+      userDefinedProperties: enforceValidMetadata(tree.userDefinedProperties),
     },
   } as const;
 }
@@ -332,7 +332,7 @@ export function createSegmentVolumeAction(
       name,
       color,
       groupId,
-      userDefinedProperties,
+      userDefinedProperties: enforceValidMetadata(userDefinedProperties),
       creationTime,
     },
   } as const;
@@ -357,7 +357,7 @@ export function updateSegmentVolumeAction(
       name,
       color,
       groupId,
-      userDefinedProperties,
+      userDefinedProperties: enforceValidMetadata(userDefinedProperties),
       creationTime,
     },
   } as const;
@@ -504,4 +504,16 @@ export function mergeAgglomerate(
       mag,
     },
   } as const;
+}
+
+function enforceValidMetadata(userDefinedProperties: UserDefinedProperty[]): UserDefinedProperty[] {
+  const keySet = new Set();
+  const filteredProps = [];
+  for (const prop of userDefinedProperties) {
+    if (!keySet.has(prop.key)) {
+      keySet.add(prop.key);
+      filteredProps.push(prop);
+    }
+  }
+  return filteredProps;
 }

@@ -113,6 +113,7 @@ interface MetadataValueInputProps {
     type: APIMetadataEnum,
   ) => void;
   isSaving?: boolean;
+  readOnly?: boolean;
   availableStrArrayTagOptions: { value: string; label: string }[];
 }
 
@@ -123,6 +124,7 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
   setFocusedRow,
   updateMetadataValue,
   isSaving,
+  readOnly,
   availableStrArrayTagOptions,
 }) => {
   const isFocused = index === focusedRow;
@@ -131,7 +133,7 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
     onFocus: () => setFocusedRow?.(index),
     onBlur: () => setFocusedRow?.(null),
     size: "small" as InputNumberProps<number>["size"],
-    disabled: isSaving,
+    disabled: isSaving || readOnly,
   };
 
   switch (record.type) {
@@ -488,6 +490,7 @@ export function InnerMetadataTable({
   getDeleteEntryButton,
   addNewEntryMenuItems,
   onlyReturnRows,
+  readOnly,
 }: {
   metadata: APIMetadataWithError[];
   getKeyInput: (record: APIMetadataWithError, index: number) => JSX.Element;
@@ -495,6 +498,7 @@ export function InnerMetadataTable({
   getDeleteEntryButton: (_: APIMetadataWithError, index: number) => JSX.Element;
   addNewEntryMenuItems: MenuProps;
   onlyReturnRows?: boolean;
+  readOnly?: boolean;
 }): React.ReactElement {
   const rows = (
     <>
@@ -505,29 +509,31 @@ export function InnerMetadataTable({
           <td>{getDeleteEntryButton(record, index)}</td>
         </tr>
       ))}
-      <tr>
-        <td colSpan={3}>
-          <div className="flex-center-child">
-            <FastTooltip title="Add a new metadata property">
-              <Dropdown
-                menu={addNewEntryMenuItems}
-                placement="bottom"
-                trigger={["click"]}
-                autoFocus
-              >
-                <Button
-                  className="add-property-button"
-                  ghost
-                  size="small"
-                  style={{ border: "none" }}
+      {readOnly ? null : (
+        <tr>
+          <td colSpan={3}>
+            <div className="flex-center-child">
+              <FastTooltip title="Add a new metadata property">
+                <Dropdown
+                  menu={addNewEntryMenuItems}
+                  placement="bottom"
+                  trigger={["click"]}
+                  autoFocus
                 >
-                  <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
-                </Button>
-              </Dropdown>
-            </FastTooltip>
-          </div>
-        </td>
-      </tr>
+                  <Button
+                    className="add-property-button"
+                    ghost
+                    size="small"
+                    style={{ border: "none" }}
+                  >
+                    <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
+                  </Button>
+                </Dropdown>
+              </FastTooltip>
+            </div>
+          </td>
+        </tr>
+      )}
     </>
   );
 

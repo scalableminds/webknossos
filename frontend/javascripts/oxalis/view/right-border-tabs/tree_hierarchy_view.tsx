@@ -320,7 +320,11 @@ function TreeHierarchyView(props: Props) {
           </AutoSizer>
         }
         secondChild={
-          <DetailsForSelection trees={props.trees} selectedTreeIds={props.selectedTreeIds} />
+          <DetailsForSelection
+            trees={props.trees}
+            selectedTreeIds={props.selectedTreeIds}
+            readOnly={!props.allowUpdate}
+          />
         }
       />
     </>
@@ -332,7 +336,11 @@ const setUserDefinedProperties = (tree: Tree, newProperties: UserDefinedProperty
 };
 
 const DetailsForSelection = memo(
-  ({ trees, selectedTreeIds }: { trees: TreeMap; selectedTreeIds: number[] }) => {
+  ({
+    trees,
+    selectedTreeIds,
+    readOnly,
+  }: { trees: TreeMap; selectedTreeIds: number[]; readOnly: boolean }) => {
     if (selectedTreeIds.length === 1) {
       const tree = trees[selectedTreeIds[0]];
       if (tree == null) {
@@ -363,6 +371,7 @@ const DetailsForSelection = memo(
               <UserDefinedPropertyTableRows
                 item={tree}
                 setUserDefinedProperties={setUserDefinedProperties}
+                readOnly={readOnly}
               />
             </tbody>
           </table>

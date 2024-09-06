@@ -1946,6 +1946,7 @@ class SegmentsView extends React.Component<Props, State> {
   renderDetailsForSelection() {
     const { segments } = this.props.selectedIds;
     if (segments.length === 1) {
+      const readOnly = !this.props.allowUpdate;
       const segment = this.props.segments?.getNullable(segments[0]);
       if (segment == null) {
         return <>Cannot find details for selected segment.</>;
@@ -1969,6 +1970,7 @@ class SegmentsView extends React.Component<Props, State> {
             <UserDefinedPropertyTableRows
               item={segment}
               setUserDefinedProperties={this.setUserDefinedProperties}
+              readOnly={readOnly}
             />
           </tbody>
         </table>

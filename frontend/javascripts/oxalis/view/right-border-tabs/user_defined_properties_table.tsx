@@ -18,18 +18,20 @@ export const UserDefinedPropertyTableRows = memo(
   <ItemType extends { userDefinedProperties: UserDefinedProperty[] }>({
     item,
     setUserDefinedProperties,
+    readOnly,
   }: {
     item: ItemType;
     setUserDefinedProperties: (item: ItemType, newProperties: UserDefinedProperty[]) => void;
+    readOnly: boolean;
   }) => {
-    // todop
-    const isReadOnly = false;
-
     const updateUserDefinedPropertyByIndex = (
       item: ItemType,
       index: number,
       newPropPartial: Partial<UserDefinedProperty>,
     ) => {
+      if (readOnly) {
+        return;
+      }
       const newProps = item.userDefinedProperties.map((element, idx) =>
         idx === index
           ? {
@@ -68,7 +70,7 @@ export const UserDefinedPropertyTableRows = memo(
       <div className="flex-center-child">
         <Button
           type="text"
-          disabled={isReadOnly}
+          disabled={readOnly}
           style={{ width: 16, height: 19 }}
           icon={
             <CloseOutlined
@@ -92,6 +94,7 @@ export const UserDefinedPropertyTableRows = memo(
             prefix={<TagsOutlined />}
             className="transparent-input"
             value={record.key}
+            disabled={readOnly}
             onChange={(value) => updateUserDefinedPropertyByIndex(item, index, { key: value })}
             placeholder="Property"
             size="small"
@@ -129,6 +132,7 @@ export const UserDefinedPropertyTableRows = memo(
         <MetadataValueInput
           record={record}
           index={index}
+          readOnly={readOnly}
           updateMetadataValue={(
             indexToUpdate: number,
             newValue: number | string | string[],
@@ -173,6 +177,7 @@ export const UserDefinedPropertyTableRows = memo(
           getValueInput={getValueInput}
           getDeleteEntryButton={getDeleteEntryButton}
           addNewEntryMenuItems={addNewEntryMenuItems}
+          readOnly={readOnly}
         />
       </>
     );

@@ -47,6 +47,7 @@ import {
   GroupTypeEnum,
   getNodeKey,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { UserDefinedProperty } from "types/api_flow_types";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -1033,7 +1034,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                     trees: {
                       [tree.treeId]: {
                         userDefinedProperties: {
-                          $set: action.userDefinedProperties,
+                          $set: sanitizeMetadata(action.userDefinedProperties),
                         },
                       },
                     },
@@ -1152,6 +1153,24 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
       }
     })
     .getOrElse(state);
+}
+
+export function sanitizeMetadata(userDefinedProperties: UserDefinedProperty[]) {
+  return userDefinedProperties.map((prop) => {
+    // If stringList value is defined, but it's an empty array, it should
+    // be switched to undefined
+    const needsCorrection =
+      prop.stringListValue != null &&
+      prop.stringListValue.length === 0 &&
+      (prop.stringValue != null || prop.numberValue != null);
+    if (needsCorrection) {
+      return {
+        ...prop,
+        stringListValue: undefined,
+      };
+    }
+    return prop;
+  });
 }
 
 export default SkeletonTracingReducer;

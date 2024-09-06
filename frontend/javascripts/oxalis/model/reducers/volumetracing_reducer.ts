@@ -58,6 +58,7 @@ import {
   findParentIdForGroupId,
   getGroupNodeKey,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import { sanitizeMetadata } from "./skeletontracing_reducer";
 type SegmentUpdateInfo =
   | {
       readonly type: "UPDATE_VOLUME_TRACING";
@@ -183,6 +184,10 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       // without a position.
     }
 
+    const userDefinedProperties = sanitizeMetadata(
+      segment.userDefinedProperties || oldSegment?.userDefinedProperties || [],
+    );
+
     const newSegment: Segment = {
       // If oldSegment exists, its creationTime will be
       // used by ...oldSegment
@@ -191,9 +196,9 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       color: null,
       groupId: null,
       someAdditionalCoordinates: someAdditionalCoordinates,
-      userDefinedProperties: [],
       ...oldSegment,
       ...segment,
+      userDefinedProperties,
       somePosition,
       id: segmentId,
     };

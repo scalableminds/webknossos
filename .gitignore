@@ -84,13 +84,13 @@ flow-coverage/
 # Sublime 
 *.sublime-project
 *.sublime-workspace
-**/screenshots/*.diff.png
-**/screenshots/*.new.png
 
 # Testing
 .nyc_output
 coverage
 coverage-ts
+**/screenshots/*.diff.png
+**/screenshots/*.new.png
 
 # Yarn 
 .yarn/*

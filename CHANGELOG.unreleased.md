@@ -14,6 +14,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - For self-hosted versions, the text in the data set upload view was updated to recommend switching to webknossos.org. [#7996](https://github.com/scalableminds/webknossos/pull/7996)
+- Updated frontend package management to yarn version 4. [8061](https://github.com/scalableminds/webknossos/pull/8061)
 
 ### Fixed
 

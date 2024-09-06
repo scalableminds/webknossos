@@ -507,6 +507,13 @@ export function mergeAgglomerate(
 }
 
 function enforceValidMetadata(userDefinedProperties: UserDefinedProperty[]): UserDefinedProperty[] {
+  // We do not want to save metadata with duplicate keys. Validation errors
+  // will warn the user in case this exists. However, we allow duplicate keys in the
+  // redux store to avoid losing information while the user is editing something.
+  // Instead, entries with duplicate keys are filtered here so that the back-end will
+  // not see this.
+  // If the user chooses to ignore the warnings, only the first appearance of a key
+  // is saved to the back-end.
   const keySet = new Set();
   const filteredProps = [];
   for (const prop of userDefinedProperties) {

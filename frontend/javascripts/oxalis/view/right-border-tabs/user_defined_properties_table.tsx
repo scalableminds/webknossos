@@ -12,6 +12,8 @@ import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
 import _ from "lodash";
 import { memo } from "react";
 
+const getKeyInputIdForIndex = (index: number) => `metadata-key-input-id-${index}`;
+
 export const UserDefinedPropertyTableRows = memo(
   <ItemType extends { userDefinedProperties: UserDefinedProperty[] }>({
     item,
@@ -105,8 +107,7 @@ export const UserDefinedPropertyTableRows = memo(
               }
               return "Each key must be unique and can only be used once.";
             }}
-            // todop
-            // id={getKeyInputIdForIndex(index)}
+            id={getKeyInputIdForIndex(index)}
           />
         </div>
       );
@@ -151,12 +152,12 @@ export const UserDefinedPropertyTableRows = memo(
     };
 
     const addNewEntryWithType = (type: APIMetadata["type"]) => {
-      // const indexOfNewEntry = prev.length;
+      const indexOfNewEntry = item.userDefinedProperties.length;
       // Auto focus the key input of the new entry.
-      // setTimeout(
-      //   () => document.getElementById(getKeyInputIdForIndex(indexOfNewEntry))?.focus(),
-      //   50,
-      // );
+      setTimeout(
+        () => document.getElementById(getKeyInputIdForIndex(indexOfNewEntry))?.focus(),
+        50,
+      );
       addUserDefinedProperty(item, {
         key: "",
         stringValue: type === APIMetadataEnum.STRING ? "" : undefined,

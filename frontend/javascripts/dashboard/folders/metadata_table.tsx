@@ -105,14 +105,14 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
 interface MetadataValueInputProps {
   record: APIMetadataWithError;
   index: number;
-  focusedRow: number | null;
-  setFocusedRow: (row: number | null) => void;
+  focusedRow?: number | null;
+  setFocusedRow?: (row: number | null) => void;
   updateMetadataValue: (
     index: number,
     newValue: number | string | string[],
     type: APIMetadataEnum,
   ) => void;
-  isSaving: boolean;
+  isSaving?: boolean;
   availableStrArrayTagOptions: { value: string; label: string }[];
 }
 
@@ -128,8 +128,8 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
   const isFocused = index === focusedRow;
   const sharedProps = {
     className: isFocused ? undefined : "transparent-input",
-    onFocus: () => setFocusedRow(index),
-    onBlur: () => setFocusedRow(null),
+    onFocus: () => setFocusedRow?.(index),
+    onBlur: () => setFocusedRow?.(null),
     size: "small" as InputNumberProps<number>["size"],
     disabled: isSaving,
   };

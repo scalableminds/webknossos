@@ -143,10 +143,6 @@ export const UserDefinedPropertyTableRows = memo(
             });
           }}
           availableStrArrayTagOptions={getUsedTagsWithinMetadata(itemMetadata)}
-          // todop: make props optional
-          focusedRow={null}
-          setFocusedRow={() => {}}
-          isSaving={false}
         />
       );
     };

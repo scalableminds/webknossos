@@ -283,7 +283,7 @@ jobs:
           path: frontend/javascripts/test/snapshots/type-check
 
       - run:
-          name: Zip screenshots
+          name: Bundle screenshots
           when: always
           command: |
             tar -czvf screenshots.tar frontend/javascripts/test/screenshots

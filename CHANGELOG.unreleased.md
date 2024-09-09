@@ -11,6 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/24.08.1...HEAD)
 
 ### Added
+- It is now possible to focus a bounding box in the bounding box tab by clicking its edges in a viewport or via a newly added context menu entry. [#8054](https://github.com/scalableminds/webknossos/pull/8054)
 
 ### Changed
 - Clicking on a bounding box within the bounding box tab centers it within the viewports and focusses it in the list. [#8049](https://github.com/scalableminds/webknossos/pull/8049)

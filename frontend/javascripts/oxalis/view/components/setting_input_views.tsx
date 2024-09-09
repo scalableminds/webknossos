@@ -571,14 +571,16 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
       ];
 
       return (
-        <Dropdown menu={{ items }}>
-          <EllipsisOutlined style={marginLeftStyle} />
-        </Dropdown>
+        <div onClick={(e) => e.stopPropagation()}>
+          <Dropdown menu={{ items }}>
+            <EllipsisOutlined style={marginLeftStyle} />
+          </Dropdown>
+        </div>
       );
     };
 
     return (
-      <>
+      <div>
         <Row
           style={{
             marginTop: 10,
@@ -593,6 +595,9 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
               style={{
                 margin: "auto 0px",
               }}
+              // To prevent centering the bounding box on every edit (e.g. upon visibility change)
+              // the click events are stopped from propagating to the parent div.
+              onClick={(_value, e) => e.stopPropagation()}
             />
           </Col>
 
@@ -610,6 +615,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
                   onPressEnter={this.handleNameChanged}
                   onBlur={this.handleNameChanged}
                   disabled={disabled}
+                  onClick={(e) => e.stopPropagation()}
                 />
               </span>
             </FastTooltip>
@@ -641,6 +647,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
                 placeholder="0, 0, 0, 512, 512, 512"
                 size="small"
                 disabled={disabled}
+                onClick={(e) => e.stopPropagation()}
               />
             </FastTooltip>
           </Col>
@@ -655,7 +662,7 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
             </FastTooltip>
           </Col>
         </Row>
-      </>
+      </div>
     );
   }
 }
@@ -693,6 +700,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
           backgroundColor: value,
           ...style,
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         <input
           type="color"

@@ -1,7 +1,7 @@
 import _ from "lodash";
 import React, { useState } from "react";
-import { SyncOutlined } from "@ant-design/icons";
-import { Table, Button, Modal } from "antd";
+import { PlusOutlined, SyncOutlined } from "@ant-design/icons";
+import { Table, Button, Modal, Space } from "antd";
 import { getAiModels } from "admin/admin_rest_api";
 import type { AiModel } from "types/api_flow_types";
 import FormattedDate from "components/formatted_date";
@@ -12,10 +12,12 @@ import { JobState } from "admin/job/job_list_view";
 import { Link } from "react-router-dom";
 import { useGuardedFetch } from "libs/react_helpers";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
+import { type AnnotationWithDataset, TrainAiModelTab } from "oxalis/view/jobs/train_ai_model";
 
 export default function AiModelListView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const [refreshCounter, setRefreshCounter] = useState(0);
+  const [isTrainModalVisible, setIsTrainModalVisible] = useState(false);
   const [aiModels, isLoading] = useGuardedFetch(
     getAiModels,
     [],
@@ -29,10 +31,18 @@ export default function AiModelListView() {
 
   return (
     <div className="container voxelytics-view">
+      {isTrainModalVisible ? (
+        <TrainNewAiJobModal onClose={() => setIsTrainModalVisible(false)} />
+      ) : null}
       <div className="pull-right">
-        <Button onClick={() => setRefreshCounter((val) => val + 1)}>
-          <SyncOutlined spin={isLoading} /> Refresh
-        </Button>
+        <Space>
+          <Button onClick={() => setIsTrainModalVisible(true)}>
+            <PlusOutlined /> Train new Model
+          </Button>
+          <Button onClick={() => setRefreshCounter((val) => val + 1)}>
+            <SyncOutlined spin={isLoading} /> Refresh
+          </Button>
+        </Space>
       </div>
       <h3>AI Models</h3>
       <Table
@@ -88,6 +98,37 @@ export default function AiModelListView() {
         dataSource={aiModels}
       />
     </div>
+  );
+}
+
+function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
+  const [annotationsWithDatasets, setAnnotationsWithDatasets] = useState<AnnotationWithDataset[]>(
+    [],
+  );
+  return (
+    <Modal
+      width={875}
+      open
+      title={
+        <>
+          <i className="fas fa-magic icon-margin-right" />
+          AI Analysis
+        </>
+      }
+      onCancel={onClose}
+      footer={null}
+    >
+      <TrainAiModelTab
+        onFinish={(_form, _useCustomWorkflow, values) => {
+          console.log("values", values);
+          // todop: reuse the other onFinish code here? generalize it probably
+        }}
+        annotationsWithDatasets={annotationsWithDatasets}
+        onAddAnnotationsWithDatasets={(newItems) => {
+          setAnnotationsWithDatasets([...annotationsWithDatasets, ...newItems]);
+        }}
+      />
+    </Modal>
   );
 }
 

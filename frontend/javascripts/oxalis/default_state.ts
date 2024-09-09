@@ -240,7 +240,7 @@ const defaultState: OxalisState = {
     showVersionRestore: false,
     showDownloadModal: false,
     showPythonClientModal: false,
-    aIJobModalState: "invisible",
+    aIJobModalState: "neuron_inferral",
     showRenderAnimationModal: false,
     showShareModal: false,
     storedLayouts: {},

@@ -2,12 +2,13 @@ import { Form, Select } from "antd";
 import { getReadableNameOfVolumeLayer } from "oxalis/model/accessors/volumetracing_accessor";
 import type { HybridTracing } from "oxalis/store";
 import type React from "react";
-import type { APIDataLayer } from "types/api_flow_types";
+import type { APIAnnotation, APIDataLayer } from "types/api_flow_types";
 
 type LayerSelectionProps = {
+  name: string | Array<string | number>;
   chooseSegmentationLayer: boolean;
   layers: APIDataLayer[];
-  tracing: HybridTracing;
+  tracing: APIAnnotation | HybridTracing;
   fixedLayerName?: string;
   label?: string;
 };
@@ -22,7 +23,7 @@ export function LayerSelection({
   value,
 }: {
   layers: APIDataLayer[];
-  tracing: HybridTracing;
+  tracing: APIAnnotation | HybridTracing;
   fixedLayerName?: string;
   layerType?: string;
   style?: React.CSSProperties;
@@ -61,6 +62,7 @@ export function LayerSelection({
 }
 
 export function LayerSelectionFormItem({
+  name,
   chooseSegmentationLayer,
   layers,
   tracing,
@@ -71,7 +73,7 @@ export function LayerSelectionFormItem({
   return (
     <Form.Item
       label={label || "Layer"}
-      name="layerName"
+      name={name}
       rules={[
         {
           required: true,

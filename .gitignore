@@ -100,4 +100,4 @@ coverage-ts
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
-tools/proxy/.yarn/install-state.gz
+tools/proxy/.yarn/*

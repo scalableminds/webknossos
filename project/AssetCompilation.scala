@@ -84,7 +84,6 @@ object AssetCompilation {
           streams.value.log.error("Could not test database entries to stage dir: " + e.getMessage)
       }
 
-
     } dependsOn yarnInstall
 
   private def slickClassesFromDBSchemaTask: Def.Initialize[Task[Seq[File]]] =

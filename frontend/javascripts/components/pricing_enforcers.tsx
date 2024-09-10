@@ -58,14 +58,14 @@ type PopoverEnforcedProps = RequiredPricingProps &
     placement?: TooltipPlacement;
     zIndex?: number;
   };
-const PricingEnforcedPopover = function ({
+const PricingEnforcedPopover = ({
   children,
   requiredPricingPlan,
   activeUser,
   activeOrganization,
   placement,
   zIndex,
-}: PopoverEnforcedProps) {
+}: React.PropsWithChildren<PopoverEnforcedProps>) => {
   return (
     <Popover
       color={PRIMARY_COLOR_HEX}
@@ -84,10 +84,10 @@ const PricingEnforcedPopover = function ({
   );
 };
 
-export const PricingEnforcedSpan = function ({
+export const PricingEnforcedSpan = ({
   children,
   requiredPricingPlan,
-}: RequiredPricingProps & { children: React.ReactNode }) {
+}: React.PropsWithChildren<RequiredPricingProps>) => {
   const [activeUser, activeOrganization] = useActiveUserAndOrganization();
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
@@ -175,11 +175,11 @@ export const PricingEnforcedSwitchSetting: React.FunctionComponent<
   );
 };
 
-export const PricingEnforcedBlur = function ({
+export const PricingEnforcedBlur = ({
   children,
   requiredPricingPlan,
   ...restProps
-}: RequiredPricingProps & { children: React.ReactNode }) {
+}: React.PropsWithChildren<RequiredPricingProps>) => {
   const [activeUser, activeOrganization] = useActiveUserAndOrganization();
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 

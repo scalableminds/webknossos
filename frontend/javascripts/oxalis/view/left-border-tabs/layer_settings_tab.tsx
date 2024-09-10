@@ -173,7 +173,7 @@ function DragHandleIcon({ isDisabled = false }: { isDisabled?: boolean }) {
         justifyContent: "center",
         cursor: "grab",
         alignItems: "center",
-        color: isDisabled ? "rgba(0, 0, 0, 0.25)" : "rgba(0, 0, 0, 0.60)",
+        opacity: isDisabled ? 0.3 : 0.60, 
       }}
     >
       <MenuOutlined

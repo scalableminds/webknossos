@@ -129,8 +129,12 @@ export class MoveTool {
           if (SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch)) {
             return;
           }
+          const clickedEdge = getClosestHoveredBoundingBox(pos, planeId);
+          if (clickedEdge) {
+            Store.dispatch(setActiveUserBoundingBoxId(clickedEdge[0].boxId));
+            return;
+          }
         }
-
         handleClickSegment(pos);
       },
       middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
@@ -142,7 +146,18 @@ export class MoveTool {
         MoveHandlers.setMousePosition(center);
         MoveHandlers.zoom(delta, true);
       },
-      mouseMove: MoveHandlers.moveWhenAltIsPressed,
+      mouseMove: (delta: Point2, position: Point2, _id: any, event: MouseEvent) => {
+        MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
+        if (planeId !== OrthoViews.TDView) {
+          const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, planeId);
+          if (hoveredEdgesInfo) {
+            const [primaryEdge] = hoveredEdgesInfo;
+            getSceneController().highlightUserBoundingBox(primaryEdge.boxId);
+          } else {
+            getSceneController().highlightUserBoundingBox(null);
+          }
+        }
+      },
       out: () => {
         MoveHandlers.setMousePosition(null);
       },

@@ -50,7 +50,7 @@ jobs:
           keys:
             - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
             - sbt-cache-{{ checksum ".circleci/cache_version" }}-
-
+      - run:
           name: Install frontend dependencies
           command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable
       - run:

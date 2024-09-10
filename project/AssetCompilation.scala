@@ -88,10 +88,9 @@ object AssetCompilation {
       {
         val nodeSrc = baseDirectory.value / "node_modules"
         val nodeDest = target.value / "universal" / "stage" / "node_modules"
-        val tmpPath = Files.createTempDirectory("yarn-dir-for-commander")
+        val tmpPath = Files.createTempDirectory("yarn-tmp-dir").toFile
         val streamsValue = streams.value.log
 
-        tmpPath.mkdirs
         startProcess(yarnPath.value, List("init", "-y"), tmpPath) ! streamsValue
         startProcess(yarnPath.value, List("add", (nodeSrc / "commander").getAbsolutePath), tmpPath) ! streamsValue
         deleteRecursively(nodeDest)

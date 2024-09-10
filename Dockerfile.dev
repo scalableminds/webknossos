@@ -29,4 +29,4 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Enable corepack for Node (which will install yarn)
-RUN corepack enable
+RUN corepack enable && corepack install --global yarn@4.4.1

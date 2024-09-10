@@ -25,7 +25,7 @@ object AssetCompilation {
     try {
       val exitValue = startProcess(
         yarnPath.value,
-        List("install", "--frozen-lockfile"),
+        List("install", "--immutable"),
         baseDirectory.value
       ) ! streams.value.log
       if (exitValue != 0)

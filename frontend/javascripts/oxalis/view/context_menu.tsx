@@ -128,7 +128,7 @@ import {
   ensureLayerMappingsAreLoadedAction,
   ensureSegmentIndexIsLoadedAction,
 } from "oxalis/model/actions/dataset_actions";
-import { hideContextMenuAction } from "oxalis/model/actions/ui_actions";
+import { hideContextMenuAction, setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import FastTooltip from "components/fast_tooltip";
 
@@ -834,6 +834,11 @@ function getBoundingBoxMenuOptions({
 
   return [
     newBoundingBoxMenuItem,
+    {
+      key: "focus-in-bbox-tab",
+      label: "Focus in Bounding Box Tab",
+      onClick: () => Store.dispatch(setActiveUserBoundingBoxId(hoveredBBox.id)),
+    },
     {
       key: "change-bounding-box-name",
       label: (

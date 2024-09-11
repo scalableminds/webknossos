@@ -2,7 +2,7 @@ version: 2
 jobs:
   build_test_deploy:
     machine:
-      image: ubuntu-2004:202111-02
+      image: ubuntu-2004:2024.05.1
       docker_layer_caching: false
     resource_class: large
     environment:

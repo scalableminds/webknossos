@@ -19,6 +19,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
 import { Vector3 } from "oxalis/constants";
+import type { Key } from "react";
 
 export default function AiModelListView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -79,7 +80,7 @@ export default function AiModelListView() {
                 value: username,
               }),
             ),
-            onFilter: (value: string | number | boolean, model: AiModel) =>
+            onFilter: (value: Key | boolean, model: AiModel) =>
               formatUserName(null, model.user).startsWith(String(value)),
             filterSearch: true,
           },

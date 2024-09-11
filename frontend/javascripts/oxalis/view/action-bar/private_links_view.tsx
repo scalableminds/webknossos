@@ -46,10 +46,16 @@ import { useSelector } from "react-redux";
 import { getDataLayers } from "oxalis/model/accessors/dataset_accessor";
 import { getReadableNameByVolumeTracingId } from "oxalis/model/accessors/volumetracing_accessor";
 
+// TODO Remove explicit (error) type declaration when updateing to tanstack/query >= 5
+// https://github.com/TanStack/query/pull/4706
 function useLinksQuery(annotationId: string) {
-  return useQuery(["links", annotationId], () => getPrivateLinksByAnnotation(annotationId), {
-    refetchOnWindowFocus: false,
-  });
+  return useQuery<ZarrPrivateLink[], Error>(
+    ["links", annotationId],
+    () => getPrivateLinksByAnnotation(annotationId),
+    {
+      refetchOnWindowFocus: false,
+    },
+  );
 }
 
 function useCreateLinkMutation(annotationId: string) {
@@ -324,7 +330,7 @@ function PrivateLinksView({ annotationId }: { annotationId: string }) {
   const deleteMutation = useDeleteLinkMutation(annotationId);
 
   if (error) {
-    return <span>Error while loading the private links: {error}</span>;
+    return <span>Error while loading the private links: {error.message}</span>;
   }
 
   const columns: ColumnsType<ZarrPrivateLink> = [

@@ -68,6 +68,7 @@ export type AnnotationActionTypes =
   | MaybeFetchMeshFilesAction
   | UpdateMeshVisibilityAction
   | TriggerMeshDownloadAction
+  | TriggerMeshesDownloadAction
   | RefreshMeshesAction
   | RefreshMeshAction
   | StartedLoadingMeshAction

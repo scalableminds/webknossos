@@ -39,7 +39,7 @@ jobs:
             DEV_CACHE=$NORMALIZED_BRANCH docker-compose build base
       - run:
           name: Prepare dependency folders
-          command: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier ~/.cache/yarn
+          command: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
       - restore_cache:
           name: Restore target cache
           keys:
@@ -50,14 +50,9 @@ jobs:
           keys:
             - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
             - sbt-cache-{{ checksum ".circleci/cache_version" }}-
-      - restore_cache:
-          name: Restore yarn cache
-          keys:
-            - yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
-            - yarn-cache-{{ checksum ".circleci/cache_version" }}-
       - run:
           name: Install frontend dependencies
-          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
+          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable
       - run:
           name: Assert unique evolution numbers
           command: docker-compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
@@ -109,12 +104,6 @@ jobs:
           paths:
             - "~/.ivy2"
             - "~/.cache/coursier"
-
-      - save_cache:
-          name: Save yarn cache
-          key: yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
-          paths:
-            - "~/.cache/yarn"
 
       - run:
           name: Build webknossos docker image
@@ -261,7 +250,7 @@ jobs:
       - run:
           name: Install dependencies and sleep at least 3min
           command: |
-            yarn install --frozen-lockfile &
+            yarn install --immutable &
             sleep 180 &
             wait
       - run:
@@ -300,7 +289,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            yarn install --frozen-lockfile
+            yarn install --immutable
 
       - run:
           name: Assert GZIP

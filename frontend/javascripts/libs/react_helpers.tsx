@@ -97,8 +97,8 @@ export function useGuardedFetch<T>(
   updates.
  */
 export function usePolledState(callback: (arg0: OxalisState) => void, interval: number = 1000) {
-  const store = useStore();
-  const oldState = useRef(null);
+  const store = useStore<OxalisState>();
+  const oldState = useRef<OxalisState | null>(null);
   useInterval(() => {
     const state = store.getState();
 

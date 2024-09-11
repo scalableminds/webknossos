@@ -679,7 +679,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         width: 300,
         filters: ownerAndTeamsFilters,
         filterMode: "tree",
-        onFilter: (value: string | number | boolean, tracing: APIAnnotationInfo) =>
+        onFilter: (value: React.Key | boolean, tracing: APIAnnotationInfo) =>
           (tracing.owner != null && tracing.owner.id === value.toString()) ||
           tracing.teams.some((team) => team.id === value),
         sorter: Utils.localeCompareBy((annotation) => annotation.owner?.firstName || ""),

@@ -1,5 +1,5 @@
 import type React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { type Key, useEffect, useMemo, useState } from "react";
 import { SyncOutlined } from "@ant-design/icons";
 import { Table, Progress, Tooltip, Button, Input } from "antd";
 import { Link } from "react-router-dom";
@@ -211,7 +211,7 @@ export default function WorkflowListView() {
               text: username || "",
               value: username || "",
             })),
-            onFilter: (value: string | number | boolean, run: RenderRunInfo) =>
+            onFilter: (value: Key | boolean, run: RenderRunInfo) =>
               run.userDisplayName?.startsWith(String(value)) || false,
             filterSearch: true,
           },
@@ -223,7 +223,7 @@ export default function WorkflowListView() {
               text: hostname,
               value: hostname,
             })),
-            onFilter: (value: string | number | boolean, run: RenderRunInfo) =>
+            onFilter: (value: Key | boolean, run: RenderRunInfo) =>
               run.hostName.startsWith(String(value)),
             filterSearch: true,
           },

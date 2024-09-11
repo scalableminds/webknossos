@@ -51,7 +51,7 @@ import type {
   ServerVolumeTracing,
 } from "types/api_flow_types";
 import { getMergedDataLayersFromDatasetAndVolumeTracings } from "oxalis/model_initialization";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -392,7 +392,7 @@ function areBoundingBoxesValid(userBoundingBoxes: UserBoundingBox[] | undefined)
   return { valid: false, reason: "All bounding boxes must have the same size." };
 }
 
-function AnnotationsCsvInput<GenericAnnotation extends APIAnnotation | HybridTracing>({
+function AnnotationsCsvInput({
   onAdd,
 }: {
   onAdd: (newItems: Array<AnnotationWithDataset<APIAnnotation>>) => void;

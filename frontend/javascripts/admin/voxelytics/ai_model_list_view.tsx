@@ -18,7 +18,7 @@ import {
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import type { Key } from "react";
 
 export default function AiModelListView() {

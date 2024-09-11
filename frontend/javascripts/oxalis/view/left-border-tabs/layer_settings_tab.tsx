@@ -1,4 +1,4 @@
-import { Button, Col, Divider, Dropdown, type MenuProps, Modal, Row, Switch } from "antd";
+import { Button, Col, Divider, Dropdown, type MenuProps, Modal, Row, Switch, Tooltip } from "antd";
 import type { Dispatch } from "redux";
 import {
   EditOutlined,
@@ -20,7 +20,6 @@ import React, { useCallback } from "react";
 import _ from "lodash";
 import classnames from "classnames";
 import update from "immutability-helper";
-import { SortableContainer, SortableElement, SortableHandle } from "react-sortable-hoc";
 import {
   APIAnnotationTypeEnum,
   type APIDataLayer,
@@ -124,6 +123,9 @@ import {
   transformPointUnscaled,
 } from "oxalis/model/helpers/transformation_helpers";
 import FastTooltip from "components/fast_tooltip";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 
 type DatasetSettingsProps = {
   userConfiguration: UserConfiguration;
@@ -163,15 +165,7 @@ type State = {
   layerToMergeWithFallback: APIDataLayer | null | undefined;
 };
 
-const SortableLayerSettingsContainer = SortableContainer(({ children }: { children: any }) => {
-  return <div>{children}</div>;
-});
-
-type DragHandleProps = {
-  hasLessThanTwoColorLayers: boolean;
-};
-
-function dragHandleIcon(isDisabled: boolean = false) {
+function DragHandleIcon({ isDisabled = false }: { isDisabled?: boolean }) {
   return (
     <div
       style={{
@@ -179,7 +173,7 @@ function dragHandleIcon(isDisabled: boolean = false) {
         justifyContent: "center",
         cursor: "grab",
         alignItems: "center",
-        color: isDisabled ? "rgba(0, 0, 0, 0.25)" : "rgba(0, 0, 0, 0.60)",
+        opacity: isDisabled ? 0.3 : 0.6,
       }}
     >
       <MenuOutlined
@@ -191,20 +185,22 @@ function dragHandleIcon(isDisabled: boolean = false) {
     </div>
   );
 }
-const DragHandle = SortableHandle(({ hasLessThanTwoColorLayers }: DragHandleProps) => {
-  return hasLessThanTwoColorLayers ? (
-    <FastTooltip title="Order is only changeable with more than one color layer.">
-      {dragHandleIcon(true)}
-    </FastTooltip>
-  ) : (
-    dragHandleIcon()
-  );
-});
+function DragHandle({ id }: { id: string }) {
+  const { attributes, listeners } = useSortable({
+    id,
+  });
 
-function DummyDragHandle({ layerType }: { layerType: string }) {
   return (
-    <FastTooltip title={`Layer not movable: ${layerType} layers are always rendered on top.`}>
-      {dragHandleIcon(true)}
+    <div {...attributes} {...listeners}>
+      <DragHandleIcon />
+    </div>
+  );
+}
+
+function DummyDragHandle({ tooltipTitle }: { tooltipTitle: string }) {
+  return (
+    <FastTooltip title={tooltipTitle}>
+      <DragHandleIcon isDisabled />
     </FastTooltip>
   );
 }
@@ -709,13 +705,19 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         : null,
     ];
     const items = possibleItems.filter((el) => el);
+    const dragHandle = isColorLayer ? (
+      hasLessThanTwoColorLayers ? (
+        <DummyDragHandle tooltipTitle="Order is only changeable with more than one color layer." />
+      ) : (
+        <DragHandle id={layerName} />
+      )
+    ) : (
+      <DummyDragHandle tooltipTitle="Layer not movable: Volume layers are always rendered on top." />
+    );
+
     return (
       <div className="flex-container">
-        {isColorLayer ? (
-          <DragHandle hasLessThanTwoColorLayers={hasLessThanTwoColorLayers} />
-        ) : (
-          <DummyDragHandle layerType="Volume" />
-        )}
+        {dragHandle}
         {this.getEnableDisableLayerSwitch(isDisabled, onChange)}
         <div
           className="flex-item"
@@ -940,26 +942,35 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     isLastLayer: boolean;
     hasLessThanTwoColorLayers?: boolean;
   }) => {
+    const { setNodeRef, transform, transition, isDragging } = useSortable({ id: layerName });
+
     // Ensure that every layer needs a layer configuration and that color layers have a color layer.
     if (!layerConfiguration || (isColorLayer && !layerConfiguration.color)) {
       return null;
     }
     const elementClass = getElementClass(this.props.dataset, layerName);
     const { isDisabled, isInEditMode } = layerConfiguration;
-    const lastLayerMarginBottom = isLastLayer ? { marginBottom: 30 } : {};
     const betweenLayersMarginBottom = isLastLayer ? {} : { marginBottom: 30 };
+
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      zIndex: isDragging ? "100" : "auto",
+      opacity: isDragging ? 0.3 : 1,
+      marginBottom: isLastLayer ? 30 : 0,
+    };
+
     const opacityLabel =
       layerConfiguration.alpha === 0 ? (
-        <div>
-          <FastTooltip title="The current opacity is zero">
-            Opacity <WarningOutlined style={{ color: "orange" }} />
-          </FastTooltip>
-        </div>
+        <FastTooltip title="The current opacity is zero">
+          Opacity <WarningOutlined style={{ color: "orange" }} />
+        </FastTooltip>
       ) : (
-        <>Opacity</>
+        "Opacity"
       );
+
     return (
-      <div key={layerName} style={lastLayerMarginBottom}>
+      <div key={layerName} style={style} ref={setNodeRef}>
         {this.getLayerSettingsHeader(
           isDisabled,
           isColorLayer,
@@ -993,8 +1004,6 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       </div>
     );
   };
-
-  SortableLayerSettings = SortableElement(this.LayerSettings);
 
   handleFindData = async (
     layerName: string,
@@ -1161,7 +1170,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
             paddingRight: 1,
           }}
         >
-          <DummyDragHandle layerType="Skeleton" />
+          <DummyDragHandle tooltipTitle="Layer not movable: Skeleton layers are always rendered on top." />
           <div
             className="flex-item"
             style={{
@@ -1405,25 +1414,32 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     });
   };
 
-  onSortLayerSettingsEnd = ({ oldIndex, newIndex }: { oldIndex: number; newIndex: number }) => {
+  onSortLayerSettingsEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
     // Fix for having a grabbing cursor during dragging from https://github.com/clauderic/react-sortable-hoc/issues/328#issuecomment-1005835670.
     document.body.classList.remove("is-dragging");
     const { colorLayerOrder } = this.props.datasetConfiguration;
-    const movedElement = colorLayerOrder[oldIndex];
-    newIndex = Math.min(newIndex, colorLayerOrder.length - 1);
-    const newLayerOrder = update(colorLayerOrder, {
-      $splice: [
-        [oldIndex, 1],
-        [newIndex, 0, movedElement],
-      ],
-    });
-    this.props.onChange("colorLayerOrder", newLayerOrder);
+
+    if (over) {
+      const oldIndex = colorLayerOrder.indexOf(active.id as string);
+      const newIndex = colorLayerOrder.indexOf(over.id as string);
+      const movedElement = colorLayerOrder[oldIndex];
+
+      const newIndexClipped = Math.min(newIndex, colorLayerOrder.length - 1);
+      const newLayerOrder = update(colorLayerOrder, {
+        $splice: [
+          [oldIndex, 1],
+          [newIndexClipped, 0, movedElement],
+        ],
+      });
+      this.props.onChange("colorLayerOrder", newLayerOrder);
+    }
   };
 
   render() {
     const { layers, colorLayerOrder } = this.props.datasetConfiguration;
     const LayerSettings = this.LayerSettings;
-    const SortableLayerSettings = this.SortableLayerSettings;
 
     const segmentationLayerNames = Object.keys(layers).filter(
       (layerName) => !getIsColorLayer(this.props.dataset, layerName),
@@ -1431,14 +1447,12 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
     const hasLessThanTwoColorLayers = colorLayerOrder.length < 2;
     const colorLayerSettings = colorLayerOrder.map((layerName, index) => {
       return (
-        <SortableLayerSettings
+        <LayerSettings
           key={layerName}
           layerName={layerName}
           layerConfiguration={layers[layerName]}
           isColorLayer
-          index={index}
           isLastLayer={index === colorLayerOrder.length - 1}
-          disabled={hasLessThanTwoColorLayers}
           hasLessThanTwoColorLayers={hasLessThanTwoColorLayers}
         />
       );
@@ -1460,17 +1474,23 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
       this.props.tracing.skeleton === null &&
       this.props.tracing.annotationType === APIAnnotationTypeEnum.Explorational &&
       state.task === null;
+
     return (
       <div className="tracing-settings-menu">
-        <SortableLayerSettingsContainer
-          onSortEnd={this.onSortLayerSettingsEnd}
-          onSortStart={() =>
+        <DndContext
+          onDragEnd={this.onSortLayerSettingsEnd}
+          onDragStart={() =>
             colorLayerOrder.length > 1 && document.body.classList.add("is-dragging")
           }
-          useDragHandle
         >
-          {colorLayerSettings}
-        </SortableLayerSettingsContainer>
+          <SortableContext
+            items={colorLayerOrder.map((layerName) => layerName)}
+            strategy={verticalListSortingStrategy}
+          >
+            {colorLayerSettings}
+          </SortableContext>
+        </DndContext>
+
         {segmentationLayerSettings}
         {this.getSkeletonLayer()}
 

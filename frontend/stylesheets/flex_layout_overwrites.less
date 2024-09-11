@@ -69,6 +69,16 @@
   font-size: 14px;
 }
 
+// Fix min/max window button in dark mode
+.flexlayout__tab_toolbar_button:hover {
+  background-color: var(--ant-color-bg-base);
+  cursor: pointer;
+
+  svg {
+    fill: var(--ant-color-link);
+  }
+}
+
 .flexlayout__tab_button {
   margin: 0;
   padding: 0px 5px;
@@ -77,6 +87,7 @@
   font-size: 14px;
   font-weight: 400;
   font-family: @font-family;
+  
   &:hover {
     cursor: move;
   }

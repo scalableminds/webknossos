@@ -72,7 +72,7 @@ case class BoundingBox(topLeft: Vec3Int, width: Int, height: Int, depth: Int) {
 
   def toLiteral: String = f"${topLeft.x},${topLeft.y},${topLeft.z},$width,$height,$depth"
 
-  def toWkLibsDict: JsObject =
+  def toWkLibsJson: JsObject =
     Json.obj("topLeft" -> topLeft, "width" -> width, "height" -> height, "depth" -> depth)
 }
 

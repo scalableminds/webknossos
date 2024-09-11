@@ -347,7 +347,7 @@ class JobController @Inject()(
             Json.parse(coords).validate[Seq[AdditionalCoordinate]]) ~> "job.additionalCoordinates.invalid"
           parsedAdditionalCoordinates = parsedAdditionalCoordinatesOpt.getOrElse(Seq.empty)
           additionalAxesOfNdBBox = additionalAxesOpt.map(additionalAxes =>
-            additionalAxes.map(_.enclosingAdditionalCoordinates(parsedAdditionalCoordinates)))
+            additionalAxes.map(_.intersectWithAdditionalCoordinates(parsedAdditionalCoordinates)))
           ndBoundingBox = NDBoundingBox(threeDBBox, additionalAxesOfNdBBox.getOrElse(Seq.empty), axisOrder)
           command = JobCommand.export_tiff
           exportFileName = if (asOmeTiff)

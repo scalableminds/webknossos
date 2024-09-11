@@ -8,8 +8,8 @@ case class NDBoundingBox(boundingBox: BoundingBox, additionalAxes: Seq[Additiona
 
   def toWkLibsDict: JsValue = {
     val additionalAxesDict = Json.toJson(additionalAxes)
-    val axisOrderDict = fullAxisOrder.toWkLibsDictObject
-    boundingBox.toWkLibsDict ++ Json.obj("additionalAxes" -> additionalAxesDict, "axisOrder" -> axisOrderDict)
+    val axisOrderDict = fullAxisOrder.toWkLibsJson
+    boundingBox.toWkLibsJson ++ Json.obj("additionalAxes" -> additionalAxesDict, "axisOrder" -> axisOrderDict)
   }
 
 }

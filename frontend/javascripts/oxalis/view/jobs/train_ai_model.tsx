@@ -258,14 +258,16 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
         return (
           <Row key={annotationId} gutter={8}>
             <Col span={8}>
-              <FormItem hasFeedback label="Annotation ID">
-                <Input value={annotationId} disabled />
+              <FormItem
+                hasFeedback
+                name={["trainingAnnotations", idx, "annotationId"]}
+                label="Annotation ID"
+                initialValue={annotationId}
+              >
+                <Input disabled />
               </FormItem>
             </Col>
             <Col span={8}>
-              <FormItem hasFeedback name={["trainingAnnotations", idx, "annotationId"]} hidden>
-                <Input value={annotationId} />
-              </FormItem>
               <FormItem
                 hasFeedback
                 name={["trainingAnnotations", idx, "imageDataLayer"]}
@@ -398,7 +400,7 @@ function AnnotationsCsvInput({
   onAdd: (newItems: Array<AnnotationWithDataset<APIAnnotation>>) => void;
 }) {
   const [value, setValue] = useState(
-    "http://localhost:9000/annotations/66def487300100170c2d6fc0\n66def487300100170c2d6fc0",
+    "http://localhost:9000/annotations/66df0d163001009c0e2d6fdf\n66def487300100170c2d6fc0\nhttp://localhost:9000/annotations/66e162f72f0100b10498fe3e",
   );
   const onClickAdd = async () => {
     const newItems = [];
@@ -456,7 +458,7 @@ function AnnotationsCsvInput({
             validator: (_rule, value) => {
               const valid = (value as string)
                 .split("\n")
-                .every((line) => line.includes("#") && line.includes(","));
+                .every((line) => !line.includes("#") && !line.includes(","));
 
               return valid
                 ? Promise.resolve()

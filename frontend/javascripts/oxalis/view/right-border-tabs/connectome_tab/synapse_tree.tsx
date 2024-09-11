@@ -1,5 +1,5 @@
-import { AutoSizer } from "react-virtualized";
-import { Dropdown, MenuProps, Tag, Tree, TreeProps } from "antd";
+import AutoSizer from "react-virtualized-auto-sizer";
+import { Dropdown, type MenuProps, Tag, Tree, type TreeProps } from "antd";
 import React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";

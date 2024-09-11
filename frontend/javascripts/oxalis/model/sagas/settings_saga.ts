@@ -10,7 +10,7 @@ import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
-import { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
+import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);

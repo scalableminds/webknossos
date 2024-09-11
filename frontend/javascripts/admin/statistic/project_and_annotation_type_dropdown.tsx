@@ -1,11 +1,11 @@
 import { Select } from "antd";
-import React from "react";
+import type React from "react";
 import { useEffect, useState } from "react";
 import { getProjects } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 
 export enum AnnotationTypeFilterEnum {
   ONLY_ANNOTATIONS_KEY = "Explorational",

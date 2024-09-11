@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { createNanoEvents } from "nanoevents";
-import { ExecutionContext } from "ava";
+import type { ExecutionContext } from "ava";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
 import { sleep } from "libs/utils";

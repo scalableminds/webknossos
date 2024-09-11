@@ -6,8 +6,8 @@ import {
   Col,
   Row,
   Switch,
-  RadioChangeEvent,
-  MenuProps,
+  type RadioChangeEvent,
+  type MenuProps,
   Space,
 } from "antd";
 import {
@@ -24,7 +24,7 @@ import type { TDViewDisplayMode } from "oxalis/constants";
 import { TDViewDisplayModeEnum } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { api } from "oxalis/singletons";
-import { SwitchChangeEventHandler } from "antd/lib/switch";
+import type { SwitchChangeEventHandler } from "antd/lib/switch";
 type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;
   tdViewDisplayDatasetBorders: boolean;

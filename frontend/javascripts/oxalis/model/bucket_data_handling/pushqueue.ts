@@ -6,7 +6,7 @@ import { createDebouncedAbortableParameterlessCallable } from "libs/async/deboun
 import { call } from "redux-saga/effects";
 import Store from "oxalis/store";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
-import { UpdateAction } from "../sagas/update_actions";
+import type { UpdateAction } from "../sagas/update_actions";
 import { AsyncFifoResolver } from "libs/async/async_fifo_resolver";
 import { escalateErrorAction } from "../actions/actions";
 

@@ -13,20 +13,20 @@ import {
   InputNumber,
   Input,
   Spin,
-  RadioChangeEvent,
+  type RadioChangeEvent,
   Tooltip,
   App,
-  UploadFile,
+  type UploadFile,
 } from "antd";
 import React, { useEffect, useState } from "react";
 import { InboxOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import _ from "lodash";
 import type { APIDataset, APITaskType, APIProject, APIScript, APITask } from "types/api_flow_types";
 import type { BoundingBoxObject } from "oxalis/store";
-import {
+import type {
   NewTask,
-  type TaskCreationResponse,
-  type TaskCreationResponseContainer,
+  TaskCreationResponse,
+  TaskCreationResponseContainer,
 } from "admin/task/task_create_bulk_view";
 import { normalizeFileEvent, NUM_TASKS_PER_BATCH } from "admin/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
@@ -48,7 +48,7 @@ import messages from "messages";
 import { saveAs } from "file-saver";
 import { formatDateInLocalTimeZone } from "components/formatted_date";
 import { AsyncButton } from "components/async_clickables";
-import { useAppProps } from "antd/es/app/context";
+import type { useAppProps } from "antd/es/app/context";
 
 const FormItem = Form.Item;
 const RadioGroup = Radio.Group;
@@ -356,7 +356,6 @@ function TaskCreateFormView({ taskId, history }: Props) {
       const validFormValues = _.omitBy(defaultValues, _.isNil);
 
       // The task type is not needed for the form and leads to antd errors if it contains null values
-      // biome-ignore lint/correctness/noUnusedVariables: underscore prefix does not work with object destructuring
       const { type, ...neededFormValues } = validFormValues;
       form.setFieldsValue(neededFormValues);
     }

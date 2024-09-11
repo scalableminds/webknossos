@@ -7,7 +7,7 @@ import {
   colormapJet,
   jsColormapJet,
 } from "oxalis/shaders/utils.glsl";
-import { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import type { ShaderModule } from "./shader_module_system";
 import { getRgbaAtIndex } from "./texture_access.glsl";
 import { hashCombine } from "./hashing.glsl";

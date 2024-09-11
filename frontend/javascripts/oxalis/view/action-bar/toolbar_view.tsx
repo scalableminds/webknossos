@@ -3,9 +3,9 @@ import {
   Badge,
   Space,
   Popover,
-  RadioChangeEvent,
+  type RadioChangeEvent,
   Dropdown,
-  MenuProps,
+  type MenuProps,
   Col,
   Row,
   Divider,
@@ -61,23 +61,23 @@ import {
   FillModeEnum,
   VolumeTools,
   MappingStatusEnum,
-  AnnotationTool,
-  OverwriteMode,
+  type AnnotationTool,
+  type OverwriteMode,
   ToolsWithInterpolationCapabilities,
   InterpolationModeEnum,
-  InterpolationMode,
+  type InterpolationMode,
   Unicode,
   MeasurementTools,
 } from "oxalis/constants";
 import { Model } from "oxalis/singletons";
-import Store, { BrushPresets, OxalisState } from "oxalis/store";
+import Store, { type BrushPresets, type OxalisState } from "oxalis/store";
 
 import features from "features";
 import { getInterpolationInfo } from "oxalis/model/sagas/volume/volume_interpolation_saga";
 import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
 import { clearProofreadingByProducts } from "oxalis/model/actions/proofread_actions";
 import { QuickSelectControls } from "./quick_select_settings";
-import { MenuInfo } from "rc-menu/lib/interface";
+import type { MenuInfo } from "rc-menu/lib/interface";
 import { getViewportExtents } from "oxalis/model/accessors/view_mode_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "oxalis/model/actions/dataset_actions";
 import { APIJobType } from "types/api_flow_types";
@@ -359,7 +359,7 @@ function VolumeInterpolationButton() {
   };
 
   const buttonsRender = useCallback(
-    ([leftButton, rightButton]) => [
+    ([leftButton, rightButton]: React.ReactNode[]) => [
       <FastTooltip title={tooltipTitle} key="leftButton">
         {React.cloneElement(leftButton as React.ReactElement<any, string>, {
           disabled: isDisabled,
@@ -1321,8 +1321,9 @@ function NuxPopConfirm({ children }: { children: React.ReactNode }) {
       description="The AI-based Quick Select can now be triggered with a single click. Also, it can be run for multiple sections at once (open the settings here to enable this)."
       overlayStyle={{ maxWidth: 400 }}
       icon={<InfoCircleOutlined style={{ color: "green" }} />}
-      children={children}
-    />
+    >
+      {children}
+    </Popconfirm>
   );
 }
 

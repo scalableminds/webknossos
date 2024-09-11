@@ -43,7 +43,7 @@ import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import DiffableMap from "libs/diffable_map";
 import * as Utils from "libs/utils";
 import type { AdditionalCoordinate, ServerVolumeTracing } from "types/api_flow_types";
-import {
+import type {
   FinishMappingInitializationAction,
   SetMappingAction,
   SetMappingEnabledAction,

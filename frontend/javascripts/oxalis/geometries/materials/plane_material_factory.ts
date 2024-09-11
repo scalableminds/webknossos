@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import _ from "lodash";
-import { BLEND_MODES, Identity4x4, OrthoView, Vector3 } from "oxalis/constants";
+import { BLEND_MODES, Identity4x4, type OrthoView, type Vector3 } from "oxalis/constants";
 import {
   ViewModeValues,
   OrthoViewValues,
@@ -52,7 +52,7 @@ import type { ElementClass } from "types/api_flow_types";
 import { CuckooTableVec3 } from "libs/cuckoo/cuckoo_table_vec3";
 import { getGlobalLayerIndexForLayerName } from "oxalis/model/bucket_data_handling/layer_rendering_manager";
 import { V3 } from "libs/mjs";
-import TPS3D from "libs/thin_plate_spline";
+import type TPS3D from "libs/thin_plate_spline";
 
 type ShaderMaterialOptions = {
   polygonOffset?: boolean;
@@ -476,7 +476,11 @@ class PlaneMaterialFactory {
           // If all layers have a transform, the representativeMagForVertexAlignment
           // isn't relevant which is why it can default to [1, 1, 1].
 
-          let representativeMagForVertexAlignment: Vector3 = [Infinity, Infinity, Infinity];
+          let representativeMagForVertexAlignment: Vector3 = [
+            Number.POSITIVE_INFINITY,
+            Number.POSITIVE_INFINITY,
+            Number.POSITIVE_INFINITY,
+          ];
           const state = Store.getState();
           for (const [layerName, activeMagIndex] of Object.entries(activeMagIndices)) {
             const layer = getLayerByName(state.dataset, layerName);
@@ -505,7 +509,7 @@ class PlaneMaterialFactory {
             }
           }
 
-          if (Math.max(...representativeMagForVertexAlignment) === Infinity) {
+          if (Math.max(...representativeMagForVertexAlignment) === Number.POSITIVE_INFINITY) {
             representativeMagForVertexAlignment = [1, 1, 1];
           }
           this.uniforms.representativeMagForVertexAlignment = {
@@ -1002,7 +1006,7 @@ class PlaneMaterialFactory {
     // The third parameter returns the number of globally available layers (this is not always equal
     // to the sum of the lengths of the first two arrays, as not all layers might be rendered.)
     const state = Store.getState();
-    const allSanitizedOrderedColorLayerNames =
+    const allSanitizedOrderedColorLayerNames: string[] =
       state.datasetConfiguration.colorLayerOrder.map(sanitizeName);
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>

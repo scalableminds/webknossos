@@ -1,8 +1,8 @@
 import "test/mocks/lz4";
 import test from "ava";
 import { getResolutionUnion } from "oxalis/model/accessors/dataset_accessor";
-import { Vector3 } from "oxalis/constants";
-import { APIDataset } from "types/api_flow_types";
+import type { Vector3 } from "oxalis/constants";
+import type { APIDataset } from "types/api_flow_types";
 import { convertToDenseResolution } from "oxalis/model/helpers/resolution_info";
 
 test("Simple convertToDenseResolution", (t) => {

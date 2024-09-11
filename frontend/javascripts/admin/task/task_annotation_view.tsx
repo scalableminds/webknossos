@@ -1,4 +1,4 @@
-import { App, Dropdown, MenuProps, Tooltip } from "antd";
+import { App, Dropdown, type MenuProps, Tooltip } from "antd";
 import {
   EyeOutlined,
   PlayCircleOutlined,

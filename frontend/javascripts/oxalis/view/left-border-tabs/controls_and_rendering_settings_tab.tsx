@@ -1,4 +1,4 @@
-import { Collapse, CollapseProps } from "antd";
+import { Collapse, type CollapseProps } from "antd";
 import type { Dispatch } from "redux";
 import { connect } from "react-redux";
 import React, { PureComponent } from "react";
@@ -28,7 +28,7 @@ import Toast from "libs/toast";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { PricingEnforcedSwitchSetting } from "components/pricing_enforcers";
-import { ArrayElement } from "types/globals";
+import type { ArrayElement } from "types/globals";
 import FastTooltip from "components/fast_tooltip";
 
 type ControlsAndRenderingSettingsTabProps = {

@@ -5,7 +5,7 @@
 // updateKey2(state, "viewModeData", "plane", { activeViewport: "PLANE_XY" });
 // The last parameter can hold multiple key-value pairs. Only the used keys will be updated.
 
-import { type OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 
 export function updateKey<Key1 extends keyof OxalisState>(
   state: OxalisState,

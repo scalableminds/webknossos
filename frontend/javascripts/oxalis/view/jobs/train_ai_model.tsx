@@ -38,6 +38,7 @@ import { Model } from "oxalis/singletons";
 import {
   getReadableNameForLayerName,
   getReadableNameOfVolumeLayer,
+  getSegmentationLayerByHumanReadableName,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
@@ -133,7 +134,7 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
   );
 
   const getMagForSegmentationLayer = async (_annotationId: string, layerName: string) => {
-    const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
+    const segmentationLayer = getSegmentationLayerByHumanReadableName(dataset, tracing, layerName);
     return getResolutionInfo(segmentationLayer.resolutions).getFinestResolution();
   };
 
@@ -237,7 +238,12 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 
       {annotationsWithDatasets.map(({ annotation, dataset }, idx) => {
         const segmentationLayerNames = _.uniq([
-          ...getSegmentationLayers(dataset).map((layer) => layer.name),
+          // Only consider the layers that are not volume layers (these don't have a tracing id).
+          // Add actual volume layers below.
+          ...getSegmentationLayers(dataset)
+            .filter((layer) => layer.tracingId == null)
+            .map((layer) => layer.name),
+          // Add volume layers here.
           ...annotation.annotationLayers
             .filter((layer) => layer.typ === "Volume")
             .map((layer) => layer.name),

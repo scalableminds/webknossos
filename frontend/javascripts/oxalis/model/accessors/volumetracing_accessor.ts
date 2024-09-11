@@ -121,6 +121,31 @@ export function getReadableNameByVolumeTracingId(
   return volumeDescriptor.name;
 }
 
+export function getSegmentationLayerByHumanReadableName(
+  dataset: APIDataset,
+  annotation: APIAnnotation | HybridTracing,
+  name: string,
+) {
+  try {
+    const layer = getSegmentationLayerByName(dataset, name);
+    return layer;
+  } catch {}
+
+  const layer = getVolumeTracingLayers(dataset).find((currentLayer) => {
+    if (currentLayer.tracingId == null) {
+      throw new Error("getVolumeTracingLayers must return tracing.");
+    }
+    const readableName = getReadableNameByVolumeTracingId(annotation, currentLayer.tracingId);
+    return readableName === name;
+  });
+
+  if (layer == null) {
+    throw new Error("Could not find segmentation layer with the name: " + name);
+  }
+
+  return layer;
+}
+
 export function getAllReadableLayerNames(dataset: APIDataset, tracing: Tracing) {
   const allReadableLayerNames = getDataLayers(dataset).map((currentLayer) =>
     "tracingId" in currentLayer && currentLayer.tracingId != null

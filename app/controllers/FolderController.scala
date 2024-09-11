@@ -10,7 +10,7 @@ import models.user.UserService
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
-import utils.ObjectId
+import utils.{MetadataAssertions, ObjectId}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext

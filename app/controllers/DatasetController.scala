@@ -69,6 +69,13 @@ object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
+trait MetadataAssertions {
+  def assertNoDuplicateMetadataKeys(metadata: JsArray)(implicit ec: ExecutionContext, provider: MessagesProvider): Fox[Unit] = {
+    val keys = metadata.value.flatMap(_.as[JsObject] \\ "key").map(_.as[String]).toList
+    if (keys.size == keys.distinct.size) Fox.successful(()) else Fox.failure(Messages("dataset.metadata.duplicateKeys"))
+  }
+}
+
 class DatasetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
                                   datasetService: DatasetService,
@@ -87,7 +94,7 @@ class DatasetController @Inject()(userService: UserService,
                                   mailchimpClient: MailchimpClient,
                                   wkExploreRemoteLayerService: WKExploreRemoteLayerService,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller {
+    extends Controller with MetadataAssertions {
 
   private val datasetPublicReads =
     ((__ \ "description").readNullable[String] and
@@ -303,6 +310,7 @@ class DatasetController @Inject()(userService: UserService,
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, request.identity._organization) ?~> notFoundMessage(
           datasetName) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
         updated <- datasetDAO.findOneByNameAndOrganization(datasetName, request.identity._organization)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
@@ -319,6 +327,7 @@ class DatasetController @Inject()(userService: UserService,
             dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, request.identity._organization) ?~> notFoundMessage(
               datasetName) ~> NOT_FOUND
             maybeUpdatedMetadata = metadata.getOrElse(dataset.metadata)
+            _ <- assertNoDuplicateMetadataKeys(maybeUpdatedMetadata)
             _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
             _ <- datasetDAO.updateFields(
               dataset._id,

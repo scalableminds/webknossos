@@ -119,10 +119,8 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       footer={null}
     >
       <TrainAiModelTab
-        onFinish={(_form, _useCustomWorkflow, values) => {
-          console.log("values", values);
-          // todop: reuse the other onFinish code here? generalize it probably
-        }}
+        getTrainingAnnotations={getTrainingAnnotations}
+        onClose={onClose}
         annotationsWithDatasets={annotationsWithDatasets}
         onAddAnnotationsWithDatasets={(newItems) => {
           setAnnotationsWithDatasets([...annotationsWithDatasets, ...newItems]);

@@ -630,7 +630,9 @@ function _DownloadModalView({
             layers={layers}
             value={selectedLayerName}
             onChange={setSelectedLayerName}
-            tracing={tracing}
+            getReadableNameForLayer={(layer) =>
+              getReadableNameOfVolumeLayer(layer, tracing) || layer.name
+            }
             style={{ width: "100%" }}
           />
 

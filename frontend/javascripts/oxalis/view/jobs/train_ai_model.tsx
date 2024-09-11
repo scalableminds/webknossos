@@ -21,16 +21,36 @@ import {
   getSegmentationLayerByName,
   getSegmentationLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import { getAnnotationInformation, getDataset, runTraining } from "admin/admin_rest_api";
-import { LayerSelection, LayerSelectionFormItem } from "components/layer_selection";
+import {
+  AiModelTrainingAnnotationSpecification,
+  getAnnotationInformation,
+  getDataset,
+  getTracingForAnnotationType,
+  runTraining,
+} from "admin/admin_rest_api";
+import {
+  LayerSelection,
+  LayerSelectionFormItem,
+  LayerSelectionFormItemForTracing,
+} from "components/layer_selection";
 import Toast from "libs/toast";
 import { Model } from "oxalis/singletons";
-import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getReadableNameForLayerName,
+  getReadableNameOfVolumeLayer,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import _ from "lodash";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
-import type { APIAnnotation, APIDataset } from "types/api_flow_types";
+import type {
+  AnnotationLayerDescriptor,
+  APIAnnotation,
+  APIDataset,
+  APISegmentationLayer,
+  ServerVolumeTracing,
+} from "types/api_flow_types";
+import { getMergedDataLayersFromDatasetAndVolumeTracings } from "oxalis/model_initialization";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
@@ -38,6 +58,8 @@ const FormItem = Form.Item;
 export type AnnotationWithDataset = {
   annotation: APIAnnotation | HybridTracing;
   dataset: APIDataset;
+  // todop
+  // volumeTracings: ServerVolumeTracing[];
 };
 
 enum AiModelCategory {
@@ -110,31 +132,60 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
   const userBoundingBoxes = useSelector((state: OxalisState) =>
     getUserBoundingBoxesFromState(state),
   );
+
+  const getTrainingAnnotations = (values: any) => {
+    return values.trainingAnnotations.map(
+      (trainingAnnotation: { imageDataLayer: string; layerName: string }) => {
+        const { imageDataLayer, layerName } = trainingAnnotation;
+        const readableVolumeName = getReadableNameForLayerName(dataset, tracing, layerName);
+        const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
+        return {
+          annotationId: tracing.annotationId,
+          colorLayerName: imageDataLayer,
+          segmentationLayerName: readableVolumeName,
+          mag: getResolutionInfo(segmentationLayer.resolutions).getFinestResolution(),
+        };
+      },
+    );
+  };
+
+  return (
+    <TrainAiModelTab
+      getTrainingAnnotations={getTrainingAnnotations}
+      ensureSavedState={() => Model.ensureSavedState()}
+      onClose={onClose}
+      annotationsWithDatasets={[{ annotation: tracing, dataset }]}
+      userBoundingBoxes={userBoundingBoxes}
+    />
+  );
+}
+
+export function TrainAiModelTab({
+  onClose,
+  getTrainingAnnotations,
+  ensureSavedState,
+  annotationsWithDatasets,
+  userBoundingBoxes,
+  onAddAnnotationsWithDatasets,
+}: {
+  onClose: () => void;
+  getTrainingAnnotations: (values: any) => AiModelTrainingAnnotationSpecification[];
+  ensureSavedState?: (() => Promise<void>) | null;
+  annotationsWithDatasets: Array<AnnotationWithDataset>;
+  userBoundingBoxes?: UserBoundingBox[];
+  onAddAnnotationsWithDatasets?: (newItems: Array<AnnotationWithDataset>) => void;
+}) {
+  const [form] = Form.useForm();
+  const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
+
   const onFinish = async (form: FormInstance<any>, useCustomWorkflow: boolean, values: any) => {
     form.validateFields();
-    await Model.ensureSavedState();
-    const readableVolumeName = getReadableNameForLayerName(dataset, tracing, values.layerName);
-    const segmentationLayer = getSegmentationLayerByName(dataset, values.layerName);
-    const colorLayer = getColorLayers(dataset).find(
-      (layer) => layer.name === values.imageDataLayer,
-    );
-    if (colorLayer?.elementClass === "uint24") {
-      const errorMessage =
-        "AI training jobs can not be started for color layers with the data type uInt24. Please select a color layer with another data type.";
-      Toast.error(errorMessage);
-      console.error(errorMessage);
-      return;
+    if (ensureSavedState != null) {
+      await ensureSavedState();
     }
 
     await runTraining({
-      trainingAnnotations: [
-        {
-          annotationId: tracing.annotationId,
-          colorLayerName: values.imageDataLayer,
-          segmentationLayerName: readableVolumeName,
-          mag: getResolutionInfo(segmentationLayer.resolutions).getFinestResolution(),
-        },
-      ],
+      trainingAnnotations: getTrainingAnnotations(values),
       name: values.modelName,
       aiModelCategory: values.modelCategory,
       workflowYaml: useCustomWorkflow ? values.workflowYaml : undefined,
@@ -143,29 +194,6 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
     Toast.success("The training has successfully started.");
     onClose();
   };
-
-  return (
-    <TrainAiModelTab
-      onFinish={onFinish}
-      annotationsWithDatasets={[{ annotation: tracing, dataset }]}
-      userBoundingBoxes={userBoundingBoxes}
-    />
-  );
-}
-
-export function TrainAiModelTab({
-  onFinish,
-  annotationsWithDatasets,
-  userBoundingBoxes,
-  onAddAnnotationsWithDatasets,
-}: {
-  onFinish: (form: FormInstance<any>, useCustomWorkflow: boolean, values: any) => void;
-  annotationsWithDatasets: Array<AnnotationWithDataset>;
-  userBoundingBoxes?: UserBoundingBox[];
-  onAddAnnotationsWithDatasets?: (newItems: Array<AnnotationWithDataset>) => void;
-}) {
-  const [form] = Form.useForm();
-  const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
 
   if (annotationsWithDatasets.length === 0 && onAddAnnotationsWithDatasets != null) {
     return (
@@ -199,11 +227,24 @@ export function TrainAiModelTab({
       <AiModelCategoryFormItem />
 
       {annotationsWithDatasets.map(({ annotation, dataset }, idx) => {
-        const segmentationLayers = getSegmentationLayers(dataset);
+        const segmentationLayerNames = _.uniq([
+          ...getSegmentationLayers(dataset).map((layer) => layer.name),
+          ...annotation.annotationLayers
+            .filter((layer) => layer.typ === "Volume")
+            .map((layer) => layer.name),
+        ]);
+        const segmentationLayers: Array<{ name: string }> = segmentationLayerNames.map(
+          (layerName) => ({
+            name: layerName,
+          }),
+        );
 
         const fixedSelectedLayer = segmentationLayers.length === 1 ? segmentationLayers[0] : null;
 
-        const colorLayers = getColorLayers(dataset);
+        // Remove uint24 color layers because they cannot be trained on currently
+        const colorLayers = getColorLayers(dataset).filter(
+          (layer) => layer.elementClass !== "uint24",
+        );
         const annotationId = "id" in annotation ? annotation.id : annotation.annotationId;
         return (
           <Row key={annotationId} gutter={8}>
@@ -227,7 +268,7 @@ export function TrainAiModelTab({
               >
                 <LayerSelection
                   layers={colorLayers}
-                  tracing={annotation}
+                  getReadableNameForLayer={(layer) => layer.name}
                   fixedLayerName={colorLayers.length === 1 ? colorLayers[0].name : undefined}
                   style={{ width: "100%" }}
                 />
@@ -238,8 +279,10 @@ export function TrainAiModelTab({
                 name={["trainingAnnotations", idx, "layerName"]}
                 chooseSegmentationLayer
                 layers={segmentationLayers}
-                fixedLayerName={fixedSelectedLayer?.name}
-                tracing={annotation}
+                getReadableNameForLayer={(layer) => {
+                  return layer.name;
+                }}
+                fixedLayerName={fixedSelectedLayer?.name || undefined}
                 label="Groundtruth Layer"
               />
             </Col>
@@ -370,9 +413,19 @@ function AnnotationsCsvInput({
           name: annotation.dataSetName,
         });
 
+        const volumeTracings: ServerVolumeTracing[] = await Promise.all(
+          annotation.annotationLayers
+            .filter((layer) => layer.typ === "Skeleton")
+            .map(
+              (layer) =>
+                getTracingForAnnotationType(annotation, layer) as Promise<ServerVolumeTracing>,
+            ),
+        );
+
         return {
           annotation,
           dataset,
+          volumeTracings,
         };
       }),
     );

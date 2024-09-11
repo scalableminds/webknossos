@@ -55,7 +55,7 @@ import {
   CollapsibleWorkflowYamlEditor,
   TrainAiModelFromAnnotationTab,
 } from "../jobs/train_ai_model";
-import { LayerSelectionFormItem } from "components/layer_selection";
+import { LayerSelectionFormItemForTracing } from "components/layer_selection";
 import { useGuardedFetch } from "libs/react_helpers";
 import _ from "lodash";
 import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
@@ -629,7 +629,7 @@ function StartJobForm(props: StartJobFormProps) {
         activeUser={activeUser}
         initialName={`${dataset.name}_${props.suggestedDatasetSuffix}`}
       />
-      <LayerSelectionFormItem
+      <LayerSelectionFormItemForTracing
         name="layerName"
         chooseSegmentationLayer={chooseSegmentationLayer}
         label={chooseSegmentationLayer ? "Segmentation Layer" : "Image data layer"}

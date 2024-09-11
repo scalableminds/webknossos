@@ -403,7 +403,7 @@ function CreateAnimationModal(props: Props) {
               layers={colorLayers}
               value={selectedColorLayerName}
               onChange={setSelectedColorLayerName}
-              tracing={tracing}
+              getReadableNameForLayer={(layer) => layer.name}
               style={{ width: "100%" }}
             />
           </Col>

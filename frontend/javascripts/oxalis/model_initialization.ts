@@ -401,7 +401,7 @@ function initializeDataset(
   const volumeTracings = getServerVolumeTracings(serverTracings);
 
   if (volumeTracings.length > 0) {
-    const newDataLayers = setupLayerForVolumeTracing(dataset, volumeTracings);
+    const newDataLayers = getMergedDataLayersFromDatasetAndVolumeTracings(dataset, volumeTracings);
     mutableDataset.dataSource.dataLayers = newDataLayers;
     validateVolumeLayers(volumeTracings, newDataLayers);
   }
@@ -480,7 +480,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   };
 }
 
-function setupLayerForVolumeTracing(
+export function getMergedDataLayersFromDatasetAndVolumeTracings(
   dataset: APIDataset,
   tracings: Array<ServerVolumeTracing>,
 ): Array<APIDataLayer> {

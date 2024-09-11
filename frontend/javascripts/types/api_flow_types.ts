@@ -455,13 +455,13 @@ export type APITask = {
   readonly directLinks?: Array<string>;
 };
 export type AnnotationLayerDescriptor = {
-  name?: string | null | undefined;
+  name: string;
   tracingId: string;
   typ: "Skeleton" | "Volume";
   stats: TracingStats | EmptyObject;
 };
 export type EditableLayerProperties = Partial<{
-  name: string | null | undefined;
+  name: string;
 }>;
 export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;

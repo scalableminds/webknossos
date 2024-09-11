@@ -3,34 +3,34 @@ import { Alert, Modal, Spin, Table } from "antd";
 import saveAs from "file-saver";
 import { formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
-import { Vector3 } from "oxalis/constants";
+import { LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import { getMappingInfo, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { OxalisState, Segment } from "oxalis/store";
+import type { OxalisState, Segment } from "oxalis/store";
 import React from "react";
 import {
-  SegmentHierarchyNode,
-  SegmentHierarchyGroup,
+  type SegmentHierarchyNode,
+  type SegmentHierarchyGroup,
   getVolumeRequestUrl,
 } from "./segments_view_helper";
 import { api } from "oxalis/singletons";
-import { APISegmentationLayer } from "types/api_flow_types";
-import { voxelToNm3 } from "oxalis/model/scaleinfo";
+import type { APISegmentationLayer, VoxelSize } from "types/api_flow_types";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import { useSelector } from "react-redux";
 import {
   getAdditionalCoordinatesAsString,
   hasAdditionalCoordinates,
 } from "oxalis/model/accessors/flycam_accessor";
-import { pluralize } from "libs/utils";
+import { pluralize, transformToCSVRow } from "libs/utils";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
+import { voxelToVolumeInUnit } from "oxalis/model/scaleinfo";
 
 const MODAL_ERROR_MESSAGE =
   "Segment statistics could not be fetched. Check the console for more details.";
 const CONSOLE_ERROR_MESSAGE =
   "Segment statistics could not be fetched due to the following reason:";
 
-const SEGMENT_STATISTICS_CSV_HEADER =
-  "segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeInNm3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ";
+const getSegmentStatisticsCSVHeader = (dataSourceUnit: string) =>
+  `segmendId,segmentName,groupId,groupName,volumeInVoxel,volumeIn${dataSourceUnit}3,boundingBoxTopLeftPositionX,boundingBoxTopLeftPositionY,boundingBoxTopLeftPositionZ,boundingBoxSizeX,boundingBoxSizeY,boundingBoxSizeZ`;
 
 const ADDITIONAL_COORDS_COLUMN = "additionalCoordinates";
 
@@ -50,7 +50,7 @@ type SegmentInfo = {
   segmentName: string;
   groupId: number | undefined | null;
   groupName: string;
-  volumeInNm3: number;
+  volumeInUnit3: number;
   formattedSize: string;
   volumeInVoxel: number;
   boundingBoxTopLeft: Vector3;
@@ -64,30 +64,28 @@ const exportStatisticsToCSV = (
   tracingIdOrDatasetName: string,
   groupIdToExport: number,
   hasAdditionalCoords: boolean,
+  voxelSize: VoxelSize,
 ) => {
   const segmentStatisticsAsString = segmentInformation
     .map((row) => {
       const maybeAdditionalCoords = hasAdditionalCoords ? [row.additionalCoordinates] : [];
-      return [
+      return transformToCSVRow([
         ...maybeAdditionalCoords,
         row.segmentId,
         row.segmentName,
         row.groupId,
         row.groupName,
         row.volumeInVoxel,
-        row.volumeInNm3,
+        row.volumeInUnit3,
         ...row.boundingBoxTopLeft,
         ...row.boundingBoxPosition,
-      ]
-        .map(String) // convert every value to String
-        .map((v) => v.replaceAll('"', '""')) // escape double quotes
-        .map((v) => (v.includes(",") || v.includes('"') ? `"${v}"` : v)); // quote it if necessary
+      ]);
     })
-    .join("\n"); // rows starting on new lines
+    .join("\n");
 
   const csv_header = hasAdditionalCoords
-    ? [ADDITIONAL_COORDS_COLUMN, SEGMENT_STATISTICS_CSV_HEADER].join(",")
-    : SEGMENT_STATISTICS_CSV_HEADER;
+    ? [ADDITIONAL_COORDS_COLUMN, getSegmentStatisticsCSVHeader(voxelSize.unit)].join(",")
+    : getSegmentStatisticsCSVHeader(voxelSize.unit);
   const csv = [csv_header, segmentStatisticsAsString].join("\n");
   const filename =
     groupIdToExport === -1
@@ -110,7 +108,7 @@ export function SegmentStatisticsModal({
   const { dataset, tracing, temporaryConfiguration } = useSelector((state: OxalisState) => state);
   const magInfo = getResolutionInfo(visibleSegmentationLayer.resolutions);
   const layersFinestResolution = magInfo.getFinestResolution();
-  const datasetScale = dataset.dataSource.scale;
+  const voxelSize = dataset.dataSource.scale;
   // Omit checking that all prerequisites for segment stats (such as a segment index) are
   // met right here because that should happen before opening the modal.
   const requestUrl = getVolumeRequestUrl(
@@ -164,7 +162,7 @@ export function SegmentStatisticsModal({
           const additionalCoordStringForCsv =
             getAdditionalCoordinatesAsString(additionalCoordinates);
           for (let i = 0; i < segments.length; i++) {
-            // segments in request and their statistics in the response are in the same order
+            // Segments in request and their statistics in the response are in the same order
             const currentSegment = segments[i];
             const currentBoundingBox = boundingBoxes[i];
             const boundingBoxInMag1 = getBoundingBoxInMag1(
@@ -172,8 +170,8 @@ export function SegmentStatisticsModal({
               layersFinestResolution,
             );
             const currentSegmentSizeInVx = segmentSizes[i];
-            const volumeInNm3 = voxelToNm3(
-              datasetScale,
+            const volumeInUnit3 = voxelToVolumeInUnit(
+              voxelSize,
               layersFinestResolution,
               currentSegmentSizeInVx,
             );
@@ -187,8 +185,11 @@ export function SegmentStatisticsModal({
               groupId: currentGroupId,
               groupName: getGroupNameForId(currentGroupId),
               volumeInVoxel: currentSegmentSizeInVx,
-              volumeInNm3,
-              formattedSize: formatNumberToVolume(volumeInNm3),
+              volumeInUnit3: volumeInUnit3,
+              formattedSize: formatNumberToVolume(
+                volumeInUnit3,
+                LongUnitToShortUnitMap[voxelSize.unit],
+              ),
               boundingBoxTopLeft: boundingBoxInMag1.topLeft,
               boundingBoxTopLeftAsString: `(${boundingBoxInMag1.topLeft.join(", ")})`,
               boundingBoxPosition: [
@@ -266,6 +267,7 @@ export function SegmentStatisticsModal({
           tracingId || dataset.name,
           parentGroup,
           hasAdditionalCoords,
+          voxelSize,
         )
       }
       okText="Export to CSV"

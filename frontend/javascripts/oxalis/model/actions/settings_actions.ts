@@ -8,7 +8,7 @@ import type {
   MappingType,
 } from "oxalis/store";
 import Deferred from "libs/async/deferred";
-import { APIHistogramData } from "types/api_flow_types";
+import type { APIHistogramData } from "types/api_flow_types";
 
 export type UpdateUserSettingAction = ReturnType<typeof updateUserSettingAction>;
 type UpdateDatasetSettingAction = ReturnType<typeof updateDatasetSettingAction>;
@@ -24,6 +24,10 @@ type SetFlightmodeRecordingAction = ReturnType<typeof setFlightmodeRecordingActi
 type SetControlModeAction = ReturnType<typeof setControlModeAction>;
 type InitializeGpuSetupAction = ReturnType<typeof initializeGpuSetupAction>;
 export type SetMappingEnabledAction = ReturnType<typeof setMappingEnabledAction>;
+export type FinishMappingInitializationAction = ReturnType<
+  typeof finishMappingInitializationAction
+>;
+export type ClearMappingAction = ReturnType<typeof clearMappingAction>;
 export type SetMappingAction = ReturnType<typeof setMappingAction>;
 export type SetMappingNameAction = ReturnType<typeof setMappingNameAction>;
 type SetHideUnmappedIdsAction = ReturnType<typeof setHideUnmappedIdsAction>;
@@ -39,6 +43,8 @@ export type SettingAction =
   | SetFlightmodeRecordingAction
   | SetControlModeAction
   | SetMappingEnabledAction
+  | FinishMappingInitializationAction
+  | ClearMappingAction
   | SetMappingAction
   | SetMappingNameAction
   | SetHideUnmappedIdsAction
@@ -172,12 +178,29 @@ export const setMappingEnabledAction = (layerName: string, isMappingEnabled: boo
     isMappingEnabled,
   }) as const;
 
+export const finishMappingInitializationAction = (layerName: string) =>
+  ({
+    type: "FINISH_MAPPING_INITIALIZATION",
+    layerName,
+  }) as const;
+
+// This is not the same as disabling a mapping. A disabled mapping can simply be re-enabled.
+// Clearing a mapping sets the mapping dictionary to undefined. This is important when a
+// locally applied mapping should no longer be applied locally but by the back-end. In that case,
+// the mapping is still enabled, but we want to clear the local mapping dictionary.
+export const clearMappingAction = (layerName: string) =>
+  ({
+    type: "CLEAR_MAPPING",
+    layerName,
+  }) as const;
+
 export type OptionalMappingProperties = {
   mapping?: Mapping;
   mappingColors?: Array<number>;
   hideUnmappedIds?: boolean;
   showLoadingIndicator?: boolean;
 };
+
 export const setMappingAction = (
   layerName: string,
   mappingName: string | null | undefined,

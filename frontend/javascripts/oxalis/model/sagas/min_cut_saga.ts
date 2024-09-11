@@ -20,9 +20,9 @@ import * as Utils from "libs/utils";
 import createProgressCallback from "libs/progress_callback";
 import { api } from "oxalis/singletons";
 import window from "libs/window";
-import { APISegmentationLayer } from "types/api_flow_types";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { APISegmentationLayer } from "types/api_flow_types";
+import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box
@@ -39,7 +39,7 @@ const DEFAULT_PADDING: Vector3 = [50, 50, 50];
 const MIN_DIST_TO_SEED = 30;
 const TimeoutError = new Error("Timeout");
 const PartitionFailedError = new Error(
-  "Segmentation could not be partioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
+  "Segmentation could not be partitioned. Zero edges removed in last iteration. Probably due to nodes being too close to each other? Aborting...",
 );
 // If the min-cut does not succeed after 10 seconds
 // in the selected mag, the next mag is tried.

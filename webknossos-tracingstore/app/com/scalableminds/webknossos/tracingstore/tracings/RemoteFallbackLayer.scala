@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRem
 
 import scala.concurrent.ExecutionContext
 
-case class RemoteFallbackLayer(organizationName: String,
+case class RemoteFallbackLayer(organizationId: String,
                                datasetName: String,
                                layerName: String,
                                elementClass: ElementClassProto)

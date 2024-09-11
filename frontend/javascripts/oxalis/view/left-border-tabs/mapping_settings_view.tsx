@@ -1,12 +1,10 @@
-import { Select, Tooltip } from "antd";
+import { Select } from "antd";
 import { connect } from "react-redux";
 import React from "react";
 import debounceRender from "react-debounce-render";
-import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
-import type { Vector3 } from "oxalis/constants";
+import type { APISegmentationLayer } from "types/api_flow_types";
 import { MappingStatusEnum } from "oxalis/constants";
 import type { OxalisState, Mapping, MappingType, EditableMapping } from "oxalis/store";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
   getSegmentationLayerByName,
   getMappingInfo,
@@ -27,6 +25,9 @@ import {
   hasEditableMapping,
   isMappingLocked,
 } from "oxalis/model/accessors/volumetracing_accessor";
+import messages from "messages";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
+import FastTooltip from "components/fast_tooltip";
 
 const { Option, OptGroup } = Select;
 
@@ -34,20 +35,19 @@ type OwnProps = {
   layerName: string;
 };
 type StateProps = {
-  dataset: APIDataset;
   segmentationLayer: APISegmentationLayer | null | undefined;
-  position: Vector3;
   isMappingEnabled: boolean;
   mapping: Mapping | null | undefined;
   mappingName: string | null | undefined;
   hideUnmappedIds: boolean | null | undefined;
   mappingType: MappingType;
-  mappingColors: Array<number> | null | undefined;
   editableMapping: EditableMapping | null | undefined;
   isMappingLocked: boolean;
   isMergerModeEnabled: boolean;
   allowUpdate: boolean;
   isEditableMappingActive: boolean;
+  isAnnotationLockedByOwner: boolean;
+  isOwner: boolean;
 } & typeof mapDispatchToProps;
 type Props = OwnProps & StateProps;
 type State = {
@@ -133,21 +133,32 @@ class MappingSettingsView extends React.Component<Props, State> {
   };
 
   render() {
-    const availableMappings =
-      this.props.segmentationLayer?.mappings != null ? this.props.segmentationLayer.mappings : [];
-    const availableAgglomerates =
-      this.props.segmentationLayer?.agglomerates != null
-        ? this.props.segmentationLayer.agglomerates
-        : [];
+    const {
+      segmentationLayer,
+      mappingName,
+      editableMapping,
+      isMergerModeEnabled,
+      mapping,
+      hideUnmappedIds,
+      isMappingEnabled,
+      isMappingLocked,
+      allowUpdate,
+      isEditableMappingActive,
+      isAnnotationLockedByOwner,
+      isOwner,
+    } = this.props;
+
+    const availableMappings = segmentationLayer?.mappings != null ? segmentationLayer.mappings : [];
+    const availableAgglomerates = segmentationLayer?.agglomerates || [];
     // Antd does not render the placeholder when a value is defined (even when it's null).
     // That's why, we only pass the value when it's actually defined.
     const selectValueProp =
-      this.props.mappingName != null
+      mappingName != null
         ? {
             value:
-              this.props.editableMapping != null
-                ? `${this.props.editableMapping.baseMappingName} (${this.props.mappingName})`
-                : this.props.mappingName,
+              editableMapping != null
+                ? `${editableMapping.baseMappingName} (${mappingName})`
+                : mappingName,
           }
         : {};
 
@@ -170,17 +181,20 @@ class MappingSettingsView extends React.Component<Props, State> {
 
     // The mapping toggle should be active if either the user clicked on it (this.state.shouldMappingBeEnabled)
     // or a mapping was activated, e.g. from the API or by selecting one from the dropdown (this.props.isMappingEnabled).
-    const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || this.props.isMappingEnabled;
+    const shouldMappingBeEnabled = this.state.shouldMappingBeEnabled || isMappingEnabled;
     const renderHideUnmappedSegmentsSwitch =
-      (shouldMappingBeEnabled || this.props.isMergerModeEnabled) &&
-      this.props.mapping &&
-      this.props.hideUnmappedIds != null;
-    const isDisabled = this.props.isEditableMappingActive || this.props.isMappingLocked;
-    const disabledMessage = this.props.isEditableMappingActive
-      ? "The mapping has been edited through proofreading actions and can no longer be disabled or changed."
-      : this.props.mapping
-        ? "This mapping has been locked to this annotation, because the segmentation was modified while it was active. It can no longer be disabled or changed."
-        : "The segmentation was modified while no mapping was active. To ensure a consistent state, mappings can no longer be enabled.";
+      (shouldMappingBeEnabled || isMergerModeEnabled) &&
+      mapping &&
+      this.props.mappingType === "JSON" &&
+      hideUnmappedIds != null;
+    const isDisabled = isEditableMappingActive || isMappingLocked || isAnnotationLockedByOwner;
+    const disabledMessage = !allowUpdate
+      ? messages["tracing.read_only_mode_notification"](isAnnotationLockedByOwner, isOwner)
+      : isEditableMappingActive
+        ? "The mapping has been edited through proofreading actions and can no longer be disabled or changed."
+        : isMappingEnabled
+          ? "This mapping has been locked to this annotation, because the segmentation was modified while it was active. It can no longer be disabled or changed."
+          : "The segmentation was modified while no mapping was active. To ensure a consistent state, mappings can no longer be enabled.";
     return (
       <React.Fragment>
         {
@@ -188,7 +202,7 @@ class MappingSettingsView extends React.Component<Props, State> {
          to avoid conflicts in the logic of the UI. */
           !this.props.isMergerModeEnabled ? (
             <React.Fragment>
-              <Tooltip title={isDisabled ? disabledMessage : null}>
+              <FastTooltip title={isDisabled ? disabledMessage : null}>
                 <div
                   style={{
                     marginBottom: 6,
@@ -199,13 +213,11 @@ class MappingSettingsView extends React.Component<Props, State> {
                     value={shouldMappingBeEnabled}
                     label="ID Mapping"
                     // Assume that the mappings are being loaded if they are null
-                    loading={
-                      shouldMappingBeEnabled && this.props.segmentationLayer?.mappings == null
-                    }
+                    loading={shouldMappingBeEnabled && segmentationLayer?.mappings == null}
                     disabled={isDisabled}
                   />
                 </div>
-              </Tooltip>
+              </FastTooltip>
 
               {/*
                 Show mapping-select even when the mapping is disabled but the UI was used before
@@ -234,7 +246,7 @@ class MappingSettingsView extends React.Component<Props, State> {
         {renderHideUnmappedSegmentsSwitch ? (
           <SwitchSetting
             onChange={this.handleChangeHideUnmappedSegments}
-            value={this.props.hideUnmappedIds === true}
+            value={hideUnmappedIds}
             label="Hide unmapped segments"
             loading={this.state.isRefreshingMappingList}
           />
@@ -261,20 +273,19 @@ function mapStateToProps(state: OxalisState, ownProps: OwnProps) {
   const editableMapping = getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId);
 
   return {
-    dataset: state.dataset,
-    position: getPosition(state.flycam),
     hideUnmappedIds: activeMappingInfo.hideUnmappedIds,
     isMappingEnabled: activeMappingInfo.mappingStatus === MappingStatusEnum.ENABLED,
     mapping: activeMappingInfo.mapping,
     mappingName: activeMappingInfo.mappingName,
     mappingType: activeMappingInfo.mappingType,
-    mappingColors: activeMappingInfo.mappingColors,
     segmentationLayer,
     isMergerModeEnabled: state.temporaryConfiguration.isMergerModeEnabled,
     allowUpdate: state.tracing.restrictions.allowUpdate,
     editableMapping,
     isEditableMappingActive: hasEditableMapping(state, ownProps.layerName),
     isMappingLocked: isMappingLocked(state, ownProps.layerName),
+    isAnnotationLockedByOwner: state.tracing.isLockedByOwner,
+    isOwner: isAnnotationOwner(state),
   };
 }
 

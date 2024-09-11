@@ -1,7 +1,8 @@
 import type { Dispatch } from "redux";
-import { Layout, Tooltip } from "antd";
+import { Layout } from "antd";
 import { connect } from "react-redux";
-import FlexLayout, { TabNode, TabSetNode } from "flexlayout-react";
+import * as FlexLayout from "flexlayout-react";
+import type { BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import * as React from "react";
 import _ from "lodash";
 import features from "features";
@@ -42,6 +43,7 @@ import {
 } from "./flex_layout_helper";
 import { layoutEmitter, getLayoutConfig } from "./layout_persistence";
 import BorderToggleButton from "../components/border_toggle_button";
+import FastTooltip from "components/fast_tooltip";
 
 const { Footer } = Layout;
 
@@ -374,9 +376,9 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
         titleFactory={(renderedNode) => (
-          <Tooltip title={BorderTabs[renderedNode.getId()].description}>
+          <FastTooltip title={BorderTabs[renderedNode.getId()].description}>
             {renderedNode.getName()}{" "}
-          </Tooltip>
+          </FastTooltip>
         )}
         onModelChange={() => {
           // Update / inform parent layout about the changes.
@@ -458,12 +460,16 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
         document.activeElement.blur();
       }
+      if (data?.node) {
+        const node = this.state.model.getNodeById(data.node);
+        if (node) {
+          const toggledViewportId = node.getChildren()[0].getId();
 
-      const toggledViewportId = this.state.model.getNodeById(data.node).getChildren()[0].getId();
-
-      if (toggledViewportId in OrthoViews) {
-        // @ts-ignore Typescript doesn't agree that toggledViewportId exists in OrthoViews
-        this.props.setActiveViewport(OrthoViews[toggledViewportId]);
+          if (toggledViewportId in OrthoViews) {
+            // @ts-ignore Typescript doesn't agree that toggledViewportId exists in OrthoViews
+            this.props.setActiveViewport(OrthoViews[toggledViewportId]);
+          }
+        }
       }
     }
 
@@ -494,10 +500,10 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
   }
 
   onRenderTabSet = (
-    tabSetNode: TabSetNode,
+    tabSetNode: TabSetNode | BorderNode,
     renderValues: {
       buttons: Array<React.ReactNode>;
-      headerContent: React.ReactNode;
+      headerContent?: React.ReactNode;
     },
   ) => {
     const { isTopMost, isRightMost } = getPositionStatusOf(tabSetNode);
@@ -556,7 +562,6 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
             factory={(...args) => this.layoutFactory(...args)}
             onModelChange={() => this.onLayoutChange()}
             onAction={this.onAction}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(tabSetNode: TabSetNode, renderValues: {    ... Remove this comment to see the full error message
             onRenderTabSet={this.onRenderTabSet}
             onRenderTab={this.onRenderTab}
             classNameMapper={this.classNameMapper}

@@ -3,14 +3,13 @@ import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontr
 import { tracing as volumetracingServerObject } from "test/fixtures/volumetracing_server_objects";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import Constants from "oxalis/constants";
-import type { TestInterface } from "ava";
-import anyTest from "ava";
+import anyTest, { type TestFn } from "ava";
 import datasetServerObject from "test/fixtures/dataset_server_object";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
+import type DataCubeType from "oxalis/model/bucket_data_handling/data_cube";
 import { assertNonNullBucket } from "oxalis/model/bucket_data_handling/bucket";
 
 const StoreMock = {
@@ -39,11 +38,13 @@ const DataCube: typeof DataCubeType = mockRequire.reRequire(
 const { default: sampleVoxelMapToResolution, applyVoxelMap } = mockRequire.reRequire(
   "oxalis/model/volumetracing/volume_annotation_sampling",
 );
-// Ava's recommendation for Flow types
-// https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
-const test: TestInterface<{
+
+// Ava's recommendation for Typescript types
+// https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
+const test = anyTest as TestFn<{
   cube: DataCubeType;
-}> = anyTest as any;
+}>;
+
 test.beforeEach((t) => {
   const mockedLayer = {
     resolutions: [

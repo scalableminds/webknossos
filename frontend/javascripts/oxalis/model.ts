@@ -19,7 +19,7 @@ import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import type { TraceOrViewCommand } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
-import { APICompoundType } from "types/api_flow_types";
+import type { APICompoundType } from "types/api_flow_types";
 
 import { initialize } from "./model_initialization";
 
@@ -227,6 +227,9 @@ export class OxalisModel {
       const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
       const id = cube.getDataValue(pos, additionalCoordinates, null, usableZoomStep);
       return {
+        // Note that this id can be an unmapped id even when
+        // a mapping is active, if it is a HDF5 mapping that is partially loaded
+        // and no entry exists yet for the input id.
         id: cube.mapId(id),
         unmappedId: id,
       };
@@ -300,7 +303,7 @@ export class OxalisModel {
     );
   }
 
-  getPushQueueStats() {
+  getPushQueueStats = () => {
     const compressingBucketCount = _.sum(
       Utils.values(this.dataLayers).map((dataLayer) =>
         dataLayer.pushQueue.getCompressingBucketCount(),
@@ -322,7 +325,7 @@ export class OxalisModel {
       waitingForCompressionBucketCount,
       outstandingBucketDownloadCount,
     };
-  }
+  };
 
   forceSave = () => {
     // In contrast to the save function, this method will trigger exactly one saveNowAction

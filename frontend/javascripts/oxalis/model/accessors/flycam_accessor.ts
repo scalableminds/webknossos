@@ -2,7 +2,7 @@ import * as THREE from "three";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
 import type { DataLayerType, Flycam, LoadingStrategy, OxalisState } from "oxalis/store";
-import { Matrix4x4 } from "libs/mjs";
+import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import { getViewportRects } from "oxalis/model/accessors/view_mode_accessor";
 import {
@@ -34,9 +34,9 @@ import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getMatrixScale, rotateOnAxis } from "../reducers/flycam_reducer";
-import { SmallerOrHigherInfo } from "../helpers/resolution_info";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
-import { AdditionalCoordinate } from "types/api_flow_types";
+import type { SmallerOrHigherInfo } from "../helpers/resolution_info";
+import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
+import type { AdditionalCoordinate, VoxelSize } from "types/api_flow_types";
 
 export const ZOOM_STEP_INTERVAL = 1.1;
 
@@ -116,7 +116,7 @@ function calculateTotalBucketCountForZoomLevel(
 export function _getMaximumZoomForAllResolutions(
   viewMode: ViewMode,
   loadingStrategy: LoadingStrategy,
-  datasetScale: Vector3,
+  voxelSizeFactor: Vector3,
   resolutions: Array<Vector3>,
   viewportRects: OrthoViewRects,
   maximumCapacity: number,
@@ -139,7 +139,8 @@ export function _getMaximumZoomForAllResolutions(
   const MAX_SUPPORTED_MAGNIFICATION_COUNT = 15;
   // From that, we calculate the theoretical maximum zoom value. The dataset scale is taken into account,
   // because the entire scene is scaled with that.
-  const maxSupportedZoomValue = 2 ** MAX_SUPPORTED_MAGNIFICATION_COUNT * Math.max(...datasetScale);
+  const maxSupportedZoomValue =
+    2 ** MAX_SUPPORTED_MAGNIFICATION_COUNT * Math.max(...voxelSizeFactor);
   // Since the viewports can be quite large, it can happen that even a zoom value of 1 is not feasible.
   // That's why we start the search with a smaller value than 1. We use the ZOOM_STEP_INTERVAL factor
   // to ensure that the calculated thresholds correspond to the normal zoom behavior.
@@ -202,14 +203,14 @@ export const _getDummyFlycamMatrix = memoizeOne((scale: Vector3) => {
 export function getMoveOffset(state: OxalisState, timeFactor: number) {
   return (
     (state.userConfiguration.moveValue * timeFactor) /
-    getBaseVoxel(state.dataset.dataSource.scale) /
+    getBaseVoxelInUnit(state.dataset.dataSource.scale.factor) /
     constants.FPS
   );
 }
 
 export function getMoveOffset3d(state: OxalisState, timeFactor: number) {
   const { moveValue3d } = state.userConfiguration;
-  const baseVoxel = getBaseVoxel(state.dataset.dataSource.scale);
+  const baseVoxel = getBaseVoxelInUnit(state.dataset.dataSource.scale.factor);
   return (moveValue3d * timeFactor) / baseVoxel / constants.FPS;
 }
 
@@ -234,12 +235,12 @@ function getMaximumZoomForAllResolutionsFromStore(
     perLayerFnCache.set(layerName, fn);
   }
 
-  const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale);
+  const dummyFlycamMatrix = _getDummyFlycamMatrix(state.dataset.dataSource.scale.factor);
 
   return fn(
     viewMode,
     state.datasetConfiguration.loadingStrategy,
-    state.dataset.dataSource.scale,
+    state.dataset.dataSource.scale.factor,
     getResolutionInfo(layer.resolutions).getDenseResolutions(),
     getViewportRects(state),
     Math.min(
@@ -248,7 +249,7 @@ function getMaximumZoomForAllResolutionsFromStore(
     ),
     layerMatrix,
     // Theoretically, the following parameter should be state.flycam.currentMatrix.
-    // However, that matrix changes on each move which means that the raanges would need
+    // However, that matrix changes on each move which means that the ranges would need
     // to be recalculate on each move. At least, for orthogonal mode, the actual matrix
     // should only differ in its translation which can be ignored for gauging the maximum
     // zoom here.
@@ -428,7 +429,10 @@ export function getValidTaskZoomRange(
   state: OxalisState,
   respectRestriction: boolean = false,
 ): [number, number] {
-  const defaultRange = [baseDatasetViewConfiguration.zoom.minimum, Infinity] as Vector2;
+  const defaultRange = [
+    baseDatasetViewConfiguration.zoom.minimum,
+    Number.POSITIVE_INFINITY,
+  ] as Vector2;
   const { resolutionRestrictions } = state.tracing.restrictions;
   // We use the first color layer as a heuristic to check the validity of the zoom range,
   // as we don't know to which layer a restriction is meant to be applied.
@@ -514,7 +518,7 @@ function getArea(
   rects: OrthoViewRects,
   position: Vector3,
   zoomStep: number,
-  datasetScale: Vector3,
+  voxelSize: VoxelSize,
   planeId: OrthoView,
 ): Area {
   const [u, v] = Dimensions.getIndices(planeId);
@@ -523,7 +527,7 @@ function getArea(
     zoomStep,
     planeId,
   ).map((el) => el / 2);
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(datasetScale);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactorsInUnit(voxelSize);
   const uHalf = viewportWidthHalf * baseVoxelFactors[u];
   const vHalf = viewportHeightHalf * baseVoxelFactors[v];
   const isVisible = uHalf > 0 && vHalf > 0;
@@ -544,13 +548,13 @@ function getAreas(
   rects: OrthoViewRects,
   position: Vector3,
   zoomStep: number,
-  datasetScale: Vector3,
+  voxelSize: VoxelSize,
 ): OrthoViewMap<Area> {
   // @ts-expect-error ts-migrate(2741) FIXME: Property 'TDView' is missing in type '{ PLANE_XY: ... Remove this comment to see the full error message
   return {
-    [OrthoViews.PLANE_XY]: getArea(rects, position, zoomStep, datasetScale, OrthoViews.PLANE_XY),
-    [OrthoViews.PLANE_XZ]: getArea(rects, position, zoomStep, datasetScale, OrthoViews.PLANE_XZ),
-    [OrthoViews.PLANE_YZ]: getArea(rects, position, zoomStep, datasetScale, OrthoViews.PLANE_YZ),
+    [OrthoViews.PLANE_XY]: getArea(rects, position, zoomStep, voxelSize, OrthoViews.PLANE_XY),
+    [OrthoViews.PLANE_XZ]: getArea(rects, position, zoomStep, voxelSize, OrthoViews.PLANE_XZ),
+    [OrthoViews.PLANE_YZ]: getArea(rects, position, zoomStep, voxelSize, OrthoViews.PLANE_YZ),
   };
 }
 
@@ -558,8 +562,8 @@ export function getAreasFromState(state: OxalisState): OrthoViewMap<Area> {
   const position = getPosition(state.flycam);
   const rects = getViewportRects(state);
   const { zoomStep } = state.flycam;
-  const datasetScale = state.dataset.dataSource.scale;
-  return getAreas(rects, position, zoomStep, datasetScale);
+  const voxelSize = state.dataset.dataSource.scale;
+  return getAreas(rects, position, zoomStep, voxelSize);
 }
 
 type UnrenderableLayersInfos = {

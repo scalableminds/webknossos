@@ -6,6 +6,7 @@ import type {
   TreeGroup,
   RecommendedConfiguration,
   SegmentGroup,
+  MeshInformation,
 } from "oxalis/store";
 import type { ServerUpdateAction } from "oxalis/model/sagas/update_actions";
 import type {
@@ -20,9 +21,10 @@ import type {
   LOG_LEVELS,
   Vector4,
   TreeType,
+  UnitLong,
 } from "oxalis/constants";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { EmptyObject } from "./globals";
+import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import type { EmptyObject, ValueOf } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -118,9 +120,13 @@ type MutableAPIDataSourceBase = {
 };
 type APIDataSourceBase = Readonly<MutableAPIDataSourceBase>;
 export type APIUnimportedDatasource = APIDataSourceBase;
+export type VoxelSize = {
+  factor: Vector3;
+  unit: UnitLong;
+};
 export type MutableAPIDataSource = MutableAPIDataSourceBase & {
   dataLayers: Array<APIDataLayer>;
-  scale: Vector3;
+  scale: VoxelSize;
 };
 export type APIDataSource = Readonly<MutableAPIDataSource>;
 export type APIDataStore = {
@@ -161,12 +167,23 @@ export type MutableAPIDatasetId = {
   owningOrganization: string;
   name: string;
 };
+export function areDatasetsIdentical(a: APIDatasetId, b: APIDatasetId) {
+  return a.owningOrganization === b.owningOrganization && a.name === b.name;
+}
 export type APIDatasetId = Readonly<MutableAPIDatasetId>;
-export type APIDatasetDetails = {
-  readonly species?: string;
-  readonly brainRegion?: string;
-  readonly acquisition?: string;
+
+export enum APIMetadataEnum {
+  STRING = "string",
+  NUMBER = "number",
+  STRING_ARRAY = "string[]",
+}
+type APIMetadataType = ValueOf<APIMetadataEnum>;
+export type APIMetadata = {
+  type: APIMetadataType;
+  key: string;
+  value: string | number | string[];
 };
+export type APIMetadataEntries = APIMetadata[];
 
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
@@ -176,7 +193,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   created: number;
   dataStore: APIDataStore;
   description: string | null | undefined;
-  details: APIDatasetDetails | null | undefined;
+  metadata: APIMetadataEntries | null | undefined;
   isEditable: boolean;
   isPublic: boolean;
   displayName: string | null | undefined;
@@ -228,7 +245,7 @@ export type APIDatasetCompact = APIDatasetCompactWithoutStatusAndLayerNames & {
 };
 
 export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact {
-  const [colorLayerNames, segmentationLayerNames] = _.partition(
+  const [segmentationLayerNames, colorLayerNames] = _.partition(
     dataset.dataSource.dataLayers,
     (layer) => layer.category === "segmentation",
   ).map((layers) => layers.map((layer) => layer.name).sort());
@@ -255,11 +272,6 @@ type APIUnimportedDataset = APIDatasetBase & {
   readonly isActive: false;
 };
 export type APIMaybeUnimportedDataset = APIUnimportedDataset | APIDataset;
-export type APIDataSourceWithMessages = {
-  readonly dataSource?: APIDataSource;
-  readonly previousDataSource?: APIDataSource | APIUnimportedDatasource;
-  readonly messages: Array<APIMessage>;
-};
 export type APITeamMembership = {
   readonly id: string;
   readonly name: string;
@@ -282,6 +294,7 @@ export type APIUserBase = APIUserCompact & {
 };
 export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
+  hasSeenSegmentAnythingWithDepth?: boolean;
   shouldSeeModernControlsModal?: boolean;
   lastViewedWhatsNewTimestamp?: number;
   hasDiscardedHelpButton?: boolean;
@@ -462,6 +475,7 @@ export type APIAnnotationInfo = {
   // backend still serves this for backward-compatibility reasons.
   readonly stats?: SkeletonTracingStats | EmptyObject;
   readonly state: string;
+  readonly isLockedByOwner: boolean;
   readonly tags: Array<string>;
   readonly typ: APIAnnotationType;
   // The owner can be null (e.g., for a sandbox annotation
@@ -479,6 +493,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     id,
     name,
     state,
+    isLockedByOwner,
     tags,
     typ,
     owner,
@@ -495,6 +510,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     description,
     modified,
     id,
+    isLockedByOwner,
     name,
     state,
     tags,
@@ -537,15 +553,33 @@ export type APIAnnotationWithTask = APIAnnotationBase & {
 export type APITaskWithAnnotation = APITask & {
   readonly annotation: APIAnnotation;
 };
-export type APITimeTracking = {
-  time: string;
-  timestamp: number;
+export type APITimeTrackingPerAnnotation = {
   annotation: string;
-  _id: string;
-  task_id: string | undefined;
-  project_name: string | undefined;
-  tasktype_id: string | undefined;
-  tasktype_summary: string | undefined;
+  task: string | undefined;
+  projectName: string | undefined;
+  timeMillis: number;
+  annotationLayerStats: Array<TracingStats>;
+};
+export type APITimeTrackingPerUser = {
+  user: APIUserCompact & {
+    email: string;
+  };
+  timeMillis: number;
+  annotationCount: number;
+};
+export type APITimeTrackingSpan = {
+  userId: string;
+  userEmail: string;
+  datasetOrganization: string;
+  datasetName: string;
+  annotationId: string;
+  taskId: string | undefined;
+  projectName: string | undefined;
+  taskTypeId: string | undefined;
+  taskTypeSummary: string | undefined;
+  timeSpanId: string;
+  timeSpanCreated: number;
+  timeSpanTimeMillis: number;
 };
 export type APIProjectProgressReport = {
   readonly projectName: string;
@@ -567,7 +601,6 @@ export type APIAvailableTasksReport = {
 export type APIOrganizationCompact = {
   readonly id: string;
   readonly name: string;
-  readonly displayName: string;
 };
 export type APIOrganization = APIOrganizationCompact & {
   readonly additionalInformation: string;
@@ -629,6 +662,7 @@ export type APIFeatureToggles = {
   readonly discussionBoardRequiresAdmin: boolean;
   readonly hideNavbarLogin: boolean;
   readonly isWkorgInstance: boolean;
+  readonly recommendWkorgInstance: boolean;
   readonly taskReopenAllowedInSeconds: number;
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;
@@ -641,10 +675,11 @@ export type APIFeatureToggles = {
   readonly openIdConnectEnabled?: boolean;
   readonly segmentAnythingEnabled?: boolean;
 };
-export type APIJobCeleryState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
+export type APIJobState = "SUCCESS" | "PENDING" | "STARTED" | "FAILURE" | null;
 export type APIJobManualState = "SUCCESS" | "FAILURE" | null;
-export type APIJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
+export type APIEffectiveJobState = "UNKNOWN" | "SUCCESS" | "PENDING" | "STARTED" | "FAILURE";
 export enum APIJobType {
+  ALIGN_SECTIONS = "align_sections",
   CONVERT_TO_WKW = "convert_to_wkw",
   EXPORT_TIFF = "export_tiff",
   RENDER_ANIMATION = "render_animation",
@@ -654,6 +689,9 @@ export enum APIJobType {
   INFER_NUCLEI = "infer_nuclei",
   INFER_NEURONS = "infer_neurons",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
+  TRAIN_MODEL = "train_model",
+  INFER_WITH_MODEL = "infer_with_model",
+  INFER_MITOCHONDRIA = "infer_mitochondria",
 }
 
 export type APIJob = {
@@ -665,16 +703,29 @@ export type APIJob = {
   readonly tracingId: string | null | undefined;
   readonly annotationId: string | null | undefined;
   readonly annotationType: string | null | undefined;
-  readonly organizationName: string | null | undefined;
+  readonly organizationId: string | null | undefined;
   readonly boundingBox: string | null | undefined;
   readonly mergeSegments: boolean | null | undefined;
   readonly type: APIJobType;
-  readonly state: APIJobState;
+  readonly state: APIEffectiveJobState;
   readonly manualState: APIJobManualState;
   readonly result: string | null | undefined;
   readonly resultLink: string | null | undefined;
   readonly createdAt: number;
+  readonly voxelyticsWorkflowHash: string | null;
+  readonly trainingAnnotations: Array<{ annotationId: string }>;
 };
+
+export type AiModel = {
+  id: string;
+  name: string;
+  dataStore: APIDataStore;
+  user: APIUser;
+  comment: string;
+  created: number;
+  trainingJob: APIJob | null;
+};
+
 // Tracing related datatypes
 export type APIUpdateActionBatch = {
   version: number;
@@ -779,7 +830,7 @@ export type ServerVolumeTracing = ServerTracingBase & {
   // https://github.com/scalableminds/webknossos/pull/4755
   resolutions?: Array<Point3>;
   mappingName?: string | null | undefined;
-  mappingIsEditable?: boolean;
+  hasEditableMapping?: boolean;
   mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
 };
@@ -827,6 +878,7 @@ export enum VoxelyticsRunState {
   CANCELLED = "CANCELLED",
   STALE = "STALE",
 }
+
 type DistributionConfig = {
   strategy: string;
   resources?: Record<string, string>;
@@ -860,29 +912,18 @@ export type VoxelyticsArtifactConfig = {
     iframes: Record<string, string>;
     links: Record<string, string>;
   };
+  foreignWorkflow: [string, string] | null;
 };
 
-export type VoxelyticsRunInfo = (
-  | {
-      state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
-      endTime: null;
-    }
-  | {
-      state:
-        | VoxelyticsRunState.COMPLETE
-        | VoxelyticsRunState.FAILED
-        | VoxelyticsRunState.CANCELLED
-        | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
-    }
-) & {
+export type VoxelyticsRunInfo = {
   id: string;
   name: string;
-  username: string;
-  hostname: string;
+  userName: string;
+  hostName: string;
   voxelyticsVersion: string;
+  state: VoxelyticsRunState;
+  beginTime: Date | null;
+  endTime: Date | null;
 };
 
 export type VoxelyticsWorkflowDagEdge = { source: string; target: string; label: string };
@@ -957,28 +998,18 @@ export type VoxelyticsWorkflowReport = {
   };
 };
 
-export type VoxelyticsWorkflowListingRun = (
-  | {
-      state: VoxelyticsRunState.RUNNING;
-      beginTime: Date;
-      endTime: null;
-    }
-  | {
-      state:
-        | VoxelyticsRunState.COMPLETE
-        | VoxelyticsRunState.FAILED
-        | VoxelyticsRunState.CANCELLED
-        | VoxelyticsRunState.STALE;
-      beginTime: Date;
-      endTime: Date;
-    }
-) & {
+export type VoxelyticsWorkflowListingRun = {
   id: string;
   name: string;
-  username: string;
-  hostname: string;
+  hostUserName: string;
+  hostName: string;
   voxelyticsVersion: string;
   taskCounts: TaskCounts;
+  userFirstName: string;
+  userLastName: string;
+  state: VoxelyticsRunState;
+  beginTime: Date | null;
+  endTime: Date | null;
 };
 
 export type VoxelyticsWorkflowListing = {
@@ -1045,21 +1076,23 @@ export type VoxelyticsLogLine = {
   wk_url: string;
 };
 
-// Backend type
+// Backend type returned by the getFolderTree api method.
 export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent: string | null;
+  metadata: APIMetadataEntries;
   isEditable: boolean;
 };
 
-// Frontend type
+// Frontend type of FlatFolderTreeItem with inferred nested structure.
 export type FolderItem = {
   title: string;
-  key: string;
+  key: string; // folder id
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;
+  metadata: APIMetadataEntries;
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1070,6 +1103,7 @@ export type Folder = {
   id: string;
   allowedTeams: APITeam[];
   allowedTeamsCumulative: APITeam[];
+  metadata: APIMetadataEntries;
   isEditable: boolean;
 };
 
@@ -1077,6 +1111,7 @@ export type FolderUpdater = {
   id: string;
   name: string;
   allowedTeams: string[];
+  metadata: APIMetadataEntries;
 };
 
 export enum CAMERA_POSITIONS {
@@ -1092,9 +1127,11 @@ export enum MOVIE_RESOLUTIONS {
 
 export type RenderAnimationOptions = {
   layerName: string;
-  segmentationLayerName?: string;
-  meshFileName?: string;
-  meshSegmentIds: number[];
+  meshes: ({
+    layerName: string;
+    tracingId: string | null;
+    adhocMag: Vector3;
+  } & MeshInformation)[];
   boundingBox: BoundingBoxObject;
   includeWatermark: boolean;
   intensityMin: number;

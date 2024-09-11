@@ -1,4 +1,4 @@
-import { Input, Tooltip, Popover, Space } from "antd";
+import { Input, Tooltip, Popover, Space, type InputRef } from "antd";
 import { DownOutlined, UpOutlined } from "@ant-design/icons";
 import * as React from "react";
 import memoizeOne from "memoize-one";
@@ -8,18 +8,20 @@ import DomVisibilityObserver from "oxalis/view/components/dom_visibility_observe
 import { mod } from "libs/utils";
 
 type Props<S> = {
-  data: Array<S>;
+  data: S[];
   searchKey: keyof S | ((item: S) => string);
   onSelect: (arg0: S) => void;
   children: React.ReactNode;
   provideShortcut?: boolean;
   targetId: string;
 };
+
 type State = {
   isVisible: boolean;
   searchQuery: string;
   currentPosition: number | null | undefined;
 };
+
 export default class AdvancedSearchPopover<
   S extends Record<string, any>,
 > extends React.PureComponent<Props<S>, State> {
@@ -30,7 +32,7 @@ export default class AdvancedSearchPopover<
   };
 
   getAvailableOptions = memoizeOne(
-    (data: Array<S>, searchQuery: string, searchKey: Props<S>["searchKey"]): Array<S> => {
+    (data: S[], searchQuery: string, searchKey: Props<S>["searchKey"]): S[] => {
       const searchKeyFn =
         typeof searchKey === "string"
           ? (element: S) => element[searchKey]
@@ -89,6 +91,12 @@ export default class AdvancedSearchPopover<
     this.setState({
       isVisible: false,
     });
+  };
+
+  autoFocus = (inputElement: InputRef) => {
+    if (inputElement) {
+      setTimeout(() => inputElement.focus(), 0);
+    }
   };
 
   render() {
@@ -166,6 +174,7 @@ export default class AdvancedSearchPopover<
                       })
                     }
                     addonAfter={`${currentPosition + 1}/${numberOfAvailableOptions}`}
+                    ref={this.autoFocus}
                     autoFocus
                   />
                   <Tooltip title="Previous (shift+enter)">

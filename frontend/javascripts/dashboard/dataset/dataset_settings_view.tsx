@@ -1,16 +1,4 @@
-import {
-  Button,
-  Spin,
-  Alert,
-  Form,
-  Card,
-  Tabs,
-  Tooltip,
-  Modal,
-  Input,
-  FormInstance,
-  AlertProps,
-} from "antd";
+import { Button, Spin, Alert, Form, Card, Tabs, Tooltip, type FormInstance } from "antd";
 import { ExclamationCircleOutlined } from "@ant-design/icons";
 import * as React from "react";
 import _ from "lodash";
@@ -18,25 +6,26 @@ import dayjs from "dayjs";
 import { connect } from "react-redux";
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter, Link } from "react-router-dom";
-import { UnregisterCallback, Location as HistoryLocation, Action as HistoryAction } from "history";
+import type {
+  UnregisterCallback,
+  Location as HistoryLocation,
+  Action as HistoryAction,
+} from "history";
 import type {
   APIDataSource,
   APIDataset,
   MutableAPIDataset,
-  MutableAPIDataSource,
   APIDatasetId,
   APIMessage,
-  APIUnimportedDatasource,
 } from "types/api_flow_types";
-import { Unicode, Vector3 } from "oxalis/constants";
+import { Unicode } from "oxalis/constants";
 import type { DatasetConfiguration, OxalisState } from "oxalis/store";
-import LinkButton from "components/link_button";
 import { diffObjects, jsonStringify } from "libs/utils";
 import {
   getDataset,
   getDatasetDefaultConfiguration,
   updateDatasetDefaultConfiguration,
-  getDatasetDatasource,
+  readDatasetDatasource,
   updateDatasetDatasource,
   updateDatasetTeams,
   sendAnalyticsEvent,
@@ -47,9 +36,8 @@ import { trackAction } from "oxalis/model/helpers/analytics";
 import Toast from "libs/toast";
 import messages from "messages";
 import features from "features";
-import { isDatasourceJSONValid } from "types/validation";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import { Hideable, hasFormError, jsonEditStyle } from "./helper_components";
+import { Hideable, hasFormError } from "./helper_components";
 import DatasetSettingsViewConfigTab from "./dataset_settings_viewconfig_tab";
 import DatasetSettingsMetadataTab from "./dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "./dataset_settings_sharing_tab";
@@ -73,20 +61,6 @@ type PropsWithFormAndRouter = Props & {
   history: RouteComponentProps["history"];
 };
 type TabKey = "data" | "general" | "defaultConfig" | "sharing" | "deleteDataset";
-enum AppliedSuggestionsEnum {
-  Yes = "Yes",
-  No = "No",
-  NoAvailableSuggestions = "NoAvailableSuggestions",
-}
-enum IsJSONFormatValidEnum {
-  Yes = "Yes",
-  No = "No",
-  BrokenJson = "BrokenJson",
-}
-type DataSourceSettingsStatus = {
-  appliedSuggestions: keyof typeof AppliedSuggestionsEnum;
-  isJSONFormatValid: keyof typeof IsJSONFormatValidEnum;
-};
 type State = {
   hasUnsavedChanges: boolean;
   dataset: APIDataset | null | undefined;
@@ -95,10 +69,7 @@ type State = {
   isLoading: boolean;
   activeDataSourceEditMode: "simple" | "advanced";
   activeTabKey: TabKey;
-  savedDataSourceOnServer: APIDataSource | APIUnimportedDatasource | null | undefined;
-  inferredDataSource: APIDataSource | null | undefined;
-  differenceBetweenDataSources: Record<string, any>;
-  dataSourceSettingsStatus: DataSourceSettingsStatus;
+  savedDataSourceOnServer: APIDataSource | null | undefined;
 };
 export type FormData = {
   dataSource: APIDataSource;
@@ -107,59 +78,6 @@ export type FormData = {
   defaultConfiguration: DatasetConfiguration;
   defaultConfigurationLayersJson: string;
 };
-
-function ensureValidScaleOnInferredDataSource(
-  savedDataSourceOnServer: APIDataSource | APIUnimportedDatasource | null | undefined,
-  inferredDataSource: APIDataSource | null | undefined,
-): APIDataSource | null | undefined {
-  if (savedDataSourceOnServer == null || inferredDataSource == null) {
-    // If one of the data sources is null, return the other.
-    const potentialSource = savedDataSourceOnServer || inferredDataSource;
-    if (potentialSource && "dataLayers" in potentialSource) {
-      return potentialSource as APIDataSource;
-    } else {
-      return null;
-    }
-  }
-
-  const inferredDataSourceClone = _.cloneDeep(inferredDataSource) as any as MutableAPIDataSource;
-
-  const savedScale =
-    "dataLayers" in savedDataSourceOnServer
-      ? savedDataSourceOnServer.scale
-      : ([0, 0, 0] as Vector3);
-  if (_.isEqual(inferredDataSource.scale, [0, 0, 0]) && !_.isEqual(savedScale, [0, 0, 0])) {
-    inferredDataSourceClone.scale = savedScale;
-  }
-
-  // Trying to use the saved value for largestSegmentId instead of 0.
-  if (
-    "dataLayers" in savedDataSourceOnServer &&
-    savedDataSourceOnServer.dataLayers != null &&
-    inferredDataSourceClone.dataLayers != null
-  ) {
-    const segmentationLayerSettings = inferredDataSourceClone.dataLayers.find(
-      (layer) => layer.category === "segmentation",
-    );
-    const savedSegmentationLayerSettings = savedDataSourceOnServer.dataLayers.find(
-      (layer) => layer.category === "segmentation",
-    );
-
-    if (
-      segmentationLayerSettings != null &&
-      savedSegmentationLayerSettings != null &&
-      // @ts-expect-error ts-migrate(2339) FIXME: Property 'largestSegmentId' does not exist on type... Remove this comment to see the full error message
-      segmentationLayerSettings.largestSegmentId === 0 && // Flow needs this additional check to understand that segmentationLayerSettings is for the segmentation layer.
-      savedSegmentationLayerSettings.category === "segmentation" &&
-      segmentationLayerSettings.category === "segmentation"
-    ) {
-      // @ts-expect-error ts-migrate(2540) FIXME: Cannot assign to 'largestSegmentId' because it is ... Remove this comment to see the full error message
-      segmentationLayerSettings.largestSegmentId = savedSegmentationLayerSettings.largestSegmentId;
-    }
-  }
-
-  return inferredDataSourceClone;
-}
 
 class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, State> {
   formRef = React.createRef<FormInstance>();
@@ -177,12 +95,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     activeDataSourceEditMode: "simple",
     activeTabKey: "data",
     savedDataSourceOnServer: null,
-    inferredDataSource: null,
-    differenceBetweenDataSources: {},
-    dataSourceSettingsStatus: {
-      appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
-      isJSONFormatValid: IsJSONFormatValidEnum.Yes,
-    },
   };
 
   async componentDidMount() {
@@ -243,68 +155,11 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         isLoading: true,
       });
       let dataset = await getDataset(this.props.datasetId);
-      let dataSource;
-
-      const dataSourceSettingsStatus = {
-        appliedSuggestions: AppliedSuggestionsEnum.NoAvailableSuggestions,
-        isJSONFormatValid: IsJSONFormatValidEnum.No,
-      };
-      const {
-        dataSource: inferredDataSource,
-        messages: dataSourceMessages,
-        previousDataSource: savedDataSourceOnServer,
-      } = await getDatasetDatasource(dataset);
-      const didParsingTheSavedDataSourceJSONSucceed =
-        savedDataSourceOnServer != null && savedDataSourceOnServer.status == null;
+      const dataSource = await readDatasetDatasource(dataset);
 
       // Ensure that zarr layers (which aren't inferred by the back-end) are still
       // included in the inferred data source
-      if (
-        savedDataSourceOnServer &&
-        "dataLayers" in savedDataSourceOnServer &&
-        inferredDataSource != null
-      ) {
-        const layerDict = _.keyBy(inferredDataSource.dataLayers, "name");
-        for (const layer of savedDataSourceOnServer.dataLayers) {
-          if (layer.dataFormat === "zarr" && layerDict[layer.name] == null) {
-            inferredDataSource.dataLayers.push(layer);
-          }
-        }
-      }
-
-      if (didParsingTheSavedDataSourceJSONSucceed) {
-        dataSource = savedDataSourceOnServer;
-
-        if (isDatasourceJSONValid(savedDataSourceOnServer)) {
-          dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.Yes;
-        }
-
-        const diff = diffObjects(inferredDataSource || {}, savedDataSourceOnServer);
-        const areObjectsEqual = _.size(diff) === 0;
-
-        if (!areObjectsEqual) {
-          dataSourceSettingsStatus.appliedSuggestions = AppliedSuggestionsEnum.No;
-          this.setState({
-            differenceBetweenDataSources: diff,
-          });
-        }
-      } else {
-        // If the current datasource json is invalid, the inferred version should be used automatically.
-        dataSource = inferredDataSource;
-        dataSourceSettingsStatus.isJSONFormatValid = IsJSONFormatValidEnum.BrokenJson;
-        dataSourceSettingsStatus.appliedSuggestions = AppliedSuggestionsEnum.Yes;
-      }
-
-      const inferredDataSourceWithCorrectedScale = ensureValidScaleOnInferredDataSource(
-        savedDataSourceOnServer,
-        inferredDataSource,
-      );
-      this.setState({
-        savedDataSourceOnServer,
-        inferredDataSource: inferredDataSourceWithCorrectedScale,
-        messages: dataSourceMessages,
-        dataSourceSettingsStatus,
-      });
+      this.setState({ savedDataSourceOnServer: dataSource });
 
       if (dataSource == null) {
         throw new Error("No datasource received from server.");
@@ -370,173 +225,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
     }
   }
 
-  getDatasourceDiffAlert() {
-    // Only show if the option did not apply
-    const { differenceBetweenDataSources, dataSourceSettingsStatus, inferredDataSource } =
-      this.state;
-    const { appliedSuggestions, isJSONFormatValid } = dataSourceSettingsStatus;
-
-    // No info shown, when:
-    // - The parsing succedded
-    if (
-      (isJSONFormatValid === IsJSONFormatValidEnum.Yes &&
-        appliedSuggestions !== AppliedSuggestionsEnum.No) ||
-      (isJSONFormatValid === IsJSONFormatValidEnum.No &&
-        appliedSuggestions === AppliedSuggestionsEnum.Yes)
-    ) {
-      return null;
-    }
-
-    function showJSONModal(title: string, object: any) {
-      Modal.info({
-        title,
-        width: 800,
-        content: <Input.TextArea rows={20} style={jsonEditStyle} value={jsonStringify(object)} />,
-      });
-    }
-
-    let message = null;
-    let type: AlertProps["type"] = "info";
-
-    const applySuggestedSettings = () => {
-      const form = this.formRef.current;
-
-      if (!form) {
-        return;
-      }
-
-      form.setFieldsValue({
-        // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Readonly<MutableAPIDataSource> |... Remove this comment to see the full error message
-        dataSourceJson: jsonStringify(inferredDataSource),
-        dataSource: inferredDataSource,
-      });
-      this.setState(
-        (currentState) => {
-          const updatedStatus = {
-            ...currentState.dataSourceSettingsStatus,
-            appliedSuggestions: AppliedSuggestionsEnum.Yes,
-          };
-          return {
-            dataSourceSettingsStatus: updatedStatus,
-            hasUnsavedChanges: true,
-          };
-        }, // Enforce validation as antd does not do this automatically.
-        () => {
-          const currentForm = this.formRef.current;
-
-          if (currentForm) {
-            currentForm.validateFields();
-          }
-        },
-      );
-    };
-
-    if (isJSONFormatValid === IsJSONFormatValidEnum.BrokenJson) {
-      // If the datasource-properties.json on the server is an invalid JSON.
-      message = (
-        <div>
-          The current datasource-properties.json on the server seems to be in an invalid JSON format
-          (or is missing completely). The settings below are suggested by WEBKNOSSOS and should be
-          adjusted. <br />
-          Be aware that WEBKNOSSOS cannot guess properties like the voxel size or the largest
-          segment id. You must set them yourself.
-        </div>
-      );
-      type = "warning";
-    } else if (
-      isJSONFormatValid === IsJSONFormatValidEnum.No &&
-      appliedSuggestions === AppliedSuggestionsEnum.No
-    ) {
-      // If the datasource-properties.json on the server has invalid or missing properties but is a valid JSON and the server has suggestions.
-      message = (
-        <div>
-          The current datasource-properties.json on the server seems to have invalid or missing
-          properties. <br />
-          <LinkButton
-            onClick={() =>
-              showJSONModal("Suggested datasource-properties.json", inferredDataSource)
-            }
-          >
-            Here
-          </LinkButton>{" "}
-          are suggested settings from WEBKNOSSOS. But be aware that properties like the voxel size
-          or the largest segment id cannot be detected correctly. <br />
-          If you want to apply those settings, click{" "}
-          <LinkButton onClick={applySuggestedSettings}>here</LinkButton>.
-        </div>
-      );
-    } else if (
-      isJSONFormatValid === IsJSONFormatValidEnum.No &&
-      appliedSuggestions === AppliedSuggestionsEnum.NoAvailableSuggestions
-    ) {
-      // If the datasource-properties.json on the server has invalid or missing properties but is a valid JSON but the server has NO suggestions.
-      message = (
-        <div>
-          The current datasource-properties.json on the server seems to have invalid or missing
-          properties. Please fix them.
-        </div>
-      );
-    } else if (
-      isJSONFormatValid === IsJSONFormatValidEnum.Yes &&
-      appliedSuggestions === AppliedSuggestionsEnum.No
-    ) {
-      // The datasource-properties.json saved on the server is valid and the user did not merge the suggested settings.
-      message = (
-        <div>
-          WEBKNOSSOS detected additional information not yet present in the dataset’s{" "}
-          <em>datasource-properties.json</em> file:
-          <div
-            style={{
-              marginTop: 8,
-            }}
-          >
-            <Button
-              size="small"
-              style={{
-                marginRight: 6,
-              }}
-              type="primary"
-              onClick={applySuggestedSettings}
-            >
-              Apply Suggestions
-            </Button>
-            <Button
-              size="small"
-              style={{
-                marginRight: 6,
-              }}
-              onClick={() =>
-                showJSONModal("Suggested datasource-properties.json", inferredDataSource)
-              }
-            >
-              Preview Suggestions
-            </Button>
-            <Button
-              size="small"
-              style={{
-                marginRight: 6,
-              }}
-              onClick={() =>
-                showJSONModal(
-                  "Difference (JSON-encoded) to suggested datasource-properties.json",
-                  differenceBetweenDataSources,
-                )
-              }
-            >
-              Inspect Difference
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
-    return message != null ? (
-      <div>
-        <Alert message={message} type={type} showIcon />
-      </div>
-    ) : null;
-  }
-
   getFormValidationSummary = (): Record<string, any> => {
     const form = this.formRef.current;
 
@@ -592,8 +280,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
   }
 
   didDatasourceChange(dataSource: Record<string, any>) {
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Readonly<MutableAPIDataSource> |... Remove this comment to see the full error message
-    return _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer)) > 0;
+    return _.size(diffObjects(dataSource, this.state.savedDataSourceOnServer || {})) > 0;
   }
 
   isOnlyDatasourceIncorrectAndNotEdited() {
@@ -683,7 +370,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       await updateDatasetDatasource(this.props.datasetId.name, dataset.dataStore.url, dataSource);
       this.setState({
         savedDataSourceOnServer: dataSource,
-        differenceBetweenDataSources: {},
       });
     }
 
@@ -723,7 +409,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
           <Alert
             key="dataSourceStatus"
             message={<span>{messages["dataset.missing_datasource_json"]}</span>}
-            type="info"
+            type="error"
             showIcon
           />
         ) : (
@@ -851,7 +537,6 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
                     activeDataSourceEditMode: activeEditMode,
                   });
                 }}
-                additionalAlert={this.getDatasourceDiffAlert()}
               />
             )}
           </Hideable>
@@ -890,7 +575,10 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
         forceRender: true,
         children: (
           <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
-            <DatasetSettingsViewConfigTab />
+            <DatasetSettingsViewConfigTab
+              datasetId={this.props.datasetId}
+              dataStoreURL={this.state.dataset?.dataStore.url}
+            />
           </Hideable>
         ),
       },

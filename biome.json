@@ -9,6 +9,7 @@
       "libs/DRACOLoader.ts",
       "libs/DRACOWorker.worker.js",
       "libs/BufferGeometryUtils.ts",
+      "libs/fps_meter.ts",
       "libs/parse_stl_buffer.ts",
       "libs/trackball_controls.ts",
       "*.d.ts"
@@ -87,5 +88,13 @@
       "libs/trackball_controls.ts",
       "*.d.ts"
     ]
-  }
+  },
+  "overrides": [
+    {
+      "include": ["**/package.json"],
+      "formatter": {
+        "lineWidth": 1
+      }
+    }
+  ]
 }

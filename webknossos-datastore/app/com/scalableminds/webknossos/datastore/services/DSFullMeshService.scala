@@ -50,25 +50,25 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.dataStoreAdHocMeshService
 
   def loadFor(token: Option[String],
-              organizationName: String,
+              organizationId: String,
               datasetName: String,
               dataLayerName: String,
               fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Array[Byte]] =
     fullMeshRequest.meshFileName match {
       case Some(_) =>
-        loadFullMeshFromMeshfile(token, organizationName, datasetName, dataLayerName, fullMeshRequest)
-      case None => loadFullMeshFromAdHoc(organizationName, datasetName, dataLayerName, fullMeshRequest)
+        loadFullMeshFromMeshfile(token, organizationId, datasetName, dataLayerName, fullMeshRequest)
+      case None => loadFullMeshFromAdHoc(organizationId, datasetName, dataLayerName, fullMeshRequest)
     }
 
   private def loadFullMeshFromAdHoc(
-      organizationName: String,
+      organizationId: String,
       datasetName: String,
       dataLayerName: String,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
       seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHoc"
-      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationName,
+      (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                 datasetName,
                                                                                 dataLayerName)
       segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
@@ -96,7 +96,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
       segmentationLayer,
       Cuboid(topLeft, chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
       fullMeshRequest.segmentId,
-      dataSource.scale,
+      dataSource.scale.factor,
       fullMeshRequest.mappingName,
       fullMeshRequest.mappingType,
       fullMeshRequest.additionalCoordinates
@@ -115,41 +115,42 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def loadFullMeshFromMeshfile(
       token: Option[String],
-      organizationName: String,
+      organizationId: String,
       datasetName: String,
       layerName: String,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Array[Byte]] =
     for {
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "meshFileName.needed"
       before = Instant.now
-      mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationName,
+      mappingNameForMeshFile = meshFileService.mappingNameForMeshFile(organizationId,
                                                                       datasetName,
                                                                       layerName,
                                                                       meshFileName)
       segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
-        organizationName,
+        organizationId,
         datasetName,
         layerName,
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
         fullMeshRequest.segmentId,
         mappingNameForMeshFile,
+        omitMissing = false,
         token
       )
-      chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegments(organizationName,
-                                                                                     datasetName,
-                                                                                     layerName,
-                                                                                     meshFileName,
-                                                                                     segmentIds)
+      chunkInfos: WebknossosSegmentInfo <- meshFileService.listMeshChunksForSegmentsMerged(organizationId,
+                                                                                           datasetName,
+                                                                                           layerName,
+                                                                                           meshFileName,
+                                                                                           segmentIds)
       allChunkRanges: List[MeshChunk] = chunkInfos.chunks.lods.head.chunks
       stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
-        readMeshChunkAsStl(organizationName, datasetName, layerName, meshFileName, chunkRange, chunkInfos.transform)
+        readMeshChunkAsStl(organizationId, datasetName, layerName, meshFileName, chunkRange, chunkInfos.transform)
       }
       stlOutput = combineEncodedChunksToStl(stlEncodedChunks)
       _ = logMeshingDuration(before, "meshfile", stlOutput.length)
     } yield stlOutput
 
-  private def readMeshChunkAsStl(organizationName: String,
+  private def readMeshChunkAsStl(organizationId: String,
                                  datasetName: String,
                                  layerName: String,
                                  meshfileName: String,
@@ -157,7 +158,7 @@ class DSFullMeshService @Inject()(dataSourceRepository: DataSourceRepository,
                                  transform: Array[Array[Double]])(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     for {
       (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunk(
-        organizationName,
+        organizationId,
         datasetName,
         layerName,
         MeshChunkDataRequestList(meshfileName, List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize)))

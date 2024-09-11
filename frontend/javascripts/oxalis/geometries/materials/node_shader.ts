@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { ViewModeValues, ViewModeValuesIndices } from "oxalis/constants";
 import type { Uniforms } from "oxalis/geometries/materials/plane_material_factory";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
+import { getBaseVoxelInUnit } from "oxalis/model/scaleinfo";
 import { getZoomValue } from "oxalis/model/accessors/flycam_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { Store } from "oxalis/singletons";
@@ -14,7 +14,7 @@ import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
 } from "oxalis/shaders/thin_plate_spline.glsl";
-import TPS3D from "libs/thin_plate_spline";
+import type TPS3D from "libs/thin_plate_spline";
 
 export const NodeTypes = {
   INVALID: 0.0,
@@ -53,11 +53,8 @@ class NodeShader {
         // will and should be square regardless of the plane's aspect ratio.
         value: getZoomValue(state.flycam),
       },
-      datasetScale: {
-        value: state.dataset.dataSource.scale,
-      },
-      datasetScaleMin: {
-        value: getBaseVoxel(state.dataset.dataSource.scale),
+      voxelSizeMin: {
+        value: getBaseVoxelInUnit(state.dataset.dataSource.scale.factor),
       },
       overrideParticleSize: {
         value: state.userConfiguration.particleSize,
@@ -69,10 +66,10 @@ class NodeShader {
         value: true,
       },
       activeTreeId: {
-        value: NaN,
+        value: Number.NaN,
       },
       activeNodeId: {
-        value: NaN,
+        value: Number.NaN,
       },
       treeColors: {
         value: treeColorTexture,
@@ -184,8 +181,7 @@ out vec3 color;
 uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float planeZoomFactor;
-uniform vec3 datasetScale;
-uniform float datasetScaleMin;
+uniform float voxelSizeMin;
 uniform float viewportScale;
 uniform float activeNodeId;
 uniform float activeTreeId;
@@ -294,7 +290,7 @@ void main() {
       gl_PointSize = overrideParticleSize;
     } else {
       gl_PointSize = max(
-        radius / planeZoomFactor / datasetScaleMin,
+        radius / planeZoomFactor / voxelSizeMin,
         overrideParticleSize
       ) * viewportScale;
     }

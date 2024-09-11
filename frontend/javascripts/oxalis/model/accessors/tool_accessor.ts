@@ -1,9 +1,9 @@
 import memoizeOne from "memoize-one";
-import { AnnotationTool, IdentityTransform } from "oxalis/constants";
+import { type AnnotationTool, IdentityTransform } from "oxalis/constants";
 import { AnnotationToolEnum } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import {
-  AgglomerateState,
+  type AgglomerateState,
   getActiveSegmentationTracing,
   getRenderableResolutionForSegmentationTracing,
   hasAgglomerateMapping,
@@ -14,13 +14,14 @@ import {
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
-import { APIOrganization, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIUser } from "types/api_flow_types";
 import {
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { isSkeletonLayerTransformed } from "./skeletontracing_accessor";
+import { reuseInstanceOnEquality } from "./accessor_helpers";
 
 const zoomInToUseToolMessage =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted resolutions from the extended annotation menu in the dashboard.";
@@ -289,7 +290,7 @@ function getDisabledVolumeInfo(state: OxalisState) {
     visibleSegmentationLayer != null &&
     visibleSegmentationLayer.name === segmentationTracingLayer.tracingId;
   const isEditableMappingActive =
-    segmentationTracingLayer != null && !!segmentationTracingLayer.mappingIsEditable;
+    segmentationTracingLayer != null && !!segmentationTracingLayer.hasEditableMapping;
 
   const isJSONMappingActive =
     segmentationTracingLayer != null &&
@@ -307,7 +308,7 @@ function getDisabledVolumeInfo(state: OxalisState) {
     isSegmentationTracingTransformed;
 
   const isUneditableMappingLocked =
-    (segmentationTracingLayer?.mappingIsLocked && !segmentationTracingLayer?.mappingIsEditable) ??
+    (segmentationTracingLayer?.mappingIsLocked && !segmentationTracingLayer?.hasEditableMapping) ??
     false;
 
   return isVolumeDisabled || isEditableMappingActive
@@ -336,9 +337,7 @@ function getDisabledVolumeInfo(state: OxalisState) {
 }
 
 const getVolumeDisabledWhenVolumeIsEnabled = memoizeOne(_getVolumeDisabledWhenVolumeIsEnabled);
-export function getDisabledInfoForTools(
-  state: OxalisState,
-): Record<AnnotationToolEnum, DisabledInfo> {
+const _getDisabledInfoForTools = (state: OxalisState): Record<AnnotationToolEnum, DisabledInfo> => {
   const hasSkeleton = state.tracing.skeleton != null;
   const skeletonToolInfo = getSkeletonToolInfo(hasSkeleton, isSkeletonLayerTransformed(state));
 
@@ -348,7 +347,8 @@ export function getDisabledInfoForTools(
     ...skeletonToolInfo,
     ...disabledVolumeInfo,
   };
-}
+};
+export const getDisabledInfoForTools = reuseInstanceOnEquality(_getDisabledInfoForTools);
 
 export function adaptActiveToolToShortcuts(
   activeTool: AnnotationTool,

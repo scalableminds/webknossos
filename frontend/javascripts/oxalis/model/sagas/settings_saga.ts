@@ -3,14 +3,14 @@ import {
   SETTINGS_RETRY_DELAY,
 } from "oxalis/model/sagas/save_saga_constants";
 import { type Saga, take, select } from "oxalis/model/sagas/effect-generators";
-import { all, takeEvery, throttle, call, retry } from "typed-redux-saga";
+import { all, takeEvery, debounce, call, retry } from "typed-redux-saga";
 import type { UpdateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import { updateUserConfiguration, updateDatasetConfiguration } from "admin/admin_rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
-import { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
+import type { DatasetConfiguration, DatasetLayerConfiguration } from "oxalis/store";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
@@ -124,11 +124,11 @@ export default function* watchPushSettingsAsync(): Saga<void> {
   const { originalDatasetSettings } = action;
 
   yield* all([
-    throttle(500, "UPDATE_USER_SETTING", pushUserSettingsAsync),
-    throttle(500, "UPDATE_DATASET_SETTING", () =>
+    debounce(2500, "UPDATE_USER_SETTING", pushUserSettingsAsync),
+    debounce(2500, "UPDATE_DATASET_SETTING", () =>
       pushDatasetSettingsAsync(originalDatasetSettings),
     ),
-    throttle(500, "UPDATE_LAYER_SETTING", () => pushDatasetSettingsAsync(originalDatasetSettings)),
+    debounce(2500, "UPDATE_LAYER_SETTING", () => pushDatasetSettingsAsync(originalDatasetSettings)),
     takeEvery("UPDATE_USER_SETTING", trackUserSettingsAsync),
     takeEvery("UPDATE_USER_SETTING", showUserSettingToast),
   ]);

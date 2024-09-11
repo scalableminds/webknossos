@@ -1,5 +1,5 @@
 import { Modal } from "antd";
-import React from "react";
+import React, { type Key } from "react";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
 import type { Vector3, TreeType } from "oxalis/constants";
 import {
@@ -14,7 +14,7 @@ import messages from "messages";
 import renderIndependently from "libs/render_independently";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
 import { batchActions } from "redux-batched-actions";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
 export type CreateNodeAction = ReturnType<typeof createNodeAction>;
@@ -29,6 +29,7 @@ type DeleteBranchPointAction = ReturnType<typeof deleteBranchPointAction>;
 type DeleteBranchpointByIdAction = ReturnType<typeof deleteBranchpointByIdAction>;
 type ToggleTreeAction = ReturnType<typeof toggleTreeAction>;
 type SetTreeVisibilityAction = ReturnType<typeof setTreeVisibilityAction>;
+type SetExpandedTreeGroupsAction = ReturnType<typeof setExpandedTreeGroupsAction>;
 type ToggleAllTreesAction = ReturnType<typeof toggleAllTreesAction>;
 type ToggleInactiveTreesAction = ReturnType<typeof toggleInactiveTreesAction>;
 type ToggleTreeGroupAction = ReturnType<typeof toggleTreeGroupAction>;
@@ -107,6 +108,7 @@ export type SkeletonTracingAction =
   | ToggleTreeAction
   | ToggleAllTreesAction
   | SetTreeVisibilityAction
+  | SetExpandedTreeGroupsAction
   | ToggleInactiveTreesAction
   | ToggleTreeGroupAction
   | NoAction
@@ -144,6 +146,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "CREATE_COMMENT",
   "DELETE_COMMENT",
   "SET_TREE_GROUPS",
+  "SET_EXPANDED_TREE_GROUPS",
   "SET_TREE_GROUP",
   "SET_MERGER_MODE_ENABLED",
   "TOGGLE_TREE",
@@ -281,9 +284,15 @@ export const requestDeleteBranchPointAction = () =>
     type: "REQUEST_DELETE_BRANCHPOINT",
   }) as const;
 
-export const createTreeAction = (timestamp: number = Date.now()) =>
+export const createTreeAction = (
+  // If the tree creation is about to succeed, this callback
+  // will be triggered with the id that will be assigned.
+  treeIdCallback?: (id: number) => void,
+  timestamp: number = Date.now(),
+) =>
   ({
     type: "CREATE_TREE",
+    treeIdCallback,
     timestamp,
   }) as const;
 
@@ -335,6 +344,12 @@ export const toggleTreeAction = (
     type: "TOGGLE_TREE",
     treeId,
     timestamp,
+  }) as const;
+
+export const setExpandedTreeGroupsAction = (expandedGroups: Set<Key>) =>
+  ({
+    type: "SET_EXPANDED_TREE_GROUPS",
+    expandedGroups,
   }) as const;
 
 export const setTreeVisibilityAction = (treeId: number | null | undefined, isVisible: boolean) =>

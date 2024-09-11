@@ -26,8 +26,8 @@ import type { InitializeSkeletonTracingAction } from "oxalis/model/actions/skele
 import { SkeletonTracingSaveRelevantActions } from "oxalis/model/actions/skeletontracing_actions";
 import { ViewModeSaveRelevantActions } from "oxalis/model/actions/view_mode_actions";
 import {
-  InitializeEditableMappingAction,
-  InitializeVolumeTracingAction,
+  type InitializeEditableMappingAction,
+  type InitializeVolumeTracingAction,
   VolumeTracingSaveRelevantActions,
 } from "oxalis/model/actions/volumetracing_actions";
 import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
@@ -107,7 +107,7 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
     //    would be present here, too (note the risk would be greater, because the
     //    user didn't use the save button which is usually accompanied a small pause).
     const itemCountToSave = forcePush
-      ? Infinity
+      ? Number.POSITIVE_INFINITY
       : yield* select((state) => selectQueue(state, saveQueueType, tracingId).length);
     let savedItemCount = 0;
     while (savedItemCount < itemCountToSave) {
@@ -573,6 +573,9 @@ function* watchForSaveConflicts() {
   while (true) {
     const interval = yield* call(getPollInterval);
     yield* call(sleep, interval);
+    if (yield* select((state) => state.uiInformation.showVersionRestore)) {
+      continue;
+    }
     try {
       yield* call(checkForNewVersion);
     } catch (exception) {

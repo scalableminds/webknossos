@@ -8,7 +8,6 @@ import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
 import models.annotation._
-import models.organization.{OrganizationDAO, OrganizationService}
 import models.project.ProjectDAO
 import models.task.TaskDAO
 import models.user.{User, UserService}
@@ -24,9 +23,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 userService: UserService,
                                 taskDAO: TaskDAO,
                                 annotationService: AnnotationService,
-                                organizationService: OrganizationService,
                                 projectDAO: ProjectDAO,
-                                organizationDAO: OrganizationDAO,
                                 timeSpanDAO: TimeSpanDAO,
                                 defaultMails: DefaultMails,
                                 conf: WkConf,
@@ -141,14 +138,12 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime ?~> "no project.expectedTime"
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
       projectOwner <- userService.findOneCached(project._owner)(GlobalAccessContext)
       projectOwnerEmail <- userService.emailFor(projectOwner)(GlobalAccessContext)
-      mailRecipient <- organizationService.overTimeMailRecipient(organization)(GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time.toMillis < timeLimit) {
-        Mailer ! Send(defaultMails
-          .overLimitMail(user, project.name, task._id.toString, annotation.id, List(mailRecipient, projectOwnerEmail)))
+        Mailer ! Send(
+          defaultMails.overLimitMail(user, project.name, task._id.toString, annotation.id, projectOwnerEmail))
       }
     }
 

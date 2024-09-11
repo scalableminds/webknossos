@@ -100,8 +100,8 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       const settingSpec = propertyName in userSettings ? userSettings[propertyName] : null;
 
       if (settingSpec != null && settingSpec.type === "number") {
-        const min = "minimum" in settingSpec ? settingSpec.minimum : -Infinity;
-        const max = "maximum" in settingSpec ? settingSpec.maximum : Infinity;
+        const min = "minimum" in settingSpec ? settingSpec.minimum : Number.NEGATIVE_INFINITY;
+        const max = "maximum" in settingSpec ? settingSpec.maximum : Number.POSITIVE_INFINITY;
         // @ts-ignore Since settingSpec.type === "number", value will be a number
         value = clamp(min, value, max);
 
@@ -222,6 +222,16 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
       });
     }
 
+    case "FINISH_MAPPING_INITIALIZATION": {
+      const { layerName } = action;
+      return updateActiveMapping(
+        state,
+        {
+          mappingStatus: MappingStatusEnum.ENABLED,
+        },
+        layerName,
+      );
+    }
     case "SET_MAPPING_ENABLED": {
       const { isMappingEnabled, layerName } = action;
 
@@ -267,10 +277,21 @@ function SettingsReducer(state: OxalisState, action: Action): OxalisState {
           mapping,
           mappingColors,
           mappingType,
-          mappingSize: mapping != null ? mapping.size : 0,
           hideUnmappedIds,
           mappingStatus:
             mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,
+        },
+        layerName,
+      );
+    }
+
+    case "CLEAR_MAPPING": {
+      const { layerName } = action;
+
+      return updateActiveMapping(
+        state,
+        {
+          mapping: undefined,
         },
         layerName,
       );

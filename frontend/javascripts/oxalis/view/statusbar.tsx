@@ -1,10 +1,10 @@
-import { Tooltip } from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import React, { useCallback, useState } from "react";
 import { WarningOutlined, MoreOutlined, DownloadOutlined } from "@ant-design/icons";
 import type { Vector3 } from "oxalis/constants";
-import { AltOrOptionKey, OrthoViews } from "oxalis/constants";
+import { AltOrOptionKey, MappingStatusEnum, OrthoViews } from "oxalis/constants";
 import {
+  getMappingInfoOrNull,
   getVisibleSegmentationLayer,
   hasVisibleUint64Segmentation,
 } from "oxalis/model/accessors/dataset_accessor";
@@ -19,7 +19,7 @@ import {
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import message from "messages";
 import {
-  ActionDescriptor,
+  type ActionDescriptor,
   getToolClassForAnnotationTool,
 } from "oxalis/controller/combinations/tool_controls";
 import {
@@ -28,8 +28,7 @@ import {
 } from "oxalis/model/accessors/view_mode_accessor";
 import { adaptActiveToolToShortcuts } from "oxalis/model/accessors/tool_accessor";
 import { V3 } from "libs/mjs";
-import { Model } from "oxalis/singletons";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import {
   getActiveSegmentationTracing,
   getReadableNameForLayerName,
@@ -37,8 +36,9 @@ import {
 import { getGlobalDataConnectionInfo } from "oxalis/model/data_connection_info";
 import { useInterval } from "libs/react_helpers";
 import _ from "lodash";
-import { AdditionalCoordinate } from "types/api_flow_types";
-import { EmptyObject } from "types/globals";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import FastTooltip from "components/fast_tooltip";
+import { Store } from "oxalis/singletons";
 
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
@@ -162,6 +162,9 @@ function ShortcutsInfo() {
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");
   const hasSkeleton = useSelector((state: OxalisState) => state.tracing.skeleton != null);
+  const isTDViewportActive = useSelector(
+    (state: OxalisState) => state.viewModeData.plane.activeViewport === OrthoViews.TDView,
+  );
 
   const moreShortcutsLink = (
     <a
@@ -170,9 +173,9 @@ function ShortcutsInfo() {
       rel="noopener noreferrer"
       style={moreLinkStyle}
     >
-      <Tooltip title="More Shortcuts">
+      <FastTooltip title="More Shortcuts">
         <MoreOutlined rotate={90} style={moreIconStyle} />
-      </Tooltip>
+      </FastTooltip>
     </a>
   );
 
@@ -185,6 +188,7 @@ function ShortcutsInfo() {
         isShiftPressed,
         isControlOrMetaPressed,
         isAltPressed,
+        isTDViewportActive,
       );
     }
 
@@ -324,6 +328,7 @@ function ShortcutsInfo() {
     isShiftPressed,
     isControlOrMetaPressed,
     isAltPressed,
+    isTDViewportActive,
   );
 
   return (
@@ -352,31 +357,46 @@ function ShortcutsInfo() {
   );
 }
 
-function getCellInfo(globalMousePosition: Vector3 | null | undefined) {
-  const getSegmentIdString = (): string => {
-    const hoveredCellInfo = Model.getHoveredCellId(globalMousePosition);
+function SegmentInfo() {
+  const visibleSegmentationLayer = useSelector((state: OxalisState) =>
+    getVisibleSegmentationLayer(state),
+  );
+  const hasVisibleSegmentation = visibleSegmentationLayer != null;
+  const activeMappingInfo = useSelector((state: OxalisState) =>
+    getMappingInfoOrNull(
+      state.temporaryConfiguration.activeMappingByLayer,
+      visibleSegmentationLayer?.name,
+    ),
+  );
+  const hoveredSegmentId = useSelector(
+    (state: OxalisState) => state.temporaryConfiguration.hoveredSegmentId,
+  );
 
-    if (!hoveredCellInfo) {
-      return "-";
-    }
+  if (hasVisibleSegmentation == null) {
+    return null;
+  }
 
-    return hoveredCellInfo.isMapped ? `${hoveredCellInfo.id} (mapped)` : `${hoveredCellInfo.id}`;
-  };
+  const idString =
+    hoveredSegmentId == null
+      ? "-"
+      : activeMappingInfo?.mappingStatus === MappingStatusEnum.ENABLED
+        ? `${hoveredSegmentId} (mapped)`
+        : `${hoveredSegmentId}`;
 
-  return <span className="info-element">Segment {getSegmentIdString()}</span>;
+  return <span className="info-element">Segment {idString}</span>;
 }
 
 function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean, label: string) {
   return isUint64SegmentationVisible ? (
     <React.Fragment>
       {label}{" "}
-      <Tooltip title={message["tracing.uint64_segmentation_warning"]}>
+      <FastTooltip title={message["tracing.uint64_segmentation_warning"]}>
         <WarningOutlined
           style={{
             color: "var(--ant-color-warning)",
           }}
         />
-      </Tooltip>
+      </FastTooltip>
     </React.Fragment>
   ) : (
     label
@@ -384,23 +404,10 @@ function maybeLabelWithSegmentationWarning(isUint64SegmentationVisible: boolean,
 }
 
 function Infos() {
-  const dataset = useSelector((state: OxalisState) => state.dataset);
-  const tracing = useSelector((state: OxalisState) => state.tracing);
-  const { representativeResolution, activeMagOfEnabledLayers, isActiveResolutionGlobal } =
-    useSelector((state: OxalisState) => getActiveResolutionInfo(state));
-
   const isSkeletonAnnotation = useSelector((state: OxalisState) => state.tracing.skeleton != null);
   const activeVolumeTracing = useSelector((state: OxalisState) =>
     getActiveSegmentationTracing(state),
   );
-  const [currentBucketDownloadSpeed, setCurrentBucketDownloadSpeed] = useState<number>(0);
-  const [totalDownloadedByteCount, setTotalDownloadedByteCount] = useState<number>(0);
-  useInterval(() => {
-    const { avgDownloadSpeedInBytesPerS, accumulatedDownloadedBytes } =
-      getGlobalDataConnectionInfo().getStatistics();
-    setCurrentBucketDownloadSpeed(avgDownloadSpeedInBytesPerS);
-    setTotalDownloadedByteCount(accumulatedDownloadedBytes);
-  }, 1500);
   const activeCellId = activeVolumeTracing?.activeCellId;
   const activeNodeId = useSelector((state: OxalisState) =>
     state.tracing.skeleton ? state.tracing.skeleton.activeNodeId : null,
@@ -429,14 +436,7 @@ function Infos() {
     <React.Fragment>
       <SegmentAndMousePosition />
       <span className="info-element">
-        <Tooltip
-          title={`Downloaded ${formatCountToDataAmountUnit(
-            totalDownloadedByteCount,
-          )} of Image Data (after decompression)`}
-        >
-          <DownloadOutlined className="icon-margin-right" />
-          {formatCountToDataAmountUnit(currentBucketDownloadSpeed)}/s
-        </Tooltip>
+        <DownloadSpeedometer />
       </span>
       {activeVolumeTracing != null ? (
         <span className="info-element">
@@ -472,46 +472,83 @@ function Infos() {
           />
         </span>
       ) : null}
-      {representativeResolution && (
-        <span className="info-element">
-          <img
-            src="/assets/images/icon-statusbar-downsampling.svg"
-            className="resolution-status-bar-icon"
-            alt="Resolution"
-          />{" "}
-          <Tooltip
-            title={
-              <>
-                Rendered magnification per layer:
-                <ul>
-                  {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-                    const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
-
-                    return (
-                      <li key={layerName}>
-                        {readableName}: {mag ? mag.join("-") : "none"}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </>
-            }
-          >
-            {representativeResolution.join("-")}
-            {isActiveResolutionGlobal ? "" : "*"}{" "}
-          </Tooltip>
-        </span>
-      )}
+      <ResolutionInfo />
     </React.Fragment>
+  );
+}
+
+function DownloadSpeedometer() {
+  const [currentBucketDownloadSpeed, setCurrentBucketDownloadSpeed] = useState<number>(0);
+  const [totalDownloadedByteCount, setTotalDownloadedByteCount] = useState<number>(0);
+  useInterval(() => {
+    const { avgDownloadSpeedInBytesPerS, accumulatedDownloadedBytes } =
+      getGlobalDataConnectionInfo().getStatistics();
+    setCurrentBucketDownloadSpeed(avgDownloadSpeedInBytesPerS);
+    setTotalDownloadedByteCount(accumulatedDownloadedBytes);
+  }, 1500);
+
+  return (
+    <FastTooltip
+      title={`Downloaded ${formatCountToDataAmountUnit(
+        totalDownloadedByteCount,
+      )} of Image Data (after decompression)`}
+    >
+      <DownloadOutlined className="icon-margin-right" />
+      {formatCountToDataAmountUnit(currentBucketDownloadSpeed)}/s
+    </FastTooltip>
+  );
+}
+
+function ResolutionInfo() {
+  const { representativeResolution, isActiveResolutionGlobal } =
+    useSelector(getActiveResolutionInfo);
+
+  const renderMagTooltipContent = useCallback(() => {
+    const state = Store.getState();
+    const { activeMagOfEnabledLayers } = getActiveResolutionInfo(state);
+    const dataset = state.dataset;
+    const tracing = state.tracing;
+
+    return (
+      <>
+        Rendered magnification per layer:
+        <ul>
+          {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+            const readableName = getReadableNameForLayerName(dataset, tracing, layerName);
+
+            return (
+              <li key={layerName}>
+                {readableName}: {mag ? mag.join("-") : "none"}
+              </li>
+            );
+          })}
+        </ul>
+      </>
+    );
+  }, []);
+
+  if (representativeResolution == null) {
+    return null;
+  }
+
+  return (
+    <span className="info-element">
+      <img
+        src="/assets/images/icon-statusbar-downsampling.svg"
+        className="resolution-status-bar-icon"
+        alt="Resolution"
+      />{" "}
+      <FastTooltip dynamicRenderer={renderMagTooltipContent} placement="top">
+        {representativeResolution.join("-")}
+        {isActiveResolutionGlobal ? "" : "*"}{" "}
+      </FastTooltip>
+    </span>
   );
 }
 
 function SegmentAndMousePosition() {
   // This component depends on the mouse position which is a fast-changing property.
   // For the sake of performance, it is isolated as a single component.
-  const hasVisibleSegmentation = useSelector(
-    (state: OxalisState) => getVisibleSegmentationLayer(state) != null,
-  );
   const mousePosition = useSelector(
     (state: OxalisState) => state.temporaryConfiguration.mousePosition,
   );
@@ -532,9 +569,10 @@ function SegmentAndMousePosition() {
 
     return undefined;
   });
+
   return (
     <>
-      {isPlaneMode && hasVisibleSegmentation ? getCellInfo(globalMousePosition) : null}
+      {isPlaneMode ? <SegmentInfo /> : null}
       {isPlaneMode ? (
         <span className="info-element">
           Pos [
@@ -546,15 +584,13 @@ function SegmentAndMousePosition() {
   );
 }
 
-class Statusbar extends React.PureComponent<EmptyObject, EmptyObject> {
-  render() {
-    return (
-      <span className="statusbar">
-        <ShortcutsInfo />
-        <Infos />
-      </span>
-    );
-  }
+function Statusbar() {
+  return (
+    <span className="statusbar">
+      <ShortcutsInfo />
+      <Infos />
+    </span>
+  );
 }
 
 export default Statusbar;

@@ -11,16 +11,11 @@ import type {
   APIBuildInfo,
   APIConnectomeFile,
   APIDataSource,
-  APIDataSourceWithMessages,
   APIDataStore,
   APIDataset,
   APIDatasetId,
   APIFeatureToggles,
   APIHistogramData,
-  APIJob,
-  APIJobCeleryState,
-  APIJobManualState,
-  APIJobState,
   APIMapping,
   APIMaybeUnimportedDataset,
   APIMeshFile,
@@ -41,7 +36,8 @@ import type {
   APITaskType,
   APITeam,
   APITimeInterval,
-  APITimeTracking,
+  APITimeTrackingPerAnnotation,
+  APITimeTrackingSpan,
   APITracingStore,
   APIUpdateActionBatch,
   APIUser,
@@ -66,11 +62,12 @@ import type {
   APIDatasetCompact,
   MaintenanceInfo,
   AdditionalCoordinate,
-  RenderAnimationOptions,
   LayerLink,
+  VoxelSize,
+  APITimeTrackingPerUser,
 } from "types/api_flow_types";
 import { APIAnnotationTypeEnum } from "types/api_flow_types";
-import type { LOG_LEVELS, Vector2, Vector3, Vector6 } from "oxalis/constants";
+import type { LOG_LEVELS, Vector2, Vector3 } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import type {
   DatasetConfiguration,
@@ -80,13 +77,19 @@ import type {
   MappingType,
   VolumeTracing,
   UserConfiguration,
+  Mapping,
+  NumberLike,
 } from "oxalis/store";
 import type { NewTask, TaskCreationResponseContainer } from "admin/task/task_create_bulk_view";
 import type { QueryObject } from "admin/task/task_search_form";
 import { V3 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
+import {
+  parseProtoListOfLong,
+  parseProtoTracing,
+  serializeProtoListOfLong,
+} from "oxalis/model/helpers/proto_helpers";
 import type { RequestOptions } from "libs/request";
 import Request from "libs/request";
 import type { Message } from "libs/toast";
@@ -94,31 +97,21 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import window, { location } from "libs/window";
-import { SaveQueueType } from "oxalis/model/actions/save_actions";
-import { DatasourceConfiguration } from "types/schemas/datasource.types";
+import type { SaveQueueType } from "oxalis/model/actions/save_actions";
+import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import { doWithToken } from "./api/token";
-import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
-import { ArbitraryObject } from "types/globals";
-import { AnnotationTypeFilterEnum } from "./statistic/project_and_annotation_type_dropdown";
-
-const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
+import type BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
+import type { ArbitraryObject } from "types/globals";
+import { assertResponseLimit } from "./api/api_utils";
+import type { AnnotationTypeFilterEnum } from "admin/statistic/project_and_annotation_type_dropdown";
 
 export * from "./api/token";
+export * from "./api/jobs";
 export * as meshApi from "./api/mesh";
 
 type NewTeam = {
   readonly name: string;
 };
-
-function assertResponseLimit(collection: unknown[]) {
-  if (collection.length === MAX_SERVER_ITEMS_PER_RESPONSE) {
-    Toast.warning(messages["request.max_item_count_alert"], {
-      sticky: true,
-    });
-  }
-}
-
-// ### Do with userToken
 
 export function sendAnalyticsEvent(
   eventType: string,
@@ -623,6 +616,19 @@ export function editAnnotation(
   });
 }
 
+export function editLockedState(
+  annotationId: string,
+  annotationType: APIAnnotationType,
+  isLockedByOwner: boolean,
+): Promise<APIAnnotation> {
+  return Request.receiveJSON(
+    `/api/annotations/${annotationType}/${annotationId}/editLockedState?isLockedByOwner=${isLockedByOwner}`,
+    {
+      method: "PATCH",
+    },
+  );
+}
+
 export function setOthersMayEditForAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
@@ -886,7 +892,7 @@ export async function getTracingForAnnotationType(
 ): Promise<ServerTracing> {
   const { tracingId, typ } = annotationLayerDescriptor;
   const version = extractVersion(versions, tracingId, typ);
-  const tracingType = typ.toLowerCase();
+  const tracingType = typ.toLowerCase() as "skeleton" | "volume";
   const possibleVersionString = version != null ? `&version=${version}` : "";
   const tracingArrayBuffer = await doWithToken((token) =>
     Request.receiveArraybuffer(
@@ -911,10 +917,10 @@ export async function getTracingForAnnotationType(
   // on the tracing's structure.
   tracing.typ = typ;
 
-  // @ts-ignore Remove datasetName and organizationName as these should not be used in the front-end, anymore.
+  // @ts-ignore Remove datasetName and organizationId as these should not be used in the front-end, anymore.
   delete tracing.datasetName;
   // @ts-ignore
-  delete tracing.organizationName;
+  delete tracing.organizationId;
 
   return tracing;
 }
@@ -944,7 +950,7 @@ export function getUpdateActionLog(
 export function getNewestVersionForTracing(
   tracingStoreUrl: string,
   tracingId: string,
-  tracingType: "skeleton" | "volume",
+  tracingType: SaveQueueType,
 ): Promise<number> {
   return doWithToken((token) =>
     Request.receiveJSON(
@@ -957,11 +963,11 @@ export function hasSegmentIndexInDataStore(
   dataStoreUrl: string,
   dataSetName: string,
   dataLayerName: string,
-  organizationName: string,
+  organizationId: string,
 ) {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${dataStoreUrl}/data/datasets/${organizationName}/${dataSetName}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${organizationId}/${dataSetName}/layers/${dataLayerName}/hasSegmentIndex?token=${token}`,
     ),
   );
 }
@@ -1116,314 +1122,6 @@ export async function getDatasets(
   return datasets;
 }
 
-export async function getJobs(): Promise<APIJob[]> {
-  const jobs = await Request.receiveJSON("/api/jobs");
-  assertResponseLimit(jobs);
-  return (
-    jobs
-      .map(
-        (job: any): APIJob => ({
-          id: job.id,
-          type: job.command,
-          datasetName: job.commandArgs.dataset_name,
-          organizationName: job.commandArgs.organization_name,
-          layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
-          annotationLayerName: job.commandArgs.annotation_layer_name,
-          boundingBox: job.commandArgs.bbox,
-          exportFileName: job.commandArgs.export_file_name,
-          tracingId: job.commandArgs.volume_tracing_id,
-          annotationId: job.commandArgs.annotation_id,
-          annotationType: job.commandArgs.annotation_type,
-          mergeSegments: job.commandArgs.merge_segments,
-          state: adaptJobState(job.state, job.manualState),
-          manualState: job.manualState,
-          result: job.returnValue,
-          resultLink: job.resultLink,
-          createdAt: job.created,
-        }),
-      )
-      // Newest jobs should be first
-      .sort((a: APIJob, b: APIJob) => a.createdAt > b.createdAt)
-  );
-}
-
-export async function getJob(jobId: string): Promise<APIJob> {
-  const job = await Request.receiveJSON(`/api/jobs/${jobId}`);
-  return {
-    id: job.id,
-    type: job.command,
-    datasetName: job.commandArgs.dataset_name,
-    organizationName: job.commandArgs.organization_name,
-    layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
-    annotationLayerName: job.commandArgs.annotation_layer_name,
-    boundingBox: job.commandArgs.bbox,
-    exportFileName: job.commandArgs.export_file_name,
-    tracingId: job.commandArgs.volume_tracing_id,
-    annotationId: job.commandArgs.annotation_id,
-    annotationType: job.commandArgs.annotation_type,
-    mergeSegments: job.commandArgs.merge_segments,
-    state: adaptJobState(job.state, job.manualState),
-    manualState: job.manualState,
-    result: job.returnValue,
-    resultLink: job.resultLink,
-    createdAt: job.created,
-  };
-}
-
-function adaptJobState(
-  celeryState: APIJobCeleryState,
-  manualState: APIJobManualState,
-): APIJobState {
-  if (manualState) {
-    return manualState;
-  }
-
-  return celeryState || "UNKNOWN";
-}
-
-export async function cancelJob(jobId: string): Promise<APIJob> {
-  return Request.receiveJSON(`/api/jobs/${jobId}/cancel`, {
-    method: "PATCH",
-  });
-}
-
-export async function startConvertToWkwJob(
-  datasetName: string,
-  organizationName: string,
-  scale: Vector3,
-): Promise<APIJob> {
-  return Request.receiveJSON(
-    `/api/jobs/run/convertToWkw/${organizationName}/${datasetName}?scale=${scale.toString()}`,
-    {
-      method: "POST",
-    },
-  );
-}
-
-export async function startFindLargestSegmentIdJob(
-  datasetName: string,
-  organizationName: string,
-  layerName: string,
-): Promise<APIJob> {
-  return Request.receiveJSON(
-    `/api/jobs/run/findLargestSegmentId/${organizationName}/${datasetName}?layerName=${layerName}`,
-    {
-      method: "POST",
-    },
-  );
-}
-
-export async function startExportTiffJob(
-  datasetName: string,
-  organizationName: string,
-  bbox: Vector6,
-  layerName: string | null | undefined,
-  mag: string | null | undefined,
-  annotationId: string | null | undefined,
-  annotationLayerName: string | null | undefined,
-  asOmeTiff: boolean,
-): Promise<APIJob> {
-  const params = new URLSearchParams({ bbox: bbox.join(","), asOmeTiff: asOmeTiff.toString() });
-  if (layerName != null) {
-    params.append("layerName", layerName);
-  }
-  if (mag != null) {
-    params.append("mag", mag);
-  }
-  if (annotationId != null) {
-    params.append("annotationId", annotationId);
-  }
-  if (annotationLayerName != null) {
-    params.append("annotationLayerName", annotationLayerName);
-  }
-  return Request.receiveJSON(
-    `/api/jobs/run/exportTiff/${organizationName}/${datasetName}?${params}`,
-    {
-      method: "POST",
-    },
-  );
-}
-
-export function startComputeMeshFileJob(
-  organizationName: string,
-  datasetName: string,
-  layerName: string,
-  mag: Vector3,
-  agglomerateView?: string,
-): Promise<APIJob> {
-  const params = new URLSearchParams();
-  params.append("layerName", layerName);
-  params.append("mag", mag.join("-"));
-
-  if (agglomerateView) {
-    params.append("agglomerateView", agglomerateView);
-  }
-
-  return Request.receiveJSON(
-    `/api/jobs/run/computeMeshFile/${organizationName}/${datasetName}?${params}`,
-    {
-      method: "POST",
-    },
-  );
-}
-
-export function startComputeSegmentIndexFileJob(
-  organizationName: string,
-  datasetName: string,
-  layerName: string,
-): Promise<APIJob> {
-  const params = new URLSearchParams();
-  params.append("layerName", layerName);
-
-  return Request.receiveJSON(
-    `/api/jobs/run/computeSegmentIndexFile/${organizationName}/${datasetName}?${params}`,
-    {
-      method: "POST",
-    },
-  );
-}
-
-export function startNucleiInferralJob(
-  organizationName: string,
-  datasetName: string,
-  layerName: string,
-  newDatasetName: string,
-): Promise<APIJob> {
-  return Request.receiveJSON(
-    `/api/jobs/run/inferNuclei/${organizationName}/${datasetName}?layerName=${layerName}&newDatasetName=${newDatasetName}`,
-    {
-      method: "POST",
-    },
-  );
-}
-
-export function startNeuronInferralJob(
-  organizationName: string,
-  datasetName: string,
-  layerName: string,
-  bbox: Vector6,
-  outputSegmentationLayerName: string,
-  newDatasetName: string,
-): Promise<APIJob> {
-  const urlParams = new URLSearchParams({
-    layerName,
-    bbox: bbox.join(","),
-    outputSegmentationLayerName,
-    newDatasetName,
-  });
-  return Request.receiveJSON(
-    `/api/jobs/run/inferNeurons/${organizationName}/${datasetName}?${urlParams.toString()}`,
-    {
-      method: "POST",
-    },
-  );
-}
-
-export function startMitochondriaInferralJob(
-  organizationName: string,
-  datasetName: string,
-  layerName: string,
-  bbox: Vector6,
-  outputSegmentationLayerName: string,
-  newDatasetName: string,
-): Promise<APIJob> {
-  const urlParams = new URLSearchParams({
-    layerName,
-    bbox: bbox.join(","),
-    outputSegmentationLayerName,
-    newDatasetName,
-  });
-  return Request.receiveJSON(
-    `/api/jobs/run/inferMitochondria/${organizationName}/${datasetName}?${urlParams.toString()}`,
-    {
-      method: "POST",
-    },
-  );
-}
-
-export function startRenderAnimationJob(
-  organizationName: string,
-  datasetName: string,
-  animationOptions: RenderAnimationOptions,
-): Promise<APIJob> {
-  return Request.sendJSONReceiveJSON(
-    `/api/jobs/run/renderAnimation/${organizationName}/${datasetName}`,
-    {
-      data: animationOptions,
-    },
-  );
-}
-
-function startSegmentationAnnotationDependentJob(
-  jobURLPath: string,
-  organizationName: string,
-  datasetName: string,
-  fallbackLayerName: string,
-  volumeLayerName: string | null | undefined,
-  newDatasetName: string,
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  outputSegmentationLayerName?: string,
-  mergeSegments?: boolean,
-): Promise<APIJob> {
-  const requestURL = new URL(
-    `/api/jobs/run/${jobURLPath}/${organizationName}/${datasetName}`,
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Location' is not assignable to parameter of type 'string | URL | undefined'.
-    location,
-  );
-  if (volumeLayerName != null) {
-    requestURL.searchParams.append("volumeLayerName", volumeLayerName);
-  }
-  requestURL.searchParams.append("fallbackLayerName", fallbackLayerName);
-  requestURL.searchParams.append("annotationId", annotationId);
-  requestURL.searchParams.append("annotationType", annotationType);
-  requestURL.searchParams.append("newDatasetName", newDatasetName);
-  if (outputSegmentationLayerName != null) {
-    requestURL.searchParams.append("outputSegmentationLayerName", outputSegmentationLayerName);
-  }
-  if (mergeSegments != null) {
-    requestURL.searchParams.append("mergeSegments", mergeSegments.toString());
-  }
-  return Request.receiveJSON(requestURL.href, {
-    method: "POST",
-  });
-}
-
-export function startMaterializingVolumeAnnotationJob(
-  organizationName: string,
-  datasetName: string,
-  fallbackLayerName: string,
-  volumeLayerName: string | null | undefined,
-  newDatasetName: string,
-  outputSegmentationLayerName: string,
-  annotationId: string,
-  annotationType: APIAnnotationType,
-  mergeSegments: boolean,
-): Promise<APIJob> {
-  return startSegmentationAnnotationDependentJob(
-    "materializeVolumeAnnotation",
-    organizationName,
-    datasetName,
-    fallbackLayerName,
-    volumeLayerName,
-    newDatasetName,
-    annotationId,
-    annotationType,
-    outputSegmentationLayerName,
-    mergeSegments,
-  );
-}
-
-export function getDatasetDatasource(
-  dataset: APIMaybeUnimportedDataset,
-): Promise<APIDataSourceWithMessages> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${dataset.dataStore.url}/data/datasets/${dataset.owningOrganization}/${dataset.name}?token=${token}`,
-    ),
-  );
-}
-
 export function readDatasetDatasource(dataset: APIDataset): Promise<APIDataSource> {
   return doWithToken((token) =>
     Request.receiveJSON(
@@ -1472,6 +1170,7 @@ export type DatasetUpdater = {
   isPublic?: boolean;
   tags?: string[];
   folderId?: string;
+  metadata?: APIDataset["metadata"];
 };
 
 export function updateDatasetPartial(
@@ -1545,8 +1244,8 @@ export function getDatasetAccessList(datasetId: APIDatasetId): Promise<Array<API
 type DatasetCompositionArgs = {
   newDatasetName: string;
   targetFolderId: string;
-  organizationName: string;
-  scale: Vector3;
+  organizationId: string;
+  voxelSize: VoxelSize;
   layers: LayerLink[];
 };
 
@@ -1575,14 +1274,14 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
     (token) =>
       // @ts-expect-error ts-migrate(2739) FIXME: Type 'Resumable' is missing the following properti... Remove this comment to see the full error message
       new ResumableJS({
-        testChunks: false,
+        testChunks: true,
         target: `${datastoreUrl}/data/datasets?token=${token}`,
-        chunkSize: 10 * 1024 * 1024,
-        // set chunk size to 10MB
+        chunkSize: 10 * 1024 * 1024, // 10MB
         permanentErrors: [400, 403, 404, 409, 415, 500, 501],
         simultaneousUploads: 3,
         chunkRetryInterval: 2000,
         maxChunkRetries: undefined,
+        xhrTimeout: 10 * 60 * 1000, // 10m
         // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
         generateUniqueIdentifier,
       }),
@@ -1593,6 +1292,7 @@ type ReserveUploadInformation = {
   organization: string;
   name: string;
   totalFileCount: number;
+  filePaths: Array<string>;
   initialTeams: Array<string>;
   folderId: string | null;
 };
@@ -1607,6 +1307,36 @@ export function reserveDatasetUpload(
       host: datastoreHost,
     }),
   );
+}
+
+export type UnfinishedUpload = {
+  uploadId: string;
+  datasetId: { name: string; organizationName: string };
+  folderId: string;
+  created: number;
+  filePaths: Array<string> | null | undefined;
+  allowedTeams: Array<string>;
+};
+
+type OldDatasetIdFormat = { name: string; team: string };
+
+export function getUnfinishedUploads(
+  datastoreHost: string,
+  organizationName: string,
+): Promise<UnfinishedUpload[]> {
+  return doWithToken(async (token) => {
+    const unfinishedUploads = (await Request.receiveJSON(
+      `/data/datasets/getUnfinishedUploads?token=${token}&organizationName=${organizationName}`,
+      {
+        host: datastoreHost,
+      },
+    )) as Array<UnfinishedUpload & { dataSourceId: OldDatasetIdFormat }>;
+    // Rename "team" to "organization" as this is the actual used current naming.
+    return unfinishedUploads.map(({ dataSourceId: { name, team }, ...rest }) => ({
+      ...rest,
+      datasetId: { name, organizationName: team },
+    }));
+  });
 }
 
 export function finishDatasetUpload(
@@ -1642,6 +1372,7 @@ type ExplorationResult = {
 
 export async function exploreRemoteDataset(
   remoteUris: string[],
+  datastoreName: string,
   credentials?: { username: string; pass: string } | null,
   preferredVoxelSize?: Vector3,
 ): Promise<ExplorationResult> {
@@ -1650,6 +1381,7 @@ export async function exploreRemoteDataset(
       const extendedUri = {
         remoteUri: uri.trim(),
         preferredVoxelSize,
+        datastoreName,
       };
 
       if (credentials) {
@@ -1672,7 +1404,7 @@ export async function exploreRemoteDataset(
 export async function storeRemoteDataset(
   datastoreUrl: string,
   datasetName: string,
-  organizationName: string,
+  organizationId: string,
   datasource: string,
   folderId: string | null,
 ): Promise<void> {
@@ -1684,7 +1416,7 @@ export async function storeRemoteDataset(
     }
 
     return Request.sendJSONReceiveJSON(
-      `${datastoreUrl}/data/datasets/${organizationName}/${datasetName}?${params}`,
+      `${datastoreUrl}/data/datasets/${organizationId}/${datasetName}?${params}`,
       {
         method: "PUT",
         data: datasource,
@@ -1803,10 +1535,10 @@ export async function revokeDatasetSharingToken(datasetId: APIDatasetId): Promis
 }
 
 export async function getOrganizationForDataset(datasetName: string): Promise<string> {
-  const { organizationName } = await Request.receiveJSON(
+  const { organizationId } = await Request.receiveJSON(
     `/api/datasets/disambiguate/${datasetName}/toNew`,
   );
-  return organizationName;
+  return organizationId;
 }
 
 export async function findDataPositionForLayer(
@@ -1905,6 +1637,27 @@ export function getEditableMappingInfo(
   );
 }
 
+export function getPositionForSegmentInAgglomerate(
+  datastoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingName: string,
+  segmentId: number,
+): Promise<Vector3> {
+  return doWithToken(async (token) => {
+    const urlParams = new URLSearchParams({
+      token,
+      segmentId: `${segmentId}`,
+    });
+    const position = await Request.receiveJSON(
+      `${datastoreUrl}/data/datasets/${datasetId.owningOrganization}/${
+        datasetId.name
+      }/layers/${layerName}/agglomerates/${mappingName}/positionForSegment?${urlParams.toString()}`,
+    );
+    return position;
+  });
+}
+
 export async function getAgglomeratesForDatasetLayer(
   datastoreUrl: string,
   datasetId: APIDatasetId,
@@ -1962,24 +1715,44 @@ export function updateUserConfiguration(
   });
 }
 
-export async function getTimeTrackingForUser(
+export async function getTimeTrackingForUserSummedPerAnnotation(
   userId: string,
   startDate: dayjs.Dayjs,
   endDate: dayjs.Dayjs,
   annotationTypes: "Explorational" | "Task" | "Task,Explorational",
   projectIds?: string[] | null,
-): Promise<Array<APITimeTracking>> {
+): Promise<Array<APITimeTrackingPerAnnotation>> {
   const params = new URLSearchParams({
-    startDate: startDate.valueOf().toString(),
-    endDate: endDate.valueOf().toString(),
+    start: startDate.valueOf().toString(),
+    end: endDate.valueOf().toString(),
   });
   if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
   if (projectIds != null && projectIds.length > 0)
     params.append("projectIds", projectIds.join(","));
-  const timeTrackingData = await Request.receiveJSON(`/api/time/user/${userId}?${params}`);
-  const { timelogs } = timeTrackingData;
-  assertResponseLimit(timelogs);
-  return timelogs;
+  params.append("annotationStates", "Active,Finished");
+  const timeTrackingData = await Request.receiveJSON(
+    `/api/time/user/${userId}/summedByAnnotation?${params}`,
+  );
+  assertResponseLimit(timeTrackingData);
+  return timeTrackingData;
+}
+
+export async function getTimeTrackingForUserSpans(
+  userId: string,
+  startDate: number,
+  endDate: number,
+  annotationTypes: "Explorational" | "Task" | "Task,Explorational",
+  projectIds?: string[] | null,
+): Promise<Array<APITimeTrackingSpan>> {
+  const params = new URLSearchParams({
+    start: startDate.toString(),
+    end: endDate.toString(),
+  });
+  if (annotationTypes != null) params.append("annotationTypes", annotationTypes);
+  if (projectIds != null && projectIds.length > 0)
+    params.append("projectIds", projectIds.join(","));
+  params.append("annotationStates", "Active,Finished");
+  return await Request.receiveJSON(`/api/time/user/${userId}/spans?${params}`);
 }
 
 export async function getTimeEntries(
@@ -1988,7 +1761,7 @@ export async function getTimeEntries(
   teamIds: string[],
   selectedTypes: AnnotationTypeFilterEnum,
   projectIds: string[],
-) {
+): Promise<Array<APITimeTrackingPerUser>> {
   const params = new URLSearchParams({
     start: startMs.toString(),
     end: endMs.toString(),
@@ -1997,6 +1770,7 @@ export async function getTimeEntries(
   // Omit empty parameters in request
   if (projectIds.length > 0) params.append("projectIds", projectIds.join(","));
   if (teamIds.length > 0) params.append("teamIds", teamIds.join(","));
+  params.append("annotationStates", "Active,Finished");
   return await Request.receiveJSON(`api/time/overview?${params}`);
 }
 
@@ -2031,8 +1805,8 @@ export function joinOrganization(inviteToken: string): Promise<void> {
   });
 }
 
-export async function switchToOrganization(organizationName: string): Promise<void> {
-  await Request.triggerRequest(`/api/auth/switchOrganization/${organizationName}`, {
+export async function switchToOrganization(organizationId: string): Promise<void> {
+  await Request.triggerRequest(`/api/auth/switchOrganization/${organizationId}`, {
     method: "POST",
   });
   location.reload();
@@ -2042,7 +1816,7 @@ export async function getUsersOrganizations(): Promise<Array<APIOrganizationComp
   const organizations: APIOrganizationCompact[] = await Request.receiveJSON(
     "/api/organizations?compact=true",
   );
-  const scmOrganization = organizations.find((org) => org.name === "scalable_minds");
+  const scmOrganization = organizations.find((org) => org.id === "scalable_minds");
   if (scmOrganization == null) {
     return organizations;
   }
@@ -2070,8 +1844,8 @@ export function sendInvitesForOrganization(
   });
 }
 
-export async function getOrganization(organizationName: string): Promise<APIOrganization> {
-  const organization = await Request.receiveJSON(`/api/organizations/${organizationName}`);
+export async function getOrganization(organizationId: string): Promise<APIOrganization> {
+  const organization = await Request.receiveJSON(`/api/organizations/${organizationId}`);
   return {
     ...organization,
     paidUntil: organization.paidUntil ?? Constants.MAXIMUM_DATE_TIMESTAMP,
@@ -2084,21 +1858,21 @@ export async function checkAnyOrganizationExists(): Promise<boolean> {
   return !(await Request.receiveJSON("/api/organizationsIsEmpty"));
 }
 
-export async function deleteOrganization(organizationName: string): Promise<void> {
-  return Request.triggerRequest(`/api/organizations/${organizationName}`, {
+export async function deleteOrganization(organizationId: string): Promise<void> {
+  return Request.triggerRequest(`/api/organizations/${organizationId}`, {
     method: "DELETE",
   });
 }
 
 export async function updateOrganization(
-  organizationName: string,
-  displayName: string,
+  organizationId: string,
+  name: string,
   newUserMailingList: string,
 ): Promise<APIOrganization> {
-  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationName}`, {
+  return Request.sendJSONReceiveJSON(`/api/organizations/${organizationId}`, {
     method: "PATCH",
     data: {
-      displayName,
+      name,
       newUserMailingList,
     },
   });
@@ -2116,7 +1890,7 @@ export async function isDatasetAccessibleBySwitching(
     );
   } else {
     return Request.receiveJSON(
-      `/api/auth/accessibleBySwitching?organizationName=${commandType.owningOrganization}&datasetName=${commandType.name}`,
+      `/api/auth/accessibleBySwitching?organizationId=${commandType.owningOrganization}&datasetName=${commandType.name}`,
       {
         showErrorToast: false,
       },
@@ -2223,7 +1997,7 @@ type MeshRequest = {
   segmentId: number; // Segment to build mesh for
   // The cubeSize is in voxels in mag <mag>
   cubeSize: Vector3;
-  scale: Vector3;
+  scaleFactor: Vector3;
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   findNeighbors: boolean;
@@ -2236,14 +2010,8 @@ export function computeAdHocMesh(
   buffer: ArrayBuffer;
   neighbors: Array<number>;
 }> {
-  const {
-    position,
-    additionalCoordinates,
-    cubeSize,
-    mappingName,
-
-    ...rest
-  } = meshRequest;
+  const { position, additionalCoordinates, cubeSize, mappingName, scaleFactor, mag, ...rest } =
+    meshRequest;
 
   return doWithToken(async (token) => {
     const params = new URLSearchParams();
@@ -2256,11 +2024,13 @@ export function computeAdHocMesh(
           // The back-end needs a small padding at the border of the
           // bounding box to calculate the mesh. This padding
           // is added here to the position and bbox size.
-          position: V3.toArray(V3.sub(position, [1, 1, 1])),
+          position: V3.toArray(V3.sub(position, mag)), // position is in mag1
           additionalCoordinates,
-          cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])),
+          cubeSize: V3.toArray(V3.add(cubeSize, [1, 1, 1])), //cubeSize is in target mag
           // Name and type of mapping to apply before building mesh (optional)
           mapping: mappingName,
+          voxelSizeFactorInUnit: scaleFactor,
+          mag,
           ...rest,
         },
       },
@@ -2317,6 +2087,67 @@ export function getAgglomerateSkeleton(
       },
     ),
   );
+}
+
+export async function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
+  dataStoreUrl: string,
+  datasetId: APIDatasetId,
+  layerName: string,
+  mappingId: string,
+  segmentIds: Array<T>,
+): Promise<Mapping> {
+  const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${dataStoreUrl}/data/datasets/${datasetId.owningOrganization}/${datasetId.name}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?token=${token}`,
+      {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+      },
+    ),
+  );
+  // Ensure that the values are bigint if the keys are bigint
+  const adaptToType = Utils.isBigInt(segmentIds[0])
+    ? (el: NumberLike) => BigInt(el)
+    : (el: NumberLike) => el;
+  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  // @ts-ignore
+  return new Map(keyValues);
+}
+
+export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
+  tracingStoreUrl: string,
+  tracingId: string,
+  segmentIds: Array<T>,
+): Promise<Mapping> {
+  const segmentIdBuffer = serializeProtoListOfLong<T>(
+    // The tracing store expects the ids to be sorted
+    segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
+  );
+  const listArrayBuffer: ArrayBuffer = await doWithToken((token) =>
+    Request.receiveArraybuffer(
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?token=${token}`,
+      {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: {
+          "Content-Type": "application/octet-stream",
+        },
+      },
+    ),
+  );
+
+  // Ensure that the values are bigint if the keys are bigint
+  const adaptToType = Utils.isBigInt(segmentIds[0])
+    ? (el: NumberLike) => BigInt(el)
+    : (el: NumberLike) => el;
+
+  const keyValues = _.zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  // @ts-ignore
+  return new Map(keyValues);
 }
 
 export function getEditableAgglomerateSkeleton(
@@ -2479,10 +2310,10 @@ export async function getEdgesForAgglomerateMinCut(
   tracingStoreUrl: string,
   tracingId: string,
   segmentsInfo: {
-    segmentPosition1: Vector3;
-    segmentPosition2: Vector3;
+    segmentId1: NumberLike;
+    segmentId2: NumberLike;
     mag: Vector3;
-    agglomerateId: number;
+    agglomerateId: NumberLike;
     editableMappingId: string;
   },
 ): Promise<Array<MinCutTargetEdge>> {
@@ -2490,7 +2321,13 @@ export async function getEdgesForAgglomerateMinCut(
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphMinCut?token=${token}`,
       {
-        data: segmentsInfo,
+        data: {
+          ...segmentsInfo,
+          // TODO: Proper 64 bit support (#6921)
+          segmentId1: Number(segmentsInfo.segmentId1),
+          segmentId2: Number(segmentsInfo.segmentId2),
+          agglomerateId: Number(segmentsInfo.agglomerateId),
+        },
       },
     ),
   );
@@ -2505,9 +2342,9 @@ export async function getNeighborsForAgglomerateNode(
   tracingStoreUrl: string,
   tracingId: string,
   segmentInfo: {
-    segmentPosition: Vector3;
+    segmentId: NumberLike;
     mag: Vector3;
-    agglomerateId: number;
+    agglomerateId: NumberLike;
     editableMappingId: string;
   },
 ): Promise<NeighborInfo> {
@@ -2515,7 +2352,12 @@ export async function getNeighborsForAgglomerateNode(
     Request.sendJSONReceiveJSON(
       `${tracingStoreUrl}/tracings/volume/${tracingId}/agglomerateGraphNeighbors?token=${token}`,
       {
-        data: segmentInfo,
+        data: {
+          ...segmentInfo,
+          // TODO: Proper 64 bit support (#6921)
+          segmentId: Number(segmentInfo.segmentId),
+          agglomerateId: Number(segmentInfo.agglomerateId),
+        },
       },
     ),
   );
@@ -2523,28 +2365,49 @@ export async function getNeighborsForAgglomerateNode(
 
 // ### Smart Select
 
-export async function getSamEmbedding(
+export async function getSamMask(
   dataset: APIDataset,
   layerName: string,
   mag: Vector3,
-  embeddingBoxMag1: BoundingBox,
+  surroundingBoxMag1: BoundingBox, // in mag 1
+  prompt:
+    | {
+        type: "BOUNDING_BOX"; // relative to topleft
+        selectionTopLeftX: number; // int, in target mag
+        selectionTopLeftY: number; // int, in target mag
+        selectionBottomRightX: number; // int, in target mag
+        selectionBottomRightY: number; // int, in target mag
+      }
+    | {
+        type: "POINT";
+        pointX: number; // int, relative to topleft
+        pointY: number; // int, relative to topleft
+      },
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
-): Promise<Float32Array> {
+): Promise<Uint8Array> {
   const params = new URLSearchParams();
   if (intensityRange != null) {
     params.append("intensityMin", `${intensityRange[0]}`);
     params.append("intensityMax", `${intensityRange[1]}`);
   }
 
+  const { type: interactionType, ...promptWithoutType } = prompt;
+
   const buffer = await Request.sendJSONReceiveArraybuffer(
-    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingEmbedding?${params}`,
+    `/api/datasets/${dataset.owningOrganization}/${dataset.name}/layers/${layerName}/segmentAnythingMask?${params}`,
     {
-      data: { mag, boundingBox: embeddingBoxMag1.asServerBoundingBox(), additionalCoordinates },
+      data: {
+        mag,
+        surroundingBoundingBox: surroundingBoxMag1.asServerBoundingBox(),
+        additionalCoordinates,
+        interactionType,
+        ...promptWithoutType,
+      },
       showErrorToast: false,
     },
   );
-  return new Float32Array(buffer);
+  return new Uint8Array(buffer);
 }
 
 // ### Short links
@@ -2565,7 +2428,7 @@ export function getShortLink(key: string): Promise<ShortLink> {
 }
 
 // ### Voxelytics
-export function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowListing>> {
+export async function getVoxelyticsWorkflows(): Promise<Array<VoxelyticsWorkflowListing>> {
   return Request.receiveJSON("/api/voxelytics/workflows");
 }
 

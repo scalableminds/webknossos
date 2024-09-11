@@ -25,7 +25,7 @@ case class DataStore(
     isDeleted: Boolean = false,
     allowsUpload: Boolean = true,
     reportUsedStorageEnabled: Boolean = false,
-    onlyAllowedOrganization: Option[ObjectId] = None
+    onlyAllowedOrganization: Option[String] = None
 )
 
 object DataStore {
@@ -93,7 +93,7 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   protected def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
-    q"(onlyAllowedOrganization is null) OR (onlyAllowedOrganization in (select _organization from webknossos.users_ where _id = $requestingUserId))"
+    q"(onlyAllowedOrganization IS NULL) OR (onlyAllowedOrganization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId))"
 
   protected def parse(r: DatastoresRow): Fox[DataStore] =
     Fox.successful(
@@ -106,40 +106,40 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         r.isdeleted,
         r.allowsupload,
         r.reportusedstorageenabled,
-        r.onlyallowedorganization.map(ObjectId(_))
+        r.onlyallowedorganization
       ))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where name = $name and $accessQuery".as[DatastoresRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE name = $name AND $accessQuery".as[DatastoresRow])
       parsed <- parseFirst(r, name)
     } yield parsed
 
   def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where url = $url and $accessQuery".as[DatastoresRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE url = $url AND $accessQuery".as[DatastoresRow])
       parsed <- parseFirst(r, url)
     } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where $accessQuery order by name".as[DatastoresRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery ORDER BY name".as[DatastoresRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def findAllWithStorageReporting: Fox[List[DataStore]] =
     for {
-      r <- run(q"select $columns from $existingCollectionName where reportUsedStorageEnabled".as[DatastoresRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE reportUsedStorageEnabled".as[DatastoresRow])
       parsed <- parseAll(r)
     } yield parsed
 
   def findOneWithUploadsAllowed(implicit ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"select $columns from $existingCollectionName where allowsUpload and $accessQuery".as[DatastoresRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE allowsUpload AND $accessQuery".as[DatastoresRow])
       parsed <- parseFirst(r, "find one with uploads allowed")
     } yield parsed
 
@@ -156,22 +156,27 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   def insertOne(d: DataStore): Fox[Unit] =
     for {
-      _ <- run(
-        q"""insert into webknossos.dataStores(name, url, publicUrl, key, isScratch, isDeleted, allowsUpload, reportUsedStorageEnabled)
-            values(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch}, ${d.isDeleted}, ${d.allowsUpload}, ${d.reportUsedStorageEnabled})""".asUpdate)
+      _ <- run(q"""INSERT INTO webknossos.dataStores
+                     (name, url, publicUrl, key, isScratch,
+                     isDeleted, allowsUpload, reportUsedStorageEnabled)
+                   VALUES(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch},
+                     ${d.isDeleted}, ${d.allowsUpload}, ${d.reportUsedStorageEnabled})""".asUpdate)
     } yield ()
 
   def deleteOneByName(name: String): Fox[Unit] =
     for {
-      _ <- run(q"update webknossos.dataStores set isDeleted = true where name = $name".asUpdate)
+      _ <- run(q"UPDATE webknossos.dataStores SET isDeleted = TRUE WHERE name = $name".asUpdate)
     } yield ()
 
   def updateOne(d: DataStore): Fox[Unit] =
     for {
-      _ <- run(q"""update webknossos.dataStores
-                   set url = ${d.url}, publicUrl = ${d.publicUrl}, isScratch = ${d.isScratch},
-                   allowsUpload = ${d.allowsUpload}
-                   where name = ${d.name}""".asUpdate)
+      _ <- run(q"""UPDATE webknossos.dataStores
+                   SET
+                     url = ${d.url},
+                     publicUrl = ${d.publicUrl},
+                     isScratch = ${d.isScratch},
+                     allowsUpload = ${d.allowsUpload}
+                   WHERE name = ${d.name}""".asUpdate)
     } yield ()
 
 }

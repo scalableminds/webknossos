@@ -11,7 +11,7 @@ import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,
 } from "oxalis/shaders/thin_plate_spline.glsl";
-import TPS3D from "libs/thin_plate_spline";
+import type TPS3D from "libs/thin_plate_spline";
 
 class EdgeShader {
   material: THREE.RawShaderMaterial;
@@ -32,16 +32,12 @@ class EdgeShader {
   }
 
   setupUniforms(treeColorTexture: THREE.DataTexture): void {
-    const state = Store.getState();
     this.uniforms = {
       activeTreeId: {
-        value: NaN,
+        value: Number.NaN,
       },
       treeColors: {
         value: treeColorTexture,
-      },
-      datasetScale: {
-        value: state.dataset.dataSource.scale,
       },
     };
 
@@ -128,7 +124,6 @@ uniform mat4 modelViewMatrix;
 uniform mat4 projectionMatrix;
 uniform float activeTreeId;
 uniform sampler2D treeColors;
-uniform vec3 datasetScale;
 
 uniform mat4 transform;
 

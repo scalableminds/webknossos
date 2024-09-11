@@ -7,14 +7,13 @@ import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
 import models.annotation.nml.{NmlParser, NmlWriter}
 import models.annotation.UploadedVolumeLayer
-import net.liftweb.common.{Box, Empty, Full}
+import net.liftweb.common.{Box, Full}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatestplus.play.PlaySpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
 import play.api.test.FakeRequest
 
 import scala.concurrent.Await
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 class NMLUnitTestSuite extends PlaySpec {
@@ -48,10 +47,10 @@ class NMLUnitTestSuite extends PlaySpec {
     val array = os.toByteArray
     NmlParser.parse("",
                     new ByteArrayInputStream(array),
-                    None,
+                    overwritingDatasetName = None,
+                    overwritingOrganizationId = None,
                     isTaskUpload = true,
-                    None,
-                    (a: String, b: String) => None)
+                    basePath = None)
   }
 
   def isParseSuccessful(
@@ -70,6 +69,28 @@ class NMLUnitTestSuite extends PlaySpec {
   "NML writing and parsing" should {
     "yield the same state" in {
       writeAndParseTracing(dummyTracing) match {
+        case Full(tuple) =>
+          tuple match {
+            case (Some(tracing), _, _, _) =>
+              assert(tracing == dummyTracing)
+            case _ => throw new Exception
+          }
+        case _ => throw new Exception
+      }
+    }
+  }
+
+  "NML writing and parsing" should {
+    "should add missing isExpanded props with a default of true" in {
+      val treeGroupsWithOmittedIsExpanded = dummyTracing.treeGroups.map(
+        treeGroup =>
+          new TreeGroup(name = treeGroup.name,
+                        groupId = treeGroup.groupId,
+                        children = treeGroup.children,
+                        isExpanded = if (treeGroup.isExpanded.getOrElse(true)) None else Some(false)))
+      val dummyTracingWithOmittedIsExpandedTreeGroupProp =
+        dummyTracing.copy(treeGroups = treeGroupsWithOmittedIsExpanded)
+      writeAndParseTracing(dummyTracingWithOmittedIsExpandedTreeGroupProp) match {
         case Full(tuple) =>
           tuple match {
             case (Some(tracing), _, _, _) =>

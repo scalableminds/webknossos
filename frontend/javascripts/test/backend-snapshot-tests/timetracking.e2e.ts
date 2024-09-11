@@ -5,10 +5,11 @@ import {
   setCurrToken,
   resetDatabase,
   writeTypeCheckingFile,
-} from "test/enzyme/e2e-setup";
+  replaceVolatileValues,
+} from "test/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import test from "ava";
-import { APITeam, APIUser } from "types/api_flow_types";
+import type { APITeam, APIUser } from "types/api_flow_types";
 
 let activeUser: APIUser;
 let firstTeam: APITeam;
@@ -25,31 +26,27 @@ test.before("Reset database and initialize values", async () => {
 
 // Note: /api/users/:userId/loggedTime is tested in users.e2e.ts
 
-test("getTimeTrackingForUser", async (t) => {
-  const timeTrackingForUser = await api.getTimeTrackingForUser(
+test("getTimeTrackingForUserSpans", async (t) => {
+  const timeTrackingForUser = await api.getTimeTrackingForUserSpans(
     activeUser.id,
-    dayjs("20180101", "YYYYMMDD"),
-    dayjs("20181001", "YYYYMMDD"),
+    dayjs("20180101", "YYYYMMDD").valueOf(),
+    dayjs("20181001", "YYYYMMDD").valueOf(),
     "Task",
   );
   t.true(timeTrackingForUser.length > 0);
-  t.snapshot(timeTrackingForUser, {
-    id: "timetracking-timeTrackingForUser",
-  });
+  t.snapshot(replaceVolatileValues(timeTrackingForUser));
 });
 
 test("getTimeTrackingForUser for a user other than the active user", async (t) => {
   const idUserC = "770b9f4d2a7c0e4d008da6ef";
-  const timeTrackingForUser = await api.getTimeTrackingForUser(
+  const timeTrackingForUser = await api.getTimeTrackingForUserSpans(
     idUserC,
-    dayjs("20160401", "YYYYMMDD"),
-    dayjs("20160420", "YYYYMMDD"),
+    dayjs("20160401", "YYYYMMDD").valueOf(),
+    dayjs("20160420", "YYYYMMDD").valueOf(),
     "Task",
   );
   t.true(timeTrackingForUser.length > 0);
-  t.snapshot(timeTrackingForUser, {
-    id: "timetracking-timeTrackingForUser-C",
-  });
+  t.snapshot(replaceVolatileValues(timeTrackingForUser));
 });
 
 test("getProjectProgressReport", async (t) => {
@@ -57,9 +54,7 @@ test("getProjectProgressReport", async (t) => {
   writeTypeCheckingFile(projectProgressReport, "project-progress", "APIProjectProgressReport", {
     isArray: true,
   });
-  t.snapshot(projectProgressReport, {
-    id: "timetracking-projectProgressReport",
-  });
+  t.snapshot(projectProgressReport);
 });
 
 test("getAvailableTasksReport", async (t) => {
@@ -67,7 +62,5 @@ test("getAvailableTasksReport", async (t) => {
   writeTypeCheckingFile(availableTasksReport, "available-tasks", "APIAvailableTasksReport", {
     isArray: true,
   });
-  t.snapshot(availableTasksReport, {
-    id: "timetracking-availableTasksReport",
-  });
+  t.snapshot(availableTasksReport);
 });

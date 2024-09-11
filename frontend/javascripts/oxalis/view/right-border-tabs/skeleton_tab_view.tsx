@@ -7,7 +7,7 @@ import {
   Modal,
   Tooltip,
   notification,
-  MenuProps,
+  type MenuProps,
   Space,
 } from "antd";
 import type { Dispatch } from "redux";
@@ -22,7 +22,7 @@ import {
 import { batchActions } from "redux-batched-actions";
 import { connect } from "react-redux";
 import { saveAs } from "file-saver";
-import { BlobReader, BlobWriter, ZipReader, Entry } from "@zip.js/zip.js";
+import { BlobReader, BlobWriter, ZipReader, type Entry } from "@zip.js/zip.js";
 import * as React from "react";
 import _ from "lodash";
 import memoizeOne from "memoize-one";
@@ -32,6 +32,7 @@ import {
   createGroupToTreesMap,
   callDeep,
   MISSING_GROUP_ID,
+  GroupTypeEnum,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { createMutableTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { formatNumberToLength, formatLengthAsVx } from "libs/format_utils";
@@ -74,7 +75,7 @@ import {
   setTreeGroupAction,
   setTreeGroupsAction,
   addTreesAndGroupsAction,
-  BatchableUpdateTreeAction,
+  type BatchableUpdateTreeAction,
   batchUpdateGroupsAndTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { setVersionNumberAction } from "oxalis/model/actions/save_actions";
@@ -99,6 +100,8 @@ import { api } from "oxalis/singletons";
 import messages from "messages";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import DeleteGroupModalView from "./delete_group_modal_view";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
+import { LongUnitToShortUnitMap } from "oxalis/constants";
 
 const { confirm } = Modal;
 const treeTabId = "tree-list";
@@ -114,9 +117,10 @@ type Props = DispatchProps & StateProps;
 type State = {
   isUploading: boolean;
   isDownloading: boolean;
-  selectedTrees: Array<number>;
+  selectedTreeIds: Array<number>;
   groupToDelete: number | null | undefined;
 };
+
 export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
   try {
     const wrappedAddTreesAndGroupsAction = (
@@ -332,31 +336,36 @@ function checkAndConfirmDeletingInitialNode(treeIds: number[]) {
 }
 
 class SkeletonTabView extends React.PureComponent<Props, State> {
-  state: State = {
-    isUploading: false,
-    isDownloading: false,
-    selectedTrees: [],
-    groupToDelete: null,
-  };
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      isUploading: false,
+      isDownloading: false,
+      selectedTreeIds:
+        props.skeletonTracing?.activeTreeId != null ? [props.skeletonTracing.activeTreeId] : [],
+      groupToDelete: null,
+    };
+  }
 
   getTreeAndTreeGroupList = memoizeOne(
     (trees: TreeMap, treeGroups: Array<TreeGroup>, sortBy: string): Array<TreeOrTreeGroup> => {
       const groupToTreesMap = createGroupToTreesMap(trees);
-      const rootGroup = {
+      const rootGroup: TreeGroup = {
         name: "Root",
         groupId: MISSING_GROUP_ID,
         children: treeGroups,
+        isExpanded: true,
       };
 
       const makeTree = (tree: Tree) => ({
         name: tree.name,
-        type: "TREE",
+        type: GroupTypeEnum.TREE,
         id: tree.treeId,
       });
 
       const makeGroup = (group: TreeGroup) => ({
         name: group.name,
-        type: "GROUP",
+        type: GroupTypeEnum.GROUP,
         id: group.groupId,
       });
 
@@ -504,16 +513,16 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
   handleDelete = () => {
     // If there exist selected trees, ask to remove them
-    const { selectedTrees } = this.state;
-    const numbOfSelectedTrees = selectedTrees.length;
+    const { selectedTreeIds } = this.state;
+    const selectedTreeCount = selectedTreeIds.length;
 
-    if (numbOfSelectedTrees > 0) {
+    if (selectedTreeCount > 0) {
       const deleteAllSelectedTrees = () => {
-        checkAndConfirmDeletingInitialNode(selectedTrees).then(() => {
-          const deleteTreeActions = selectedTrees.map((treeId) => deleteTreeAction(treeId));
+        checkAndConfirmDeletingInitialNode(selectedTreeIds).then(() => {
+          const deleteTreeActions = selectedTreeIds.map((treeId) => deleteTreeAction(treeId));
           this.props.onBatchActions(deleteTreeActions, "DELETE_TREE");
           this.setState({
-            selectedTrees: [],
+            selectedTreeIds: [],
           });
         });
       };
@@ -521,7 +530,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       this.showModalConfirmWarning(
         "Delete all selected trees?",
         messages["tracing.delete_multiple_trees"]({
-          countOfTrees: numbOfSelectedTrees,
+          countOfTrees: selectedTreeCount,
         }),
         deleteAllSelectedTrees,
       );
@@ -565,13 +574,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     // Wait 1 second for the Modal to render
     const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
     const state = Store.getState();
-    const nml = serializeToNml(
-      state,
-      this.props.annotation,
-      skeletonTracing,
-      buildInfo,
-      applyTransforms,
-    );
+    const nml = serializeToNml(state, state.tracing, skeletonTracing, buildInfo, applyTransforms);
     this.setState({
       isDownloading: false,
     });
@@ -596,20 +599,44 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
   }
 
-  onSelectTree = (id: number) => {
+  onSingleSelectTree = (treeId: number, dispatchSetActiveTree: boolean) => {
+    if (!this.props.skeletonTracing) {
+      return;
+    }
+
+    this.setState({
+      selectedTreeIds: [treeId],
+    });
+    if (dispatchSetActiveTree) {
+      this.props.onSetActiveTree(treeId);
+    }
+  };
+
+  onRangeSelectTrees = (ids: number[]) => {
+    // Use this method only for range selecting multiple trees (SHIFT + click)
     const tracing = this.props.skeletonTracing;
 
     if (!tracing) {
       return;
     }
+    this.setState({
+      selectedTreeIds: ids,
+    });
+  };
 
-    const { selectedTrees } = this.state;
+  onMultiSelectTree = (id: number) => {
+    // Use this method only for selecting individual trees for multi-select (CTRL + click)
+    const tracing = this.props.skeletonTracing;
+    const { selectedTreeIds } = this.state;
 
+    if (!tracing) {
+      return;
+    }
     // If the tree was already selected
-    if (selectedTrees.includes(id)) {
+    if (selectedTreeIds.includes(id)) {
       // If the tree is the second last -> set remaining tree to be the active tree
-      if (selectedTrees.length === 2) {
-        const lastSelectedTree = selectedTrees.find((treeId) => treeId !== id);
+      if (selectedTreeIds.length === 2) {
+        const lastSelectedTree = selectedTreeIds.find((treeId) => treeId !== id);
 
         if (lastSelectedTree != null) {
           this.props.onSetActiveTree(lastSelectedTree);
@@ -619,39 +646,25 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
       } else {
         // Just deselect the tree
         this.setState((prevState) => ({
-          selectedTrees: prevState.selectedTrees.filter((currentId) => currentId !== id),
+          selectedTreeIds: prevState.selectedTreeIds.filter((currentId) => currentId !== id),
         }));
       }
     } else {
       const { activeTreeId } = tracing;
 
-      if (selectedTrees.length === 0) {
-        this.props.onDeselectActiveGroup();
+      this.props.onDeselectActiveGroup();
 
-        /* If there are no selected trees and no active tree:
-           Set selected tree to the active tree */
-        if (activeTreeId == null) {
-          this.props.onSetActiveTree(id);
-          return;
-        }
-      }
-
-      // If the active node is selected, don't go into multi selection mode
-      if (activeTreeId === id) {
-        return;
-      }
-
-      if (selectedTrees.length === 0 && activeTreeId != null) {
+      if (selectedTreeIds.length === 0 && activeTreeId != null) {
         // If this is the first selected tree -> also select the active tree
         this.setState({
-          selectedTrees: [id, activeTreeId],
+          selectedTreeIds: [id, activeTreeId],
         });
         // Remove the current active tree
         this.props.onDeselectActiveTree();
       } else {
         // Just select this tree
         this.setState((prevState) => ({
-          selectedTrees: [...prevState.selectedTrees, id],
+          selectedTreeIds: [...prevState.selectedTreeIds, id],
         }));
       }
     }
@@ -659,12 +672,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 
   deselectAllTrees = () => {
     this.setState({
-      selectedTrees: [],
+      selectedTreeIds: [],
     });
   };
 
   handleSearchSelect = (selectedElement: TreeOrTreeGroup) => {
-    if (selectedElement.type === "TREE") {
+    if (selectedElement.type === GroupTypeEnum.TREE) {
       this.props.onSetActiveTree(selectedElement.id);
     } else {
       this.props.onSetActiveTreeGroup(selectedElement.id);
@@ -684,8 +697,10 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
         activeGroupId={this.props.skeletonTracing.activeGroupId}
         allowUpdate={this.props.allowUpdate}
         sortBy={sortBy}
-        selectedTrees={this.state.selectedTrees}
-        onSelectTree={this.onSelectTree}
+        selectedTreeIds={this.state.selectedTreeIds}
+        onSingleSelectTree={this.onSingleSelectTree}
+        onMultiSelectTree={this.onMultiSelectTree}
+        onRangeSelectTrees={this.onRangeSelectTrees}
         deselectAllTrees={this.deselectAllTrees}
         onDeleteGroup={this.showDeleteGroupModal}
       />
@@ -771,13 +786,13 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
   }
 
   getSelectedTreesAlert = () =>
-    this.state.selectedTrees.length > 0 ? (
+    this.state.selectedTreeIds.length > 1 ? (
       <Alert
         type="info"
         message={
           <React.Fragment>
-            {this.state.selectedTrees.length}{" "}
-            {Utils.pluralize("Tree", this.state.selectedTrees.length)} selected.{" "}
+            {this.state.selectedTreeIds.length}{" "}
+            {Utils.pluralize("Tree", this.state.selectedTreeIds.length)} selected.{" "}
             <Button type="dashed" size="small" onClick={this.deselectAllTrees}>
               Clear Selection
             </Button>
@@ -787,10 +802,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     ) : null;
 
   handleMeasureAllSkeletonsLength = () => {
+    const { unit } = Store.getState().dataset.dataSource.scale;
     const [totalLengthNm, totalLengthVx] = api.tracing.measureAllTrees();
     notification.open({
       message: `The total length of all skeletons is ${formatNumberToLength(
         totalLengthNm,
+        LongUnitToShortUnitMap[unit],
       )} (${formatLengthAsVx(totalLengthVx)}).`,
       icon: <i className="fas fa-ruler" />,
     });
@@ -811,9 +828,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
 
     const { showSkeletons } = skeletonTracing;
-    const activeTreeName = getActiveTree(skeletonTracing)
-      .map((activeTree) => activeTree.name)
-      .getOrElse("");
+    const activeTreeName = getActiveTree(skeletonTracing)?.name ?? "";
     const activeGroupName = getActiveTreeGroup(skeletonTracing)
       .map((activeGroup) => activeGroup.name)
       .getOrElse("");
@@ -830,6 +845,11 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
     const { groupToDelete } = this.state;
     const isEditingDisabled = !this.props.allowUpdate;
+    const { isAnnotationLockedByUser, isOwner } = this.props;
+    const isEditingDisabledMessage = messages["tracing.read_only_mode_notification"](
+      isAnnotationLockedByUser,
+      isOwner,
+    );
 
     return (
       <div id={treeTabId} className="padded-tab-content">
@@ -863,22 +883,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                   </AdvancedSearchPopover>
                   <ButtonComponent
                     onClick={this.props.onCreateTree}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : "Create new Tree (C)"
-                    }
+                    title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
                     disabled={isEditingDisabled}
                   >
                     <i className="fas fa-plus" />
                   </ButtonComponent>
                   <ButtonComponent
                     onClick={this.handleDelete}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : "Delete Selected Trees"
-                    }
+                    title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
                     disabled={isEditingDisabled}
                   >
                     <i className="far fa-trash-alt" />
@@ -915,12 +927,8 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     onChange={this.handleChangeName}
                     value={activeTreeName || activeGroupName}
                     disabled={noTreesAndGroups || isEditingDisabled}
-                    title={
-                      isEditingDisabled
-                        ? messages["tracing.read_only_mode_notification"]
-                        : undefined
-                    }
-                    style={{ width: "70%" }}
+                    title={isEditingDisabled ? isEditingDisabledMessage : undefined}
+                    style={{ width: "80%" }}
                   />
                   <ButtonComponent
                     onClick={this.props.onSelectNextTreeForward}
@@ -987,11 +995,12 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState) => ({
-  annotation: state.tracing,
   allowUpdate: state.tracing.restrictions.allowUpdate,
   skeletonTracing: state.tracing.skeleton,
   userConfiguration: state.userConfiguration,
   isSkeletonLayerTransformed: isSkeletonLayerTransformed(state),
+  isAnnotationLockedByUser: state.tracing.isLockedByOwner,
+  isOwner: isAnnotationOwner(state),
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<any>) => ({

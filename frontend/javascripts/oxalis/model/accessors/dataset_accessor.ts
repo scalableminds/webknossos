@@ -19,14 +19,20 @@ import type {
   ActiveMappingInfo,
 } from "oxalis/store";
 import ErrorHandling from "libs/error_handling";
-import { IdentityTransform, Vector3, Vector4, ViewMode } from "oxalis/constants";
+import {
+  IdentityTransform,
+  LongUnitToShortUnitMap,
+  type Vector3,
+  type Vector4,
+  type ViewMode,
+} from "oxalis/constants";
 import constants, { ViewModeValues, Vector3Indicies, MappingStatusEnum } from "oxalis/constants";
 import { aggregateBoundingBox, maxValue } from "libs/utils";
-import { formatExtentWithLength, formatNumberToLength } from "libs/format_utils";
+import { formatExtentInUnitWithLength, formatNumberToLength } from "libs/format_utils";
 import messages from "messages";
-import { DataLayer } from "types/schemas/datasource.types";
+import type { DataLayer } from "types/schemas/datasource.types";
 import BoundingBox from "../bucket_data_handling/bounding_box";
-import { M4x4, Matrix4x4, V3 } from "libs/mjs";
+import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import { convertToDenseResolution, ResolutionInfo } from "../helpers/resolution_info";
 import MultiKeyMap from "libs/multi_key_map";
 import {
@@ -34,7 +40,7 @@ import {
   createAffineTransformFromMatrix,
   createThinPlateSplineTransform,
   invertTransform,
-  Transform,
+  type Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
 
@@ -237,10 +243,10 @@ export function getDefaultValueRangeOfLayer(
       return [0, 2 ** 63 - 1];
 
     case "float":
-      return [0, maxFloatValue];
+      return [-maxFloatValue, maxFloatValue];
 
     case "double":
-      return [0, maxDoubleValue];
+      return [-maxDoubleValue, maxDoubleValue];
 
     default:
       return [0, 255];
@@ -263,8 +269,16 @@ export function getLayerBoundingBox(dataset: APIDataset, layerName: string): Bou
 }
 
 export function getDatasetBoundingBox(dataset: APIDataset): BoundingBox {
-  const min: Vector3 = [Infinity, Infinity, Infinity];
-  const max: Vector3 = [-Infinity, -Infinity, -Infinity];
+  const min: Vector3 = [
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+    Number.POSITIVE_INFINITY,
+  ];
+  const max: Vector3 = [
+    Number.NEGATIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ];
   const layers = getDataLayers(dataset);
 
   for (const dataLayer of layers) {
@@ -299,15 +313,17 @@ export function getDatasetExtentInVoxel(dataset: APIDataset) {
   };
   return extent;
 }
-export function getDatasetExtentInLength(dataset: APIDataset): BoundingBoxObject {
+export function getDatasetExtentInUnit(dataset: APIDataset): BoundingBoxObject {
   const extentInVoxel = getDatasetExtentInVoxel(dataset);
-  const { scale } = dataset.dataSource;
-  const topLeft = extentInVoxel.topLeft.map((val, index) => val * scale[index]) as any as Vector3;
+  const scaleFactor = dataset.dataSource.scale.factor;
+  const topLeft = extentInVoxel.topLeft.map(
+    (val, index) => val * scaleFactor[index],
+  ) as any as Vector3;
   const extent = {
     topLeft,
-    width: extentInVoxel.width * scale[0],
-    height: extentInVoxel.height * scale[1],
-    depth: extentInVoxel.depth * scale[2],
+    width: extentInVoxel.width * scaleFactor[0],
+    height: extentInVoxel.height * scaleFactor[1],
+    depth: extentInVoxel.depth * scaleFactor[2],
   };
   return extent;
 }
@@ -321,11 +337,13 @@ export function getDatasetExtentAsString(
 
   if (inVoxel) {
     const extentInVoxel = getDatasetExtentInVoxel(dataset);
-    return `${formatExtentWithLength(extentInVoxel, (x) => `${x}`)} voxel`;
+    return `${formatExtentInUnitWithLength(extentInVoxel, (x) => `${x}`)} voxel`;
   }
 
-  const extent = getDatasetExtentInLength(dataset);
-  return formatExtentWithLength(extent, formatNumberToLength);
+  const extent = getDatasetExtentInUnit(dataset);
+  return formatExtentInUnitWithLength(extent, (length) =>
+    formatNumberToLength(length, LongUnitToShortUnitMap[dataset.dataSource.scale.unit]),
+  );
 }
 export function determineAllowedModes(settings?: Settings): {
   preferredMode: APIAllowedMode | null | undefined;
@@ -557,7 +575,7 @@ export function getEnabledColorLayers(
 
 export function getThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
-  const organizationName = dataset.owningOrganization;
+  const organizationId = dataset.owningOrganization;
   const layers = dataset.dataSource.dataLayers;
 
   const colorLayer = _.find(layers, {
@@ -565,18 +583,18 @@ export function getThumbnailURL(dataset: APIDataset): string {
   });
 
   if (colorLayer) {
-    return `/api/datasets/${organizationName}/${datasetName}/layers/${colorLayer.name}/thumbnail`;
+    return `/api/datasets/${organizationId}/${datasetName}/layers/${colorLayer.name}/thumbnail`;
   }
 
   return "";
 }
 export function getSegmentationThumbnailURL(dataset: APIDataset): string {
   const datasetName = dataset.name;
-  const organizationName = dataset.owningOrganization;
+  const organizationId = dataset.owningOrganization;
   const segmentationLayer = getFirstSegmentationLayer(dataset);
 
   if (segmentationLayer) {
-    return `/api/datasets/${organizationName}/${datasetName}/layers/${segmentationLayer.name}/thumbnail`;
+    return `/api/datasets/${organizationId}/${datasetName}/layers/${segmentationLayer.name}/thumbnail`;
   }
 
   return "";
@@ -658,21 +676,26 @@ const dummyMapping = {
   mappingColors: null,
   hideUnmappedIds: false,
   mappingStatus: MappingStatusEnum.DISABLED,
-  mappingSize: 0,
   mappingType: "JSON",
 } as const;
+
+export function getMappingInfoOrNull(
+  activeMappingInfos: Record<string, ActiveMappingInfo>,
+  layerName: string | null | undefined,
+): ActiveMappingInfo | null {
+  if (layerName != null && activeMappingInfos[layerName]) {
+    return activeMappingInfos[layerName];
+  }
+  return null;
+}
 
 export function getMappingInfo(
   activeMappingInfos: Record<string, ActiveMappingInfo>,
   layerName: string | null | undefined,
 ): ActiveMappingInfo {
-  if (layerName != null && activeMappingInfos[layerName]) {
-    return activeMappingInfos[layerName];
-  }
-
   // Return a dummy object (this mirrors webKnossos' behavior before the support of
   // multiple segmentation layers)
-  return dummyMapping;
+  return getMappingInfoOrNull(activeMappingInfos, layerName) || dummyMapping;
 }
 export function getMappingInfoForSupportedLayer(state: OxalisState): ActiveMappingInfo {
   const layer = getSegmentationLayerWithMappingSupport(state);
@@ -707,7 +730,7 @@ function _getOriginalTransformsForLayerOrNull(
   } else if (type === "thin_plate_spline") {
     const { source, target } = transformation.correspondences;
 
-    return createThinPlateSplineTransform(target, source, dataset.dataSource.scale);
+    return createThinPlateSplineTransform(source, target, dataset.dataSource.scale.factor);
   }
 
   console.error(

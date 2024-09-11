@@ -18,7 +18,6 @@ import java.nio.file.Path
 import scala.concurrent.ExecutionContext
 
 class BinaryDataService(val dataBaseDir: Path,
-                        maxCacheSize: Int,
                         val agglomerateServiceOpt: Option[AgglomerateService],
                         remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
                         val applicationHealthService: Option[ApplicationHealthService],
@@ -28,11 +27,10 @@ class BinaryDataService(val dataBaseDir: Path,
     with DatasetDeleter
     with LazyLogging {
 
-  /* Note that this must stay in sync with the front-end constant
-    compare https://github.com/scalableminds/webknossos/issues/5223 */
+  /* Note that this must stay in sync with the front-end constant MAX_MAG_FOR_AGGLOMERATE_MAPPING
+     compare https://github.com/scalableminds/webknossos/issues/5223 */
   private val MaxMagForAgglomerateMapping = 16
 
-  private lazy val shardHandleCache = new DataCubeCache(maxCacheSize)
   private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
 
   def handleDataRequest(request: DataServiceDataRequest): Fox[Array[Byte]] = {
@@ -93,15 +91,15 @@ class BinaryDataService(val dataBaseDir: Path,
       val bucketProvider =
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
           request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
-      bucketProvider.load(readInstruction, shardHandleCache).futureBox.flatMap {
+      bucketProvider.load(readInstruction).futureBox.flatMap {
         case Failure(msg, Full(e: InternalError), _) =>
           applicationHealthService.foreach(a => a.pushError(e))
-          logger.warn(
+          logger.error(
             s"Caught internal error: $msg while loading a bucket for layer ${request.dataLayer.name} of dataset ${request.dataSource.id}")
           Fox.failure(e.getMessage)
         case f: Failure =>
           if (datasetErrorLoggingService.exists(_.shouldLog(request.dataSource.id.team, request.dataSource.id.name))) {
-            logger.debug(
+            logger.error(
               s"Bucket loading for layer ${request.dataLayer.name} of dataset ${request.dataSource.id.team}/${request.dataSource.id.name} at ${readInstruction.bucket} failed: ${Fox
                 .failureChainAsString(f, includeStackTraces = true)}")
             datasetErrorLoggingService.foreach(_.registerLogged(request.dataSource.id.team, request.dataSource.id.name))
@@ -176,26 +174,20 @@ class BinaryDataService(val dataBaseDir: Path,
     compressed
   }
 
-  def clearCache(organizationName: String, datasetName: String, layerName: Option[String]): (Int, Int, Int) = {
-    val dataSourceId = DataSourceId(datasetName, organizationName)
-
-    def dataCubeMatchPredicate(cubeKey: CachedCube) =
-      cubeKey.dataSourceName == datasetName && cubeKey.organization == organizationName && layerName.forall(
-        _ == cubeKey.dataLayerName)
+  def clearCache(organizationId: String, datasetName: String, layerName: Option[String]): (Int, Int, Int) = {
+    val dataSourceId = DataSourceId(datasetName, organizationId)
 
     def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
-      agglomerateKey.datasetName == datasetName && agglomerateKey.organizationName == organizationName && layerName
-        .forall(_ == agglomerateKey.layerName)
+      agglomerateKey.datasetName == datasetName && agglomerateKey.organizationId == organizationId && layerName.forall(
+        _ == agglomerateKey.layerName)
 
     def bucketProviderPredicate(key: (DataSourceId, String)): Boolean =
-      key._1 == DataSourceId(datasetName, organizationName) && layerName.forall(_ == key._2)
+      key._1 == DataSourceId(datasetName, organizationId) && layerName.forall(_ == key._2)
 
     val closedAgglomerateFileHandleCount =
       agglomerateServiceOpt.map(_.agglomerateFileCache.clear(agglomerateFileMatchPredicate)).getOrElse(0)
 
-    val closedDataCubeHandleCount = shardHandleCache.clear(dataCubeMatchPredicate)
-
-    bucketProviderCache.clear(bucketProviderPredicate)
+    val clearedBucketProviderCount = bucketProviderCache.clear(bucketProviderPredicate)
 
     def chunkContentsPredicate(key: String): Boolean =
       key.startsWith(s"${dataSourceId.toString}") && layerName.forall(l =>
@@ -203,7 +195,7 @@ class BinaryDataService(val dataBaseDir: Path,
 
     val removedChunksCount = sharedChunkContentsCache.map(_.clear(chunkContentsPredicate)).getOrElse(0)
 
-    (closedAgglomerateFileHandleCount, closedDataCubeHandleCount, removedChunksCount)
+    (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount)
   }
 
 }

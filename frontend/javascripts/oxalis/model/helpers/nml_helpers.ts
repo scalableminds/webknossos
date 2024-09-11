@@ -26,16 +26,16 @@ import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_hel
 import messages from "messages";
 import * as Utils from "libs/utils";
 import {
-  BoundingBoxType,
+  type BoundingBoxType,
   IdentityTransform,
-  TreeType,
+  type TreeType,
   TreeTypeEnum,
-  Vector3,
+  type Vector3,
 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import { location } from "libs/window";
 import { coalesce } from "libs/utils";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
 import { getTransformsForSkeletonLayer } from "../accessors/dataset_accessor";
 
@@ -256,9 +256,10 @@ function serializeParameters(
           wkUrl: `${location.protocol}//${location.host}`,
         }),
         serializeTag("scale", {
-          x: state.dataset.dataSource.scale[0],
-          y: state.dataset.dataSource.scale[1],
-          z: state.dataset.dataSource.scale[2],
+          x: state.dataset.dataSource.scale.factor[0],
+          y: state.dataset.dataSource.scale.factor[1],
+          z: state.dataset.dataSource.scale.factor[2],
+          unit: state.dataset.dataSource.scale.unit,
         }),
         serializeTag("offset", {
           x: 0,
@@ -503,6 +504,7 @@ function serializeTreeGroups(treeGroups: Array<TreeGroup>, trees: Array<Tree>): 
         {
           id: treeGroup.groupId,
           name: treeGroup.name,
+          ...(treeGroup.isExpanded ? {} : { isExpanded: treeGroup.isExpanded }),
         },
         serializeTreeGroups(treeGroup.children, trees),
       ),
@@ -679,7 +681,7 @@ function splitTreeIntoComponents(
       color: tree.color,
       name: `${tree.name}_${i}`,
       comments: tree.comments.filter((comment) => nodeIdsSet.has(comment.nodeId)),
-      nodes: new DiffableMap(nodeIds.map((nodeId) => [nodeId, tree.nodes.get(nodeId)])),
+      nodes: new DiffableMap(nodeIds.map((nodeId) => [nodeId, tree.nodes.getOrThrow(nodeId)])),
       branchPoints: tree.branchPoints.filter((bp) => nodeIdsSet.has(bp.nodeId)),
       timestamp: tree.timestamp,
       edges: EdgeCollection.loadFromArray(edges),
@@ -930,6 +932,7 @@ export function parseNml(nmlString: string): Promise<{
             const newGroup = {
               groupId: _parseInt(attr, "id"),
               name: _parseEntities(attr, "name"),
+              isExpanded: _parseBool(attr, "isExpanded", true),
               children: [],
             };
             if (existingTreeGroupIds.has(newGroup.groupId)) {

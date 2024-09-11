@@ -1,7 +1,7 @@
 import type { Vector3, Vector4, BucketAddress } from "oxalis/constants";
 import constants from "oxalis/constants";
-import { type AdditionalCoordinate } from "types/api_flow_types";
-import { type ResolutionInfo } from "./resolution_info";
+import type { AdditionalCoordinate } from "types/api_flow_types";
+import type { ResolutionInfo } from "./resolution_info";
 
 export function globalPositionToBucketPosition(
   [x, y, z]: Vector3,

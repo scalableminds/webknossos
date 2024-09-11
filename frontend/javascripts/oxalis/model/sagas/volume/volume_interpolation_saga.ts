@@ -3,14 +3,14 @@ import distanceTransform from "distance-transform";
 import { V2, V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { pluralize } from "libs/utils";
-import ndarray, { NdArray } from "ndarray";
+import ndarray, { type NdArray } from "ndarray";
 import {
   ContourModeEnum,
   InterpolationModeEnum,
   OrthoViews,
   ToolsWithInterpolationCapabilities,
-  TypedArrayWithoutBigInt,
-  Vector3,
+  type TypedArrayWithoutBigInt,
+  type Vector3,
 } from "oxalis/constants";
 import { reuseInstanceOnEquality } from "oxalis/model/accessors/accessor_helpers";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
@@ -33,9 +33,9 @@ import {
 import Dimensions from "oxalis/model/dimensions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import type { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { Model, api } from "oxalis/singletons";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { call, put } from "typed-redux-saga";
 import { createVolumeLayer, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 import { ensureMaybeActiveMappingIsLocked } from "../saga_helpers";
@@ -480,7 +480,7 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 
   // Theoretically, the user might extrude (or interpolate, even though this is less likely) multiple
-  // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything inbetween manually.
+  // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything in between manually.
   // In that case, the interpolation/extrusion would always start from slice 0 which is unexpected and leads
   // to additional performance overhead (also the maximum interpolation depth will be exceeded at some point).
   // As a counter measure, we simply use the current position to update the current direction (and with it

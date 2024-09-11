@@ -1,5 +1,5 @@
 import { Alert, Modal, Button, Row, Col, Input } from "antd";
-import Markdown from "react-remarkable";
+import Markdown from "libs/markdown_adapter";
 import * as React from "react";
 
 function getFirstLine(comment: string) {
@@ -9,16 +9,7 @@ function getFirstLine(comment: string) {
 
 export function MarkdownWrapper({ source, singleLine }: { source: string; singleLine?: boolean }) {
   const content = singleLine ? getFirstLine(source) : source;
-  return (
-    <Markdown
-      source={content}
-      options={{
-        html: false,
-        breaks: true,
-        linkify: true,
-      }}
-    />
-  );
+  return <Markdown>{content}</Markdown>;
 }
 
 export function MarkdownModal({
@@ -34,19 +25,32 @@ export function MarkdownModal({
   isOpen?: boolean;
   placeholder?: string;
   onOk: () => void;
-  onChange: React.ChangeEventHandler<HTMLTextAreaElement>;
+  onChange: (newValue: string) => void;
 }) {
   const placeholderText = placeholder ? placeholder : `Add ${label}`;
+  const [currentValue, setCurrentValue] = React.useState(source);
+
+  const onConfirm = () => {
+    onChange(currentValue);
+    onOk();
+  };
+
+  const setCurrentValueFromEvent = (
+    event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>,
+  ) => {
+    setCurrentValue(event.target.value);
+  };
+
   return (
     <Modal
       key="comment-markdown-modal"
       title={<span>{`Edit ${label}`}</span>}
       open={isOpen}
       onCancel={onOk}
-      closable={false}
+      closable={true}
       width={700}
       footer={[
-        <Button key="back" onClick={onOk}>
+        <Button key="back" onClick={onConfirm}>
           Ok
         </Button>,
       ]}
@@ -71,9 +75,9 @@ export function MarkdownModal({
       <Row gutter={16}>
         <Col span={12}>
           <Input.TextArea
-            defaultValue={source}
+            defaultValue={currentValue}
             placeholder={placeholderText}
-            onChange={onChange}
+            onChange={setCurrentValueFromEvent}
             rows={5}
             autoSize={{
               minRows: 5,
@@ -88,7 +92,7 @@ export function MarkdownModal({
             overflowY: "auto",
           }}
         >
-          <MarkdownWrapper source={source} />
+          <MarkdownWrapper source={currentValue} />
         </Col>
       </Row>
     </Modal>

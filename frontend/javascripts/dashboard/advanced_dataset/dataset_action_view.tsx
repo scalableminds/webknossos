@@ -3,24 +3,24 @@ import {
   EllipsisOutlined,
   EyeOutlined,
   LoadingOutlined,
-  PlusCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
   SettingOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
 import window from "libs/window";
-import { Link, LinkProps } from "react-router-dom";
-import * as React from "react";
+import { Link, type LinkProps } from "react-router-dom";
+import type * as React from "react";
 import type { APIDatasetId, APIDataset, APIDatasetCompact } from "types/api_flow_types";
 import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
-import { MenuProps, Modal, Typography } from "antd";
+import { type MenuProps, Modal, Typography } from "antd";
+import { useState } from "react";
 import { confirmAsync } from "dashboard/dataset/helper_components";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { getNoActionsAvailableMenu } from "oxalis/view/context_menu";
 
 const disabledStyle: React.CSSProperties = {
   pointerEvents: "none",
@@ -193,18 +193,31 @@ function DatasetActionView(props: Props) {
       style={disabledWhenReloadingStyle}
       type="link"
     >
-      {isReloading ? <LoadingOutlined /> : <ReloadOutlined className="icon-margin-right" />}
+      {isReloading ? (
+        <LoadingOutlined className="icon-margin-right" />
+      ) : (
+        <ReloadOutlined className="icon-margin-right" />
+      )}
       Reload
     </a>
   );
-  const importLink = (
-    <div className="dataset-table-actions">
-      <Link
-        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/import`}
-        className="import-dataset"
+  const datasetSettingsLink = (
+    <>
+      <LinkWithDisabled
+        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
+        title="Open Dataset Settings"
+        disabled={isReloading}
       >
-        <PlusCircleOutlined className="icon-margin-right" />
-        Import
+        <SettingOutlined className="icon-margin-right" />
+        Settings
+      </LinkWithDisabled>
+    </>
+  );
+  const brokenDatasetActions = (
+    <div className="dataset-table-actions">
+      <Link to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}>
+        <SettingOutlined className="icon-margin-right" />
+        Settings
       </Link>
       {reloadLink}
       <a
@@ -236,41 +249,35 @@ function DatasetActionView(props: Props) {
       ) : null}
     </div>
   );
+
+  const activeDatasetActions = (
+    <>
+      {" "}
+      <NewAnnotationLink
+        dataset={dataset}
+        isReloading={isReloading}
+        isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
+        onShowCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(true)}
+        onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
+      />
+      <LinkWithDisabled
+        to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
+        title="View Dataset"
+        disabled={isReloading}
+      >
+        <EyeOutlined className="icon-margin-right" />
+        View
+      </LinkWithDisabled>
+      {dataset.isEditable ? datasetSettingsLink : null}
+      {reloadLink}
+    </>
+  );
   return (
     <div>
-      {dataset.isEditable && !dataset.isActive ? importLink : null}
-      {dataset.isActive ? (
-        <div className="dataset-table-actions nowrap">
-          <NewAnnotationLink
-            dataset={dataset}
-            isReloading={isReloading}
-            isCreateExplorativeModalVisible={isCreateExplorativeModalVisible}
-            onShowCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(true)}
-            onCloseCreateExplorativeModal={() => setIsCreateExplorativeModalVisible(false)}
-          />
-          <LinkWithDisabled
-            to={`/datasets/${dataset.owningOrganization}/${dataset.name}/view`}
-            title="View Dataset"
-            disabled={isReloading}
-          >
-            <EyeOutlined className="icon-margin-right" />
-            View
-          </LinkWithDisabled>
-          {dataset.isEditable ? (
-            <React.Fragment>
-              <LinkWithDisabled
-                to={`/datasets/${dataset.owningOrganization}/${dataset.name}/edit`}
-                title="Open Dataset Settings"
-                disabled={isReloading}
-              >
-                <SettingOutlined className="icon-margin-right" />
-                Settings
-              </LinkWithDisabled>
-              {reloadLink}
-            </React.Fragment>
-          ) : null}
-        </div>
-      ) : null}
+      {dataset.isEditable && !dataset.isActive ? brokenDatasetActions : null}
+      <div className="dataset-table-actions nowrap">
+        {dataset.isActive ? activeDatasetActions : null}
+      </div>
     </div>
   );
 }
@@ -297,20 +304,7 @@ export function getDatasetActionContextMenu({
   hideContextMenu: () => void;
 }): MenuProps {
   if (datasets.length !== 1) {
-    return {
-      onClick: hideContextMenu,
-      style: {
-        borderRadius: 6,
-      },
-      mode: "vertical",
-      items: [
-        {
-          key: "view",
-          disabled: true,
-          label: "No actions available.",
-        },
-      ],
-    };
+    return getNoActionsAvailableMenu(hideContextMenu);
   }
   const dataset = datasets[0];
 
@@ -330,7 +324,7 @@ export function getDatasetActionContextMenu({
             },
           }
         : null,
-      dataset.isEditable && dataset.isActive
+      dataset.isEditable
         ? {
             key: "edit",
             label: "Open Settings",
@@ -340,15 +334,6 @@ export function getDatasetActionContextMenu({
           }
         : null,
 
-      dataset.isEditable && !dataset.isActive
-        ? {
-            key: "import",
-            label: "Import",
-            onClick: () => {
-              window.location.href = `/datasets/${dataset.owningOrganization}/${dataset.name}/import`;
-            },
-          }
-        : null,
       {
         key: "reload",
         label: "Reload",

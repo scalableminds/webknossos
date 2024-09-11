@@ -1,10 +1,10 @@
 import React from "react";
 import _ from "lodash";
 import type { Vector4 } from "oxalis/constants";
-import {
-  type DatasetConfiguration,
-  type UserConfiguration,
-  type DatasetLayerConfiguration,
+import type {
+  DatasetConfiguration,
+  UserConfiguration,
+  DatasetLayerConfiguration,
 } from "oxalis/store";
 
 export type RecommendedConfiguration = Partial<
@@ -57,7 +57,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
       but it will take more time until the best quality is shown).`,
   fourBit:
     "Decrease size of transferred data by half, using lossy compression. Recommended for poor and/or capped internet connections.",
-  interpolation: "Smooth the rendered data by interpolating color values",
+  interpolation: "Smooth the rendered data by interpolating color values.",
   renderMissingDataBlack:
     "If disabled, missing data will be rendered by using downsampled magnifications.",
   gpuMemoryFactor:
@@ -65,17 +65,17 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   useLegacyBindings:
     "When enabled, right-click does not open the context menu in some tools, but instead triggers actions, such as creating nodes or erasing volume data. This setting is only recommended when having experience with these classic mouse and keyboard bindings.",
   dynamicSpaceDirection:
-    "When enabled, the move direction (shortcuts d/f) changes dynamically to match the direction of the last two created nodes",
+    "When enabled, the move direction (shortcuts d/f) changes dynamically to match the direction of the last two created nodes.",
   keyboardDelay:
     "Delay after which shortcut keys (e.g. d/f for moving) are assumed to be intentionally held down, so that continuous movement is triggered.",
   moveValue: "Increase to speed up movement through the dataset when holding d/f/space.",
-  displayCrosshair: "Show crosshair marker in the viewing direction center",
+  displayCrosshair: "Show crosshair marker in the viewing direction center.",
   sphericalCapRadius: "Set the radius of the spherical cap the data is projected on.",
-  crosshairSize: "Size of the crosshair marker in the viewing direction center",
-  rotateValue: "Rotation speed when using the arrow keys on the keyboard",
+  crosshairSize: "Size of the crosshair marker in the viewing direction center.",
+  rotateValue: "Rotation speed when using the arrow keys on the keyboard.",
   mouseRotateValue: "Rotation speed when using the mouse to drag the rotation.",
-  zoom: "Zoom in or out in the data viewports",
-  displayScalebars: "Show a scale in the lower-right corner of each viewport",
+  zoom: "Zoom in or out in the data viewports.",
+  displayScalebars: "Show a scale in the lower-right corner of each viewport.",
   blendMode:
     "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers. Cover mode enables reordering of color layers.",
   renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
@@ -93,6 +93,7 @@ export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfigura
   isInverted: "Inverted Layer",
   isInEditMode: "Configuration Mode",
   gammaCorrectionValue: "Gamma Correction",
+  mapping: "Active Mapping",
 };
 export const layerViewConfigurationTooltips: Partial<
   Record<keyof DatasetLayerConfiguration, string>
@@ -199,8 +200,12 @@ instead. Only enable this option if you understand its effect. All layers will n
   "tracing.compound_project_not_found":
     "It looks like this project does not have a single task completed. Make sure that at least one task of this project is finished to view it.",
   "tracing.no_allowed_mode": "There was no valid allowed annotation mode specified.",
-  "tracing.read_only_mode_notification":
-    "This annotation is in read-only mode and cannot be updated.",
+  "tracing.read_only_mode_notification": (isAnnotationLockedByUser: boolean, isOwner: boolean) =>
+    isAnnotationLockedByUser
+      ? `This annotation is in read-only mode and cannot be updated. It is currently locked by ${
+          isOwner ? "you" : "the owner"
+        }.`
+      : "This annotation is in read-only mode and cannot be updated.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
   "tracing.volume_layer_name_duplication":
     "This layer name already exists! Please change it to resolve duplicates.",
@@ -234,8 +239,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "You cannot place nodes outside of a segment in merger mode.",
   "tracing.not_mesh_available_to_download":
     "There is no mesh for the active segment id available to download.",
-  "tracing.mesh_listing_failed":
-    "A precomputed mesh could not be loaded for this segment. More information was printed to the browser's console.",
+  "tracing.mesh_listing_failed": (segmentId: number) =>
+    `A precomputed mesh could not be loaded for segment ${segmentId}. You may want to use ad-hoc meshing instead. More information was printed to the browser's console.`,
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",
   "tracing.agglomerate_skeleton.no_cell":
@@ -258,6 +263,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The active volume annotation layer has an active mapping. By mutating the layer, the mapping will be permanently locked and can no longer be changed or disabled. This can only be undone by restoring an older version of this annotation. Are you sure you want to continue?",
   "tracing.locked_mapping_confirmed": (mappingName: string) =>
     `The mapping ${mappingName} is now locked for this annotation and can no longer be changed or disabled.`,
+  "mapping.loading_failed": (layerName: string) =>
+    `Loading the available mappings for layer ${layerName} failed.`,
   "layouting.missing_custom_layout_info":
     "The annotation views are separated into four classes. Each of them has their own layouts. If you can't find your layout please open the annotation in the correct view mode or just add it here manually.",
   "datastore.unknown_type": "Unknown datastore type:",
@@ -294,6 +301,10 @@ instead. Only enable this option if you understand its effect. All layers will n
     "This annotation is currently being edited by someone else. To avoid conflicts, you can only view it at the moment.",
   "annotation.acquiringMutexSucceeded":
     "This annotation is not being edited anymore and available for editing. Reload the page to see its newest version and to edit it.",
+  "annotation.unlock.success":
+    "The annotation was successfully unlocked. Reloading this annotation ...",
+  "annotation.lock.success":
+    "The annotation was successfully locked. Reloading this annotation ...",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
@@ -327,14 +338,16 @@ instead. Only enable this option if you understand its effect. All layers will n
     "The explored data has a different voxel size from the datasource that was already loaded. The explored voxel size was:",
   "dataset.segmentationlayer_not_existing": "This annotation has no segmentation layer.",
   "dataset.invalid_datasource_json":
-    "The datasource-properties.json on disk is invalid. Please review all properties before importing the dataset. You can always go back and change the values later.",
+    "The datasource-properties.json on disk is invalid. Please review all properties below to use the dataset. You can always go back and change the values later.",
   "dataset.missing_datasource_json":
-    "The datasource-properties.json was not found. The values below are guessed by WEBKNOSSOS. Please review all properties before importing the dataset. You can always go back and change the values later.",
+    "A datasource-properties.json file was not found. Please review all properties below to use the dataset. You can always go back and change the values later.",
   "dataset.import_complete":
-    "A valid datasource-properties.json was found. The dataset is imported and ready to use. You may still change the properties below.",
+    "A valid datasource-properties.json file was found. The dataset is imported and ready to use. You may still change the properties below.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
   "dataset.does_not_exist": "Selected dataset doesn't exist!",
+  "dataset.name.already_taken":
+    "This name is already being used by a different dataset. Please choose a different name.",
   "dataset.no_data": "No data available! Something seems to be wrong with the dataset.",
   "dataset.not_imported": "Please double check if you have the dataset imported:",
   "dataset.changed_without_reload":
@@ -412,7 +425,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Your account has been created. An administrator is going to unlock you soon.",
   "auth.automatic_user_activation": "User was activated automatically",
   "auth.error_no_user": "No active user is logged in.",
-  "auth.error_no_organization": "No active organziation can be loaded.",
+  "auth.error_no_organization": "No active organization can be loaded.",
   "auth.invalid_organization_name":
     "The link is not valid, since the specified organization does not exist. You are being redirected to the general registration form.",
   "request.max_item_count_alert":

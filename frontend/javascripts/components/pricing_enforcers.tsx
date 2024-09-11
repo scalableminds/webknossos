@@ -1,11 +1,11 @@
 import React from "react";
 import { useSelector } from "react-redux";
-import { Alert, ButtonProps, Button, Result, Popover, Col, Row } from "antd";
+import { Alert, type ButtonProps, Button, Result, Popover, Col, Row } from "antd";
 import { LockOutlined } from "@ant-design/icons";
 import {
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,
-  PricingPlanEnum,
+  type PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
 import { isUserAllowedToRequestUpgrades } from "admin/organization/pricing_plan_utils";
 import { Link } from "react-router-dom";
@@ -13,9 +13,10 @@ import type { OxalisState } from "oxalis/store";
 import { rgbToHex } from "libs/utils";
 import { PRIMARY_COLOR } from "oxalis/constants";
 import UpgradePricingPlanModal from "admin/organization/upgrade_plan_modal";
-import { APIOrganization, APIUser } from "types/api_flow_types";
-import { TooltipPlacement } from "antd/lib/tooltip";
+import type { APIOrganization, APIUser } from "types/api_flow_types";
+import type { TooltipPlacement } from "antd/lib/tooltip";
 import { SwitchSetting } from "oxalis/view/components/setting_input_views";
+import type { PopoverProps } from "antd/lib";
 
 const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
 
@@ -50,20 +51,21 @@ const useActiveUserAndOrganization = (): [APIUser | null | undefined, APIOrganiz
   return [activeUser, activeOrganization];
 };
 
-type PopoverEnforcedProps = RequiredPricingProps & {
-  activeUser: APIUser | null | undefined;
-  activeOrganization: APIOrganization | null;
-  placement?: TooltipPlacement;
-  zIndex?: number;
-};
-const PricingEnforcedPopover: React.FunctionComponent<PopoverEnforcedProps> = ({
+type PopoverEnforcedProps = RequiredPricingProps &
+  PopoverProps & {
+    activeUser: APIUser | null | undefined;
+    activeOrganization: APIOrganization | null;
+    placement?: TooltipPlacement;
+    zIndex?: number;
+  };
+const PricingEnforcedPopover = ({
   children,
   requiredPricingPlan,
   activeUser,
   activeOrganization,
   placement,
   zIndex,
-}) => {
+}: React.PropsWithChildren<PopoverEnforcedProps>) => {
   return (
     <Popover
       color={PRIMARY_COLOR_HEX}
@@ -82,10 +84,10 @@ const PricingEnforcedPopover: React.FunctionComponent<PopoverEnforcedProps> = ({
   );
 };
 
-export const PricingEnforcedSpan: React.FunctionComponent<RequiredPricingProps> = ({
+export const PricingEnforcedSpan = ({
   children,
   requiredPricingPlan,
-}) => {
+}: React.PropsWithChildren<RequiredPricingProps>) => {
   const [activeUser, activeOrganization] = useActiveUserAndOrganization();
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
@@ -173,11 +175,11 @@ export const PricingEnforcedSwitchSetting: React.FunctionComponent<
   );
 };
 
-export const PricingEnforcedBlur: React.FunctionComponent<RequiredPricingProps> = ({
+export const PricingEnforcedBlur = ({
   children,
   requiredPricingPlan,
   ...restProps
-}) => {
+}: React.PropsWithChildren<RequiredPricingProps>) => {
   const [activeUser, activeOrganization] = useActiveUserAndOrganization();
   const isFeatureAllowed = isFeatureAllowedByPricingPlan(activeOrganization, requiredPricingPlan);
 
@@ -246,7 +248,7 @@ export function PageUnavailableForYourPlanView({
 
   const linkToOrganizationSettings =
     activeUser && activeOrganization && isUserAllowedToRequestUpgrades(activeUser) ? (
-      <Link to={`/organizations/${activeOrganization.name}`}>
+      <Link to={`/organizations/${activeOrganization.id}`}>
         <Button>Go to Organization Settings</Button>
       </Link>
     ) : undefined;
@@ -268,7 +270,7 @@ export function PageUnavailableForYourPlanView({
             </p>
           }
           extra={[
-            <Link to="/">
+            <Link to="/" key="return-to-dashboard">
               <Button type="primary">Return to Dashboard</Button>
             </Link>,
             linkToOrganizationSettings,

@@ -53,12 +53,12 @@ import messages from "messages";
 import type { ToastStyle } from "libs/toast";
 import update from "immutability-helper";
 import { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
-import { APICompoundType, APICompoundTypeEnum } from "types/api_flow_types";
+import { type APICompoundType, APICompoundTypeEnum } from "types/api_flow_types";
 import { coalesce } from "libs/utils";
 
 import { assertExists, assertSkeleton, assertVolume } from "./api_latest";
 import { getLayerBoundingBox } from "oxalis/model/accessors/dataset_accessor";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 function makeTreeBackwardsCompatible(tree: TreeMap) {
   return update(tree, {
@@ -92,9 +92,7 @@ class TracingApi {
    */
   getActiveNodeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveNode(tracing)
-      .map((node) => node.id)
-      .getOrElse(null);
+    return getActiveNode(tracing)?.id ?? null;
   }
 
   /**
@@ -102,9 +100,7 @@ class TracingApi {
    */
   getActiveTreeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveTree(tracing)
-      .map((tree) => tree.treeId)
-      .getOrElse(null);
+    return getActiveTree(tracing)?.treeId ?? null;
   }
 
   /**
@@ -185,7 +181,10 @@ class TracingApi {
     if (treeId != null) {
       tree = skeletonTracing.trees[treeId];
       assertExists(tree, `Couldn't find tree ${treeId}.`);
-      assertExists(tree.nodes.get(nodeId), `Couldn't find node ${nodeId} in tree ${treeId}.`);
+      assertExists(
+        tree.nodes.getNullable(nodeId),
+        `Couldn't find node ${nodeId} in tree ${treeId}.`,
+      );
     } else {
       tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nodeId));
       assertExists(tree, `Couldn't find node ${nodeId}.`);
@@ -566,8 +565,10 @@ class DataApi {
     const mappingProperties = {
       mapping:
         mapping instanceof Map
-          ? new Map(mapping)
-          : new Map(Object.entries(mapping).map(([key, value]) => [parseInt(key, 10), value])),
+          ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
+          : new Map(
+              Object.entries(mapping).map(([key, value]) => [Number.parseInt(key, 10), value]),
+            ),
     };
     Store.dispatch(setMappingAction(layerName, "<custom mapping>", "JSON", mappingProperties));
   }

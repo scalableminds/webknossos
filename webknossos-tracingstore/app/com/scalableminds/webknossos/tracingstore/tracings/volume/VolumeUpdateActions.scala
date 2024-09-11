@@ -19,7 +19,10 @@ trait VolumeUpdateActionHelper {
       if (segment.segmentId == segmentId) transformSegment(segment) else segment)
 
   protected def convertSegmentGroup(aSegmentGroup: UpdateActionSegmentGroup): SegmentGroup =
-    SegmentGroup(aSegmentGroup.name, aSegmentGroup.groupId, aSegmentGroup.children.map(convertSegmentGroup))
+    SegmentGroup(aSegmentGroup.name,
+                 aSegmentGroup.groupId,
+                 aSegmentGroup.children.map(convertSegmentGroup),
+                 aSegmentGroup.isExpanded)
 
 }
 
@@ -365,7 +368,7 @@ case class UpdateMappingNameAction(mappingName: Option[String],
     if (tracing.mappingIsLocked.getOrElse(false)) tracing // cannot change mapping name if it is locked
     else
       tracing.copy(mappingName = mappingName,
-                   mappingIsEditable = Some(isEditable.getOrElse(false)),
+                   hasEditableMapping = Some(isEditable.getOrElse(false)),
                    mappingIsLocked = Some(isLocked.getOrElse(false)))
 }
 

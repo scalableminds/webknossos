@@ -15,7 +15,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
-import React, { Key, useEffect, useState } from "react";
+import React, { type Key, useEffect, useState } from "react";
 import _ from "lodash";
 import dayjs from "dayjs";
 import { location } from "libs/window";
@@ -249,7 +249,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
     return (
       <Alert
         message="You reached the maximum number of users"
-        description={`You organization reached the maxmium number of users included in your current plan. Consider upgrading your WEBKNOSSOS plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
+        description={`You organization reached the maximum number of users included in your current plan. Consider upgrading your WEBKNOSSOS plan to accommodate more users or deactivate some user accounts. Email invites are disabled in the meantime. Your organization currently has ${getActiveUserCount(
           users,
         )} active users of ${activeOrganization.includedUsers} allowed by your plan.`}
         type="warning"
@@ -349,7 +349,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
           currentUserCount={getActiveUserCount(users)}
           maxUserCountPerOrganization={activeOrganization.includedUsers}
           isOpen={isInviteModalOpen}
-          organizationName={activeUser.organization}
+          organizationId={activeUser.organization}
           handleVisibleChange={(visible) => {
             setIsInviteModalOpen(visible);
           }}
@@ -392,7 +392,7 @@ function UserListView({ activeUser, activeOrganization }: Props) {
             marginTop: 30,
           }}
           onChange={(_pagination, filters) =>
-            // @ts-expect-error ts-migrate(2322) FIXME: Type 'FilterValue' is not assignable to type '("tr... Remove this comment to see the full erro(messag)
+            // @ts-expect-error ts-migrate(2322) FIXME: Type 'FilterValue' is not assignable to type '("tr... Remove this comment to see the full error(message)
             setActivationFilter(filters.isActive != null ? filters.isActive : [])
           }
           onRow={(user) => ({

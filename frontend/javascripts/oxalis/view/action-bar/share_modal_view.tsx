@@ -7,13 +7,14 @@ import {
   Button,
   Row,
   Col,
-  RadioChangeEvent,
+  type RadioChangeEvent,
   Tooltip,
   Space,
 } from "antd";
 import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
-import React, { useState, useEffect } from "react";
+import type React from "react";
+import { useState, useEffect } from "react";
 import type {
   APIDataset,
   APIAnnotationVisibility,
@@ -35,7 +36,7 @@ import Toast from "libs/toast";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import Store, { OxalisState } from "oxalis/store";
+import Store, { type OxalisState } from "oxalis/store";
 import UrlManager from "oxalis/controller/url_manager";
 import {
   setAnnotationVisibilityAction,
@@ -48,6 +49,7 @@ import { AsyncButton } from "components/async_clickables";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
+import { formatUserName } from "oxalis/model/accessors/user_accessor";
 
 const RadioGroup = Radio.Group;
 const sharingActiveNode = true;
@@ -177,6 +179,7 @@ function _ShareModalView(props: Props) {
   const dataset = useSelector((state: OxalisState) => state.dataset);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
+  const isAnnotationLockedByUser = tracing.isLockedByOwner;
 
   const annotationVisibility = tracing.visibility;
   const [visibility, setVisibility] = useState(annotationVisibility);
@@ -299,8 +302,12 @@ function _ShareModalView(props: Props) {
 
   const maybeShowWarning = () => {
     let message;
-
-    if (!hasUpdatePermissions) {
+    if (isAnnotationLockedByUser) {
+      message = `You can't change the visibility of this annotation because it is locked by ${formatUserName(
+        activeUser,
+        tracing.owner,
+      )}.`;
+    } else if (!hasUpdatePermissions) {
       message = "You don't have the permission to edit the visibility of this annotation.";
     } else if (!dataset.isPublic && visibility === "Public") {
       message =
@@ -369,7 +376,7 @@ function _ShareModalView(props: Props) {
           margin: "18px 0",
         }}
       >
-        <i className={`fas fa-${iconMap[visibility]}`} />
+        <i className={`fas fa-${iconMap[visibility]} icon-margin-right`} />
         Visibility
       </Divider>
       {maybeShowWarning()}
@@ -430,7 +437,7 @@ function _ShareModalView(props: Props) {
           margin: "18px 0",
         }}
       >
-        <ShareAltOutlined />
+        <ShareAltOutlined className="icon-margin-right" />
         Team Sharing
       </Divider>
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
@@ -533,7 +540,7 @@ export function CopyableSharingLink({
   const linkToCopy = showShortLink ? shortUrl || longUrl : longUrl;
 
   return (
-    <Space.Compact>
+    <Space.Compact block>
       <Tooltip title="When enabled, the link is shortened automatically.">
         <Button
           type={showShortLink ? "primary" : "default"}

@@ -7,7 +7,7 @@ import * as Utils from "libs/utils";
 import type { Point2 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import window, { document } from "libs/window";
-import { createNanoEvents, Emitter } from "nanoevents";
+import { createNanoEvents, type Emitter } from "nanoevents";
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
 // the controller, this is were the magic happens.
@@ -296,7 +296,7 @@ export class InputKeyboard {
     this.bindings.push(binding);
   }
 
-  // In order to continously fire callbacks we have to loop
+  // In order to continuously fire callbacks we have to loop
   // through all the buttons that a marked as "pressed".
   buttonLoop() {
     if (!this.isStarted) {

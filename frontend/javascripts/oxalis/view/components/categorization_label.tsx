@@ -1,6 +1,6 @@
 import { Tag, Tooltip } from "antd";
 import UserLocalStorage from "libs/user_local_storage";
-import React, { MouseEventHandler, useEffect } from "react";
+import React, { type MouseEventHandler, useEffect } from "react";
 import { stringToColor } from "libs/format_utils";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 type LabelProps = {
@@ -16,11 +16,13 @@ type FilterProps = {
   setTags: (arg0: Array<string>) => void;
   localStorageSavingKey: string;
 };
+const LOCKED_TAG_COLOR = "var(--ant-color-warning)";
 export default function CategorizationLabel({ tag, kind, onClick, onClose, closable }: LabelProps) {
+  const color = tag === "locked" ? LOCKED_TAG_COLOR : stringToColor(tag);
   return (
     <Tooltip title={`Click to only show ${kind} with this tag.`}>
       <Tag
-        color={stringToColor(tag)}
+        color={color}
         onClick={onClick}
         onClose={onClose}
         closable={closable}

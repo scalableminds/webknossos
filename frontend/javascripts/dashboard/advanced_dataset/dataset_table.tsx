@@ -1,6 +1,6 @@
 import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { Dropdown, MenuProps, Table, Tag, Tooltip } from "antd";
+import { Dropdown, type MenuProps, type TableProps, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
 import * as React from "react";
 import _ from "lodash";
@@ -12,7 +12,7 @@ import type {
   APIMaybeUnimportedDataset,
   FolderItem,
 } from "types/api_flow_types";
-import { type DatasetFilteringMode } from "dashboard/dataset_view";
+import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import { stringToColor } from "libs/format_utils";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import CategorizationLabel from "oxalis/view/components/categorization_label";
@@ -25,23 +25,26 @@ import * as Utils from "libs/utils";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import { ContextMenuContext, GenericContextMenuContainer } from "oxalis/view/context_menu";
+import {
+  ContextMenuContext,
+  GenericContextMenuContainer,
+  getContextMenuPositionFromEvent,
+} from "oxalis/view/context_menu";
 import Shortcut from "libs/shortcut_component";
 import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 import { useSelector } from "react-redux";
-import { type DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
+import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { Unicode } from "oxalis/constants";
-import { DatasetUpdater } from "admin/admin_rest_api";
+import type { DatasetUpdater } from "admin/admin_rest_api";
 import { generateSettingsForFolder, useDatasetDrop } from "dashboard/folders/folder_tree";
 import classNames from "classnames";
-import { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/globals";
 
 type FolderItemWithName = FolderItem & { name: string };
-type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
+export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
 
 const { ThinSpace } = Unicode;
-const { Column } = Table;
 const useLruRank = true;
 
 const THUMBNAIL_SIZE = 100;
@@ -235,7 +238,8 @@ const DraggableDatasetRow = ({
 
   const datasetName = restProps["data-row-key"];
   const [, drag, preview] = useDrag({
-    item: { type: DraggableDatasetType, index, datasetName },
+    item: { index, datasetName },
+    type: DraggableDatasetType,
     canDrag: () => isADataset,
   });
   const [collectedProps, drop] = useDatasetDrop(rowKey, !isADataset);
@@ -354,6 +358,7 @@ class DatasetRenderer {
 class FolderRenderer {
   data: FolderItemWithName;
   datasetTable: DatasetTable;
+
   constructor(data: FolderItemWithName, datasetTable: DatasetTable) {
     this.data = data;
     this.datasetTable = datasetTable;
@@ -387,7 +392,7 @@ class FolderRenderer {
 class DatasetTable extends React.PureComponent<Props, State> {
   state: State = {
     sortedInfo: {
-      columnKey: useLruRank ? "" : "created",
+      columnKey: useLruRank ? undefined : "created",
       order: "descend",
     },
     prevSearchQuery: "",
@@ -573,6 +578,36 @@ class DatasetTable extends React.PureComponent<Props, State> {
       selectedRowKeys = [context.selectedFolder?.key];
     }
 
+    const columns: TableProps["columns"] = [
+      {
+        title: "Name",
+        dataIndex: "name",
+        key: "name",
+        sorter: Utils.localeCompareBy<RowRenderer>((rowRenderer) => rowRenderer.data.name),
+        sortOrder: sortedInfo.columnKey === "name" ? sortedInfo.order : undefined,
+        render: (_name: string, rowRenderer: RowRenderer) => rowRenderer.renderNameColumn(),
+      },
+      {
+        width: 180,
+        title: "Creation Date",
+        dataIndex: "created",
+        key: "created",
+        sorter: Utils.compareBy<RowRenderer>((rowRenderer) =>
+          isRecordADataset(rowRenderer.data) ? rowRenderer.data.created : 0,
+        ),
+        sortOrder: sortedInfo.columnKey === "created" ? sortedInfo.order : undefined,
+        render: (_created, rowRenderer: RowRenderer) => rowRenderer.renderCreationDateColumn(),
+      },
+
+      {
+        width: 200,
+        title: "Actions",
+        key: "actions",
+        fixed: "right",
+        render: (__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn(),
+      },
+    ];
+
     return (
       <DndProvider backend={HTML5Backend}>
         <ContextMenuContainer
@@ -591,6 +626,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
         <FixedExpandableTable
           expandable={{ childrenColumnName: "notUsed" }}
           dataSource={sortedDataSourceRenderers}
+          columns={columns}
           rowKey={(renderer: RowRenderer) => renderer.getRowKey()}
           components={components}
           pagination={{
@@ -673,23 +709,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
                 // Since the dashboard tabs don't destroy their contents after switching the tabs,
                 // there might be several overlays. We will use the one with a non-zero width since
                 // this should be the relevant one.
-                const overlayDivs = document.getElementsByClassName("node-context-menu-overlay");
-                const referenceDiv = Array.from(overlayDivs)
-                  .map((p) => p.parentElement)
-                  .find((potentialParent) => {
-                    if (potentialParent == null) {
-                      return false;
-                    }
-                    const bounds = potentialParent.getBoundingClientRect();
-                    return bounds.width > 0;
-                  });
-
-                if (referenceDiv == null) {
-                  return;
-                }
-                const bounds = referenceDiv.getBoundingClientRect();
-                const x = event.clientX - bounds.left;
-                const y = event.clientY - bounds.top;
+                const [x, y] = getContextMenuPositionFromEvent(event, "node-context-menu-overlay");
 
                 this.showContextMenuAt(x, y);
                 if (isADataset) {
@@ -729,35 +749,7 @@ class DatasetTable extends React.PureComponent<Props, State> {
               context.setSelectedFolder(null);
             },
           }}
-        >
-          <Column
-            title="Name"
-            dataIndex="name"
-            key="name"
-            sorter={Utils.localeCompareBy<RowRenderer>((rowRenderer) => rowRenderer.data.name)}
-            sortOrder={sortedInfo.columnKey === "name" ? sortedInfo.order : undefined}
-            render={(_name: string, renderer: RowRenderer) => renderer.renderNameColumn()}
-          />
-          <Column
-            width={180}
-            title="Creation Date"
-            dataIndex="created"
-            key="created"
-            sorter={Utils.compareBy<RowRenderer>((rowRenderer) =>
-              isRecordADataset(rowRenderer.data) ? rowRenderer.data.created : 0,
-            )}
-            sortOrder={sortedInfo.columnKey === "created" ? sortedInfo.order : undefined}
-            render={(_created, rowRenderer: RowRenderer) => rowRenderer.renderCreationDateColumn()}
-          />
-
-          <Column
-            width={200}
-            title="Actions"
-            key="actions"
-            fixed="right"
-            render={(__, rowRenderer: RowRenderer) => rowRenderer.renderActionsColumn()}
-          />
-        </FixedExpandableTable>
+        />
       </DndProvider>
     );
   }

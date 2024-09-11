@@ -1,5 +1,5 @@
 import _ from "lodash";
-import * as React from "react";
+import type * as React from "react";
 import type { Rect, Viewport } from "oxalis/constants";
 import {
   AnnotationToolEnum,
@@ -27,7 +27,7 @@ const emptyViewportRect = {
 };
 
 function ignoreContextMenu(event: React.MouseEvent) {
-  // hide contextmenu, while right-clicking a canvas
+  // hide context menu, while right-clicking a canvas
   event.preventDefault();
 }
 
@@ -169,8 +169,11 @@ function InputCatcher({
           className={`inputcatcher ${viewportID}`}
           style={{
             position: "relative",
-            // Disable inputs while wk is busy. However, keep the custom cursor and the ignoreContextMenu handler
+            // Disable inputs while WK is busy. However, keep the custom cursor and the ignoreContextMenu handler
             // which is why those are defined at the outer element.
+            // Note that due to race conditions a pointer event might still get through even
+            // though WK is busy. Especially sagas should use takeEveryUnlessBusy or should
+            // explicitly check for the busy state.
             pointerEvents: busyBlockingInfo.isBusy ? "none" : "auto",
           }}
         >

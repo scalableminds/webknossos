@@ -21,7 +21,7 @@ import sinon from "sinon";
 import test from "ava";
 import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
 import { withoutUpdateTracing } from "test/helpers/saveHelpers";
-import { ActiveMappingInfo } from "oxalis/store";
+import type { ActiveMappingInfo } from "oxalis/store";
 import { askUserForLockingActiveMapping } from "oxalis/model/sagas/saga_helpers";
 
 mockRequire("app", {
@@ -124,7 +124,6 @@ const dummyActiveMapping: ActiveMappingInfo = {
   mappingColors: [],
   hideUnmappedIds: false,
   mappingStatus: "ENABLED",
-  mappingSize: 0,
   mappingType: "HDF5",
 };
 

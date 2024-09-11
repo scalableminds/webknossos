@@ -1,10 +1,12 @@
-import React, { useEffect } from "react";
+import type React from "react";
+import { useEffect } from "react";
 import { useSelector } from "react-redux";
 import { App, ConfigProvider, theme } from "antd";
-import { APIUser } from "types/api_flow_types";
+import type { APIUser } from "types/api_flow_types";
 import window from "libs/window";
 import type { OxalisState, Theme } from "oxalis/store";
 import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
+import { ToastContextMountRoot } from "libs/toast";
 
 const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue
@@ -39,6 +41,8 @@ export function getAntdTheme(userTheme: Theme) {
     Tree: {
       colorBgContainer: "transparent",
       directoryNodeSelectedBg: ColorWKBlue,
+      titleHeight: 20, // default is 24px,
+      marginXXS: 2, // default is 4px; adjust to match checkboxes because of smaller titleHeight
     },
   };
 
@@ -56,11 +60,19 @@ export function getAntdTheme(userTheme: Theme) {
 
   if (userTheme === "dark") {
     algorithm = theme.darkAlgorithm;
+    components.Tree = {
+      ...components.Tree,
+      nodeSelectedBg: ColorWKBlue,
+      nodeHoverBg: ColorWKDarkGrey,
+    };
   }
   return { algorithm, token: globalDesignToken, components };
 }
 
-export default function GlobalThemeProvider({ children }: { children?: React.ReactNode }) {
+export default function GlobalThemeProvider({
+  children,
+  isMainProvider = true,
+}: { children?: React.ReactNode; isMainProvider?: boolean }) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const userTheme = getThemeFromUser(activeUser);
   const antdTheme = getAntdTheme(userTheme);
@@ -82,9 +94,10 @@ export default function GlobalThemeProvider({ children }: { children?: React.Rea
           className={isDarkMode ? "dark-theme" : undefined}
           style={{
             background: "var(--ant-color-bg-base)",
-            height: "calc(100vh - var(--navbar-height))",
+            height: isMainProvider ? "calc(100vh - var(--navbar-height))" : "auto",
           }}
         >
+          {isMainProvider && <ToastContextMountRoot />}
           {children}
         </div>
       </App>

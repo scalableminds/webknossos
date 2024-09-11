@@ -120,20 +120,20 @@ function TaskCreateBulkView() {
     const dataSet = words[0];
     const taskTypeId = words[1];
     const experienceDomain = words[2];
-    const minExperience = parseInt(words[3]);
-    const x = parseInt(words[4]);
-    const y = parseInt(words[5]);
-    const z = parseInt(words[6]);
-    const rotX = parseInt(words[7]);
-    const rotY = parseInt(words[8]);
-    const rotZ = parseInt(words[9]);
-    const pendingInstances = parseInt(words[10]);
-    const boundingBoxX = parseInt(words[11]);
-    const boundingBoxY = parseInt(words[12]);
-    const boundingBoxZ = parseInt(words[13]);
-    const width = parseInt(words[14]);
-    const height = parseInt(words[15]);
-    const depth = parseInt(words[16]);
+    const minExperience = Number.parseInt(words[3]);
+    const x = Number.parseInt(words[4]);
+    const y = Number.parseInt(words[5]);
+    const z = Number.parseInt(words[6]);
+    const rotX = Number.parseInt(words[7]);
+    const rotY = Number.parseInt(words[8]);
+    const rotZ = Number.parseInt(words[9]);
+    const pendingInstances = Number.parseInt(words[10]);
+    const boundingBoxX = Number.parseInt(words[11]);
+    const boundingBoxY = Number.parseInt(words[12]);
+    const boundingBoxZ = Number.parseInt(words[13]);
+    const width = Number.parseInt(words[14]);
+    const height = Number.parseInt(words[15]);
+    const depth = Number.parseInt(words[16]);
     const projectName = words[17];
 
     // mapOptional takes care of treating empty strings as null
@@ -211,7 +211,7 @@ function TaskCreateBulkView() {
 
   function getInvalidTaskIndices(tasks: NewTask[]): number[] {
     // returns the index / line number of an invalidly parsed task
-    // returned indicies start at 1 for easier matching by non-CS people
+    // returned indices start at 1 for easier matching by non-CS people
     const isValidTasks = tasks.map(isValidTask);
     const invalidTasks: number[] = [];
     return isValidTasks.reduce((result, isValid: boolean, i: number) => {
@@ -261,13 +261,13 @@ function TaskCreateBulkView() {
       <Spin spinning={isUploading}>
         <Card title={<h3>Bulk Create Tasks</h3>}>
           <p>
-            Specify each new task on a separate line as comma seperated values (CSV) in the
+            Specify each new task on a separate line as comma separated values (CSV) in the
             following format:
             <br />
-            <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
+            <a href="/dashboard">dataset</a>, <a href="/taskTypes">taskTypeId</a>, experienceDomain,
             minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height,
-            depth, <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>,
-            baseAnnotationId]
+            depth, <a href="/projects">project</a>, <a href="/scripts">scriptId</a> (optional),
+            baseAnnotationId (optional)
             <br />
             If you want to define some (but not all) of the optional values, please list all
             optional values and use an empty value for the ones you do not want to set (e.g.,

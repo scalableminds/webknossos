@@ -1,11 +1,10 @@
-import { APIOrganization } from "types/api_flow_types";
+import type { APIOrganization } from "types/api_flow_types";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 
 const dummyOrga: APIOrganization = {
-  id: "dummy_orga_id",
-  name: "dummy_orga",
+  id: "dummy_orga",
   additionalInformation: "more information",
-  displayName: "Dummy Orga",
+  name: "Dummy Orga",
   pricingPlan: PricingPlanEnum.Basic,
   enableAutoVerify: true,
   newUserMailingList: "dummy@example.com",

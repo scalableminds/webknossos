@@ -2,7 +2,7 @@ import _ from "lodash";
 import type { OxalisState } from "oxalis/store";
 import { getMaxZoomStep } from "oxalis/model/accessors/dataset_accessor";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
-import constants, { Identity4x4, Vector3 } from "oxalis/constants";
+import constants, { Identity4x4, UnitLong, type Vector3 } from "oxalis/constants";
 import test from "ava";
 import defaultState from "oxalis/default_state";
 const { GPU_FACTOR_MULTIPLIER, DEFAULT_GPU_MEMORY_FACTOR } = constants;
@@ -19,7 +19,7 @@ const initialState: OxalisState = {
     ...defaultState.dataset,
     dataSource: {
       ...defaultState.dataset.dataSource,
-      scale: [1, 1, 2],
+      scale: { factor: [1, 1, 2], unit: UnitLong.nm },
       dataLayers: [
         {
           name: "layer1",

@@ -2,11 +2,7 @@ import _ from "lodash";
 import { V3 } from "libs/mjs";
 import { applyState } from "oxalis/model_initialization";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getSkeletonTracing,
-  getActiveNode,
-  enforceSkeletonTracing,
-} from "oxalis/model/accessors/skeletontracing_accessor";
+import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { OxalisState, MappingType, MeshInformation } from "oxalis/store";
 import Store from "oxalis/store";
 import * as Utils from "libs/utils";
@@ -17,9 +13,9 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
 import { validateUrlStateJSON } from "types/validation";
-import { APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
+import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_flow_types";
 import { coalesce } from "libs/utils";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import {
   additionalCoordinateToKeyValue,
   parseAdditionalCoordinateKey,
@@ -219,7 +215,7 @@ class UrlManager {
       if (coordinateName != null) {
         additionalCoordinates.push({
           name: coordinateName,
-          value: parseFloat(value),
+          value: Number.parseFloat(value),
         });
       }
     }
@@ -246,12 +242,8 @@ class UrlManager {
           rotation: Utils.map3((e) => Utils.roundTo(e, 2), getRotation(state.flycam)),
         }
       : {};
-    const activeNodeOptional = getSkeletonTracing(state.tracing)
-      .chain((skeletonTracing) => getActiveNode(skeletonTracing))
-      .map((node) => ({
-        activeNode: node.id,
-      }))
-      .getOrElse({});
+    const activeNode = state.tracing.skeleton?.activeNodeId;
+    const activeNodeOptional = activeNode != null ? { activeNode } : {};
     const stateByLayer: UrlStateByLayer = {};
 
     for (const layerName of Object.keys(state.temporaryConfiguration.activeMappingByLayer)) {

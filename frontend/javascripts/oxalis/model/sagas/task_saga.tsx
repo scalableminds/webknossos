@@ -22,7 +22,7 @@ import {
 import { updateLastTaskTypeIdOfUser } from "admin/admin_rest_api";
 import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 import RecommendedConfigurationModal from "oxalis/view/recommended_configuration_modal";
-import Store, { RecommendedConfiguration } from "oxalis/store";
+import Store, { type RecommendedConfiguration } from "oxalis/store";
 import Toast from "libs/toast";
 import messages from "messages";
 import renderIndependently from "libs/render_independently";
@@ -175,7 +175,7 @@ export function* warnAboutMagRestriction(): Saga<void> {
       let constraintString = `between ${min.toFixed(2)} and ${max.toFixed(2)}`;
       if (min === 0) {
         constraintString = `lower than ${max.toFixed(2)}`;
-      } else if (max === Infinity) {
+      } else if (max === Number.POSITIVE_INFINITY) {
         constraintString = `greater than ${min.toFixed(2)}`;
       }
 

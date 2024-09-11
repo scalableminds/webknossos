@@ -7,7 +7,7 @@ trait LRUConcurrentCache[K, V] {
 
   private val cache = new java.util.LinkedHashMap[K, V]() {
     override def removeEldestEntry(eldest: java.util.Map.Entry[K, V]): Boolean =
-      if (size > maxEntries) {
+      if (this.size > maxEntries) {
         onElementRemoval(eldest.getKey, eldest.getValue)
         true
       } else {
@@ -37,7 +37,7 @@ trait LRUConcurrentCache[K, V] {
     }
 
   /**
-    * Use if load function returns Option and only Somes should be cached
+    * Use if load function returns Option and only Some should be cached
     */
   def getOrLoadAndPutOptional(key: K)(loadFunction: K => Option[V]): Option[V] =
     get(key).orElse {

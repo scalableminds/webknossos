@@ -1,8 +1,16 @@
 import _ from "lodash";
 import type { Dispatch } from "redux";
 import type { Action } from "oxalis/model/actions/actions";
+
 const MAX_ACTION_LOG_LENGTH = 250;
 let actionLog: string[] = [];
+
+// For grouping consecutive action types
+let lastActionName: string | null = null;
+let lastActionCount: number = 0;
+
+const DEBUG_OUTPUT_FOR_ACTIONS = false;
+
 const actionBlacklist = [
   "ADD_TO_LAYER",
   "MOVE_FLYCAM",
@@ -17,6 +25,7 @@ const actionBlacklist = [
   "SET_TD_CAMERA",
   "SET_VIEWPORT",
   "ZOOM_TD_VIEW",
+  "UPDATE_TEMPORARY_SETTING",
 ];
 export function getActionLog(): Array<string> {
   return actionLog;
@@ -30,9 +39,26 @@ export default function actionLoggerMiddleware<A extends Action>(): (
       const isBlackListed = actionBlacklist.includes(action.type);
 
       if (!isBlackListed) {
-        actionLog.push(action.type);
+        if (lastActionName == null || lastActionName !== action.type) {
+          actionLog.push(action.type);
+          lastActionCount = 1;
+        } else {
+          lastActionCount++;
+          actionLog[actionLog.length - 1] = lastActionName + " * " + lastActionCount;
+        }
+        lastActionName = action.type;
+
         const overflowCount = Math.max(actionLog.length - MAX_ACTION_LOG_LENGTH, 0);
         actionLog = _.drop(actionLog, overflowCount);
+
+        if (DEBUG_OUTPUT_FOR_ACTIONS) {
+          console.group(action.type);
+          console.info("dispatching", action);
+          let result = next(action);
+          // console.log('next state', store.getState())
+          console.groupEnd();
+          return result;
+        }
       }
 
       return next(action);

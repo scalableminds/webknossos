@@ -8,11 +8,11 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import mock from "mock-require";
-import test, { ExecutionContext } from "ava";
+import test, { type ExecutionContext } from "ava";
 import { TreeTypeEnum } from "oxalis/constants";
-import * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
-import * as OriginalNmlHelpers from "oxalis/model/helpers/nml_helpers";
-import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import type * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
+import type * as OriginalNmlHelpers from "oxalis/model/helpers/nml_helpers";
+import type OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
 import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
@@ -126,11 +126,13 @@ const initialSkeletonTracing: SkeletonTracing = {
     {
       groupId: 1,
       name: "Axon 1",
+      isExpanded: true,
       children: [
         {
           groupId: 3,
           name: "Blah",
           children: [],
+          isExpanded: false,
         },
       ],
     },
@@ -138,6 +140,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       groupId: 2,
       name: "Axon 2",
       children: [],
+      isExpanded: true,
     },
   ],
   activeTreeId: 1,
@@ -168,6 +171,10 @@ const initialSkeletonTracing: SkeletonTracing = {
 };
 
 const initialState: OxalisState = _.extend({}, defaultState, {
+  dataset: {
+    ...defaultState.dataset,
+    name: "Test Dataset",
+  },
   tracing: {
     name: "",
     restrictions: {
@@ -304,7 +311,7 @@ test("NML serializing and parsing should yield the same state even when addition
   if (existingNodeMap == null) {
     throw new Error("Unexpected null value.");
   }
-  const existingNode = existingNodeMap.get(1);
+  const existingNode = existingNodeMap.getOrThrow(1);
   const newNodeMap = existingNodeMap.set(1, {
     ...existingNode,
     additionalCoordinates: [{ name: "t", value: 123 }],
@@ -397,9 +404,7 @@ test("NML serializer should produce correct NMLs", (t) => {
     BUILD_INFO,
     false,
   );
-  t.snapshot(serializedNml, {
-    id: "nml",
-  });
+  t.snapshot(serializedNml);
 });
 test("NML serializer should produce correct NMLs with additional coordinates", (t) => {
   let adaptedState = update(initialState, {
@@ -416,7 +421,7 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
   if (existingNodeMap == null) {
     throw new Error("Unexpected null value.");
   }
-  const existingNode = existingNodeMap.get(1);
+  const existingNode = existingNodeMap.getOrThrow(1);
   const newNodeMap = existingNodeMap.set(1, {
     ...existingNode,
     additionalCoordinates: [{ name: "t", value: 123 }],
@@ -442,9 +447,7 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
     BUILD_INFO,
     false,
   );
-  t.snapshot(serializedNml, {
-    id: "nml-with-additional-coordinates",
-  });
+  t.snapshot(serializedNml);
 });
 test("NML serializer should escape special characters and multilines", (t) => {
   const state = update(initialState, {
@@ -481,9 +484,7 @@ test("NML serializer should escape special characters and multilines", (t) => {
       "Hello&quot;a&apos;b&lt;c&gt;d&amp;e&quot;f&apos;g&lt;h&gt;i&amp;j&#xa;with&#xa;new&#xa;lines",
     ) > -1,
   );
-  t.snapshot(serializedNml, {
-    id: "nml-special-chars",
-  });
+  t.snapshot(serializedNml);
 });
 test("Serialized nml should be correctly named", async (t) => {
   t.is(getNmlName(initialState), "Test Dataset__5b1fd1cb97000027049c67ec__sboy__tionId.nml");
@@ -694,10 +695,10 @@ test("addTreesAndGroups reducer should assign new node and tree ids", (t) => {
   t.is(newSkeletonTracing.trees[3].treeId, 3);
   t.is(newSkeletonTracing.trees[4].treeId, 4);
   t.is(newSkeletonTracing.trees[3].nodes.size(), 4);
-  t.is(newSkeletonTracing.trees[3].nodes.get(8).id, 8);
-  t.is(newSkeletonTracing.trees[3].nodes.get(9).id, 9);
+  t.is(newSkeletonTracing.trees[3].nodes.getOrThrow(8).id, 8);
+  t.is(newSkeletonTracing.trees[3].nodes.getOrThrow(9).id, 9);
   t.is(newSkeletonTracing.trees[4].nodes.size(), 3);
-  t.is(newSkeletonTracing.trees[4].nodes.get(12).id, 12);
+  t.is(newSkeletonTracing.trees[4].nodes.getOrThrow(12).id, 12);
 
   const getSortedEdges = (edges: EdgeCollection) => _.sortBy(edges.asArray(), "source");
 

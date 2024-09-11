@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.helpers.{
   SegmentIndexData
 }
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
+import com.scalableminds.webknossos.datastore.models.{VoxelSize, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.FullMeshRequest
@@ -34,7 +34,7 @@ class TSRemoteDatastoreClient @Inject()(
     with MissingBucketHeaders {
 
   private lazy val dataStoreUriCache: AlfuCache[(String, String), String] = AlfuCache()
-  private lazy val voxelSizeCache: AlfuCache[String, Vec3Double] = AlfuCache(timeToLive = 10 minutes)
+  private lazy val voxelSizeCache: AlfuCache[String, VoxelSize] = AlfuCache(timeToLive = 10 minutes)
   private lazy val largestAgglomerateIdCache: AlfuCache[(RemoteFallbackLayer, String, Option[String]), Long] =
     AlfuCache(timeToLive = 10 minutes)
 
@@ -133,7 +133,7 @@ class TSRemoteDatastoreClient @Inject()(
   def querySegmentIndex(remoteFallbackLayer: RemoteFallbackLayer,
                         segmentId: Long,
                         mag: Vec3Int,
-                        mappingName: Option[String],
+                        mappingName: Option[String], // should be the baseMappingName in case of editable mappings
                         editableMappingTracingId: Option[String],
                         userToken: Option[String]): Fox[Seq[Vec3Int]] =
     for {
@@ -152,12 +152,13 @@ class TSRemoteDatastoreClient @Inject()(
       indices = positions.map(_.scale(1f / DataLayer.bucketLength)) // Route returns positions to use the same interface as tracing store, we want indices
     } yield indices
 
-  def querySegmentIndexForMultipleSegments(remoteFallbackLayer: RemoteFallbackLayer,
-                                           segmentIds: Seq[Long],
-                                           mag: Vec3Int,
-                                           mappingName: Option[String],
-                                           editableMappingTracingId: Option[String],
-                                           userToken: Option[String]): Fox[Seq[(Long, Seq[Vec3Int])]] =
+  def querySegmentIndexForMultipleSegments(
+      remoteFallbackLayer: RemoteFallbackLayer,
+      segmentIds: Seq[Long],
+      mag: Vec3Int,
+      mappingName: Option[String], // should be the baseMappingName in case of editable mappings
+      editableMappingTracingId: Option[String],
+      userToken: Option[String]): Fox[Seq[(Long, Seq[Vec3Int])]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/segmentIndex")
@@ -182,28 +183,28 @@ class TSRemoteDatastoreClient @Inject()(
         .postJsonWithBytesResponse(fullMeshRequest)
     } yield result
 
-  def voxelSizeForTracingWithCache(tracingId: String, token: Option[String]): Fox[Vec3Double] =
+  def voxelSizeForTracingWithCache(tracingId: String, token: Option[String]): Fox[VoxelSize] =
     voxelSizeCache.getOrLoad(tracingId, tId => voxelSizeForTracing(tId, token))
 
-  private def voxelSizeForTracing(tracingId: String, token: Option[String]): Fox[Vec3Double] =
+  private def voxelSizeForTracing(tracingId: String, token: Option[String]): Fox[VoxelSize] =
     for {
       dataSourceId <- remoteWebknossosClient.getDataSourceIdForTracing(tracingId)
       dataStoreUri <- dataStoreUriWithCache(dataSourceId.team, dataSourceId.name)
       result <- rpc(s"$dataStoreUri/data/datasets/${dataSourceId.team}/${dataSourceId.name}/readInboxDataSource")
         .addQueryStringOptional("token", token)
         .getWithJsonResponse[InboxDataSource]
-      scale <- result.scaleOpt ?~> "could not determine voxel size of dataset"
+      scale <- result.voxelSizeOpt ?~> "could not determine voxel size of dataset"
     } yield scale
 
   private def getRemoteLayerUri(remoteLayer: RemoteFallbackLayer): Fox[String] =
     for {
-      datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationName, remoteLayer.datasetName)
+      datastoreUri <- dataStoreUriWithCache(remoteLayer.organizationId, remoteLayer.datasetName)
     } yield
-      s"$datastoreUri/data/datasets/${remoteLayer.organizationName}/${remoteLayer.datasetName}/layers/${remoteLayer.layerName}"
+      s"$datastoreUri/data/datasets/${remoteLayer.organizationId}/${remoteLayer.datasetName}/layers/${remoteLayer.layerName}"
 
-  private def dataStoreUriWithCache(organizationName: String, datasetName: String): Fox[String] =
+  private def dataStoreUriWithCache(organizationId: String, datasetName: String): Fox[String] =
     dataStoreUriCache.getOrLoad(
-      (organizationName, datasetName),
+      (organizationId, datasetName),
       keyTuple => remoteWebknossosClient.getDataStoreUriForDataSource(keyTuple._1, keyTuple._2))
 
 }

@@ -6,6 +6,55 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [24.08.1](https://github.com/scalableminds/webknossos/releases/tag/24.08.1) - 2024-09-03
+[Commits](https://github.com/scalableminds/webknossos/compare/24.08.0...24.08.1)
+
+### Postgres Evolutions:
+None.
+
+## [24.08.0](https://github.com/scalableminds/webknossos/releases/tag/24.08.0) - 2024-09-02
+[Commits](https://github.com/scalableminds/webknossos/compare/24.07.0...24.08.0)
+
+- If Segment Anything was already configured, it needs to be pointed to an endpoint that works with SAM 2. [#7965](https://github.com/scalableminds/webknossos/pull/7965)
+
+### Postgres Evolutions:
+- [118-voxelytics-artifacts-index.sql](conf/evolutions/118-voxelytics-artifacts-index.sql)
+- [119-add-metadata-to-folders-and-datasets.sql](conf/evolutions/119-add-metadata-to-folders-and-datasets.sql)
+- [120-remove-old-organization-id.sql](conf/evolutions/120-remove-old-organization-id.sql)
+
+## [24.07.0](https://github.com/scalableminds/webknossos/releases/tag/24.07.0) - 2024-07-05
+[Commits](https://github.com/scalableminds/webknossos/compare/24.06.0...24.07.0)
+
+- The datastore config field `datastore.cache.dataCube.maxEntries` is no longer used and can be removed. [#7818](https://github.com/scalableminds/webknossos/pull/7818)
+- If your setup contains webknossos-workers, you may want to add the newly available job `align_sections` to the `supportedJobCommands` of your workers. Make sure you deploy the latest webknossos-worker release. [#7820](https://github.com/scalableminds/webknossos/pull/7820)
+- If you place WKW datasets directly on disk, a datasource-properties.json is now required, as WEBKNOSSOS no longer guesses its contents from the raw data. Standard dataset creation methods, e.g. with the WEBKNOSSOS CLI or python libs will already automatically this metadata file. [#7697](https://github.com/scalableminds/webknossos/pull/7697)
+
+### Postgres Evolutions:
+
+- [114-ai-models.sql](conf/evolutions/114-ai-models.sql)
+- [115-annotation-locked-by-user.sql](conf/evolutions/115-annotation-locked-by-user.sql)
+- [116-drop-overtimemailinglist.sql](conf/evolutions/116-drop-overtimemailinglist.sql)
+- [117-voxel-size-unit.sql](conf/evolutions/117-voxel-size-unit.sql)
+
+
+## [24.06.0](https://github.com/scalableminds/webknossos/releases/tag/24.06.0) - 2024-05-27
+[Commits](https://github.com/scalableminds/webknossos/compare/24.05.0...24.06.0)
+
+### Postgres Evolutions:
+None.
+
+## [24.05.0](https://github.com/scalableminds/webknossos/releases/tag/24.05.0) - 2024-04-29
+[Commits](https://github.com/scalableminds/webknossos/compare/24.04.0...24.05.0)
+
+- Changed some internal APIs to use spelling dataset instead of dataSet. This requires all connected datastores to be the latest version. [#7690](https://github.com/scalableminds/webknossos/pull/7690)
+- If your setup contains webknossos-workers, you may want to add the new available job `infer_mitochondria` to the `supportedJobCommands` of your workers. Make sure you deploy the latest webknossos-worker release. [#7752](https://github.com/scalableminds/webknossos/pull/7752)
+- Meshfiles with version 2 or older are no longer supported. Talk to us about support in converting your old meshfiles. [#7764](https://github.com/scalableminds/webknossos/pull/7764)
+
+### Postgres Evolutions:
+
+- If your setup contains a worker, make sure to upgrade it to the latest version, as the authentication api has changed (user_auth_token rather than webknossos_token). [#6547](https://github.com/scalableminds/webknossos/pull/6547)
+
+
 ## [24.04.0](https://github.com/scalableminds/webknossos/releases/tag/24.04.0) - 2024-03-25
 [Commits](https://github.com/scalableminds/webknossos/compare/24.02.3...24.04.0)
 - WKW datasets can now only be read if they have a `header.wkw` file in their mag directories. If specific datasets can no longer be loaded, consider adding such a file. Backend logging should show according error message. [#7528](https://github.com/scalableminds/webknossos/pull/7528)
@@ -351,7 +400,7 @@ None.
 
 ## [21.11.0](https://github.com/scalableminds/webknossos/releases/tag/21.11.0) - 2021-11-30
 - The docker files now place the webKnossos installation under `/webknossos` instead of `/srv/webknossos`. All mounts, most importantly `/srv/webknossos/binaryData`, need to be changed accordingly.
-- The entrypoint of the docker files have changed. Therefore, any existing `docker-compose.yml` setups need to be adapted. In most cases, only the `entrypoint: bin/webknossos` lines need to be removed (if existant).
+- The entrypoint of the docker files have changed. Therefore, any existing `docker-compose.yml` setups need to be adapted. In most cases, only the `entrypoint: bin/webknossos` lines need to be removed (if existent).
 - To receive Slack notifications about slow bucket requests, overwrite `slackNotifications.uri` in the webknossos-datastore config.
 - If your setup includes a webknossos-worker, it needs to be updated to the latest version (PR https://github.com/scalableminds/webknossos-worker/pull/70)
 
@@ -606,7 +655,7 @@ No migrations necessary.
 
 
 ## [19.03.0](https://github.com/scalableminds/webknossos/releases/tag/19.03.0) - 2019-03-04
-- The config paramters `application.authentication.enableDevAutoVerify` and `application.authentication.enableDevAutoAdmin` have been removed. To enable automatic verification for user signup, set the organization’s new `enableAutoVerify` field to `true` in the database.
+- The config parameters `application.authentication.enableDevAutoVerify` and `application.authentication.enableDevAutoAdmin` have been removed. To enable automatic verification for user signup, set the organization’s new `enableAutoVerify` field to `true` in the database.
 
 ### Postgres Evolutions:
 - [038-more-voxel-types.sql](conf/evolutions/038-more-voxel-types.sql)
@@ -643,7 +692,7 @@ No migrations necessary.
 
 ## [18.11.0](https://github.com/scalableminds/webknossos/releases/tag/18.11.0) - 2018-10-29
 - Some config keys have changed, if you overwrite them in your setup, please adapt: the `oxalis` prefix is renamed to `webKnossos` so the new keys are `webKnossos.user.time.tracingPauseInSeconds`, `webKnossos.tasks.maxOpenPerUser`, `webKnossos.newOrganizationMailingList` as well as `datastore.webKnossos.uri`, `datastore.webKnossos.secured`, `datastore.webKnossos.pingIntervalMinutes` for the data store.
-- There is now a separate module for the tracingstore, the datastore is no longer responsible for saving tracings. This module can run as a standalone application, or as a module of webKnossos locally. It is recommended that you choose the option that was previously also in place for datastores. In case of a standalone datastore, the local one needs to be disabled in application.conf: `tracingstore.enabled = false` and `play.modules.disabled += "com.scalableminds.braingames.datastore.TracingStoreModule` – and in either case, the adress of the tracingstore (localhost or remote) needs to be inserted in the db in `webknossos.tracingStores`.
+- There is now a separate module for the tracingstore, the datastore is no longer responsible for saving tracings. This module can run as a standalone application, or as a module of webKnossos locally. It is recommended that you choose the option that was previously also in place for datastores. In case of a standalone datastore, the local one needs to be disabled in application.conf: `tracingstore.enabled = false` and `play.modules.disabled += "com.scalableminds.braingames.datastore.TracingStoreModule` – and in either case, the address of the tracingstore (localhost or remote) needs to be inserted in the db in `webknossos.tracingStores`.
 - The FossilDB version has changed from `0.1.10` to `0.1.14`.
 - The FossilDB needs to be run with an additional column family `volumeUpdates`.
 - If your setup overwrites the config key `play.http.router` to disable the local datastore, change it to `"noDS.Routes"` (or `"noDS.noTS.Routes"` to also disable the local tracingstore).

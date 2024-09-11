@@ -1,4 +1,4 @@
-import { BufferGeometry } from "three";
+import type { BufferGeometry } from "three";
 import { DRACOLoader } from "libs/DRACOLoader";
 
 let _dracoLoader: CustomDRACOLoader | null;
@@ -24,6 +24,7 @@ export function getDracoLoader(): CustomDRACOLoader {
 
   _dracoLoader.setDecoderPath("/assets/wasm/");
   _dracoLoader.setDecoderConfig({ type: "wasm" });
+  _dracoLoader.preload();
   // The loader could theoretically be disposed like this:
   // _dracoLoader.dispose();
   // However, it's probably okay to not release the resources,

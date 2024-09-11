@@ -7,7 +7,7 @@ import {
   Row,
   Switch,
   Tooltip,
-  FormInstance,
+  type FormInstance,
   Select,
   Space,
   Button,
@@ -16,7 +16,7 @@ import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import { validateDatasourceJSON, isValidJSON, syncValidator } from "types/validation";
-import { BoundingBoxObject, OxalisState } from "oxalis/store";
+import type { BoundingBoxObject, OxalisState } from "oxalis/store";
 import {
   Hideable,
   FormItemWithInfo,
@@ -25,13 +25,13 @@ import {
 } from "dashboard/dataset/helper_components";
 import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 import { jsonStringify, parseMaybe } from "libs/utils";
-import { DataLayer } from "types/schemas/datasource.types";
+import type { DataLayer } from "types/schemas/datasource.types";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
-import { APIDataLayer, APIDataset, APIJobType } from "types/api_flow_types";
+import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_types";
 import { useStartAndPollJob } from "admin/job/job_hooks";
-import { Vector3 } from "oxalis/constants";
+import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 
 const FormItem = Form.Item;
@@ -64,14 +64,12 @@ export default function DatasetSettingsDataTab({
   form,
   activeDataSourceEditMode,
   onChange,
-  additionalAlert,
   dataset,
 }: {
   allowRenamingDataset: boolean;
   form: FormInstance;
   activeDataSourceEditMode: "simple" | "advanced";
   onChange: (arg0: "simple" | "advanced") => void;
-  additionalAlert?: React.ReactNode | null | undefined;
   dataset?: APIDataset | null | undefined;
 }) {
   // Using the return value of useWatch for the `dataSource` var
@@ -112,8 +110,6 @@ export default function DatasetSettingsDataTab({
           />
         </Tooltip>
       </div>
-
-      {additionalAlert}
 
       <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
@@ -211,18 +207,18 @@ function SimpleDatasetForm({
               </Col>
               <Col span={24} xl={12}>
                 <FormItemWithInfo
-                  name={["dataSource", "scale"]}
+                  name={["dataSource", "scale", "factor"]}
                   label="Voxel Size"
-                  info="The voxel size defines the extent (for x, y, z) of one voxel in nanometer."
+                  info="The voxel size defines the extent (for x, y, z) of one voxel in the specified unit."
                   rules={[
                     {
                       required: true,
-                      message: "Please provide a scale for the dataset.",
+                      message: "Please provide a voxel size for the dataset.",
                     },
                     {
                       validator: syncValidator(
                         (value: Vector3) => value?.every((el) => el > 0),
-                        "Each component of the scale must be greater than 0",
+                        "Each component of the voxel size must be greater than 0",
                       ),
                     },
                   ]}
@@ -232,6 +228,30 @@ function SimpleDatasetForm({
                       width: 400,
                     }}
                     allowDecimals
+                  />
+                </FormItemWithInfo>
+                <Space size="large" />
+                <FormItemWithInfo
+                  name={["dataSource", "scale", "unit"]}
+                  label="Unit"
+                  info="The unit in which the voxel size is defined."
+                  rules={[
+                    {
+                      required: true,
+                      message: "Please provide a unit for the voxel scale of the dataset.",
+                    },
+                  ]}
+                >
+                  <Select
+                    style={{ width: 120 }}
+                    options={AllUnits.map((unit) => ({
+                      value: unit,
+                      label: (
+                        <span>
+                          <Tooltip title={unit}>{LongUnitToShortUnitMap[unit]}</Tooltip>
+                        </span>
+                      ),
+                    }))}
                   />
                 </FormItemWithInfo>
               </Col>
@@ -347,7 +367,7 @@ function SimpleLayerForm({
       }}
     >
       {mayLayerBeRemoved && (
-        <div style={{ position: "absolute", top: 12, right: 0, zIndex: 1000 }}>
+        <div style={{ position: "absolute", top: 12, right: 0, zIndex: 500 }}>
           <Tooltip title="Remove Layer">
             <Button shape="circle" icon={<DeleteOutlined />} onClick={() => onRemoveLayer(layer)} />
           </Tooltip>
@@ -558,7 +578,7 @@ function SimpleLayerForm({
                         if (value == null || value === "") {
                           return undefined;
                         }
-                        return parseInt(value, 10);
+                        return Number.parseInt(value, 10);
                       }}
                     />
                     {dataset?.dataStore.jobsSupportedByAvailableWorkers.includes(

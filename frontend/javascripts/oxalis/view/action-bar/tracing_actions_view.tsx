@@ -22,12 +22,14 @@ import {
   StopOutlined,
   VerticalLeftOutlined,
   VerticalRightOutlined,
+  UnlockOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import { connect } from "react-redux";
 import * as React from "react";
 import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_flow_types";
 import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
-import { AsyncButton, AsyncButtonProps } from "components/async_clickables";
+import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 import {
@@ -35,6 +37,7 @@ import {
   finishAnnotation,
   reOpenAnnotation,
   createExplorational,
+  editLockedState,
 } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import {
@@ -66,6 +69,7 @@ import {
   screenshotMenuItem,
   renderAnimationMenuItem,
 } from "oxalis/view/action-bar/view_dataset_actions_view";
+import * as Utils from "libs/utils";
 import UserLocalStorage from "libs/user_local_storage";
 import features from "features";
 import { getTracingType } from "oxalis/model/accessors/tracing_accessor";
@@ -73,8 +77,8 @@ import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
-import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
-import { CreateAnimationModalWrapper as CreateAnimationModal } from "./create_animation_modal";
+import type { ItemType, SubMenuType } from "antd/es/menu/interface";
+import CreateAnimationModal from "./create_animation_modal";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
   AsyncButton,
@@ -95,7 +99,8 @@ type StateProps = {
   isRenderAnimationModalOpen: boolean;
   busyBlockingInfo: BusyBlockingInfo;
   annotationOwner: APIUserBase | null | undefined;
-  othersMayEdit: boolean;
+  isAnnotationLockedByUser: boolean;
+  annotationTags: string[];
 };
 type Props = OwnProps & StateProps;
 type State = {
@@ -449,6 +454,25 @@ class TracingActionsView extends React.PureComponent<Props, State> {
     });
   };
 
+  handleChangeLockedStateOfAnnotation = async (isLocked: boolean) => {
+    try {
+      const { annotationId, annotationType } = this.props;
+      // Ensure saved state, before (un)locking the annotation and then reloading.
+      await Model.ensureSavedState();
+      await editLockedState(annotationId, annotationType, isLocked);
+      Toast.success(
+        isLocked ? messages["annotation.lock.success"] : messages["annotation.unlock.success"],
+      );
+      // Give some time to show the toast before reloading the page.
+      await Utils.sleep(250);
+      location.reload();
+    } catch (error: any) {
+      const verb = isLocked ? "lock" : "unlock";
+      Toast.error(`Could not ${verb} the annotation. ` + error?.message);
+      console.error(`Could not ${verb} the annotation. `, error);
+    }
+  };
+
   render() {
     const { viewMode, controlMode } = Store.getState().temporaryConfiguration;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
@@ -461,16 +485,11 @@ class TracingActionsView extends React.PureComponent<Props, State> {
       activeUser,
       layoutMenu,
       busyBlockingInfo,
-      othersMayEdit,
+      isAnnotationLockedByUser,
       annotationOwner,
     } = this.props;
-    const copyAnnotationText =
-      !restrictions.allowUpdate &&
-      activeUser != null &&
-      annotationOwner?.id === activeUser.id &&
-      othersMayEdit
-        ? "Duplicate"
-        : "Copy To My Account";
+    const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
+    const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
     const archiveButtonText = task ? "Finish and go to Dashboard" : "Archive";
     const saveButton = restrictions.allowUpdate
       ? [
@@ -694,6 +713,14 @@ class TracingActionsView extends React.PureComponent<Props, State> {
         label: "Disable saving",
       });
     }
+    if (isAnnotationOwner) {
+      menuItems.push({
+        key: "lock-unlock-button",
+        onClick: () => this.handleChangeLockedStateOfAnnotation(!isAnnotationLockedByUser),
+        icon: isAnnotationLockedByUser ? <UnlockOutlined /> : <LockOutlined />,
+        label: `${isAnnotationLockedByUser ? "Unlock" : "Lock"} Annotation`,
+      });
+    }
 
     return (
       <>
@@ -729,7 +756,8 @@ function mapStateToProps(state: OxalisState): StateProps {
     isShareModalOpen: state.uiInformation.showShareModal,
     isRenderAnimationModalOpen: state.uiInformation.showRenderAnimationModal,
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
-    othersMayEdit: state.tracing.othersMayEdit,
+    isAnnotationLockedByUser: state.tracing.isLockedByOwner,
+    annotationTags: state.tracing.tags,
   };
 }
 

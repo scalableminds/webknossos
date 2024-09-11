@@ -57,6 +57,7 @@ import {
   setViewModeAction,
   setMappingAction,
   updateLayerSettingAction,
+  setMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   initializeEditableMappingAction,
@@ -94,7 +95,7 @@ import Toast from "libs/toast";
 import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
 import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
-import constants, { ControlModeEnum, AnnotationToolEnum, Vector3 } from "oxalis/constants";
+import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";
 import messages from "messages";
 import {
   setActiveConnectomeAgglomerateIdsAction,
@@ -250,7 +251,7 @@ async function fetchEditableMappings(
   serverVolumeTracings: ServerVolumeTracing[],
 ): Promise<ServerEditableMapping[]> {
   const promises = serverVolumeTracings
-    .filter((tracing) => tracing.mappingIsEditable)
+    .filter((tracing) => tracing.hasEditableMapping)
     .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id));
   return Promise.all(promises);
 }
@@ -620,7 +621,24 @@ function determineDefaultState(
   }
 
   const stateByLayer = urlStateByLayer ?? {};
+  // Add the default mapping to the state for each layer that does not have a mapping set in its URL settings.
+  for (const layerName in datasetConfiguration.layers) {
+    if (!(layerName in stateByLayer)) {
+      stateByLayer[layerName] = {};
+    }
+    const { mapping } = datasetConfiguration.layers[layerName];
+    if (stateByLayer[layerName].mappingInfo == null && mapping != null) {
+      stateByLayer[layerName].mappingInfo = {
+        mappingName: mapping.name,
+        mappingType: mapping.type,
+      };
+    }
+  }
 
+  // Overwriting the mapping to load for each volume layer in case
+  // - the volume tracing has a not locked mapping set and the url does not.
+  // - the volume tracing has a locked mapping set.
+  // - the volume tracing has locked that no tracing should be loaded.
   const volumeTracings = tracings.filter(
     (tracing) => tracing.typ === "Volume",
   ) as ServerVolumeTracing[];
@@ -730,6 +748,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
           showLoadingIndicator: true,
         }),
       );
+      Store.dispatch(setMappingEnabledAction(effectiveLayerName, true));
 
       if (agglomerateIdsToImport != null) {
         const { tracing } = Store.getState();

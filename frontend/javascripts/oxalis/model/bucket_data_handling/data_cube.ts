@@ -1,11 +1,17 @@
 import _ from "lodash";
+import { createNanoEvents, type Emitter } from "nanoevents";
 import type { Bucket, BucketDataArray } from "oxalis/model/bucket_data_handling/bucket";
 import { DataBucket, NULL_BUCKET, NullBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { AdditionalAxis, ElementClass } from "types/api_flow_types";
 import type { ProgressCallback } from "libs/progress_callback";
 import { V3 } from "libs/mjs";
 import { VoxelNeighborQueue2D, VoxelNeighborQueue3D } from "oxalis/model/volumetracing/volumelayer";
-import { areBoundingBoxesOverlappingOrTouching, castForArrayType } from "libs/utils";
+import {
+  areBoundingBoxesOverlappingOrTouching,
+  castForArrayType,
+  isNumberMap,
+  union,
+} from "libs/utils";
 import { getMappingInfo } from "oxalis/model/accessors/dataset_accessor";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
@@ -14,8 +20,8 @@ import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { DimensionMap } from "oxalis/model/dimensions";
 import Dimensions from "oxalis/model/dimensions";
 import ErrorHandling from "libs/error_handling";
-import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
-import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import type PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import type { Mapping } from "oxalis/store";
 import Store from "oxalis/store";
 import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
@@ -27,8 +33,8 @@ import type {
   BucketAddress,
 } from "oxalis/constants";
 import constants, { MappingStatusEnum } from "oxalis/constants";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 const warnAboutTooManyAllocations = _.once(() => {
   const msg =
@@ -78,6 +84,8 @@ class DataCube {
   elementClass: ElementClass;
   resolutionInfo: ResolutionInfo;
   layerName: string;
+  emitter: Emitter;
+  lastRequestForValueSet: number | null = null;
 
   // The cube stores the buckets in a separate array for each zoomStep. For each
   // zoomStep the cube-array contains the boundaries and an array holding the buckets.
@@ -108,6 +116,7 @@ class DataCube {
     this.resolutionInfo = resolutionInfo;
     this.layerName = layerName;
     this.additionalAxes = _.keyBy(additionalAxes, "name");
+    this.emitter = createNanoEvents();
 
     this.cubes = {};
     this.buckets = [];
@@ -170,19 +179,25 @@ class DataCube {
       : false;
   }
 
-  mapId(idToMap: number): number {
-    let mappedId = null;
+  mapId(unmappedId: number): number {
+    // Note that the return value can be an unmapped id even when
+    // a mapping is active, if it is a HDF5 mapping that is partially loaded
+    // and no entry exists yet for the input id.
+    let mappedId: number | null | undefined = null;
     const mapping = this.getMapping();
 
     if (mapping != null && this.isMappingEnabled()) {
-      mappedId = mapping.get(idToMap);
+      mappedId = isNumberMap(mapping)
+        ? mapping.get(Number(unmappedId))
+        : // TODO: Proper 64 bit support (#6921)
+          Number(mapping.get(BigInt(unmappedId)));
+    }
+    if (mappedId == null || isNaN(mappedId)) {
+      // The id couldn't be mapped.
+      return this.shouldHideUnmappedIds() ? 0 : unmappedId;
     }
 
-    if (this.shouldHideUnmappedIds() && mappedId == null) {
-      mappedId = 0;
-    }
-
-    return mappedId != null ? mappedId : idToMap;
+    return mappedId;
   }
 
   private getCubeKey(zoomStep: number, allCoords: AdditionalCoordinate[] | undefined | null) {
@@ -371,6 +386,30 @@ class DataCube {
 
     this.buckets = notCollectedBuckets;
     this.bucketIterator = notCollectedBuckets.length;
+  }
+
+  triggerBucketDataChanged(): void {
+    this.emitter.emit("bucketDataChanged");
+  }
+
+  shouldEagerlyMaintainUsedValueSet() {
+    // The value set for all buckets in this cube should be maintained eagerly
+    // if the valueSet was used within the last 2 minutes.
+    return Date.now() - (this.lastRequestForValueSet || 0) < 2 * 60 * 1000;
+  }
+
+  getValueSetForAllBuckets(): Set<number> | Set<bigint> {
+    this.lastRequestForValueSet = Date.now();
+
+    // Theoretically, we could ignore coarser buckets for which we know that
+    // finer buckets are already loaded. However, the current performance
+    // is acceptable which is why this optimization isn't implemented.
+    const valueSets = this.buckets
+      .filter((bucket) => bucket.state === "LOADED")
+      .map((bucket) => bucket.getValueSet());
+    // @ts-ignore The buckets of a single layer all have the same element class, so they are all number or all bigint
+    const valueSet = union(valueSets);
+    return valueSet;
   }
 
   collectBucket(bucket: DataBucket): void {
@@ -838,17 +877,21 @@ class DataCube {
 
     if (bucket.hasData()) {
       const data = bucket.getData();
-      const dataValue = Number(data[voxelIndex]);
+      const dataValue = data[voxelIndex];
 
       if (mapping) {
-        const mappedValue = mapping.get(dataValue);
+        const mappedValue = isNumberMap(mapping)
+          ? mapping.get(Number(dataValue))
+          : mapping.get(BigInt(dataValue));
 
         if (mappedValue != null) {
-          return mappedValue;
+          // TODO: Proper 64 bit support (#6921)
+          return Number(mappedValue);
         }
       }
 
-      return dataValue;
+      // TODO: Proper 64 bit support (#6921)
+      return Number(dataValue);
     }
 
     return 0;

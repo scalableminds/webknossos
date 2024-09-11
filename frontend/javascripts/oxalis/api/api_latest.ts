@@ -4,9 +4,9 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import { APICompoundType, APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
+import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
-import { M4x4, Matrix4x4, V3, Vector16 } from "libs/mjs";
+import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
 import {
   addTreesAndGroupsAction,
@@ -26,6 +26,7 @@ import {
   setTreeGroupAction,
   setTreeGroupsAction,
   setTreeEdgeVisibilityAction,
+  createTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   bucketPositionToGlobalAddress,
@@ -40,7 +41,7 @@ import {
   moveGroupsHelper,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
-import { discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
+import { disableSavingAction, discardSaveQueuesAction } from "oxalis/model/actions/save_actions";
 import {
   doWithToken,
   finishAnnotation,
@@ -77,7 +78,7 @@ import {
   getVolumeTracings,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import { getHalfViewportExtentsFromState } from "oxalis/model/sagas/saga_selectors";
+import { getHalfViewportExtentsInUnitFromState } from "oxalis/model/sagas/saga_selectors";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -100,7 +101,7 @@ import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middlewar
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import {
-  BatchableUpdateSegmentAction,
+  type BatchableUpdateSegmentAction,
   batchUpdateGroupsAndSegmentsAction,
   clickSegmentAction,
   removeSegmentAction,
@@ -143,9 +144,9 @@ import Constants, {
   MappingStatusEnum,
   EMPTY_OBJECT,
 } from "oxalis/constants";
-import DataLayer from "oxalis/model/data_layer";
+import type DataLayer from "oxalis/model/data_layer";
 import type { OxalisModel } from "oxalis/model";
-import { Model } from "oxalis/singletons";
+import { Model, api } from "oxalis/singletons";
 import Request from "libs/request";
 import type {
   MappingType,
@@ -175,8 +176,12 @@ import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import {
+  createSkeletonNode,
+  getOptionsForCreateSkeletonNode,
+} from "oxalis/controller/combinations/skeleton_handlers";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -247,9 +252,7 @@ class TracingApi {
    */
   getActiveNodeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveNode(tracing)
-      .map((node) => node.id)
-      .getOrElse(null);
+    return getActiveNode(tracing)?.id ?? null;
   }
 
   /**
@@ -257,9 +260,7 @@ class TracingApi {
    */
   getActiveTreeId(): number | null | undefined {
     const tracing = assertSkeleton(Store.getState().tracing);
-    return getActiveTree(tracing)
-      .map((tree) => tree.treeId)
-      .getOrElse(null);
+    return getActiveTree(tracing)?.treeId ?? null;
   }
 
   /**
@@ -321,11 +322,60 @@ class TracingApi {
   }
 
   /**
+   * Creates a new and empty tree. Returns the
+   * id of that tree.
+   */
+  createTree() {
+    assertSkeleton(Store.getState().tracing);
+    let treeId = null;
+    Store.dispatch(
+      createTreeAction((id) => {
+        treeId = id;
+      }),
+    );
+    if (treeId == null) {
+      throw new Error("Could not create tree.");
+    }
+    return treeId;
+  }
+
+  /**
    * Deletes the tree with the given treeId.
    */
   deleteTree(treeId: number) {
     assertSkeleton(Store.getState().tracing);
     Store.dispatch(deleteTreeAction(treeId));
+  }
+
+  /**
+   * Creates a new node in the current tree. If the active tree
+   * is not empty, the node will be connected with an edge to
+   * the currently active node.
+   */
+  createNode(
+    position: Vector3,
+    options?: {
+      additionalCoordinates?: AdditionalCoordinate[];
+      rotation?: Vector3;
+      center?: boolean;
+      branchpoint?: boolean;
+      activate?: boolean;
+      skipCenteringAnimationInThirdDimension?: boolean;
+    },
+  ) {
+    assertSkeleton(Store.getState().tracing);
+    const defaultOptions = getOptionsForCreateSkeletonNode();
+    createSkeletonNode(
+      position,
+      options?.additionalCoordinates ?? defaultOptions.additionalCoordinates,
+      options?.rotation ?? defaultOptions.rotation,
+      options?.center ?? defaultOptions.center,
+      options?.branchpoint ?? defaultOptions.branchpoint,
+      options?.activate ?? defaultOptions.activate,
+      // This is the only parameter where we don't fall back to the default option,
+      // as the parameter mostly makes sense when the user creates a node *manually*.
+      options?.skipCenteringAnimationInThirdDimension ?? false,
+    );
   }
 
   /**
@@ -379,7 +429,10 @@ class TracingApi {
     if (treeId != null) {
       tree = skeletonTracing.trees[treeId];
       assertExists(tree, `Couldn't find tree ${treeId}.`);
-      assertExists(tree.nodes.get(nodeId), `Couldn't find node ${nodeId} in tree ${treeId}.`);
+      assertExists(
+        tree.nodes.getOrThrow(nodeId),
+        `Couldn't find node ${nodeId} in tree ${treeId}.`,
+      );
     } else {
       tree = _.values(skeletonTracing.trees).find((__) => __.nodes.has(nodeId));
       assertExists(tree, `Couldn't find node ${nodeId}.`);
@@ -588,6 +641,95 @@ class TracingApi {
   }
 
   /**
+   * Registers all segments that exist at least partially in the given bounding box.
+   *
+   * @example
+   * api.tracing.registerSegmentsForBoundingBox(
+   *   [0, 0, 0],
+   *   [10, 10, 10],
+   *   "My Bounding Box"
+   * );
+   */
+  registerSegmentsForBoundingBox = async (
+    min: Vector3,
+    max: Vector3,
+    bbName: string,
+    options?: { maximumSegmentCount?: number; maximumVolume?: number },
+  ) => {
+    const maximumVolume = options?.maximumVolume ?? Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
+    const maximumSegmentCount =
+      options?.maximumSegmentCount ?? Constants.REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT;
+    const shape = Utils.computeShapeFromBoundingBox({ min, max });
+    const volume = Math.ceil(shape[0] * shape[1] * shape[2]);
+    if (volume > maximumVolume) {
+      Toast.error(
+        `The volume of the bounding box exceeds ${maximumVolume} Vx, please make it smaller.`,
+      );
+      return;
+    } else if (volume > maximumVolume / 8) {
+      Toast.warning(
+        "The volume of the bounding box is very large, registering all segments might take a while.",
+      );
+    }
+
+    const segmentationLayerName = api.data.getSegmentationLayerNames()[0];
+    const layer = getLayerByName(Store.getState().dataset, segmentationLayerName);
+
+    const resolutionInfo = getResolutionInfo(layer.resolutions);
+    const finestResolution = resolutionInfo.getFinestResolution();
+    // By default, getDataForBoundingBox uses the finest existing magnification.
+    // We use that as strides to traverse the data array properly.
+    const [dx, dy, dz] = finestResolution;
+
+    const data = await api.data.getDataForBoundingBox(segmentationLayerName, {
+      min,
+      max,
+    });
+
+    const segmentIdToPosition = new Map();
+    let idx = 0;
+    for (let z = min[2]; z < max[2]; z += dz) {
+      for (let y = min[1]; y < max[1]; y += dy) {
+        for (let x = min[0]; x < max[0]; x += dx) {
+          const id = data[idx];
+          if (id !== 0 && !segmentIdToPosition.has(id)) {
+            segmentIdToPosition.set(id, [x, y, z]);
+          }
+          idx++;
+        }
+      }
+    }
+
+    const segmentIdCount = Array.from(segmentIdToPosition.entries()).length;
+    const halfMaxNoSegments = maximumSegmentCount / 2;
+    if (segmentIdCount > maximumSegmentCount) {
+      Toast.error(
+        `The given bounding box contains ${segmentIdCount} segments, but only ${maximumSegmentCount} segments can be registered at once. Please reduce the size of the bounding box.`,
+      );
+      return;
+    } else if (segmentIdCount > halfMaxNoSegments) {
+      Toast.warning(
+        `The bounding box contains more than ${halfMaxNoSegments} segments. Registering all segments might take a while.`,
+      );
+    }
+
+    const groupId = api.tracing.createSegmentGroup(
+      `Segments for ${bbName}`,
+      -1,
+      segmentationLayerName,
+    );
+    const updateSegmentActions: BatchableUpdateSegmentAction[] = [];
+    for (const [segmentId, position] of segmentIdToPosition.entries()) {
+      api.tracing.registerSegment(segmentId, position, undefined, segmentationLayerName);
+      updateSegmentActions.push(
+        updateSegmentAction(segmentId, { groupId, id: segmentId }, segmentationLayerName),
+      );
+    }
+    if (updateSegmentActions.length > 0)
+      Store.dispatch(batchUpdateGroupsAndSegmentsAction(updateSegmentActions));
+  };
+
+  /**
    * Gets a segment object within the referenced volume layer. Note that this object
    * does not support any modifications made to it.
    *
@@ -599,7 +741,7 @@ class TracingApi {
    * console.log(segment.groupId)
    */
   getSegment(segmentId: number, layerName: string): Segment {
-    const segment = getSegmentsForLayer(Store.getState(), layerName).get(segmentId);
+    const segment = getSegmentsForLayer(Store.getState(), layerName).getOrThrow(segmentId);
     // Return a copy to avoid mutations by third-party code.
     return { ...segment };
   }
@@ -687,6 +829,7 @@ class TracingApi {
       name: name || `Group ${newGroupId}`,
       groupId: newGroupId,
       children: [],
+      isExpanded: false,
     };
 
     if (parentGroupId === MISSING_GROUP_ID) {
@@ -788,7 +931,7 @@ class TracingApi {
               { groupId: parentGroupId === MISSING_GROUP_ID ? null : parentGroupId },
               volumeTracing.tracingId,
               // The parameter createsNewUndoState is not passed, since the action
-              // is added to a batch and batch updates always crate a new undo state.
+              // is added to a batch and batch updates always create a new undo state.
             ),
           );
         }
@@ -1062,21 +1205,20 @@ class TracingApi {
       throw new Error(`Tree with id ${treeId} not found.`);
     }
 
-    const datasetScale = state.dataset.dataSource.scale;
+    const voxelSizeFactor = state.dataset.dataSource.scale.factor;
     // Pre-allocate vectors
-    let lengthNmAcc = 0;
-    let lengthVxAcc = 0;
+    let lengthInUnitAcc = 0;
+    let lengthInVxAcc = 0;
 
     const getPos = (node: Readonly<MutableNode>) => getNodePosition(node, state);
 
     for (const edge of tree.edges.all()) {
-      const sourceNode = tree.nodes.get(edge.source);
-      const targetNode = tree.nodes.get(edge.target);
-      lengthNmAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), datasetScale);
-      lengthVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
+      const sourceNode = tree.nodes.getOrThrow(edge.source);
+      const targetNode = tree.nodes.getOrThrow(edge.target);
+      lengthInUnitAcc += V3.scaledDist(getPos(sourceNode), getPos(targetNode), voxelSizeFactor);
+      lengthInVxAcc += V3.length(V3.sub(getPos(sourceNode), getPos(targetNode)));
     }
-
-    return [lengthNmAcc, lengthVxAcc];
+    return [lengthInUnitAcc, lengthInVxAcc];
   }
 
   /**
@@ -1084,16 +1226,16 @@ class TracingApi {
    */
   measureAllTrees(): [number, number] {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
-    let totalLengthNm = 0;
-    let totalLengthVx = 0;
+    let totalLengthInUnit = 0;
+    let totalLengthInVx = 0;
 
     _.values(skeletonTracing.trees).forEach((currentTree) => {
-      const [lengthNm, lengthVx] = this.measureTreeLength(currentTree.treeId);
-      totalLengthNm += lengthNm;
-      totalLengthVx += lengthVx;
+      const [lengthInUnit, lengthInVx] = this.measureTreeLength(currentTree.treeId);
+      totalLengthInUnit += lengthInUnit;
+      totalLengthInVx += lengthInVx;
     });
 
-    return [totalLengthNm, totalLengthVx];
+    return [totalLengthInUnit, totalLengthInVx];
   }
 
   /**
@@ -1104,8 +1246,8 @@ class TracingApi {
     sourceNodeId: number,
     targetNodeId: number,
   ): {
-    lengthNm: number;
-    lengthVx: number;
+    lengthInUnit: number;
+    lengthInVx: number;
     shortestPath: number[];
   } {
     const skeletonTracing = assertSkeleton(Store.getState().tracing);
@@ -1126,7 +1268,7 @@ class TracingApi {
       throw new Error("The nodes are not within the same tree.");
     }
 
-    const datasetScale = Store.getState().dataset.dataSource.scale;
+    const voxelSizeFactor = Store.getState().dataset.dataSource.scale.factor;
     // We use the Dijkstra algorithm to get the shortest path between the nodes.
     const distanceMap: Record<number, number> = {};
     // The distance map is also maintained in voxel space. This information is only
@@ -1155,25 +1297,24 @@ class TracingApi {
 
     while (priorityQueue.length > 0) {
       const [nextNodeId, distance] = priorityQueue.dequeue();
-      const nextNodePosition = getPos(sourceTree.nodes.get(nextNodeId));
+      const nextNodePosition = getPos(sourceTree.nodes.getOrThrow(nextNodeId));
 
       // Calculate the distance to all neighbours and update the distances.
       for (const { source, target } of sourceTree.edges.getEdgesForNode(nextNodeId)) {
         const neighbourNodeId = source === nextNodeId ? target : source;
-        const neighbourPosition = getPos(sourceTree.nodes.get(neighbourNodeId));
+        const neighbourPosition = getPos(sourceTree.nodes.getOrThrow(neighbourNodeId));
         const neighbourDistance =
-          distance + V3.scaledDist(nextNodePosition, neighbourPosition, datasetScale);
+          distance + V3.scaledDist(nextNodePosition, neighbourPosition, voxelSizeFactor);
 
         if (neighbourDistance < getDistance(neighbourNodeId)) {
           distanceMap[neighbourNodeId] = neighbourDistance;
           parentMap[neighbourNodeId] = source === nextNodeId ? source : target;
           const neighbourDistanceVx = V3.length(V3.sub(nextNodePosition, neighbourPosition));
-          distanceMapVx[neighbourNodeId] = neighbourDistanceVx;
+          distanceMapVx[neighbourNodeId] = neighbourDistanceVx + distanceMapVx[nextNodeId];
           priorityQueue.queue([neighbourNodeId, neighbourDistance]);
         }
       }
     }
-
     // Retrace the shortest path from the target node.
     let nodeId = targetNodeId;
     const shortestPath = [targetNodeId];
@@ -1183,8 +1324,8 @@ class TracingApi {
     }
 
     return {
-      lengthNm: distanceMap[targetNodeId],
-      lengthVx: distanceMapVx[targetNodeId],
+      lengthInUnit: distanceMap[targetNodeId],
+      lengthInVx: distanceMapVx[targetNodeId],
       shortestPath,
     };
   }
@@ -1193,28 +1334,34 @@ class TracingApi {
    * Returns the length of the shortest path between two nodes in nanometer and in voxels.
    */
   measurePathLengthBetweenNodes(sourceNodeId: number, targetNodeId: number): [number, number] {
-    const { lengthNm, lengthVx } = this.findShortestPathBetweenNodes(sourceNodeId, targetNodeId);
-    return [lengthNm, lengthVx];
+    const { lengthInUnit, lengthInVx } = this.findShortestPathBetweenNodes(
+      sourceNodeId,
+      targetNodeId,
+    );
+    return [lengthInUnit, lengthInVx];
   }
 
   /**
    * Starts an animation to center the given position. See setCameraPosition for a non-animated version of this function.
    *
    * @param position - Vector3
-   * @param skipDimensions - Boolean which decides whether the third dimension shall also be animated (defaults to true)
+   * @param skipCenteringAnimationInThirdDimension -
+   *        Boolean which decides whether the third dimension shall also be animated (defaults to true)
+   *        When true, this lets the user still manipulate the "third dimension"
+   *        during the animation (important because otherwise the user cannot continue to trace until
+   *        the animation is over).
    * @param rotation - Vector3 (optional) - Will only be noticeable in flight or oblique mode.
    * @example
    * api.tracing.centerPositionAnimated([0, 0, 0])
    */
   centerPositionAnimated(
     position: Vector3,
-    skipDimensions: boolean = true,
+    skipCenteringAnimationInThirdDimension: boolean = true,
     rotation?: Vector3,
   ): void {
-    // Let the user still manipulate the "third dimension" during animation
     const { activeViewport } = Store.getState().viewModeData.plane;
     const dimensionToSkip =
-      skipDimensions && activeViewport !== OrthoViews.TDView
+      skipCenteringAnimationInThirdDimension && activeViewport !== OrthoViews.TDView
         ? dimensions.thirdDimensionForPlane(activeViewport)
         : null;
     const curPosition = getPosition(Store.getState().flycam);
@@ -1358,6 +1505,14 @@ class TracingApi {
     await this.save();
     await downsampleSegmentation(annotationId, annotationType, volumeTracingId);
     await this.hardReload();
+  }
+
+  /**
+   * Disables the saving for the current annotation.
+   * WARNING: Cannot be undone. Only do this if you know what you are doing.
+   */
+  disableSaving() {
+    Store.dispatch(disableSavingAction());
   }
 }
 /**
@@ -1519,8 +1674,10 @@ class DataApi {
     const mappingProperties = {
       mapping:
         mapping instanceof Map
-          ? new Map(mapping)
-          : new Map(Object.entries(mapping).map(([key, value]) => [parseInt(key, 10), value])),
+          ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
+          : new Map(
+              Object.entries(mapping).map(([key, value]) => [Number.parseInt(key, 10), value]),
+            ),
       mappingColors,
       hideUnmappedIds,
       showLoadingIndicator,
@@ -1758,7 +1915,7 @@ class DataApi {
       dimensions.roundCoordinate(getPosition(state.flycam)),
       viewport,
     );
-    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsFromState(
+    const [halfViewportExtentU, halfViewportExtentV] = getHalfViewportExtentsInUnitFromState(
       state,
       viewport,
     );
@@ -2174,15 +2331,12 @@ class DataApi {
 
     if (
       state.localSegmentationData[effectiveLayerName].availableMeshFiles == null ||
-      // @ts-expect-error ts-migrate(2533) FIXME: Object is possibly 'null' or 'undefined'.
       !state.localSegmentationData[effectiveLayerName].availableMeshFiles.find(
         (el) => el.meshFileName === meshFileName,
       )
     ) {
       throw new Error(
-        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(
-          state.localSegmentationData[effectiveLayerName].availableMeshFiles || []
-        ).join(", ")}`,
+        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(state.localSegmentationData[effectiveLayerName].availableMeshFiles || []).join(", ")}`,
       );
     }
 

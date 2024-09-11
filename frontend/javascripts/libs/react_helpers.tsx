@@ -1,7 +1,10 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useStore } from "react-redux";
+import type React from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSelector, useStore } from "react-redux";
 import type { OxalisState } from "oxalis/store";
-import { ArbitraryFunction } from "types/globals";
+import type { ArbitraryFunction } from "types/globals";
+import { isUserAdminOrManager } from "libs/utils";
+import Toast from "./toast";
 
 // From https://overreacted.io/making-setinterval-declarative-with-react-hooks/
 export function useInterval(
@@ -47,6 +50,44 @@ export function useFetch<T>(
   return value;
 }
 
+export function useGuardedFetch<T>(
+  fetchFn: () => Promise<T>,
+  defaultValue: T,
+  dependencies: Array<any>,
+  toastErrorMessage: string,
+): [T, boolean] {
+  /*
+   * Similar to useFetch, this hook loads something asynchronously and exposes that value.
+   * Additionally, if fetchFn should fail, toastErrorMessage is shown as a toast error.
+   * Also, the function returns a tuple consistent of:
+   * - the value T
+   * - an isLoading boolean
+   */
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [value, setValue] = useState<T>(defaultValue);
+
+  async function loadData() {
+    setIsLoading(true);
+    try {
+      const _value = await fetchFn();
+      setValue(_value);
+    } catch (err) {
+      console.error(err);
+      Toast.error(toastErrorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies(loadData):
+  useEffect(() => {
+    loadData();
+  }, dependencies);
+
+  return [value, isLoading];
+}
+
 /*
   Instead of recomputing derived values on every store change,
   this hook throttles such computations at a given interval.
@@ -56,8 +97,8 @@ export function useFetch<T>(
   updates.
  */
 export function usePolledState(callback: (arg0: OxalisState) => void, interval: number = 1000) {
-  const store = useStore();
-  const oldState = useRef(null);
+  const store = useStore<OxalisState>();
+  const oldState = useRef<OxalisState | null>(null);
   useInterval(() => {
     const state = store.getState();
 
@@ -86,6 +127,11 @@ export function makeComponentLazy<T extends { isOpen: boolean }>(
     }
     return null;
   };
+}
+
+export function useIsActiveUserAdminOrManager() {
+  const user = useSelector((state: OxalisState) => state.activeUser);
+  return user != null && isUserAdminOrManager(user);
 }
 
 export default {};

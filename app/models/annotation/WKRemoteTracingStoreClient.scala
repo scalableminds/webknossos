@@ -8,6 +8,7 @@ import com.scalableminds.util.tools.Fox.bool2Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
   AnnotationLayerType,
@@ -197,7 +198,7 @@ class WKRemoteTracingStoreClient(
                        version: Option[Long] = None,
                        skipVolumeData: Boolean,
                        volumeDataZipFormat: VolumeDataZipFormat,
-                       voxelSize: Option[Vec3Double]): Fox[FetchedAnnotationLayer] = {
+                       voxelSize: Option[VoxelSize]): Fox[FetchedAnnotationLayer] = {
     logger.debug("Called to get VolumeTracing." + baseInfo)
     for {
       _ <- bool2Fox(annotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.download.fetch.notSkeleton"
@@ -211,7 +212,8 @@ class WKRemoteTracingStoreClient(
           .addQueryString("token" -> RpcTokenHolder.webknossosToken)
           .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
           .addQueryStringOptional("version", version.map(_.toString))
-          .addQueryStringOptional("voxelSize", voxelSize.map(_.toUriLiteral))
+          .addQueryStringOptional("voxelSizeFactor", voxelSize.map(_.factor.toUriLiteral))
+          .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
           .getWithBytesResponse
       }
       fetchedAnnotationLayer <- FetchedAnnotationLayer.fromAnnotationLayer(annotationLayer, Right(tracing), data)
@@ -221,14 +223,15 @@ class WKRemoteTracingStoreClient(
   def getVolumeData(tracingId: String,
                     version: Option[Long] = None,
                     volumeDataZipFormat: VolumeDataZipFormat,
-                    voxelSize: Option[Vec3Double]): Fox[Array[Byte]] = {
+                    voxelSize: Option[VoxelSize]): Fox[Array[Byte]] = {
     logger.debug("Called to get volume data." + baseInfo)
     for {
       data <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
         .addQueryString("token" -> RpcTokenHolder.webknossosToken)
         .addQueryString("volumeDataZipFormat" -> volumeDataZipFormat.toString)
         .addQueryStringOptional("version", version.map(_.toString))
-        .addQueryStringOptional("voxelSize", voxelSize.map(_.toUriLiteral))
+        .addQueryStringOptional("voxelSizeFactor", voxelSize.map(_.factor.toUriLiteral))
+        .addQueryStringOptional("voxelSizeUnit", voxelSize.map(_.unit.toString))
         .getWithBytesResponse
     } yield data
   }

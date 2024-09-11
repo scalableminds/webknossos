@@ -1,4 +1,4 @@
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export const ViewModeValues = ["orthogonal", "flight", "oblique"] as ViewMode[];
 
@@ -287,16 +287,6 @@ export type LabeledVoxelsMap = Map<BucketAddress, Uint8Array>;
 // that it can hold multiple slices per bucket (keyed by the W component,
 // e.g., z in XY viewport).
 export type LabelMasksByBucketAndW = Map<BucketAddress, Map<number, Uint8Array>>;
-export type ShowContextMenuFunction = (
-  arg0: number,
-  arg1: number,
-  arg2: number | null | undefined,
-  arg3: number | null | undefined,
-  arg4: Vector3 | null | undefined,
-  arg5: OrthoView,
-  arg6?: number | null | undefined,
-  arg7?: Vector3 | null | undefined,
-) => void;
 
 const Constants = {
   ARBITRARY_VIEW: 4,
@@ -313,7 +303,7 @@ const Constants = {
   BUCKET_SIZE: 32 ** 3,
   VIEWPORT_WIDTH,
   DEFAULT_NAVBAR_HEIGHT: 48,
-  MAINTENANCE_BANNER_HEIGHT: 38,
+  BANNER_HEIGHT: 38,
   // For reference, the area of a large brush size (let's say, 300px) corresponds to
   // pi * 300 ^ 2 == 282690.
   // We multiply this with 5, since the labeling is not done
@@ -347,6 +337,8 @@ const Constants = {
   SCALEBAR_HEIGHT: 22,
   SCALEBAR_OFFSET: 10,
   OBJECT_ID_STRING_LENGTH: 24,
+  REGISTER_SEGMENTS_BB_MAX_VOLUME_VX: 512 * 512 * 512,
+  REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
 };
 export default Constants;
 
@@ -405,3 +397,92 @@ const isMac = (() => {
 
 export const AltOrOptionKey = isMac ? "⌥" : "Alt";
 export const CtrlOrCmdKey = isMac ? "Cmd" : "Ctrl";
+
+export enum UnitLong {
+  ym = "yoctometer",
+  zm = "zeptometer",
+  am = "attometer",
+  fm = "femtometer",
+  pm = "picometer",
+  nm = "nanometer",
+  µm = "micrometer",
+  mm = "millimeter",
+  cm = "centimeter",
+  dm = "decimeter",
+  m = "meter",
+  hm = "hectometer",
+  km = "kilometer",
+  Mm = "megameter",
+  Gm = "gigameter",
+  Tm = "terameter",
+  Pm = "petameter",
+  Em = "exameter",
+  Zm = "zettameter",
+  Ym = "yottameter",
+  Å = "ångström",
+  in = "inch",
+  ft = "foot",
+  yd = "yard",
+  mi = "mile",
+  pc = "parsec",
+}
+
+export enum UnitShort {
+  ym = "ym",
+  zm = "zm",
+  am = "am",
+  fm = "fm",
+  pm = "pm",
+  nm = "nm",
+  µm = "µm",
+  mm = "mm",
+  cm = "cm",
+  dm = "dm",
+  m = "m",
+  hm = "hm",
+  km = "km",
+  Mm = "Mm",
+  Gm = "Gm",
+  Tm = "Tm",
+  Pm = "Pm",
+  Em = "Em",
+  Zm = "Zm",
+  Ym = "Ym",
+  Å = "Å",
+  in = "in",
+  ft = "ft",
+  yd = "yd",
+  mi = "mi",
+  pc = "pc",
+}
+
+export const LongUnitToShortUnitMap: Record<UnitLong, UnitShort> = {
+  [UnitLong.ym]: UnitShort.ym,
+  [UnitLong.zm]: UnitShort.zm,
+  [UnitLong.am]: UnitShort.am,
+  [UnitLong.fm]: UnitShort.fm,
+  [UnitLong.pm]: UnitShort.pm,
+  [UnitLong.nm]: UnitShort.nm,
+  [UnitLong.µm]: UnitShort.µm,
+  [UnitLong.mm]: UnitShort.mm,
+  [UnitLong.cm]: UnitShort.cm,
+  [UnitLong.dm]: UnitShort.dm,
+  [UnitLong.m]: UnitShort.m,
+  [UnitLong.hm]: UnitShort.hm,
+  [UnitLong.km]: UnitShort.km,
+  [UnitLong.Mm]: UnitShort.Mm,
+  [UnitLong.Gm]: UnitShort.Gm,
+  [UnitLong.Tm]: UnitShort.Tm,
+  [UnitLong.Pm]: UnitShort.Pm,
+  [UnitLong.Em]: UnitShort.Em,
+  [UnitLong.Zm]: UnitShort.Zm,
+  [UnitLong.Ym]: UnitShort.Ym,
+  [UnitLong.Å]: UnitShort.Å,
+  [UnitLong.in]: UnitShort.in,
+  [UnitLong.ft]: UnitShort.ft,
+  [UnitLong.yd]: UnitShort.yd,
+  [UnitLong.mi]: UnitShort.mi,
+  [UnitLong.pc]: UnitShort.pc,
+};
+
+export const AllUnits = Object.values(UnitLong);

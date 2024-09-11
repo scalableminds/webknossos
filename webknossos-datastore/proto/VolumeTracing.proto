@@ -36,11 +36,11 @@ message VolumeTracing {
     required double zoomLevel = 11;
     optional BoundingBoxProto userBoundingBox = 12;
     repeated NamedBoundingBoxProto userBoundingBoxes = 13;
-    optional string organizationName = 14; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
+    optional string organizationId = 14; // used when parsing and handling nmls, not used in tracing store anymore, do not rely on correct values
     repeated Vec3IntProto resolutions = 15;
     repeated Segment segments = 16;
     optional string mappingName = 17; // either a mapping present in the fallback layer, or an editable mapping on the tracingstore
-    optional bool mappingIsEditable = 18; // the selected mapping is an editable mapping
+    optional bool hasEditableMapping = 18; // the selected mapping is an editable mapping
     repeated SegmentGroup segmentGroups = 19;
     optional bool hasSegmentIndex = 20;
     repeated AdditionalCoordinateProto editPositionAdditionalCoordinates = 21;
@@ -52,6 +52,7 @@ message SegmentGroup {
   required string name = 1;
   required int32 groupId = 2;
   repeated SegmentGroup children = 3;
+  optional bool isExpanded = 4;
 }
 
 message VolumeTracingOpt {

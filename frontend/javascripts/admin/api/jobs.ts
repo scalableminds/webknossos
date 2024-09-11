@@ -22,6 +22,7 @@ function transformBackendJobToAPIJob(job: any): APIJob {
     layerName: job.commandArgs.layer_name || job.commandArgs.volume_layer_name,
     annotationLayerName: job.commandArgs.annotation_layer_name,
     boundingBox: job.commandArgs.bbox,
+    ndBoundingBox: job.commandArgs.nd_bbox,
     exportFileName: job.commandArgs.export_file_name,
     tracingId: job.commandArgs.volume_tracing_id,
     annotationId: job.commandArgs.annotation_id,

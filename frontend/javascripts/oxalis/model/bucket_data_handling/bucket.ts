@@ -1,4 +1,4 @@
-import { createNanoEvents, Emitter } from "nanoevents";
+import { createNanoEvents, type Emitter } from "nanoevents";
 import * as THREE from "three";
 import _ from "lodash";
 import type { ElementClass } from "types/api_flow_types";
@@ -12,10 +12,10 @@ import Constants from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
 import Store from "oxalis/store";
-import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import type TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import window from "libs/window";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",

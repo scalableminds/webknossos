@@ -1,9 +1,9 @@
 import memoizeOne from "memoize-one";
-import { AnnotationTool, IdentityTransform } from "oxalis/constants";
+import { type AnnotationTool, IdentityTransform } from "oxalis/constants";
 import { AnnotationToolEnum } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import {
-  AgglomerateState,
+  type AgglomerateState,
   getActiveSegmentationTracing,
   getRenderableResolutionForSegmentationTracing,
   hasAgglomerateMapping,
@@ -14,7 +14,7 @@ import {
   getVisibleSegmentationLayer,
 } from "oxalis/model/accessors/dataset_accessor";
 import { isMagRestrictionViolated } from "oxalis/model/accessors/flycam_accessor";
-import { APIOrganization, APIUser } from "types/api_flow_types";
+import type { APIOrganization, APIUser } from "types/api_flow_types";
 import {
   getFeatureNotAvailableInPlanMessage,
   isFeatureAllowedByPricingPlan,

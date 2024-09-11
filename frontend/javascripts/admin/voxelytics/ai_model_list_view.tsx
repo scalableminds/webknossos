@@ -3,15 +3,16 @@ import React, { useState } from "react";
 import { SyncOutlined } from "@ant-design/icons";
 import { Table, Button, Modal } from "antd";
 import { getAiModels } from "admin/admin_rest_api";
-import { AiModel } from "types/api_flow_types";
+import type { AiModel } from "types/api_flow_types";
 import FormattedDate from "components/formatted_date";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { JobState } from "admin/job/job_list_view";
 import { Link } from "react-router-dom";
 import { useGuardedFetch } from "libs/react_helpers";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
+import type { Key } from "react";
 
 export default function AiModelListView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -63,7 +64,7 @@ export default function AiModelListView() {
                 value: username,
               }),
             ),
-            onFilter: (value: string | number | boolean, model: AiModel) =>
+            onFilter: (value: Key | boolean, model: AiModel) =>
               formatUserName(null, model.user).startsWith(String(value)),
             filterSearch: true,
           },
@@ -116,7 +117,7 @@ const renderActionsForModel = (model: AiModel) => {
                   <ul>
                     {trainingAnnotations.map(
                       (annotation: { annotationId: string }, index: number) => (
-                        <li>
+                        <li key={`annotation_${index}`}>
                           <a
                             href={`/annotations/${annotation.annotationId}`}
                             target="_blank"

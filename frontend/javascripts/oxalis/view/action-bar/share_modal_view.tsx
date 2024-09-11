@@ -7,13 +7,14 @@ import {
   Button,
   Row,
   Col,
-  RadioChangeEvent,
+  type RadioChangeEvent,
   Tooltip,
   Space,
 } from "antd";
 import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import { useSelector } from "react-redux";
-import React, { useState, useEffect } from "react";
+import type React from "react";
+import { useState, useEffect } from "react";
 import type {
   APIDataset,
   APIAnnotationVisibility,
@@ -35,7 +36,7 @@ import Toast from "libs/toast";
 import { location } from "libs/window";
 import _ from "lodash";
 import messages from "messages";
-import Store, { OxalisState } from "oxalis/store";
+import Store, { type OxalisState } from "oxalis/store";
 import UrlManager from "oxalis/controller/url_manager";
 import {
   setAnnotationVisibilityAction,

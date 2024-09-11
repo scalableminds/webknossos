@@ -7,7 +7,7 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 import test from "ava";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
-import { APIDataLayer } from "types/api_flow_types";
+import type { APIDataLayer } from "types/api_flow_types";
 
 const RequestMock = {
   always: (promise: Promise<any>, func: (v: any) => any) => promise.then(func, func),

@@ -20,9 +20,9 @@ import * as Utils from "libs/utils";
 import createProgressCallback from "libs/progress_callback";
 import { api } from "oxalis/singletons";
 import window from "libs/window";
-import { APISegmentationLayer } from "types/api_flow_types";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { APISegmentationLayer } from "types/api_flow_types";
+import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 // By default, a new bounding box is created around
 // the seed nodes with a padding. Within the bounding box

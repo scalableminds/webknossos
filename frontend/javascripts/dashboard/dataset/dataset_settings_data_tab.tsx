@@ -7,7 +7,7 @@ import {
   Row,
   Switch,
   Tooltip,
-  FormInstance,
+  type FormInstance,
   Select,
   Space,
   Button,
@@ -16,7 +16,7 @@ import * as React from "react";
 import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
 import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 import { validateDatasourceJSON, isValidJSON, syncValidator } from "types/validation";
-import { BoundingBoxObject, OxalisState } from "oxalis/store";
+import type { BoundingBoxObject, OxalisState } from "oxalis/store";
 import {
   Hideable,
   FormItemWithInfo,
@@ -25,13 +25,13 @@ import {
 } from "dashboard/dataset/helper_components";
 import { startFindLargestSegmentIdJob } from "admin/admin_rest_api";
 import { jsonStringify, parseMaybe } from "libs/utils";
-import { DataLayer } from "types/schemas/datasource.types";
+import type { DataLayer } from "types/schemas/datasource.types";
 import { getDatasetNameRules, layerNameRules } from "admin/dataset/dataset_components";
 import { useSelector } from "react-redux";
 import { DeleteOutlined } from "@ant-design/icons";
-import { APIDataLayer, APIDataset, APIJobType } from "types/api_flow_types";
+import { type APIDataLayer, type APIDataset, APIJobType } from "types/api_flow_types";
 import { useStartAndPollJob } from "admin/job/job_hooks";
-import { AllUnits, LongUnitToShortUnitMap, Vector3 } from "oxalis/constants";
+import { AllUnits, LongUnitToShortUnitMap, type Vector3 } from "oxalis/constants";
 import Toast from "libs/toast";
 
 const FormItem = Form.Item;
@@ -578,7 +578,7 @@ function SimpleLayerForm({
                         if (value == null || value === "") {
                           return undefined;
                         }
-                        return parseInt(value, 10);
+                        return Number.parseInt(value, 10);
                       }}
                     />
                     {dataset?.dataStore.jobsSupportedByAvailableWorkers.includes(

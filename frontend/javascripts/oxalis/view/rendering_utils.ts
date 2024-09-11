@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { saveAs } from "file-saver";
 import Store from "oxalis/store";
-import { ARBITRARY_CAM_DISTANCE, OrthoView } from "oxalis/constants";
+import { ARBITRARY_CAM_DISTANCE, type OrthoView } from "oxalis/constants";
 import constants, {
   ArbitraryViewport,
   OrthoViewColors,

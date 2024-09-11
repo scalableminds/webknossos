@@ -23,8 +23,8 @@ import type {
   TreeType,
   UnitLong,
 } from "oxalis/constants";
-import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { EmptyObject, ValueOf } from "./globals";
+import type { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import type { EmptyObject, ValueOf } from "./globals";
 
 export type AdditionalCoordinate = { name: string; value: number };
 
@@ -662,6 +662,7 @@ export type APIFeatureToggles = {
   readonly discussionBoardRequiresAdmin: boolean;
   readonly hideNavbarLogin: boolean;
   readonly isWkorgInstance: boolean;
+  readonly recommendWkorgInstance: boolean;
   readonly taskReopenAllowedInSeconds: number;
   readonly allowDeleteDatasets: boolean;
   readonly jobsEnabled: boolean;

@@ -177,5 +177,5 @@ function initializeTMax(
     Math.abs((step[0] > 0 ? negativeRest[0] : positiveRest[0]) / v[0]),
     Math.abs((step[1] > 0 ? negativeRest[1] : positiveRest[1]) / v[1]),
     Math.abs((step[2] > 0 ? negativeRest[2] : positiveRest[2]) / v[2]),
-  ].map((el) => (Number.isNaN(el) ? Infinity : el)) as Vector3;
+  ].map((el) => (Number.isNaN(el) ? Number.POSITIVE_INFINITY : el)) as Vector3;
 }

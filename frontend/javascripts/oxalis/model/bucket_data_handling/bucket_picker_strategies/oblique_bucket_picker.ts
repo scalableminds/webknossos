@@ -5,7 +5,7 @@ import { M4x4, V3 } from "libs/mjs";
 import { chunk2 } from "oxalis/model/helpers/chunk";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import ThreeDMap from "libs/ThreeDMap";
-import { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "oxalis/constants";
+import type { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 import type { LoadingStrategy, PlaneRects } from "oxalis/store";

@@ -14,7 +14,7 @@ import {
   PlusOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import { Link, RouteComponentProps, withRouter } from "react-router-dom";
+import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import type { APIUser, APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";

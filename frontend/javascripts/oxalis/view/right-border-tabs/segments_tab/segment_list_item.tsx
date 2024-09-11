@@ -5,9 +5,9 @@ import {
   VerticalAlignBottomOutlined,
   EllipsisOutlined,
 } from "@ant-design/icons";
-import { List, MenuProps, App } from "antd";
+import { List, type MenuProps, App } from "antd";
 import { useDispatch, useSelector } from "react-redux";
-import Checkbox, { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
+import Checkbox, { type CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
 import React from "react";
 
 import classnames from "classnames";
@@ -37,9 +37,9 @@ import Toast from "libs/toast";
 import { rgbaToCSS } from "oxalis/shaders/utils.glsl";
 import { V4 } from "libs/mjs";
 import { ChangeColorMenuItemContent } from "components/color_picker";
-import { MenuItemType } from "antd/es/menu/interface";
+import type { MenuItemType } from "antd/es/menu/interface";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getAdditionalCoordinatesAsString } from "oxalis/model/accessors/flycam_accessor";
 import FastTooltip from "components/fast_tooltip";
 import { getContextMenuPositionFromEvent } from "oxalis/view/context_menu";

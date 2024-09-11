@@ -11,7 +11,7 @@ import {
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { addUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
-import { InputKeyboard, InputKeyboardNoLoop, InputMouse, MouseBindingMap } from "libs/input";
+import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } from "libs/input";
 import { document } from "libs/window";
 import {
   getPosition,

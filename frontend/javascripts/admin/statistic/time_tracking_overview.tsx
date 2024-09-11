@@ -16,9 +16,9 @@ import TimeTrackingDetailView from "./time_tracking_detail_view";
 import LinkButton from "components/link_button";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import * as Utils from "libs/utils";
-import { APITimeTrackingPerUser } from "types/api_flow_types";
+import type { APITimeTrackingPerUser } from "types/api_flow_types";
 import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import dayjs, { type Dayjs } from "dayjs";
 const { RangePicker } = DatePicker;
 

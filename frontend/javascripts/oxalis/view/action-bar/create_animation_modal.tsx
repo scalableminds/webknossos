@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import { startRenderAnimationJob } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import _ from "lodash";
-import Store, { MeshInformation, OxalisState, UserBoundingBox } from "oxalis/store";
+import Store, { type MeshInformation, type OxalisState, type UserBoundingBox } from "oxalis/store";
 
 import {
   getColorLayers,
@@ -21,11 +21,11 @@ import {
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
   CAMERA_POSITIONS,
-  RenderAnimationOptions,
+  type RenderAnimationOptions,
   MOVIE_RESOLUTIONS,
-  APIDataLayer,
+  type APIDataLayer,
   APIJobType,
-  APISegmentationLayer,
+  type APISegmentationLayer,
 } from "types/api_flow_types";
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
@@ -33,7 +33,7 @@ import {
   PricingPlanEnum,
   isFeatureAllowedByPricingPlan,
 } from "admin/organization/pricing_plan_utils";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import { BoundingBoxSelection } from "./starting_job_modals";
 import { LayerSelection } from "components/layer_selection";
@@ -59,7 +59,7 @@ function selectMagForTextureCreation(
   const dimensionLongestSide = boundingBox.getSize().indexOf(longestSide);
 
   let bestMag = colorLayer.resolutions[0];
-  let bestDifference = Infinity;
+  let bestDifference = Number.POSITIVE_INFINITY;
 
   for (const mag of colorLayer.resolutions) {
     const size = longestSide / mag[dimensionLongestSide];

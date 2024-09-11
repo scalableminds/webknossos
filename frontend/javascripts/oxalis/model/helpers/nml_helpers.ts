@@ -26,16 +26,16 @@ import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_hel
 import messages from "messages";
 import * as Utils from "libs/utils";
 import {
-  BoundingBoxType,
+  type BoundingBoxType,
   IdentityTransform,
-  TreeType,
+  type TreeType,
   TreeTypeEnum,
-  Vector3,
+  type Vector3,
 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import { location } from "libs/window";
 import { coalesce } from "libs/utils";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getNodePosition } from "../accessors/skeletontracing_accessor";
 import { getTransformsForSkeletonLayer } from "../accessors/dataset_accessor";
 

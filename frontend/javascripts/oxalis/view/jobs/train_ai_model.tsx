@@ -51,15 +51,14 @@ import type {
   ServerVolumeTracing,
 } from "types/api_flow_types";
 import { getMergedDataLayersFromDatasetAndVolumeTracings } from "oxalis/model_initialization";
+import { Vector3 } from "oxalis/constants";
 
 const { TextArea } = Input;
 const FormItem = Form.Item;
 
-export type AnnotationWithDataset = {
-  annotation: APIAnnotation | HybridTracing;
+export type AnnotationWithDataset<GenericAnnotation> = {
+  annotation: GenericAnnotation;
   dataset: APIDataset;
-  // todop
-  // volumeTracings: ServerVolumeTracing[];
 };
 
 enum AiModelCategory {
@@ -133,25 +132,14 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
     getUserBoundingBoxesFromState(state),
   );
 
-  const getTrainingAnnotations = (values: any) => {
-    return values.trainingAnnotations.map(
-      (trainingAnnotation: { imageDataLayer: string; layerName: string }) => {
-        const { imageDataLayer, layerName } = trainingAnnotation;
-        const readableVolumeName = getReadableNameForLayerName(dataset, tracing, layerName);
-        const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
-        return {
-          annotationId: tracing.annotationId,
-          colorLayerName: imageDataLayer,
-          segmentationLayerName: readableVolumeName,
-          mag: getResolutionInfo(segmentationLayer.resolutions).getFinestResolution(),
-        };
-      },
-    );
+  const getMagForSegmentationLayer = async (_annotationId: string, layerName: string) => {
+    const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
+    return getResolutionInfo(segmentationLayer.resolutions).getFinestResolution();
   };
 
   return (
     <TrainAiModelTab
-      getTrainingAnnotations={getTrainingAnnotations}
+      getMagForSegmentationLayer={getMagForSegmentationLayer}
       ensureSavedState={() => Model.ensureSavedState()}
       onClose={onClose}
       annotationsWithDatasets={[{ annotation: tracing, dataset }]}
@@ -160,23 +148,44 @@ export function TrainAiModelFromAnnotationTab({ onClose }: { onClose: () => void
   );
 }
 
-export function TrainAiModelTab({
+export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | HybridTracing>({
+  getMagForSegmentationLayer,
   onClose,
-  getTrainingAnnotations,
   ensureSavedState,
   annotationsWithDatasets,
   userBoundingBoxes,
   onAddAnnotationsWithDatasets,
 }: {
+  getMagForSegmentationLayer: (annotationId: string, layerName: string) => Promise<Vector3>;
   onClose: () => void;
-  getTrainingAnnotations: (values: any) => AiModelTrainingAnnotationSpecification[];
   ensureSavedState?: (() => Promise<void>) | null;
-  annotationsWithDatasets: Array<AnnotationWithDataset>;
+  annotationsWithDatasets: Array<AnnotationWithDataset<GenericAnnotation>>;
   userBoundingBoxes?: UserBoundingBox[];
-  onAddAnnotationsWithDatasets?: (newItems: Array<AnnotationWithDataset>) => void;
+  onAddAnnotationsWithDatasets?: (newItems: Array<AnnotationWithDataset<APIAnnotation>>) => void;
 }) {
   const [form] = Form.useForm();
   const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
+
+  const getTrainingAnnotations = async (values: any) => {
+    return Promise.all(
+      values.trainingAnnotations.map(
+        async (trainingAnnotation: {
+          annotationId: string;
+          imageDataLayer: string;
+          layerName: string;
+        }) => {
+          const { annotationId, imageDataLayer, layerName } = trainingAnnotation;
+          return {
+            annotationId,
+            colorLayerName: imageDataLayer,
+            // todop: doublecheck that this is the human-readable one
+            segmentationLayerName: layerName,
+            mag: await getMagForSegmentationLayer(annotationId, layerName),
+          };
+        },
+      ),
+    );
+  };
 
   const onFinish = async (form: FormInstance<any>, useCustomWorkflow: boolean, values: any) => {
     form.validateFields();
@@ -185,7 +194,7 @@ export function TrainAiModelTab({
     }
 
     await runTraining({
-      trainingAnnotations: getTrainingAnnotations(values),
+      trainingAnnotations: await getTrainingAnnotations(values),
       name: values.modelName,
       aiModelCategory: values.modelCategory,
       workflowYaml: useCustomWorkflow ? values.workflowYaml : undefined,
@@ -254,6 +263,9 @@ export function TrainAiModelTab({
               </FormItem>
             </Col>
             <Col span={8}>
+              <FormItem hasFeedback name={["trainingAnnotations", idx, "annotationId"]} hidden>
+                <Input value={annotationId} />
+              </FormItem>
               <FormItem
                 hasFeedback
                 name={["trainingAnnotations", idx, "imageDataLayer"]}
@@ -380,10 +392,10 @@ function areBoundingBoxesValid(userBoundingBoxes: UserBoundingBox[] | undefined)
   return { valid: false, reason: "All bounding boxes must have the same size." };
 }
 
-function AnnotationsCsvInput({
+function AnnotationsCsvInput<GenericAnnotation extends APIAnnotation | HybridTracing>({
   onAdd,
 }: {
-  onAdd: (newItems: Array<AnnotationWithDataset>) => void;
+  onAdd: (newItems: Array<AnnotationWithDataset<APIAnnotation>>) => void;
 }) {
   const [value, setValue] = useState(
     "http://localhost:9000/annotations/66def487300100170c2d6fc0\n66def487300100170c2d6fc0",
@@ -438,24 +450,24 @@ function AnnotationsCsvInput({
         name="annotationCsv"
         label="Annotations CSV"
         hasFeedback
-        // todop
-        // rules={[
-        //   () => ({
-        //     validator: (_rule, value) => {
-        //       const tasks = parseText(value);
-        //       const invalidTaskIndices = getInvalidTaskIndices(tasks);
-        //       return _.isString(value) && invalidTaskIndices.length === 0
-        //         ? Promise.resolve()
-        //         : Promise.reject(
-        //             new Error(
-        //               `${
-        //                 Messages["task.bulk_create_invalid"]
-        //               } Error in line ${invalidTaskIndices.join(", ")}`,
-        //             ),
-        //           );
-        //     },
-        //   }),
-        // ]}
+        initialValue={value}
+        rules={[
+          () => ({
+            validator: (_rule, value) => {
+              const valid = (value as string)
+                .split("\n")
+                .every((line) => line.includes("#") && line.includes(","));
+
+              return valid
+                ? Promise.resolve()
+                : Promise.reject(
+                    new Error(
+                      "Each line should only contain an annotation ID or URL (without # or ,)",
+                    ),
+                  );
+            },
+          }),
+        ]}
       >
         <TextArea
           className="input-monospace"

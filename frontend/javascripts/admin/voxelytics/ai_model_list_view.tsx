@@ -2,8 +2,8 @@ import _ from "lodash";
 import React, { useState } from "react";
 import { PlusOutlined, SyncOutlined } from "@ant-design/icons";
 import { Table, Button, Modal, Space } from "antd";
-import { getAiModels } from "admin/admin_rest_api";
-import type { AiModel } from "types/api_flow_types";
+import { getAiModels, getTracingForAnnotationType } from "admin/admin_rest_api";
+import type { AiModel, APIAnnotation, ServerVolumeTracing } from "types/api_flow_types";
 import FormattedDate from "components/formatted_date";
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { useSelector } from "react-redux";
@@ -13,6 +13,12 @@ import { Link } from "react-router-dom";
 import { useGuardedFetch } from "libs/react_helpers";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
 import { type AnnotationWithDataset, TrainAiModelTab } from "oxalis/view/jobs/train_ai_model";
+import {
+  getResolutionInfo,
+  getSegmentationLayerByName,
+} from "oxalis/model/accessors/dataset_accessor";
+import { serverVolumeToClientVolumeTracing } from "oxalis/model/reducers/volumetracing_reducer";
+import { Vector3 } from "oxalis/constants";
 
 export default function AiModelListView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -102,9 +108,38 @@ export default function AiModelListView() {
 }
 
 function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
-  const [annotationsWithDatasets, setAnnotationsWithDatasets] = useState<AnnotationWithDataset[]>(
-    [],
-  );
+  const [annotationsWithDatasets, setAnnotationsWithDatasets] = useState<
+    AnnotationWithDataset<APIAnnotation>[]
+  >([]);
+
+  const getMagForSegmentationLayer = async (annotationId: string, layerName: string) => {
+    const annotationWithDataset = annotationsWithDatasets.find(({ annotation }) => {
+      const currentAnnotationId = annotation.id;
+      return annotationId === currentAnnotationId;
+    });
+    if (annotationWithDataset == null) {
+      throw new Error("Cannot find annotation for specified id.");
+    }
+
+    const { annotation, dataset } = annotationWithDataset;
+
+    let annotationLayer = annotation.annotationLayers.find((l) => l.name === layerName);
+
+    if (annotationLayer != null) {
+      const volumeTracing = (await getTracingForAnnotationType(
+        annotation,
+        annotationLayer,
+      )) as ServerVolumeTracing;
+      const resolutions: Vector3[] = volumeTracing.resolutions?.map(({ x, y, z }) => [x, y, z]) || [
+        [1, 1, 1],
+      ];
+      return getResolutionInfo(resolutions).getFinestResolution();
+    } else {
+      const segmentationLayer = getSegmentationLayerByName(dataset, layerName);
+      return getResolutionInfo(segmentationLayer.resolutions).getFinestResolution();
+    }
+  };
+
   return (
     <Modal
       width={875}
@@ -119,7 +154,7 @@ function TrainNewAiJobModal({ onClose }: { onClose: () => void }) {
       footer={null}
     >
       <TrainAiModelTab
-        getTrainingAnnotations={getTrainingAnnotations}
+        getMagForSegmentationLayer={getMagForSegmentationLayer}
         onClose={onClose}
         annotationsWithDatasets={annotationsWithDatasets}
         onAddAnnotationsWithDatasets={(newItems) => {

@@ -25,7 +25,8 @@ class FolderController @Inject()(
     organizationDAO: OrganizationDAO,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
-    with FoxImplicits with MetadataAssertions {
+    with FoxImplicits
+    with MetadataAssertions {
 
   def getRoot: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

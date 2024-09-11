@@ -12,6 +12,7 @@ import { JobState } from "admin/job/job_list_view";
 import { Link } from "react-router-dom";
 import { useGuardedFetch } from "libs/react_helpers";
 import { PageNotAvailableToNormalUser } from "components/permission_enforcer";
+import type { Key } from "react";
 
 export default function AiModelListView() {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
@@ -63,7 +64,7 @@ export default function AiModelListView() {
                 value: username,
               }),
             ),
-            onFilter: (value: string | number | boolean, model: AiModel) =>
+            onFilter: (value: Key | boolean, model: AiModel) =>
               formatUserName(null, model.user).startsWith(String(value)),
             filterSearch: true,
           },

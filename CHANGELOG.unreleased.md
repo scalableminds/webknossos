@@ -8,14 +8,17 @@ and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MIC
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
 ## Unreleased
-[Commits](https://github.com/scalableminds/webknossos/compare/24.08.0...HEAD)
+[Commits](https://github.com/scalableminds/webknossos/compare/24.08.1...HEAD)
 
 ### Added
-- If the opacity of a volume layer is zero, a warning is now shown in the layer settings tab. [#8003](https://github.com/scalableminds/webknossos/pull/8003)
+- It is now possible to focus a bounding box in the bounding box tab by clicking its edges in a viewport or via a newly added context menu entry. [#8054](https://github.com/scalableminds/webknossos/pull/8054)
 - Added the option to export nd datasets as ome tiff or tiff stack. Previously, this was only possible for 3d datasets. [#7971](https://github.com/scalableminds/webknossos/pull/7971)
 
-
 ### Changed
+- Clicking on a bounding box within the bounding box tab centers it within the viewports and focusses it in the list. [#8049](https://github.com/scalableminds/webknossos/pull/8049)
+- For self-hosted versions, the text in the data set upload view was updated to recommend switching to webknossos.org. [#7996](https://github.com/scalableminds/webknossos/pull/7996)
+- Updated frontend package management to yarn version 4. [8061](https://github.com/scalableminds/webknossos/pull/8061)
+- Updated React to version 18. Updated many peer dependencies inlcuding Redux, React-Router, antd, and FlexLayout. [#8048](https://github.com/scalableminds/webknossos/pull/8048)
 
 ### Fixed
 

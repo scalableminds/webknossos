@@ -1006,7 +1006,7 @@ class PlaneMaterialFactory {
     // The third parameter returns the number of globally available layers (this is not always equal
     // to the sum of the lengths of the first two arrays, as not all layers might be rendered.)
     const state = Store.getState();
-    const allSanitizedOrderedColorLayerNames =
+    const allSanitizedOrderedColorLayerNames: string[] =
       state.datasetConfiguration.colorLayerOrder.map(sanitizeName);
     const colorLayerNames = getSanitizedColorLayerNames();
     const segmentationLayerNames = Model.getSegmentationLayers().map((layer) =>

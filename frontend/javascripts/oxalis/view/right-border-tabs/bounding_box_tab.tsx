@@ -22,7 +22,8 @@ import * as Utils from "libs/utils";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
-import { AutoSizer } from "react-virtualized";
+import AutoSizer from "react-virtualized-auto-sizer";
+import { setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
 
 const ADD_BBOX_BUTTON_HEIGHT = 32;
 
@@ -192,6 +193,12 @@ export default function BoundingBoxTab() {
                 virtual
                 scroll={{ y: height - (allowUpdate ? ADD_BBOX_BUTTON_HEIGHT : 10) }} // If the scroll height is exactly
                 // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
+                onRow={(bb) => ({
+                  onClick: () => {
+                    handleGoToBoundingBox(bb.id);
+                    dispatch(setActiveUserBoundingBoxId(bb.id));
+                  },
+                })}
               />
             </div>
           )}

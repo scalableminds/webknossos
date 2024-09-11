@@ -103,7 +103,7 @@ import {
 import SegmentListItem from "oxalis/view/right-border-tabs/segments_tab/segment_list_item";
 import React, { type Key } from "react";
 import { connect, useSelector } from "react-redux";
-import { AutoSizer } from "react-virtualized";
+import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIMeshFile, APISegmentationLayer, APIUser } from "types/api_flow_types";
 import DeleteGroupModalView from "../delete_group_modal_view";

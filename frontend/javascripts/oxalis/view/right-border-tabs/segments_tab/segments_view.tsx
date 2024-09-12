@@ -132,7 +132,7 @@ import {
   getGroupNodeKey,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
-import { MetadataEntryTableRows } from "../user_defined_properties_table";
+import { MetadataEntryTableRows } from "../metadata_table";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import type { ItemType } from "antd/lib/menu/interface";
 import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";

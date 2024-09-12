@@ -1025,7 +1025,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
             .getOrElse(state);
         }
 
-        case "SET_TREE_USER_DEFINED_PROPERTIES": {
+        case "SET_TREE_METADATA": {
           return getTree(skeletonTracing, action.treeId)
             .map((tree) => {
               return update(state, {

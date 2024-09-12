@@ -141,7 +141,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_ACTIVE_TREE",
   "SET_ACTIVE_TREE_BY_NAME",
   "SET_TREE_NAME",
-  "SET_TREE_USER_DEFINED_PROPERTIES",
+  "SET_TREE_METADATA",
   "MERGE_TREES",
   "SELECT_NEXT_TREE",
   "SHUFFLE_TREE_COLOR",
@@ -431,7 +431,7 @@ export const setTreeMetadataAction = (
   treeId?: number | null | undefined,
 ) =>
   ({
-    type: "SET_TREE_USER_DEFINED_PROPERTIES",
+    type: "SET_TREE_METADATA",
     metadata,
     treeId,
   }) as const;

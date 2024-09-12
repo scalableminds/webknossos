@@ -1,15 +1,20 @@
 import { FileExcelOutlined } from "@ant-design/icons";
 import { Button, Upload } from "antd";
-import { UploadChangeParam, UploadFile } from "antd/lib/upload";
+import type { UploadChangeParam, UploadFile } from "antd/lib/upload";
 import { AsyncButton } from "components/async_clickables";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
 import _ from "lodash";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import React from "react";
-import { tryToFetchDatasetsByName, WizardComponentProps, WizardContext, FileList } from "./common";
+import {
+  tryToFetchDatasetsByName,
+  type WizardComponentProps,
+  type WizardContext,
+  type FileList,
+} from "./common";
 import ErrorHandling from "libs/error_handling";
 import * as Utils from "libs/utils";
 
@@ -133,8 +138,8 @@ async function parseBigWarpFile(fileList: FileList): Promise<Partial<WizardConte
     const [_pointName, enabled, x1, y1, z1, x2, y2, z2] = fields;
 
     if (enabled) {
-      const source = [x1, y1, z1].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
-      const target = [x2, y2, z2].map((el) => parseInt(el.replaceAll('"', ""))) as Vector3;
+      const source = [x1, y1, z1].map((el) => Number.parseInt(el.replaceAll('"', ""))) as Vector3;
+      const target = [x2, y2, z2].map((el) => Number.parseInt(el.replaceAll('"', ""))) as Vector3;
       sourcePoints.push(source);
       targetPoints.push(target);
     }

@@ -6,7 +6,7 @@ import ErrorHandling from "libs/error_handling";
 import type { APIDataset, APIMeshFile, APISegmentationLayer } from "types/api_flow_types";
 import { mergeBufferGeometries } from "libs/BufferGeometryUtils";
 import Deferred from "libs/async/deferred";
-import { ActionPattern } from "redux-saga/effects";
+import type { ActionPattern } from "redux-saga/effects";
 
 import Store from "oxalis/store";
 import {
@@ -16,20 +16,20 @@ import {
   getSegmentationLayerByName,
 } from "oxalis/model/accessors/dataset_accessor";
 import {
-  LoadAdHocMeshAction,
-  LoadPrecomputedMeshAction,
-  AdHocMeshInfo,
+  type LoadAdHocMeshAction,
+  type LoadPrecomputedMeshAction,
+  type AdHocMeshInfo,
   loadPrecomputedMeshAction,
 } from "oxalis/model/actions/segmentation_actions";
 import type { Action } from "oxalis/model/actions/actions";
 import type { Vector3 } from "oxalis/constants";
 import { AnnotationToolEnum, MappingStatusEnum } from "oxalis/constants";
 import {
-  UpdateMeshVisibilityAction,
-  RemoveMeshAction,
-  RefreshMeshAction,
-  TriggerMeshDownloadAction,
-  MaybeFetchMeshFilesAction,
+  type UpdateMeshVisibilityAction,
+  type RemoveMeshAction,
+  type RefreshMeshAction,
+  type TriggerMeshDownloadAction,
+  type MaybeFetchMeshFilesAction,
   updateMeshFileListAction,
   updateCurrentMeshFileAction,
   dispatchMaybeFetchMeshFilesAsync,
@@ -38,7 +38,7 @@ import {
   addPrecomputedMeshAction,
   finishedLoadingMeshAction,
   startedLoadingMeshAction,
-  TriggerMeshesDownloadAction,
+  type TriggerMeshesDownloadAction,
   updateMeshVisibilityAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
@@ -53,7 +53,7 @@ import {
   getBucketPositionsForAdHocMesh,
 } from "admin/admin_rest_api";
 import { zoomedAddressToAnotherZoomStepWithInfo } from "oxalis/model/helpers/position_converter";
-import DataLayer from "oxalis/model/data_layer";
+import type DataLayer from "oxalis/model/data_layer";
 import { Model } from "oxalis/singletons";
 import ThreeDMap from "libs/ThreeDMap";
 import exportToStl from "libs/stl_exporter";
@@ -70,17 +70,17 @@ import { getDracoLoader } from "libs/draco";
 import messages from "messages";
 import processTaskWithPool from "libs/async/task_pool";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
-import {
+import type {
   BatchUpdateGroupsAndSegmentsAction,
   RemoveSegmentAction,
   UpdateSegmentAction,
 } from "../actions/volumetracing_actions";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import Zip from "libs/zipjs_wrapper";
-import { FlycamAction } from "../actions/flycam_actions";
+import type { FlycamAction } from "../actions/flycam_actions";
 import { getAdditionalCoordinatesAsString } from "../accessors/flycam_accessor";
-import { BufferGeometryWithInfo } from "oxalis/controller/segment_mesh_controller";
+import type { BufferGeometryWithInfo } from "oxalis/controller/segment_mesh_controller";
 import { WkDevFlags } from "oxalis/api/wk_dev";
 
 export const NO_LOD_MESH_INDEX = -1;
@@ -1225,7 +1225,7 @@ export function* handleAdditionalCoordinateUpdate(): Saga<void> {
       for (const [layerName, recordsForOneLayer] of Object.entries(recordsOfLayers)) {
         const segmentIds = Object.keys(recordsForOneLayer);
         for (const segmentIdAsString of segmentIds) {
-          const segmentId = parseInt(segmentIdAsString);
+          const segmentId = Number.parseInt(segmentIdAsString);
           yield* put(
             updateMeshVisibilityAction(
               layerName,

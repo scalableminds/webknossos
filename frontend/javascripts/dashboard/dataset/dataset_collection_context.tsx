@@ -1,11 +1,13 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type React from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
   APIDatasetId,
   APIDatasetCompact,
   APIDatasetCompactWithoutStatusAndLayerNames,
   FolderItem,
+  APIDataset,
 } from "types/api_flow_types";
-import { DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
+import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
 import UserLocalStorage from "libs/user_local_storage";
 import _ from "lodash";
 import {
@@ -32,7 +34,7 @@ export type DatasetCollectionContextValue = {
     datasetId: APIDatasetId,
     datasetsToUpdate?: Array<APIDatasetCompact>,
   ) => Promise<void>;
-  updateCachedDataset: (id: APIDatasetId, updater: DatasetUpdater) => Promise<void>;
+  updateCachedDataset: (id: APIDatasetId, updater: DatasetUpdater) => Promise<APIDataset>;
   activeFolderId: string | null;
   setActiveFolderId: (id: string | null) => void;
   mostRecentlyUsedActiveFolderId: string | null;
@@ -160,7 +162,7 @@ export default function DatasetCollectionContextProvider({
   }
 
   async function updateCachedDataset(id: APIDatasetId, updater: DatasetUpdater) {
-    await updateDatasetMutation.mutateAsync([id, updater]);
+    return await updateDatasetMutation.mutateAsync([id, updater]);
   }
 
   const getBreadcrumbs = (dataset: APIDatasetCompactWithoutStatusAndLayerNames) => {
@@ -198,6 +200,9 @@ export default function DatasetCollectionContextProvider({
         datasetsInFolderQuery.isFetching ||
         datasetsInFolderQuery.isRefetching) || isMutating;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchDatasets): <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies(reloadDataset): <explanation>
+  // biome-ignore lint/correctness/useExhaustiveDependencies(updateCachedDataset): <explanation>
   const value: DatasetCollectionContextValue = useMemo(
     () => ({
       supportsFolders: true as const,
@@ -272,7 +277,9 @@ export default function DatasetCollectionContextProvider({
       updateDatasetMutation,
       selectedDatasets,
       globalSearchQuery,
+      // biome-ignore lint/correctness/useExhaustiveDependencies:
       getActiveSubfolders,
+      // biome-ignore lint/correctness/useExhaustiveDependencies:
       getBreadcrumbs,
       selectedFolder,
       setGlobalSearchQuery,

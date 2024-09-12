@@ -100,18 +100,18 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
   private def datasetOpenGraphTags(uriPath: String, token: Option[String])(implicit ec: ExecutionContext,
                                                                            ctx: DBAccessContext): Fox[OpenGraphTags] =
     uriPath match {
-      case datasetRoute1Regex(organizationName, datasetName) =>
-        datasetOpenGraphTagsWithOrganizationName(organizationName, datasetName, token)
-      case datasetRoute2Regex(organizationName, datasetName) =>
-        datasetOpenGraphTagsWithOrganizationName(organizationName, datasetName, token)
+      case datasetRoute1Regex(organizationId, datasetName) =>
+        datasetOpenGraphTagsWithOrganizationId(organizationId, datasetName, token)
+      case datasetRoute2Regex(organizationId, datasetName) =>
+        datasetOpenGraphTagsWithOrganizationId(organizationId, datasetName, token)
       case _ => Fox.failure("not a matching uri")
     }
 
-  private def datasetOpenGraphTagsWithOrganizationName(organizationName: String,
-                                                       datasetName: String,
-                                                       token: Option[String])(implicit ctx: DBAccessContext) =
+  private def datasetOpenGraphTagsWithOrganizationId(organizationId: String,
+                                                     datasetName: String,
+                                                     token: Option[String])(implicit ctx: DBAccessContext) =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganizationName(datasetName, organizationName)
+      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
       layers <- datasetLayerDAO.findAllForDataset(dataset._id)
       layerOpt = layers.find(_.category == Category.color)
       organization <- organizationDAO.findOne(dataset._organization)
@@ -149,7 +149,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
                            token: Option[String]): Option[String] =
     layerOpt.map { layer =>
       val tokenParam = token.map(t => s"&sharingToken=$t").getOrElse("")
-      s"${conf.Http.uri}/api/datasets/${organization.name}/${dataset.name}/layers/${layer.name}/thumbnail?w=$thumbnailWidth&h=$thumbnailHeight$tokenParam"
+      s"${conf.Http.uri}/api/datasets/${organization._id}/${dataset.name}/layers/${layer.name}/thumbnail?w=$thumbnailWidth&h=$thumbnailHeight$tokenParam"
     }
 
   private def defaultTags(pageType: OpenGraphPageType.Value = OpenGraphPageType.unknown): OpenGraphTags = {

@@ -1,10 +1,10 @@
 import mock from "mock-require";
-import test, { ExecutionContext } from "ava";
+import test, { type ExecutionContext } from "ava";
 import _ from "lodash";
 
 import "test/mocks/globals.mock";
 import "test/mocks/updatable_texture.mock";
-import { generateRandomCuckooEntrySet } from "./cuckoo_table.spec";
+import { generateRandomCuckooEntrySet } from "./cuckoo_table_helpers";
 
 type Key = number;
 type Value = number;

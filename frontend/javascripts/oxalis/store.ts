@@ -1,4 +1,4 @@
-import { createStore, applyMiddleware, Middleware } from "redux";
+import { createStore, applyMiddleware, type Middleware } from "redux";
 import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
 import type {
@@ -636,7 +636,7 @@ const combinedReducers = reduceReducers(
   OrganizationReducer,
 );
 
-const store = createStore<OxalisState>(
+const store = createStore<OxalisState, Action, unknown, unknown>(
   enableBatching(combinedReducers),
   defaultState,
   applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),

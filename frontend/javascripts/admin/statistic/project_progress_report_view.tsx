@@ -46,6 +46,7 @@ function ProjectProgressReportView() {
       setIsLoading(false);
     }
   }
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchData):
   React.useEffect(() => {
     fetchData(team);
   }, [team]);

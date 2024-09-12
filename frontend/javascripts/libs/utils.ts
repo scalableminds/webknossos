@@ -14,7 +14,7 @@ import type {
   TypedArray,
 } from "oxalis/constants";
 import window, { document, location } from "libs/window";
-import { ArbitraryObject, Comparator } from "types/globals";
+import type { ArbitraryObject, Comparator } from "types/globals";
 import dayjs from "dayjs";
 
 type UrlParams = Record<string, string>;
@@ -227,7 +227,7 @@ export function rgbToHex(color: Vector3): string {
 }
 
 export function hexToRgb(hex: string): Vector3 {
-  const bigint = parseInt(hex.slice(1), 16);
+  const bigint = Number.parseInt(hex.slice(1), 16);
   const r = (bigint >> 16) & 255;
   const g = (bigint >> 8) & 255;
   const b = bigint & 255;
@@ -419,7 +419,7 @@ export function stringToNumberArray(s: string): Array<number> {
   const result = [];
 
   for (const e of stringArray) {
-    const newEl = parseFloat(e);
+    const newEl = Number.parseFloat(e);
 
     if (!Number.isNaN(newEl)) {
       result.push(newEl);

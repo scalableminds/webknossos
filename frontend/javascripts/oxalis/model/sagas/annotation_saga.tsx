@@ -2,13 +2,13 @@ import React from "react";
 import _ from "lodash";
 import type { Action } from "oxalis/model/actions/actions";
 import {
-  EditAnnotationLayerAction,
+  type EditAnnotationLayerAction,
   setAnnotationAllowUpdateAction,
   setBlockedByUserAction,
   type SetOthersMayEditForAnnotationAction,
 } from "oxalis/model/actions/annotation_actions";
 import type { EditableAnnotation } from "admin/admin_rest_api";
-import { ActionPattern } from "redux-saga/effects";
+import type { ActionPattern } from "redux-saga/effects";
 import {
   editAnnotation,
   updateAnnotationLayer,
@@ -39,7 +39,7 @@ import Store from "oxalis/store";
 import Toast from "libs/toast";
 import constants, { MappingStatusEnum } from "oxalis/constants";
 import messages from "messages";
-import { APIUserCompact } from "types/api_flow_types";
+import type { APIUserCompact } from "types/api_flow_types";
 import { Button } from "antd";
 import ErrorHandling from "libs/error_handling";
 import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";

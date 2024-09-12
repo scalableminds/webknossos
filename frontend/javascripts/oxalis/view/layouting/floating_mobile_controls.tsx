@@ -6,9 +6,9 @@ import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
 import { getMoveOffset, getMoveOffset3d } from "oxalis/model/accessors/flycam_accessor";
 import { moveFlycamAction } from "oxalis/model/actions/flycam_actions";
 import { Store } from "oxalis/singletons";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { layoutEmitter } from "oxalis/view/layouting/layout_persistence";
-import * as React from "react";
+import type * as React from "react";
 import { useSelector } from "react-redux";
 import ButtonComponent from "../components/button_component";
 

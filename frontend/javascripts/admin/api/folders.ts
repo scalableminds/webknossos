@@ -1,5 +1,5 @@
 import Request from "libs/request";
-import { Folder, FlatFolderTreeItem, FolderUpdater } from "types/api_flow_types";
+import type { Folder, FlatFolderTreeItem, FolderUpdater } from "types/api_flow_types";
 
 export function getFolder(folderId: string): Promise<Folder> {
   return Request.receiveJSON(`/api/folders/${folderId}`);

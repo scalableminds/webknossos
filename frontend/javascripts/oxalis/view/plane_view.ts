@@ -17,7 +17,7 @@ import VisibilityAwareRaycaster, {
 } from "libs/visibility_aware_raycaster";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { MeshSceneNode, SceneGroupForMeshes } from "oxalis/controller/segment_mesh_controller";
+import type { MeshSceneNode, SceneGroupForMeshes } from "oxalis/controller/segment_mesh_controller";
 
 const createDirLight = (
   position: Vector3,

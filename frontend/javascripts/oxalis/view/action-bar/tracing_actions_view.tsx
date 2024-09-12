@@ -29,7 +29,7 @@ import { connect } from "react-redux";
 import * as React from "react";
 import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_flow_types";
 import { APIAnnotationTypeEnum, TracingTypeEnum } from "types/api_flow_types";
-import { AsyncButton, AsyncButtonProps } from "components/async_clickables";
+import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import type { LayoutKeys } from "oxalis/view/layouting/default_layout_configs";
 import { mapLayoutKeysToLanguage } from "oxalis/view/layouting/default_layout_configs";
 import {
@@ -77,7 +77,7 @@ import Toast from "libs/toast";
 import UrlManager from "oxalis/controller/url_manager";
 import { withAuthentication } from "admin/auth/authentication_modal";
 import { PrivateLinksModal } from "./private_links_view";
-import { ItemType, SubMenuType } from "antd/lib/menu/hooks/useItems";
+import type { ItemType, SubMenuType } from "antd/es/menu/interface";
 import CreateAnimationModal from "./create_animation_modal";
 
 const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(

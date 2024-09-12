@@ -8,8 +8,8 @@ import Dimensions from "oxalis/model/dimensions";
 import type { OrthoView, OrthoViewMap, Vector3, Vector4 } from "oxalis/constants";
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import { getPriorityWeightForPrefetch } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
-import { ResolutionInfo } from "../helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { ResolutionInfo } from "../helpers/resolution_info";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 const { MAX_ZOOM_STEP_DIFF_PREFETCH } = constants;
 
@@ -72,9 +72,9 @@ export class AbstractPrefetchStrategy {
 }
 export class PrefetchStrategy extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
-  velocityRangeEnd = Infinity;
+  velocityRangeEnd = Number.POSITIVE_INFINITY;
   roundTripTimeRangeStart = 0;
-  roundTripTimeRangeEnd = Infinity;
+  roundTripTimeRangeEnd = Number.POSITIVE_INFINITY;
   preloadingSlides = 0;
   preloadingPriorityOffset = 0;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'w' has no initializer and is not definite... Remove this comment to see the full error message

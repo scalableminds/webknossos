@@ -16,7 +16,7 @@ import localeData from "dayjs/plugin/localeData";
 
 import type { BoundingBoxObject } from "oxalis/store";
 import type { Duration } from "dayjs/plugin/duration";
-import { VoxelSize } from "types/api_flow_types";
+import type { VoxelSize } from "types/api_flow_types";
 
 dayjs.extend(updateLocale);
 dayjs.extend(duration);

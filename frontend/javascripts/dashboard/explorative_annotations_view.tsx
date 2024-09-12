@@ -1,6 +1,18 @@
 import { Link } from "react-router-dom";
 import { PropTypes } from "@scalableminds/prop-types";
-import { Spin, Input, Table, Button, Modal, Tooltip, Tag, Row, Col, Card, TableProps } from "antd";
+import {
+  Spin,
+  Input,
+  Table,
+  Button,
+  Modal,
+  Tooltip,
+  Tag,
+  Row,
+  Col,
+  Card,
+  type TableProps,
+} from "antd";
 import {
   DownloadOutlined,
   FolderOpenOutlined,
@@ -20,9 +32,9 @@ import update from "immutability-helper";
 import { AsyncLink } from "components/async_clickables";
 import {
   annotationToCompact,
-  APIAnnotationInfo,
-  APIUser,
-  APIUserCompact,
+  type APIAnnotationInfo,
+  type APIUser,
+  type APIUserCompact,
 } from "types/api_flow_types";
 import { AnnotationContentTypes } from "oxalis/constants";
 import {
@@ -53,7 +65,7 @@ import TextWithDescription from "components/text_with_description";
 import { getVolumeDescriptors } from "oxalis/model/accessors/volumetracing_accessor";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
-import { SearchProps } from "antd/lib/input";
+import type { SearchProps } from "antd/lib/input";
 import { getCombinedStatsFromServerAnnotation } from "oxalis/model/accessors/annotation_accessor";
 import { AnnotationStats } from "oxalis/view/right-border-tabs/dataset_info_tab_view";
 
@@ -667,7 +679,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         width: 300,
         filters: ownerAndTeamsFilters,
         filterMode: "tree",
-        onFilter: (value: string | number | boolean, tracing: APIAnnotationInfo) =>
+        onFilter: (value: React.Key | boolean, tracing: APIAnnotationInfo) =>
           (tracing.owner != null && tracing.owner.id === value.toString()) ||
           tracing.teams.some((team) => team.id === value),
         sorter: Utils.localeCompareBy((annotation) => annotation.owner?.firstName || ""),

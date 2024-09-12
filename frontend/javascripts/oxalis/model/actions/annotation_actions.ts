@@ -15,9 +15,9 @@ import type {
 } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import _ from "lodash";
-import { Dispatch } from "redux";
+import type { Dispatch } from "redux";
 import Deferred from "libs/async/deferred";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
 type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>;
@@ -68,6 +68,7 @@ export type AnnotationActionTypes =
   | MaybeFetchMeshFilesAction
   | UpdateMeshVisibilityAction
   | TriggerMeshDownloadAction
+  | TriggerMeshesDownloadAction
   | RefreshMeshesAction
   | RefreshMeshAction
   | StartedLoadingMeshAction

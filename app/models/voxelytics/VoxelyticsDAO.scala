@@ -196,7 +196,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                     task = row._4,
                     config = Json.parse(row._5).as[JsObject]))
 
-  def findWorkflowsByHashAndOrganization(organizationId: ObjectId,
+  def findWorkflowsByHashAndOrganization(organizationId: String,
                                          workflowHashes: Set[String]): Fox[List[WorkflowEntry]] =
     for {
       r <- run(q"""
@@ -206,7 +206,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         """.as[(String, String)])
     } yield r.toList.map(row => WorkflowEntry(name = row._1, hash = row._2, _organization = organizationId))
 
-  def findWorkflowByHashAndOrganization(organizationId: ObjectId, workflowHash: String): Fox[WorkflowEntry] =
+  def findWorkflowByHashAndOrganization(organizationId: String, workflowHash: String): Fox[WorkflowEntry] =
     for {
       r <- run(q"""
         SELECT name, hash
@@ -224,7 +224,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         WHERE hash = $workflowHash
         """.as[(String, String, String)])
       (name, hash, organizationId) <- r.headOption // Could have multiple entries; picking the first.
-    } yield WorkflowEntry(name, hash, ObjectId(organizationId))
+    } yield WorkflowEntry(name, hash, organizationId)
 
   def findTaskRuns(runIds: List[ObjectId], staleTimeout: FiniteDuration): Fox[List[TaskRunEntry]] =
     for {
@@ -583,7 +583,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
     } yield ObjectId(objectId)
   }
 
-  def getRunNameById(runId: ObjectId, organizationId: ObjectId): Fox[String] =
+  def getRunNameById(runId: ObjectId, organizationId: String): Fox[String] =
     for {
       nameList <- run(q"""
         SELECT name
@@ -603,7 +603,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       userId <- userIdList.headOption
     } yield ObjectId(userId)
 
-  def getUserIdForRunOpt(runName: String, organizationId: ObjectId): Fox[Option[ObjectId]] =
+  def getUserIdForRunOpt(runName: String, organizationId: String): Fox[Option[ObjectId]] =
     for {
       userId <- run(q"""
         SELECT _user
@@ -994,7 +994,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
     } yield ()
   }
 
-  def upsertWorkflow(hash: String, name: String, organizationId: ObjectId): Fox[Unit] =
+  def upsertWorkflow(hash: String, name: String, organizationId: String): Fox[Unit] =
     for {
       _ <- run(q"""
         INSERT INTO webknossos.voxelytics_workflows (hash, name, _organization)
@@ -1004,7 +1004,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         """.asUpdate)
     } yield ()
 
-  def upsertRun(organizationId: ObjectId,
+  def upsertRun(organizationId: String,
                 userId: ObjectId,
                 name: String,
                 username: String,

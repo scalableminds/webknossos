@@ -1,4 +1,4 @@
-import { Dropdown, Tooltip, Space, Tree as AntdTree, TreeProps, GetRef } from "antd";
+import { Dropdown, Tooltip, Space, Tree as AntdTree, type TreeProps, type GetRef } from "antd";
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
@@ -37,9 +37,9 @@ import type {
 import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import type { MenuProps } from "rc-menu";
-import { Comparator } from "types/globals";
-import { EventDataNode } from "antd/es/tree";
-import { AutoSizer } from "react-virtualized";
+import type { Comparator } from "types/globals";
+import type { EventDataNode } from "antd/es/tree";
+import AutoSizer from "react-virtualized-auto-sizer";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { useLifecycle } from "beautiful-react-hooks";

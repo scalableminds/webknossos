@@ -1,7 +1,8 @@
 import type { Dispatch } from "redux";
 import { Layout } from "antd";
 import { connect } from "react-redux";
-import FlexLayout, { BorderNode, TabNode, TabSetNode } from "flexlayout-react";
+import * as FlexLayout from "flexlayout-react";
+import type { BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import * as React from "react";
 import _ from "lodash";
 import features from "features";
@@ -459,12 +460,16 @@ class FlexLayoutWrapper extends React.PureComponent<Props, State> {
         // @ts-expect-error ts-migrate(2339) FIXME: Property 'blur' does not exist on type 'Element'.
         document.activeElement.blur();
       }
+      if (data?.node) {
+        const node = this.state.model.getNodeById(data.node);
+        if (node) {
+          const toggledViewportId = node.getChildren()[0].getId();
 
-      const toggledViewportId = this.state.model.getNodeById(data.node).getChildren()[0].getId();
-
-      if (toggledViewportId in OrthoViews) {
-        // @ts-ignore Typescript doesn't agree that toggledViewportId exists in OrthoViews
-        this.props.setActiveViewport(OrthoViews[toggledViewportId]);
+          if (toggledViewportId in OrthoViews) {
+            // @ts-ignore Typescript doesn't agree that toggledViewportId exists in OrthoViews
+            this.props.setActiveViewport(OrthoViews[toggledViewportId]);
+          }
+        }
       }
     }
 

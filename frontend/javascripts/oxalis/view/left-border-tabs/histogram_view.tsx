@@ -3,7 +3,7 @@ import { Alert, Slider, Row, Col, InputNumber, Spin } from "antd";
 import { connect } from "react-redux";
 import * as React from "react";
 import * as _ from "lodash";
-import { PRIMARY_COLOR, Vector2, Vector3 } from "oxalis/constants";
+import { PRIMARY_COLOR, type Vector2, type Vector3 } from "oxalis/constants";
 import type { APIHistogramData, HistogramDatum, ElementClass } from "types/api_flow_types";
 import { roundTo } from "libs/utils";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
@@ -307,7 +307,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-                    value = parseFloat(value);
+                    value = Number.parseFloat(value);
 
                     if (value <= maxRange) {
                       this.setState({
@@ -342,7 +342,7 @@ class Histogram extends React.PureComponent<HistogramProps, HistogramState> {
                   variant="borderless"
                   onChange={(value) => {
                     // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'number' is not assignable to par... Remove this comment to see the full error message
-                    value = parseFloat(value);
+                    value = Number.parseFloat(value);
 
                     if (value >= minRange) {
                       this.setState({

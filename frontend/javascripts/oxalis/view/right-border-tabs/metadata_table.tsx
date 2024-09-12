@@ -40,18 +40,6 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntry[] }>({
         : element,
     );
 
-    // todop: remove again?
-    if (
-      newProps.some(
-        (el) =>
-          (el.stringValue != null && el.stringListValue != null) ||
-          (el.stringListValue as any) === "" ||
-          Array.isArray(el.stringValue),
-      )
-    ) {
-      console.error("invalid newprops?");
-    }
-
     setMetadata(item, newProps);
   };
 

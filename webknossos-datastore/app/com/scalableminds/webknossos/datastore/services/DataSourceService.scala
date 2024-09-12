@@ -54,7 +54,7 @@ class DataSourceService @Inject()(
   }
 
   def assertDataDirWritable(organizationId: String): Fox[Unit] =
-    Fox.bool2Fox(Files.isWritable(dataBaseDir.resolve(organizationId))) ?~> "Datastore can not write to its data directory."
+    Fox.bool2Fox(Files.isWritable(dataBaseDir.resolve(organizationId))) ?~> "Datastore cannot write to its data directory."
 
   def checkInbox(verbose: Boolean): Fox[Unit] = {
     if (verbose) logger.info(s"Scanning inbox ($dataBaseDir)...")

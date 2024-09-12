@@ -117,7 +117,7 @@ import type {
   APIMeshFile,
   APISegmentationLayer,
   APIUser,
-  UserDefinedProperty,
+  MetadataEntry,
 } from "types/api_flow_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import type { ValueOf } from "types/globals";
@@ -132,7 +132,7 @@ import {
   getGroupNodeKey,
   MISSING_GROUP_ID,
 } from "../tree_hierarchy_view_helpers";
-import { UserDefinedPropertyTableRows } from "../user_defined_properties_table";
+import { MetadataEntryTableRows } from "../user_defined_properties_table";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 import type { ItemType } from "antd/lib/menu/interface";
 import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
@@ -1965,9 +1965,9 @@ class SegmentsView extends React.Component<Props, State> {
                 />
               </td>
             </tr>
-            <UserDefinedPropertyTableRows
+            <MetadataEntryTableRows
               item={segment}
-              setUserDefinedProperties={this.setUserDefinedProperties}
+              setMetadata={this.setMetadata}
               readOnly={readOnly}
             />
           </tbody>
@@ -1977,14 +1977,14 @@ class SegmentsView extends React.Component<Props, State> {
     return null;
   }
 
-  setUserDefinedProperties = (segment: Segment, newProperties: UserDefinedProperty[]) => {
+  setMetadata = (segment: Segment, newProperties: MetadataEntry[]) => {
     if (this.props.visibleSegmentationLayer == null) {
       return;
     }
     this.props.updateSegment(
       segment.id,
       {
-        userDefinedProperties: newProperties,
+        metadata: newProperties,
       },
       this.props.visibleSegmentationLayer.name,
       true,

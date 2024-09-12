@@ -65,7 +65,7 @@ export default function generateDummyTrees(
       name: "explorative_2017-10-09_SCM_Boy_023",
       createdTimestamp: 1507550576213,
       isVisible: true,
-      userDefinedProperties: [],
+      metadata: [],
     };
   }
 

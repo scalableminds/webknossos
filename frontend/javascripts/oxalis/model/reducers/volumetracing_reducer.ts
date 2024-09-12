@@ -184,9 +184,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       // without a position.
     }
 
-    const userDefinedProperties = sanitizeMetadata(
-      segment.userDefinedProperties || oldSegment?.userDefinedProperties || [],
-    );
+    const metadata = sanitizeMetadata(segment.metadata || oldSegment?.metadata || []);
 
     const newSegment: Segment = {
       // If oldSegment exists, its creationTime will be
@@ -198,7 +196,7 @@ function handleUpdateSegment(state: OxalisState, action: UpdateSegmentAction) {
       someAdditionalCoordinates: someAdditionalCoordinates,
       ...oldSegment,
       ...segment,
-      userDefinedProperties,
+      metadata,
       somePosition,
       id: segmentId,
     };

@@ -39,7 +39,7 @@ export const tracing: ServerSkeletonTracing = {
       name: "",
       isVisible: true,
       createdTimestamp: 1528811979356,
-      userDefinedProperties: [],
+      metadata: [],
     },
   ],
   treeGroups: [],

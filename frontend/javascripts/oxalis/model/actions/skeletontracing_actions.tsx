@@ -14,7 +14,7 @@ import Store from "oxalis/store";
 import RemoveTreeModal from "oxalis/view/remove_tree_modal";
 import type { Key } from "react";
 import { batchActions } from "redux-batched-actions";
-import type { ServerSkeletonTracing, UserDefinedProperty } from "types/api_flow_types";
+import type { ServerSkeletonTracing, MetadataEntry } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
@@ -47,7 +47,7 @@ type SetActiveTreeGroupAction = ReturnType<typeof setActiveTreeGroupAction>;
 type DeselectActiveTreeGroupAction = ReturnType<typeof deselectActiveTreeGroupAction>;
 export type MergeTreesAction = ReturnType<typeof mergeTreesAction>;
 type SetTreeNameAction = ReturnType<typeof setTreeNameAction>;
-type SetTreeUserDefinedPropertiesAction = ReturnType<typeof setTreeUserDefinedPropertiesAction>;
+type SetTreeMetadataAction = ReturnType<typeof setTreeMetadataAction>;
 type SelectNextTreeAction = ReturnType<typeof selectNextTreeAction>;
 type SetTreeColorIndexAction = ReturnType<typeof setTreeColorIndexAction>;
 type ShuffleTreeColorAction = ReturnType<typeof shuffleTreeColorAction>;
@@ -99,7 +99,7 @@ export type SkeletonTracingAction =
   | DeselectActiveTreeAction
   | MergeTreesAction
   | SetTreeNameAction
-  | SetTreeUserDefinedPropertiesAction
+  | SetTreeMetadataAction
   | SelectNextTreeAction
   | SetTreeColorAction
   | SetTreeTypeAction
@@ -426,13 +426,13 @@ export const setTreeNameAction = (
     treeId,
   }) as const;
 
-export const setTreeUserDefinedPropertiesAction = (
-  userDefinedProperties: UserDefinedProperty[],
+export const setTreeMetadataAction = (
+  metadata: MetadataEntry[],
   treeId?: number | null | undefined,
 ) =>
   ({
     type: "SET_TREE_USER_DEFINED_PROPERTIES",
-    userDefinedProperties,
+    metadata,
     treeId,
   }) as const;
 

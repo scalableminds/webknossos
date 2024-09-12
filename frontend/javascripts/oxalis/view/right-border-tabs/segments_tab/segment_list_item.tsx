@@ -602,7 +602,7 @@ function _SegmentListItem({
             iconClassName="deemphasized"
             disableEditing={!allowUpdate}
           />
-          {(segment.userDefinedProperties || []).length > 0 ? (
+          {(segment.metadata || []).length > 0 ? (
             <FastTooltip
               className="deemphasized icon-margin-right"
               title="This segment has assigned metadata properties."

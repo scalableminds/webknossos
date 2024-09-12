@@ -7,33 +7,31 @@ import {
   InnerMetadataTable,
   MetadataValueInput,
 } from "dashboard/folders/metadata_table";
-import { type APIMetadata, APIMetadataEnum, type UserDefinedProperty } from "types/api_flow_types";
+import { type APIMetadata, APIMetadataEnum, type MetadataEntry } from "types/api_flow_types";
 import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
 import _ from "lodash";
 import { memo } from "react";
 
 const getKeyInputIdForIndex = (index: number) => `metadata-key-input-id-${index}`;
 
-function _UserDefinedPropertyTableRows<
-  ItemType extends { userDefinedProperties: UserDefinedProperty[] },
->({
+function _MetadataTableRows<ItemType extends { metadata: MetadataEntry[] }>({
   item,
-  setUserDefinedProperties,
+  setMetadata,
   readOnly,
 }: {
   item: ItemType;
-  setUserDefinedProperties: (item: ItemType, newProperties: UserDefinedProperty[]) => void;
+  setMetadata: (item: ItemType, newProperties: MetadataEntry[]) => void;
   readOnly: boolean;
 }) {
-  const updateUserDefinedPropertyByIndex = (
+  const updateMetadataEntryByIndex = (
     item: ItemType,
     index: number,
-    newPropPartial: Partial<UserDefinedProperty>,
+    newPropPartial: Partial<MetadataEntry>,
   ) => {
     if (readOnly) {
       return;
     }
-    const newProps = item.userDefinedProperties.map((element, idx) =>
+    const newProps = item.metadata.map((element, idx) =>
       idx === index
         ? {
             ...element,
@@ -54,17 +52,17 @@ function _UserDefinedPropertyTableRows<
       console.error("invalid newprops?");
     }
 
-    setUserDefinedProperties(item, newProps);
+    setMetadata(item, newProps);
   };
 
-  const removeUserDefinedPropertyByIndex = (item: ItemType, index: number) => {
-    const newProps = item.userDefinedProperties.filter((_element, idx) => idx !== index);
-    setUserDefinedProperties(item, newProps);
+  const removeMetadataEntryByIndex = (item: ItemType, index: number) => {
+    const newProps = item.metadata.filter((_element, idx) => idx !== index);
+    setMetadata(item, newProps);
   };
 
-  const addUserDefinedProperty = (item: ItemType, newProp: UserDefinedProperty) => {
-    const newProps = item.userDefinedProperties.concat([newProp]);
-    setUserDefinedProperties(item, newProps);
+  const addMetadataEntry = (item: ItemType, newProp: MetadataEntry) => {
+    const newProps = item.metadata.concat([newProp]);
+    setMetadata(item, newProps);
   };
 
   const getDeleteEntryButton = (_: APIMetadataWithError, index: number) => (
@@ -82,7 +80,7 @@ function _UserDefinedPropertyTableRows<
           />
         }
         onClick={() => {
-          removeUserDefinedPropertyByIndex(item, index);
+          removeMetadataEntryByIndex(item, index);
         }}
       />
     </div>
@@ -96,16 +94,14 @@ function _UserDefinedPropertyTableRows<
           className="transparent-input"
           value={record.key}
           disabled={readOnly}
-          onChange={(value) => updateUserDefinedPropertyByIndex(item, index, { key: value })}
+          onChange={(value) => updateMetadataEntryByIndex(item, index, { key: value })}
           placeholder="Property"
           size="small"
           validate={(value: string) => {
             if (
               // If all items (except for the current one) have another key,
               // everything is fine.
-              item.userDefinedProperties.every(
-                (otherItem, idx) => idx === index || otherItem.key !== value,
-              )
+              item.metadata.every((otherItem, idx) => idx === index || otherItem.key !== value)
             ) {
               return null;
             }
@@ -117,7 +113,7 @@ function _UserDefinedPropertyTableRows<
     );
   };
 
-  const itemMetadata = item.userDefinedProperties.map((prop) => ({
+  const itemMetadata = item.metadata.map((prop) => ({
     key: prop.key,
     type:
       prop.stringValue != null
@@ -139,7 +135,7 @@ function _UserDefinedPropertyTableRows<
           newValue: number | string | string[],
           type: APIMetadataEnum,
         ) => {
-          updateUserDefinedPropertyByIndex(item, indexToUpdate, {
+          updateMetadataEntryByIndex(item, indexToUpdate, {
             stringValue: type === APIMetadataEnum.STRING ? (newValue as string) : undefined,
             stringListValue:
               type === APIMetadataEnum.STRING_ARRAY ? (newValue as string[]) : undefined,
@@ -153,10 +149,10 @@ function _UserDefinedPropertyTableRows<
   };
 
   const addNewEntryWithType = (type: APIMetadata["type"]) => {
-    const indexOfNewEntry = item.userDefinedProperties.length;
+    const indexOfNewEntry = item.metadata.length;
     // Auto focus the key input of the new entry.
     setTimeout(() => document.getElementById(getKeyInputIdForIndex(indexOfNewEntry))?.focus(), 50);
-    addUserDefinedProperty(item, {
+    addMetadataEntry(item, {
       key: "",
       stringValue: type === APIMetadataEnum.STRING ? "" : undefined,
       numberValue: type === APIMetadataEnum.NUMBER ? 0 : undefined,
@@ -181,6 +177,4 @@ function _UserDefinedPropertyTableRows<
   );
 }
 
-export const UserDefinedPropertyTableRows = memo(
-  _UserDefinedPropertyTableRows,
-) as typeof _UserDefinedPropertyTableRows;
+export const MetadataEntryTableRows = memo(_MetadataTableRows) as typeof _MetadataTableRows;

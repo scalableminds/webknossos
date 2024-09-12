@@ -661,7 +661,7 @@ function* uncachedDiffSegmentLists(
       segment.name,
       segment.color,
       segment.groupId,
-      segment.userDefinedProperties,
+      segment.metadata,
     );
   }
 
@@ -677,7 +677,7 @@ function* uncachedDiffSegmentLists(
         segment.name,
         segment.color,
         segment.groupId,
-        segment.userDefinedProperties,
+        segment.metadata,
         segment.creationTime,
       );
     }

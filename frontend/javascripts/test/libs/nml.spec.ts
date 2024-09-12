@@ -93,7 +93,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       groupId: 3,
       type: TreeTypeEnum.DEFAULT,
       edgesAreVisible: true,
-      userDefinedProperties: [],
+      metadata: [],
     },
     "2": {
       treeId: 2,
@@ -121,7 +121,7 @@ const initialSkeletonTracing: SkeletonTracing = {
       groupId: 2,
       type: TreeTypeEnum.DEFAULT,
       edgesAreVisible: true,
-      userDefinedProperties: [],
+      metadata: [],
     },
   },
   treeGroups: [
@@ -452,7 +452,7 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
   t.snapshot(serializedNml);
 });
 
-test("NML serializer should produce correct NMLs with userDefinedProperties for trees", async (t) => {
+test("NML serializer should produce correct NMLs with metadata for trees", async (t) => {
   const properties = [
     {
       key: "key of string",
@@ -480,7 +480,7 @@ test("NML serializer should produce correct NMLs with userDefinedProperties for 
       skeleton: {
         trees: {
           "1": {
-            userDefinedProperties: {
+            metadata: {
               $set: properties,
             },
           },
@@ -497,17 +497,15 @@ test("NML serializer should produce correct NMLs with userDefinedProperties for 
   );
 
   t.true(
-    serializedNml.includes(
-      '<userDefinedProperty key="key of string" stringValue="string value" />',
-    ),
+    serializedNml.includes('<metadataEntry key="key of string" stringValue="string value" />'),
   );
 
-  t.true(serializedNml.includes('<userDefinedProperty key="key of true" boolValue="true" />'));
-  t.true(serializedNml.includes('<userDefinedProperty key="key of false" boolValue="false" />'));
-  t.true(serializedNml.includes('<userDefinedProperty key="key of number" numberValue="1234" />'));
+  t.true(serializedNml.includes('<metadataEntry key="key of true" boolValue="true" />'));
+  t.true(serializedNml.includes('<metadataEntry key="key of false" boolValue="false" />'));
+  t.true(serializedNml.includes('<metadataEntry key="key of number" numberValue="1234" />'));
   t.true(
     serializedNml.includes(
-      '<userDefinedProperty key="key of string list" stringListValue-0="1" stringListValue-1="2" stringListValue-2="3" stringListValue-3="4" stringListValue-4="5" stringListValue-5="6" stringListValue-6="7" stringListValue-7="8" stringListValue-8="9" stringListValue-9="10" stringListValue-10="11" />',
+      '<metadataEntry key="key of string list" stringListValue-0="1" stringListValue-1="2" stringListValue-2="3" stringListValue-3="4" stringListValue-4="5" stringListValue-5="6" stringListValue-6="7" stringListValue-7="8" stringListValue-8="9" stringListValue-9="10" stringListValue-10="11" />',
     ),
   );
 

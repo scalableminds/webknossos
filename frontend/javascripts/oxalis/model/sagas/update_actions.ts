@@ -10,7 +10,7 @@ import type {
   NumberLike,
 } from "oxalis/store";
 import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
-import type { AdditionalCoordinate, UserDefinedProperty } from "types/api_flow_types";
+import type { AdditionalCoordinate, MetadataEntry } from "types/api_flow_types";
 
 export type NodeWithTreeId = {
   treeId: number;
@@ -130,7 +130,7 @@ export function createTree(tree: Tree) {
       isVisible: tree.isVisible,
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
-      userDefinedProperties: enforceValidMetadata(tree.userDefinedProperties),
+      metadata: enforceValidMetadata(tree.metadata),
     },
   } as const;
 }
@@ -157,7 +157,7 @@ export function updateTree(tree: Tree) {
       isVisible: tree.isVisible,
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
-      userDefinedProperties: enforceValidMetadata(tree.userDefinedProperties),
+      metadata: enforceValidMetadata(tree.metadata),
     },
   } as const;
 }
@@ -319,7 +319,7 @@ export function createSegmentVolumeAction(
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
-  userDefinedProperties: UserDefinedProperty[],
+  metadata: MetadataEntry[],
   creationTime: number | null | undefined = Date.now(),
 ) {
   return {
@@ -330,7 +330,7 @@ export function createSegmentVolumeAction(
       name,
       color,
       groupId,
-      userDefinedProperties: enforceValidMetadata(userDefinedProperties),
+      metadata: enforceValidMetadata(metadata),
       creationTime,
     },
   } as const;
@@ -343,7 +343,7 @@ export function updateSegmentVolumeAction(
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
-  userDefinedProperties: Array<UserDefinedProperty>,
+  metadata: Array<MetadataEntry>,
   creationTime: number | null | undefined = Date.now(),
 ) {
   return {
@@ -355,7 +355,7 @@ export function updateSegmentVolumeAction(
       name,
       color,
       groupId,
-      userDefinedProperties: enforceValidMetadata(userDefinedProperties),
+      metadata: enforceValidMetadata(metadata),
       creationTime,
     },
   } as const;
@@ -504,7 +504,7 @@ export function mergeAgglomerate(
   } as const;
 }
 
-function enforceValidMetadata(userDefinedProperties: UserDefinedProperty[]): UserDefinedProperty[] {
+function enforceValidMetadata(metadata: MetadataEntry[]): MetadataEntry[] {
   // We do not want to save metadata with duplicate keys. Validation errors
   // will warn the user in case this exists. However, we allow duplicate keys in the
   // redux store to avoid losing information while the user is editing something.
@@ -514,7 +514,7 @@ function enforceValidMetadata(userDefinedProperties: UserDefinedProperty[]): Use
   // is saved to the back-end.
   const keySet = new Set();
   const filteredProps = [];
-  for (const prop of userDefinedProperties) {
+  for (const prop of metadata) {
     if (!keySet.has(prop.key)) {
       keySet.add(prop.key);
       filteredProps.push(prop);

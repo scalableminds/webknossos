@@ -779,9 +779,9 @@ export type ServerSkeletonTracingTree = {
   type?: TreeType;
   edgesAreVisible?: boolean;
   // todop: check whether this is really not-optional
-  userDefinedProperties: UserDefinedProperty[];
+  metadata: MetadataEntry[];
 };
-export type UserDefinedProperty = {
+export type MetadataEntry = {
   key: string;
   stringValue?: string;
   boolValue?: boolean;
@@ -797,7 +797,7 @@ type ServerSegment = {
   creationTime: number | null | undefined;
   color: ColorObject | null;
   groupId: number | null | undefined;
-  userDefinedProperties: UserDefinedProperty[];
+  metadata: MetadataEntry[];
 };
 export type ServerTracingBase = {
   id: string;

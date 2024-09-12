@@ -553,7 +553,7 @@ function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
     prevTree.timestamp !== tree.timestamp ||
     prevTree.groupId !== tree.groupId ||
     prevTree.type !== tree.type ||
-    prevTree.userDefinedProperties !== tree.userDefinedProperties
+    prevTree.metadata !== tree.metadata
   );
 }
 

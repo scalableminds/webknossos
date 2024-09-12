@@ -47,7 +47,7 @@ import {
   GroupTypeEnum,
   getNodeKey,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import type { UserDefinedProperty } from "types/api_flow_types";
+import type { MetadataEntry } from "types/api_flow_types";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -1033,8 +1033,8 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
                   skeleton: {
                     trees: {
                       [tree.treeId]: {
-                        userDefinedProperties: {
-                          $set: sanitizeMetadata(action.userDefinedProperties),
+                        metadata: {
+                          $set: sanitizeMetadata(action.metadata),
                         },
                       },
                     },
@@ -1155,10 +1155,10 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
     .getOrElse(state);
 }
 
-export function sanitizeMetadata(userDefinedProperties: UserDefinedProperty[]) {
+export function sanitizeMetadata(metadata: MetadataEntry[]) {
   // todop: or should this happen in enforceValidMetadata when the update-actions for
   // saving are crafted?
-  return userDefinedProperties.map((prop) => {
+  return metadata.map((prop) => {
     // If stringList value is defined, but it's an empty array, it should
     // be switched to undefined
     const needsCorrection =

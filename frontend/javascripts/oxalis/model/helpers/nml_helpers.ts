@@ -1,7 +1,7 @@
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'saxo... Remove this comment to see the full error message
 import Saxophone from "saxophone";
 import _ from "lodash";
-import type { APIBuildInfo, UserDefinedProperty } from "types/api_flow_types";
+import type { APIBuildInfo, MetadataEntry } from "types/api_flow_types";
 import {
   getMaximumGroupId,
   getMaximumTreeId,
@@ -363,9 +363,7 @@ function serializeTrees(
 ): Array<string> {
   return _.flatten(
     trees.map((tree) => {
-      const userDefinedPropertiesString = serializeUserDefinedProperties(
-        tree.userDefinedProperties,
-      );
+      const metadataString = serializeMetadata(tree.metadata);
 
       return serializeTagWithChildren(
         "thing",
@@ -383,12 +381,8 @@ function serializeTrees(
           "<edges>",
           ...indent(serializeEdges(tree.edges)),
           "</edges>",
-          ...(userDefinedPropertiesString.length > 0
-            ? [
-                "<userDefinedProperties>",
-                ...indent(userDefinedPropertiesString),
-                "</userDefinedProperties>",
-              ]
+          ...(metadataString.length > 0
+            ? ["<metadata>", ...indent(metadataString), "</metadata>"]
             : []),
         ],
       );
@@ -468,8 +462,8 @@ function serializeEdges(edges: EdgeCollection): Array<string> {
   );
 }
 
-function serializeUserDefinedProperties(userDefinedProperties: UserDefinedProperty[]): string[] {
-  return userDefinedProperties.map((prop) => {
+function serializeMetadata(metadata: MetadataEntry[]): string[] {
+  return metadata.map((prop) => {
     const values: any = {};
     if (prop.stringValue != null) {
       values.stringValue = prop.stringValue;
@@ -483,7 +477,7 @@ function serializeUserDefinedProperties(userDefinedProperties: UserDefinedProper
       }
     }
 
-    return serializeTag("userDefinedProperty", { key: prop.key, ...values });
+    return serializeTag("metadataEntry", { key: prop.key, ...values });
   });
 }
 
@@ -766,7 +760,7 @@ function splitTreeIntoComponents(
       groupId: newGroupId,
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
-      userDefinedProperties: tree.userDefinedProperties,
+      metadata: tree.metadata,
     };
     newTrees.push(newTree);
   }
@@ -846,12 +840,12 @@ function parseBoundingBoxObject(attr: Record<any, any>): BoundingBoxObject {
   return boundingBoxObject;
 }
 
-function parseUserDefinedProperty(attr: Record<any, any>): UserDefinedProperty {
+function parseMetadataEntry(attr: Record<any, any>): MetadataEntry {
   const stringValue = _parseEntities(attr, "stringValue", { defaultValue: undefined });
   const boolValue = _parseBool(attr, "boolValue", { defaultValue: undefined });
   const numberValue = _parseFloat(attr, "numberValue", { defaultValue: undefined });
   const stringListValue = _parseStringArray(attr, "stringListValue", { defaultValue: undefined });
-  const prop: UserDefinedProperty = {
+  const prop: MetadataEntry = {
     key: _parseEntities(attr, "key"),
     stringValue,
     boolValue,
@@ -860,7 +854,7 @@ function parseUserDefinedProperty(attr: Record<any, any>): UserDefinedProperty {
   };
   const compactProp = Object.fromEntries(
     Object.entries(prop).filter(([_k, v]) => v !== undefined),
-  ) as UserDefinedProperty;
+  ) as MetadataEntry;
   if (Object.entries(compactProp).length !== 2) {
     throw new NmlParseError(
       `Could not parse user-defined property. Expected exactly one key and one value. Got: ${Object.keys(
@@ -925,7 +919,7 @@ export function parseNml(nmlString: string): Promise<{
               groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
               type: _parseTreeType(attr, "type", TreeTypeEnum.DEFAULT),
               edgesAreVisible: _parseBool(attr, "edgesAreVisible", { defaultValue: true }),
-              userDefinedProperties: [],
+              metadata: [],
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
@@ -979,12 +973,12 @@ export function parseNml(nmlString: string): Promise<{
             break;
           }
 
-          case "userDefinedProperty": {
+          case "metadataEntry": {
             if (currentTree == null) {
               throw new NmlParseError(messages["nml.user_defined_property_outside_tree"]);
             }
             if (currentNode == null) {
-              currentTree.userDefinedProperties.push(parseUserDefinedProperty(attr));
+              currentTree.metadata.push(parseMetadataEntry(attr));
             } else {
               // todop: link follow-up issue for custom metadata in nodes
             }

@@ -94,7 +94,7 @@ export function renderTreeNode(
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
       {`(${tree.nodes.size()}) `} {maybeProofreadingIcon} {tree.name}
-      {(tree.userDefinedProperties || []).length > 0 ? (
+      {(tree.metadata || []).length > 0 ? (
         <FastTooltip
           className="deemphasized icon-margin-left"
           title="This tree has assigned metadata properties."

@@ -6,7 +6,7 @@ import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeGroupAction,
   setTreeNameAction,
-  setTreeUserDefinedPropertiesAction,
+  setTreeMetadataAction,
   toggleAllTreesAction,
   toggleTreeAction,
   toggleTreeGroupAction,
@@ -37,8 +37,8 @@ import {
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
 import { ResizableSplitPane } from "./resizable_split_pane";
-import { UserDefinedPropertyTableRows } from "./user_defined_properties_table";
-import type { UserDefinedProperty } from "types/api_flow_types";
+import { MetadataEntryTableRows } from "./user_defined_properties_table";
+import type { MetadataEntry } from "types/api_flow_types";
 import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
@@ -331,8 +331,8 @@ function TreeHierarchyView(props: Props) {
   );
 }
 
-const setUserDefinedProperties = (tree: Tree, newProperties: UserDefinedProperty[]) => {
-  Store.dispatch(setTreeUserDefinedPropertiesAction(newProperties, tree.treeId));
+const setMetadata = (tree: Tree, newProperties: MetadataEntry[]) => {
+  Store.dispatch(setTreeMetadataAction(newProperties, tree.treeId));
 };
 
 const DetailsForSelection = memo(
@@ -368,11 +368,7 @@ const DetailsForSelection = memo(
                   />
                 </td>
               </tr>
-              <UserDefinedPropertyTableRows
-                item={tree}
-                setUserDefinedProperties={setUserDefinedProperties}
-                readOnly={readOnly}
-              />
+              <MetadataEntryTableRows item={tree} setMetadata={setMetadata} readOnly={readOnly} />
             </tbody>
           </table>
         </div>

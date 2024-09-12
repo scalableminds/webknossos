@@ -243,19 +243,15 @@ const manualAnnotationBanner = (
     </div>
   </div>
 );
-const banners = [
-  // segmentationBanner,
-  alignBanner,
-  // manualAnnotationBanner
-];
+const banners = [segmentationBanner, alignBanner, manualAnnotationBanner];
 
 function VoxelyticsBanner() {
   const [bannerIndex] = useState(Math.floor(Math.random() * banners.length));
   const theme = useSelector((state: OxalisState) => state.uiInformation.theme);
 
-  // if (!features().isWkorgInstance) {
-  //   return null;
-  // }
+  if (!features().isWkorgInstance) {
+    return null;
+  }
 
   return (
     <Sider className="hide-on-small-screen" width={300} theme={theme}>

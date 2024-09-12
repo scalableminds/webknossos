@@ -16,7 +16,11 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{
 }
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceRepository}
+import com.scalableminds.webknossos.datastore.services.{
+  DSRemoteWebknossosClient,
+  DataSourceRepository,
+  DataSourceService
+}
 import play.api.libs.json.{Json, OFormat}
 
 import java.nio.charset.StandardCharsets
@@ -54,6 +58,7 @@ object DataLayerId {
 
 class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
                                remoteWebknossosClient: DSRemoteWebknossosClient,
+                               dataSourceService: DataSourceService,
                                datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
@@ -62,11 +67,9 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
   private def uploadDirectory(organizationId: String, name: String): Path =
     dataBaseDir.resolve(organizationId).resolve(name)
 
-  def composeDataset(composeRequest: ComposeRequest, userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[DataSource] =
+  def composeDataset(composeRequest: ComposeRequest, userToken: Option[String]): Fox[DataSource] =
     for {
-      _ <- Fox.bool2Fox(Files.isWritable(dataBaseDir.resolve(composeRequest.organizationName))) ?~> "Datastore can not write to its data directory."
-
+      _ <- dataSourceService.assertDataDirWritable(composeRequest.organizationId)
       reserveUploadInfo = ReserveUploadInformation("",
                                                    composeRequest.newDatasetName,
                                                    composeRequest.organizationId,

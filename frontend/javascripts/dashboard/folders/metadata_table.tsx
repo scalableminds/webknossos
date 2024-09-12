@@ -23,7 +23,6 @@ import {
 } from "dashboard/dataset/dataset_collection_context";
 import { useIsMounted, useStateWithRef } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { isStringNumeric } from "libs/utils";
 import _ from "lodash";
 import {
   InputNumberWithUpdateOnBlur,
@@ -147,14 +146,6 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
             console.log("onChange was called with", newNum);
             return updateMetadataValue(index, newNum || 0, APIMetadataEnum.NUMBER);
           }}
-          // validate={(value: string) => {
-          //   if (isStringNumeric(value)) {
-          //     console.log("validating", value, ": okay");
-          //     return null;
-          //   }
-          //   console.log("validating", value, ": not okay");
-          //   return "The value must be a number.";
-          // }}
           {...sharedProps}
         />
       );

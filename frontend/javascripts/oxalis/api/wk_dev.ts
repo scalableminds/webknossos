@@ -182,12 +182,12 @@ export default class WkDev {
     }
     const duration = performance.now() - start;
     console.timeEnd("Move Benchmark");
-    if (this.benchmarkHistory.length > 0) {
+    this.benchmarkHistory.push(duration);
+    if (this.benchmarkHistory.length > 1) {
       console.log(
-        `Average of previous ${this.benchmarkHistory.length} benchmark runs:`,
+        `Average of all ${this.benchmarkHistory.length} benchmark runs:`,
         _.mean(this.benchmarkHistory),
       );
     }
-    this.benchmarkHistory.push(duration);
   }
 }

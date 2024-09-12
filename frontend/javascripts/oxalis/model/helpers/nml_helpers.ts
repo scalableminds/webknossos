@@ -975,7 +975,7 @@ export function parseNml(nmlString: string): Promise<{
 
           case "metadataEntry": {
             if (currentTree == null) {
-              throw new NmlParseError(messages["nml.user_defined_property_outside_tree"]);
+              throw new NmlParseError(messages["nml.metadata_entry_outside_tree"]);
             }
             if (currentNode == null) {
               currentTree.metadata.push(parseMetadataEntry(attr));

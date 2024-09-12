@@ -1,8 +1,8 @@
 import _ from "lodash";
-import React, { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Utils from "libs/utils";
 import {
-  DatasetUpdater,
+  type DatasetUpdater,
   getDataset,
   getDatasets,
   updateDatasetPartial,
@@ -16,16 +16,16 @@ import {
   updateFolder,
 } from "admin/api/folders";
 import Toast from "libs/toast";
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
-  APIDatasetId,
-  APIDatasetCompact,
-  FlatFolderTreeItem,
-  Folder,
-  FolderItem,
-  FolderUpdater,
+  type APIDatasetId,
+  type APIDatasetCompact,
+  type FlatFolderTreeItem,
+  type Folder,
+  type FolderItem,
+  type FolderUpdater,
   convertDatasetToCompact,
-  APIDataset,
+  type APIDataset,
 } from "types/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
 
@@ -46,6 +46,13 @@ export function useFolderQuery(folderId: string | null) {
     {
       refetchOnWindowFocus: false,
       enabled: folderId != null,
+      // Avoid default retry delay with exponential back-off
+      // to shorten the delay after which webKnossos will switch
+      // to the root folder.
+      // This is relevant for the case where the current folder
+      // does not exist, anymore (e.g., was deleted by somebody
+      // else).
+      retryDelay: 500,
     },
   );
 }
@@ -113,9 +120,14 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
    * - ask the user if they want to update the list IF something changes
    * - do nothing (since the cache is up to date)
    *
-   * We do this by disabling the main query by default (and enabling it when
-   * necessary). Also the main query reads its result from the prefetched
+   * We do this by disabling the main query by default and setting the data
+   * manually. The main query will read its result from the prefetched
    * data (if available).
+   *
+   * **Note** that invalidateQueries() calls won't have a direct, visible effect
+   * due to the above mechanism IF the query data is already rendered.
+   * Therefore, queryClient.setQueryData() or datasetsInFolderQuery.refetch()
+   * should be used instead in these scenarios.
    */
 
   const queryClient = useQueryClient();
@@ -147,6 +159,7 @@ export function useDatasetsInFolderQuery(folderId: string | null) {
     },
   );
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether further dependencies are necessary.
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
     if (queryData.data == null || queryData.data.length === 0) {
@@ -266,7 +279,7 @@ export function useCreateFolderMutation() {
       queryClient.setQueryData(
         mutationKey,
         transformHierarchy((oldItems: FlatFolderTreeItem[] | undefined) =>
-          (oldItems || []).concat([{ ...newFolder, parent: parentId }]),
+          (oldItems || []).concat([{ ...newFolder, parent: parentId, metadata: [] }]),
         ),
       );
     },
@@ -408,6 +421,12 @@ export function useUpdateDatasetMutation(folderId: string | null) {
             })
             .filter((dataset: APIDatasetCompact) => dataset.folderId === folderId),
         );
+        const updatedDatasetId = {
+          name: updatedDataset.name,
+          owningOrganization: updatedDataset.owningOrganization,
+        };
+        // Also update the cached dataset under the key "datasetById".
+        queryClient.setQueryData(["datasetById", updatedDatasetId], updatedDataset);
         const targetFolderId = updatedDataset.folderId;
         if (targetFolderId !== folderId) {
           // The dataset was moved to another folder. Add the dataset to that target folder
@@ -572,6 +591,7 @@ export function getFolderHierarchy(folderTree: FlatFolderTreeItem[]): FolderHier
       title: folderTreeItem.name,
       isEditable: folderTreeItem.isEditable,
       parent: folderTreeItem.parent,
+      metadata: folderTreeItem.metadata,
       children: [],
     };
     if (folderTreeItem.parent == null) {

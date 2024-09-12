@@ -1,11 +1,9 @@
 package com.scalableminds.webknossos.datastore.models
 
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.GenericInboxDataSource
 import play.api.libs.json._
-
-import scala.annotation.nowarn
 
 package object datasource {
 
@@ -25,13 +23,13 @@ package object datasource {
 
   case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId,
                                                     dataLayers: List[T],
-                                                    scale: Vec3Double,
+                                                    scale: VoxelSize,
                                                     defaultViewConfiguration: Option[DatasetViewConfiguration] = None)
       extends GenericInboxDataSource[T] {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)
 
-    val scaleOpt: Option[Vec3Double] = Some(scale)
+    val voxelSizeOpt: Option[VoxelSize] = Some(scale)
 
     val statusOpt: Option[String] = None
 
@@ -54,7 +52,6 @@ package object datasource {
   }
 
   object GenericDataSource {
-    @nowarn // Suppress unused warning. The passed Format[T] is expanded to more than what is really used. It can not be omitted, though.
     implicit def dataSourceFormat[T <: DataLayerLike](implicit fmt: Format[T]): Format[GenericDataSource[T]] =
       Json.format[GenericDataSource[T]]
 

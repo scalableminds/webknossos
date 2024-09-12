@@ -12,7 +12,7 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import { Model, Store, api } from "oxalis/singletons";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export function handleDrawStart(pos: Point2, plane: OrthoView) {
   const state = Store.getState();
@@ -95,10 +95,10 @@ export function handlePickCellFromGlobalPosition(
   globalPos: Vector3,
   additionalCoordinates: AdditionalCoordinate[],
 ) {
-  const cellId = getSegmentIdForPosition(globalPos);
+  const segmentId = getSegmentIdForPosition(globalPos);
 
-  if (cellId > 0) {
-    Store.dispatch(setActiveCellAction(cellId, globalPos, additionalCoordinates));
+  if (segmentId > 0) {
+    Store.dispatch(setActiveCellAction(segmentId, globalPos, additionalCoordinates));
   }
 }
 export function handleFloodFill(pos: Point2, plane: OrthoView) {

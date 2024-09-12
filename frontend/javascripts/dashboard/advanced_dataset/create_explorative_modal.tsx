@@ -12,7 +12,7 @@ import {
 } from "oxalis/model/accessors/dataset_accessor";
 import { getDataset } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 type Props = {
   datasetId: APIDatasetId;
@@ -58,7 +58,7 @@ export function NewVolumeLayerSelection({
       </Tooltip>
       <Radio.Group
         onChange={(e) => {
-          const index = parseInt(e.target.value);
+          const index = Number.parseInt(e.target.value);
           setSelectedSegmentationLayerName(
             index !== -1 ? segmentationLayers[index].name : undefined,
           );
@@ -103,6 +103,7 @@ export function RestrictResolutionSlider({
   const highResolutionIndex = Math.min(highestResolutionIndex, resolutionIndices[1]);
   const lowResolutionIndex = Math.max(lowestResolutionIndex, resolutionIndices[0]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: setResolutionIndices should also be added to the dependencies. Consider fixing this.
   useEffect(() => {
     setResolutionIndices([lowestResolutionIndex, highestResolutionIndex]);
   }, [lowestResolutionIndex, highestResolutionIndex]);

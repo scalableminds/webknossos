@@ -2,6 +2,7 @@ import memoizeOne from "memoize-one";
 import type {
   APIAnnotation,
   APIAnnotationInfo,
+  APIDataLayer,
   APIDataset,
   APISegmentationLayer,
   AdditionalCoordinate,
@@ -14,12 +15,19 @@ import type {
   HybridTracing,
   LabelAction,
   OxalisState,
+  Segment,
   SegmentGroup,
   SegmentMap,
   Tracing,
   VolumeTracing,
 } from "oxalis/store";
-import { AnnotationTool, ContourMode, MappingStatusEnum, Vector3, Vector4 } from "oxalis/constants";
+import {
+  type AnnotationTool,
+  type ContourMode,
+  MappingStatusEnum,
+  type Vector3,
+  type Vector4,
+} from "oxalis/constants";
 import { AnnotationToolEnum, VolumeTools } from "oxalis/constants";
 import {
   getMappingInfo,
@@ -43,9 +51,13 @@ import { jsConvertCellIdToRGBA } from "oxalis/shaders/segmentation.glsl";
 import { jsRgb2hsl } from "oxalis/shaders/utils.glsl";
 import { ResolutionInfo } from "../helpers/resolution_info";
 import messages from "messages";
-import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
+import {
+  MISSING_GROUP_ID,
+  getGroupByIdWithSubgroups,
+} from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { Store } from "oxalis/singletons";
 import { setSelectedSegmentsOrGroupAction } from "../actions/volumetracing_actions";
+import _ from "lodash";
 
 export function getVolumeTracings(tracing: Tracing): Array<VolumeTracing> {
   return tracing.volumes;
@@ -159,10 +171,7 @@ const getResolutionInfoOfActiveSegmentationTracingLayer = memoizeOne(
 export function getServerVolumeTracings(
   tracings: Array<ServerTracing> | null | undefined,
 ): Array<ServerVolumeTracing> {
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'ServerTracing[]' is not assignable to type '... Remove this comment to see the full error message
-  const volumeTracings: Array<ServerVolumeTracing> = (tracings || []).filter(
-    (tracing) => tracing.typ === "Volume",
-  );
+  const volumeTracings = (tracings || []).filter((tracing) => tracing.typ === "Volume");
   return volumeTracings;
 }
 
@@ -348,6 +357,7 @@ export function getSegmentsForLayer(state: OxalisState, layerName: string): Segm
   return state.localSegmentationData[layer.name].segments;
 }
 
+const EMPTY_SEGMENT_GROUPS: SegmentGroup[] = [];
 export function getVisibleSegments(state: OxalisState): {
   segments: SegmentMap | null | undefined;
   segmentGroups: Array<SegmentGroup>;
@@ -365,14 +375,14 @@ export function getVisibleSegments(state: OxalisState): {
 
   // There aren't any segment groups for view-only layers
   const { segments } = state.localSegmentationData[layer.name];
-  return { segments, segmentGroups: [] };
+  return { segments, segmentGroups: EMPTY_SEGMENT_GROUPS };
 }
 
 // Next to returning a clean list of selected segments or group, this method returns
 // a callback function that updates the selectedIds in store if segments are stored
 // there that are not visible in the segments view tab.
 // The returned segment and group ids are all visible in the segments view tab.
-export function getSelectedIds(state: OxalisState): [
+function _getSelectedIds(state: OxalisState): [
   {
     segments: number[];
     group: number | null;
@@ -396,9 +406,10 @@ export function getSelectedIds(state: OxalisState): [
   const currentSegmentIds = new Set(currentVisibleSegments?.segments?.map((segment) => segment.id));
   let cleanedSelectedGroup = null;
   if (group != null) {
-    const availableGroups = currentVisibleSegments.segmentGroups
-      .map((group) => group.groupId)
-      .concat(MISSING_GROUP_ID);
+    const availableGroups = currentVisibleSegments.segmentGroups.flatMap((group) =>
+      getGroupByIdWithSubgroups(currentVisibleSegments.segmentGroups, group.groupId),
+    );
+    availableGroups.push(MISSING_GROUP_ID);
     cleanedSelectedGroup = availableGroups.includes(group) ? group : null;
   }
   const selectedIds = {
@@ -420,6 +431,8 @@ export function getSelectedIds(state: OxalisState): [
   }
   return [selectedIds, maybeSetSelectedSegmentsOrGroupsAction];
 }
+
+export const getSelectedIds = reuseInstanceOnEquality(_getSelectedIds);
 
 export function getActiveSegmentPosition(state: OxalisState): Vector3 | null | undefined {
   const layer = getVisibleSegmentationLayer(state);
@@ -520,15 +533,15 @@ export const getRenderableResolutionForActiveSegmentationTracing = reuseInstance
 
 export function getMappingInfoForVolumeTracing(
   state: OxalisState,
-  tracingId: string | null | undefined,
+  tracingIdOrLayerName: string | null | undefined,
 ): ActiveMappingInfo {
-  return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId);
+  return getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingIdOrLayerName);
 }
 
-export function hasEditableMapping(
+function getVolumeTracingForLayerName(
   state: OxalisState,
   layerName?: string | null | undefined,
-): boolean {
+): VolumeTracing | null | undefined {
   if (layerName != null) {
     // This needs to be checked before calling getRequestedOrDefaultSegmentationTracingLayer,
     // as the function will throw an error if layerName is given but a corresponding tracing layer
@@ -536,14 +549,34 @@ export function hasEditableMapping(
     const layer = getSegmentationLayerByName(state.dataset, layerName);
     const tracing = getTracingForSegmentationLayer(state, layer);
 
-    if (tracing == null) return false;
+    if (tracing == null) return null;
   }
 
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 
+  return volumeTracing;
+}
+
+export function hasEditableMapping(
+  state: OxalisState,
+  layerName?: string | null | undefined,
+): boolean {
+  const volumeTracing = getVolumeTracingForLayerName(state, layerName);
+
   if (volumeTracing == null) return false;
 
-  return !!volumeTracing.mappingIsEditable;
+  return !!volumeTracing.hasEditableMapping;
+}
+
+export function isMappingLocked(
+  state: OxalisState,
+  layerName?: string | null | undefined,
+): boolean {
+  const volumeTracing = getVolumeTracingForLayerName(state, layerName);
+
+  if (volumeTracing == null) return false;
+
+  return !!volumeTracing.mappingIsLocked;
 }
 
 export function isMappingActivationAllowed(
@@ -552,8 +585,9 @@ export function isMappingActivationAllowed(
   layerName?: string | null | undefined,
 ): boolean {
   const isEditableMappingActive = hasEditableMapping(state, layerName);
+  const isActiveMappingLocked = isMappingLocked(state, layerName);
 
-  if (!isEditableMappingActive) return true;
+  if (!isEditableMappingActive && !isActiveMappingLocked) return true;
 
   const volumeTracing = getRequestedOrDefaultSegmentationTracingLayer(state, layerName);
 
@@ -594,6 +628,11 @@ export function getLabelActionFromPreviousSlice(
   return volumeTracing.lastLabelActions.find(
     (el) => Math.floor(adapt(el.centroid)[dim]) !== position[dim],
   );
+}
+
+export function getSegmentName(segment: Segment, fallbackToId: boolean = false): string {
+  const fallback = fallbackToId ? `${segment.id}` : `Segment ${segment.id}`;
+  return segment.name || fallback;
 }
 
 // Output is in [0,1] for R, G, B, and A
@@ -690,7 +729,7 @@ export function hasConnectomeFile(state: OxalisState) {
   return CONNECTOME_STATES.YES;
 }
 
-export type AgglomerateState = typeof AGGLOMERATE_STATES[keyof typeof AGGLOMERATE_STATES];
+export type AgglomerateState = (typeof AGGLOMERATE_STATES)[keyof typeof AGGLOMERATE_STATES];
 
 export function hasAgglomerateMapping(state: OxalisState) {
   const segmentation = getVisibleSegmentationLayer(state);
@@ -753,4 +792,59 @@ export function getMeshInfoForSegment(
   );
   if (meshesForAddCoords == null) return null;
   return meshesForAddCoords[segmentId];
+}
+
+export function needsLocalHdf5Mapping(state: OxalisState, layerName: string) {
+  const volumeTracing = getVolumeTracingByLayerName(state.tracing, layerName);
+  if (volumeTracing == null) {
+    return false;
+  }
+
+  return (
+    // An annotation that has an editable mapping is likely proofread a lot.
+    // Switching between tools should not require a reload which is why
+    // needsLocalHdf5Mapping() will always return true in that case.
+    volumeTracing.hasEditableMapping ||
+    state.uiInformation.activeTool === AnnotationToolEnum.PROOFREAD
+  );
+}
+
+export type BucketRetrievalSource =
+  | ["REQUESTED-WITHOUT-MAPPING", "NO-LOCAL-MAPPING-APPLIED"]
+  | ["REQUESTED-WITHOUT-MAPPING", "LOCAL-MAPPING-APPLIED", string]
+  | ["REQUESTED-WITH-MAPPING", string];
+
+export const getBucketRetrievalSourceFn =
+  // The function that is passed to memoize will only be executed once
+  // per layerName. This is important since the function uses reuseInstanceOnEquality
+  // to create a function that ensures that identical BucketRetrievalSource tuples will be re-used between
+  // consecutive calls.
+  _.memoize((layerName: string) =>
+    reuseInstanceOnEquality((state: OxalisState): BucketRetrievalSource => {
+      const usesLocalHdf5Mapping = needsLocalHdf5Mapping(state, layerName);
+
+      const mappingInfo = getMappingInfoForVolumeTracing(state, layerName);
+
+      if (
+        mappingInfo.mappingStatus === MappingStatusEnum.DISABLED ||
+        mappingInfo.mappingName == null
+      ) {
+        return ["REQUESTED-WITHOUT-MAPPING", "NO-LOCAL-MAPPING-APPLIED"];
+      }
+
+      if (usesLocalHdf5Mapping || mappingInfo.mappingType === "JSON") {
+        return ["REQUESTED-WITHOUT-MAPPING", "LOCAL-MAPPING-APPLIED", mappingInfo.mappingName];
+      }
+
+      return ["REQUESTED-WITH-MAPPING", mappingInfo.mappingName];
+    }),
+  );
+
+export function getReadableNameOfVolumeLayer(
+  layer: APIDataLayer,
+  tracing: HybridTracing,
+): string | null {
+  return "tracingId" in layer && layer.tracingId != null
+    ? getReadableNameByVolumeTracingId(tracing, layer.tracingId)
+    : null;
 }

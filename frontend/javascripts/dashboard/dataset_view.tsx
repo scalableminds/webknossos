@@ -23,7 +23,6 @@ import {
   HourglassOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module '@sca... Remove this comment to see the full error message
 import { PropTypes } from "@scalableminds/prop-types";
 import type { APIJob, APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
 import DatasetTable from "dashboard/advanced_dataset/dataset_table";
@@ -37,7 +36,7 @@ import FormattedDate from "components/formatted_date";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { Unicode } from "oxalis/constants";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
-import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
+import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,
   SEARCH_RESULTS_LIMIT,
@@ -45,8 +44,8 @@ import {
 } from "./dataset/queries";
 import { PricingEnforcedButton } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { MenuProps } from "rc-menu";
-import { ItemType } from "antd/lib/menu/hooks/useItems";
+import type { MenuProps } from "rc-menu";
+import type { ItemType } from "antd/es/menu/interface";
 
 type Props = {
   user: APIUser;
@@ -115,7 +114,7 @@ function DatasetView(props: Props) {
     if (features().jobsEnabled) {
       getJobs().then((newJobs) => setJobs(newJobs));
     }
-  }, []);
+  }, [setSearchQuery]);
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
@@ -395,8 +394,8 @@ function GlobalSearchHeader({
             activeFolderId == null
               ? "everywhere"
               : context.searchRecursively
-              ? "folder-with-subfolders"
-              : "folder"
+                ? "folder-with-subfolders"
+                : "folder"
           }
         />
       </div>

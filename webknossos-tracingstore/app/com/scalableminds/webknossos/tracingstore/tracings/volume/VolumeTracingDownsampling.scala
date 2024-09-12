@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike, DataSourceLike, ElementClass}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
-import com.scalableminds.webknossos.tracingstore.TSRemoteWebKnossosClient
+import com.scalableminds.webknossos.tracingstore.TSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
@@ -55,7 +55,7 @@ trait VolumeTracingDownsampling
     with FoxImplicits {
 
   val tracingDataStore: TracingDataStore
-  val tracingStoreWkRpcClient: TSRemoteWebKnossosClient
+  val tracingStoreWkRpcClient: TSRemoteWebknossosClient
   protected def saveBucket(dataLayer: VolumeTracingLayer,
                            bucket: BucketPosition,
                            data: Array[Byte],
@@ -66,15 +66,22 @@ trait VolumeTracingDownsampling
                                    bucketPosition: BucketPosition,
                                    bucketBytes: Array[Byte],
                                    previousBucketBytesBox: Box[Array[Byte]],
-                                   elementClass: ElementClassProto): Fox[Unit]
+                                   elementClass: ElementClassProto,
+                                   mappingName: Option[String],
+                                   editableMappingTracingId: Option[String]): Fox[Unit]
+
+  protected def editableMappingTracingId(tracing: VolumeTracing, tracingId: String): Option[String]
+
+  protected def baseMappingName(tracing: VolumeTracing): Fox[Option[String]]
 
   protected def volumeSegmentIndexClient: FossilDBClient
 
-  protected def downsampleWithLayer(
-      tracingId: String,
-      oldTracingId: String,
-      tracing: VolumeTracing,
-      dataLayer: VolumeTracingLayer)(implicit ec: ExecutionContext): Fox[List[Vec3Int]] = {
+  protected def downsampleWithLayer(tracingId: String,
+                                    oldTracingId: String,
+                                    tracing: VolumeTracing,
+                                    dataLayer: VolumeTracingLayer,
+                                    tracingService: VolumeTracingService,
+                                    userToken: Option[String])(implicit ec: ExecutionContext): Fox[List[Vec3Int]] = {
     val bucketVolume = 32 * 32 * 32
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
@@ -97,19 +104,29 @@ trait VolumeTracingDownsampling
                              dataLayer)
         requiredMag
       }
+      fallbackLayer <- tracingService.getFallbackLayer(oldTracingId) // remote wk does not know the new id yet
+      tracing <- tracingService.find(tracingId) ?~> "tracing.notFound"
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                         volumeSegmentIndexClient,
                                                         tracing.version,
-                                                        dataLayer.additionalAxes)
+                                                        tracingService.remoteDatastoreClient,
+                                                        fallbackLayer,
+                                                        dataLayer.additionalAxes,
+                                                        userToken)
       _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
         for {
           _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)
+          mappingName <- baseMappingName(tracing)
           _ <- Fox.runIfOptionTrue(tracing.hasSegmentIndex)(
-            updateSegmentIndex(segmentIndexBuffer,
-                               bucketPosition,
-                               bucketDataMapMutable(bucketPosition),
-                               Empty,
-                               tracing.elementClass))
+            updateSegmentIndex(
+              segmentIndexBuffer,
+              bucketPosition,
+              bucketDataMapMutable(bucketPosition),
+              Empty,
+              tracing.elementClass,
+              mappingName,
+              editableMappingTracingId(tracing, tracingId)
+            ))
         } yield ()
       }
       _ <- segmentIndexBuffer.flush()

@@ -4,18 +4,21 @@ import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.{Fox, TextUtils}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.layers.{ZarrDataLayer, ZarrLayer, ZarrSegmentationLayer}
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.datareaders.zarr._
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
+import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   Category,
+  DataFormat,
   ElementClass,
   LayerViewConfiguration
 }
-import play.api.libs.json.{JsArray, JsNumber}
+import play.api.libs.json.{JsArray, JsBoolean, JsNumber, Json}
 
 import scala.concurrent.ExecutionContext
 
@@ -23,21 +26,20 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
 
   override def name: String = "OME NGFF Zarr v0.4"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String]): Fox[List[(ZarrLayer, VoxelSize)]] =
     for {
       zattrsPath <- Fox.successful(remotePath / NgffMetadata.FILENAME_DOT_ZATTRS)
       ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
-      labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(
-        Fox.successful(List[(ZarrLayer, Vec3Double)]()))
+      labelLayers <- exploreLabelLayers(remotePath, credentialId).orElse(Fox.successful(List[(ZarrLayer, VoxelSize)]()))
 
-      layerLists: List[List[(ZarrLayer, Vec3Double)]] <- Fox.serialCombined(ngffHeader.multiscales)(multiscale => {
+      layerLists: List[List[(ZarrLayer, VoxelSize)]] <- Fox.serialCombined(ngffHeader.multiscales)(multiscale => {
         for {
           channelCount: Int <- getNgffMultiscaleChannelCount(multiscale, remotePath)
           channelAttributes = getChannelAttributes(ngffHeader)
           layers <- layersFromNgffMultiscale(multiscale, remotePath, credentialId, channelCount, channelAttributes)
         } yield layers
       })
-      layers: List[(ZarrLayer, Vec3Double)] = layerLists.flatten
+      layers: List[(ZarrLayer, VoxelSize)] = layerLists.flatten
     } yield layers ++ labelLayers
 
   private def getNgffMultiscaleChannelCount(multiscale: NgffMultiscalesItem, remotePath: VaultPath): Fox[Int] =
@@ -58,14 +60,15 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
                                        credentialId: Option[String],
                                        channelCount: Int,
                                        channelAttributes: Option[Seq[ChannelAttributes]] = None,
-                                       isSegmentation: Boolean = false): Fox[List[(ZarrLayer, Vec3Double)]] =
+                                       isSegmentation: Boolean = false): Fox[List[(ZarrLayer, VoxelSize)]] =
     for {
       axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
-      axisUnitFactors <- extractAxisUnitFactors(multiscale.axes, axisOrder) ?~> "Could not extract axis unit-to-nm factors"
+      unifiedAxisUnit <- selectAxisUnit(multiscale.axes, axisOrder)
+      axisUnitFactors <- extractAxisUnitFactors(unifiedAxisUnit, multiscale.axes, axisOrder) ?~> "Could not extract axis unit-to-nm factors"
       voxelSizeInAxisUnits <- extractVoxelSizeInAxisUnits(
         multiscale.datasets.map(_.coordinateTransformations),
         axisOrder) ?~> "Could not extract voxel size from scale transforms"
-      voxelSizeNanometers = voxelSizeInAxisUnits * axisUnitFactors
+      voxelSizeFactor = voxelSizeInAxisUnits * axisUnitFactors
       nameFromPath = guessNameFromPath(remotePath)
       name = multiscale.name.getOrElse(nameFromPath)
       layerTuples <- Fox.serialCombined((0 until channelCount).toList)({ channelIndex: Int =>
@@ -79,14 +82,33 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
 
           (viewConfig: LayerViewConfiguration, channelName: String) = channelAttributes match {
             case Some(attributes) => {
-              val color = attributes(channelIndex).color
+              val thisChannelAttributes = attributes(channelIndex)
               val attributeName: String =
-                attributes(channelIndex).name
+                thisChannelAttributes.name
                   .map(TextUtils.normalizeStrong(_).getOrElse(name).replaceAll(" ", ""))
                   .getOrElse(name)
-              (color match {
-                case Some(c) => Seq(("color" -> JsArray(c.toArrayOfInts.map(i => JsNumber(BigDecimal(i)))))).toMap
-                case None    => LayerViewConfiguration.empty
+
+              val layerViewConfiguration = (thisChannelAttributes.color match {
+                case Some(c) => Seq("color" -> JsArray(c.toArrayOfInts.map(i => JsNumber(BigDecimal(i)))))
+                case None    => Seq()
+              }) ++ (thisChannelAttributes.window match {
+                case Some(w) =>
+                  Seq("intensityRange" -> Json.arr(JsNumber(w.start), JsNumber(w.end)),
+                      "min" -> JsNumber(w.min),
+                      "max" -> JsNumber(w.max))
+                case None => Seq()
+              }) ++ (thisChannelAttributes.inverted match {
+                case Some(i) => Seq("isInverted" -> JsBoolean(i))
+                case None    => Seq()
+              }) ++ (thisChannelAttributes.active match {
+                case Some(a) => Seq("isDisabled" -> JsBoolean(!a))
+                case None    => Seq()
+              })
+
+              (if (layerViewConfiguration.isEmpty) {
+                LayerViewConfiguration.empty
+              } else {
+                layerViewConfiguration.toMap
               }, attributeName)
             }
             case None => (LayerViewConfiguration.empty, name)
@@ -102,7 +124,8 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
               magsWithAttributes.map(_.mag),
               largestSegmentId = None,
               additionalAxes = Some(additionalAxes),
-              defaultViewConfiguration = Some(viewConfig)
+              defaultViewConfiguration = Some(viewConfig),
+              dataFormat = DataFormat.zarr
             )
           } else
             ZarrDataLayer(
@@ -112,9 +135,10 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
               elementClass,
               magsWithAttributes.map(_.mag),
               additionalAxes = Some(additionalAxes),
-              defaultViewConfiguration = Some(viewConfig)
+              defaultViewConfiguration = Some(viewConfig),
+              dataFormat = DataFormat.zarr
             )
-        } yield (layer, voxelSizeNanometers)
+        } yield (layer, VoxelSize(voxelSizeFactor, unifiedAxisUnit))
       })
     } yield layerTuples
 
@@ -136,7 +160,11 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
     } yield axes
   }
 
-  private case class ChannelAttributes(color: Option[Color], name: Option[String])
+  private case class ChannelAttributes(color: Option[Color],
+                                       name: Option[String],
+                                       window: Option[NgffChannelWindow],
+                                       inverted: Option[Boolean],
+                                       active: Option[Boolean])
 
   private def getChannelAttributes(
       ngffHeader: NgffMetadata
@@ -145,13 +173,18 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
       case Some(value) =>
         Some(
           value.channels.map(omeroChannelAttributes =>
-            ChannelAttributes(omeroChannelAttributes.color.map(Color.fromHTML(_).getOrElse(Color(1, 1, 1, 0))),
-                              omeroChannelAttributes.label)))
+            ChannelAttributes(
+              omeroChannelAttributes.color.map(Color.fromHTML(_).getOrElse(Color(1, 1, 1, 0))),
+              omeroChannelAttributes.label,
+              omeroChannelAttributes.window,
+              omeroChannelAttributes.inverted,
+              omeroChannelAttributes.active
+          )))
       case None => None
     }
 
   private def exploreLabelLayers(remotePath: VaultPath,
-                                 credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
+                                 credentialId: Option[String]): Fox[List[(ZarrLayer, VoxelSize)]] =
     for {
       labelDescriptionPath <- Fox.successful(remotePath / NgffLabelsGroup.LABEL_PATH)
       labelGroup <- parseJsonFromPath[NgffLabelsGroup](labelDescriptionPath)
@@ -162,12 +195,12 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
 
   private def layersForLabel(remotePath: VaultPath,
                              labelPath: String,
-                             credentialId: Option[String]): Fox[List[(ZarrLayer, Vec3Double)]] =
+                             credentialId: Option[String]): Fox[List[(ZarrLayer, VoxelSize)]] =
     for {
       fullLabelPath <- Fox.successful(remotePath / "labels" / labelPath)
       zattrsPath = fullLabelPath / NgffMetadata.FILENAME_DOT_ZATTRS
       ngffHeader <- parseJsonFromPath[NgffMetadata](zattrsPath) ?~> s"Failed to read OME NGFF header at $zattrsPath"
-      layers: List[List[(ZarrLayer, Vec3Double)]] <- Fox.serialCombined(ngffHeader.multiscales)(
+      layers: List[List[(ZarrLayer, VoxelSize)]] <- Fox.serialCombined(ngffHeader.multiscales)(
         multiscale =>
           layersFromNgffMultiscale(multiscale.copy(name = Some(s"labels-$labelPath")),
                                    fullLabelPath,
@@ -236,12 +269,26 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
       }
   }
 
-  private def extractAxisUnitFactors(axes: List[NgffAxis], axisOrder: AxisOrder): Fox[Vec3Double] =
+  private def selectAxisUnit(axes: List[NgffAxis], axisOrder: AxisOrder): Fox[LengthUnit] =
     for {
-      xUnitFactor <- axes(axisOrder.x).spaceUnitToNmFactor
-      yUnitFactor <- axes(axisOrder.y).spaceUnitToNmFactor
-      zUnitFactor <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).spaceUnitToNmFactor)
-    } yield Vec3Double(xUnitFactor, yUnitFactor, zUnitFactor.getOrElse(1))
+      xUnit <- axes(axisOrder.x).lengthUnit.toFox
+      yUnit <- axes(axisOrder.y).lengthUnit.toFox
+      zUnitOpt <- Fox.runIf(axisOrder.hasZAxis)(axes(axisOrder.zWithFallback).lengthUnit)
+      units: List[LengthUnit] = List(Some(xUnit), Some(yUnit), zUnitOpt).flatten
+    } yield units.minBy(LengthUnit.toNanometer)
+
+  private def extractAxisUnitFactors(unifiedAxisUnit: LengthUnit,
+                                     axes: List[NgffAxis],
+                                     axisOrder: AxisOrder): Fox[Vec3Double] =
+    for {
+      xUnitToNm <- axes(axisOrder.x).lengthUnit.map(LengthUnit.toNanometer).toFox
+      yUnitToNm <- axes(axisOrder.y).lengthUnit.map(LengthUnit.toNanometer).toFox
+      zUnitToNmOpt <- Fox.runIf(axisOrder.hasZAxis)(
+        axes(axisOrder.zWithFallback).lengthUnit.map(LengthUnit.toNanometer))
+      xUnitToTarget = xUnitToNm / LengthUnit.toNanometer(unifiedAxisUnit)
+      yUnitToTarget = yUnitToNm / LengthUnit.toNanometer(unifiedAxisUnit)
+      zUnitToTargetOpt = zUnitToNmOpt.map(_ / LengthUnit.toNanometer(unifiedAxisUnit))
+    } yield Vec3Double(xUnitToTarget, yUnitToTarget, zUnitToTargetOpt.getOrElse(1))
 
   private def magFromTransforms(coordinateTransforms: List[NgffCoordinateTransformation],
                                 voxelSizeInAxisUnits: Vec3Double,
@@ -259,7 +306,7 @@ class NgffExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplore
   /*
    * Guesses the voxel size from all transforms of an ngff multiscale object.
    * Note: the returned voxel size is in axis units and should later be combined with those units
-   *   to get a webKnossos-typical voxel size in nanometers.
+   *   to get a webknossos-typical voxel size in nanometers.
    * Note: allCoordinateTransforms is nested: the inner list has all transforms of one ngff “dataset” (mag in our terminology),
    *   the outer list gathers these for all such “datasets” (mags) of one “multiscale object” (layer)
    */

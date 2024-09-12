@@ -1,6 +1,6 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import { Tabs, Modal, Button, Layout, TabsProps } from "antd";
+import { Tabs, Modal, Button, Layout, type TabsProps } from "antd";
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { connect, useSelector } from "react-redux";
@@ -13,13 +13,14 @@ import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import DatasetAddComposeView from "./dataset_add_compose_view";
+import type { History } from "history";
 
 const { Content, Sider } = Layout;
 
 // Used for the tab keys as well as for
 // distinguishing between the add type after
 // successful import.
-enum DatasetAddType {
+export enum DatasetAddType {
   UPLOAD = "upload",
   REMOTE = "remote",
   COMPOSE = "compose",
@@ -46,8 +47,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
     setOrganization(datasetOrganization);
     setDatasetName(uploadedDatasetName);
     setImportType(datasetAddType);
-    // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'boolean | null | undefined' is n... Remove this comment to see the full error message
-    setDatasetNeedsConversion(needsConversion);
+    if (needsConversion != null) setDatasetNeedsConversion(needsConversion);
   };
 
   const showAfterUploadContent = datasetName !== "";
@@ -57,55 +57,13 @@ function DatasetAddView({ history }: RouteComponentProps) {
       return null;
     }
 
-    return (
-      <div
-        style={{
-          fontSize: 20,
-          paddingTop: 13,
-          textAlign: "center",
-        }}
-      >
-        The dataset was {addTypeToVerb[datasetAddType]} successfully
-        {datasetNeedsConversion ? " and a conversion job was started." : null}.
-        <br />
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
-          <div
-            className="centered-items"
-            style={{
-              marginTop: 10,
-            }}
-          >
-            {datasetNeedsConversion ? (
-              <React.Fragment>
-                <Button type="primary" onClick={() => history.push("/jobs")}>
-                  View the Jobs Queue
-                </Button>
-                <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
-              </React.Fragment>
-            ) : (
-              <React.Fragment>
-                <Button
-                  type="primary"
-                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/view`)}
-                >
-                  View the Dataset
-                </Button>
-                <Button
-                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/import`)}
-                >
-                  Go to Dataset Settings
-                </Button>
-                <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
-              </React.Fragment>
-            )}
-          </div>
-        </div>
-      </div>
+    return getPostUploadModal(
+      datasetNeedsConversion,
+      datasetAddType,
+      organization,
+      datasetName,
+      setDatasetName,
+      history,
     );
   };
 
@@ -160,28 +118,7 @@ function DatasetAddView({ history }: RouteComponentProps) {
         </Content>
         <VoxelyticsBanner />
       </Layout>
-      <Modal
-        open={showAfterUploadContent}
-        closable={showAfterUploadContent}
-        keyboard={showAfterUploadContent}
-        maskClosable={false}
-        className="no-footer-modal"
-        cancelButtonProps={{
-          style: {
-            display: "none",
-          },
-        }}
-        okButtonProps={{
-          style: {
-            display: "none",
-          },
-        }}
-        onCancel={() => setDatasetName("")}
-        onOk={() => setDatasetName("")}
-        width={580}
-      >
-        {showAfterUploadContent && getAfterUploadModalContent()}
-      </Modal>
+      {getAfterUploadModalContent()}
     </React.Fragment>
   );
 }
@@ -324,3 +261,83 @@ const mapStateToProps = (state: OxalisState) => ({
 
 const connector = connect(mapStateToProps);
 export default connector(withRouter(DatasetAddView));
+
+const getPostUploadModal = (
+  datasetNeedsConversion: boolean,
+  datasetAddType: DatasetAddType,
+  organization: string,
+  datasetName: string,
+  setDatasetName: (arg0: string) => void,
+  history: History<unknown>,
+) => {
+  return (
+    <Modal
+      open
+      closable
+      maskClosable={false}
+      className="no-footer-modal"
+      cancelButtonProps={{
+        style: {
+          display: "none",
+        },
+      }}
+      okButtonProps={{
+        style: {
+          display: "none",
+        },
+      }}
+      onCancel={() => setDatasetName("")}
+      onOk={() => setDatasetName("")}
+      width={580}
+    >
+      <div
+        style={{
+          fontSize: 20,
+          paddingTop: 13,
+          textAlign: "center",
+        }}
+      >
+        The dataset was {addTypeToVerb[datasetAddType]} successfully
+        {datasetNeedsConversion ? " and a conversion job was started." : null}.
+        <br />
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+          }}
+        >
+          <div
+            className="centered-items"
+            style={{
+              marginTop: 10,
+            }}
+          >
+            {datasetNeedsConversion ? (
+              <React.Fragment>
+                <Button type="primary" onClick={() => history.push("/jobs")}>
+                  View the Jobs Queue
+                </Button>
+                <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
+              </React.Fragment>
+            ) : (
+              <React.Fragment>
+                <Button
+                  type="primary"
+                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/view`)}
+                >
+                  View the Dataset
+                </Button>
+                <Button
+                  onClick={() => history.push(`/datasets/${organization}/${datasetName}/edit`)}
+                >
+                  Go to Dataset Settings
+                </Button>
+                <Button onClick={() => history.push("/dashboard/datasets")}>Go to Dashboard</Button>
+              </React.Fragment>
+            )}
+          </div>
+        </div>
+      </div>{" "}
+    </Modal>
+  );
+};

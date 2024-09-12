@@ -7,6 +7,7 @@ import FetchBufferWithHeadersWorker from "oxalis/workers/fetch_buffer_with_heade
 import FetchBufferWorker from "oxalis/workers/fetch_buffer.worker";
 import Toast from "libs/toast";
 import handleStatus from "libs/handle_http_status";
+import type { ArbitraryObject } from "types/globals";
 
 const fetchBufferViaWorker = createWorker(FetchBufferWorker);
 const fetchBufferWithHeaders = createWorker(FetchBufferWithHeadersWorker);
@@ -15,6 +16,7 @@ const compress = createWorker(CompressWorker);
 type method = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
 export type RequestOptionsBase<T> = {
+  body?: ReadableStream | Blob | BufferSource | FormData | URLSearchParams | string;
   compress?: boolean;
   doNotInvestigate?: boolean;
   extractHeaders?: boolean;
@@ -344,7 +346,7 @@ class Request {
     return Promise.reject(error);
   };
 
-  handleEmptyJsonResponse = (response: Response): Promise<{}> =>
+  handleEmptyJsonResponse = (response: Response): Promise<ArbitraryObject> =>
     response.text().then((responseText) => {
       if (responseText.length === 0) {
         return {};

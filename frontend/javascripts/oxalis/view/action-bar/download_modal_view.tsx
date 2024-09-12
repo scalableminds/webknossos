@@ -10,12 +10,19 @@ import {
   Radio,
   Alert,
   Tooltip,
-  TabsProps,
+  type TabsProps,
 } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { makeComponentLazy, useFetch } from "libs/react_helpers";
-import type { AdditionalAxis, APIDataLayer, APIDataset } from "types/api_flow_types";
+import {
+  APIJobType,
+  type VoxelSize,
+  type AdditionalAxis,
+  type APIDataLayer,
+  type APIDataset,
+} from "types/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
 import { Model } from "oxalis/singletons";
@@ -27,14 +34,10 @@ import {
   getAuthToken,
   startExportTiffJob,
 } from "admin/admin_rest_api";
-import {
-  LayerSelection,
-  BoundingBoxSelection,
-  getReadableNameOfVolumeLayer,
-  MagSlider,
-} from "oxalis/view/action-bar/starting_job_modals";
+import { BoundingBoxSelection, MagSlider } from "oxalis/view/action-bar/starting_job_modals";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
+  getReadableNameOfVolumeLayer,
   getVolumeTracingById,
   hasVolumeTracings,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -52,8 +55,9 @@ import {
   computeShapeFromBoundingBox,
 } from "libs/utils";
 import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
-import { BoundingBoxType, Vector3 } from "oxalis/constants";
+import type { BoundingBoxType, Vector3 } from "oxalis/constants";
 import { useStartAndPollJob } from "admin/job/job_hooks";
+import { LayerSelection } from "components/layer_selection";
 const { Paragraph, Text } = Typography;
 
 type TabKeys = "download" | "export" | "python";
@@ -173,8 +177,10 @@ function estimateFileSize(
 }
 
 function formatSelectedScale(dataset: APIDataset, mag: Vector3) {
-  const scale = dataset.dataSource.scale;
-  return formatScale([scale[0] * mag[0], scale[1] * mag[1], scale[2] * mag[2]]);
+  const magAdaptedScale = dataset.dataSource.scale.factor.map((f, i) => f * mag[i]);
+  const unit = dataset.dataSource.scale.unit;
+  const scale = { factor: magAdaptedScale, unit } as VoxelSize;
+  return formatScale(scale);
 }
 
 export function Hint({
@@ -594,7 +600,8 @@ function _DownloadModalView({
           {messages["download.export_as_tiff"]({ typeName })}
         </Text>
       </Row>
-      {activeTabKey === "export" && !features().jobsEnabled ? (
+      {activeTabKey === "export" &&
+      !dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobType.EXPORT_TIFF) ? (
         workerInfo
       ) : (
         <div>

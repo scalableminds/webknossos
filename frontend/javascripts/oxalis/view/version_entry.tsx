@@ -42,7 +42,7 @@ import type {
 import FormattedDate from "components/formatted_date";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { formatUserName, getContributorById } from "oxalis/model/accessors/user_accessor";
 type Description = {
   description: string;

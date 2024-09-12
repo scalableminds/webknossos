@@ -1,32 +1,32 @@
 import { V3 } from "libs/mjs";
 import Constants, {
-  ContourMode,
+  type ContourMode,
   ContourModeEnum,
-  LabeledVoxelsMap,
-  OrthoView,
-  OverwriteMode,
+  type LabeledVoxelsMap,
+  type OrthoView,
+  type OverwriteMode,
   OverwriteModeEnum,
-  Vector2,
-  Vector3,
+  type Vector2,
+  type Vector3,
 } from "oxalis/constants";
 import { getDatasetBoundingBox, getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { getHalfViewportExtents } from "oxalis/model/sagas/saga_selectors";
+import { getHalfViewportExtentsInVx } from "oxalis/model/sagas/saga_selectors";
 import { call } from "typed-redux-saga";
 import sampleVoxelMapToResolution, {
   applyVoxelMap,
 } from "oxalis/model/volumetracing/volume_annotation_sampling";
-import Dimensions, { DimensionMap } from "oxalis/model/dimensions";
-import DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import Dimensions, { type DimensionMap } from "oxalis/model/dimensions";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { Model } from "oxalis/singletons";
-import VolumeLayer, { VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
+import VolumeLayer, { type VoxelBuffer2D } from "oxalis/model/volumetracing/volumelayer";
 import { enforceActiveVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
-import { BoundingBoxObject, VolumeTracing } from "oxalis/store";
+import type { BoundingBoxObject, VolumeTracing } from "oxalis/store";
 import { getFlooredPosition } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedPositionToZoomedAddress } from "oxalis/model/helpers/position_converter";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 
 function* pairwise<T>(arr: Array<T>): Generator<[T, T], any, any> {
   for (let i = 0; i < arr.length - 1; i++) {
@@ -43,7 +43,7 @@ export function* getBoundingBoxForViewport(
   currentViewport: OrthoView,
 ): Saga<BoundingBox> {
   const [halfViewportExtentX, halfViewportExtentY] = yield* call(
-    getHalfViewportExtents,
+    getHalfViewportExtentsInVx,
     currentViewport,
   );
 

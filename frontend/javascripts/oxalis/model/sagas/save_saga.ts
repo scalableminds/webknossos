@@ -26,8 +26,8 @@ import type { InitializeSkeletonTracingAction } from "oxalis/model/actions/skele
 import { SkeletonTracingSaveRelevantActions } from "oxalis/model/actions/skeletontracing_actions";
 import { ViewModeSaveRelevantActions } from "oxalis/model/actions/view_mode_actions";
 import {
-  InitializeEditableMappingAction,
-  InitializeVolumeTracingAction,
+  type InitializeEditableMappingAction,
+  type InitializeVolumeTracingAction,
   VolumeTracingSaveRelevantActions,
 } from "oxalis/model/actions/volumetracing_actions";
 import compactSaveQueue from "oxalis/model/helpers/compaction/compact_save_queue";
@@ -86,7 +86,7 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
-    yield* put(setSaveBusyAction(true, saveQueueType));
+    yield* put(setSaveBusyAction(true, saveQueueType, tracingId));
 
     // Send (parts) of the save queue to the server.
     // There are two main cases:
@@ -107,7 +107,7 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
     //    would be present here, too (note the risk would be greater, because the
     //    user didn't use the save button which is usually accompanied a small pause).
     const itemCountToSave = forcePush
-      ? Infinity
+      ? Number.POSITIVE_INFINITY
       : yield* select((state) => selectQueue(state, saveQueueType, tracingId).length);
     let savedItemCount = 0;
     while (savedItemCount < itemCountToSave) {
@@ -120,7 +120,7 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
       }
     }
 
-    yield* put(setSaveBusyAction(false, saveQueueType));
+    yield* put(setSaveBusyAction(false, saveQueueType, tracingId));
   }
 }
 export function sendRequestWithToken(
@@ -468,11 +468,27 @@ const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
 
 function* watchForSaveConflicts() {
   function* checkForNewVersion() {
-    const allowSave = yield* select((state) => state.tracing.restrictions.allowSave);
-    const allowUpdate = yield* select((state) => state.tracing.restrictions.allowUpdate);
-    const othersMayEdit = yield* select((state) => state.tracing.othersMayEdit);
-    if (!allowUpdate && othersMayEdit) {
-      // The user does not have the annotation's mutex and therefore no repeated version check is needed.
+    const allowSave = yield* select(
+      (state) => state.tracing.restrictions.allowSave && state.tracing.restrictions.allowUpdate,
+    );
+    if (allowSave) {
+      // The active user is currently the only one that is allowed to mutate the annotation.
+      // Since we only acquire the mutex upon page load, there shouldn't be any unseen updates
+      // between the page load and this check here.
+      // A race condition where
+      //   1) another user saves version X
+      //   2) we load the annotation but only get see version X - 1 (this is the race)
+      //   3) we acquire a mutex
+      // should not occur, because there is a grace period for which the mutex has to be free until it can
+      // be acquired again (see annotation.mutex.expiryTime in application.conf).
+      // The downside of an early return here is that we won't be able to warn the user early
+      // if the user opened the annotation in two tabs and mutated it there.
+      // However,
+      //   a) this scenario is pretty rare and the worst case is that they get a 409 error
+      //      during saving and
+      //   b) checking for newer versions when the active user may update the annotation introduces
+      //      a race condition between this saga and the actual save saga. Synchronizing these sagas
+      //      would be possible, but would add further complexity to the mission critical save saga.
       return;
     }
 
@@ -492,25 +508,6 @@ function* watchForSaveConflicts() {
         tracing.tracingId,
         tracing.type,
       );
-
-      // There is a rare chance of a race condition happening
-      // which can result in an incorrect toast warning.
-      // It occurs if certain saga effects run in the following order:
-      // 1) a new version is pushed to the server (in sendRequestToServer)
-      // 2) the current server version is fetched (in this saga here)
-      // 3) the server version is compared with the client version (in this saga here)
-      // 4) only now is the local version number updated because the
-      //    sendRequestToServer saga was scheduled now.
-      // Since (4) is happening too late, the comparison in (3) will assume
-      // that client and server are out of sync.
-      // The chance of this happening is relatively low, but from time to time it
-      // happened. To mitigate this problem, we introduce a simple sleep here which
-      // means that the chance of (4) being scheduled after (2) should be close to
-      // 0 (hopefully).
-      // Note that a false-positive warning in this saga doesn't have serious side-effects
-      // (except for potentially confusing the user). This is why a more complex mutex- or
-      // semaphore-based solution to this problem was not chosen.
-      yield* call(sleep, 2000);
 
       // Read the tracing version again from the store, since the
       // old reference to tracing might be outdated now due to the
@@ -576,6 +573,9 @@ function* watchForSaveConflicts() {
   while (true) {
     const interval = yield* call(getPollInterval);
     yield* call(sleep, interval);
+    if (yield* select((state) => state.uiInformation.showVersionRestore)) {
+      continue;
+    }
     try {
       yield* call(checkForNewVersion);
     } catch (exception) {

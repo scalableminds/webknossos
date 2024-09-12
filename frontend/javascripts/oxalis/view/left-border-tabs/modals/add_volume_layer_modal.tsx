@@ -1,6 +1,7 @@
 import { Modal, Row } from "antd";
 import { PlusOutlined } from "@ant-design/icons";
-import React, { useMemo, useState } from "react";
+import type React from "react";
+import { useMemo, useState } from "react";
 import _ from "lodash";
 import type { APIDataset, APISegmentationLayer } from "types/api_flow_types";
 import { AsyncButton } from "components/async_clickables";
@@ -104,6 +105,7 @@ export default function AddVolumeLayerModal({
     () => getAllReadableLayerNames(dataset, tracing),
     [dataset, tracing],
   );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether to add more dependencies.
   const initialNewLayerName = useMemo(() => {
     if (preselectedLayerName) {
       return preselectedLayerName;

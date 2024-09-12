@@ -94,11 +94,13 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         .addVolumeFallbackBoundingBoxes(extractedTracingBoxesRaw, request.identity._organization)
       fullParams: List[Box[TaskParameters]] = taskCreationService.buildFullParamsFromFiles(params,
                                                                                            extractedTracingBoxes)
-      (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracings(extractedTracingBoxes.map(_.skeleton),
-                                                                                extractedTracingBoxes.map(_.volume),
-                                                                                fullParams,
-                                                                                taskType,
-                                                                                request.identity._organization)
+      (skeletonBases, volumeBases) <- taskCreationService.fillInMissingTracings(
+        extractedTracingBoxes.map(_.skeleton),
+        extractedTracingBoxes.map(_.volume),
+        fullParams,
+        taskType,
+        request.identity._organization
+      )
 
       fullParamsWithTracings = taskCreationService.combineParamsWithTracings(fullParams, skeletonBases, volumeBases)
       result <- taskCreationService.createTasks(fullParamsWithTracings, request.identity)

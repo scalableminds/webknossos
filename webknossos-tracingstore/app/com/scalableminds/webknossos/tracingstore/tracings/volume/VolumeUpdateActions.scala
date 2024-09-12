@@ -19,7 +19,10 @@ trait VolumeUpdateActionHelper {
       if (segment.segmentId == segmentId) transformSegment(segment) else segment)
 
   protected def convertSegmentGroup(aSegmentGroup: UpdateActionSegmentGroup): SegmentGroup =
-    SegmentGroup(aSegmentGroup.name, aSegmentGroup.groupId, aSegmentGroup.children.map(convertSegmentGroup))
+    SegmentGroup(aSegmentGroup.name,
+                 aSegmentGroup.groupId,
+                 aSegmentGroup.children.map(convertSegmentGroup),
+                 aSegmentGroup.isExpanded)
 
 }
 
@@ -348,6 +351,7 @@ object DeleteSegmentDataVolumeAction {
 
 case class UpdateMappingNameAction(mappingName: Option[String],
                                    isEditable: Option[Boolean],
+                                   isLocked: Option[Boolean],
                                    actionTimestamp: Option[Long],
                                    actionAuthorId: Option[String] = None)
     extends ApplyableVolumeAction {
@@ -361,7 +365,11 @@ case class UpdateMappingNameAction(mappingName: Option[String],
                               Json.obj("mappingName" -> mappingName))
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.copy(mappingName = mappingName, mappingIsEditable = Some(isEditable.getOrElse(false)))
+    if (tracing.mappingIsLocked.getOrElse(false)) tracing // cannot change mapping name if it is locked
+    else
+      tracing.copy(mappingName = mappingName,
+                   hasEditableMapping = Some(isEditable.getOrElse(false)),
+                   mappingIsLocked = Some(isLocked.getOrElse(false)))
 }
 
 object UpdateMappingNameAction {

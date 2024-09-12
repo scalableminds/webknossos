@@ -1,15 +1,13 @@
 import type { Dispatch } from "redux";
-import { Tooltip, Typography, Tag } from "antd";
+import { Typography, Tag } from "antd";
 import { SettingOutlined, InfoCircleOutlined, EditOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
-// @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'reac... Remove this comment to see the full error message
-import Markdown from "react-remarkable";
-import React, { CSSProperties, ChangeEvent } from "react";
+import Markdown from "libs/markdown_adapter";
+import React, { type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIUser } from "types/api_flow_types";
 import { ControlModeEnum } from "oxalis/constants";
 import { formatScale } from "libs/format_utils";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import {
   getDatasetExtentAsString,
   getResolutionUnion,
@@ -28,10 +26,11 @@ import type { OxalisState, Task, Tracing } from "oxalis/store";
 
 import { formatUserName } from "oxalis/model/accessors/user_accessor";
 import { mayEditAnnotationProperties } from "oxalis/model/accessors/annotation_accessor";
-import { mayUserEditDataset, pluralize } from "libs/utils";
+import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
 import { getReadableNameForLayerName } from "oxalis/model/accessors/volumetracing_accessor";
 import { getOrganization } from "admin/admin_rest_api";
 import { MarkdownModal } from "../components/markdown_modal";
+import FastTooltip from "components/fast_tooltip";
 
 type StateProps = {
   annotation: Tracing;
@@ -48,7 +47,7 @@ type DispatchProps = {
 };
 type Props = StateProps & DispatchProps;
 type State = {
-  owningOrganizationDisplayName: string | null;
+  owningOrganizationName: string | null;
   isMarkdownModalOpen: boolean;
 };
 const shortcuts = [
@@ -123,148 +122,125 @@ const shortcuts = [
   },
 ];
 
-export function convertPixelsToNm(
-  lengthInPixel: number,
-  zoomValue: number,
-  dataset: APIDataset,
-): number {
-  return lengthInPixel * zoomValue * getBaseVoxel(dataset.dataSource.scale);
-}
-
-export function convertNmToPixels(
-  lengthInNm: number,
-  zoomValue: number,
-  dataset: APIDataset,
-): number {
-  return lengthInNm / (zoomValue * getBaseVoxel(dataset.dataSource.scale));
-}
-
 export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   const extentInVoxel = getDatasetExtentAsString(dataset, true);
   const extentInLength = getDatasetExtentAsString(dataset, false);
 
   return (
-    <Tooltip title="Dataset extent" placement="left">
-      <tr>
-        <td
-          style={{
-            paddingRight: 20,
-            paddingTop: 10,
-          }}
-        >
-          <img
-            className="info-tab-icon"
-            src="/assets/images/icon-extent.svg"
-            alt="Dataset extent"
-          />
-        </td>
-        <td
-          style={{
-            paddingTop: 10,
-          }}
-        >
-          {extentInVoxel}
-          <br /> {extentInLength}
-        </td>
-      </tr>
-    </Tooltip>
+    <FastTooltip title="Dataset extent" placement="left" wrapper="tr">
+      <td
+        style={{
+          paddingRight: 20,
+          paddingTop: 10,
+        }}
+      >
+        <img className="info-tab-icon" src="/assets/images/icon-extent.svg" alt="Dataset extent" />
+      </td>
+      <td
+        style={{
+          paddingTop: 10,
+        }}
+      >
+        {extentInVoxel}
+        <br /> {extentInLength}
+      </td>
+    </FastTooltip>
   );
 }
 
 export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
   return (
-    <Tooltip title="Dataset voxel size" placement="left">
-      <tr>
-        <td
-          style={{
-            paddingRight: 20,
-          }}
-        >
-          <img className="info-tab-icon" src="/assets/images/icon-voxelsize.svg" alt="Voxel size" />
-        </td>
-        <td>{formatScale(dataset.dataSource.scale)}</td>
-      </tr>
-    </Tooltip>
+    <FastTooltip title="Dataset voxel size" placement="left" wrapper="tr">
+      <td
+        style={{
+          paddingRight: 20,
+        }}
+      >
+        <img className="info-tab-icon" src="/assets/images/icon-voxelsize.svg" alt="Voxel size" />
+      </td>
+      <td>{formatScale(dataset.dataSource.scale)}</td>
+    </FastTooltip>
   );
 }
 
-export function OwningOrganizationRow({ organizationName }: { organizationName: string | null }) {
+export function OwningOrganizationRow({ organizationId }: { organizationId: string | null }) {
   return (
-    <Tooltip title="Organization" placement="left">
+    <FastTooltip title="Organization" placement="left">
       <div className="info-tab-block">
         <p className="sidebar-label">Organization</p>
         <p>
-          <Tag color="blue">{organizationName === null ? <i>loading...</i> : organizationName}</Tag>
+          <Tag color="blue">{organizationId === null ? <i>loading...</i> : organizationId}</Tag>
         </p>
       </div>
-    </Tooltip>
+    </FastTooltip>
   );
 }
 
 export function AnnotationStats({
   stats,
   asInfoBlock,
+  withMargin,
 }: {
   stats: CombinedTracingStats;
   asInfoBlock: boolean;
+  withMargin?: boolean | null | undefined;
 }) {
   const formatLabel = (str: string) => (asInfoBlock ? str : "");
+  const useStyleWithMargin = withMargin != null ? withMargin : true;
+  const styleWithLargeMarginBottom = { marginBottom: 14 };
+  const styleWithSmallMargin = { margin: 2 };
 
   return (
-    <div className="info-tab-block">
+    <div
+      className="info-tab-block"
+      style={useStyleWithMargin ? styleWithLargeMarginBottom : styleWithSmallMargin}
+    >
       {asInfoBlock && <p className="sidebar-label">Statistics</p>}
       <table className={asInfoBlock ? "annotation-stats-table" : "annotation-stats-table-slim"}>
         <tbody>
           {"treeCount" in stats ? (
-            <Tooltip
+            <FastTooltip
               placement="left"
-              title={
-                <>
-                  <p>Trees: {stats.treeCount}</p>
-                  <p>Nodes: {stats.nodeCount}</p>
-                  <p>Edges: {stats.edgeCount}</p>
-                  <p>Branchpoints: {stats.branchPointCount}</p>
-                </>
-              }
+              html={`
+                  <p>Trees: ${safeNumberToStr(stats.treeCount)}</p>
+                  <p>Nodes: ${safeNumberToStr(stats.nodeCount)}</p>
+                  <p>Edges: ${safeNumberToStr(stats.edgeCount)}</p>
+                  <p>Branchpoints: ${safeNumberToStr(stats.branchPointCount)}</p>
+                `}
+              wrapper="tr"
             >
-              <tr>
-                <td>
-                  <img
-                    className="info-tab-icon"
-                    src="/assets/images/icon-skeletons.svg"
-                    alt="Skeletons"
-                  />
-                </td>
-                <td>
-                  {stats.treeCount} {formatLabel(pluralize("Tree", stats.treeCount))}
-                </td>
-              </tr>
-            </Tooltip>
+              <td>
+                <img
+                  className="info-tab-icon"
+                  src="/assets/images/icon-skeletons.svg"
+                  alt="Skeletons"
+                />
+              </td>
+              <td>
+                {stats.treeCount} {formatLabel(pluralize("Tree", stats.treeCount))}
+              </td>
+            </FastTooltip>
           ) : null}
           {"segmentCount" in stats ? (
-            <Tooltip
+            <FastTooltip
               placement="left"
-              title={`${stats.segmentCount} ${pluralize(
-                "Segment",
-                stats.segmentCount,
-              )} – Only segments that were manually registered (either brushed or
+              title={`${stats.segmentCount} ${pluralize("Segment", stats.segmentCount)} – Only segments that were manually registered (either brushed or
                                       interacted with) are counted in this statistic. Segmentation layers
                                       created from automated workflows (also known as fallback layers) are not
                                       considered currently.`}
+              wrapper="tr"
             >
-              <tr>
-                <td>
-                  <img
-                    className="info-tab-icon"
-                    src="/assets/images/icon-segments.svg"
-                    alt="Segments"
-                  />
-                </td>
-                <td>
-                  {stats.segmentCount} {formatLabel(pluralize("Segment", stats.segmentCount))}
-                </td>
-              </tr>
-            </Tooltip>
+              <td>
+                <img
+                  className="info-tab-icon"
+                  src="/assets/images/icon-segments.svg"
+                  alt="Segments"
+                />
+              </td>
+              <td>
+                {stats.segmentCount} {formatLabel(pluralize("Segment", stats.segmentCount))}
+              </td>
+            </FastTooltip>
           ) : null}
         </tbody>
       </table>
@@ -275,15 +251,11 @@ export function AnnotationStats({
 export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   state: State = {
     isMarkdownModalOpen: false,
-    owningOrganizationDisplayName: null,
+    owningOrganizationName: null,
   };
 
   setAnnotationName = (newName: string) => {
     this.props.setAnnotationName(newName);
-  };
-
-  setAnnotationDescription = (evt: ChangeEvent<HTMLTextAreaElement>) => {
-    this.props.setAnnotationDescription(evt.target.value);
   };
 
   componentDidMount(): void {
@@ -291,11 +263,10 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
-    let organization = await getOrganization(this.props.dataset.owningOrganization);
+    const organization = await getOrganization(this.props.dataset.owningOrganization);
     this.setState({
-      owningOrganizationDisplayName: organization.displayName,
+      owningOrganizationName: organization.name,
     });
-    console.log(this.state.owningOrganizationDisplayName);
   }
 
   getAnnotationStatistics() {
@@ -350,7 +321,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
 
     const getEditSettingsIcon = () =>
       mayUserEditDataset(activeUser, this.props.dataset) ? (
-        <Tooltip title="Edit dataset settings">
+        <FastTooltip title="Edit dataset settings">
           <Link
             to={`/datasets/${owningOrganization}/${datasetName}/edit`}
             style={{ paddingLeft: 3 }}
@@ -359,7 +330,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
               <SettingOutlined />
             </Typography.Text>
           </Link>
-        </Tooltip>
+        </FastTooltip>
       ) : null;
 
     if (this.props.isDatasetViewMode) {
@@ -381,14 +352,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
                 fontSize: 14,
               }}
             >
-              <Markdown
-                source={datasetDescription}
-                options={{
-                  html: false,
-                  breaks: true,
-                  linkify: true,
-                }}
-              />
+              <Markdown>{datasetDescription}</Markdown>
             </div>
           ) : null}
         </div>
@@ -454,15 +418,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const description = isDescriptionEmpty ? (
       annotationDescription
     ) : (
-      <Markdown
-        source={annotationDescription}
-        container={"span"}
-        options={{
-          html: false,
-          breaks: true,
-          linkify: true,
-        }}
-      />
+      <Markdown>{annotationDescription}</Markdown>
     );
     const buttonStylesForMarkdownRendering: CSSProperties = isDescriptionEmpty
       ? {}
@@ -479,7 +435,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
           <div style={{ position: "relative" }}>
             <Typography.Text>
               {description}
-              <Tooltip title="Edit">
+              <FastTooltip title="Edit">
                 <div
                   role="button"
                   className="ant-typography-edit"
@@ -495,15 +451,16 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
                 >
                   <EditOutlined />
                 </div>
-              </Tooltip>
+              </FastTooltip>
             </Typography.Text>
           </div>
           <MarkdownModal
             label="Annotation Description"
-            source={annotationDescription}
+            placeholder="[No description]"
+            source={this.props.annotation.description}
             isOpen={this.state.isMarkdownModalOpen}
             onOk={() => this.setState({ isMarkdownModalOpen: false })}
-            onChange={this.setAnnotationDescription}
+            onChange={this.props.setAnnotationDescription}
           />
         </div>
       );
@@ -512,14 +469,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     return (
       <div className="info-tab-block">
         <p className="sidebar-label">Description</p>
-        <Markdown
-          source={annotationDescription}
-          options={{
-            html: false,
-            breaks: true,
-            linkify: true,
-          }}
-        />
+        <Markdown>{annotationDescription}</Markdown>
       </div>
     );
   }
@@ -528,7 +478,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     const { activeUser, dataset } = this.props;
     const owningOrganization = dataset.owningOrganization;
     if (activeUser?.organization === owningOrganization) return;
-    return <OwningOrganizationRow organizationName={this.state.owningOrganizationDisplayName} />;
+    return <OwningOrganizationRow organizationId={this.state.owningOrganizationName} />;
   };
 
   maybePrintOwnerAndContributors() {
@@ -563,13 +513,13 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
         <div className="info-tab-block">
           <p className="sidebar-label">
             Contributors
-            <Tooltip title='If other users edited this annotation, they will be listed here. You can allow other users to edit the annotation by opening the "Share" dialog from the dropdown menu.'>
+            <FastTooltip title='If other users edited this annotation, they will be listed here. You can allow other users to edit the annotation by opening the "Share" dialog from the dropdown menu.'>
               <InfoCircleOutlined
                 style={{
                   marginLeft: 6,
                 }}
               />
-            </Tooltip>
+            </FastTooltip>
           </p>
           <p>{contributorTags}</p>
         </div>
@@ -577,62 +527,62 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
     );
   }
 
-  getResolutionInfo() {
+  renderResolutionsTooltip = () => {
     const { dataset, annotation, activeResolutionInfo } = this.props;
-    const { activeMagOfEnabledLayers, representativeResolution, isActiveResolutionGlobal } =
-      activeResolutionInfo;
-
+    const { activeMagOfEnabledLayers } = activeResolutionInfo;
     const resolutionUnion = getResolutionUnion(dataset);
-    return representativeResolution != null ? (
-      <Tooltip
-        title={
-          <div>
-            Rendered magnification per layer:
-            <ul>
-              {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
-                const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
+    return (
+      <div>
+        Rendered magnification per layer:
+        <ul>
+          {Object.entries(activeMagOfEnabledLayers).map(([layerName, mag]) => {
+            const readableName = getReadableNameForLayerName(dataset, annotation, layerName);
 
-                return (
-                  <li key={layerName}>
-                    {readableName}: {mag ? mag.join("-") : "none"}
-                  </li>
-                );
-              })}
-            </ul>
-            Available resolutions:
-            <ul>
-              {resolutionUnion.map((mags) => (
-                <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
-              ))}
-            </ul>
-          </div>
-        }
-        placement="left"
-      >
-        <tr>
-          <td
-            style={{
-              paddingRight: 4,
-              paddingTop: 8,
-            }}
-          >
-            <img
-              className="info-tab-icon"
-              src="/assets/images/icon-downsampling.svg"
-              alt="Resolution"
-            />
-          </td>
-          <td
-            style={{
-              paddingRight: 4,
-              paddingTop: 8,
-            }}
-          >
-            {representativeResolution.join("-")}
-            {isActiveResolutionGlobal ? "" : "*"}{" "}
-          </td>
-        </tr>
-      </Tooltip>
+            return (
+              <li key={layerName}>
+                {readableName}: {mag ? mag.join("-") : "none"}
+              </li>
+            );
+          })}
+        </ul>
+        Available resolutions:
+        <ul>
+          {resolutionUnion.map((mags) => (
+            <li key={mags[0].join()}>{mags.map((mag) => mag.join("-")).join(", ")}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
+
+  getResolutionInfo() {
+    const { activeResolutionInfo } = this.props;
+    const { representativeResolution, isActiveResolutionGlobal } = activeResolutionInfo;
+
+    return representativeResolution != null ? (
+      <FastTooltip dynamicRenderer={this.renderResolutionsTooltip} placement="left" wrapper="tr">
+        <td
+          style={{
+            paddingRight: 4,
+            paddingTop: 8,
+          }}
+        >
+          <img
+            className="info-tab-icon"
+            src="/assets/images/icon-downsampling.svg"
+            alt="Resolution"
+          />
+        </td>
+        <td
+          style={{
+            paddingRight: 4,
+            paddingTop: 8,
+          }}
+        >
+          {representativeResolution.join("-")}
+          {isActiveResolutionGlobal ? "" : "*"}{" "}
+        </td>
+      </FastTooltip>
     ) : null;
   }
 

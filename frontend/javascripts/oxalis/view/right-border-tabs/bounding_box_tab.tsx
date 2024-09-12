@@ -1,27 +1,44 @@
-import { Tooltip, Typography } from "antd";
+import { Table, Tooltip, Typography } from "antd";
 import { PlusSquareOutlined } from "@ant-design/icons";
 import { useSelector, useDispatch } from "react-redux";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import _ from "lodash";
-import { UserBoundingBoxInput } from "oxalis/view/components/setting_input_views";
-import { Vector3, Vector6, BoundingBoxType, ControlModeEnum } from "oxalis/constants";
+import UserBoundingBoxInput from "oxalis/view/components/setting_input_views";
+import {
+  type Vector3,
+  type Vector6,
+  type BoundingBoxType,
+  ControlModeEnum,
+} from "oxalis/constants";
 import {
   changeUserBoundingBoxAction,
   addUserBoundingBoxAction,
   deleteUserBoundingBoxAction,
 } from "oxalis/model/actions/annotation_actions";
 import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
+import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import * as Utils from "libs/utils";
-import { OxalisState, UserBoundingBox } from "oxalis/store";
+import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
+import { APIJobType } from "types/api_flow_types";
+import AutoSizer from "react-virtualized-auto-sizer";
+import { setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
+
+const ADD_BBOX_BUTTON_HEIGHT = 32;
 
 export default function BoundingBoxTab() {
+  const bboxTableRef: Parameters<typeof Table>[0]["ref"] = useRef(null);
   const [selectedBoundingBoxForExport, setSelectedBoundingBoxForExport] =
     useState<UserBoundingBox | null>(null);
   const tracing = useSelector((state: OxalisState) => state.tracing);
   const allowUpdate = tracing.restrictions.allowUpdate;
+  const isLockedByOwner = tracing.isLockedByOwner;
+  const isOwner = useSelector((state: OxalisState) => isAnnotationOwner(state));
   const dataset = useSelector((state: OxalisState) => state.dataset);
+  const activeBoundingBoxId = useSelector(
+    (state: OxalisState) => state.uiInformation.activeUserBoundingBoxId,
+  );
   const { userBoundingBoxes } = getSomeTracing(tracing);
   const dispatch = useDispatch();
 
@@ -91,55 +108,108 @@ export default function BoundingBoxTab() {
       "Copy this annotation to your account to adapt the bounding boxes.";
   }
 
+  const isExportEnabled = dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+    APIJobType.EXPORT_TIFF,
+  );
+
+  useEffect(() => {
+    if (bboxTableRef.current != null && activeBoundingBoxId != null) {
+      bboxTableRef.current.scrollTo({ key: activeBoundingBoxId });
+    }
+  }, [activeBoundingBoxId]);
+
+  const boundingBoxWrapperTableColumns = [
+    {
+      title: "Bounding Boxes",
+      key: "id",
+      render: (_id: number, bb: UserBoundingBox) => (
+        <UserBoundingBoxInput
+          key={bb.id}
+          value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
+          color={bb.color}
+          name={bb.name}
+          isExportEnabled={isExportEnabled}
+          isVisible={bb.isVisible}
+          onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
+          onDelete={_.partial(deleteBoundingBox, bb.id)}
+          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
+          onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
+          onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
+          onNameChange={_.partial(setBoundingBoxName, bb.id)}
+          onColorChange={_.partial(setBoundingBoxColor, bb.id)}
+          disabled={!allowUpdate}
+          isLockedByOwner={isLockedByOwner}
+          isOwner={isOwner}
+        />
+      ),
+    },
+  ];
+
+  const maybeAddBoundingBoxButton = allowUpdate ? (
+    <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
+      <Tooltip title="Click to add another bounding box.">
+        <PlusSquareOutlined
+          onClick={addNewBoundingBox}
+          style={{
+            cursor: "pointer",
+            marginBottom: userBoundingBoxes.length === 0 ? 12 : 0,
+          }}
+        />
+      </Tooltip>
+    </div>
+  ) : null;
+
   return (
     <div
       className="padded-tab-content"
       style={{
         minWidth: 300,
+        height: "100%",
       }}
     >
-      {/* In view mode, it's okay to render an empty list, since there will be
-          an explanation below, anyway.
-      */}
-      {userBoundingBoxes.length > 0 || isViewMode ? (
-        userBoundingBoxes.map((bb) => (
-          <UserBoundingBoxInput
-            key={bb.id}
-            tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-            value={Utils.computeArrayFromBoundingBox(bb.boundingBox)}
-            color={bb.color}
-            name={bb.name}
-            isExportEnabled={dataset.jobsEnabled}
-            isVisible={bb.isVisible}
-            onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
-            onDelete={_.partial(deleteBoundingBox, bb.id)}
-            onExport={
-              dataset.jobsEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}
-            }
-            onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
-            onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
-            onNameChange={_.partial(setBoundingBoxName, bb.id)}
-            onColorChange={_.partial(setBoundingBoxColor, bb.id)}
-            allowUpdate={allowUpdate}
-          />
-        ))
+      {/* Don't render a table in view mode. */}
+      {isViewMode ? null : userBoundingBoxes.length > 0 ? (
+        <AutoSizer defaultHeight={500}>
+          {({ height, width }) => (
+            <div
+              style={{
+                height,
+                width,
+              }}
+            >
+              <Table
+                ref={bboxTableRef}
+                columns={boundingBoxWrapperTableColumns}
+                dataSource={userBoundingBoxes}
+                pagination={false}
+                rowKey="id"
+                showHeader={false}
+                className="bounding-box-table"
+                rowSelection={{
+                  selectedRowKeys: activeBoundingBoxId != null ? [activeBoundingBoxId] : [],
+                  getCheckboxProps: () => ({ disabled: true }),
+                }}
+                footer={() => maybeAddBoundingBoxButton}
+                virtual
+                scroll={{ y: height - (allowUpdate ? ADD_BBOX_BUTTON_HEIGHT : 10) }} // If the scroll height is exactly
+                // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
+                onRow={(bb) => ({
+                  onClick: () => {
+                    handleGoToBoundingBox(bb.id);
+                    dispatch(setActiveUserBoundingBoxId(bb.id));
+                  },
+                })}
+              />
+            </div>
+          )}
+        </AutoSizer>
       ) : (
-        <div>No Bounding Boxes created yet.</div>
+        <>
+          <div>No Bounding Boxes created yet.</div>
+          {maybeAddBoundingBoxButton}
+        </>
       )}
       <Typography.Text type="secondary">{maybeUneditableExplanation}</Typography.Text>
-      {allowUpdate ? (
-        <div style={{ display: "inline-block", width: "100%", textAlign: "center" }}>
-          <Tooltip title="Click to add another bounding box.">
-            <PlusSquareOutlined
-              onClick={addNewBoundingBox}
-              style={{
-                cursor: "pointer",
-                marginBottom: userBoundingBoxes.length === 0 ? 12 : 0,
-              }}
-            />
-          </Tooltip>
-        </div>
-      ) : null}
       {selectedBoundingBoxForExport != null ? (
         <DownloadModalView
           isOpen

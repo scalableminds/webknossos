@@ -1,10 +1,11 @@
 import { Button } from "antd";
 import { AsyncButton } from "components/async_clickables";
 import DatasetSelectionComponent, {
-  DatasetSelectionValue,
+  type DatasetSelectionValue,
 } from "dashboard/dataset/dataset_selection_component";
-import React, { useEffect, useState } from "react";
-import { tryToFetchDatasetsByName, WizardComponentProps } from "./common";
+import React, { useState } from "react";
+import { tryToFetchDatasetsByName, type WizardComponentProps } from "./common";
+import { useEffectOnlyOnce } from "libs/react_hooks";
 
 export default function SelectDatasets({ wizardContext, setWizardContext }: WizardComponentProps) {
   const [datasetValues, setDatasetValues] = useState<DatasetSelectionValue[]>([]);
@@ -33,9 +34,9 @@ export default function SelectDatasets({ wizardContext, setWizardContext }: Wiza
     }));
   };
 
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     setDatasetValues(wizardContext.datasets.map((ds) => ({ value: ds.name, label: ds.name })));
-  }, []);
+  });
 
   // When not using any transforms,
   let isDatasetCountValid = true;
@@ -47,7 +48,11 @@ export default function SelectDatasets({ wizardContext, setWizardContext }: Wiza
 
   return (
     <div>
-      <p>Select the datasets that you want to combine or doublecheck the pre-selected datasets.</p>
+      <p>
+        Select the datasets that you want to combine or doublecheck the pre-selected datasets. Note
+        that the order of the datasets is important and needs to be equal to the order of the files
+        from the upload.
+      </p>
       <DatasetSelectionComponent
         datasetValues={datasetValues}
         setDatasetValues={setDatasetValues}

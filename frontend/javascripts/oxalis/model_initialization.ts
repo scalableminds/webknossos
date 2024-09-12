@@ -57,6 +57,7 @@ import {
   setViewModeAction,
   setMappingAction,
   updateLayerSettingAction,
+  setMappingEnabledAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   initializeEditableMappingAction,
@@ -94,7 +95,7 @@ import Toast from "libs/toast";
 import type { PartialUrlManagerState, UrlStateByLayer } from "oxalis/controller/url_manager";
 import UrlManager from "oxalis/controller/url_manager";
 import * as Utils from "libs/utils";
-import constants, { ControlModeEnum, AnnotationToolEnum, Vector3 } from "oxalis/constants";
+import constants, { ControlModeEnum, AnnotationToolEnum, type Vector3 } from "oxalis/constants";
 import messages from "messages";
 import {
   setActiveConnectomeAgglomerateIdsAction,
@@ -250,7 +251,7 @@ async function fetchEditableMappings(
   serverVolumeTracings: ServerVolumeTracing[],
 ): Promise<ServerEditableMapping[]> {
   const promises = serverVolumeTracings
-    .filter((tracing) => tracing.mappingIsEditable)
+    .filter((tracing) => tracing.hasEditableMapping)
     .map((tracing) => getEditableMappingInfo(tracingStoreUrl, tracing.id));
   return Promise.all(promises);
 }
@@ -620,23 +621,43 @@ function determineDefaultState(
   }
 
   const stateByLayer = urlStateByLayer ?? {};
+  // Add the default mapping to the state for each layer that does not have a mapping set in its URL settings.
+  for (const layerName in datasetConfiguration.layers) {
+    if (!(layerName in stateByLayer)) {
+      stateByLayer[layerName] = {};
+    }
+    const { mapping } = datasetConfiguration.layers[layerName];
+    if (stateByLayer[layerName].mappingInfo == null && mapping != null) {
+      stateByLayer[layerName].mappingInfo = {
+        mappingName: mapping.name,
+        mappingType: mapping.type,
+      };
+    }
+  }
 
+  // Overwriting the mapping to load for each volume layer in case
+  // - the volume tracing has a not locked mapping set and the url does not.
+  // - the volume tracing has a locked mapping set.
+  // - the volume tracing has locked that no tracing should be loaded.
   const volumeTracings = tracings.filter(
     (tracing) => tracing.typ === "Volume",
   ) as ServerVolumeTracing[];
   for (const volumeTracing of volumeTracings) {
-    const { id: layerName, mappingName } = volumeTracing;
-
-    if (mappingName == null) continue;
+    const { id: layerName, mappingName, mappingIsLocked } = volumeTracing;
 
     if (!(layerName in stateByLayer)) {
       stateByLayer[layerName] = {};
     }
-    if (stateByLayer[layerName].mappingInfo == null) {
-      stateByLayer[layerName].mappingInfo = {
-        mappingName,
-        mappingType: "HDF5",
-      };
+    if (stateByLayer[layerName].mappingInfo == null || mappingIsLocked) {
+      // A locked mapping always takes precedence over the URL configuration.
+      if (mappingName == null) {
+        delete stateByLayer[layerName].mappingInfo;
+      } else {
+        stateByLayer[layerName].mappingInfo = {
+          mappingName,
+          mappingType: "HDF5",
+        };
+      }
     }
   }
 
@@ -697,11 +718,11 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
       // The name of the layer could have changed if a volume tracing was created from a viewed annotation
       effectiveLayerName = getLayerByName(dataset, layerName, true).name;
     } catch (e) {
-      console.error(e);
       Toast.error(
         // @ts-ignore
         `URL configuration values for the layer "${layerName}" are ignored, because: ${e.message}`,
       );
+      console.error(e);
       // @ts-ignore
       ErrorHandling.notify(e, {
         urlLayerState: stateByLayer,
@@ -727,6 +748,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
           showLoadingIndicator: true,
         }),
       );
+      Store.dispatch(setMappingEnabledAction(effectiveLayerName, true));
 
       if (agglomerateIdsToImport != null) {
         const { tracing } = Store.getState();
@@ -757,7 +779,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
         // Ensure mesh files are loaded, so that the given mesh file name can be activated.
         // Doing this in a loop is fine, since it can only happen once (maximum) and there
         // are not many other iterations (== layers) which are blocked by this.
-        // eslint-disable-next-line no-await-in-loop
+
         await dispatchMaybeFetchMeshFilesAsync(Store.dispatch, segmentationLayer, dataset, false);
         Store.dispatch(updateCurrentMeshFileAction(effectiveLayerName, currentMeshFileName));
       }

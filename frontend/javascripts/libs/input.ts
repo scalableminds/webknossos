@@ -7,7 +7,7 @@ import * as Utils from "libs/utils";
 import type { Point2 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import window, { document } from "libs/window";
-import { createNanoEvents, Emitter } from "nanoevents";
+import { createNanoEvents, type Emitter } from "nanoevents";
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
 // the controller, this is were the magic happens.
@@ -20,8 +20,9 @@ import { createNanoEvents, Emitter } from "nanoevents";
 // In most cases the heavy lifting is done by libraries in the background.
 export const KEYBOARD_BUTTON_LOOP_INTERVAL = 1000 / constants.FPS;
 const MOUSE_MOVE_DELTA_THRESHOLD = 5;
-export type ModifierKeys = "alt" | "shift" | "ctrl";
+export type ModifierKeys = "alt" | "shift" | "ctrlOrMeta";
 type KeyboardKey = string;
+type MouseButton = string;
 type KeyboardHandler = (event: KeyboardEvent) => void | Promise<void>;
 // Callable Object, see https://www.typescriptlang.org/docs/handbook/2/functions.html#call-signatures
 type KeyboardLoopHandler = {
@@ -32,13 +33,15 @@ type KeyboardLoopHandler = {
 };
 type KeyboardBindingPress = [KeyboardKey, KeyboardHandler, KeyboardHandler];
 type KeyboardBindingDownUp = [KeyboardKey, KeyboardHandler, KeyboardHandler];
-type BindingMap<T extends (...args: Array<any>) => any> = Record<KeyboardKey, T>;
+type KeyBindingMap = Record<KeyboardKey, KeyboardHandler>;
+type KeyBindingLoopMap = Record<KeyboardKey, KeyboardLoopHandler>;
+export type MouseBindingMap = Record<MouseButton, MouseHandler>;
 type MouseButtonWhich = 1 | 2 | 3;
 type MouseButtonString = "left" | "middle" | "right";
-type MouseHandler =
+export type MouseHandler =
   | ((deltaYorX: number, modifier: ModifierKeys | null | undefined) => void)
-  | ((position: Point2, id: string | null | undefined, event: MouseEvent) => void)
-  | ((delta: Point2, position: Point2, id: string | null | undefined, event: MouseEvent) => void);
+  | ((position: Point2, id: string, event: MouseEvent, isTouch: boolean) => void)
+  | ((delta: Point2, position: Point2, id: string, event: MouseEvent) => void);
 type HammerJsEvent = {
   center: Point2;
   pointers: Array<Record<string, any>>;
@@ -76,11 +79,11 @@ export class InputKeyboardNoLoop {
   cancelExtendedModeTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
-    initialBindings: BindingMap<KeyboardHandler>,
+    initialBindings: KeyBindingMap,
     options?: {
       supportInputElements?: boolean;
     },
-    extendedCommands?: BindingMap<KeyboardHandler>,
+    extendedCommands?: KeyBindingMap,
   ) {
     if (options) {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
@@ -125,7 +128,7 @@ export class InputKeyboardNoLoop {
   };
 
   preventBrowserSearchbarShortcut = (evt: KeyboardEvent) => {
-    if (evt.ctrlKey && evt.key === "k") {
+    if ((evt.ctrlKey || evt.metaKey) && evt.key === "k") {
       evt.preventDefault();
       evt.stopPropagation();
     }
@@ -196,7 +199,7 @@ export class InputKeyboardNoLoop {
 // It is able to handle key-presses and will continuously
 // fire the attached callback.
 export class InputKeyboard {
-  keyCallbackMap: Record<string, KeyboardLoopHandler> = {};
+  keyCallbackMap: KeyBindingLoopMap = {};
   keyPressedCount: number = 0;
   bindings: Array<KeyboardBindingDownUp> = [];
   isStarted: boolean = true;
@@ -204,7 +207,7 @@ export class InputKeyboard {
   supportInputElements: boolean = false;
 
   constructor(
-    initialBindings: BindingMap<KeyboardLoopHandler>,
+    initialBindings: KeyBindingLoopMap,
     options?: {
       delay?: number;
       supportInputElements?: boolean;
@@ -293,7 +296,7 @@ export class InputKeyboard {
     this.bindings.push(binding);
   }
 
-  // In order to continously fire callbacks we have to loop
+  // In order to continuously fire callbacks we have to loop
   // through all the buttons that a marked as "pressed".
   buttonLoop() {
     if (!this.isStarted) {
@@ -333,17 +336,12 @@ class InputMouseButton {
   mouse: InputMouse;
   name: MouseButtonString;
   which: MouseButtonWhich;
-  id: string | null | undefined;
+  id: string;
   down: boolean = false;
   drag: boolean = false;
   moveDelta: number = 0;
 
-  constructor(
-    name: MouseButtonString,
-    which: MouseButtonWhich,
-    mouse: InputMouse,
-    id: string | null | undefined,
-  ) {
+  constructor(name: MouseButtonString, which: MouseButtonWhich, mouse: InputMouse, id: string) {
     this.name = name;
     this.which = which;
     this.mouse = mouse;
@@ -399,7 +397,7 @@ export class InputMouse {
   emitter: Emitter;
   targetId: string;
   hammerManager: typeof Hammer;
-  id: string | null | undefined;
+  id: string;
   leftMouseButton: InputMouseButton;
   middleMouseButton: InputMouseButton;
   rightMouseButton: InputMouseButton;
@@ -416,8 +414,8 @@ export class InputMouse {
 
   constructor(
     targetId: string,
-    initialBindings: BindingMap<MouseHandler> = {},
-    id: string | null | undefined = null,
+    initialBindings: MouseBindingMap,
+    id: string,
     ignoreScrollingWhileDragging: boolean = false,
   ) {
     this.emitter = createNanoEvents();
@@ -640,8 +638,8 @@ export class InputMouse {
       modifier = "shift";
     } else if (event.altKey) {
       modifier = "alt";
-    } else if (event.ctrlKey) {
-      modifier = "ctrl";
+    } else if (event.ctrlKey || event.metaKey) {
+      modifier = "ctrlOrMeta";
     }
 
     this.emitter.emit("scroll", delta, modifier);

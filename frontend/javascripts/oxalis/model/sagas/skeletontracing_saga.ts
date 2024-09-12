@@ -49,6 +49,7 @@ import {
   findTreeByName,
   getTreeNameForAgglomerateSkeleton,
   getTreesWithType,
+  getNodePosition,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -101,19 +102,24 @@ function* centerActiveNode(action: Action): Saga<void> {
     }
   }
 
-  getActiveNode(yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing))).map(
-    (activeNode) => {
-      if ("suppressAnimation" in action && action.suppressAnimation) {
-        Store.dispatch(setPositionAction(activeNode.position));
-        Store.dispatch(setRotationAction(activeNode.rotation));
-      } else {
-        api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation);
-      }
-      if (activeNode.additionalCoordinates) {
-        Store.dispatch(setAdditionalCoordinatesAction(activeNode.additionalCoordinates));
-      }
-    },
+  const activeNode = getActiveNode(
+    yield* select((state: OxalisState) => enforceSkeletonTracing(state.tracing)),
   );
+
+  if (activeNode != null) {
+    const activeNodePosition = yield* select((state: OxalisState) =>
+      getNodePosition(activeNode, state),
+    );
+    if ("suppressAnimation" in action && action.suppressAnimation) {
+      Store.dispatch(setPositionAction(activeNodePosition));
+      Store.dispatch(setRotationAction(activeNode.rotation));
+    } else {
+      api.tracing.centerPositionAnimated(activeNodePosition, false, activeNode.rotation);
+    }
+    if (activeNode.additionalCoordinates) {
+      Store.dispatch(setAdditionalCoordinatesAction(activeNode.additionalCoordinates));
+    }
+  }
 }
 
 function* watchBranchPointDeletion(): Saga<void> {
@@ -209,7 +215,7 @@ export function* watchTreeNames(): Saga<void> {
     }
   }
 }
-export function* watchVersionRestoreParam(): Saga<void> {
+export function* checkVersionRestoreParam(): Saga<void> {
   const showVersionRestore = yield* call(Utils.hasUrlParam, "showVersionRestore");
 
   if (showVersionRestore) {
@@ -470,7 +476,7 @@ export function* watchSkeletonTracingAsync(): Saga<void> {
   yield* throttle(5000, "PUSH_SAVE_QUEUE_TRANSACTION", watchTracingConsistency);
   yield* fork(watchFailedNodeCreations);
   yield* fork(watchBranchPointDeletion);
-  yield* fork(watchVersionRestoreParam);
+  yield* fork(checkVersionRestoreParam);
 }
 
 function* diffNodes(
@@ -490,13 +496,13 @@ function* diffNodes(
   }
 
   for (const nodeId of addedNodeIds) {
-    const node = nodes.get(nodeId);
+    const node = nodes.getOrThrow(nodeId);
     yield createNode(treeId, node);
   }
 
   for (const nodeId of changedNodeIds) {
-    const node = nodes.get(nodeId);
-    const prevNode = prevNodes.get(nodeId);
+    const node = nodes.getOrThrow(nodeId);
+    const prevNode = prevNodes.getOrThrow(nodeId);
 
     if (updateNodePredicate(prevNode, node)) {
       yield updateNode(treeId, node);

@@ -1,12 +1,14 @@
 import "test/sagas/volumetracing/volumetracing_saga.mock";
 import { take, put, call } from "redux-saga/effects";
 import update from "immutability-helper";
+import _ from "lodash";
 import type { APISegmentationLayer, ServerVolumeTracing } from "types/api_flow_types";
 import {
   OrthoViews,
   AnnotationToolEnum,
   ContourModeEnum,
   OverwriteModeEnum,
+  MappingStatusEnum,
 } from "oxalis/constants";
 import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 import { enforce } from "libs/utils";
@@ -19,6 +21,8 @@ import sinon from "sinon";
 import test from "ava";
 import { expectValueDeepEqual, execCall } from "test/helpers/sagaHelpers";
 import { withoutUpdateTracing } from "test/helpers/saveHelpers";
+import type { ActiveMappingInfo } from "oxalis/store";
+import { askUserForLockingActiveMapping } from "oxalis/model/sagas/saga_helpers";
 
 mockRequire("app", {
   currentUser: {
@@ -29,10 +33,14 @@ mockRequire("app", {
 mockRequire("oxalis/model/sagas/root_saga", function* () {
   yield;
 });
+mockRequire("libs/toast", {
+  info: _.noop,
+});
 
 const { setupSavingForTracingType } = require("oxalis/model/sagas/save_saga");
 
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
+const { ensureMaybeActiveMappingIsLocked } = require("oxalis/model/sagas/saga_helpers");
 
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 
@@ -109,6 +117,18 @@ const initialState = update(defaultState, {
     },
   },
 });
+
+const dummyActiveMapping: ActiveMappingInfo = {
+  mappingName: "dummy-mapping-name",
+  mapping: new Map(),
+  mappingColors: [],
+  hideUnmappedIds: false,
+  mappingStatus: "ENABLED",
+  mappingType: "HDF5",
+};
+
+const ensureMaybeMappingIsLockedReturnValueDummy = { isMappingLockedIfNeeded: true };
+
 const ACTIVE_CELL_ID = 5;
 const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL_ID);
 const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
@@ -185,6 +205,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", (t) => {
     zoomStep: 0,
   });
   saga.next(ACTIVE_CELL_ID); // pass active cell id
+  saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
   expectValueDeepEqual(
     t,
     saga.next([]), // pass empty additional coords
@@ -225,6 +246,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", (t) => {
   }); // pass labeled resolution
 
   saga.next(ACTIVE_CELL_ID); // pass active cell id
+  saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
   expectValueDeepEqual(
     t,
     saga.next([]), // pass empty additional coords
@@ -275,6 +297,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", (t) => {
   }); // pass labeled resolution
 
   saga.next(ACTIVE_CELL_ID); // pass active cell id
+  saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
   expectValueDeepEqual(
     t,
     saga.next([]), // pass empty additional coords
@@ -336,6 +359,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
     zoomStep: 0,
   }); // pass labeled resolution
   saga.next(ACTIVE_CELL_ID); // pass active cell id
+  saga.next(ensureMaybeMappingIsLockedReturnValueDummy);
   expectValueDeepEqual(
     t,
     saga.next([]), // pass empty additional coords
@@ -393,4 +417,73 @@ test("VolumeTracingSaga should ignore brush action when busy (saga test)", (t) =
     }),
     take("START_EDITING"),
   );
+});
+
+test("VolumeTracingSaga should lock an active mapping upon first volume annotation", (t) => {
+  const saga = editVolumeLayerAsync();
+  saga.next();
+  saga.next();
+  expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
+  saga.next(startEditingAction);
+  saga.next({
+    isBusy: false,
+  });
+  saga.next(volumeTracing);
+  saga.next(OverwriteModeEnum.OVERWRITE_ALL);
+  saga.next(AnnotationToolEnum.BRUSH);
+  saga.next(false);
+  // pass labeled resolution
+  saga.next({
+    resolution: [1, 1, 1],
+    zoomStep: 0,
+  });
+  // Test whether nested saga ensureMaybeActiveMappingIsLocked is called.
+  expectValueDeepEqual(
+    t,
+    saga.next(ACTIVE_CELL_ID),
+    call(ensureMaybeActiveMappingIsLocked, volumeTracing),
+  );
+});
+
+test("ensureMaybeActiveMappingIsLocked should lock an existing mapping to the annotation", (t) => {
+  const activeMappingByLayer = { [volumeTracing.tracingId]: dummyActiveMapping };
+  const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
+  saga.next();
+  expectValueDeepEqual(
+    t,
+    saga.next({ [volumeTracing.tracingId]: dummyActiveMapping }),
+    call(askUserForLockingActiveMapping, volumeTracing, activeMappingByLayer),
+  );
+  t.true(saga.next().done);
+});
+
+test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case no mapping is active.", (t) => {
+  const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
+  saga.next();
+  expectValueDeepEqual(t, saga.next({}), put(VolumeTracingActions.setMappingIsLockedAction()));
+  t.true(saga.next().done);
+});
+
+test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a mapping is active but disabled.", (t) => {
+  const jsonDummyMapping = { ...dummyActiveMapping, mappingStatus: MappingStatusEnum.DISABLED };
+  const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
+  saga.next();
+  expectValueDeepEqual(
+    t,
+    saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
+    put(VolumeTracingActions.setMappingIsLockedAction()),
+  );
+  t.true(saga.next().done);
+});
+
+test("ensureMaybeActiveMappingIsLocked should lock 'no mapping' in case a JSON mapping is active.", (t) => {
+  const jsonDummyMapping = { ...dummyActiveMapping, mappingType: "JSON" };
+  const saga = ensureMaybeActiveMappingIsLocked(volumeTracing);
+  saga.next();
+  expectValueDeepEqual(
+    t,
+    saga.next({ [volumeTracing.tracingId]: jsonDummyMapping }),
+    put(VolumeTracingActions.setMappingIsLockedAction()),
+  );
+  t.true(saga.next().done);
 });

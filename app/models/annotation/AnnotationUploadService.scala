@@ -22,9 +22,12 @@ case class UploadedVolumeLayer(tracing: VolumeTracing, dataZipLocation: String, 
 
 class AnnotationUploadService @Inject()(tempFileService: TempFileService) extends LazyLogging {
 
-  private def extractFromNml(file: File, name: String, overwritingDatasetName: Option[String], isTaskUpload: Boolean)(
-      implicit m: MessagesProvider): NmlParseResult =
-    extractFromNml(new FileInputStream(file), name, overwritingDatasetName, isTaskUpload)
+  private def extractFromNmlFile(file: File,
+                                 name: String,
+                                 overwritingDatasetName: Option[String],
+                                 overwritingOrganizationId: Option[String],
+                                 isTaskUpload: Boolean)(implicit m: MessagesProvider): NmlParseResult =
+    extractFromNml(new FileInputStream(file), name, overwritingDatasetName, overwritingOrganizationId, isTaskUpload)
 
   private def formatChain(chain: Box[Failure]): String = chain match {
     case Full(failure) =>
@@ -35,20 +38,22 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
   private def extractFromNml(inputStream: InputStream,
                              name: String,
                              overwritingDatasetName: Option[String],
+                             overwritingOrganizationId: Option[String],
                              isTaskUpload: Boolean,
                              basePath: Option[String] = None)(implicit m: MessagesProvider): NmlParseResult =
-    NmlParser.parse(name, inputStream, overwritingDatasetName, isTaskUpload, basePath) match {
+    NmlParser.parse(name, inputStream, overwritingDatasetName, overwritingOrganizationId, isTaskUpload, basePath) match {
       case Full((skeletonTracing, uploadedVolumeLayers, description, wkUrl)) =>
         NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, description, wkUrl)
       case Failure(msg, _, chain) => NmlParseFailure(name, msg + chain.map(_ => formatChain(chain)).getOrElse(""))
       case Empty                  => NmlParseEmpty(name)
     }
 
-  def extractFromZip(file: File,
-                     zipFileName: Option[String] = None,
-                     useZipName: Boolean,
-                     overwritingDatasetName: Option[String],
-                     isTaskUpload: Boolean)(implicit m: MessagesProvider): MultiNmlParseResult = {
+  private def extractFromZip(file: File,
+                             zipFileName: Option[String],
+                             useZipName: Boolean,
+                             overwritingDatasetName: Option[String],
+                             overwritingOrganizationId: Option[String],
+                             isTaskUpload: Boolean)(implicit m: MessagesProvider): MultiNmlParseResult = {
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, File]
     var parseResults = List.empty[NmlParseResult]
@@ -56,7 +61,12 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
     ZipIO.withUnziped(file) { (filename, inputStream) =>
       if (filename.toString.endsWith(".nml")) {
         val result =
-          extractFromNml(inputStream, filename.toString, overwritingDatasetName, isTaskUpload, Some(file.getPath))
+          extractFromNml(inputStream,
+                         filename.toString,
+                         overwritingDatasetName,
+                         overwritingOrganizationId,
+                         isTaskUpload,
+                         Some(file.getPath))
         parseResults ::= (if (useZipName) result.withName(name) else result)
       } else {
         val tempFile: Path = tempFileService.create(file.getPath.replaceAll("/", "_") + filename.toString)
@@ -105,7 +115,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
     def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing = {
       val unusedGroupId = getMaximumTreeGroupId(tracing.treeGroups) + 1
       val newTrees = tracing.trees.map(tree => tree.copy(groupId = Some(tree.groupId.getOrElse(unusedGroupId))))
-      val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups))
+      val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups, isExpanded = Some(true)))
       tracing.copy(trees = newTrees, treeGroups = newTreeGroups)
     }
 
@@ -134,6 +144,7 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
   def extractFromFiles(files: Seq[(File, String)],
                        useZipName: Boolean,
                        overwritingDatasetName: Option[String] = None,
+                       overwritingOrganizationId: Option[String] = None,
                        isTaskUpload: Boolean = false)(implicit m: MessagesProvider): MultiNmlParseResult =
     files.foldLeft(NmlResults.MultiNmlParseResult()) {
       case (acc, (file, name)) =>
@@ -143,28 +154,44 @@ class AnnotationUploadService @Inject()(tempFileService: TempFileService) extend
               if (allZips)
                 acc.combineWith(
                   extractFromFiles(
-                    extractFromZip(file, Some(name), useZipName, overwritingDatasetName, isTaskUpload).otherFiles.toSeq
-                      .map(tuple => (tuple._2, tuple._1)),
+                    extractFromZip(file,
+                                   Some(name),
+                                   useZipName,
+                                   overwritingDatasetName,
+                                   overwritingOrganizationId,
+                                   isTaskUpload).otherFiles.toSeq.map(tuple => (tuple._2, tuple._1)),
                     useZipName,
                     overwritingDatasetName,
+                    overwritingOrganizationId,
                     isTaskUpload
                   ))
-              else acc.combineWith(extractFromFile(file, name, useZipName, overwritingDatasetName, isTaskUpload))
+              else
+                acc.combineWith(
+                  extractFromFile(file,
+                                  name,
+                                  useZipName,
+                                  overwritingDatasetName,
+                                  overwritingOrganizationId,
+                                  isTaskUpload))
             case _ => acc
-          } else acc.combineWith(extractFromFile(file, name, useZipName, overwritingDatasetName, isTaskUpload))
+          } else
+          acc.combineWith(
+            extractFromFile(file, name, useZipName, overwritingDatasetName, overwritingOrganizationId, isTaskUpload))
     }
 
   private def extractFromFile(file: File,
                               fileName: String,
                               useZipName: Boolean,
                               overwritingDatasetName: Option[String],
+                              overwritingOrganizationId: Option[String],
                               isTaskUpload: Boolean)(implicit m: MessagesProvider): MultiNmlParseResult =
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")
-      extractFromZip(file, Some(fileName), useZipName, overwritingDatasetName, isTaskUpload)
+      extractFromZip(file, Some(fileName), useZipName, overwritingDatasetName, overwritingOrganizationId, isTaskUpload)
     } else {
       logger.trace("Extracting from Nml file")
-      val parseResult = extractFromNml(file, fileName, overwritingDatasetName, isTaskUpload)
+      val parseResult =
+        extractFromNmlFile(file, fileName, overwritingDatasetName, overwritingOrganizationId, isTaskUpload)
       MultiNmlParseResult(List(parseResult), Map.empty)
     }
 

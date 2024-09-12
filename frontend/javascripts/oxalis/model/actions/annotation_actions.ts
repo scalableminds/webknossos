@@ -15,9 +15,9 @@ import type {
 } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import _ from "lodash";
-import { Dispatch } from "redux";
+import type { Dispatch } from "redux";
 import Deferred from "libs/async/deferred";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 type InitializeAnnotationAction = ReturnType<typeof initializeAnnotationAction>;
 type SetAnnotationNameAction = ReturnType<typeof setAnnotationNameAction>;
@@ -68,6 +68,7 @@ export type AnnotationActionTypes =
   | MaybeFetchMeshFilesAction
   | UpdateMeshVisibilityAction
   | TriggerMeshDownloadAction
+  | TriggerMeshesDownloadAction
   | RefreshMeshesAction
   | RefreshMeshAction
   | StartedLoadingMeshAction
@@ -98,19 +99,19 @@ export const initializeAnnotationAction = (annotation: APIAnnotation) =>
   ({
     type: "INITIALIZE_ANNOTATION",
     annotation,
-  } as const);
+  }) as const;
 
 export const setAnnotationNameAction = (name: string) =>
   ({
     type: "SET_ANNOTATION_NAME",
     name,
-  } as const);
+  }) as const;
 
 export const setAnnotationVisibilityAction = (visibility: APIAnnotationVisibility) =>
   ({
     type: "SET_ANNOTATION_VISIBILITY",
     visibility,
-  } as const);
+  }) as const;
 
 export const editAnnotationLayerAction = (
   tracingId: string,
@@ -120,25 +121,25 @@ export const editAnnotationLayerAction = (
     type: "EDIT_ANNOTATION_LAYER",
     tracingId,
     layerProperties,
-  } as const);
+  }) as const;
 
 export const setAnnotationDescriptionAction = (description: string) =>
   ({
     type: "SET_ANNOTATION_DESCRIPTION",
     description,
-  } as const);
+  }) as const;
 
 export const setAnnotationAllowUpdateAction = (allowUpdate: boolean) =>
   ({
     type: "SET_ANNOTATION_ALLOW_UPDATE",
     allowUpdate,
-  } as const);
+  }) as const;
 
 export const setBlockedByUserAction = (blockedByUser: APIUserCompact | null | undefined) =>
   ({
     type: "SET_BLOCKED_BY_USER",
     blockedByUser,
-  } as const);
+  }) as const;
 
 // Strictly speaking this is no annotation action but a tracing action, as the boundingBox is saved with
 // the tracing, hence no ANNOTATION in the action type.
@@ -146,20 +147,20 @@ export const setUserBoundingBoxesAction = (userBoundingBoxes: Array<UserBounding
   ({
     type: "SET_USER_BOUNDING_BOXES",
     userBoundingBoxes,
-  } as const);
+  }) as const;
 
 export const changeUserBoundingBoxAction = (id: number, newProps: UserBoundingBoxWithoutIdMaybe) =>
   ({
     type: "CHANGE_USER_BOUNDING_BOX",
     id,
     newProps,
-  } as const);
+  }) as const;
 
 export const finishedResizingUserBoundingBoxAction = (id: number) =>
   ({
     type: "FINISHED_RESIZING_USER_BOUNDING_BOX",
     id,
-  } as const);
+  }) as const;
 
 export const addUserBoundingBoxAction = (
   newBoundingBox?: Partial<UserBoundingBoxWithoutId> | null | undefined,
@@ -169,19 +170,19 @@ export const addUserBoundingBoxAction = (
     type: "ADD_NEW_USER_BOUNDING_BOX",
     newBoundingBox,
     center,
-  } as const);
+  }) as const;
 
 export const deleteUserBoundingBoxAction = (id: number) =>
   ({
     type: "DELETE_USER_BOUNDING_BOX",
     id,
-  } as const);
+  }) as const;
 
 export const addUserBoundingBoxesAction = (userBoundingBoxes: Array<UserBoundingBox>) =>
   ({
     type: "ADD_USER_BOUNDING_BOXES",
     userBoundingBoxes,
-  } as const);
+  }) as const;
 
 export const updateMeshVisibilityAction = (
   layerName: string,
@@ -195,7 +196,7 @@ export const updateMeshVisibilityAction = (
     id,
     visibility,
     additionalCoordinates,
-  } as const);
+  }) as const;
 
 export const maybeFetchMeshFilesAction = (
   segmentationLayer: APIDataLayer | null | undefined,
@@ -211,7 +212,7 @@ export const maybeFetchMeshFilesAction = (
     mustRequest,
     autoActivate,
     callback,
-  } as const);
+  }) as const;
 
 export const triggerMeshDownloadAction = (
   segmentName: string,
@@ -223,7 +224,7 @@ export const triggerMeshDownloadAction = (
     segmentName,
     segmentId,
     layerName,
-  } as const);
+  }) as const;
 
 export const triggerMeshesDownloadAction = (
   segmentsArray: Array<{ segmentName: string; segmentId: number; layerName: string }>,
@@ -231,40 +232,40 @@ export const triggerMeshesDownloadAction = (
   ({
     type: "TRIGGER_MESHES_DOWNLOAD",
     segmentsArray,
-  } as const);
+  }) as const;
 
 export const refreshMeshesAction = () =>
   ({
     type: "REFRESH_MESHES",
-  } as const);
+  }) as const;
 
 export const refreshMeshAction = (layerName: string, segmentId: number) =>
   ({
     type: "REFRESH_MESH",
     layerName,
     segmentId,
-  } as const);
+  }) as const;
 
 export const startedLoadingMeshAction = (layerName: string, segmentId: number) =>
   ({
     type: "STARTED_LOADING_MESH",
     layerName,
     segmentId,
-  } as const);
+  }) as const;
 
 export const finishedLoadingMeshAction = (layerName: string, segmentId: number) =>
   ({
     type: "FINISHED_LOADING_MESH",
     layerName,
     segmentId,
-  } as const);
+  }) as const;
 
 export const updateMeshFileListAction = (layerName: string, meshFiles: Array<APIMeshFile>) =>
   ({
     type: "UPDATE_MESH_FILE_LIST",
     layerName,
     meshFiles,
-  } as const);
+  }) as const;
 
 export const updateCurrentMeshFileAction = (
   layerName: string,
@@ -274,14 +275,14 @@ export const updateCurrentMeshFileAction = (
     type: "UPDATE_CURRENT_MESH_FILE",
     layerName,
     meshFileName,
-  } as const);
+  }) as const;
 
 export const removeMeshAction = (layerName: string, segmentId: number) =>
   ({
     type: "REMOVE_MESH",
     layerName,
     segmentId,
-  } as const);
+  }) as const;
 
 export const addAdHocMeshAction = (
   layerName: string,
@@ -299,7 +300,7 @@ export const addAdHocMeshAction = (
     seedAdditionalCoordinates,
     mappingName,
     mappingType,
-  } as const);
+  }) as const;
 
 export const addPrecomputedMeshAction = (
   layerName: string,
@@ -307,6 +308,8 @@ export const addPrecomputedMeshAction = (
   seedPosition: Vector3,
   seedAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
   meshFileName: string,
+  areChunksMerged: boolean,
+  mappingName: string | null | undefined,
 ) =>
   ({
     type: "ADD_PRECOMPUTED_MESH",
@@ -315,13 +318,15 @@ export const addPrecomputedMeshAction = (
     seedPosition,
     seedAdditionalCoordinates,
     meshFileName,
-  } as const);
+    areChunksMerged,
+    mappingName,
+  }) as const;
 
 export const setOthersMayEditForAnnotationAction = (othersMayEdit: boolean) =>
   ({
     type: "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION",
     othersMayEdit,
-  } as const);
+  }) as const;
 
 export const dispatchMaybeFetchMeshFilesAsync = async (
   dispatch: Dispatch<any>,

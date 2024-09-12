@@ -1,8 +1,9 @@
 package controllers
 
 import play.silhouette.api.Silhouette
-import play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
+import play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
 import models.dataset.DatasetService
@@ -12,6 +13,7 @@ import javax.inject.Inject
 import models.project.ProjectDAO
 import models.task.{TaskDAO, TaskService}
 import models.user.User
+import net.liftweb.common.Box.tryo
 import play.api.http.HttpEntity
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
@@ -29,6 +31,7 @@ object LegacyCreateExplorationalParameters {
 }
 
 class LegacyApiController @Inject()(annotationController: AnnotationController,
+                                    datasetController: DatasetController,
                                     userController: UserController,
                                     projectController: ProjectController,
                                     projectDAO: ProjectDAO,
@@ -39,10 +42,65 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
+  def listDatasetsV7(isActive: Option[Boolean],
+                     isUnreported: Option[Boolean],
+                     organizationName: Option[String],
+                     onlyMyOrganization: Option[Boolean],
+                     uploaderId: Option[String],
+                     folderId: Option[String],
+                     includeSubfolders: Option[Boolean],
+                     searchQuery: Option[String],
+                     limit: Option[Int],
+                     compact: Option[Boolean]): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    datasetController.list(isActive,
+                           isUnreported,
+                           organizationName,
+                           onlyMyOrganization,
+                           uploaderId,
+                           folderId,
+                           includeSubfolders,
+                           searchQuery,
+                           limit,
+                           compact)(request)
+  }
+
+  def listDatasetsV6(isActive: Option[Boolean],
+                     isUnreported: Option[Boolean],
+                     organizationName: Option[String],
+                     onlyMyOrganization: Option[Boolean],
+                     uploaderId: Option[String],
+                     folderId: Option[String],
+                     includeSubfolders: Option[Boolean],
+                     searchQuery: Option[String],
+                     limit: Option[Int],
+                     compact: Option[Boolean]): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    for {
+      result <- datasetController.list(isActive,
+                                       isUnreported,
+                                       organizationName,
+                                       onlyMyOrganization,
+                                       uploaderId,
+                                       folderId,
+                                       includeSubfolders,
+                                       searchQuery,
+                                       limit,
+                                       compact)(request)
+      adaptedResult <- replaceInResult(replaceVoxelSize)(result)
+    } yield adaptedResult
+  }
+
+  def readDatasetV6(organizationName: String, datasetName: String, sharingToken: Option[String]): Action[AnyContent] =
+    sil.UserAwareAction.async { implicit request =>
+      for {
+        result <- datasetController.read(organizationName, datasetName, sharingToken)(request)
+        adaptedResult <- replaceInResult(replaceVoxelSize)(result)
+      } yield adaptedResult
+    }
+
   def assertValidNewNameV5(organizationName: String, datasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        organization <- organizationDAO.findOneByName(organizationName)
+        organization <- organizationDAO.findOne(organizationName) // the old organizationName is now the organization id
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
         _ <- datasetService.assertValidDatasetName(datasetName)
         _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
@@ -171,7 +229,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     } yield adaptedResult
   }
 
-  def annotationCreateExplorationalV4(organizationName: String,
+  def annotationCreateExplorationalV4(organizationName: String, // the old organizationName is now the organization id
                                       datasetName: String): Action[LegacyCreateExplorationalParameters] =
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {
@@ -265,175 +323,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     } yield Ok(Json.toJson(jsResult))
   }
 
-  /* to provide v2
-   - insert automatic timestamp in finish and info request (changed in v3)
-   - replace new annotation layers by old tracing ids (changed in v5)
-   */
-
-  def annotationFinishV2(typ: String, id: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    for {
-      _ <- Fox.successful(logVersioned(request))
-      result <- annotationController.finish(typ, id, System.currentTimeMillis)(request)
-      adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
-    } yield adaptedResult
-  }
-
-  def annotationInfoV2(typ: String, id: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
-    for {
-      _ <- Fox.successful(logVersioned(request))
-      result <- annotationController.info(typ, id, System.currentTimeMillis)(request)
-      adaptedResult <- replaceInResult(replaceAnnotationLayers)(result)
-    } yield adaptedResult
-  }
-
-  /* to provide v1,
-    - replace new field “visibility” in annotation json by old boolean field “isPublic” (changed in v2)
-    - insert automatic timestamp in finish and info request (changed in v3)
-    - replace new annotation layers by old tracing ids (changed in v5)
-   */
-
-  def annotationDuplicateV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- Fox.successful(logVersioned(request))
-      result <- annotationController.duplicate(typ, id)(request)
-      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-    } yield adaptedResult
-  }
-
-  def annotationFinishV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- Fox.successful(logVersioned(request))
-      result <- annotationController.finish(typ, id, System.currentTimeMillis)(request)
-      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-    } yield adaptedResult
-  }
-
-  def annotationReopenV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- Fox.successful(logVersioned(request))
-      result <- annotationController.reopen(typ, id)(request)
-      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-    } yield adaptedResult
-  }
-
-  def annotationResetV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- Fox.successful(logVersioned(request))
-      result <- annotationController.reset(typ, id)(request)
-      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-    } yield adaptedResult
-  }
-
-  def annotationInfoV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- Fox.successful(logVersioned(request))
-      result <- annotationController.info(typ, id, System.currentTimeMillis)(request)
-      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-    } yield adaptedResult
-  }
-
-  def annotationMakeHybridV1(typ: String, id: String): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.makeHybrid(typ, id, None)(request)
-        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-      } yield adaptedResult
-  }
-
-  def annotationMergeV1(typ: String, id: String, mergedTyp: String, mergedId: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.merge(typ, id, mergedTyp, mergedId)(request)
-        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-      } yield adaptedResult
-    }
-
-  def annotationCreateExplorationalV1(organizationName: String,
-                                      datasetName: String): Action[LegacyCreateExplorationalParameters] =
-    sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        result <- annotationController.createExplorational(organizationName, datasetName)(
-          request.withBody(replaceCreateExplorationalParameters(request)))
-        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-      } yield adaptedResult
-    }
-
-  def annotationListForCurrentUserV1(isFinished: Option[Boolean],
-                                     limit: Option[Int],
-                                     pageNumber: Option[Int],
-                                     includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        result <- userController.annotations(isFinished, limit, pageNumber, includeTotalCount)(request)
-        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-      } yield adaptedResult
-  }
-
-  def annotationListByUserV1(id: String,
-                             isFinished: Option[Boolean],
-                             limit: Option[Int],
-                             pageNumber: Option[Int],
-                             includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        result <- userController.userAnnotations(id, isFinished, limit, pageNumber, includeTotalCount)(request)
-        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-      } yield adaptedResult
-  }
-
-  def annotationsForTaskV1(id: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    for {
-      _ <- Fox.successful(logVersioned(request))
-      result <- annotationController.annotationsForTask(id)(request)
-      adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-    } yield adaptedResult
-  }
-
-  def annotationTasksV1(isFinished: Option[Boolean],
-                        limit: Option[Int],
-                        pageNumber: Option[Int],
-                        includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        result <- userController.tasks(isFinished, limit, pageNumber, includeTotalCount)(request)
-        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-      } yield adaptedResult
-  }
-
-  def annotationTasksByUserV1(id: String,
-                              isFinished: Option[Boolean],
-                              limit: Option[Int],
-                              pageNumber: Option[Int],
-                              includeTotalCount: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async {
-    implicit request =>
-      for {
-        _ <- Fox.successful(logVersioned(request))
-        result <- userController.userTasks(id, isFinished, limit, pageNumber, includeTotalCount)(request)
-        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-      } yield adaptedResult
-  }
-
-  def annotationEditV1(typ: String, id: String): Action[JsValue] = sil.SecuredAction.async(parse.json) {
-    implicit request =>
-      logVersioned(request)
-      val oldRequest = request
-      val newRequest =
-        if (request.body.as[JsObject].keys.contains("isPublic"))
-          request.withBody(Json.toJson(insertVisibilityInJsObject(oldRequest.body.as[JsObject])))
-        else request
-
-      for {
-        result <- annotationController.editAnnotation(typ, id)(newRequest)
-        adaptedResult <- replaceInResult(replaceVisibility, replaceAnnotationLayers)(result)
-      } yield adaptedResult
-  }
-
   private def replaceCreateExplorationalParameters(
       request: SecuredRequest[WkEnv, LegacyCreateExplorationalParameters]) = {
     val skeletonParameters =
@@ -465,18 +354,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     List(skeletonParameters, volumeParameters).flatten
   }
 
-  private def insertVisibilityInJsObject(jsObject: JsObject) = {
-    val isPublic = (jsObject \ "isPublic").as[Boolean]
-    val newJson = jsObject + ("visibility" -> Json.toJson(if (isPublic) "Public" else "Internal"))
-    newJson - "isPublic"
-  }
-
-  private def replaceVisibility(jsObject: JsObject) = {
-    val visibilityString = (jsObject \ "visibility").as[String]
-    val newJson = jsObject + ("isPublic" -> Json.toJson(visibilityString == "Public"))
-    Fox.successful(newJson - "visibility")
-  }
-
   private def replaceAnnotationLayers(jsObject: JsObject) = {
     val annotationLayers = (jsObject \ "annotationLayers").as[List[AnnotationLayer]]
     val skeletonTracingId = annotationLayers.find(_.typ == AnnotationLayerType.Skeleton).map(_.tracingId)
@@ -489,9 +366,19 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     } yield newJson - "annotationLayers"
   }
 
-  private def replaceInResult(replacement1: JsObject => Fox[JsObject], replacement2: JsObject => Fox[JsObject])(
-      result: Result): Fox[Result] =
-    replaceInResult(Fox.chainFunctions(List(replacement1, replacement2)))(result)
+  private def replaceVoxelSize(jsObject: JsObject) = {
+    val voxelSizeOpt = (jsObject \ "dataSource" \ "scale").asOpt[VoxelSize]
+    voxelSizeOpt match {
+      case None => Fox.successful(jsObject)
+      case Some(voxelSize) =>
+        val inNanometer = voxelSize.toNanometer
+        for {
+          newDataSource <- tryo(
+            (jsObject \ "dataSource").as[JsObject] - "scale" + ("scale" -> Json.toJson(inNanometer))).toFox
+          newValue <- tryo(jsObject - "dataSource" + ("dataSource" -> newDataSource)).toFox
+        } yield newValue
+    }
+  }
 
   private def replaceInResult(replacement: JsObject => Fox[JsObject])(result: Result): Fox[Result] =
     if (result.header.status == 200) {
@@ -514,9 +401,6 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
 
   private def logVersioned(request: SecuredRequest[WkEnv, _]): Unit =
     logVersioned(request.identity, request.uri)
-
-  private def logVersioned(request: UserAwareRequest[WkEnv, _]): Unit =
-    request.identity.foreach(user => logVersioned(user, request.uri))
 
   private def logVersioned(user: User, uri: String): Unit =
     logger.info(s"Noted usage of legacy route $uri by user ${user._id}")

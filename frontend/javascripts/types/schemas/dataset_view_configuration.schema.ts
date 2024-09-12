@@ -1,5 +1,5 @@
 import { BLEND_MODES } from "oxalis/constants";
-import { type DatasetLayerConfiguration, type DatasetConfiguration } from "oxalis/store";
+import type { DatasetLayerConfiguration, DatasetConfiguration } from "oxalis/store";
 
 export function getDefaultLayerViewConfiguration(
   dynamicDefault: Partial<DatasetLayerConfiguration> = {},
@@ -14,6 +14,7 @@ export function getDefaultLayerViewConfiguration(
     isDisabled: false,
     isInverted: false,
     isInEditMode: false,
+    mapping: null,
   };
   return { ...defaultLayerViewConfiguration, ...dynamicDefault };
 }
@@ -63,6 +64,19 @@ export const layerViewConfiguration = {
   },
   isInEditMode: {
     type: "boolean",
+  },
+  mapping: {
+    type: ["object", "null"],
+    properties: {
+      name: {
+        type: "string",
+      },
+      type: {
+        type: "string",
+      },
+    },
+    required: ["name", "type"],
+    additionalProperties: false,
   },
 };
 export const defaultDatasetViewConfigurationWithoutNull: DatasetConfiguration = {

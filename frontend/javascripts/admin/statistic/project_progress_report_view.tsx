@@ -10,43 +10,27 @@ import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import messages from "messages";
 import TeamSelectionForm from "./team_selection_form";
+import { useState } from "react";
 const { Column, ColumnGroup } = Table;
 const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
 
-const typeHint: APIProjectProgressReport[] = [];
-type State = {
-  areSettingsVisible: boolean;
-  team: APITeam | null | undefined;
-  data: Array<APIProjectProgressReport>;
-  isLoading: boolean;
-  updatedAt: number | null | undefined;
-};
+function ProjectProgressReportView() {
+  const [areSettingsVisible, setAreSettingsVisible] = useState(true);
+  const [data, setData] = useState<APIProjectProgressReport[]>([]);
+  const [team, setTeam] = useState<APITeam | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<number | undefined>(undefined);
 
-class ProjectProgressReportView extends React.PureComponent<{}, State> {
-  state: State = {
-    areSettingsVisible: true,
-    data: [],
-    team: undefined,
-    isLoading: false,
-    updatedAt: null,
-  };
-
-  async fetchData(suppressLoadingState: boolean = false) {
-    const { team } = this.state;
-
+  async function fetchData(team: APITeam | undefined, suppressLoadingState: boolean = false) {
     if (team == null) {
-      this.setState({
-        data: [],
-      });
+      setData([]);
     } else if (suppressLoadingState) {
       const errorToastKey = "progress-report-failed-to-refresh";
 
       try {
         const progessData = await getProjectProgressReport(team.id);
-        this.setState({
-          data: progessData,
-          updatedAt: Date.now(),
-        });
+        setData(progessData);
+        setUpdatedAt(Date.now());
         Toast.close(errorToastKey);
       } catch (_err) {
         Toast.error(messages["project.report.failed_to_refresh"], {
@@ -55,210 +39,203 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
         });
       }
     } else {
-      this.setState({
-        isLoading: true,
-      });
+      setIsLoading(true);
       const progessData = await getProjectProgressReport(team.id);
-      this.setState({
-        data: progessData,
-        updatedAt: Date.now(),
-        isLoading: false,
-      });
+      setData(progessData);
+      setUpdatedAt(Date.now());
+      setIsLoading(false);
     }
   }
+  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchData):
+  React.useEffect(() => {
+    fetchData(team);
+  }, [team]);
 
-  handleTeamChange = (team: APITeam) => {
-    this.setState(
-      {
-        team,
-        areSettingsVisible: false,
-      },
-      () => {
-        this.fetchData();
-      },
-    );
-  };
+  function handleTeamChange(newTeam: APITeam) {
+    setTeam(newTeam);
+    setAreSettingsVisible(false);
+  }
 
-  handleOpenSettings = () => {
-    this.setState({
-      areSettingsVisible: true,
-    });
-  };
+  function handleOpenSettings() {
+    setAreSettingsVisible(true);
+  }
 
-  handleReload = () => {
-    this.fetchData();
-  };
+  function handleReload() {
+    fetchData(team);
+  }
 
-  handleAutoReload = () => {
-    this.fetchData(true);
-  };
+  function handleAutoReload() {
+    fetchData(team, true);
+  }
 
-  render() {
-    return (
-      <div className="container">
-        <Loop onTick={this.handleAutoReload} interval={RELOAD_INTERVAL} />
-        <div className="pull-right">
-          {this.state.updatedAt != null ? <FormattedDate timestamp={this.state.updatedAt} /> : null}{" "}
-          <SettingOutlined onClick={this.handleOpenSettings} />
-          <ReloadOutlined onClick={this.handleReload} />
-        </div>
-        <h3>Project Progress</h3>
-        {this.state.areSettingsVisible ? (
-          <Card>
-            <TeamSelectionForm value={this.state.team} onChange={this.handleTeamChange} />
-          </Card>
-        ) : null}
+  return (
+    <div className="container">
+      <Loop onTick={handleAutoReload} interval={RELOAD_INTERVAL} />
+      <div className="pull-right">
+        {updatedAt != null ? <FormattedDate timestamp={updatedAt} /> : null}{" "}
+        <SettingOutlined onClick={handleOpenSettings} />
+        <ReloadOutlined onClick={handleReload} />
+      </div>
+      <h3>Project Progress</h3>
+      {areSettingsVisible ? (
+        <Card>
+          <TeamSelectionForm value={team} onChange={handleTeamChange} />
+        </Card>
+      ) : null}
 
-        <Spin spinning={this.state.isLoading}>
-          <Table
-            dataSource={this.state.data}
-            pagination={{
-              defaultPageSize: 100,
-            }}
-            rowKey="projectName"
-            style={{
-              marginTop: 30,
-              marginBottom: 30,
-            }}
-            size="small"
-            className="large-table"
-          >
+      <Spin spinning={isLoading}>
+        <Table
+          dataSource={data}
+          pagination={{
+            defaultPageSize: 100,
+          }}
+          rowKey="projectName"
+          style={{
+            marginTop: 30,
+            marginBottom: 30,
+          }}
+          size="small"
+          className="large-table"
+        >
+          <Column
+            title="Project"
+            dataIndex="projectName"
+            defaultSortOrder="ascend"
+            sorter={Utils.localeCompareBy<APIProjectProgressReport>(
+              (project) => project.projectName,
+            )}
+            render={(text: string, item: APIProjectProgressReport) => (
+              <span>
+                {item.paused ? <PauseCircleOutlined /> : null} {text}
+              </span>
+            )}
+          />
+          <Column
+            title="Tasks"
+            dataIndex="totalTasks"
+            sorter={Utils.compareBy<APIProjectProgressReport>((project) => project.totalTasks)}
+            render={(number) => number.toLocaleString()}
+          />
+          <Column
+            title="Priority"
+            dataIndex="priority"
+            sorter={Utils.compareBy<APIProjectProgressReport>((project) => project.priority)}
+            render={(number) => number.toLocaleString()}
+          />
+          <Column
+            title="Time [h]"
+            dataIndex="billedMilliseconds"
+            sorter={Utils.compareBy<APIProjectProgressReport>(
+              (project) => project.billedMilliseconds,
+            )}
+            render={(number) =>
+              Utils.millisecondsToHours(number).toLocaleString(undefined, {
+                maximumFractionDigits: 1,
+              })
+            }
+          />
+          <ColumnGroup title="Instances">
             <Column
-              title="Project"
-              dataIndex="projectName"
-              defaultSortOrder="ascend"
-              sorter={Utils.localeCompareBy(typeHint, (project) => project.projectName)}
-              render={(text: string, item: APIProjectProgressReport) => (
-                <span>
-                  {item.paused ? <PauseCircleOutlined /> : null} {text}
-                </span>
+              title="Total"
+              width={100}
+              dataIndex="totalInstances"
+              sorter={Utils.compareBy<APIProjectProgressReport>(
+                (project) => project.totalInstances,
               )}
-            />
-            <Column
-              title="Tasks"
-              dataIndex="totalTasks"
-              sorter={Utils.compareBy(typeHint, (project) => project.totalTasks)}
               render={(number) => number.toLocaleString()}
             />
             <Column
-              title="Priority"
-              dataIndex="priority"
-              sorter={Utils.compareBy(typeHint, (project) => project.priority)}
-              render={(number) => number.toLocaleString()}
-            />
-            <Column
-              title="Time [h]"
-              dataIndex="billedMilliseconds"
-              sorter={Utils.compareBy(typeHint, (project) => project.billedMilliseconds)}
-              render={(number) =>
-                Utils.millisecondsToHours(number).toLocaleString(undefined, {
-                  maximumFractionDigits: 1,
-                })
+              title="Progress"
+              key="progress"
+              dataIndex="finishedInstances"
+              width={100}
+              sorter={Utils.compareBy<APIProjectProgressReport>(
+                ({ finishedInstances, totalInstances }) => finishedInstances / totalInstances,
+              )}
+              render={(finishedInstances, item) =>
+                finishedInstances === item.totalInstances ? (
+                  <Badge
+                    count="100%"
+                    style={{
+                      backgroundColor: colors.finished,
+                    }}
+                  />
+                ) : (
+                  <span>{Math.floor((100 * finishedInstances) / item.totalInstances)} %</span>
+                )
               }
             />
-            <ColumnGroup title="Instances">
-              <Column
-                title="Total"
-                width={100}
-                dataIndex="totalInstances"
-                sorter={Utils.compareBy(typeHint, (project) => project.totalInstances)}
-                render={(number) => number.toLocaleString()}
-              />
-              <Column
-                title="Progress"
-                key="progress"
-                dataIndex="finishedInstances"
-                width={100}
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'Comparator<APIProjectProgressReport>' is not... Remove this comment to see the full error message
-                sorter={Utils.compareBy(
-                  typeHint,
-                  ({ finishedInstances, totalInstances }) => finishedInstances / totalInstances,
-                )}
-                render={(finishedInstances, item) =>
-                  // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                  finishedInstances === item.totalInstances ? (
-                    <Badge
-                      count="100%"
-                      style={{
-                        backgroundColor: colors.finished,
-                      }}
-                    />
-                  ) : (
-                    // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                    <span>{Math.floor((100 * finishedInstances) / item.totalInstances)} %</span>
-                  )
-                }
-              />
-              <Column
-                title={
-                  <Badge
-                    count="Finished"
-                    style={{
-                      background: colors.finished,
-                    }}
+            <Column
+              title={
+                <Badge
+                  count="Finished"
+                  style={{
+                    background: colors.finished,
+                  }}
+                />
+              }
+              dataIndex="finishedInstances"
+              sorter={Utils.compareBy<APIProjectProgressReport>(
+                (project) => project.finishedInstances,
+              )}
+              render={(_text, item: APIProjectProgressReport) => ({
+                props: {
+                  colSpan: 3,
+                },
+                children: (
+                  <StackedBarChart
+                    a={item.finishedInstances}
+                    b={item.activeInstances}
+                    c={item.pendingInstances}
                   />
-                }
-                dataIndex="finishedInstances"
-                // @ts-expect-error ts-migrate(2322) FIXME: Type 'Comparator<APIProjectProgressReport>' is not... Remove this comment to see the full error message
-                sorter={Utils.compareBy(typeHint, (project) => project.finishedInstances)}
-                render={(_text, item) => ({
-                  props: {
-                    colSpan: 3,
-                  },
-                  children: (
-                    <StackedBarChart
-                      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                      a={item.finishedInstances}
-                      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                      b={item.activeInstances}
-                      // @ts-expect-error ts-migrate(2571) FIXME: Object is of type 'unknown'.
-                      c={item.pendingInstances}
-                    />
-                  ),
-                })}
-              />
-              <Column
-                title={
-                  <Badge
-                    count="Active"
-                    style={{
-                      background: colors.active,
-                    }}
-                  />
-                }
-                dataIndex="activeInstances"
-                sorter={Utils.compareBy(typeHint, (project) => project.activeInstances)}
-                render={() => ({
-                  props: {
-                    colSpan: 0,
-                  },
-                  children: null,
-                })}
-              />
-              <Column
-                title={
-                  <Badge
-                    count="Pending"
-                    style={{
-                      background: colors.open,
-                    }}
-                  />
-                }
-                dataIndex="pendingInstances"
-                sorter={Utils.compareBy(typeHint, (project) => project.pendingInstances)}
-                render={() => ({
-                  props: {
-                    colSpan: 0,
-                  },
-                  children: null,
-                })}
-              />
-            </ColumnGroup>
-          </Table>
-        </Spin>
-      </div>
-    );
-  }
+                ),
+              })}
+            />
+            <Column
+              title={
+                <Badge
+                  count="Active"
+                  style={{
+                    background: colors.active,
+                  }}
+                />
+              }
+              dataIndex="activeInstances"
+              sorter={Utils.compareBy<APIProjectProgressReport>(
+                (project) => project.activeInstances,
+              )}
+              render={() => ({
+                props: {
+                  colSpan: 0,
+                },
+                children: null,
+              })}
+            />
+            <Column
+              title={
+                <Badge
+                  count="Pending"
+                  style={{
+                    background: colors.open,
+                  }}
+                />
+              }
+              dataIndex="pendingInstances"
+              sorter={Utils.compareBy<APIProjectProgressReport>(
+                (project) => project.pendingInstances,
+              )}
+              render={() => ({
+                props: {
+                  colSpan: 0,
+                },
+                children: null,
+              })}
+            />
+          </ColumnGroup>
+        </Table>
+      </Spin>
+    </div>
+  );
 }
 
 export default ProjectProgressReportView;

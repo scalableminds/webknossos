@@ -129,6 +129,8 @@ export const annotation: APIAnnotation = {
     url: "http://localhost:9000",
     isScratch: false,
     allowsUpload: true,
+    jobsEnabled: false,
+    jobsSupportedByAvailableWorkers: [],
   },
   tracingStore: {
     name: "localhost",
@@ -163,6 +165,7 @@ export const annotation: APIAnnotation = {
   },
   contributors: [],
   othersMayEdit: false,
+  isLockedByOwner: false,
   teams: [
     {
       id: "5b1e45f9a00000a000abc2c3",

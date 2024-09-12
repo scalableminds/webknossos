@@ -1,18 +1,22 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
-import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.dataformats.n5.{N5DataLayer, N5SegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.precomputed.{
+import com.scalableminds.webknossos.datastore.dataformats.layers.{
+  N5DataLayer,
+  N5SegmentationLayer,
   PrecomputedDataLayer,
-  PrecomputedSegmentationLayer
+  PrecomputedSegmentationLayer,
+  WKWDataLayer,
+  WKWSegmentationLayer,
+  Zarr3DataLayer,
+  Zarr3SegmentationLayer,
+  ZarrDataLayer,
+  ZarrSegmentationLayer
 }
-import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr.{ZarrDataLayer, ZarrSegmentationLayer}
-import com.scalableminds.webknossos.datastore.dataformats.zarr3.{Zarr3DataLayer, Zarr3SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.services.{DSRemoteWebKnossosClient, DataSourceRepository}
+import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceRepository}
 import play.api.libs.json.{Json, OFormat}
 
 import java.nio.charset.StandardCharsets
@@ -23,8 +27,8 @@ import scala.concurrent.ExecutionContext
 case class ComposeRequest(
     newDatasetName: String,
     targetFolderId: String,
-    organizationName: String,
-    scale: Vec3Double,
+    organizationId: String,
+    voxelSize: VoxelSize,
     layers: Seq[ComposeRequestLayer]
 )
 
@@ -49,14 +53,14 @@ object DataLayerId {
 }
 
 class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
-                               remoteWebKnossosClient: DSRemoteWebKnossosClient,
+                               remoteWebknossosClient: DSRemoteWebknossosClient,
                                datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
   val dataBaseDir: Path = datasetSymlinkService.dataBaseDir
 
-  private def uploadDirectory(organizationName: String, name: String): Path =
-    dataBaseDir.resolve(organizationName).resolve(name)
+  private def uploadDirectory(organizationId: String, name: String): Path =
+    dataBaseDir.resolve(organizationId).resolve(name)
 
   def composeDataset(composeRequest: ComposeRequest, userToken: Option[String])(
       implicit ec: ExecutionContext): Fox[DataSource] =
@@ -65,15 +69,16 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
 
       reserveUploadInfo = ReserveUploadInformation("",
                                                    composeRequest.newDatasetName,
-                                                   composeRequest.organizationName,
+                                                   composeRequest.organizationId,
                                                    1,
+                                                   None,
                                                    None,
                                                    List(),
                                                    Some(composeRequest.targetFolderId))
-      _ <- remoteWebKnossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
-      directory = uploadDirectory(composeRequest.organizationName, composeRequest.newDatasetName)
+      _ <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
+      directory = uploadDirectory(composeRequest.organizationId, composeRequest.newDatasetName)
       _ = PathUtils.ensureDirectory(directory)
-      dataSource <- createDatasource(composeRequest, composeRequest.organizationName)
+      dataSource <- createDatasource(composeRequest, composeRequest.organizationId)
       properties = Json.toJson(dataSource).toString().getBytes(StandardCharsets.UTF_8)
       _ = Files.write(directory.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
     } yield dataSource
@@ -131,14 +136,14 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       }
     } yield editedLayer
 
-  private def createDatasource(composeRequest: ComposeRequest, organizationName: String): Fox[DataSource] = {
-    val uploadDir = uploadDirectory(organizationName, composeRequest.newDatasetName)
+  private def createDatasource(composeRequest: ComposeRequest, organizationId: String): Fox[DataSource] = {
+    val uploadDir = uploadDirectory(organizationId, composeRequest.newDatasetName)
     for {
       layers <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer(_, uploadDir))
       dataSource = GenericDataSource(
-        DataSourceId(composeRequest.newDatasetName, organizationName),
+        DataSourceId(composeRequest.newDatasetName, organizationId),
         layers,
-        composeRequest.scale,
+        composeRequest.voxelSize,
         None
       )
 

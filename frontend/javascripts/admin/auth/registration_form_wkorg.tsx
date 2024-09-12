@@ -15,7 +15,7 @@ type Props = {
   onRegistered: (isUserLoggedIn: true) => void;
 };
 
-function generateOrganizationName() {
+function generateOrganizationId() {
   let output = "";
 
   for (let i = 0; i < 8; i++) {
@@ -29,18 +29,20 @@ function generateOrganizationName() {
 
 function RegistrationFormWKOrg(props: Props) {
   const [form] = Form.useForm();
-  const organizationName = useRef(generateOrganizationName());
+  const organizationId = useRef(generateOrganizationId());
 
   async function onFinish(formValues: Record<string, any>) {
     await Request.sendJSONReceiveJSON("/api/auth/createOrganizationWithAdmin", {
       data: {
         ...formValues,
+        firstName: formValues.firstName.trim(),
+        lastName: formValues.lastName.trim(),
         password: {
           password1: formValues.password.password1,
           password2: formValues.password.password1,
         },
-        organization: organizationName.current,
-        organizationDisplayName: `${formValues.firstName} ${formValues.lastName} Lab`,
+        organization: organizationId.current,
+        organizationName: `${formValues.firstName.trim()} ${formValues.lastName.trim()} Lab`,
       },
     });
     const [user, organization] = await loginUser({

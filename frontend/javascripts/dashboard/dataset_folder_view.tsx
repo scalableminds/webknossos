@@ -1,6 +1,6 @@
 import { filterNullValues } from "libs/utils";
 import React, { useEffect, useState } from "react";
-import { APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
+import type { APIDatasetCompact, APIUser, FolderItem } from "types/api_flow_types";
 import DatasetCollectionContextProvider, {
   useDatasetCollectionContext,
 } from "./dataset/dataset_collection_context";
@@ -78,6 +78,8 @@ function DatasetFolderViewInner(props: Props) {
   const folderIdForDetailsSidebar = context.selectedFolder?.key ?? context.activeFolderId;
   const datasetCountForDetailsSidebar =
     context.selectedFolder != null ? selectedFolderDatasets?.length || 0 : context.datasets.length;
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Only update the selected datasets when the context datasets change.
   useEffect(() => {
     if (selectedDatasets.length === 0 || !context.datasets) {
       return;
@@ -201,7 +203,7 @@ function DatasetFolderViewInner(props: Props) {
     <div
       style={{
         display: "grid",
-        gridTemplate: "auto / auto 1fr auto",
+        gridTemplate: "auto / auto minmax(60%, 1fr) auto",
         flexGrow: 1,
         minHeight: 0,
       }}
@@ -222,7 +224,7 @@ function DatasetFolderViewInner(props: Props) {
       >
         <FolderTreeSidebar setFolderIdForEditModal={setFolderIdForEditModal} />
       </div>
-      <main style={{ gridColumn: "2 / 2", overflow: "auto", paddingRight: 4 }}>
+      <main style={{ gridColumn: "2 / 3", overflow: "auto", paddingRight: 4 }}>
         <DatasetView
           user={props.user}
           onSelectDataset={setSelectedDataset}

@@ -48,10 +48,10 @@ class DoubleChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
     tryo(Using.Manager { use =>
       val typedStorage = new Array[Double](chunkShape.product)
-      val bais = use(new ByteArrayInputStream(bytes))
-      val iis = use(new MemoryCacheImageInputStream(bais))
-      iis.setByteOrder(header.byteOrder)
-      iis.readFully(typedStorage, 0, typedStorage.length)
+      val byteArrayInputStream = use(new ByteArrayInputStream(bytes))
+      val imageInputStream = use(new MemoryCacheImageInputStream(byteArrayInputStream))
+      imageInputStream.setByteOrder(header.byteOrder)
+      imageInputStream.readFully(typedStorage, 0, typedStorage.length)
       MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 }
@@ -63,10 +63,10 @@ class ShortChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
     tryo(Using.Manager { use =>
       val typedStorage = new Array[Short](chunkShape.product)
-      val bais = use(new ByteArrayInputStream(bytes))
-      val iis = use(new MemoryCacheImageInputStream(bais))
-      iis.setByteOrder(header.byteOrder)
-      iis.readFully(typedStorage, 0, typedStorage.length)
+      val byteArrayInputStream = use(new ByteArrayInputStream(bytes))
+      val imageInputStream = use(new MemoryCacheImageInputStream(byteArrayInputStream))
+      imageInputStream.setByteOrder(header.byteOrder)
+      imageInputStream.readFully(typedStorage, 0, typedStorage.length)
       MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 }
@@ -78,10 +78,10 @@ class IntChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
     tryo(Using.Manager { use =>
       val typedStorage = new Array[Int](chunkShape.product)
-      val bais = use(new ByteArrayInputStream(bytes))
-      val iis = use(new MemoryCacheImageInputStream(bais))
-      iis.setByteOrder(header.byteOrder)
-      iis.readFully(typedStorage, 0, typedStorage.length)
+      val byteArrayInputStream = use(new ByteArrayInputStream(bytes))
+      val imageInputStream = use(new MemoryCacheImageInputStream(byteArrayInputStream))
+      imageInputStream.setByteOrder(header.byteOrder)
+      imageInputStream.readFully(typedStorage, 0, typedStorage.length)
       MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 }
@@ -93,10 +93,10 @@ class LongChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
     tryo(Using.Manager { use =>
       val typedStorage = new Array[Long](chunkShape.product)
-      val bais = use(new ByteArrayInputStream(bytes))
-      val iis = use(new MemoryCacheImageInputStream(bais))
-      iis.setByteOrder(header.byteOrder)
-      iis.readFully(typedStorage, 0, typedStorage.length)
+      val byteArrayInputStream = use(new ByteArrayInputStream(bytes))
+      val imageInputStream = use(new MemoryCacheImageInputStream(byteArrayInputStream))
+      imageInputStream.setByteOrder(header.byteOrder)
+      imageInputStream.readFully(typedStorage, 0, typedStorage.length)
       MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 
@@ -109,10 +109,10 @@ class FloatChunkTyper(val header: DatasetHeader) extends ChunkTyper {
   def wrapAndType(bytes: Array[Byte], chunkShape: Array[Int]): Box[MultiArray] =
     tryo(Using.Manager { use =>
       val typedStorage = new Array[Float](chunkShape.product)
-      val bais = use(new ByteArrayInputStream(bytes))
-      val iis = use(new MemoryCacheImageInputStream(bais))
-      iis.setByteOrder(header.byteOrder)
-      iis.readFully(typedStorage, 0, typedStorage.length)
+      val byteArrayInputStream = use(new ByteArrayInputStream(bytes))
+      val imageInputStream = use(new MemoryCacheImageInputStream(byteArrayInputStream))
+      imageInputStream.setByteOrder(header.byteOrder)
+      imageInputStream.readFully(typedStorage, 0, typedStorage.length)
       MultiArray.factory(ma2DataType, chunkShapeOrdered(chunkShape), typedStorage)
     }.get)
 }

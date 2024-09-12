@@ -36,27 +36,27 @@ export const initializeConnectomeTracingAction = (layerName: string) =>
   ({
     type: "INITIALIZE_CONNECTOME_TRACING",
     layerName,
-  } as const);
+  }) as const;
 
 export const removeConnectomeTracingAction = (layerName: string) =>
   ({
     type: "REMOVE_CONNECTOME_TRACING",
     layerName,
-  } as const);
+  }) as const;
 
 export const addConnectomeTreesAction = (trees: MutableTreeMap, layerName: string) =>
   ({
     type: "ADD_CONNECTOME_TREES",
     trees,
     layerName,
-  } as const);
+  }) as const;
 
 export const deleteConnectomeTreesAction = (treeIds: Array<number>, layerName: string) =>
   ({
     type: "DELETE_CONNECTOME_TREES",
     treeIds,
     layerName,
-  } as const);
+  }) as const;
 
 export const setConnectomeTreesVisibilityAction = (
   treeIds: Array<number>,
@@ -68,7 +68,7 @@ export const setConnectomeTreesVisibilityAction = (
     treeIds,
     isVisible,
     layerName,
-  } as const);
+  }) as const;
 
 export const updateConnectomeFileListAction = (
   layerName: string,
@@ -78,7 +78,7 @@ export const updateConnectomeFileListAction = (
     type: "UPDATE_CONNECTOME_FILE_LIST",
     layerName,
     connectomeFiles,
-  } as const);
+  }) as const;
 
 export const updateCurrentConnectomeFileAction = (
   layerName: string,
@@ -88,7 +88,7 @@ export const updateCurrentConnectomeFileAction = (
     type: "UPDATE_CURRENT_CONNECTOME_FILE",
     layerName,
     connectomeFileName,
-  } as const);
+  }) as const;
 
 export const setActiveConnectomeAgglomerateIdsAction = (
   layerName: string,
@@ -98,7 +98,7 @@ export const setActiveConnectomeAgglomerateIdsAction = (
     type: "SET_ACTIVE_CONNECTOME_AGGLOMERATE_IDS",
     layerName,
     agglomerateIds,
-  } as const);
+  }) as const;
 
 export const loadConnectomeAgglomerateSkeletonAction = (
   layerName: string,
@@ -110,7 +110,7 @@ export const loadConnectomeAgglomerateSkeletonAction = (
     layerName,
     mappingName,
     agglomerateId,
-  } as const);
+  }) as const;
 
 export const removeConnectomeAgglomerateSkeletonAction = (
   layerName: string,
@@ -122,4 +122,4 @@ export const removeConnectomeAgglomerateSkeletonAction = (
     layerName,
     mappingName,
     agglomerateId,
-  } as const);
+  }) as const;

@@ -30,6 +30,7 @@ class Application @Inject()(actorSystem: ActorSystem,
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
+  // Note: This route is used by external applications, keep stable
   def buildInfo: Action[AnyContent] = sil.UserAwareAction.async {
     for {
       schemaVersion <- releaseInformationDAO.getSchemaVersion.futureBox
@@ -63,8 +64,7 @@ class Application @Inject()(actorSystem: ActorSystem,
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
       userEmail <- userService.emailFor(request.identity)
-      _ = Mailer ! Send(
-        defaultMails.helpMail(request.identity, userEmail, organization.displayName, message, currentUrl))
+      _ = Mailer ! Send(defaultMails.helpMail(request.identity, userEmail, organization.name, message, currentUrl))
     } yield Ok
   }
 
@@ -83,7 +83,7 @@ class ReleaseInformationDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     with FoxImplicits {
   def getSchemaVersion(implicit ec: ExecutionContext): Fox[Int] =
     for {
-      rList <- run(q"select schemaVersion from webknossos.releaseInformation".as[Int])
+      rList <- run(q"SELECT schemaVersion FROM webknossos.releaseInformation".as[Int])
       r <- rList.headOption.toFox
     } yield r
 }

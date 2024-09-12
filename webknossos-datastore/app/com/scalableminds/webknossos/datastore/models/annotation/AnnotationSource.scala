@@ -4,8 +4,8 @@ import play.api.libs.json.{Json, OFormat}
 
 case class AnnotationSource(id: String,
                             annotationLayers: List[AnnotationLayer],
-                            dataSetName: String,
-                            organizationName: String,
+                            datasetName: String,
+                            organizationId: String,
                             dataStoreUrl: String,
                             tracingStoreUrl: String,
                             accessViaPrivateLink: Boolean) {

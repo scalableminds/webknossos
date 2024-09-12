@@ -68,7 +68,7 @@ export function moveWhenAltIsPressed(delta: Point2, position: Point2, _id: any, 
   // alt + scroll won't result in the correct zoomToMouse behavior.
   setMousePosition(position);
 
-  if (event.altKey && !event.shiftKey && !event.ctrlKey) {
+  if (event.altKey && !event.shiftKey && !(event.ctrlKey || event.metaKey)) {
     handleMovePlane(delta);
   }
 }
@@ -108,7 +108,6 @@ export function zoomPlanes(value: number, zoomToMouse: boolean): void {
 export function zoomTDView(value: number): void {
   const zoomToPosition = null;
   const { width, height } = getInputCatcherRect(Store.getState(), OrthoViews.TDView);
-  // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'null' is not assignable to param... Remove this comment to see the full error message
   Store.dispatch(zoomTDViewAction(value, zoomToPosition, width, height));
 }
 

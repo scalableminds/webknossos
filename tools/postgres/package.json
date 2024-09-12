@@ -1,0 +1,9 @@
+{
+  "name": "dbtool",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dbtool.js",
+  "dependencies": {
+    "commander": "^10.0.0"
+  }
+}

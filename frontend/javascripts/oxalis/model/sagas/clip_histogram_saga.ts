@@ -4,7 +4,7 @@ import { takeEvery } from "typed-redux-saga";
 import type { ClipHistogramAction } from "oxalis/model/actions/settings_actions";
 import { updateLayerSettingAction } from "oxalis/model/actions/settings_actions";
 import Toast from "libs/toast";
-import { OrthoViews, Vector3 } from "oxalis/constants";
+import { OrthoViews, type Vector3 } from "oxalis/constants";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
 import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
 import { api } from "oxalis/singletons";

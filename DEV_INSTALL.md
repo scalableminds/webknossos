@@ -26,9 +26,11 @@ For non-localhost deployments, check out the [installation guide in the document
 * [Redis 5+](https://redis.io/)
 * [Blosc](https://github.com/Blosc/c-blosc)
 * [Brotli](https://github.com/google/brotli)
+* [Draco](https://github.com/google/draco)
 * [node.js 18](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
+* [cmake](https://cmake.org/download/)
 
 * For some development tasks like refreshing snapshots, Docker 19.03.0+ and Docker Compose 2.+ are required
 
@@ -41,13 +43,14 @@ arch -x86_64 /bin/zsh
 # Install Homebrew package manager
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
-# Install git, node.js, postgres, sbt, gfind, gsed
-brew install openjdk@21 openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn c-blosc brotli wget
+# Install git, node.js, postgres, sbt, gfind, gsed, draco
+brew install openjdk draco openssl git node postgresql sbt findutils coreutils gnu-sed redis yarn c-blosc brotli wget
 
 # Set env variables for openjdk and openssl
 # You probably want to add these lines manually to avoid conflicts in your zshrc
 echo 'if [ $(arch) = "i386" ]; then' >> ~/.zshrc
-echo '  export PATH="/usr/local/opt/openjdk@14/bin:$PATH"' >> ~/.zshrc
+echo '  export JAVA_HOME=/opt/homebrew/opt/openjdk/libexec/openjdk.jdk/Contents/Home' >> ~/.zshrc
+echo '  export PATH="/usr/local/opt/openjdk/bin:$PATH"' >> ~/.zshrc
 echo '  export PATH="/usr/local/opt/openssl/bin:$PATH"' >> ~/.zshrc
 echo '  export LDFLAGS="-L/usr/local/opt/openssl/lib"' >> ~/.zshrc
 echo '  export CPPFLAGS="-I/usr/local/opt/openssl/include"' >> ~/.zshrc
@@ -74,20 +77,28 @@ Note: On arm64-based Macs (e.g. M1), you need to run WEBKNOSSOS in an x86_64 env
 
 ```bash
 sudo apt install -y curl ca-certificates wget
-# Adding repositories for nodejs, sbt and yarn
-curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+
+# Install nvm, node 18
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+nvm install 18
+nvm use 18
+
+# Adding repositories for yarn
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 sudo apt update
-sudo apt install -y nodejs git postgresql postgresql-client unzip zip yarn redis-server build-essential libblosc1 libbrotli1
+sudo apt install -y git postgresql postgresql-client unzip zip yarn redis-server build-essential libblosc1 libbrotli1 libdraco-dev cmake
 
  # Install sdkman, java, scala and sbt
 curl -s "https://get.sdkman.io" | bash
-source "/root/.sdkman/bin/sdkman-init.sh"
+source "$HOME/.sdkman/bin/sdkman-init.sh"
 sdk install scala 2.13.12
 sdk install sbt
 sdk install java 21.0.2-tem
+# Source sdkman-init.sh again to load environment variables like JAVA_HOME
+source "$HOME/.sdkman/bin/sdkman-init.sh"
 
 # Assign a password to PostgreSQL user
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
@@ -121,7 +132,7 @@ On older Ubuntu distributions: Please make sure to have the correct versions of 
 ### node.js & yarn
 
 * Install node from [http://nodejs.org/download/](http://nodejs.org/download/)
-* node version **16+ is required**
+* node version **16 to 18 is required**
 * Install yarn package manager: `npm install -g yarn`
 
 ## Run locally

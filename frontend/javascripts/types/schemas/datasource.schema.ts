@@ -1,3 +1,4 @@
+import { UnitLong } from "oxalis/constants";
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
 
 export default {
@@ -405,13 +406,21 @@ export default {
           },
         },
         scale: {
-          type: "array",
-          items: {
-            type: "number",
-            exclusiveMinimum: 0,
+          type: "object",
+          properties: {
+            factor: {
+              type: "array",
+              items: {
+                type: "number",
+                exclusiveMinimum: 0,
+              },
+              minItems: 3,
+              maxItems: 3,
+            },
+            unit: {
+              enum: Object.values(UnitLong),
+            },
           },
-          minItems: 3,
-          maxItems: 3,
         },
         defaultViewConfiguration: {
           $ref: "#/definitions/types::OptionalDatasetViewConfiguration",

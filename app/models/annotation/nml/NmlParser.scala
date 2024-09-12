@@ -2,6 +2,7 @@ package models.annotation.nml
 
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
+import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{
@@ -17,7 +18,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.tracingstore.tracings.ColorGenerator
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
-import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeSegmentIndexService
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.UploadedVolumeLayer
 import net.liftweb.common.Box._
@@ -41,6 +41,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   def parse(name: String,
             nmlInputStream: InputStream,
             overwritingDatasetName: Option[String],
+            overwritingOrganizationId: Option[String],
             isTaskUpload: Boolean,
             basePath: Option[String] = None)(
       implicit m: MessagesProvider): Box[(Option[SkeletonTracing], List[UploadedVolumeLayer], String, Option[String])] =
@@ -54,17 +55,19 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         trees <- parseTrees(data \ "thing", buildBranchPointMap(branchPoints), buildCommentMap(comments))
         treeGroups <- extractTreeGroups(data \ "groups")
         volumes = extractVolumes(data \ "volume")
+        _ <- bool2Box(volumes.length == volumes.map(_.name).distinct.length) ?~ Messages(
+          "nml.duplicateVolumeLayerNames")
         treesAndGroupsAfterSplitting = MultiComponentTreeSplitter.splitMulticomponentTrees(trees, treeGroups)
         treesSplit = treesAndGroupsAfterSplitting._1
         treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
         _ <- TreeValidator.validateTrees(treesSplit, treeGroupsAfterSplit, branchPoints, comments)
         additionalAxisProtos <- parseAdditionalAxes(parameters \ "additionalAxes")
+        datasetName = overwritingDatasetName.getOrElse(parseDatasetName(parameters \ "experiment"))
+        organizationId = if (overwritingDatasetName.isDefined) overwritingOrganizationId
+        else parseOrganizationId(parameters \ "experiment")
       } yield {
-        val datasetName = overwritingDatasetName.getOrElse(parseDatasetName(parameters \ "experiment"))
         val description = parseDescription(parameters \ "experiment")
         val wkUrl = parseWkUrl(parameters \ "experiment")
-        val organizationName =
-          if (overwritingDatasetName.isDefined) None else parseOrganizationName(parameters \ "experiment")
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
         val (editPosition, editPositionAdditionalCoordinates) =
           parseEditPosition(parameters \ "editPosition").getOrElse((SkeletonTracingDefaults.editPosition, Seq()))
@@ -84,23 +87,25 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
           volumes.toList.map { v =>
             UploadedVolumeLayer(
               VolumeTracing(
-                None,
-                boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)),
-                timestamp,
-                datasetName,
-                editPosition,
-                editRotation,
-                ElementClass.uint32,
-                v.fallbackLayerName,
-                v.largestSegmentId,
-                0,
-                zoomLevel,
-                None,
-                userBoundingBoxes,
-                organizationName,
+                activeSegmentId = None,
+                boundingBox = boundingBoxToProto(taskBoundingBox.getOrElse(BoundingBox.empty)), // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
+                createdTimestamp = timestamp,
+                datasetName = datasetName,
+                editPosition = editPosition,
+                editRotation = editRotation,
+                elementClass = ElementClass.uint32, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
+                fallbackLayer = v.fallbackLayerName,
+                largestSegmentId = v.largestSegmentId,
+                version = 0,
+                zoomLevel = zoomLevel,
+                userBoundingBox = None,
+                userBoundingBoxes = userBoundingBoxes,
+                organizationId = organizationId,
                 segments = v.segments,
+                mappingName = v.mappingName,
+                mappingIsLocked = v.mappingIsLocked,
                 segmentGroups = v.segmentGroups,
-                hasSegmentIndex = VolumeSegmentIndexService.canHaveSegmentIndexOpt(v.fallbackLayerName),
+                hasSegmentIndex = None, // Note: this property may be adapted later in adaptPropertiesToFallbackLayer
                 editPositionAdditionalCoordinates = editPositionAdditionalCoordinates,
                 additionalAxes = additionalAxisProtos
               ),
@@ -126,7 +131,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
                 None,
                 treeGroupsAfterSplit,
                 userBoundingBoxes,
-                organizationName,
+                organizationId,
                 editPositionAdditionalCoordinates,
                 additionalAxes = additionalAxisProtos
               )
@@ -160,7 +165,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       id <- idText.toIntOpt ?~ Messages("nml.treegroup.id.invalid", idText)
       children <- (node \ "group").map(parseTreeGroup).toList.toSingleBox("")
       name = getSingleAttribute(node, "name")
-    } yield TreeGroup(name, id, children)
+      isExpanded = getSingleAttribute(node, "isExpanded").toBooleanOpt.getOrElse(true)
+    } yield TreeGroup(name, id, children, isExpanded = Some(isExpanded))
   }
 
   private def extractVolumes(volumeNodes: NodeSeq)(implicit m: MessagesProvider): immutable.Seq[NmlVolumeTag] =
@@ -169,6 +175,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         NmlVolumeTag(
           getSingleAttribute(node, "location"),
           getSingleAttributeOpt(node, "fallbackLayer"),
+          getSingleAttributeOpt(node, "mappingName"),
+          getSingleAttributeOpt(node, "mappingIsLocked").flatMap(_.toBooleanOpt),
           getSingleAttributeOpt(node, "name"),
           parseVolumeSegmentMetadata(node \ "segments" \ "segment"),
           getSingleAttributeOpt(node, "largestSegmentId").flatMap(_.toLongOpt),
@@ -298,7 +306,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
   private def parseWkUrl(nodes: NodeSeq): Option[String] =
     nodes.headOption.map(node => getSingleAttribute(node, "wkUrl"))
 
-  private def parseOrganizationName(nodes: NodeSeq): Option[String] =
+  private def parseOrganizationId(nodes: NodeSeq): Option[String] =
     nodes.headOption.flatMap(node => getSingleAttributeOpt(node, "organization"))
 
   private def parseActiveNode(nodes: NodeSeq): Option[Int] =

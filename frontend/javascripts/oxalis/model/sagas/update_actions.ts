@@ -7,9 +7,10 @@ import type {
   TreeGroup,
   UserBoundingBox,
   SegmentGroup,
+  NumberLike,
 } from "oxalis/store";
 import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
-import { AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type NodeWithTreeId = {
   treeId: number;
@@ -80,7 +81,9 @@ export type UpdateAction =
 // This update action is only created in the frontend for display purposes
 type CreateTracingUpdateAction = {
   name: "createTracing";
-  value: {};
+  value: {
+    actionTimestamp: number;
+  };
 };
 // This update action is only created by the backend
 type ImportVolumeTracingUpdateAction = {
@@ -91,7 +94,9 @@ type ImportVolumeTracingUpdateAction = {
 }; // This update action is only created by the backend
 type AddSegmentIndexUpdateAction = {
   name: "addSegmentIndex";
-  value: {};
+  value: {
+    actionTimestamp: number;
+  };
 };
 type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
   value: T["value"] & {
@@ -212,20 +217,28 @@ export function deleteEdge(treeId: number, sourceNodeId: number, targetNodeId: n
     },
   } as const;
 }
+
+export type UpdateActionNode = Omit<Node, "untransformedPosition"> & {
+  position: Node["untransformedPosition"];
+  treeId: number;
+};
+
 export function createNode(treeId: number, node: Node) {
+  const { untransformedPosition, ...restNode } = node;
   return {
     name: "createNode",
-    value: Object.assign({}, node, {
-      treeId,
-    }),
+    value: { ...restNode, position: untransformedPosition, treeId } as UpdateActionNode,
   } as const;
 }
 export function updateNode(treeId: number, node: Node) {
+  const { untransformedPosition, ...restNode } = node;
   return {
     name: "updateNode",
-    value: Object.assign({}, node, {
+    value: {
+      ...restNode,
+      position: untransformedPosition,
       treeId,
-    }),
+    } as UpdateActionNode,
   } as const;
 }
 export function deleteNode(treeId: number, nodeId: number) {
@@ -412,43 +425,73 @@ export function serverCreateTracing(timestamp: number) {
 }
 export function updateMappingName(
   mappingName: string | null | undefined,
-  isEditable: boolean | undefined,
+  isEditable: boolean | null | undefined,
+  isLocked: boolean | undefined,
 ) {
   return {
     name: "updateMappingName",
-    value: { mappingName, isEditable },
+    value: { mappingName, isEditable, isLocked },
   } as const;
 }
 export function splitAgglomerate(
-  agglomerateId: number,
-  segmentPosition1: Vector3,
-  segmentPosition2: Vector3,
+  agglomerateId: NumberLike,
+  segmentId1: NumberLike,
+  segmentId2: NumberLike,
   mag: Vector3,
-) {
+): {
+  name: "splitAgglomerate";
+  value: {
+    agglomerateId: number;
+    segmentId1: number | undefined;
+    segmentId2: number | undefined;
+    // For backwards compatibility reasons,
+    // older segments are defined using their positions (and mag)
+    // instead of their unmapped ids.
+    segmentPosition1?: Vector3 | undefined;
+    segmentPosition2?: Vector3 | undefined;
+    mag: Vector3;
+  };
+} {
   return {
     name: "splitAgglomerate",
     value: {
-      agglomerateId,
-      segmentPosition1,
-      segmentPosition2,
+      // TODO: Proper 64 bit support (#6921)
+      agglomerateId: Number(agglomerateId),
+      segmentId1: Number(segmentId1),
+      segmentId2: Number(segmentId2),
       mag,
     },
   } as const;
 }
 export function mergeAgglomerate(
-  agglomerateId1: number,
-  agglomerateId2: number,
-  segmentPosition1: Vector3,
-  segmentPosition2: Vector3,
+  agglomerateId1: NumberLike,
+  agglomerateId2: NumberLike,
+  segmentId1: NumberLike,
+  segmentId2: NumberLike,
   mag: Vector3,
-) {
+): {
+  name: "mergeAgglomerate";
+  value: {
+    agglomerateId1: number;
+    agglomerateId2: number;
+    segmentId1: number | undefined;
+    segmentId2: number | undefined;
+    // For backwards compatibility reasons,
+    // older segments are defined using their positions (and mag)
+    // instead of their unmapped ids.
+    segmentPosition1?: Vector3 | undefined;
+    segmentPosition2?: Vector3 | undefined;
+    mag: Vector3;
+  };
+} {
   return {
     name: "mergeAgglomerate",
     value: {
-      agglomerateId1,
-      agglomerateId2,
-      segmentPosition1,
-      segmentPosition2,
+      // TODO: Proper 64 bit support (#6921)
+      agglomerateId1: Number(agglomerateId1),
+      agglomerateId2: Number(agglomerateId2),
+      segmentId1: Number(segmentId1),
+      segmentId2: Number(segmentId2),
       mag,
     },
   } as const;

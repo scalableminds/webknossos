@@ -81,10 +81,13 @@ import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select, take } from "oxalis/model/sagas/effect-generators";
 import listenToMinCut from "oxalis/model/sagas/min_cut_saga";
 import listenToQuickSelect from "oxalis/model/sagas/quick_select_saga";
-import { takeEveryUnlessBusy } from "oxalis/model/sagas/saga_helpers";
+import {
+  ensureMaybeActiveMappingIsLocked,
+  takeEveryUnlessBusy,
+} from "oxalis/model/sagas/saga_helpers";
 import {
   deleteSegmentDataVolumeAction,
-  UpdateAction,
+  type UpdateAction,
   updateSegmentGroups,
 } from "oxalis/model/sagas/update_actions";
 import {
@@ -96,7 +99,7 @@ import {
   updateVolumeTracing,
   updateMappingName,
 } from "oxalis/model/sagas/update_actions";
-import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
+import type VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import { Model, api } from "oxalis/singletons";
 import type { Flycam, SegmentMap, VolumeTracing } from "oxalis/store";
 import React from "react";
@@ -105,11 +108,12 @@ import {
   applyLabeledVoxelMapToAllMissingResolutions,
   createVolumeLayer,
   labelWithVoxelBuffer2D,
-  BooleanBox,
+  type BooleanBox,
 } from "./volume/helpers";
 import maybeInterpolateSegmentationLayer from "./volume/volume_interpolation_saga";
 import messages from "messages";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
+import type { ActionPattern } from "redux-saga/effects";
 
 const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
@@ -219,6 +223,14 @@ export function* editVolumeLayerAsync(): Saga<any> {
     }
 
     const activeCellId = yield* select((state) => enforceActiveVolumeTracing(state).activeCellId);
+    // As changes to the volume layer will be applied, the potentially existing mapping should be locked to ensure a consistent state.
+    const { isMappingLockedIfNeeded } = yield* call(
+      ensureMaybeActiveMappingIsLocked,
+      volumeTracing,
+    );
+    if (!isMappingLockedIfNeeded) {
+      continue;
+    }
 
     if (isDrawing && activeCellId === 0) {
       yield* call(
@@ -403,6 +415,12 @@ export function* floodFill(): Saga<void> {
 
     const { position: positionFloat, planeId } = floodFillAction;
     const volumeTracing = yield* select(enforceActiveVolumeTracing);
+    if (volumeTracing.hasEditableMapping) {
+      const message = "Volume modification is not allowed when an editable mapping is active.";
+      Toast.error(message);
+      console.error(message);
+      continue;
+    }
     const segmentationLayer = yield* call(
       [Model, Model.getSegmentationTracingLayer],
       volumeTracing.tracingId,
@@ -435,7 +453,15 @@ export function* floodFill(): Saga<void> {
       console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "unknown"})`);
       continue;
     }
-
+    // As the flood fill will be applied to the volume layer,
+    // the potentially existing mapping should be locked to ensure a consistent state.
+    const { isMappingLockedIfNeeded } = yield* call(
+      ensureMaybeActiveMappingIsLocked,
+      volumeTracing,
+    );
+    if (!isMappingLockedIfNeeded) {
+      continue;
+    }
     yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
     const boundingBoxForFloodFill = yield* call(getBoundingBoxForFloodFill, seedPosition, planeId);
     const progressCallback = createProgressCallback({
@@ -628,7 +654,7 @@ function* uncachedDiffSegmentLists(
   }
 
   for (const segmentId of addedSegmentIds) {
-    const segment = newSegments.get(segmentId);
+    const segment = newSegments.getOrThrow(segmentId);
     yield createSegmentVolumeAction(
       segment.id,
       segment.somePosition,
@@ -639,8 +665,8 @@ function* uncachedDiffSegmentLists(
   }
 
   for (const segmentId of bothSegmentIds) {
-    const segment = newSegments.get(segmentId);
-    const prevSegment = prevSegments.get(segmentId);
+    const segment = newSegments.getOrThrow(segmentId);
+    const prevSegment = prevSegments.getOrThrow(segmentId);
 
     if (segment !== prevSegment) {
       yield updateSegmentVolumeAction(
@@ -693,8 +719,18 @@ export function* diffVolumeTracing(
       yield removeFallbackLayer();
     }
 
-    if (prevVolumeTracing.mappingName !== volumeTracing.mappingName) {
-      yield updateMappingName(volumeTracing.mappingName, volumeTracing.mappingIsEditable);
+    if (
+      prevVolumeTracing.mappingName !== volumeTracing.mappingName ||
+      prevVolumeTracing.mappingIsLocked !== volumeTracing.mappingIsLocked
+    ) {
+      // Once the first volume action is performed on a volume layer, the mapping state is locked.
+      // In case no mapping is active, this is denoted by setting the mapping name to null.
+      const action = updateMappingName(
+        volumeTracing.mappingName || null,
+        volumeTracing.hasEditableMapping || null,
+        volumeTracing.mappingIsLocked,
+      );
+      yield action;
     }
   }
 }
@@ -794,17 +830,27 @@ function* updateHoveredSegmentId(): Saga<void> {
   }
 
   const globalMousePosition = yield* call(getGlobalMousePosition);
-  const hoveredCellInfo = yield* call(
+  const hoveredSegmentInfo = yield* call(
     { context: Model, fn: Model.getHoveredCellId },
     globalMousePosition,
   );
-  const id = hoveredCellInfo != null ? hoveredCellInfo.id : 0;
+  // Note that hoveredSegmentInfo.id can be an unmapped id even when
+  // a mapping is active, if it is a HDF5 mapping that is partially loaded
+  // and no entry exists yet for the input id.
+  const id = hoveredSegmentInfo != null ? hoveredSegmentInfo.id : 0;
+  const unmappedId = hoveredSegmentInfo != null ? hoveredSegmentInfo.unmappedId : 0;
   const oldHoveredSegmentId = yield* select(
     (store) => store.temporaryConfiguration.hoveredSegmentId,
+  );
+  const oldHoveredUnmappedSegmentId = yield* select(
+    (store) => store.temporaryConfiguration.hoveredUnmappedSegmentId,
   );
 
   if (oldHoveredSegmentId !== id) {
     yield* put(updateTemporarySettingAction("hoveredSegmentId", id));
+  }
+  if (oldHoveredUnmappedSegmentId !== unmappedId) {
+    yield* put(updateTemporarySettingAction("hoveredUnmappedSegmentId", unmappedId));
   }
 }
 
@@ -888,7 +934,7 @@ function* ensureValidBrushSize(): Saga<void> {
       "WK_READY",
       (action: Action) =>
         action.type === "UPDATE_LAYER_SETTING" && action.propertyName === "isDisabled",
-    ],
+    ] as ActionPattern<Action>,
     maybeClampBrushSize,
   );
 }

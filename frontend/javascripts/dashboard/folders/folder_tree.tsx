@@ -1,22 +1,22 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ConnectDropTarget, DropTargetMonitor, useDrop } from "react-dnd";
+import type React from "react";
+import { type Key, useCallback, useEffect, useRef, useState } from "react";
+import { type ConnectDropTarget, type DropTargetMonitor, useDrop } from "react-dnd";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
 import {
-  DatasetCollectionContextValue,
+  type DatasetCollectionContextValue,
   useDatasetCollectionContext,
 } from "../dataset/dataset_collection_context";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
-import { Dropdown, Modal, MenuProps, Tree } from "antd";
+import { Dropdown, Modal, type MenuProps, Tree } from "antd";
 import Toast from "libs/toast";
-import { DragObjectWithType } from "react-dnd";
-import { DataNode, DirectoryTreeProps } from "antd/lib/tree";
-import { Key } from "antd/lib/table/interface";
+import type { AntTreeNodeSelectedEvent, DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
-import { FolderItem } from "types/api_flow_types";
+import type { FolderItem } from "types/api_flow_types";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { AntTreeNodeBaseEvent } from "antd/es/tree/Tree";
 
 const { DirectoryTree } = Tree;
 
@@ -35,6 +35,7 @@ export function FolderTreeSidebar({
 
   const { data: folderHierarchy, isLoading } = context.queries.folderHierarchyQuery;
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation whether further dependencies are necessary.
   useEffect(() => {
     const newTreeData = folderHierarchy?.tree || [];
     const itemById = folderHierarchy?.itemById || {};
@@ -57,6 +58,7 @@ export function FolderTreeSidebar({
     setExpandedKeys(newExpandedKeys);
   }, [folderHierarchy]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Needs investigation on what dependencies are needed.
   useEffect(() => {
     if (context.activeFolderId == null && !context.globalSearchQuery) {
       // No search is active and no folder is selected. For example, this can happen
@@ -77,7 +79,7 @@ export function FolderTreeSidebar({
   });
 
   const onSelect: DirectoryTreeProps["onSelect"] = useCallback(
-    (keys, event) => {
+    (keys: React.Key[], { nativeEvent }: { nativeEvent: MouseEvent }) => {
       // Without the following check, the onSelect callback would also be called by antd
       // when the user clicks on a menu entry in the context menu (e.g., deleting a folder
       // would directly select it afterwards).
@@ -85,9 +87,12 @@ export function FolderTreeSidebar({
       // the ant-tree container. Therefore, we can use this property to filter out those
       // click events.
       // The classic preventDefault() didn't work as an alternative workaround.
-      const doesEventReferToTreeUi = event.nativeEvent.target.closest(".ant-tree") != null;
-      if (keys.length > 0 && doesEventReferToTreeUi) {
-        context.setActiveFolderId(keys[0] as string);
+      if (nativeEvent.target && nativeEvent.target instanceof HTMLElement) {
+        const doesEventReferToTreeUi = nativeEvent.target.closest(".ant-tree") != null;
+        if (keys.length > 0 && doesEventReferToTreeUi) {
+          context.setActiveFolderId(keys[0] as string);
+          context.setSelectedDatasets([]);
+        }
       }
     },
     [context],
@@ -223,7 +228,7 @@ export function generateSettingsForFolder(
         key: "create",
         disabled: !isEditable,
         onClick: createFolder,
-        icon: <PlusOutlined />,
+        icon: <PlusOutlined className="icon-margin-right" />,
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
             {newFolderText}
@@ -234,7 +239,7 @@ export function generateSettingsForFolder(
         key: "edit",
         disabled: !isEditable,
         onClick: editFolder,
-        icon: <EditOutlined />,
+        icon: <EditOutlined className="icon-margin-right" />,
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
             Edit Folder
@@ -245,7 +250,7 @@ export function generateSettingsForFolder(
         key: "delete",
         onClick: deleteFolder,
         disabled: !isEditable,
-        icon: <DeleteOutlined />,
+        icon: <DeleteOutlined className="icon-margin-right" />,
         label: <span>Delete Folder</span>,
       },
     ],
@@ -295,9 +300,9 @@ export function useDatasetDrop(
   const context = useDatasetCollectionContext();
   const { selectedDatasets, setSelectedDatasets } = context;
   const [collectedProps, drop] = useDrop<
-    DragObjectWithType & {
+    Partial<{
       datasetName: string;
-    },
+    }>,
     void,
     {
       canDrop: boolean;
@@ -305,7 +310,7 @@ export function useDatasetDrop(
     }
   >({
     accept: DraggableDatasetType,
-    drop: (item: DragObjectWithType & { datasetName: string }) => {
+    drop: (item: Partial<{ datasetName: string }>) => {
       if (selectedDatasets.length > 1) {
         if (selectedDatasets.every((ds) => ds.folderId === folderId)) {
           Toast.warning(

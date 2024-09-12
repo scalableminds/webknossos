@@ -3,7 +3,12 @@ import type { ModifierKeys } from "libs/input";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import type { Matrix4x4 } from "libs/mjs";
 import { V3 } from "libs/mjs";
-import { getActiveNode, getMaxNodeId } from "oxalis/model/accessors/skeletontracing_accessor";
+import {
+  getActiveNode,
+  getMaxNodeId,
+  getNodePosition,
+  untransformNodePosition,
+} from "oxalis/model/accessors/skeletontracing_accessor";
 import { getRotation, getPosition, getMoveOffset3d } from "oxalis/model/accessors/flycam_accessor";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -15,6 +20,7 @@ import {
   requestDeleteBranchPointAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
+  createTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   setFlightmodeRecordingAction,
@@ -35,11 +41,12 @@ import TDController from "oxalis/controller/td_controller";
 import Toast from "libs/toast";
 import * as Utils from "libs/utils";
 import { api } from "oxalis/singletons";
-import type { ViewMode, Point2, Vector3 } from "oxalis/constants";
+import type { ViewMode, Point2, Vector3, Viewport } from "oxalis/constants";
 import constants, { ArbitraryViewport } from "oxalis/constants";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import messages from "messages";
 import { downloadScreenshot } from "oxalis/view/rendering_utils";
+import { SkeletonTool } from "../combinations/tool_controls";
 
 const arbitraryViewportId = "inputcatcher_arbitraryViewport";
 type Props = {
@@ -85,34 +92,53 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   initMouse(): void {
     Utils.waitForElementWithId(arbitraryViewportId).then(() => {
-      this.input.mouseController = new InputMouse(arbitraryViewportId, {
-        leftDownMove: (delta: Point2) => {
-          if (this.props.viewMode === constants.MODE_ARBITRARY) {
-            Store.dispatch(
-              yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
+      this.input.mouseController = new InputMouse(
+        arbitraryViewportId,
+        {
+          leftClick: (pos: Point2, viewport: string, event: MouseEvent, isTouch: boolean) => {
+            SkeletonTool.onLeftClick(
+              this.arbitraryView,
+              pos,
+              event.shiftKey,
+              event.altKey,
+              event.ctrlKey || event.metaKey,
+              viewport as Viewport,
+              isTouch,
+              false,
             );
-            Store.dispatch(
-              pitchFlycamAction(
-                delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
-                true,
-              ),
-            );
-          } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-            const [scaleX, scaleY] = getViewportScale(Store.getState(), ArbitraryViewport);
-            const fx = Store.getState().flycam.zoomStep / scaleX;
-            const fy = Store.getState().flycam.zoomStep / scaleY;
-            Store.dispatch(moveFlycamAction([delta.x * fx, delta.y * fy, 0]));
-          }
+          },
+          leftDownMove: (delta: Point2) => {
+            if (this.props.viewMode === constants.MODE_ARBITRARY) {
+              Store.dispatch(
+                yawFlycamAction(
+                  delta.x * Store.getState().userConfiguration.mouseRotateValue,
+                  true,
+                ),
+              );
+              Store.dispatch(
+                pitchFlycamAction(
+                  delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
+                  true,
+                ),
+              );
+            } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
+              const [scaleX, scaleY] = getViewportScale(Store.getState(), ArbitraryViewport);
+              const fx = Store.getState().flycam.zoomStep / scaleX;
+              const fy = Store.getState().flycam.zoomStep / scaleY;
+              Store.dispatch(moveFlycamAction([delta.x * fx, delta.y * fy, 0]));
+            }
+          },
+          scroll: this.scroll,
+          pinch: (delta: number) => {
+            if (delta < 0) {
+              Store.dispatch(zoomOutAction());
+            } else {
+              Store.dispatch(zoomInAction());
+            }
+          },
         },
-        scroll: this.scroll,
-        pinch: (delta: number) => {
-          if (delta < 0) {
-            Store.dispatch(zoomOutAction());
-          } else {
-            Store.dispatch(zoomInAction());
-          }
-        },
-      });
+        ArbitraryViewport,
+      );
     });
   }
 
@@ -191,6 +217,16 @@ class ArbitraryController extends React.PureComponent<Props> {
       "2": () => {
         Store.dispatch(toggleInactiveTreesAction());
       },
+      // Delete active node
+      delete: () => {
+        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
+      },
+      backspace: () => {
+        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
+      },
+      c: () => {
+        Store.dispatch(createTreeAction());
+      },
       // Branches
       b: () => this.pushBranch(),
       j: () => {
@@ -198,15 +234,21 @@ class ArbitraryController extends React.PureComponent<Props> {
       },
       // Recenter active node
       s: () => {
-        const skeletonTracing = Store.getState().tracing.skeleton;
+        const state = Store.getState();
+        const skeletonTracing = state.tracing.skeleton;
 
         if (!skeletonTracing) {
           return;
         }
 
-        getActiveNode(skeletonTracing).map((activeNode) =>
-          api.tracing.centerPositionAnimated(activeNode.position, false, activeNode.rotation),
-        );
+        const activeNode = getActiveNode(skeletonTracing);
+        if (activeNode) {
+          api.tracing.centerPositionAnimated(
+            getNodePosition(activeNode, state),
+            false,
+            activeNode.rotation,
+          );
+        }
       },
       ".": () => this.nextNode(true),
       ",": () => this.nextNode(false),
@@ -231,7 +273,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   setRecord(record: boolean): void {
     if (record !== Store.getState().temporaryConfiguration.flightmodeRecording) {
       Store.dispatch(setFlightmodeRecordingAction(record));
-      this.setWaypoint();
+      this.handleCreateNode();
     }
   }
 
@@ -242,15 +284,16 @@ class ArbitraryController extends React.PureComponent<Props> {
       return;
     }
 
-    Utils.zipMaybe(getActiveNode(skeletonTracing), getMaxNodeId(skeletonTracing)).map(
-      ([activeNode, maxNodeId]) => {
-        if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
-          return;
-        }
-
-        Store.dispatch(setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1)); // implicit cast from boolean to int
-      },
-    );
+    const activeNode = getActiveNode(skeletonTracing);
+    const maxNodeId = getMaxNodeId(skeletonTracing);
+    if (activeNode == null || maxNodeId == null) {
+      return;
+    }
+    if ((nextOne && activeNode.id === maxNodeId) || (!nextOne && activeNode.id === 1)) {
+      return;
+    }
+    // implicit cast from boolean to int
+    Store.dispatch(setActiveNodeAction(activeNode.id + 2 * Number(nextOne) - 1));
   }
 
   move(timeFactor: number): void {
@@ -284,7 +327,7 @@ class ArbitraryController extends React.PureComponent<Props> {
           if (isRecording) {
             // This listener is responsible for setting a new waypoint, when the user enables
             // the "flightmode recording" toggle in the top-left corner of the flight canvas.
-            this.setWaypoint();
+            this.handleCreateNode();
           }
         },
       ),
@@ -353,16 +396,22 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.input.keyboardNoLoop?.destroy();
   }
 
-  setWaypoint(): void {
+  handleCreateNode(): void {
     if (!Store.getState().temporaryConfiguration.flightmodeRecording) {
       return;
     }
-
-    const position = getPosition(Store.getState().flycam);
-    const rotation = getRotation(Store.getState().flycam);
-    const additionalCoordinates = Store.getState().flycam.additionalCoordinates;
+    const state = Store.getState();
+    const position = getPosition(state.flycam);
+    const rotation = getRotation(state.flycam);
+    const additionalCoordinates = state.flycam.additionalCoordinates;
     Store.dispatch(
-      createNodeAction(position, additionalCoordinates, rotation, constants.ARBITRARY_VIEW, 0),
+      createNodeAction(
+        untransformNodePosition(position, state),
+        additionalCoordinates,
+        rotation,
+        constants.ARBITRARY_VIEW,
+        0,
+      ),
     );
   }
 
@@ -386,7 +435,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
 
     // Consider for deletion
-    this.setWaypoint();
+    this.handleCreateNode();
     Store.dispatch(createBranchPointAction());
     Toast.success(messages["tracing.branchpoint_set"]);
   }
@@ -407,7 +456,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     const vectorLength = V3.length(vector);
 
     if (vectorLength > 10) {
-      this.setWaypoint();
+      this.handleCreateNode();
       this.lastNodeMatrix = matrix;
     }
   }

@@ -1,4 +1,4 @@
-import * as React from "react";
+import type * as React from "react";
 import Toast from "libs/toast";
 import messages from "messages";
 import ErrorHandling from "libs/error_handling";
@@ -23,7 +23,7 @@ const registerWebGlCrashHandler = (canvas) => {
         key: WEBGL_CONTEXT_LOST_KEY,
       });
       console.error("Webgl context lost", e);
-      ErrorHandling.notify(e);
+      ErrorHandling.notify(new Error("WebGLContextLost"));
     },
     false,
   );
@@ -65,7 +65,7 @@ const registerWebGlCrashHandler = (canvas) => {
 
 export default function TracingView() {
   const handleContextMenu = (event: React.SyntheticEvent) => {
-    // hide contextmenu, while right-clicking a canvas
+    // hide context menu, while right-clicking a canvas
     event.preventDefault();
   };
 

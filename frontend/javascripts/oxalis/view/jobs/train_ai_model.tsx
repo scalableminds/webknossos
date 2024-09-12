@@ -28,11 +28,7 @@ import {
   getTracingForAnnotationType,
   runTraining,
 } from "admin/admin_rest_api";
-import {
-  LayerSelection,
-  LayerSelectionFormItem,
-  LayerSelectionFormItemForTracing,
-} from "components/layer_selection";
+import { LayerSelection, LayerSelectionFormItem } from "components/layer_selection";
 import Toast from "libs/toast";
 import { Model } from "oxalis/singletons";
 import {
@@ -51,7 +47,6 @@ import type {
   APISegmentationLayer,
   ServerVolumeTracing,
 } from "types/api_flow_types";
-import { getMergedDataLayersFromDatasetAndVolumeTracings } from "oxalis/model_initialization";
 import type { Vector3 } from "oxalis/constants";
 
 const { TextArea } = Input;
@@ -179,7 +174,6 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
           return {
             annotationId,
             colorLayerName: imageDataLayer,
-            // todop: doublecheck that this is the human-readable one
             segmentationLayerName: layerName,
             mag: await getMagForSegmentationLayer(annotationId, layerName),
           };
@@ -190,6 +184,8 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 
   const onFinish = async (form: FormInstance<any>, useCustomWorkflow: boolean, values: any) => {
     form.validateFields();
+
+    // Outside of an annotation, no saving needs to happen.
     if (ensureSavedState != null) {
       await ensureSavedState();
     }
@@ -215,8 +211,6 @@ export function TrainAiModelTab<GenericAnnotation extends APIAnnotation | Hybrid
 
   const defaultValues = {
     modelCategory: AiModelCategory.EM_NEURONS,
-    // todop
-    // imageDataLayer: colorLayer.name,
   };
 
   const bboxesVoxelCount = _.sum(
@@ -405,9 +399,7 @@ function AnnotationsCsvInput({
 }: {
   onAdd: (newItems: Array<AnnotationWithDataset<APIAnnotation>>) => void;
 }) {
-  const [value, setValue] = useState(
-    "http://localhost:9000/annotations/66df0d163001009c0e2d6fdf\n66def487300100170c2d6fc0\nhttp://localhost:9000/annotations/66e162f72f0100b10498fe3e",
-  );
+  const [value, setValue] = useState("");
   const onClickAdd = async () => {
     const newItems = [];
 

@@ -480,7 +480,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
   };
 }
 
-export function getMergedDataLayersFromDatasetAndVolumeTracings(
+function getMergedDataLayersFromDatasetAndVolumeTracings(
   dataset: APIDataset,
   tracings: Array<ServerVolumeTracing>,
 ): Array<APIDataLayer> {

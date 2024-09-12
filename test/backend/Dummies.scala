@@ -1,7 +1,7 @@
 package backend
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.UserDefinedProperties.UserDefinedPropertyProto
+import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, VolumeTracing}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.{BoundingBoxProto, ColorProto, Vec3DoubleProto, Vec3IntProto}
@@ -34,10 +34,10 @@ object Dummies {
     timestamp,
     None,
     Some(true),
-    userDefinedProperties = Seq(
-      UserDefinedPropertyProto("aKey", numberValue = Some(5.7)),
-      UserDefinedPropertyProto("anotherKey", boolValue = Some(true)),
-      UserDefinedPropertyProto("aThirdKey", stringListValue = Seq("multiple", "strings"))
+    metadata = Seq(
+      MetadataEntryProto("aKey", numberValue = Some(5.7)),
+      MetadataEntryProto("anotherKey", boolValue = Some(true)),
+      MetadataEntryProto("aThirdKey", stringListValue = Seq("multiple", "strings"))
     )
   )
 

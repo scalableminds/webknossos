@@ -5,7 +5,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.UserDefinedProperties.UserDefinedPropertyProto
+import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup}
 import com.scalableminds.webknossos.datastore.geometry._
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -300,13 +300,13 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           }
           s.color.foreach(_ => writeColor(s.color))
           s.groupId.foreach(groupId => writer.writeAttribute("groupId", groupId.toString))
-          s.userDefinedProperties.foreach(writeUserDefinedProperty)
+          s.metadata.foreach(writeMetadataEntry)
         }
       }
     }
 
-  private def writeUserDefinedProperty(p: UserDefinedPropertyProto)(implicit writer: XMLStreamWriter): Unit =
-    Xml.withinElementSync("userDefinedProperty") {
+  private def writeMetadataEntry(p: MetadataEntryProto)(implicit writer: XMLStreamWriter): Unit =
+    Xml.withinElementSync("metadataEntry") {
       writer.writeAttribute("key", p.key)
       p.stringValue.foreach { v =>
         writer.writeAttribute("stringValue", v)
@@ -341,7 +341,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         t.`type`.foreach(t => writer.writeAttribute("type", t.toString))
         Xml.withinElementSync("nodes")(writeNodesAsXml(t.nodes.sortBy(_.id)))
         Xml.withinElementSync("edges")(writeEdgesAsXml(t.edges))
-        t.userDefinedProperties.foreach(writeUserDefinedProperty)
+        t.metadata.foreach(writeMetadataEntry)
       }
     }
 
@@ -362,7 +362,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("interpolation", n.interpolation.toString)
         writer.writeAttribute("time", n.createdTimestamp.toString)
         n.additionalCoordinates.foreach(writeAdditionalCoordinateValue)
-        n.userDefinedProperties.foreach(writeUserDefinedProperty)
+        n.metadata.foreach(writeMetadataEntry)
       }
     }
 

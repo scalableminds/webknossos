@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.ExtendedTypes.{ExtendedDouble, ExtendedString}
 import com.scalableminds.util.tools.JsonHelper.bool2Box
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.UserDefinedProperties.UserDefinedPropertyProto
+import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.datastore.VolumeTracing.{Segment, SegmentGroup, VolumeTracing}
 import com.scalableminds.webknossos.datastore.geometry.{
   AdditionalAxisProto,
@@ -211,7 +211,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         case _                           => None
       }
       val anchorPositionAdditionalCoordinates = parseAdditionalCoordinateValues(node)
-      val userDefinedProperties = parseUserDefinedProperties(node \ "userDefinedProperty")
+      val metadata = parseMetadata(node \ "metadataEntry")
       Segment(
         segmentId = getSingleAttribute(node, "id").toLong,
         anchorPosition = anchorPosition,
@@ -220,13 +220,13 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         color = parseColorOpt(node),
         groupId = getSingleAttribute(node, "groupId").toIntOpt,
         anchorPositionAdditionalCoordinates = anchorPositionAdditionalCoordinates,
-        userDefinedProperties = userDefinedProperties
+        metadata = metadata
       )
     })
 
-  private def parseUserDefinedProperties(userDefinedPropertyNodes: NodeSeq): Seq[UserDefinedPropertyProto] =
-    userDefinedPropertyNodes.map(node => {
-      UserDefinedPropertyProto(
+  private def parseMetadata(metadataEntryNodes: NodeSeq): Seq[MetadataEntryProto] =
+    metadataEntryNodes.map(node => {
+      MetadataEntryProto(
         getSingleAttribute(node, "key"),
         getSingleAttributeOpt(node, "stringValue"),
         getSingleAttributeOpt(node, "boolValue").flatMap(_.toBooleanOpt),
@@ -444,7 +444,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       nodeIds = nodes.map(_.id)
       treeBranchPoints = nodeIds.flatMap(nodeId => branchPoints.getOrElse(nodeId, List()))
       treeComments = nodeIds.flatMap(nodeId => comments.getOrElse(nodeId, List()))
-      userDefinedProperties = parseUserDefinedProperties(tree \ "userDefinedProperty")
+      metadata = parseMetadata(tree \ "metadataEntry")
       createdTimestamp = if (nodes.isEmpty) System.currentTimeMillis()
       else nodes.minBy(_.createdTimestamp).createdTimestamp
     } yield
@@ -459,7 +459,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
            groupId,
            isVisible,
            treeType,
-           userDefinedProperties = userDefinedProperties)
+           metadata = metadata)
   }
 
   private def parseComments(comments: NodeSeq)(implicit m: MessagesProvider): Box[List[Comment]] =
@@ -545,7 +545,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       val bitDepth = parseBitDepth(node)
       val interpolation = parseInterpolation(node)
       val rotation = parseRotationForNode(node).getOrElse(NodeDefaults.rotation)
-      val userDefinedProperties = parseUserDefinedProperties(node \ "userDefinedProperty")
+      val metadata = parseMetadata(node \ "metadataEntry")
       Node(id,
            position,
            rotation,
@@ -556,7 +556,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
            interpolation,
            timestamp,
            additionalCoordinates,
-           userDefinedProperties = userDefinedProperties)
+           metadata = metadata)
     }
   }
 

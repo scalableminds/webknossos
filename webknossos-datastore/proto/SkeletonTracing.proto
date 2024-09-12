@@ -3,7 +3,7 @@ syntax = "proto2";
 package com.scalableminds.webknossos.datastore;
 
 import "geometry.proto";
-import "UserDefinedProperties.proto";
+import "MetadataEntry.proto";
 
 message Node {
     required int32 id = 1;
@@ -16,7 +16,7 @@ message Node {
     required bool interpolation = 8;
     required int64 createdTimestamp = 9;
     repeated AdditionalCoordinateProto additionalCoordinates = 10;
-    repeated UserDefinedPropertyProto userDefinedProperties = 11;
+    repeated MetadataEntryProto metadata = 11;
 }
 
 message Edge {
@@ -52,7 +52,7 @@ message Tree {
      optional bool isVisible = 10; // `None` means `true`
      optional TreeTypeProto type = 11;
      optional bool edgesAreVisible = 12; // `None` means `true`
-     repeated UserDefinedPropertyProto userDefinedProperties = 13;
+     repeated MetadataEntryProto metadata = 13;
 }
 
 message TreeGroup {

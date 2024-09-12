@@ -21,7 +21,7 @@ case class CreateTreeSkeletonAction(id: Int,
                                     info: Option[String] = None,
                                     `type`: Option[TreeType] = None,
                                     edgesAreVisible: Option[Boolean] = None,
-                                    userDefinedProperties: Option[Seq[UserDefinedProperty]] = None)
+                                    metadata: Option[Seq[MetadataEntry]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -38,7 +38,7 @@ case class CreateTreeSkeletonAction(id: Int,
       isVisible,
       `type`.map(TreeType.toProto),
       edgesAreVisible,
-      userDefinedProperties = UserDefinedProperty.toProtoMultiple(userDefinedProperties)
+      metadata = MetadataEntry.toProtoMultiple(metadata)
     )
     tracing.withTrees(newTree +: tracing.trees)
   }
@@ -76,7 +76,7 @@ case class UpdateTreeSkeletonAction(id: Int,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
                                     `type`: Option[TreeType] = None,
-                                    userDefinedProperties: Option[Seq[UserDefinedProperty]] = None)
+                                    metadata: Option[Seq[MetadataEntry]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing): SkeletonTracing = {
@@ -89,7 +89,7 @@ case class UpdateTreeSkeletonAction(id: Int,
         name = name,
         groupId = groupId,
         `type` = `type`.map(TreeType.toProto),
-        userDefinedProperties = UserDefinedProperty.toProtoMultiple(userDefinedProperties)
+        metadata = MetadataEntry.toProtoMultiple(metadata)
       )
 
     tracing.withTrees(mapTrees(tracing, id, treeTransform))
@@ -222,7 +222,7 @@ case class CreateNodeSkeletonAction(id: Int,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                                    userDefinedProperties: Option[Seq[UserDefinedProperty]] = None)
+                                    metadata: Option[Seq[MetadataEntry]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -239,7 +239,7 @@ case class CreateNodeSkeletonAction(id: Int,
       interpolation getOrElse NodeDefaults.interpolation,
       createdTimestamp = timestamp,
       additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates),
-      userDefinedProperties = UserDefinedProperty.toProtoMultiple(userDefinedProperties)
+      metadata = MetadataEntry.toProtoMultiple(metadata)
     )
 
     def treeTransform(tree: Tree) = tree.withNodes(newNode +: tree.nodes)
@@ -268,7 +268,7 @@ case class UpdateNodeSkeletonAction(id: Int,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None,
                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-                                    userDefinedProperties: Option[Seq[UserDefinedProperty]] = None)
+                                    metadata: Option[Seq[MetadataEntry]] = None)
     extends UpdateAction.SkeletonUpdateAction
     with SkeletonUpdateActionHelper
     with ProtoGeometryImplicits {
@@ -286,7 +286,7 @@ case class UpdateNodeSkeletonAction(id: Int,
       interpolation getOrElse NodeDefaults.interpolation,
       createdTimestamp = timestamp,
       additionalCoordinates = AdditionalCoordinate.toProto(additionalCoordinates),
-      userDefinedProperties = UserDefinedProperty.toProtoMultiple(userDefinedProperties)
+      metadata = MetadataEntry.toProtoMultiple(metadata)
     )
 
     def treeTransform(tree: Tree) =

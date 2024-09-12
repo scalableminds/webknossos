@@ -130,7 +130,7 @@ export type UserBoundingBoxWithoutId = {
 export type UserBoundingBox = UserBoundingBoxWithoutId & {
   id: number;
 };
-// Remember to also update Tree
+// When changing MutableTree, remember to also update Tree
 export type MutableTree = {
   treeId: number;
   groupId: number | null | undefined;
@@ -146,7 +146,7 @@ export type MutableTree = {
   edgesAreVisible: boolean;
   metadata: MetadataEntry[];
 };
-// Remember to also update MutableTree
+// When changing Tree, remember to also update MutableTree
 export type Tree = {
   readonly treeId: number;
   readonly groupId: number | null | undefined;

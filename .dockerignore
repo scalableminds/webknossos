@@ -1,4 +1,3 @@
 *
 !target/
 !webknossos-datastore/lib/
-!tools/postgres/node_modules

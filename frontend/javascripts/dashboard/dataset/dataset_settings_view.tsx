@@ -183,7 +183,7 @@ class DatasetSettingsView extends React.PureComponent<PropsWithFormAndRouter, St
       form.setFieldsValue({
         dataSourceJson: jsonStringify(dataSource),
         dataset: {
-          displayName: dataset.displayName || undefined,
+          name: dataset.name || undefined,
           isPublic: dataset.isPublic || false,
           description: dataset.description || undefined,
           allowedTeams: dataset.allowedTeams || [],

@@ -47,9 +47,7 @@ function getDisplayName(item: PublicationItem): string {
       ? "Unnamed annotation"
       : item.annotation.name;
   }
-  return item.dataset.displayName == null || item.dataset.displayName === ""
-    ? item.dataset.name
-    : item.dataset.displayName;
+  return item.dataset.name;
 }
 
 function getExtendedDetails(item: PublicationItem): ExtendedDatasetDetails {

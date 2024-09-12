@@ -148,7 +148,7 @@ const defaultState: OxalisState = {
     },
     owningOrganization: "",
     description: null,
-    displayName: "Loading",
+    path: "Loading",
     allowedTeams: [],
     allowedTeamsCumulative: [],
     logoUrl: null,

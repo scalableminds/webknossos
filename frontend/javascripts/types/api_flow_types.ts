@@ -196,7 +196,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   metadata: APIMetadataEntries | null | undefined;
   isEditable: boolean;
   isPublic: boolean;
-  displayName: string | null | undefined;
+  path: string;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
   sortingKey: number;
@@ -230,7 +230,7 @@ export type APIDatasetCompactWithoutStatusAndLayerNames = Pick<
   | "name"
   | "folderId"
   | "isActive"
-  | "displayName"
+  | "path"
   | "created"
   | "isEditable"
   | "lastUsedByUser"
@@ -255,7 +255,7 @@ export function convertDatasetToCompact(dataset: APIDataset): APIDatasetCompact 
     name: dataset.name,
     folderId: dataset.folderId,
     isActive: dataset.isActive,
-    displayName: dataset.displayName,
+    path: dataset.path,
     created: dataset.created,
     isEditable: dataset.isEditable,
     lastUsedByUser: dataset.lastUsedByUser,

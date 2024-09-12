@@ -237,14 +237,14 @@ class UserService @Inject()(conf: WkConf,
 
   def updateDatasetViewConfiguration(
       user: User,
-      datasetName: String,
+      datasetNameAndId: String,
       organizationId: String,
       datasetConfiguration: DatasetViewConfiguration,
       layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext) ?~> Messages(
+      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organizationId)(GlobalAccessContext) ?~> Messages(
         "dataset.notFound",
-        datasetName)
+        datasetNameAndId)
       layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
       _ <- Fox.serialCombined(layerMap.toList) {
         case (name, config) =>

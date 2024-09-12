@@ -127,7 +127,7 @@ function DatasetDetails({ selectedDataset }: { selectedDataset: APIDatasetCompac
         ) : (
           <FileOutlined style={{ marginRight: 4 }} />
         )}{" "}
-        {selectedDataset.displayName || selectedDataset.name}
+        {selectedDataset.name}
       </h4>
       {renderOrganization()}
       <Spin spinning={fullDataset == null}>

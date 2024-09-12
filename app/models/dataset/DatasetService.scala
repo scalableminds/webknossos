@@ -18,7 +18,7 @@ import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.{Box, Full, Empty}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
 import utils.{ObjectId, WkConf}
@@ -103,6 +103,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     for {
       organization <- organizationDAO.findOne(owningOrganization)
       organizationRootFolder <- folderDAO.findOne(organization._rootFolder)
+      isNewDatasetName <- assertNewDatasetName(dataSource.id.name, organization._id).futureBox.map {
+        case Empty => true
+        case _     => false
+      }
+      datasetPath = if (isNewDatasetName) dataSource.id.name else newId.toString
       dataset = Dataset(
         newId,
         dataStore.name,
@@ -114,7 +119,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         dataSource.defaultViewConfiguration,
         adminViewConfiguration = None,
         description = None,
-        displayName = None,
+        path = datasetPath,
         isPublic = false,
         isUsable = dataSource.isUsable,
         name = dataSource.id.name,
@@ -236,17 +241,17 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def deactivateUnreportedDataSources(existingDatasetIds: List[ObjectId], dataStore: DataStore): Fox[Unit] =
     datasetDAO.deactivateUnreported(existingDatasetIds, dataStore.name, unreportedStatus, inactiveStatusList)
 
-  def getSharingToken(datasetName: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[String] = {
+  def getSharingToken(datasetNameAndId: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[String] = {
 
-    def createAndSaveSharingToken(datasetName: String)(implicit ctx: DBAccessContext): Fox[String] =
+    def createAndSaveSharingToken(datasetNameAndId: String)(implicit ctx: DBAccessContext): Fox[String] =
       for {
         tokenValue <- new RandomIDGenerator().generate
-        _ <- datasetDAO.updateSharingTokenByName(datasetName, organizationId, Some(tokenValue))
+        _ <- datasetDAO.updateSharingTokenByIdOrName(datasetNameAndId, organizationId, Some(tokenValue))
       } yield tokenValue
 
-    datasetDAO.getSharingTokenByName(datasetName, organizationId).flatMap {
+    datasetDAO.getSharingTokenByIdOrName(datasetNameAndId, organizationId).flatMap {
       case Some(oldToken) => Fox.successful(oldToken)
-      case None           => createAndSaveSharingToken(datasetName)
+      case None           => createAndSaveSharingToken(datasetNameAndId)
     }
   }
 
@@ -358,6 +363,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         organizationDAO.getUsedStorageForDataset(dataset._id))
     } yield {
       Json.obj(
+        "id" -> dataset._id,
         "name" -> dataset.name,
         "dataSource" -> dataSource,
         "dataStore" -> dataStoreJs,
@@ -367,7 +373,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "isActive" -> dataset.isUsable,
         "isPublic" -> dataset.isPublic,
         "description" -> dataset.description,
-        "displayName" -> dataset.displayName,
+        "path" -> dataset.path,
         "created" -> dataset.created,
         "isEditable" -> isEditable,
         "lastUsedByUser" -> lastUsedByUser,

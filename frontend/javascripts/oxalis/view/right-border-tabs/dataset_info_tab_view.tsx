@@ -313,7 +313,6 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
   getDatasetName() {
     const {
       name: datasetName,
-      displayName,
       description: datasetDescription,
       owningOrganization,
     } = this.props.dataset;
@@ -342,7 +341,7 @@ export class DatasetInfoTabView extends React.PureComponent<Props, State> {
             }}
           >
             <Typography.Title level={5} style={{ display: "initial" }}>
-              {displayName || datasetName}
+              {datasetName}
             </Typography.Title>
             {getEditSettingsIcon()}
           </div>

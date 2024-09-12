@@ -117,7 +117,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       organization <- organizationDAO.findOne(dataset._organization)
     } yield
       OpenGraphTags(
-        Some(s"${dataset.displayName.getOrElse(datasetName)} | WEBKNOSSOS"),
+        Some(s"${dataset.name} | WEBKNOSSOS"),
         Some("View this dataset in WEBKNOSSOS"),
         thumbnailUri(dataset, layerOpt, organization, token)
       )
@@ -136,8 +136,8 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
           layerOpt = layers.find(_.category == Category.color)
         } yield
           OpenGraphTags(
-            Some(s"${annotation.nameOpt.orElse(dataset.displayName).getOrElse(dataset.name)} | WEBKNOSSOS"),
-            Some(s"View this annotation on dataset ${dataset.displayName.getOrElse(dataset.name)} in WEBKNOSSOS"),
+            Some(s"${annotation.nameOpt.getOrElse(dataset.name)} | WEBKNOSSOS"),
+            Some(s"View this annotation on dataset ${dataset.name} in WEBKNOSSOS"),
             thumbnailUri(dataset, layerOpt, organization, token)
           )
       case _ => Fox.failure("not a matching uri")

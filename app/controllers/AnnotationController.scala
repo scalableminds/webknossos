@@ -242,15 +242,15 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  def createExplorational(organizationId: String, datasetName: String): Action[List[AnnotationLayerParameters]] =
+  def createExplorational(organizationId: String, datasetNameAndId: String): Action[List[AnnotationLayerParameters]] =
     sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {
         organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           organizationId) ~> NOT_FOUND
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id) ?~> Messages(
+        dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organization._id) ?~> Messages(
           "dataset.notFound",
-          datasetName) ~> NOT_FOUND
+          datasetNameAndId) ~> NOT_FOUND
         annotation <- annotationService.createExplorationalFor(
           request.identity,
           dataset._id,
@@ -263,7 +263,7 @@ class AnnotationController @Inject()(
     }
 
   def getSandbox(organization: String,
-                 datasetName: String,
+                 datasetNameAndId: String,
                  typ: String,
                  sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
@@ -272,9 +272,9 @@ class AnnotationController @Inject()(
         organization <- organizationDAO.findOne(organization)(GlobalAccessContext) ?~> Messages(
           "organization.notFound",
           organization) ~> NOT_FOUND
-        dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organization._id)(ctx) ?~> Messages(
+        dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organization._id)(ctx) ?~> Messages(
           "dataset.notFound",
-          datasetName) ~> NOT_FOUND
+          datasetNameAndId) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox
         _ <- bool2Fox(tracingType == TracingType.skeleton) ?~> "annotation.sandbox.skeletonOnly"
         annotation = Annotation(

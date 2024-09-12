@@ -37,7 +37,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
 
   def getThumbnailWithCache(
       organizationId: String,
-      datasetName: String,
+      datasetNameAndId: String,
       layerName: String,
       w: Option[Int],
       h: Option[Int],
@@ -45,7 +45,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
     val width = com.scalableminds.util.tools.Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
     val height = com.scalableminds.util.tools.Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
+      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organizationId)(GlobalAccessContext)
       image <- thumbnailCachingService.getOrLoad(
         dataset._id,
         layerName,
@@ -53,13 +53,15 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
         height,
         mappingName,
         _ =>
-          getThumbnail(organizationId, datasetName, layerName, width, height, mappingName)(ec, GlobalAccessContext, mp)
+          getThumbnail(organizationId, datasetNameAndId, layerName, width, height, mappingName)(ec,
+                                                                                                GlobalAccessContext,
+                                                                                                mp)
       )
     } yield image
   }
 
   private def getThumbnail(organizationId: String,
-                           datasetName: String,
+                           datasetNameAndId: String,
                            layerName: String,
                            width: Int,
                            height: Int,
@@ -67,12 +69,12 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
                                                         ctx: DBAccessContext,
                                                         mp: MessagesProvider): Fox[Array[Byte]] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)
+      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organizationId)
       dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
       usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
       layer <- usableDataSource.dataLayers.find(_.name == layerName) ?~> Messages("dataLayer.notFound", layerName) ~> NOT_FOUND
       viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty,
-                                                                                             datasetName,
+                                                                                             datasetNameAndId,
                                                                                              organizationId)(ctx)
       (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt) = selectParameters(viewConfiguration,
                                                                                      usableDataSource,
@@ -182,9 +184,9 @@ class ThumbnailCachingService @Inject()(datasetDAO: DatasetDAO, thumbnailDAO: Th
         } yield fromDbOrNew
     )
 
-  def removeFromCache(organizationId: String, datasetName: String): Fox[Unit] =
+  def removeFromCache(organizationId: String, datasetNameAndId: String): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
+      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organizationId)(GlobalAccessContext)
       _ <- removeFromCache(dataset._id)
     } yield ()
 

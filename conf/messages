@@ -115,6 +115,7 @@ dataset.explore.failed.readFile=Failed to read remote file
 dataset.explore.magDtypeMismatch=Element class must be the same for all mags of a layer. Got {0}
 dataset.explore.autoAdd.failed=Failed to automatically import the explored dataset.
 dataset.additionalCoordinates.different=Additional coordinates differ in merged units.
+dataset.metadata.duplicateKeys=Metadata keys must be unique.
 
 dataVault.insert.failed=Failed to store remote file system credential
 dataVault.setup.failed=Failed to set up remote file system

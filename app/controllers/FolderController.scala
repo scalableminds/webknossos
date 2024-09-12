@@ -10,7 +10,7 @@ import models.user.UserService
 import play.api.libs.json.{JsArray, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
-import utils.ObjectId
+import utils.{MetadataAssertions, ObjectId}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -25,7 +25,8 @@ class FolderController @Inject()(
     organizationDAO: OrganizationDAO,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
-    with FoxImplicits {
+    with FoxImplicits
+    with MetadataAssertions {
 
   def getRoot: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
@@ -53,6 +54,7 @@ class FolderController @Inject()(
         _ <- folderDAO.findOne(idValidated) ?~> "folder.notFound"
         - <- Fox.assertTrue(folderDAO.isEditable(idValidated)) ?~> "folder.update.notAllowed" ~> FORBIDDEN
         _ <- folderService.assertValidFolderName(params.name)
+        _ <- assertNoDuplicateMetadataKeys(params.metadata)
         _ <- folderDAO.updateMetadata(idValidated, params.metadata)
         _ <- folderDAO.updateName(idValidated, params.name) ?~> "folder.update.name.failed"
         _ <- folderService

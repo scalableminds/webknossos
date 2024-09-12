@@ -1156,8 +1156,10 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
 }
 
 export function sanitizeMetadata(metadata: MetadataEntry[]) {
-  // todop: or should this happen in enforceValidMetadata when the update-actions for
-  // saving are crafted?
+  // Workaround for stringList values that are [], even though they
+  // should be null. This workaround is necessary because protobuf cannot
+  // distinguish between an empty list and an not existent property.
+  // Therefore, we clean this up here.
   return metadata.map((prop) => {
     // If stringList value is defined, but it's an empty array, it should
     // be switched to undefined

@@ -786,7 +786,9 @@ export type MetadataEntry = {
   stringValue?: string;
   boolValue?: boolean;
   numberValue?: number;
-  // todop: the server always sends an empty array
+  // Note that the server always sends an empty array currently,
+  // because of the protobuf format. However, for consistency within
+  // JS land, we mark it as nullable here.
   stringListValue?: string[];
 };
 type ServerSegment = {

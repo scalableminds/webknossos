@@ -128,7 +128,6 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntry[] }>({
             stringListValue:
               type === APIMetadataEnum.STRING_ARRAY ? (newValue as string[]) : undefined,
             numberValue: type === APIMetadataEnum.NUMBER ? (newValue as number) : undefined,
-            // todop: support bool?
           });
         }}
         availableStrArrayTagOptions={getUsedTagsWithinMetadata(itemMetadata)}

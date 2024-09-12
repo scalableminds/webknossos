@@ -980,7 +980,7 @@ export function parseNml(nmlString: string): Promise<{
             if (currentNode == null) {
               currentTree.metadata.push(parseMetadataEntry(attr));
             } else {
-              // todop: link follow-up issue for custom metadata in nodes
+              // TODO: Also support MetadataEntry in nodes. See #7483
             }
             break;
           }

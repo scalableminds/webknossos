@@ -40,16 +40,16 @@ jobs:
       - run:
           name: Prepare dependency folders
           command: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
-      - restore_cache:
-          name: Restore target cache
-          keys:
-            - target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
-            - target-cache-{{ checksum ".circleci/cache_version" }}-master
-      - restore_cache:
-          name: Restore sbt cache
-          keys:
-            - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
-            - sbt-cache-{{ checksum ".circleci/cache_version" }}-
+      # - restore_cache:
+      #     name: Restore target cache
+      #     keys:
+      #       - target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+      #       - target-cache-{{ checksum ".circleci/cache_version" }}-master
+      # - restore_cache:
+      #     name: Restore sbt cache
+      #     keys:
+      #       - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
+      #       - sbt-cache-{{ checksum ".circleci/cache_version" }}-
       - run:
           name: Install frontend dependencies
           command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable

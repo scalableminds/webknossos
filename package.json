@@ -2,7 +2,7 @@
   "name": "webknossos",
   "license": "AGPL-3.0",
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "repository": {
     "type": "git",
@@ -42,7 +42,7 @@
     "documentation": "^14.0.2",
     "domexception": "^2.0.1",
     "dpdm": "^3.14.0",
-    "esbuild": "^0.20",
+    "esbuild": "^0.23",
     "espree": "^3.5.4",
     "husky": "^9.1.5",
     "jsdoc": "^3.5.5",
@@ -57,6 +57,7 @@
     "pg": "^7.4.1",
     "pixelmatch": "^5.2.0",
     "pngjs": "^3.3.3",
+    "pnp-webpack-plugin": "^1.7.0",
     "proto-loader6": "^0.4.0",
     "puppeteer": "^19.7.2",
     "redux-mock-store": "^1.2.2",
@@ -71,15 +72,15 @@
     "webpack-dev-server": "^5.0.2"
   },
   "scripts": {
-    "start": "node tools/proxy/proxy.js",
-    "build": "node --max-old-space-size=4096 node_modules/.bin/webpack --env production",
+    "start": "yarn node tools/proxy/proxy.js",
+    "build": "yarn node --max-old-space-size=4096 node_modules/.bin/webpack --env production",
     "@comment build-backend": "Only check for errors in the backend code like done by the CI. This command is not needed to run WEBKNOSSOS",
     "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore && rm webknossos-tracingstore/conf/messages webknossos-datastore/conf/messages",
     "build-wk-backend": "sbt -no-colors -DfailOnWarning compile stage",
     "build-wk-datastore": "sbt -no-colors -DfailOnWarning \"project webknossosDatastore\" copyMessages compile stage",
     "build-wk-tracingstore": "sbt -no-colors -DfailOnWarning \"project webknossosTracingstore\" copyMessages compile stage",
-    "build-dev": "node_modules/.bin/webpack",
-    "build-watch": "node_modules/.bin/webpack -w",
+    "build-dev": "yarn webpack",
+    "build-watch": "yarn webpack -w",
     "listening": "lsof -i:5005,7155,9000,9001,9002",
     "kill-listeners": "kill -9 $(lsof -t -i:5005,7155,9000,9001,9002)",
     "rm-fossil-lock": "rm fossildb/data/LOCK",
@@ -157,7 +158,7 @@
     "deep-freeze": "0.0.1",
     "dice-coefficient": "^2.1.0",
     "distance-transform": "^1.0.2",
-    "esbuild-loader": "^4.1.0",
+    "esbuild-loader": "^4.2.2",
     "file-saver": "^2.0.1",
     "flexlayout-react": "0.7.15",
     "hammerjs": "^2.0.8",
@@ -232,5 +233,9 @@
     ],
     "reporter": "lcov"
   },
+  "workspaces": [
+    ".",
+    "tools/proxy"
+  ],
   "packageManager": "yarn@4.4.1"
 }

@@ -35,7 +35,7 @@ const processes = {
       shell: true,
     },
   ),
-  webpackDev: spawnIfNotSpecified("noWebpackDev", "node_modules/.bin/webpack-dev-server", [], {
+  webpackDev: spawnIfNotSpecified("noWebpackDev", "yarn webpack-dev-server", [], {
     cwd: ROOT,
     env: makeEnv(PORT + 2, HOST),
     shell: true,

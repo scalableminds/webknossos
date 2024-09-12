@@ -101,3 +101,4 @@ coverage-ts
 !.yarn/sdks
 !.yarn/versions
 tools/proxy/.yarn/*
+tools/postgres/.yarn/*

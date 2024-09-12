@@ -4299,7 +4299,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"commander@npm:^10.0.0, commander@npm:^10.0.1":
+"commander@npm:^10.0.1":
   version: 10.0.1
   resolution: "commander@npm:10.0.1"
   checksum: 10c0/53f33d8927758a911094adadda4b2cbac111a5b377d8706700587650fd8f45b0bbe336de4b5c3fe47fd61f420a3d9bd452b6e0e6e5600a7e74d7bf0174f6efe3
@@ -13841,7 +13841,6 @@ __metadata:
     classnames: "npm:^2.2.5"
     color-hash: "npm:^2.0.1"
     comlink: "npm:^4.3.0"
-    commander: "npm:^10.0.0"
     copy-webpack-plugin: "npm:^11.0.0"
     coveralls: "npm:^3.0.2"
     css-loader: "npm:^6.5.1"

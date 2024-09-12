@@ -275,13 +275,13 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           if (skipVolumeData) {
             writer.writeComment(f"Note that volume data was omitted when downloading this annotation.")
           }
-          writeVolumeSegmentMetadata(volumeTracing.segments)
+          writeVolumeSegmentInfos(volumeTracing.segments)
           Xml.withinElementSync("groups")(writeSegmentGroupsAsXml(volumeTracing.segmentGroups))
         case _ => ()
       }
     }
 
-  private def writeVolumeSegmentMetadata(segments: Seq[Segment])(implicit writer: XMLStreamWriter): Unit =
+  private def writeVolumeSegmentInfos(segments: Seq[Segment])(implicit writer: XMLStreamWriter): Unit =
     Xml.withinElementSync("segments") {
       segments.foreach { s =>
         Xml.withinElementSync("segment") {
@@ -300,7 +300,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
           }
           s.color.foreach(_ => writeColor(s.color))
           s.groupId.foreach(groupId => writer.writeAttribute("groupId", groupId.toString))
-          s.metadata.foreach(writeMetadataEntry)
+          if (s.metadata.nonEmpty)
+            Xml.withinElementSync("metadata")(s.metadata.foreach(writeMetadataEntry))
         }
       }
     }
@@ -341,7 +342,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         t.`type`.foreach(t => writer.writeAttribute("type", t.toString))
         Xml.withinElementSync("nodes")(writeNodesAsXml(t.nodes.sortBy(_.id)))
         Xml.withinElementSync("edges")(writeEdgesAsXml(t.edges))
-        t.metadata.foreach(writeMetadataEntry)
+        if (t.metadata.nonEmpty)
+          Xml.withinElementSync("metadata")(t.metadata.foreach(writeMetadataEntry))
       }
     }
 
@@ -362,7 +364,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext) extends FoxImplicits {
         writer.writeAttribute("interpolation", n.interpolation.toString)
         writer.writeAttribute("time", n.createdTimestamp.toString)
         n.additionalCoordinates.foreach(writeAdditionalCoordinateValue)
-        n.metadata.foreach(writeMetadataEntry)
+        if (n.metadata.nonEmpty)
+          Xml.withinElementSync("metadata")(n.metadata.foreach(writeMetadataEntry))
       }
     }
 

@@ -211,7 +211,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
         case _                           => None
       }
       val anchorPositionAdditionalCoordinates = parseAdditionalCoordinateValues(node)
-      val metadata = parseMetadata(node \ "metadataEntry")
+      val metadata = parseMetadata(node \ "metadata" \ "metadataEntry")
       Segment(
         segmentId = getSingleAttribute(node, "id").toLong,
         anchorPosition = anchorPosition,
@@ -444,7 +444,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       nodeIds = nodes.map(_.id)
       treeBranchPoints = nodeIds.flatMap(nodeId => branchPoints.getOrElse(nodeId, List()))
       treeComments = nodeIds.flatMap(nodeId => comments.getOrElse(nodeId, List()))
-      metadata = parseMetadata(tree \ "metadataEntry")
+      metadata = parseMetadata(tree \ "metadata" \ "metadataEntry")
       createdTimestamp = if (nodes.isEmpty) System.currentTimeMillis()
       else nodes.minBy(_.createdTimestamp).createdTimestamp
     } yield
@@ -545,7 +545,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits with ColorGener
       val bitDepth = parseBitDepth(node)
       val interpolation = parseInterpolation(node)
       val rotation = parseRotationForNode(node).getOrElse(NodeDefaults.rotation)
-      val metadata = parseMetadata(node \ "metadataEntry")
+      val metadata = parseMetadata(node \ "metadata" \ "metadataEntry")
       Node(id,
            position,
            rotation,

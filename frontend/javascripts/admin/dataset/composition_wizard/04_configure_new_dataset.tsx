@@ -89,10 +89,10 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
     }
     const layers = form.getFieldValue(["layers"]);
 
-    const uploadableDatastores = props.datastores.filter((datastore) => datastore.allowsUpload);
-    const datastoreToUse = uploadableDatastores[0];
+    // Don't check datastore.allowsUpdate for dataset composition
+    const datastoreToUse = props.datastores[0];
     if (!datastoreToUse) {
-      Toast.error("Could not find datastore that allows uploading.");
+      Toast.error("Could not find datastore for creating new dataset.");
       return;
     }
 

@@ -1,7 +1,7 @@
 import { DownOutlined, TagsOutlined } from "@ant-design/icons";
 import { Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import React, { memo, useCallback, useEffect, useRef, useState } from "react";
-import { AutoSizer } from "react-virtualized";
+import AutoSizer from "react-virtualized-auto-sizer";
 import { mapGroups } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeGroupAction,

@@ -39,7 +39,7 @@ import AdvancedSearchPopover from "../advanced_search_popover";
 import type { MenuProps } from "rc-menu";
 import type { Comparator } from "types/globals";
 import type { EventDataNode } from "antd/es/tree";
-import { AutoSizer } from "react-virtualized";
+import AutoSizer from "react-virtualized-auto-sizer";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { useLifecycle } from "beautiful-react-hooks";

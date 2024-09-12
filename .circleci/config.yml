@@ -13,7 +13,13 @@ jobs:
     steps:
       - run:
           name: "Clone Repository"
-          command: git clone --depth 5 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH" --no-tags .
+          command: |
+            if [ -n "$CIRCLE_BRANCH" ]; then
+              git clone --depth 5 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_BRANCH" --no-tags .
+            fi
+            if [ -n "$CIRCLE_TAG" ]; then
+              git clone --depth 5 "$CIRCLE_REPOSITORY_URL" --branch "$CIRCLE_TAG" .
+            fi
       - run:
           name: "Custom environment variables"
           command: |
@@ -33,25 +39,10 @@ jobs:
             DEV_CACHE=$NORMALIZED_BRANCH docker-compose build base
       - run:
           name: Prepare dependency folders
-          command: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier ~/.cache/yarn
-      - restore_cache:
-          name: Restore target cache
-          keys:
-            - target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
-            - target-cache-{{ checksum ".circleci/cache_version" }}-master
-      - restore_cache:
-          name: Restore sbt cache
-          keys:
-            - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
-            - sbt-cache-{{ checksum ".circleci/cache_version" }}-
-      - restore_cache:
-          name: Restore yarn cache
-          keys:
-            - yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
-            - yarn-cache-{{ checksum ".circleci/cache_version" }}-
+          command: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
       - run:
           name: Install frontend dependencies
-          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --frozen-lockfile
+          command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable
       - run:
           name: Assert unique evolution numbers
           command: docker-compose run base tools/postgres/dbtool.js assert-unique-evolution-numbers
@@ -89,26 +80,6 @@ jobs:
       - run:
           name: Checksum App Dirs
           command: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
-
-      - save_cache:
-          name: Save target cache
-          key: target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ checksum "app_checksum.txt" }}
-          paths:
-            - "project/target"
-            - "target"
-
-      - save_cache:
-          name: Save sbt cache
-          key: sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
-          paths:
-            - "~/.ivy2"
-            - "~/.cache/coursier"
-
-      - save_cache:
-          name: Save yarn cache
-          key: yarn-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "yarn.lock" }}
-          paths:
-            - "~/.cache/yarn"
 
       - run:
           name: Build webknossos docker image
@@ -255,7 +226,7 @@ jobs:
       - run:
           name: Install dependencies and sleep at least 3min
           command: |
-            yarn install --frozen-lockfile &
+            yarn install --immutable &
             sleep 180 &
             wait
       - run:
@@ -276,6 +247,15 @@ jobs:
       - store_artifacts:
           path: frontend/javascripts/test/snapshots/type-check
 
+      - run:
+          name: Bundle screenshots
+          when: always
+          command: |
+            tar -czvf screenshots.tar frontend/javascripts/test/screenshots
+
+      - store_artifacts:
+          path: screenshots.tar
+
   wkorg_nightly:
     docker:
       - image: scalableminds/puppeteer:master
@@ -285,7 +265,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            yarn install --frozen-lockfile
+            yarn install --immutable
 
       - run:
           name: Assert GZIP

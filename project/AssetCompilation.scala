@@ -25,7 +25,7 @@ object AssetCompilation {
     try {
       val exitValue = startProcess(
         yarnPath.value,
-        List("install", "--frozen-lockfile"),
+        List("install", "--immutable"),
         baseDirectory.value
       ) ! streams.value.log
       if (exitValue != 0)
@@ -82,21 +82,6 @@ object AssetCompilation {
       } catch {
         case e: Exception =>
           streams.value.log.error("Could not test database entries to stage dir: " + e.getMessage)
-      }
-
-      // copy node_modules for diff_schema.js
-      {
-        val nodeSrc = baseDirectory.value / "node_modules"
-        val nodeDest = target.value / "universal" / "stage" / "node_modules"
-        val tmpPath = baseDirectory.value / "tmp"
-        val streamsValue = streams.value.log
-
-        tmpPath.mkdirs
-        startProcess(yarnPath.value, List("init", "-y"), tmpPath) ! streamsValue
-        startProcess(yarnPath.value, List("add", (nodeSrc / "commander").getAbsolutePath), tmpPath) ! streamsValue
-        deleteRecursively(nodeDest)
-        copyRecursively(tmpPath / "node_modules", nodeDest)
-        deleteRecursively(tmpPath)
       }
 
     } dependsOn yarnInstall

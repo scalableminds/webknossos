@@ -110,7 +110,7 @@ import {
 import type RcTree from "rc-tree";
 import React, { type Key } from "react";
 import { connect, useSelector } from "react-redux";
-import { AutoSizer } from "react-virtualized";
+import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
 import type {
   APIDataset,

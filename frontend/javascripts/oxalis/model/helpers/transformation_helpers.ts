@@ -1,8 +1,8 @@
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
 import { M4x4 } from "libs/mjs";
 import TPS3D from "libs/thin_plate_spline";
-import { Matrix4x4 } from "mjs";
-import { Vector3, Vector4 } from "oxalis/constants";
+import type { Matrix4x4 } from "mjs";
+import type { Vector3, Vector4 } from "oxalis/constants";
 
 export function nestedToFlatMatrix(matrix: [Vector4, Vector4, Vector4, Vector4]): Matrix4x4 {
   return [...matrix[0], ...matrix[1], ...matrix[2], ...matrix[3]];
@@ -34,6 +34,7 @@ export function createAffineTransformFromMatrix(
 }
 
 export function createAffineTransform(source: Vector3[], target: Vector3[]): Transform {
+  /* Creates an affine transform that transforms from source points to target points. */
   const affineMatrix = estimateAffineMatrix4x4(source, target);
 
   return {
@@ -43,11 +44,20 @@ export function createAffineTransform(source: Vector3[], target: Vector3[]): Tra
   };
 }
 
+export function checkLandmarksForThinPlateSpline(source: Vector3[], target: Vector3[]) {
+  // Strictly speaking, the TPS transform is not needed here, because it will
+  // be created when the actual dataset is opened. However, if the landmarks
+  // cannot be loaded into a TPS (e.g., because the landmarks are planar and
+  // affine estimation will crash), we want to detect this here automatically.
+  createThinPlateSplineTransform(source, target, [1, 1, 1]);
+}
+
 export function createThinPlateSplineTransform(
   source: Vector3[],
   target: Vector3[],
   scale: Vector3,
 ): Transform {
+  /* Creates a TPS that transforms from source points to target points. */
   const affineMatrix = estimateAffineMatrix4x4(source, target);
   const affineMatrixInv = estimateAffineMatrix4x4(target, source);
 

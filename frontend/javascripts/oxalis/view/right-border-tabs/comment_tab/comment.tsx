@@ -1,5 +1,5 @@
 import { Popover } from "antd";
-import * as React from "react";
+import type * as React from "react";
 
 import classNames from "classnames";
 import { MarkdownWrapper } from "oxalis/view/components/markdown_modal";

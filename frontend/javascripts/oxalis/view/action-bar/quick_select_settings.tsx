@@ -5,15 +5,21 @@ import {
 } from "oxalis/model/actions/volumetracing_actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import { useDispatch, useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import React from "react";
 import defaultState from "oxalis/default_state";
 import Shortcut from "libs/shortcut_component";
-import { Radio, RadioChangeEvent } from "antd";
+import { Radio, type RadioChangeEvent } from "antd";
 import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
 import ButtonComponent from "../components/button_component";
 import { showQuickSelectSettingsAction } from "oxalis/model/actions/ui_actions";
 import features from "features";
+import FastTooltip from "components/fast_tooltip";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+
+// The maximum depth of 16 also needs to be adapted in the back-end
+// (at the time of writing, in segmentAnythingMask in DatasetController.scala).
+const MAX_DEPTH_FOR_SAM = 16;
 
 const OPTIONS_WITH_DISABLED = [
   { label: "Dark Segment", value: "dark" },
@@ -48,11 +54,30 @@ export function AiQuickSelectControls() {
 
   return (
     <div>
+      <div style={{ position: "absolute", right: 4, top: 4 }}>
+        <FastTooltip
+          placement="right-start"
+          dynamicRenderer={() => (
+            <div style={{ maxWidth: 400 }}>
+              <p>
+                The AI-based Quick Select feature can be used by clicking on a cell or by drawing a
+                rectangle around a cell. By configuring the prediction depth, multiple sections can
+                be segmented at once.
+              </p>
+              <p>
+                Hint: If the predicted selection is too big, zoom in a bit further and try again.
+              </p>
+            </div>
+          )}
+        >
+          <QuestionCircleOutlined />
+        </FastTooltip>
+      </div>
       <NumberSliderSetting
         label="Prediction Depth"
         min={1}
         value={quickSelectConfig.predictionDepth || 1}
-        max={5}
+        max={MAX_DEPTH_FOR_SAM}
         step={1}
         onChange={onChangePredictionDepth}
       />

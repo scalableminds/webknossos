@@ -4,11 +4,11 @@ import type { Action } from "oxalis/model/actions/actions";
 import { setBusyBlockingInfoAction } from "oxalis/model/actions/ui_actions";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { select } from "oxalis/model/sagas/effect-generators";
-import { ActiveMappingInfo, VolumeTracing } from "oxalis/store";
+import type { ActiveMappingInfo, VolumeTracing } from "oxalis/store";
 import { call, put, takeEvery } from "typed-redux-saga";
 import Toast from "libs/toast";
 import { Store } from "oxalis/singletons";
-import { ActionPattern } from "@redux-saga/types";
+import type { ActionPattern } from "@redux-saga/types";
 import { setMappingIsLockedAction } from "../actions/volumetracing_actions";
 import { MappingStatusEnum } from "oxalis/constants";
 
@@ -78,7 +78,7 @@ export function askUserForLockingActiveMapping(
         cancelText: "Abort Annotation Action",
         width: 600,
         onOk: lockMapping,
-        onCancel: async () => {
+        onCancel: () => {
           reject({ isMappingLockedIfNeeded: false, reason: "User aborted." });
         },
       });

@@ -13,6 +13,7 @@ import {
   handleClickSegment,
 } from "oxalis/controller/combinations/segmentation_handlers";
 import {
+  computeQuickSelectForPointAction,
   computeQuickSelectForRectAction,
   confirmQuickSelectAction,
   hideBrushAction,
@@ -21,12 +22,12 @@ import { isBrushTool } from "oxalis/model/accessors/tool_accessor";
 import getSceneController from "oxalis/controller/scene_controller_provider";
 import { finishedResizingUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import * as MoveHandlers from "oxalis/controller/combinations/move_handlers";
-import PlaneView from "oxalis/view/plane_view";
+import type PlaneView from "oxalis/view/plane_view";
 import * as SkeletonHandlers from "oxalis/controller/combinations/skeleton_handlers";
 import {
   createBoundingBoxAndGetEdges,
   handleMovingBoundingBox,
-  SelectedEdge,
+  type SelectedEdge,
 } from "oxalis/controller/combinations/bounding_box_handlers";
 import {
   getClosestHoveredBoundingBox,
@@ -52,7 +53,8 @@ import {
   setIsMeasuringAction,
   setActiveUserBoundingBoxId,
 } from "oxalis/model/actions/ui_actions";
-import ArbitraryView from "oxalis/view/arbitrary_view";
+import type ArbitraryView from "oxalis/view/arbitrary_view";
+import features from "features";
 
 export type ActionDescriptor = {
   leftClick?: string;
@@ -127,8 +129,12 @@ export class MoveTool {
           if (SkeletonHandlers.handleSelectNode(planeView, pos, plane, isTouch)) {
             return;
           }
+          const clickedEdge = getClosestHoveredBoundingBox(pos, planeId);
+          if (clickedEdge) {
+            Store.dispatch(setActiveUserBoundingBoxId(clickedEdge[0].boxId));
+            return;
+          }
         }
-
         handleClickSegment(pos);
       },
       middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
@@ -140,7 +146,18 @@ export class MoveTool {
         MoveHandlers.setMousePosition(center);
         MoveHandlers.zoom(delta, true);
       },
-      mouseMove: MoveHandlers.moveWhenAltIsPressed,
+      mouseMove: (delta: Point2, position: Point2, _id: any, event: MouseEvent) => {
+        MoveHandlers.moveWhenAltIsPressed(delta, position, _id, event);
+        if (planeId !== OrthoViews.TDView) {
+          const hoveredEdgesInfo = getClosestHoveredBoundingBox(position, planeId);
+          if (hoveredEdgesInfo) {
+            const [primaryEdge] = hoveredEdgesInfo;
+            getSceneController().highlightUserBoundingBox(primaryEdge.boxId);
+          } else {
+            getSceneController().highlightUserBoundingBox(null);
+          }
+        }
+      },
       out: () => {
         MoveHandlers.setMousePosition(null);
       },
@@ -725,6 +742,19 @@ export class QuickSelectTool {
         currentPos = newCurrentPos;
 
         quickSelectGeometry.setCoordinates(startPos, currentPos);
+      },
+      leftClick: (pos: Point2, _plane: OrthoView, _event: MouseEvent, _isTouch: boolean) => {
+        const state = Store.getState();
+        const clickedPos = V3.floor(calculateGlobalPos(state, pos));
+        isDragging = false;
+
+        const quickSelectConfig = state.userConfiguration.quickSelect;
+        const isAISelectAvailable = features().segmentAnythingEnabled;
+        const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
+
+        if (!isQuickSelectHeuristic) {
+          Store.dispatch(computeQuickSelectForPointAction(clickedPos, quickSelectGeometry));
+        }
       },
       rightClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         SkeletonHandlers.handleOpenContextMenu(planeView, pos, plane, isTouch, event);

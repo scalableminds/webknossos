@@ -19,10 +19,10 @@ import {
 import Store from "oxalis/throttled_store";
 import { api } from "oxalis/singletons";
 import messages from "messages";
-import { UnregisterHandler } from "oxalis/api/api_latest";
-import { Action } from "oxalis/model/actions/actions";
-import { CreateNodeAction } from "./model/actions/skeletontracing_actions";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { UnregisterHandler } from "oxalis/api/api_latest";
+import type { Action } from "oxalis/model/actions/actions";
+import type { CreateNodeAction } from "./model/actions/skeletontracing_actions";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 type MergerModeState = {
   treeIdToRepresentativeSegmentId: Record<number, number | null | undefined>;
@@ -99,7 +99,7 @@ function getAllNodesWithTreeId(): Array<NodeWithTreeId> {
   const nodes: Array<NodeWithTreeId> = [];
   // Create an array of all nodes, but with the additional treeId Property
   Object.keys(trees).forEach((treeId) => {
-    const currentTreeId = parseInt(treeId);
+    const currentTreeId = Number.parseInt(treeId);
     const currentTree = trees[currentTreeId];
 
     for (const node of currentTree.nodes.values()) {

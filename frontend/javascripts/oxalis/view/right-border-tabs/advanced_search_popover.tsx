@@ -1,4 +1,4 @@
-import { Input, Tooltip, Popover, Space, InputRef } from "antd";
+import { Input, Tooltip, Popover, Space, type InputRef } from "antd";
 import { DownOutlined, UpOutlined } from "@ant-design/icons";
 import * as React from "react";
 import memoizeOne from "memoize-one";

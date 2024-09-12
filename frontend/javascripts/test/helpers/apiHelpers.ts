@@ -1,10 +1,8 @@
 // @ts-nocheck
 import { createNanoEvents } from "nanoevents";
-import { ExecutionContext } from "ava";
-import Maybe from "data.maybe";
+import type { ExecutionContext } from "ava";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
-import { type Tracing, type VolumeTracing } from "oxalis/store";
 import { sleep } from "libs/utils";
 import mockRequire from "mock-require";
 import sinon from "sinon";
@@ -151,13 +149,6 @@ setStore(Store);
 setupApi();
 startSagas(rootSaga);
 
-export function getFirstVolumeTracingOrFail(tracing: Tracing): Maybe<VolumeTracing> {
-  if (tracing.volumes.length > 0) {
-    return Maybe.Just(tracing.volumes[0]);
-  }
-
-  throw new Error("Annotation is not of type volume!");
-}
 const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
 let counter = 0;
@@ -180,7 +171,7 @@ export function __setupOxalis(
   };
   t.context.setSlowCompression = setSlowCompression;
   const webknossos = new OxalisApi(Model);
-  const organizationName = "Connectomics Department";
+  const organizationId = "Connectomics Department";
   const ANNOTATION = modelData[mode].annotation;
   Request.receiveJSON
     .withArgs(
@@ -203,7 +194,7 @@ export function __setupOxalis(
     )
     .returns(Promise.resolve({}));
   Request.receiveJSON
-    .withArgs(`/api/datasets/${organizationName}/${ANNOTATION.dataSetName}`) // Right now, initializeDataset() in model_initialization mutates the dataset to add a new
+    .withArgs(`/api/datasets/${organizationId}/${ANNOTATION.dataSetName}`) // Right now, initializeDataset() in model_initialization mutates the dataset to add a new
     // volume layer. Since this mutation should be isolated between different tests, we have to make
     // sure that each receiveJSON call returns its own clone. Without the following "onCall" line,
     // each __setupOxalis call would overwrite the current stub to receiveJSON.

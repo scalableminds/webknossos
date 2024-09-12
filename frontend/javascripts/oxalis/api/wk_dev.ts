@@ -1,10 +1,33 @@
 import { Store } from "oxalis/singletons";
-import { Vector3 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
 import type ApiLoader from "./api_loader";
-import { type ApiInterface } from "./api_latest";
+import type { ApiInterface } from "./api_latest";
 import showFpsMeter from "libs/fps_meter";
+
+// Can be accessed via window.webknossos.DEV.flags. Only use this
+// for debugging or one off scripts.
+export const WkDevFlags = {
+  sam: {
+    useLocalMask: true,
+  },
+  bucketDebugging: {
+    // For visualizing buckets which are passed to the GPU
+    visualizeBucketsOnGPU: false,
+    // For visualizing buckets which are prefetched
+    visualizePrefetchedBuckets: false,
+    // For enforcing fallback rendering. enforcedZoomDiff == 2, means
+    // that buckets of currentZoomStep + 2 are rendered.
+    enforcedZoomDiff: undefined,
+  },
+  meshing: {
+    marchingCubeSizeInTargetMag: [64, 64, 64] as Vector3,
+  },
+  datasetComposition: {
+    allowThinPlateSplines: false,
+  },
+};
 
 export default class WkDev {
   /*
@@ -14,6 +37,8 @@ export default class WkDev {
    */
   apiLoader: ApiLoader;
   _api!: ApiInterface;
+
+  flags = WkDevFlags;
 
   constructor(apiLoader: ApiLoader) {
     this.apiLoader = apiLoader;

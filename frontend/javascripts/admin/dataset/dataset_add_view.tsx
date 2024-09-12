@@ -1,6 +1,6 @@
 import type { RouteComponentProps } from "react-router-dom";
 import { withRouter } from "react-router-dom";
-import { Tabs, Modal, Button, Layout, TabsProps } from "antd";
+import { Tabs, Modal, Button, Layout, type TabsProps } from "antd";
 import { CopyOutlined, DatabaseOutlined, UploadOutlined } from "@ant-design/icons";
 import React, { useState } from "react";
 import { connect, useSelector } from "react-redux";
@@ -13,7 +13,7 @@ import features from "features";
 import { getDatastores } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import DatasetAddComposeView from "./dataset_add_compose_view";
-import { History } from "history";
+import type { History } from "history";
 
 const { Content, Sider } = Layout;
 

@@ -8,7 +8,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { finishMappingInitializationAction } from "oxalis/model/actions/settings_actions";
 import type { Mapping, NumberLike } from "oxalis/store";
 import Store from "oxalis/store";
-import UpdatableTexture from "libs/UpdatableTexture";
+import type UpdatableTexture from "libs/UpdatableTexture";
 import { CuckooTableUint64 } from "libs/cuckoo/cuckoo_table_uint64";
 import { CuckooTableUint32 } from "libs/cuckoo/cuckoo_table_uint32";
 import { message } from "antd";

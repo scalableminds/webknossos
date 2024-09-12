@@ -4,13 +4,13 @@ import * as React from "react";
 import * as THREE from "three";
 import { InputMouse } from "libs/input";
 import {
-  AnnotationTool,
+  type AnnotationTool,
   AnnotationToolEnum,
-  OrthoView,
+  type OrthoView,
   OrthoViews,
-  OrthoViewMap,
-  Point2,
-  Vector3,
+  type OrthoViewMap,
+  type Point2,
+  type Vector3,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -28,14 +28,14 @@ import {
 import { getActiveNode, getNodePosition } from "oxalis/model/accessors/skeletontracing_accessor";
 import { voxelToUnit } from "oxalis/model/scaleinfo";
 import CameraController from "oxalis/controller/camera_controller";
-import PlaneView from "oxalis/view/plane_view";
+import type PlaneView from "oxalis/view/plane_view";
 import type { CameraData, OxalisState, Tracing } from "oxalis/store";
 import Store from "oxalis/store";
 import TrackballControls from "libs/trackball_controls";
 import * as Utils from "libs/utils";
 import { ProofreadTool, SkeletonTool } from "oxalis/controller/combinations/tool_controls";
 import { handleOpenContextMenu } from "oxalis/controller/combinations/skeleton_handlers";
-import { VoxelSize } from "types/api_flow_types";
+import type { VoxelSize } from "types/api_flow_types";
 import { setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveSegmentationTracing } from "oxalis/model/accessors/volumetracing_accessor";
 

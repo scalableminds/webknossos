@@ -44,11 +44,14 @@ class DSRemoteTracingstoreClient @Inject()(
   def getVolumeLayerAsZarrLayer(tracingId: String,
                                 tracingName: Option[String],
                                 tracingStoreUri: String,
-                                token: Option[String]): Fox[ZarrSegmentationLayer] =
-    rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/zarrSource")
+                                token: Option[String],
+                                zarrVersion: Int): Fox[ZarrSegmentationLayer] = {
+    val zarrVersionDependantSubPath = getZarrVersionDependantSubPath(zarrVersion)
+    rpc(s"$tracingStoreUri/tracings/volume/$zarrVersionDependantSubPath/$tracingId/zarrSource")
       .addQueryStringOptional("token", token)
       .addQueryStringOptional("tracingName", tracingName)
       .getWithJsonResponse[ZarrSegmentationLayer]
+  }
 
   def getOmeNgffHeader(tracingId: String, tracingStoreUri: String, token: Option[String]): Fox[NgffMetadata] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/.zattrs")

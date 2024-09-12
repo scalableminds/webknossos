@@ -1,7 +1,7 @@
 import { Button, Modal, Avatar, List, Spin, Checkbox, Alert } from "antd";
 import { FileOutlined, InboxOutlined } from "@ant-design/icons";
 import { connect } from "react-redux";
-import Dropzone, { DropzoneInputProps } from "react-dropzone";
+import Dropzone, { type DropzoneInputProps } from "react-dropzone";
 import * as React from "react";
 import prettyBytes from "pretty-bytes";
 import type { Dispatch } from "redux";

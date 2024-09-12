@@ -1,4 +1,4 @@
-import { Dropdown, Tooltip, Space, Tree as AntdTree, TreeProps, GetRef } from "antd";
+import { Dropdown, Tooltip, Space, Tree as AntdTree, type TreeProps, type GetRef } from "antd";
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
@@ -37,9 +37,9 @@ import type {
 import messages from "messages";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import type { MenuProps } from "rc-menu";
-import { Comparator } from "types/globals";
-import { EventDataNode } from "antd/es/tree";
-import { AutoSizer } from "react-virtualized";
+import type { Comparator } from "types/globals";
+import type { EventDataNode } from "antd/es/tree";
+import AutoSizer from "react-virtualized-auto-sizer";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
 import { useLifecycle } from "beautiful-react-hooks";
@@ -103,6 +103,7 @@ function CommentTabView(props: Props) {
   const [collapsedTreeIds, setCollapsedTreeIds] = useState<React.Key[]>([]);
   const [highlightedNodeIds, setHighlightedNodeIds] = useState<React.Key[]>([]);
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
+  const [isVisibleInDom, setIsVisibleInDom] = useState(true);
 
   const [keyboard, setKeyboard] = useState<InputKeyboard | null>(null);
   const nextCommentRef = useRef<(arg0?: boolean) => void>();
@@ -159,8 +160,10 @@ function CommentTabView(props: Props) {
   useEffect(() => {
     // If the activeNode has a comment, scroll to it,
     // otherwise scroll to the activeTree
-    scrollToActiveCommentOrTree(activeComment, props.skeletonTracing.activeTreeId);
-  }, [activeComment, props.skeletonTracing.activeTreeId]);
+    if (isVisibleInDom) {
+      scrollToActiveCommentOrTree(activeComment, props.skeletonTracing.activeTreeId);
+    }
+  }, [activeComment, props.skeletonTracing.activeTreeId, isVisibleInDom]);
 
   function scrollToActiveCommentOrTree(
     activeComment: MutableCommentType | undefined,
@@ -177,13 +180,13 @@ function CommentTabView(props: Props) {
       if (treeRef.current)
         if (activeComment) {
           const commentNodeKey = `comment-${activeComment.nodeId}`;
-          treeRef.current.scrollTo({ key: commentNodeKey, align: "auto" });
+          treeRef.current.scrollTo({ key: commentNodeKey, align: "top" });
           setHighlightedNodeIds([commentNodeKey]);
         } else if (activeTreeId) {
           const treeNodeKey = activeTreeId.toString();
           treeRef.current.scrollTo({
             key: treeNodeKey,
-            align: "auto",
+            align: "top",
           });
           setHighlightedNodeIds([treeNodeKey]);
         }
@@ -430,7 +433,12 @@ function CommentTabView(props: Props) {
         height: "inherit",
       }}
     >
-      <DomVisibilityObserver targetId={commentTabId}>
+      <DomVisibilityObserver
+        targetId={commentTabId}
+        onChange={(isVisible) => {
+          setIsVisibleInDom(isVisible);
+        }}
+      >
         {(isVisibleInDom) => {
           if (!isVisibleInDom && !isMarkdownModalOpen) {
             return null;

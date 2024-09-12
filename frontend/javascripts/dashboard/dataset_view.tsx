@@ -36,7 +36,7 @@ import FormattedDate from "components/formatted_date";
 import { TOOLTIP_MESSAGES_AND_ICONS } from "admin/job/job_list_view";
 import { Unicode } from "oxalis/constants";
 import { RenderToPortal } from "oxalis/view/layouting/portal_utils";
-import { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
+import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
   MINIMUM_SEARCH_QUERY_LENGTH,
   SEARCH_RESULTS_LIMIT,
@@ -44,8 +44,8 @@ import {
 } from "./dataset/queries";
 import { PricingEnforcedButton } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { MenuProps } from "rc-menu";
-import { ItemType } from "antd/lib/menu/hooks/useItems";
+import type { MenuProps } from "rc-menu";
+import type { ItemType } from "antd/es/menu/interface";
 
 type Props = {
   user: APIUser;

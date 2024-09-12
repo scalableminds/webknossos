@@ -3,12 +3,12 @@ import ops from "ndarray-ops";
 import moments from "ndarray-moments";
 import {
   ContourModeEnum,
-  OrthoView,
-  OrthoViewWithoutTD,
-  OverwriteMode,
-  TypedArrayWithoutBigInt,
-  Vector2,
-  Vector3,
+  type OrthoView,
+  type OrthoViewWithoutTD,
+  type OverwriteMode,
+  type TypedArrayWithoutBigInt,
+  type Vector2,
+  type Vector3,
 } from "oxalis/constants";
 import PriorityQueue from "js-priority-queue";
 
@@ -21,10 +21,11 @@ import {
   getSegmentationLayerForTracing,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import {
-  CancelQuickSelectAction,
-  ComputeQuickSelectForRectAction,
-  ConfirmQuickSelectAction,
-  FineTuneQuickSelectAction,
+  type CancelQuickSelectAction,
+  type ComputeQuickSelectForPointAction,
+  type ComputeQuickSelectForRectAction,
+  type ConfirmQuickSelectAction,
+  type FineTuneQuickSelectAction,
   finishAnnotationStrokeAction,
   registerLabelPointAction,
   updateSegmentAction,
@@ -34,19 +35,23 @@ import { api } from "oxalis/singletons";
 import ndarray from "ndarray";
 import morphology from "ball-morphology";
 import Toast from "libs/toast";
-import {
+import type {
   DatasetLayerConfiguration,
   OxalisState,
   QuickSelectConfig,
   VolumeTracing,
 } from "oxalis/store";
-import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import type { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { clamp, map3, take2 } from "libs/utils";
-import { APIDataLayer, APIDataset } from "types/api_flow_types";
+import type { APIDataLayer, APIDataset } from "types/api_flow_types";
 import { sendAnalyticsEvent } from "admin/admin_rest_api";
 import { copyNdArray } from "./volume/volume_interpolation_saga";
 import { createVolumeLayer, labelWithVoxelBuffer2D } from "./volume/helpers";
-import { EnterAction, EscapeAction, showQuickSelectSettingsAction } from "../actions/ui_actions";
+import {
+  type EnterAction,
+  type EscapeAction,
+  showQuickSelectSettingsAction,
+} from "../actions/ui_actions";
 import {
   getDefaultValueRangeOfLayer,
   getEnabledColorLayers,
@@ -54,7 +59,7 @@ import {
   getResolutionInfo,
   getTransformsForLayer,
 } from "../accessors/dataset_accessor";
-import Dimensions, { DimensionIndices } from "../dimensions";
+import Dimensions, { type DimensionIndices } from "../dimensions";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
 import { updateUserSettingAction } from "../actions/settings_actions";
 
@@ -72,7 +77,9 @@ const warnAboutMultipleColorLayers = _.memoize((layerName: string) => {
 
 let wasPreviewModeToastAlreadyShown = false;
 
-export function* prepareQuickSelect(action: ComputeQuickSelectForRectAction): Saga<{
+export function* prepareQuickSelect(
+  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction,
+): Saga<{
   labeledZoomStep: number;
   firstDim: DimensionIndices;
   secondDim: DimensionIndices;
@@ -162,9 +169,11 @@ export function* prepareQuickSelect(action: ComputeQuickSelectForRectAction): Sa
   };
 }
 
-export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
+export default function* performQuickSelect(
+  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction,
+): Saga<void> {
   const preparation = yield* call(prepareQuickSelect, action);
-  if (preparation == null) {
+  if (preparation == null || action.type === "COMPUTE_QUICK_SELECT_FOR_POINT") {
     return;
   }
   const {
@@ -639,7 +648,7 @@ function getThresholdField(
 
   // extremeThreshold is either the min or maximum value
   // of all seen values at the current time.
-  let extremeThreshold = mode === "dark" ? 0 : Infinity;
+  let extremeThreshold = mode === "dark" ? 0 : Number.POSITIVE_INFINITY;
   const extremeFn = mode === "dark" ? Math.max : Math.min;
   while (queue.length > 0) {
     const { coords, threshold } = queue.dequeue();

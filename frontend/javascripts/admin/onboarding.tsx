@@ -14,7 +14,7 @@ import {
   PlusOutlined,
   UserAddOutlined,
 } from "@ant-design/icons";
-import { Link, RouteComponentProps, withRouter } from "react-router-dom";
+import { Link, type RouteComponentProps, withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import type { APIUser, APIDataStore } from "types/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -38,7 +38,7 @@ type Props = StateProps & RouteComponentProps;
 type State = {
   currentStep: number;
   datastores: Array<APIDataStore>;
-  organizationName: string;
+  organizationId: string;
   datasetNameToImport: string | null | undefined;
   isDatasetUploadModalVisible: boolean;
   isInviteModalVisible: boolean;
@@ -216,14 +216,14 @@ export function OptionCard({ icon, header, children, action, height }: OptionCar
 }
 
 export function InviteUsersModal({
-  organizationName,
+  organizationId,
   isOpen,
   handleVisibleChange,
   destroy,
   currentUserCount = 1,
   maxUserCountPerOrganization = maxInludedUsersInBasicPlan, // default for Basic Plan,
 }: {
-  organizationName: string;
+  organizationId: string;
   isOpen?: boolean;
   handleVisibleChange?: (...args: Array<any>) => any;
   destroy?: (...args: Array<any>) => any;
@@ -258,7 +258,7 @@ export function InviteUsersModal({
         description="Inviting more users will exceed your organization's user limit. Consider upgrading your WEBKNOSSOS plan."
         style={{ marginBottom: 10 }}
         action={
-          <Link to={`/organizations/${organizationName}`}>
+          <Link to={`/organizations/${organizationId}`}>
             <Button size="small" type="primary">
               Upgrade Now
             </Button>
@@ -328,7 +328,7 @@ const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) =
 
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'values' implicitly has an 'any' type.
   const onFinish = (values) => {
-    onComplete(values.organizationName);
+    onComplete(values.organizationId);
   };
 
   return (
@@ -336,7 +336,7 @@ const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) =
       onFinish={onFinish}
       form={form}
       initialValues={{
-        organizationName: "",
+        organizationId: "",
       }}
     >
       <Row
@@ -358,7 +358,7 @@ const OrganizationForm = ({ onComplete }: { onComplete: (args: any) => void }) =
                 message: "Please enter an organization name!",
               },
             ]}
-            name="organizationName"
+            name="organizationId"
           >
             <AutoComplete
               size="large"
@@ -392,7 +392,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   state: State = {
     currentStep: 0,
     datastores: [],
-    organizationName: "",
+    organizationId: "",
     isDatasetUploadModalVisible: false,
     isInviteModalVisible: false,
     datasetNameToImport: null,
@@ -433,9 +433,9 @@ class OnboardingView extends React.PureComponent<Props, State> {
       icon={<i className="far fa-building icon-big" />}
     >
       <OrganizationForm
-        onComplete={(organizationName) => {
+        onComplete={(organizationId) => {
           this.setState({
-            organizationName,
+            organizationId,
           });
           this.advanceStep();
         }}
@@ -456,7 +456,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
     >
       <RegistrationFormGeneric
         hidePrivacyStatement
-        organizationNameToCreate={this.state.organizationName}
+        organizationIdToCreate={this.state.organizationId}
         onRegistered={() => {
           // Update the entered organization to the normalized name of the organization received by the backend.
           // This is needed for further requests.
@@ -464,7 +464,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
 
           if (activeUser) {
             this.setState({
-              organizationName: activeUser.organization,
+              organizationId: activeUser.organization,
             });
             // A user can only see the available datastores when he is logged in.
             // Thus we can fetch the datastores only after the registration.
@@ -523,7 +523,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             isEditingMode={false}
             datasetId={{
               name: this.state.datasetNameToImport || "",
-              owningOrganization: this.state.organizationName || "",
+              owningOrganization: this.state.organizationId || "",
             }}
             onComplete={this.advanceStep}
             onCancel={this.advanceStep}
@@ -597,7 +597,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             Invite users to work collaboratively
           </LinkButton>{" "}
           <InviteUsersModal
-            organizationName={this.state.organizationName}
+            organizationId={this.state.organizationId}
             isOpen={this.state.isInviteModalVisible}
             handleVisibleChange={(isInviteModalVisible) =>
               this.setState({

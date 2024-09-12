@@ -5,7 +5,7 @@ import { M4x4, V3 } from "libs/mjs";
 import { chunk2 } from "oxalis/model/helpers/chunk";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import ThreeDMap from "libs/ThreeDMap";
-import { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "oxalis/constants";
+import type { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "oxalis/constants";
 import constants from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 import type { LoadingStrategy, PlaneRects } from "oxalis/store";
@@ -18,20 +18,22 @@ const hashPosition = ([x, y, z]: Vector3 | Vector4): number => 2 ** 32 * x + 2 *
 const makeBucketsUnique = (buckets: Vector3[]) => _.uniqBy(buckets, hashPosition);
 
 const ALPHA = Math.PI / 2;
+
 // biome-ignore format: don't format array
-const YZ_ROTATION = [
+const ROTATIONS = {
+  YZ: [
     Math.cos(ALPHA), 0, Math.sin(ALPHA), 0,
     0, 1, 0, 0,
     -Math.sin(ALPHA), 0, Math.cos(ALPHA), 0,
     0, 0, 0, 1,
-] as Matrix4x4;
-// biome-ignore format: don't format array
-const XZ_ROTATION = [
-  1, 0, 0, 0,
-  0, Math.cos(ALPHA), -Math.sin(ALPHA), 0,
-  0, Math.sin(ALPHA), Math.cos(ALPHA), 0,
-  0, 0, 0, 1,
-] as Matrix4x4;
+  ] as Matrix4x4,
+  XZ: [
+    1, 0, 0, 0,
+    0, Math.cos(ALPHA), -Math.sin(ALPHA), 0,
+    0, Math.sin(ALPHA), Math.cos(ALPHA), 0,
+    0, 0, 0, 1,
+  ] as Matrix4x4
+}
 
 export default function determineBucketsForOblique(
   viewMode: ViewMode,
@@ -93,9 +95,9 @@ function addNecessaryBucketsToPriorityQueueOblique(
       enlargedHalfExtent = [Math.ceil(extent[0] / 2), Math.ceil(extent[1] / 2)] as Vector2;
       enlargedExtent = [enlargedHalfExtent[0] * 2, enlargedHalfExtent[1] * 2];
       if (planeId === "PLANE_YZ") {
-        M4x4.mul(matrix, YZ_ROTATION, queryMatrix);
+        M4x4.mul(matrix, ROTATIONS.YZ, queryMatrix);
       } else if (planeId === "PLANE_XZ") {
-        M4x4.mul(matrix, XZ_ROTATION, queryMatrix);
+        M4x4.mul(matrix, ROTATIONS.XZ, queryMatrix);
       }
     } else {
       // Buckets adjacent to the current viewport are also loaded so that these

@@ -63,7 +63,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
             annotationLayerDAO.updateStatistics(annotation._id, report.tracingId, statistics)
           }
           userBox <- bearerTokenService.userForTokenOpt(report.userToken).futureBox
-          trackTime = (report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges)
+          trackTime = report.significantChangesCount > 0 || !wkConf.WebKnossos.User.timeTrackingOnlyWithSignificantChanges
           _ <- Fox.runOptional(userBox)(user =>
             Fox.runIf(trackTime)(timeSpanService.logUserInteraction(report.timestamps, user, annotation)))
           _ <- Fox.runOptional(userBox)(user =>
@@ -109,25 +109,22 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
           annotation <- annotationInformationProvider.annotationForTracing(tracingId) ?~> s"No annotation for tracing $tracingId"
           dataset <- datasetDAO.findOne(annotation._dataset)
           organization <- organizationDAO.findOne(dataset._organization)
-        } yield Ok(Json.toJson(DataSourceId(dataset.name, organization.name)))
+        } yield Ok(Json.toJson(DataSourceId(dataset.name, organization._id)))
       }
     }
 
   def dataStoreUriForDataset(name: String,
                              key: String,
-                             organizationName: Option[String],
+                             organizationId: Option[String],
                              datasetName: String): Action[AnyContent] =
     Action.async { implicit request =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          organizationIdOpt <- Fox.runOptional(organizationName) {
-            organizationDAO.findOneByName(_)(GlobalAccessContext).map(_._id)
-          } ?~> Messages("organization.notFound", organizationName.getOrElse("")) ~> NOT_FOUND
-          organizationId <- Fox.fillOption(organizationIdOpt) {
-            datasetDAO.getOrganizationForDataset(datasetName)(GlobalAccessContext)
+          organizationIdWithFallback <- Fox.fillOption(organizationId) {
+            datasetDAO.getOrganizationIdForDataset(datasetName)(GlobalAccessContext)
           } ?~> Messages("dataset.noAccess", datasetName) ~> FORBIDDEN
-          dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId) ?~> Messages(
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationIdWithFallback) ?~> Messages(
             "dataset.noAccess",
             datasetName) ~> FORBIDDEN
           dataStore <- datasetService.dataStoreFor(dataset)

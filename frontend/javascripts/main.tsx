@@ -1,6 +1,5 @@
 import { Provider } from "react-redux";
-import React from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import window, { document } from "libs/window";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import UnthrottledStore, { startSagas } from "oxalis/store";
@@ -42,7 +41,7 @@ startSagas(rootSaga);
 const reactQueryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      cacheTime: Infinity,
+      cacheTime: Number.POSITIVE_INFINITY,
     },
   },
 });
@@ -104,7 +103,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const containerElement = document.getElementById("main-container");
 
   if (containerElement) {
-    ReactDOM.render(
+    const react_root = createRoot(containerElement);
+    react_root.render(
       <ErrorBoundary>
         {/* @ts-ignore */}
         <Provider store={Store}>
@@ -121,7 +121,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           </QueryClientProvider>
         </Provider>
       </ErrorBoundary>,
-      containerElement,
     );
   }
 });

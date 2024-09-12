@@ -1,4 +1,4 @@
-import { createNanoEvents, Emitter } from "nanoevents";
+import { createNanoEvents, type Emitter } from "nanoevents";
 import * as THREE from "three";
 import _ from "lodash";
 import type { ElementClass } from "types/api_flow_types";
@@ -12,10 +12,10 @@ import Constants from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import ErrorHandling from "libs/error_handling";
 import Store from "oxalis/store";
-import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import type TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
 import window from "libs/window";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export enum BucketStateEnum {
   UNREQUESTED = "UNREQUESTED",
@@ -30,18 +30,6 @@ export type BucketDataArray =
   | Uint32Array
   | Float32Array
   | BigUint64Array;
-export const bucketDebuggingFlags = {
-  // For visualizing buckets which are passed to the GPU
-  visualizeBucketsOnGPU: false,
-  // For visualizing buckets which are prefetched
-  visualizePrefetchedBuckets: false,
-  // For enforcing fallback rendering. enforcedZoomDiff == 2, means
-  // that buckets of currentZoomStep + 2 are rendered.
-  enforcedZoomDiff: undefined,
-};
-// Exposing this variable allows debugging on deployed systems
-// @ts-ignore
-window.bucketDebuggingFlags = bucketDebuggingFlags;
 
 const WARNING_THROTTLE_THRESHOLD = 10000;
 

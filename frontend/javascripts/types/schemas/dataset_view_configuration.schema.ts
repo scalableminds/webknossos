@@ -1,5 +1,5 @@
 import { BLEND_MODES } from "oxalis/constants";
-import { type DatasetLayerConfiguration, type DatasetConfiguration } from "oxalis/store";
+import type { DatasetLayerConfiguration, DatasetConfiguration } from "oxalis/store";
 
 export function getDefaultLayerViewConfiguration(
   dynamicDefault: Partial<DatasetLayerConfiguration> = {},

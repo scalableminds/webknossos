@@ -5,9 +5,9 @@ import type { NumberLike, Segment, SegmentGroup, SegmentMap } from "oxalis/store
 import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
 import { AllUserBoundingBoxActions } from "oxalis/model/actions/annotation_actions";
-import { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
+import type { QuickSelectGeometry } from "oxalis/geometries/helper_geometries";
 import { batchActions } from "redux-batched-actions";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type InitializeVolumeTracingAction = ReturnType<typeof initializeVolumeTracingAction>;
 export type InitializeEditableMappingAction = ReturnType<typeof initializeEditableMappingAction>;
@@ -47,6 +47,7 @@ export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappin
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
 
 export type ComputeQuickSelectForRectAction = ReturnType<typeof computeQuickSelectForRectAction>;
+export type ComputeQuickSelectForPointAction = ReturnType<typeof computeQuickSelectForPointAction>;
 export type FineTuneQuickSelectAction = ReturnType<typeof fineTuneQuickSelectAction>;
 export type CancelQuickSelectAction = ReturnType<typeof cancelQuickSelectAction>;
 export type ConfirmQuickSelectAction = ReturnType<typeof confirmQuickSelectAction>;
@@ -94,6 +95,7 @@ export type VolumeTracingAction =
   | SetMappingIsLockedAction
   | InitializeEditableMappingAction
   | ComputeQuickSelectForRectAction
+  | ComputeQuickSelectForPointAction
   | FineTuneQuickSelectAction
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
@@ -234,8 +236,11 @@ export const updateSegmentAction = (
   layerName: string,
   timestamp: number = Date.now(),
   createsNewUndoState: boolean = false,
-) =>
-  ({
+) => {
+  if (segmentId == null) {
+    throw new Error("Segment ID must not be null.");
+  }
+  return {
     type: "UPDATE_SEGMENT",
     // TODO: Proper 64 bit support (#6921)
     segmentId: Number(segmentId),
@@ -243,7 +248,8 @@ export const updateSegmentAction = (
     layerName,
     timestamp,
     createsNewUndoState,
-  }) as const;
+  } as const;
+};
 
 export const removeSegmentAction = (
   segmentId: NumberLike,
@@ -390,6 +396,16 @@ export const computeQuickSelectForRectAction = (
     type: "COMPUTE_QUICK_SELECT_FOR_RECT",
     startPosition,
     endPosition,
+    quickSelectGeometry,
+  }) as const;
+
+export const computeQuickSelectForPointAction = (
+  position: Vector3,
+  quickSelectGeometry: QuickSelectGeometry,
+) =>
+  ({
+    type: "COMPUTE_QUICK_SELECT_FOR_POINT",
+    position,
     quickSelectGeometry,
   }) as const;
 

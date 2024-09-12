@@ -113,7 +113,7 @@ function resetMatrix(matrix: Matrix4x4, voxelSize: Vector3) {
 function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
   const matrix = cloneMatrix(state.flycam.currentMatrix);
 
-  if (!vector.includes(NaN)) {
+  if (!vector.includes(Number.NaN)) {
     matrix[12] += vector[0];
     matrix[13] += vector[1];
     matrix[14] += vector[2];
@@ -289,7 +289,7 @@ function FlycamReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "MOVE_FLYCAM": {
-      if (action.vector.includes(NaN)) {
+      if (action.vector.includes(Number.NaN)) {
         // if the action vector is invalid, do not update
         return state;
       }

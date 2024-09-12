@@ -29,7 +29,7 @@ import Constants from "oxalis/constants";
 import { PLANE_SUBDIVISION } from "oxalis/geometries/plane";
 import { MAX_ZOOM_STEP_DIFF } from "oxalis/model/bucket_data_handling/loading_strategy_logic";
 import { getBlendLayersAdditive, getBlendLayersCover } from "./blending.glsl";
-import TPS3D from "libs/thin_plate_spline";
+import type TPS3D from "libs/thin_plate_spline";
 import {
   generateCalculateTpsOffsetFunction,
   generateTpsInitialization,

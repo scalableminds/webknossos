@@ -1,6 +1,6 @@
 import { FileOutlined, FolderOpenOutlined, PlusOutlined, WarningOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { Dropdown, MenuProps, TableProps, Tag, Tooltip } from "antd";
+import { Dropdown, type MenuProps, type TableProps, Tag, Tooltip } from "antd";
 import type { FilterValue, SorterResult, TablePaginationConfig } from "antd/lib/table/interface";
 import * as React from "react";
 import _ from "lodash";
@@ -12,7 +12,7 @@ import type {
   APIMaybeUnimportedDataset,
   FolderItem,
 } from "types/api_flow_types";
-import { type DatasetFilteringMode } from "dashboard/dataset_view";
+import type { DatasetFilteringMode } from "dashboard/dataset_view";
 import { stringToColor } from "libs/format_utils";
 import { trackAction } from "oxalis/model/helpers/analytics";
 import CategorizationLabel from "oxalis/view/components/categorization_label";
@@ -33,15 +33,15 @@ import {
 import Shortcut from "libs/shortcut_component";
 import { MINIMUM_SEARCH_QUERY_LENGTH } from "dashboard/dataset/queries";
 import { useSelector } from "react-redux";
-import { type DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
+import type { DatasetCollectionContextValue } from "dashboard/dataset/dataset_collection_context";
 import { Unicode } from "oxalis/constants";
-import { DatasetUpdater } from "admin/admin_rest_api";
+import type { DatasetUpdater } from "admin/admin_rest_api";
 import { generateSettingsForFolder, useDatasetDrop } from "dashboard/folders/folder_tree";
 import classNames from "classnames";
-import { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/globals";
 
 type FolderItemWithName = FolderItem & { name: string };
-type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
+export type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
 type RowRenderer = DatasetRenderer | FolderRenderer;
 
 const { ThinSpace } = Unicode;
@@ -238,7 +238,8 @@ const DraggableDatasetRow = ({
 
   const datasetName = restProps["data-row-key"];
   const [, drag, preview] = useDrag({
-    item: { type: DraggableDatasetType, index, datasetName },
+    item: { index, datasetName },
+    type: DraggableDatasetType,
     canDrag: () => isADataset,
   });
   const [collectedProps, drop] = useDatasetDrop(rowKey, !isADataset);
@@ -391,7 +392,7 @@ class FolderRenderer {
 class DatasetTable extends React.PureComponent<Props, State> {
   state: State = {
     sortedInfo: {
-      columnKey: useLruRank ? "" : "created",
+      columnKey: useLruRank ? undefined : "created",
       order: "descend",
     },
     prevSearchQuery: "",

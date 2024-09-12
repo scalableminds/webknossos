@@ -7,7 +7,7 @@ import {
   FillModeEnum,
   OrthoViews,
   OverwriteModeEnum,
-  Vector3,
+  type Vector3,
 } from "oxalis/constants";
 import { __setupOxalis, createBucketResponseFunction } from "test/helpers/apiHelpers";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
@@ -15,7 +15,7 @@ import { restartSagaAction, wkReadyAction } from "oxalis/model/actions/actions";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";
 import mockRequire from "mock-require";
-import anyTest, { ExecutionContext, TestInterface } from "ava";
+import anyTest, { type ExecutionContext, type TestFn } from "ava";
 import { V3 } from "libs/mjs";
 import dummyUser from "test/fixtures/dummy_user";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
@@ -26,10 +26,10 @@ import {
   setSegmentGroupsAction,
   updateSegmentAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { type ModelType } from "oxalis/model";
-import { type RequestType } from "libs/request";
-import { type ApiInterface } from "oxalis/api/api_latest";
-import { type DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import type { ModelType } from "oxalis/model";
+import type { RequestType } from "libs/request";
+import type { ApiInterface } from "oxalis/api/api_latest";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { MISSING_GROUP_ID } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 
 const { dispatchUndoAsync, dispatchRedoAsync, discardSaveQueuesAction } = mockRequire.reRequire(
@@ -58,7 +58,7 @@ type Context = {
   setSlowCompression: (b: boolean) => void;
   api: ApiInterface;
 };
-const test: TestInterface<Context> = anyTest as any;
+const test = anyTest as TestFn<Context>;
 
 test.beforeEach(async (t) => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
@@ -176,9 +176,6 @@ test.serial("Executing a floodfill in mag 1", async (t) => {
         min: [32, 32, 32],
         max: [64, 64, 64],
       }),
-      {
-        id: `floodfill_mag1_${zoomStep}`,
-      },
     );
   }
 });
@@ -422,9 +419,6 @@ test.serial("Brushing/Tracing with a new segment id should update the bucket dat
       min: [0, 0, 0],
       max: [32, 32, 32],
     }),
-    {
-      id: "volumetracing_brush_without_fallback_data",
-    },
   );
 });
 test.serial("Brushing/Tracing with already existing backend data", async (t) => {
@@ -467,9 +461,6 @@ test.serial("Brushing/Tracing with already existing backend data", async (t) => 
       min: [0, 0, 0],
       max: [32, 32, 32],
     }),
-    {
-      id: "volumetracing_brush_with_fallback_data",
-    },
   );
 });
 // The binary parameters control whether the test will assert additional

@@ -1,4 +1,4 @@
-import { OrthoView, OrthoViews, Vector3 } from "oxalis/constants";
+import { type OrthoView, OrthoViews, type Vector3 } from "oxalis/constants";
 
 export type DimensionIndices = 0 | 1 | 2;
 export type DimensionMap = [DimensionIndices, DimensionIndices, DimensionIndices];

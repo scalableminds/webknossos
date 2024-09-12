@@ -19,7 +19,7 @@ import MappingSaga from "oxalis/model/sagas/mapping_saga";
 import ProofreadSaga from "oxalis/model/sagas/proofread_saga";
 import { listenForWkReady } from "oxalis/model/sagas/wk_ready_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
-import { EscalateErrorAction } from "../actions/actions";
+import type { EscalateErrorAction } from "../actions/actions";
 
 let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<void> {

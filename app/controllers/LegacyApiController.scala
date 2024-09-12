@@ -42,6 +42,28 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
+  def listDatasetsV7(isActive: Option[Boolean],
+                     isUnreported: Option[Boolean],
+                     organizationName: Option[String],
+                     onlyMyOrganization: Option[Boolean],
+                     uploaderId: Option[String],
+                     folderId: Option[String],
+                     includeSubfolders: Option[Boolean],
+                     searchQuery: Option[String],
+                     limit: Option[Int],
+                     compact: Option[Boolean]): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    datasetController.list(isActive,
+                           isUnreported,
+                           organizationName,
+                           onlyMyOrganization,
+                           uploaderId,
+                           folderId,
+                           includeSubfolders,
+                           searchQuery,
+                           limit,
+                           compact)(request)
+  }
+
   def listDatasetsV6(isActive: Option[Boolean],
                      isUnreported: Option[Boolean],
                      organizationName: Option[String],
@@ -78,7 +100,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
   def assertValidNewNameV5(organizationName: String, datasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        organization <- organizationDAO.findOneByName(organizationName)
+        organization <- organizationDAO.findOne(organizationName) // the old organizationName is now the organization id
         _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
         _ <- datasetService.assertValidDatasetName(datasetName)
         _ <- datasetService.assertNewDatasetName(datasetName, organization._id) ?~> "dataset.name.alreadyTaken"
@@ -207,7 +229,7 @@ class LegacyApiController @Inject()(annotationController: AnnotationController,
     } yield adaptedResult
   }
 
-  def annotationCreateExplorationalV4(organizationName: String,
+  def annotationCreateExplorationalV4(organizationName: String, // the old organizationName is now the organization id
                                       datasetName: String): Action[LegacyCreateExplorationalParameters] =
     sil.SecuredAction.async(validateJson[LegacyCreateExplorationalParameters]) { implicit request =>
       for {

@@ -5,7 +5,6 @@ import {
   Select,
   Button,
   Form,
-  Input,
   Slider,
   Row,
   Space,
@@ -15,7 +14,7 @@ import {
   Alert,
   Tabs,
   Switch,
-  FormInstance,
+  type FormInstance,
   Checkbox,
 } from "antd";
 import {
@@ -29,11 +28,7 @@ import {
 } from "admin/admin_rest_api";
 import { useDispatch, useSelector } from "react-redux";
 import { DatasetNameFormItem } from "admin/dataset/dataset_components";
-import {
-  getColorLayers,
-  getSegmentationLayers,
-  getDataLayers,
-} from "oxalis/model/accessors/dataset_accessor";
+import { getColorLayers, getSegmentationLayers } from "oxalis/model/accessors/dataset_accessor";
 import {
   getActiveSegmentationTracingLayer,
   getReadableNameOfVolumeLayer,
@@ -51,15 +46,16 @@ import {
 } from "libs/utils";
 import { getBaseSegmentationName } from "oxalis/view/right-border-tabs/segments_tab/segments_view_helper";
 import { V3 } from "libs/mjs";
-import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
+import type { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
 import { isBoundingBoxExportable } from "./download_modal_view";
 import features from "features";
 import { setAIJobModalStateAction } from "oxalis/model/actions/ui_actions";
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { TrainAiModelTab } from "../jobs/train_ai_model";
+import { TrainAiModelTab, CollapsibleWorkflowYamlEditor } from "../jobs/train_ai_model";
 import { LayerSelectionFormItem } from "components/layer_selection";
 import { useGuardedFetch } from "libs/react_helpers";
 import _ from "lodash";
+import DEFAULT_PREDICT_WORKFLOW from "./default-predict-workflow-template";
 
 const { ThinSpace } = Unicode;
 
@@ -80,12 +76,6 @@ const jobNameToImagePath = {
   inference: "",
 } as const;
 
-const jobTypeWithConfigurableOutputSegmentationLayerName = [
-  "materialize_volume_annotation",
-  "neuron_inferral",
-  "mitochondria_inferral",
-  "inference",
-];
 type Props = {
   handleClose: () => void;
 };
@@ -97,9 +87,9 @@ type StartAIJobModalProps = {
 type JobApiCallArgsType = {
   newDatasetName: string;
   selectedLayer: APIDataLayer;
-  outputSegmentationLayerName?: string;
   selectedBoundingBox: UserBoundingBox | null | undefined;
   annotationId?: string;
+  useCustomWorkflow?: boolean;
 };
 type StartJobFormProps = Props & {
   jobApiCall: (arg0: JobApiCallArgsType, form: FormInstance<any>) => Promise<void | APIJob>;
@@ -112,6 +102,7 @@ type StartJobFormProps = Props & {
   title: string;
   buttonLabel?: string | null;
   isSkeletonSelectable?: boolean;
+  showWorkflowYaml?: boolean;
 };
 
 type BoundingBoxSelectionProps = {
@@ -284,46 +275,6 @@ export function MagSlider({
       )}
       onChange={(value) => onChange(allMags[value][1])}
     />
-  );
-}
-
-type OutputSegmentationLayerNameProps = {
-  hasOutputSegmentationLayer: boolean;
-  notAllowedLayerNames: string[];
-};
-
-export function OutputSegmentationLayerNameFormItem({
-  hasOutputSegmentationLayer,
-  notAllowedLayerNames,
-}: OutputSegmentationLayerNameProps) {
-  return (
-    <Form.Item
-      label="New segmentation layer name"
-      name="outputSegmentationLayerName"
-      rules={[
-        { required: hasOutputSegmentationLayer },
-        {
-          min: 3,
-        },
-        {
-          pattern: /[0-9a-zA-Z_-]+$/,
-        },
-        {
-          validator: async (_rule, newOutputLayerName) => {
-            if (notAllowedLayerNames.includes(newOutputLayerName)) {
-              const reason =
-                "This name is already used by another segmentation layer of this dataset.";
-              return Promise.reject(reason);
-            } else {
-              return Promise.resolve();
-            }
-          },
-        },
-      ]}
-      hidden={!hasOutputSegmentationLayer}
-    >
-      <Input />
-    </Form.Item>
   );
 }
 
@@ -580,7 +531,7 @@ function StartJobForm(props: StartJobFormProps) {
   const activeUser = useSelector((state: OxalisState) => state.activeUser);
   const colorLayers = getColorLayers(dataset);
   const layers = chooseSegmentationLayer ? getSegmentationLayers(dataset) : colorLayers;
-  const allLayers = getDataLayers(dataset);
+  const [useCustomWorkflow, setUseCustomWorkflow] = React.useState(false);
   const defaultBBForLayers: UserBoundingBox[] = layers.map((layer, index) => {
     return {
       id: -1 * index,
@@ -596,13 +547,11 @@ function StartJobForm(props: StartJobFormProps) {
     layerName,
     boundingBoxId,
     name: newDatasetName,
-    outputSegmentationLayerName,
     useAnnotation,
   }: {
     layerName: string;
     boundingBoxId: number;
     name: string;
-    outputSegmentationLayerName: string;
     useAnnotation: boolean;
   }) => {
     const selectedLayer = layers.find((layer) => layer.name === layerName);
@@ -625,11 +574,11 @@ function StartJobForm(props: StartJobFormProps) {
     try {
       await Model.ensureSavedState();
       const jobArgs: JobApiCallArgsType = {
-        outputSegmentationLayerName,
         newDatasetName,
         selectedLayer,
         selectedBoundingBox,
         annotationId: useAnnotation ? tracing.annotationId : undefined,
+        useCustomWorkflow,
       };
       const apiJob = await jobApiCall(jobArgs, form);
 
@@ -657,33 +606,9 @@ function StartJobForm(props: StartJobFormProps) {
   };
 
   let initialLayerName = layers.length === 1 ? layers[0].name : null;
-  let initialOutputSegmentationLayerName = getReadableNameOfVolumeLayer(layers[0], tracing);
   if (fixedSelectedLayer) {
     initialLayerName = fixedSelectedLayer.name;
-    initialOutputSegmentationLayerName = getReadableNameOfVolumeLayer(fixedSelectedLayer, tracing);
   }
-  initialOutputSegmentationLayerName = `${initialOutputSegmentationLayerName || "segmentation"}${
-    fixedSelectedLayer ? "_corrected" : "_inferred"
-  }`;
-  const hasOutputSegmentationLayer =
-    jobTypeWithConfigurableOutputSegmentationLayerName.indexOf(jobName) > -1;
-  const notAllowedOutputLayerNames = allLayers
-    .filter((layer) => {
-      // Existing layer names may not be used for the output layer. The only exception
-      // is the name of the currently selected layer. This layer is the only one not
-      // copied over from the original dataset to the output dataset.
-      // Therefore, this name is available as the name for the output layer name.
-      // That is why that layer is filtered out here.
-      const currentSelectedVolumeLayerName = chooseSegmentationLayer
-        ? form.getFieldValue("layerName") || initialLayerName
-        : undefined;
-      return (
-        getReadableNameOfVolumeLayer(layer, tracing) !== currentSelectedVolumeLayerName &&
-        layer.name !== currentSelectedVolumeLayerName
-      );
-    })
-    .map((layer) => getReadableNameOfVolumeLayer(layer, tracing) || layer.name);
-
   return (
     <Form
       onFinish={startJob}
@@ -691,7 +616,7 @@ function StartJobForm(props: StartJobFormProps) {
       initialValues={{
         layerName: initialLayerName,
         boundingBoxId: null,
-        outputSegmentationLayerName: initialOutputSegmentationLayerName,
+        workflowYaml: DEFAULT_PREDICT_WORKFLOW,
       }}
       form={form}
     >
@@ -708,10 +633,6 @@ function StartJobForm(props: StartJobFormProps) {
         fixedLayerName={fixedSelectedLayer?.name}
         tracing={tracing}
       />
-      <OutputSegmentationLayerNameFormItem
-        hasOutputSegmentationLayer={hasOutputSegmentationLayer}
-        notAllowedLayerNames={notAllowedOutputLayerNames}
-      />
       <BoundingBoxSelectionFormItem
         isBoundingBoxConfigurable={isBoundingBoxConfigurable}
         userBoundingBoxes={userBoundingBoxes}
@@ -719,6 +640,12 @@ function StartJobForm(props: StartJobFormProps) {
         value={form.getFieldValue("boundingBoxId")}
       />
       {isSkeletonSelectable && <ShouldUseTreesFormItem />}
+      {props.showWorkflowYaml ? (
+        <CollapsibleWorkflowYamlEditor
+          isActive={useCustomWorkflow}
+          setActive={setUseCustomWorkflow}
+        />
+      ) : null}
       <div style={{ textAlign: "center" }}>
         <Button type="primary" size="large" htmlType="submit">
           {props.buttonLabel ? props.buttonLabel : title}
@@ -777,13 +704,8 @@ export function NeuronSegmentationForm() {
       title="AI Neuron Segmentation"
       suggestedDatasetSuffix="with_reconstructed_neurons"
       isBoundingBoxConfigurable
-      jobApiCall={async ({
-        newDatasetName,
-        selectedLayer: colorLayer,
-        selectedBoundingBox,
-        outputSegmentationLayerName,
-      }) => {
-        if (!selectedBoundingBox || !outputSegmentationLayerName) {
+      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
+        if (!selectedBoundingBox) {
           return;
         }
 
@@ -793,7 +715,6 @@ export function NeuronSegmentationForm() {
           dataset.name,
           colorLayer.name,
           bbox,
-          outputSegmentationLayerName,
           newDatasetName,
         );
       }}
@@ -825,13 +746,8 @@ export function MitochondriaSegmentationForm() {
       title="AI Mitochondria Segmentation"
       suggestedDatasetSuffix="with_mitochondria_detected"
       isBoundingBoxConfigurable
-      jobApiCall={async ({
-        newDatasetName,
-        selectedLayer: colorLayer,
-        selectedBoundingBox,
-        outputSegmentationLayerName,
-      }) => {
-        if (!selectedBoundingBox || !outputSegmentationLayerName) {
+      jobApiCall={async ({ newDatasetName, selectedLayer: colorLayer, selectedBoundingBox }) => {
+        if (!selectedBoundingBox) {
           return;
         }
 
@@ -841,7 +757,6 @@ export function MitochondriaSegmentationForm() {
           dataset.name,
           colorLayer.name,
           bbox,
-          outputSegmentationLayerName,
           newDatasetName,
         );
       }}
@@ -890,16 +805,12 @@ function CustomAiModelInferenceForm() {
       title="AI Inference"
       suggestedDatasetSuffix="with_custom_model"
       isBoundingBoxConfigurable
+      showWorkflowYaml
       jobApiCall={async (
-        {
-          newDatasetName,
-          selectedLayer: colorLayer,
-          selectedBoundingBox,
-          outputSegmentationLayerName,
-        },
+        { newDatasetName, selectedLayer: colorLayer, selectedBoundingBox, useCustomWorkflow },
         form,
       ) => {
-        if (!selectedBoundingBox || !outputSegmentationLayerName) {
+        if (!selectedBoundingBox) {
           return;
         }
 
@@ -909,10 +820,10 @@ function CustomAiModelInferenceForm() {
         return runInferenceJob({
           ...maybeAnnotationId,
           aiModelId: form.getFieldValue("aiModel"),
+          workflowYaml: useCustomWorkflow ? form.getFieldValue("workflowYaml") : undefined,
           datasetName: dataset.name,
           colorLayerName: colorLayer.name,
           boundingBox,
-          newSegmentationLayerName: outputSegmentationLayerName,
           newDatasetName: newDatasetName,
         });
       }}
@@ -1055,14 +966,7 @@ export function MaterializeVolumeAnnotationModal({
         suggestedDatasetSuffix="with_merged_segmentation"
         chooseSegmentationLayer
         fixedSelectedLayer={fixedSelectedLayer}
-        jobApiCall={async ({
-          newDatasetName,
-          selectedLayer: segmentationLayer,
-          outputSegmentationLayerName,
-        }) => {
-          if (outputSegmentationLayerName == null) {
-            return;
-          }
+        jobApiCall={async ({ newDatasetName, selectedLayer: segmentationLayer }) => {
           // There are 3 cases for the value assignments to volumeLayerName and baseSegmentationName for the job:
           // 1. There is a volume annotation with a fallback layer. volumeLayerName will reference the volume layer
           // and baseSegmentationName will reference the fallback layer. The job will merge those layers.
@@ -1081,7 +985,6 @@ export function MaterializeVolumeAnnotationModal({
             baseSegmentationName,
             volumeLayerName,
             newDatasetName,
-            outputSegmentationLayerName,
             tracing.annotationId,
             tracing.annotationType,
             isMergerModeEnabled,

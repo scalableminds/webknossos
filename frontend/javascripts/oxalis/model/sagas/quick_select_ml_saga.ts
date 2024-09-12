@@ -1,23 +1,28 @@
 import _ from "lodash";
-import ndarray, { NdArray } from "ndarray";
-import { OrthoView, TypedArrayWithoutBigInt, Vector2, Vector3 } from "oxalis/constants";
+import ndarray, { type NdArray } from "ndarray";
+import type { OrthoView, TypedArrayWithoutBigInt, Vector2, Vector3 } from "oxalis/constants";
 import type { Saga } from "oxalis/model/sagas/effect-generators";
 import { call, cancel, fork, put } from "typed-redux-saga";
 import { select } from "oxalis/model/sagas/effect-generators";
 import { V3 } from "libs/mjs";
-import { ComputeQuickSelectForRectAction } from "oxalis/model/actions/volumetracing_actions";
+import type {
+  ComputeQuickSelectForPointAction,
+  ComputeQuickSelectForRectAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Toast from "libs/toast";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
 import { map3, sleep } from "libs/utils";
-import { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
+import type { AdditionalCoordinate, APIDataset } from "types/api_flow_types";
 import { getSamMask, sendAnalyticsEvent } from "admin/admin_rest_api";
 import Dimensions from "../dimensions";
 import { finalizeQuickSelectForSlice, prepareQuickSelect } from "./quick_select_heuristic_saga";
 import { setGlobalProgressAction } from "../actions/ui_actions";
 import { estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
+import { getPlaneExtentInVoxelFromStore } from "../accessors/view_mode_accessor";
+import { WkDevFlags } from "oxalis/api/wk_dev";
 
-const MASK_SIZE = [1024, 1024, 0] as Vector3;
+const MAXIMUM_MASK_BASE = 1024;
 
 // This should tend to be smaller because the progress rendering at the end of the animation
 // can cope very well with faster operations (the end of the progress bar will finish very slowly).
@@ -38,20 +43,33 @@ function* getMask(
   additionalCoordinates: AdditionalCoordinate[],
   intensityRange?: Vector2 | null,
 ): Saga<[BoundingBox, Array<NdArray<TypedArrayWithoutBigInt>>]> {
-  if (userBoxMag1.getVolume() === 0) {
-    throw new Error("User bounding box should not have empty volume.");
-  }
+  const usePointPrompt = userBoxMag1.getVolume() === 0;
   const trans = (vec: Vector3) => Dimensions.transDim(vec, activeViewport);
   const centerMag1 = V3.round(userBoxMag1.getCenter());
 
-  const sizeInMag1 = V3.scale3(trans(MASK_SIZE), mag);
+  const viewportExtentInMag = yield* select((state) => {
+    const [width, height] = getPlaneExtentInVoxelFromStore(
+      state,
+      state.flycam.zoomStep,
+      activeViewport,
+    );
+    const [u, v] = Dimensions.getIndices(activeViewport);
+
+    return Math.ceil(Math.max(width / mag[u], height / mag[v]));
+  });
+  const maskSizeBase = Math.min(MAXIMUM_MASK_BASE, viewportExtentInMag + 100);
+  const maskSize = (
+    WkDevFlags.sam.useLocalMask ? [maskSizeBase, maskSizeBase, 0] : [1024, 1024, 0]
+  ) as Vector3;
+
+  const sizeInMag1 = V3.scale3(trans(maskSize), mag);
   const maskTopLeftMag1 = V3.alignWithMag(V3.sub(centerMag1, V3.scale(sizeInMag1, 0.5)), mag);
-  // Effectively, zero the first and second dimension in the mag.
 
   const depth = yield* select(
     (state: OxalisState) => state.userConfiguration.quickSelect.predictionDepth || 1,
   );
 
+  // Effectively, zero the first and second dimension in the mag.
   const depthSummand = V3.scale3(mag, trans([0, 0, depth]));
   const maskBottomRightMag1 = V3.add(maskTopLeftMag1, sizeInMag1);
   const maskBoxMag1 = new BoundingBox({
@@ -70,14 +88,28 @@ function* getMask(
   const maskBoxInMag = maskBoxMag1.fromMag1ToMag(mag);
   const userBoxRelativeToMaskInMag = userBoxInMag.offset(V3.negate(maskBoxInMag.min));
 
+  const minUV = userBoxRelativeToMaskInMag.getMinUV(activeViewport);
+  const maxUV = userBoxRelativeToMaskInMag.getMaxUV(activeViewport);
+
   const maskData = yield* call(
     getSamMask,
     dataset,
     layerName,
     mag,
     maskBoxMag1,
-    userBoxRelativeToMaskInMag.getMinUV(activeViewport),
-    userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
+    usePointPrompt
+      ? {
+          type: "POINT",
+          pointX: minUV[0],
+          pointY: minUV[1],
+        }
+      : {
+          type: "BOUNDING_BOX",
+          selectionTopLeftX: minUV[0],
+          selectionTopLeftY: minUV[1],
+          selectionBottomRightX: maxUV[0],
+          selectionBottomRightY: maxUV[1],
+        },
     additionalCoordinates,
     intensityRange,
   );
@@ -118,7 +150,9 @@ function* showApproximatelyProgress(amount: number, expectedDurationPerItemMs: n
   }
 }
 
-export default function* performQuickSelect(action: ComputeQuickSelectForRectAction): Saga<void> {
+export default function* performQuickSelect(
+  action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction,
+): Saga<void> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (additionalCoordinates && additionalCoordinates.length > 0) {
     Toast.warning(
@@ -151,7 +185,21 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
     } = preparation;
     const trans = (vec: Vector3) => Dimensions.transDim(vec, activeViewport);
 
-    const { startPosition, endPosition, quickSelectGeometry } = action;
+    const { type, quickSelectGeometry } = action;
+
+    let startPosition;
+    let endPosition;
+    if (type === "COMPUTE_QUICK_SELECT_FOR_POINT") {
+      // We use the click position for both start and end position so that
+      // the logic dealing for centering the mask etc can be done with the
+      // same code. The resulting bounding box will have a volume of 0 which
+      // is okay.
+      startPosition = action.position;
+      endPosition = action.position;
+    } else {
+      startPosition = action.startPosition;
+      endPosition = action.endPosition;
+    }
 
     // Effectively, zero the first and second dimension in the mag.
     const depthSummand = V3.scale3(labeledResolution, trans([0, 0, 1]));
@@ -199,21 +247,32 @@ export default function* performQuickSelect(action: ComputeQuickSelectForRectAct
 
     sendAnalyticsEvent("used_quick_select_with_ai");
 
-    const userBoxInMag = alignedUserBoxMag1.fromMag1ToMag(labeledResolution);
+    let userBoxInMag = alignedUserBoxMag1.fromMag1ToMag(labeledResolution);
+    if (action.type === "COMPUTE_QUICK_SELECT_FOR_POINT") {
+      // In the point case, the bounding box will have a volume of zero which
+      // prevents the estimateBBoxInMask call from inferring the correct bbox.
+      // Therefore, we enlarge the bounding box by one pixel in u and v.
+      userBoxInMag = userBoxInMag.paddedWithMargins([0, 0, 0], trans([1, 1, 0]));
+    }
     const userBoxRelativeToMaskInMag = userBoxInMag.offset(V3.negate(maskBoxInMag.min));
 
     let wOffset = 0;
+    const currentEstimationInputForBBoxEstimation = {
+      min: userBoxRelativeToMaskInMag.getMinUV(activeViewport),
+      max: userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
+    };
     for (const mask of masks) {
       const targetW = alignedUserBoxMag1.min[thirdDim] + labeledResolution[thirdDim] * wOffset;
 
       const { min: minUV, max: maxUV } = estimateBBoxInMask(
         mask,
-        {
-          min: userBoxRelativeToMaskInMag.getMinUV(activeViewport),
-          max: userBoxRelativeToMaskInMag.getMaxUV(activeViewport),
-        },
+        currentEstimationInputForBBoxEstimation,
         MAXIMUM_PADDING_ERROR,
       );
+      // Use the estimated bbox as input for the next iteration so that
+      // moving segments don't "exit" the used bbox at the some point in W.
+      currentEstimationInputForBBoxEstimation.min = minUV;
+      currentEstimationInputForBBoxEstimation.max = maxUV;
 
       // Span a bbox from the estimated values (relative to the mask)
       // and move it by the mask's min position to achieve a global

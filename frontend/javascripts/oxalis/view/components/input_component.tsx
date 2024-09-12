@@ -1,4 +1,4 @@
-import { Input, InputProps, InputRef } from "antd";
+import { Input, type InputProps, type InputRef } from "antd";
 import * as React from "react";
 import _ from "lodash";
 import FastTooltip from "components/fast_tooltip";

@@ -11,9 +11,9 @@ import {
   Tag,
   Tooltip,
   Select,
-  MenuProps,
+  type MenuProps,
   App,
-  CollapseProps,
+  type CollapseProps,
 } from "antd";
 import {
   ClockCircleOutlined,
@@ -24,6 +24,7 @@ import {
   ExclamationCircleOutlined,
   LeftOutlined,
   FieldTimeOutlined,
+  ExportOutlined,
 } from "@ant-design/icons";
 import MiniSearch from "minisearch";
 
@@ -32,11 +33,11 @@ import dayjs from "dayjs";
 import { useSearchParams, useUpdateEvery } from "libs/react_hooks";
 import {
   VoxelyticsRunState,
-  VoxelyticsTaskConfig,
-  VoxelyticsTaskConfigWithHierarchy,
-  VoxelyticsTaskConfigWithName,
-  VoxelyticsTaskInfo,
-  VoxelyticsWorkflowReport,
+  type VoxelyticsTaskConfig,
+  type VoxelyticsTaskConfigWithHierarchy,
+  type VoxelyticsTaskConfigWithName,
+  type VoxelyticsTaskInfo,
+  type VoxelyticsWorkflowReport,
 } from "types/api_flow_types";
 import {
   formatDateMedium,
@@ -52,7 +53,7 @@ import { LOG_LEVELS } from "oxalis/constants";
 import { getVoxelyticsLogs } from "admin/admin_rest_api";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import { notEmpty } from "libs/utils";
-import { ArrayElement } from "types/globals";
+import type { ArrayElement } from "types/globals";
 
 const { Search } = Input;
 
@@ -512,6 +513,12 @@ export default function TaskListView({
       return undefined;
     }
 
+    const taskArtifacts = report.artifacts[task.taskName] || {};
+    let foreignWorkflow: null | [string, string] = null;
+    if (taskInfo.state === VoxelyticsRunState.SKIPPED) {
+      foreignWorkflow = Object.values(taskArtifacts)[0]?.foreignWorkflow ?? null;
+    }
+
     return {
       key: task.taskName,
       id: `task-panel-${task.taskName}`,
@@ -527,7 +534,17 @@ export default function TaskListView({
               backgroundColor: colorHasher.hex(task.task),
             }}
           />
-          {task.taskName}
+          {foreignWorkflow != null ? (
+            <>
+              <Link to={`/workflows/${foreignWorkflow[0]}?runId=${foreignWorkflow[1]}`}>
+                {task.taskName}
+                &nbsp;
+                <ExportOutlined />
+              </Link>
+            </>
+          ) : (
+            task.taskName
+          )}
           <wbr />
           {task.config.name != null && <span className="task-panel-name">{task.config.name}</span>}
           <wbr />
@@ -542,7 +559,7 @@ export default function TaskListView({
           workflowHash={report.workflow.hash}
           runId={singleRunId}
           task={task}
-          artifacts={report.artifacts[task.taskName] || []}
+          artifacts={taskArtifacts}
           dag={report.dag}
           taskInfo={taskInfo}
           onSelectTask={handleSelectTask}
@@ -565,8 +582,8 @@ export default function TaskListView({
     workflow: { name: readableWorkflowName },
   } = report;
   const runBeginTimeString = report.runs.reduce(
-    (r, a) => Math.min(r, a.beginTime != null ? a.beginTime.getTime() : Infinity),
-    Infinity,
+    (r, a) => Math.min(r, a.beginTime != null ? a.beginTime.getTime() : Number.POSITIVE_INFINITY),
+    Number.POSITIVE_INFINITY,
   );
 
   return (
@@ -667,8 +684,18 @@ export default function TaskListView({
 
 function aggregateTimes(taskInfos: Array<VoxelyticsTaskInfo>): [Date, Date] {
   return [
-    new Date(taskInfos.reduce((r, a) => Math.min(r, a.beginTime?.getTime() ?? Infinity), Infinity)),
-    new Date(taskInfos.reduce((r, a) => Math.max(r, a.endTime?.getTime() ?? -Infinity), -Infinity)),
+    new Date(
+      taskInfos.reduce(
+        (r, a) => Math.min(r, a.beginTime?.getTime() ?? Number.POSITIVE_INFINITY),
+        Number.POSITIVE_INFINITY,
+      ),
+    ),
+    new Date(
+      taskInfos.reduce(
+        (r, a) => Math.max(r, a.endTime?.getTime() ?? Number.NEGATIVE_INFINITY),
+        Number.NEGATIVE_INFINITY,
+      ),
+    ),
   ];
 }
 

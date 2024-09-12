@@ -40,16 +40,6 @@ jobs:
       - run:
           name: Prepare dependency folders
           command: mkdir -p project/target target ~/.ivy2 ~/.cache/coursier
-      # - restore_cache:
-      #     name: Restore target cache
-      #     keys:
-      #       - target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
-      #       - target-cache-{{ checksum ".circleci/cache_version" }}-master
-      # - restore_cache:
-      #     name: Restore sbt cache
-      #     keys:
-      #       - sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
-      #       - sbt-cache-{{ checksum ".circleci/cache_version" }}-
       - run:
           name: Install frontend dependencies
           command: docker-compose run -e PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true base yarn install --immutable
@@ -90,20 +80,6 @@ jobs:
       - run:
           name: Checksum App Dirs
           command: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
-
-      - save_cache:
-          name: Save target cache
-          key: target-cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ checksum "app_checksum.txt" }}
-          paths:
-            - "project/target"
-            - "target"
-
-      - save_cache:
-          name: Save sbt cache
-          key: sbt-cache-{{ checksum ".circleci/cache_version" }}-{{ checksum "project/Dependencies.scala" }}
-          paths:
-            - "~/.ivy2"
-            - "~/.cache/coursier"
 
       - run:
           name: Build webknossos docker image

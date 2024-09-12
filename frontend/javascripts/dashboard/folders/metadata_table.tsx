@@ -24,10 +24,7 @@ import {
 import { useIsMounted, useStateWithRef } from "libs/react_hooks";
 import Toast from "libs/toast";
 import _ from "lodash";
-import {
-  InputNumberWithUpdateOnBlur,
-  InputWithUpdateOnBlur,
-} from "oxalis/view/components/input_with_update_on_blur";
+import { InputWithUpdateOnBlur } from "oxalis/view/components/input_with_update_on_blur";
 import type React from "react";
 import { useEffect } from "react";
 import { useState } from "react";

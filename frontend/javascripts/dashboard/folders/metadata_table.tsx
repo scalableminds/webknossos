@@ -447,7 +447,7 @@ export default function MetadataTable({
   return (
     <div style={{ marginBottom: 16 }}>
       <div className="sidebar-label">Metadata</div>
-      <div className="ant-tag antd-app-theme metadata-table-wrapper">
+      <div className="ant-tag antd-app-theme dashboard-metadata-table-wrapper">
         {/* Not using AntD Table to have more control over the styling. */}
         {metadata.length > 0 ? (
           <InnerMetadataTable

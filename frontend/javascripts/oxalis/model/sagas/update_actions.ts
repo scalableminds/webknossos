@@ -301,7 +301,7 @@ export function updateVolumeTracing(
   zoomLevel: number,
 ) {
   return {
-    name: "updateTracing",
+    name: "updateVolumeTracing",
     value: {
       activeSegmentId: tracing.activeCellId,
       editPosition: position,

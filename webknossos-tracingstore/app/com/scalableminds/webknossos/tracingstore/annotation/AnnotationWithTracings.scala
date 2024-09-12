@@ -74,8 +74,13 @@ case class AnnotationWithTracings(
                            tracingsById,
                            editableMappingsByTracingId)
 
-  def withVersion(newVersion: Long): AnnotationWithTracings =
-    AnnotationWithTracings(annotation.copy(version = newVersion), tracingsById, editableMappingsByTracingId) // TODO also update version in tracings?
+  def withVersion(newVersion: Long): AnnotationWithTracings = {
+    val tracingsUpdated = tracingsById.view.mapValues {
+      case Left(t: SkeletonTracing) => Left(t.withVersion(newVersion))
+      case Right(t: VolumeTracing)  => Right(t.withVersion(newVersion))
+    }
+    AnnotationWithTracings(annotation.copy(version = newVersion), tracingsUpdated.toMap, editableMappingsByTracingId)
+  }
 
   def applySkeletonAction(a: SkeletonUpdateAction)(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
     for {

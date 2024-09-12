@@ -9,6 +9,7 @@ RUN mkdir -p /webknossos
 WORKDIR /webknossos
 
 COPY target/universal/stage .
+COPY tools/postgres/node_modules ./node_modules
 
 
 RUN addgroup --system --gid 999 webknossos \

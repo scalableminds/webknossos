@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Updated React to version 18. Updated many peer dependencies inlcuding Redux, React-Router, antd, and FlexLayout. [#8048](https://github.com/scalableminds/webknossos/pull/8048)
 
 ### Fixed
+- The JS API v2 has been removed as it was deprecated by v3 in 2018. Please upgrade to v3 in case your scripts still use v2. [#8076](https://github.com/scalableminds/webknossos/pull/8076)
 
 ### Removed
 

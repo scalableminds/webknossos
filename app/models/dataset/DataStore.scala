@@ -25,7 +25,7 @@ case class DataStore(
     isDeleted: Boolean = false,
     allowsUpload: Boolean = true,
     reportUsedStorageEnabled: Boolean = false,
-    onlyAllowedOrganization: Option[ObjectId] = None
+    onlyAllowedOrganization: Option[String] = None
 )
 
 object DataStore {
@@ -106,7 +106,7 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         r.isdeleted,
         r.allowsupload,
         r.reportusedstorageenabled,
-        r.onlyallowedorganization.map(ObjectId(_))
+        r.onlyallowedorganization
       ))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =

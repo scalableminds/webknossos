@@ -3,13 +3,12 @@ import urljoin from "url-join";
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'node... Remove this comment to see the full error message
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import type { Browser } from "puppeteer";
-import type { TestInterface } from "ava";
-import anyTest from "ava";
+import anyTest, { type TestFn } from "ava";
 import type { PartialDatasetConfiguration } from "oxalis/store";
 import type { Page } from "puppeteer";
 import mergeImg from "merge-img";
 import pixelmatch from "pixelmatch";
-import { RequestOptions } from "libs/request";
+import type { RequestOptions } from "libs/request";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
 import type { APIDatasetId } from "../../types/api_flow_types";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/admin_rest_api";
@@ -199,7 +198,7 @@ async function waitForRenderingFinish(page: Page) {
   let lastShot = await page.screenshot({
     fullPage: true,
   });
-  let changedPixels = Infinity;
+  let changedPixels = Number.POSITIVE_INFINITY;
 
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
   while (currentShot == null || !isPixelEquivalent(changedPixels, width, height)) {
@@ -350,9 +349,9 @@ export async function withRetry(
 
 // Ava's recommendation for Typescript types
 // https://github.com/avajs/ava/blob/main/docs/recipes/typescript.md#typing-tcontext
-export const test: TestInterface<{
+export const test = anyTest as TestFn<{
   browser: Browser;
-}> = anyTest as any;
+}>;
 
 export function setupBeforeEachAndAfterEach() {
   test.beforeEach(async (t) => {

@@ -1,4 +1,4 @@
-import { Dropdown, MenuProps } from "antd";
+import { Dropdown, type MenuProps } from "antd";
 import React from "react";
 
 import Shortcut from "libs/shortcut_component";

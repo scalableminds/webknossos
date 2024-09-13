@@ -1,8 +1,8 @@
-import test, { ExecutionContext } from "ava";
-import { BoundingBox2D, estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
+import test, { type ExecutionContext } from "ava";
+import { type BoundingBox2D, estimateBBoxInMask } from "libs/find_bounding_box_in_nd";
 import { V3 } from "libs/mjs";
 import ndarray from "ndarray";
-import { Vector2, Vector3 } from "oxalis/constants";
+import type { Vector2, Vector3 } from "oxalis/constants";
 
 function prepareMask(size: Vector3, trueBBox: BoundingBox2D) {
   const maskData = new Uint8Array(V3.prod(size));

@@ -16,7 +16,11 @@ import com.scalableminds.webknossos.datastore.dataformats.layers.{
 }
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceRepository}
+import com.scalableminds.webknossos.datastore.services.{
+  DSRemoteWebknossosClient,
+  DataSourceRepository,
+  DataSourceService
+}
 import play.api.libs.json.{Json, OFormat}
 
 import java.nio.charset.StandardCharsets
@@ -27,7 +31,7 @@ import scala.concurrent.ExecutionContext
 case class ComposeRequest(
     newDatasetName: String,
     targetFolderId: String,
-    organizationName: String,
+    organizationId: String,
     voxelSize: VoxelSize,
     layers: Seq[ComposeRequestLayer]
 )
@@ -54,30 +58,30 @@ object DataLayerId {
 
 class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
                                remoteWebknossosClient: DSRemoteWebknossosClient,
+                               dataSourceService: DataSourceService,
                                datasetSymlinkService: DatasetSymlinkService)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
   val dataBaseDir: Path = datasetSymlinkService.dataBaseDir
 
-  private def uploadDirectory(organizationName: String, name: String): Path =
-    dataBaseDir.resolve(organizationName).resolve(name)
+  private def uploadDirectory(organizationId: String, name: String): Path =
+    dataBaseDir.resolve(organizationId).resolve(name)
 
-  def composeDataset(composeRequest: ComposeRequest, userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[DataSource] =
+  def composeDataset(composeRequest: ComposeRequest, userToken: Option[String]): Fox[DataSource] =
     for {
-      _ <- Fox.bool2Fox(Files.isWritable(dataBaseDir)) ?~> "Datastore can not write to its data directory."
-
+      _ <- dataSourceService.assertDataDirWritable(composeRequest.organizationId)
       reserveUploadInfo = ReserveUploadInformation("",
                                                    composeRequest.newDatasetName,
-                                                   composeRequest.organizationName,
+                                                   composeRequest.organizationId,
                                                    1,
+                                                   None,
                                                    None,
                                                    List(),
                                                    Some(composeRequest.targetFolderId))
       _ <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
-      directory = uploadDirectory(composeRequest.organizationName, composeRequest.newDatasetName)
+      directory = uploadDirectory(composeRequest.organizationId, composeRequest.newDatasetName)
       _ = PathUtils.ensureDirectory(directory)
-      dataSource <- createDatasource(composeRequest, composeRequest.organizationName)
+      dataSource <- createDatasource(composeRequest, composeRequest.organizationId)
       properties = Json.toJson(dataSource).toString().getBytes(StandardCharsets.UTF_8)
       _ = Files.write(directory.resolve(GenericDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON), properties)
     } yield dataSource
@@ -135,12 +139,12 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
       }
     } yield editedLayer
 
-  private def createDatasource(composeRequest: ComposeRequest, organizationName: String): Fox[DataSource] = {
-    val uploadDir = uploadDirectory(organizationName, composeRequest.newDatasetName)
+  private def createDatasource(composeRequest: ComposeRequest, organizationId: String): Fox[DataSource] = {
+    val uploadDir = uploadDirectory(organizationId, composeRequest.newDatasetName)
     for {
       layers <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer(_, uploadDir))
       dataSource = GenericDataSource(
-        DataSourceId(composeRequest.newDatasetName, organizationName),
+        DataSourceId(composeRequest.newDatasetName, organizationId),
         layers,
         composeRequest.voxelSize,
         None

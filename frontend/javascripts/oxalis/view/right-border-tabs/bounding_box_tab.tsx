@@ -4,7 +4,12 @@ import { useSelector, useDispatch } from "react-redux";
 import React, { useEffect, useRef, useState } from "react";
 import _ from "lodash";
 import UserBoundingBoxInput from "oxalis/view/components/setting_input_views";
-import { Vector3, Vector6, BoundingBoxType, ControlModeEnum } from "oxalis/constants";
+import {
+  type Vector3,
+  type Vector6,
+  type BoundingBoxType,
+  ControlModeEnum,
+} from "oxalis/constants";
 import {
   changeUserBoundingBoxAction,
   addUserBoundingBoxAction,
@@ -14,10 +19,11 @@ import { getSomeTracing } from "oxalis/model/accessors/tracing_accessor";
 import { isAnnotationOwner } from "oxalis/model/accessors/annotation_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import * as Utils from "libs/utils";
-import { OxalisState, UserBoundingBox } from "oxalis/store";
+import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
-import { AutoSizer } from "react-virtualized";
+import AutoSizer from "react-virtualized-auto-sizer";
+import { setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
 
 const ADD_BBOX_BUTTON_HEIGHT = 32;
 
@@ -106,12 +112,11 @@ export default function BoundingBoxTab() {
     APIJobType.EXPORT_TIFF,
   );
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Always try to scroll the active bounding box into view.
   useEffect(() => {
     if (bboxTableRef.current != null && activeBoundingBoxId != null) {
       bboxTableRef.current.scrollTo({ key: activeBoundingBoxId });
     }
-  }, [activeBoundingBoxId, bboxTableRef.current]);
+  }, [activeBoundingBoxId]);
 
   const boundingBoxWrapperTableColumns = [
     {
@@ -188,6 +193,12 @@ export default function BoundingBoxTab() {
                 virtual
                 scroll={{ y: height - (allowUpdate ? ADD_BBOX_BUTTON_HEIGHT : 10) }} // If the scroll height is exactly
                 // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
+                onRow={(bb) => ({
+                  onClick: () => {
+                    handleGoToBoundingBox(bb.id);
+                    dispatch(setActiveUserBoundingBoxId(bb.id));
+                  },
+                })}
               />
             </div>
           )}

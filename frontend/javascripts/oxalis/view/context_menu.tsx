@@ -1,8 +1,8 @@
 import { CopyOutlined, PushpinOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
 import type { Dispatch } from "redux";
-import { Dropdown, Empty, notification, Popover, Input, MenuProps, Modal } from "antd";
+import { Dropdown, Empty, notification, Popover, Input, type MenuProps, Modal } from "antd";
 import { useSelector } from "react-redux";
-import React, { createContext, MouseEvent, useContext, useEffect, useState } from "react";
+import React, { createContext, type MouseEvent, useContext, useEffect, useState } from "react";
 import type {
   APIConnectomeFile,
   APIDataset,
@@ -21,15 +21,15 @@ import type {
   VolumeTracing,
 } from "oxalis/store";
 import {
-  AnnotationTool,
-  Vector3,
-  OrthoView,
+  type AnnotationTool,
+  type Vector3,
+  type OrthoView,
   AnnotationToolEnum,
   VolumeTools,
   AltOrOptionKey,
   CtrlOrCmdKey,
   LongUnitToShortUnitMap,
-  UnitLong,
+  type UnitLong,
 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
@@ -112,23 +112,23 @@ import {
   proofreadMerge,
 } from "oxalis/model/actions/proofread_actions";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import {
+import type {
   ItemType,
   MenuItemGroupType,
   MenuItemType,
   SubMenuType,
-} from "antd/lib/menu/hooks/useItems";
+} from "antd/es/menu/interface";
 import { getSegmentBoundingBoxes, getSegmentVolumes } from "admin/admin_rest_api";
 import { useFetch } from "libs/react_helpers";
 import { AsyncIconButton } from "components/async_clickables";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { voxelToVolumeInUnit } from "oxalis/model/scaleinfo";
 import { getBoundingBoxInMag1 } from "oxalis/model/sagas/volume/helpers";
 import {
   ensureLayerMappingsAreLoadedAction,
   ensureSegmentIndexIsLoadedAction,
 } from "oxalis/model/actions/dataset_actions";
-import { hideContextMenuAction } from "oxalis/model/actions/ui_actions";
+import { hideContextMenuAction, setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
 import { getDisabledInfoForTools } from "oxalis/model/accessors/tool_accessor";
 import FastTooltip from "components/fast_tooltip";
 
@@ -834,6 +834,11 @@ function getBoundingBoxMenuOptions({
 
   return [
     newBoundingBoxMenuItem,
+    {
+      key: "focus-in-bbox-tab",
+      label: "Focus in Bounding Box Tab",
+      onClick: () => Store.dispatch(setActiveUserBoundingBoxId(hoveredBBox.id)),
+    },
     {
       key: "change-bounding-box-name",
       label: (
@@ -1558,7 +1563,7 @@ function ContextMenuInner(propsWithInputRef: Props) {
     nodeContextMenuNode != null && clickedNodesPosition != null
       ? positionToString(clickedNodesPosition, nodeContextMenuNode.additionalCoordinates)
       : "";
-  const infoRows = [];
+  const infoRows: ItemType[] = [];
 
   if (maybeClickedNodeId != null && nodeContextMenuTree != null) {
     infoRows.push(

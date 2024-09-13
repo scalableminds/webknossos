@@ -25,11 +25,7 @@ import java.util.zip.{ZipEntry, ZipFile}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-trait VolumeDataZipHelper
-    extends WKWDataFormatHelper
-    with ReversionHelper
-    with BoxImplicits
-    with LazyLogging {
+trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with BoxImplicits with LazyLogging {
 
   protected def withBucketsFromZip(zipFile: File)(block: (BucketPosition, Array[Byte]) => Fox[Unit])(
       implicit ec: ExecutionContext): Fox[Unit] =

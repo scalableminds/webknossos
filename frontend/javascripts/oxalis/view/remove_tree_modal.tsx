@@ -3,7 +3,7 @@ import * as React from "react";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Store from "oxalis/store";
 import messages from "messages";
-import { CheckboxChangeEvent } from "antd/lib/checkbox";
+import type { CheckboxChangeEvent } from "antd/lib/checkbox";
 type Props = {
   onOk: (...args: Array<any>) => any;
   destroy?: (...args: Array<any>) => any;

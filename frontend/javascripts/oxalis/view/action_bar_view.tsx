@@ -12,14 +12,14 @@ import {
 import { trackAction } from "oxalis/model/helpers/analytics";
 import AddNewLayoutModal from "oxalis/view/action-bar/add_new_layout_modal";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { ViewMode, ControlMode, MappingStatusEnum } from "oxalis/constants";
+import { type ViewMode, type ControlMode, MappingStatusEnum } from "oxalis/constants";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import type { OxalisState } from "oxalis/store";
 import Store from "oxalis/store";
 import TracingActionsView, {
   getLayoutMenu,
-  LayoutProps,
+  type LayoutProps,
 } from "oxalis/view/action-bar/tracing_actions_view";
 import ViewDatasetActionsView from "oxalis/view/action-bar/view_dataset_actions_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
@@ -32,7 +32,7 @@ import {
   getUnifiedAdditionalCoordinates,
   getColorLayers,
 } from "oxalis/model/accessors/dataset_accessor";
-import { AsyncButton, AsyncButtonProps } from "components/async_clickables";
+import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import { setAdditionalCoordinatesAction } from "oxalis/model/actions/flycam_actions";
 import { NumberSliderSetting } from "./components/setting_input_views";
 import { ArbitraryVectorInput } from "libs/vector_input";

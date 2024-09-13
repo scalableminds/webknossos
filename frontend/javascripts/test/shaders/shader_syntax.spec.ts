@@ -1,7 +1,7 @@
 import "test/mocks/lz4";
 import getMainFragmentShader from "oxalis/shaders/main_data_shaders.glsl";
 import resolutions from "test/fixtures/resolutions";
-import test, { ExecutionContext } from "ava";
+import test, { type ExecutionContext } from "ava";
 import { parser } from "@shaderfrog/glsl-parser";
 
 test.beforeEach((t: ExecutionContext<any>) => {

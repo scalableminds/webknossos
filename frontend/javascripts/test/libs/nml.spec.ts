@@ -8,11 +8,11 @@ import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
 import { findGroup } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
 import mock from "mock-require";
-import test, { ExecutionContext } from "ava";
+import test, { type ExecutionContext } from "ava";
 import { TreeTypeEnum } from "oxalis/constants";
-import * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
-import * as OriginalNmlHelpers from "oxalis/model/helpers/nml_helpers";
-import OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
+import type * as OriginalSkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
+import type * as OriginalNmlHelpers from "oxalis/model/helpers/nml_helpers";
+import type OriginalSkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";
 import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
@@ -404,9 +404,7 @@ test("NML serializer should produce correct NMLs", (t) => {
     BUILD_INFO,
     false,
   );
-  t.snapshot(serializedNml, {
-    id: "nml",
-  });
+  t.snapshot(serializedNml);
 });
 test("NML serializer should produce correct NMLs with additional coordinates", (t) => {
   let adaptedState = update(initialState, {
@@ -449,9 +447,7 @@ test("NML serializer should produce correct NMLs with additional coordinates", (
     BUILD_INFO,
     false,
   );
-  t.snapshot(serializedNml, {
-    id: "nml-with-additional-coordinates",
-  });
+  t.snapshot(serializedNml);
 });
 test("NML serializer should escape special characters and multilines", (t) => {
   const state = update(initialState, {
@@ -488,9 +484,7 @@ test("NML serializer should escape special characters and multilines", (t) => {
       "Hello&quot;a&apos;b&lt;c&gt;d&amp;e&quot;f&apos;g&lt;h&gt;i&amp;j&#xa;with&#xa;new&#xa;lines",
     ) > -1,
   );
-  t.snapshot(serializedNml, {
-    id: "nml-special-chars",
-  });
+  t.snapshot(serializedNml);
 });
 test("Serialized nml should be correctly named", async (t) => {
   t.is(getNmlName(initialState), "Test Dataset__5b1fd1cb97000027049c67ec__sboy__tionId.nml");

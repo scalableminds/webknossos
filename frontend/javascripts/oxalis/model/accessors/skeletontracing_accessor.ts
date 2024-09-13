@@ -249,19 +249,19 @@ export function getMaxNodeIdInTree(tree: Tree): Maybe<number> {
   const maxNodeId = _.reduce(
     Array.from(tree.nodes.keys()),
     (r, nodeId) => Math.max(r, nodeId),
-    -Infinity,
+    Number.NEGATIVE_INFINITY,
   );
 
-  return maxNodeId === -Infinity ? Maybe.Nothing() : Maybe.Just(maxNodeId);
+  return maxNodeId === Number.NEGATIVE_INFINITY ? Maybe.Nothing() : Maybe.Just(maxNodeId);
 }
 export function getMaxNodeId(skeletonTracing: SkeletonTracing): number | null {
   const maxNodeId = _.reduce(
     skeletonTracing.trees,
-    (r, tree) => Math.max(r, getMaxNodeIdInTree(tree).getOrElse(-Infinity)),
-    -Infinity,
+    (r, tree) => Math.max(r, getMaxNodeIdInTree(tree).getOrElse(Number.NEGATIVE_INFINITY)),
+    Number.NEGATIVE_INFINITY,
   );
 
-  return maxNodeId === -Infinity ? null : maxNodeId;
+  return maxNodeId === Number.NEGATIVE_INFINITY ? null : maxNodeId;
 }
 export function getBranchPoints(tracing: Tracing): Maybe<Array<BranchPoint>> {
   return getSkeletonTracing(tracing).map((skeletonTracing) =>

@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert, Form, Row, Col, Input, Button, Select, Collapse, Tooltip, Checkbox } from "antd";
 import { useSelector } from "react-redux";
-import { OxalisState, UserBoundingBox } from "oxalis/store";
+import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import { getUserBoundingBoxesFromState } from "oxalis/model/accessors/tracing_accessor";
 import {
   getColorLayers,
@@ -194,7 +194,7 @@ export function CollapsibleWorkflowYamlEditor({
     <Collapse
       style={{ marginBottom: 8 }}
       onChange={() => setActive(!isActive)}
-      expandIcon={() => <Checkbox checked={isActive} onChange={() => setActive(!isActive)} />}
+      expandIcon={() => <Checkbox checked={isActive} />}
       items={[
         {
           key: "advanced",

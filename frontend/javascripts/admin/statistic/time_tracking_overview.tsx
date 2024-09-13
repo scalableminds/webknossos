@@ -12,14 +12,14 @@ import ProjectAndAnnotationTypeDropdown, {
 import { isUserAdminOrTeamManager, transformToCSVRow } from "libs/utils";
 import messages from "messages";
 import Toast from "libs/toast";
-import dayjs, { Dayjs } from "antd/node_modules/dayjs";
 import TimeTrackingDetailView from "./time_tracking_detail_view";
 import LinkButton from "components/link_button";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import * as Utils from "libs/utils";
-import { APITimeTrackingPerUser } from "types/api_flow_types";
+import type { APITimeTrackingPerUser } from "types/api_flow_types";
 import { useSelector } from "react-redux";
-import { OxalisState } from "oxalis/store";
+import type { OxalisState } from "oxalis/store";
+import dayjs, { type Dayjs } from "dayjs";
 const { RangePicker } = DatePicker;
 
 const TIMETRACKING_CSV_HEADER_PER_USER = ["userId,userFirstName,userLastName,timeTrackedInSeconds"];
@@ -236,7 +236,7 @@ function TimeTrackingOverview() {
         style={filterStyle}
         value={[startDate, endDate]}
         presets={rangePresets}
-        onChange={(dates: null | (Dayjs | null)[]) => {
+        onChange={(dates: [Dayjs | null, Dayjs | null] | null) => {
           if (dates == null || dates[0] == null || dates[1] == null) return;
           if (Math.abs(dates[0].diff(dates[1], "days")) > 3 * 31) {
             Toast.error(messages["timetracking.date_range_too_long"]);

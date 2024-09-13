@@ -1,6 +1,7 @@
 import { notification, Collapse } from "antd";
 import { CloseCircleOutlined } from "@ant-design/icons";
-import React, { useEffect } from "react";
+import type React from "react";
+import { useEffect } from "react";
 import { animationFrame, sleep } from "./utils";
 
 export type ToastStyle = "info" | "warning" | "success" | "error";

@@ -1,4 +1,4 @@
-import * as React from "react";
+import type * as React from "react";
 import loadable from "./lazy_loader";
 
 type Props = {

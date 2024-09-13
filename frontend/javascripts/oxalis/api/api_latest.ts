@@ -4,9 +4,9 @@ import TWEEN from "tween.js";
 import _ from "lodash";
 import type { Bucket, DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import { getConstructorForElementClass } from "oxalis/model/bucket_data_handling/bucket";
-import { APICompoundType, APICompoundTypeEnum, ElementClass } from "types/api_flow_types";
+import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_flow_types";
 import { InputKeyboardNoLoop } from "libs/input";
-import { M4x4, Matrix4x4, V3, Vector16 } from "libs/mjs";
+import { M4x4, type Matrix4x4, V3, type Vector16 } from "libs/mjs";
 import type { Versions } from "oxalis/view/version_view";
 import {
   addTreesAndGroupsAction,
@@ -101,7 +101,7 @@ import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middlewar
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import {
-  BatchableUpdateSegmentAction,
+  type BatchableUpdateSegmentAction,
   batchUpdateGroupsAndSegmentsAction,
   clickSegmentAction,
   removeSegmentAction,
@@ -144,7 +144,7 @@ import Constants, {
   MappingStatusEnum,
   EMPTY_OBJECT,
 } from "oxalis/constants";
-import DataLayer from "oxalis/model/data_layer";
+import type DataLayer from "oxalis/model/data_layer";
 import type { OxalisModel } from "oxalis/model";
 import { Model, api } from "oxalis/singletons";
 import Request from "libs/request";
@@ -176,7 +176,7 @@ import window, { location } from "libs/window";
 import { coalesce } from "libs/utils";
 import { setLayerTransformsAction } from "oxalis/model/actions/dataset_actions";
 import { ResolutionInfo } from "oxalis/model/helpers/resolution_info";
-import { type AdditionalCoordinate } from "types/api_flow_types";
+import type { AdditionalCoordinate } from "types/api_flow_types";
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import {
   createSkeletonNode,
@@ -1675,7 +1675,9 @@ class DataApi {
       mapping:
         mapping instanceof Map
           ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
-          : new Map(Object.entries(mapping).map(([key, value]) => [parseInt(key, 10), value])),
+          : new Map(
+              Object.entries(mapping).map(([key, value]) => [Number.parseInt(key, 10), value]),
+            ),
       mappingColors,
       hideUnmappedIds,
       showLoadingIndicator,
@@ -2334,9 +2336,7 @@ class DataApi {
       )
     ) {
       throw new Error(
-        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(
-          state.localSegmentationData[effectiveLayerName].availableMeshFiles || []
-        ).join(", ")}`,
+        `The provided mesh file (${meshFileName}) is not available for this dataset. Available mesh files are: ${(state.localSegmentationData[effectiveLayerName].availableMeshFiles || []).join(", ")}`,
       );
     }
 

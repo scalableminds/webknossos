@@ -50,6 +50,9 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     } yield ()
 
   def currentMaterializableVersion(annotationId: String): Fox[Long] =
+    tracingDataStore.annotationUpdates.getVersion(annotationId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
+
+  def currentMaterializedVersion(annotationId: String): Fox[Long] =
     tracingDataStore.annotations.getVersion(annotationId, mayBeEmpty = Some(true), emptyFallback = Some(0L))
 
   private def findPendingUpdates(annotationId: String, existingVersion: Long, desiredVersion: Long)(

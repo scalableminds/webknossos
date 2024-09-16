@@ -14,6 +14,7 @@ import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import dummyUser from "test/fixtures/dummy_user";
 import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 import { omit } from "lodash";
+import { tracing as TaskTracing } from "test/fixtures/tasktracing_server_objects";
 
 const {
   createTreeMapFromTreeArray,
@@ -67,7 +68,7 @@ test.serial(
         ],
       ],
       TIMESTAMP,
-      "tracingId",
+      TaskTracing.id,
       getStats(state.tracing, "skeleton", "irrelevant_in_skeleton_case") || undefined,
     );
     // Reset the info field which is just for debugging purposes

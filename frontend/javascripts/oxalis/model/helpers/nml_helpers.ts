@@ -653,13 +653,15 @@ function _parseColor(obj: Record<string, string>, defaultColor: Vector3): Vector
 function _parseTreeType(
   obj: Record<string, string>,
   key: string,
-  defaultValue?: TreeType,
+  options?: {
+    defaultValue: TreeType;
+  },
 ): TreeType {
   if (obj[key] == null || obj[key].length === 0) {
-    if (defaultValue == null) {
+    if (options?.defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
-      return defaultValue;
+      return options.defaultValue;
     }
   }
 
@@ -923,7 +925,7 @@ export function parseNml(nmlString: string): Promise<{
               edges: new EdgeCollection(),
               isVisible: _parseFloat(attr, "color.a") !== 0,
               groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
-              type: _parseTreeType(attr, "type", TreeTypeEnum.DEFAULT),
+              type: _parseTreeType(attr, "type", { defaultValue: TreeTypeEnum.DEFAULT }),
               edgesAreVisible: _parseBool(attr, "edgesAreVisible", { defaultValue: true }),
               metadata: [],
             };

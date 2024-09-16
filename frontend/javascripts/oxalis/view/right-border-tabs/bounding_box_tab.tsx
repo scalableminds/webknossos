@@ -59,7 +59,10 @@ export default function BoundingBoxTab() {
 
   const setPosition = (position: Vector3) => dispatch(setPositionAction(position));
 
-  const deleteBoundingBox = (id: number) => dispatch(deleteUserBoundingBoxAction(id));
+  const deleteBoundingBox = (id: number) => {
+    dispatch(deleteUserBoundingBoxAction(id));
+    hideContextMenu();
+  };
 
   const setBoundingBoxVisibility = (id: number, isVisible: boolean) =>
     dispatch(
@@ -86,6 +89,11 @@ export default function BoundingBoxTab() {
     setChangeBoundingBoxBounds(id, Utils.computeBoundingBoxFromArray(boundingBox));
   }
 
+  function handleExportBoundingBox(bb: UserBoundingBox) {
+    _.partial(setSelectedBoundingBoxForExport, bb);
+    hideContextMenu();
+  }
+
   function handleGoToBoundingBox(id: number) {
     const boundingBoxEntry = userBoundingBoxes.find((bbox) => bbox.id === id);
 
@@ -100,6 +108,7 @@ export default function BoundingBoxTab() {
       min[2] + (max[2] - min[2]) / 2,
     ];
     setPosition(center);
+    hideContextMenu();
   }
 
   const isViewMode = useSelector(
@@ -138,7 +147,7 @@ export default function BoundingBoxTab() {
           isVisible={bb.isVisible}
           onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
           onDelete={_.partial(deleteBoundingBox, bb.id)}
-          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => { }}
+          onExport={isExportEnabled ? () => handleExportBoundingBox(bb) : () => {}}
           onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
           onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
           onNameChange={_.partial(setBoundingBoxName, bb.id)}
@@ -147,6 +156,7 @@ export default function BoundingBoxTab() {
           isLockedByOwner={isLockedByOwner}
           isOwner={isOwner}
           onOpenContextMenu={onOpenContextMenu}
+          onHideContextMenu={hideContextMenu}
         />
       ),
     },
@@ -187,6 +197,7 @@ export default function BoundingBoxTab() {
   const hideContextMenu = useCallback(() => {
     setContextMenuPosition(null);
     setMenu(null);
+    console.log("hide");
   }, []);
 
   return (

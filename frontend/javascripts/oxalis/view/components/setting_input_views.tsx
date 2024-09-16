@@ -396,6 +396,7 @@ type UserBoundingBoxInputProps = {
   isOwner: boolean;
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   onOpenContextMenu: (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => void;
+  onHideContextMenu?: () => void;
 };
 type State = {
   isEditing: boolean;
@@ -488,7 +489,14 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
     const min: Vector3 = [value[0], value[1], value[2]];
     const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
     api.tracing.registerSegmentsForBoundingBox(min, max, name);
+    this.maybeCloseContextMenu();
   }
+
+  maybeCloseContextMenu = () => {
+    if (this.props.onHideContextMenu) {
+      this.props.onHideContextMenu();
+    }
+  };
 
   render() {
     const { name } = this.state;

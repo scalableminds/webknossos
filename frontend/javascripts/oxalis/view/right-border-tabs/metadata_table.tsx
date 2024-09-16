@@ -75,7 +75,7 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntry[] }>({
     </div>
   );
 
-  const getKeyInput = (record: APIMetadataWithError, index: number) => {
+  const getKeyInput = (entry: APIMetadataWithError, index: number) => {
     return (
       <div style={{ display: "flex" }}>
         <InputWithUpdateOnBlur
@@ -85,7 +85,7 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntry[] }>({
             </FastTooltip>
           }
           className="transparent-input"
-          value={record.key}
+          value={entry.key}
           disabled={readOnly}
           onChange={(value) => updateMetadataEntryByIndex(item, index, { key: value })}
           placeholder="Property"
@@ -117,10 +117,10 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntry[] }>({
     value: prop.stringValue || prop.numberValue || prop.stringListValue || "",
   }));
 
-  const getValueInput = (record: APIMetadataWithError, index: number) => {
+  const getValueInput = (entry: APIMetadataWithError, index: number) => {
     return (
       <MetadataValueInput
-        record={record}
+        entry={entry}
         index={index}
         readOnly={readOnly}
         updateMetadataValue={(

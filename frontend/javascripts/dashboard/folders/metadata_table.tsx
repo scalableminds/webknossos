@@ -108,7 +108,7 @@ export function getUsedTagsWithinMetadata(metadata: APIMetadataWithError[]) {
 }
 
 interface MetadataValueInputProps {
-  record: APIMetadataWithError;
+  entry: APIMetadataWithError;
   index: number;
   focusedRow?: number | null;
   setFocusedRow?: (row: number | null) => void;
@@ -123,7 +123,7 @@ interface MetadataValueInputProps {
 }
 
 export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
-  record,
+  entry,
   index,
   focusedRow,
   setFocusedRow,
@@ -141,11 +141,11 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
     disabled: isSaving || readOnly,
   };
 
-  switch (record.type) {
+  switch (entry.type) {
     case APIMetadataEnum.NUMBER:
       return (
         <InputNumber
-          value={record.value as number}
+          value={entry.value as number}
           controls={false}
           placeholder="Enter a number"
           onChange={(newNum) => {
@@ -157,7 +157,7 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
     case APIMetadataEnum.STRING:
       return (
         <InputWithUpdateOnBlur
-          value={record.value as string}
+          value={entry.value as string}
           placeholder="Enter text"
           onChange={(newValue) =>
             updateMetadataValue(index, newValue as string, APIMetadataEnum.STRING)
@@ -170,7 +170,7 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
         <Select
           mode="tags"
           placeholder="Enter multiple entries"
-          value={record.value as string[]}
+          value={entry.value as string[]}
           onChange={(values) => updateMetadataValue(index, values, APIMetadataEnum.STRING_ARRAY)}
           options={availableStrArrayTagOptions}
           suffixIcon={null}
@@ -389,35 +389,35 @@ export default function MetadataTable({
 
   const availableStrArrayTagOptions = getUsedTagsWithinMetadata(metadata);
 
-  const getKeyInput = (record: APIMetadataWithError, index: number) => {
+  const getKeyInput = (entry: APIMetadataWithError, index: number) => {
     const isFocused = index === focusedRow;
     return (
       <>
-        <FastTooltip title={record.error} placement="left" variant="warning">
+        <FastTooltip title={entry.error} placement="left" variant="warning">
           <Input
             className={isFocused ? undefined : "transparent-input"}
             onFocus={() => setFocusedRow(index)}
             onBlur={() => setFocusedRow(null)}
-            value={record.key}
+            value={entry.key}
             onChange={(evt) => updateMetadataKey(index, evt.target.value)}
             placeholder="Property"
             size="small"
             disabled={isSaving}
             id={getKeyInputIdForIndex(index)}
-            status={record.error != null ? "warning" : undefined}
+            status={entry.error != null ? "warning" : undefined}
             // Use a span as an empty prefix, because null would lose the focus
             // when the prefix changes.
-            prefix={record.error != null ? <InfoCircleOutlined /> : <span />}
+            prefix={entry.error != null ? <InfoCircleOutlined /> : <span />}
           />
         </FastTooltip>
       </>
     );
   };
 
-  const getValueInput = (record: APIMetadataWithError, index: number) => {
+  const getValueInput = (entry: APIMetadataWithError, index: number) => {
     return (
       <MetadataValueInput
-        record={record}
+        entry={entry}
         index={index}
         focusedRow={focusedRow}
         setFocusedRow={setFocusedRow}
@@ -480,8 +480,8 @@ export function InnerMetadataTable({
   readOnly,
 }: {
   metadata: APIMetadataWithError[];
-  getKeyInput: (record: APIMetadataWithError, index: number) => JSX.Element;
-  getValueInput: (record: APIMetadataWithError, index: number) => JSX.Element;
+  getKeyInput: (entry: APIMetadataWithError, index: number) => JSX.Element;
+  getValueInput: (entry: APIMetadataWithError, index: number) => JSX.Element;
   getDeleteEntryButton: (_: APIMetadataWithError, index: number) => JSX.Element;
   addNewEntryMenuItems: MenuProps;
   onlyReturnRows?: boolean;
@@ -489,11 +489,11 @@ export function InnerMetadataTable({
 }): React.ReactElement {
   const rows = (
     <>
-      {metadata.map((record, index) => (
+      {metadata.map((entry, index) => (
         <tr key={index}>
-          <td>{getKeyInput(record, index)}</td>
-          <td>{getValueInput(record, index)}</td>
-          <td>{getDeleteEntryButton(record, index)}</td>
+          <td>{getKeyInput(entry, index)}</td>
+          <td>{getValueInput(entry, index)}</td>
+          <td>{getDeleteEntryButton(entry, index)}</td>
         </tr>
       ))}
       {readOnly ? null : (

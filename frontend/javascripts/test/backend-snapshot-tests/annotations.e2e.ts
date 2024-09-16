@@ -20,6 +20,8 @@ import * as api from "admin/admin_rest_api";
 import generateDummyTrees from "oxalis/model/helpers/generate_dummy_trees";
 import test from "ava";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
+import type { SaveQueueEntry } from "oxalis/store";
+
 const datasetId = {
   name: "confocal-multi_knossos",
   owningOrganization: "Organization_X",
@@ -146,8 +148,7 @@ test.serial("getTracingsForAnnotation() for hybrid", async (t) => {
   });
 });
 
-// @ts-expect-error ts-migrate(7006) FIXME: Parameter 'queue' implicitly has an 'any' type.
-async function sendUpdateActionsForSkeleton(explorational: APIAnnotation, queue) {
+async function sendUpdateActionsForSkeleton(explorational: APIAnnotation, queue: SaveQueueEntry[]) {
   const skeletonTracing = getSkeletonDescriptor(explorational);
   if (skeletonTracing == null) throw new Error("No skeleton annotation present.");
   return sendRequestWithToken(
@@ -173,6 +174,7 @@ test.serial("Send update actions and compare resulting tracing", async (t) => {
         [UpdateActions.updateSkeletonTracing(initialSkeleton, [2, 3, 4], null, [1, 2, 3], 2)],
       ],
       123456789,
+      createdExplorational.annotationLayers[0].tracingId,
     ),
     0,
   );
@@ -207,6 +209,7 @@ test("Send complex update actions and compare resulting tracing", async (t) => {
     createSaveQueueFromUpdateActions(
       [createTreesUpdateActions, [updateTreeGroupsUpdateAction]],
       123456789,
+      createdExplorational.annotationLayers[0].tracingId,
     ),
     0,
   );

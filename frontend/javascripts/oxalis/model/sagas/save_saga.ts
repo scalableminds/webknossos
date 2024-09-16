@@ -105,7 +105,7 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
     //    ignored (they will be picked up in the next iteration of this loop).
     //    Otherwise, the risk of a high number of save-requests (see case 1)
     //    would be present here, too (note the risk would be greater, because the
-    //    user didn't use the save button which is usually accompanied a small pause).
+    //    user didn't use the save button which is usually accompanied by a small pause).
     const itemCountToSave = forcePush
       ? Number.POSITIVE_INFINITY
       : yield* select((state) => selectQueue(state, saveQueueType, tracingId).length);
@@ -175,9 +175,7 @@ export function* sendRequestToServer(
   const fullSaveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue, saveQueueType);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
-  const { version, type } = yield* select((state) =>
-    selectTracing(state, saveQueueType, tracingId),
-  );
+  const { version } = yield* select((state) => selectTracing(state, saveQueueType, tracingId));
   const annotationId = yield* select((state) => state.tracing.annotationId);
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   let versionIncrement;
@@ -354,8 +352,8 @@ export function performDiffTracing(
   tracing: SkeletonTracing | VolumeTracing,
   prevFlycam: Flycam,
   flycam: Flycam,
-  prevTdCamera: CameraData,
-  tdCamera: CameraData,
+  _prevTdCamera: CameraData,
+  _tdCamera: CameraData,
 ): Array<UpdateAction> {
   let actions: Array<UpdateAction> = [];
 
@@ -372,7 +370,7 @@ export function performDiffTracing(
   }
 
   /*
-  TODO: restore this update action (decide how to handle it, does it belong to skeleton or volume or something else?)
+  TODOp: restore this update action (decide how to handle it, does it belong to skeleton or volume or something else?)
   if (prevTdCamera !== tdCamera) {
     actions = actions.concat(updateTdCamera());
   }
@@ -401,7 +399,7 @@ export function* setupSavingForTracingType(
   /*
     Listen to changes to the annotation and derive UpdateActions from the
     old and new state.
-     The actual push to the server is done by the forked pushSaveQueueAsync saga.
+    The actual push to the server is done by the forked pushSaveQueueAsync saga.
   */
   const saveQueueType =
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";

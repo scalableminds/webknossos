@@ -27,6 +27,7 @@ import { TreeTypeEnum } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { addTracingIdToActions } from "oxalis/model/reducers/save_reducer";
 
 const TIMESTAMP = 1494347146379;
 const DateMock = {
@@ -82,6 +83,13 @@ function compactSaveQueueWithUpdateActions(
   tracing: SkeletonTracing,
 ): Array<SaveQueueEntry> {
   return compactSaveQueue(
+    // todop
+    // Do we really need compactSaveQueueWithUpdateActions? actually, compactUpdateActions
+    // is never called with a save queue in prod (instead, the function is called before
+    // filling the save queue). one could probably combine compactUpdateActions and
+    // createSaveQueueFromUpdateActions to have a createCompactedSaveQueueFromUpdateActions
+    // helper function and use that in this spec.
+    // @ts-expect-error
     queue.map((batch) => ({ ...batch, actions: compactUpdateActions(batch.actions, tracing) })),
   );
 }
@@ -634,7 +642,11 @@ test("compactUpdateActions should detect a tree merge (1/3)", (t) => {
     testState.flycam,
     newState.flycam,
   );
-  const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions(
+    [updateActions],
+    TIMESTAMP,
+    skeletonTracing.tracingId,
+  );
   const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
     saveQueue,
     enforceSkeletonTracing(newState.tracing),
@@ -694,7 +706,11 @@ test("compactUpdateActions should detect a tree merge (2/3)", (t) => {
     testDiffing(newState1.tracing, newState2.tracing, newState1.flycam, newState2.flycam),
   );
   // compactUpdateActions is triggered by the saving, it can therefore contain the results of more than one diffing
-  const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions(
+    updateActions,
+    TIMESTAMP,
+    skeletonTracing.tracingId,
+  );
   const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
     saveQueue,
     enforceSkeletonTracing(newState2.tracing),
@@ -796,7 +812,11 @@ test("compactUpdateActions should detect a tree merge (3/3)", (t) => {
     ),
   );
   // compactUpdateActions is triggered by the saving, it can therefore contain the results of more than one diffing
-  const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions(
+    updateActions,
+    TIMESTAMP,
+    skeletonTracing.tracingId,
+  );
   const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
     saveQueue,
     enforceSkeletonTracing(newState.tracing),
@@ -878,7 +898,11 @@ test("compactUpdateActions should detect a tree split (1/3)", (t) => {
     testState.flycam,
     newState.flycam,
   );
-  const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions(
+    [updateActions],
+    TIMESTAMP,
+    skeletonTracing.tracingId,
+  );
   const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
     saveQueue,
     enforceSkeletonTracing(newState.tracing),
@@ -936,7 +960,11 @@ test("compactUpdateActions should detect a tree split (2/3)", (t) => {
     testState.flycam,
     newState.flycam,
   );
-  const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions(
+    [updateActions],
+    TIMESTAMP,
+    skeletonTracing.tracingId,
+  );
   const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
     saveQueue,
     enforceSkeletonTracing(newState.tracing),
@@ -1008,7 +1036,11 @@ test("compactUpdateActions should detect a tree split (3/3)", (t) => {
   updateActions.push(
     testDiffing(newState1.tracing, newState2.tracing, newState1.flycam, newState2.flycam),
   );
-  const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions(
+    updateActions,
+    TIMESTAMP,
+    skeletonTracing.tracingId,
+  );
   const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
     saveQueue,
     enforceSkeletonTracing(newState2.tracing),
@@ -1095,7 +1127,11 @@ test("compactUpdateActions should do nothing if it cannot compact", (t) => {
     testState.flycam,
     newState.flycam,
   );
-  const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions(
+    [updateActions],
+    TIMESTAMP,
+    skeletonTracing.tracingId,
+  );
   const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
     saveQueue,
     enforceSkeletonTracing(newState.tracing),
@@ -1124,7 +1160,11 @@ test("compactUpdateActions should detect a deleted tree", (t) => {
     testState.flycam,
     newState.flycam,
   );
-  const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions(
+    [updateActions],
+    TIMESTAMP,
+    skeletonTracing.tracingId,
+  );
   const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
     saveQueue,
     enforceSkeletonTracing(newState.tracing),
@@ -1156,7 +1196,11 @@ test("compactUpdateActions should not detect a deleted tree if there is no delet
     testState.flycam,
     newState.flycam,
   );
-  const saveQueue = createSaveQueueFromUpdateActions([updateActions], TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions(
+    [updateActions],
+    TIMESTAMP,
+    skeletonTracing.tracingId,
+  );
   const simplifiedUpdateActions = compactSaveQueueWithUpdateActions(
     saveQueue,
     enforceSkeletonTracing(newState.tracing),

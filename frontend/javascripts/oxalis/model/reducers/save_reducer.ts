@@ -18,7 +18,7 @@ import {
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import Date from "libs/date";
 import * as Utils from "libs/utils";
-import type { UpdateActionWithTracingId } from "../sagas/update_actions";
+import type { UpdateAction, UpdateActionWithTracingId } from "../sagas/update_actions";
 
 // These update actions are not idempotent. Having them
 // twice in the save queue causes a corruption of the current annotation.
@@ -135,16 +135,19 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "PUSH_SAVE_QUEUE_TRANSACTION": {
-      const { items, transactionId } = action;
+      // Use `dispatchedAction` to better distinguish this variable from
+      // update actions.
+      const dispatchedAction = action;
+      const { items, transactionId } = dispatchedAction;
       if (items.length === 0) {
         return state;
       }
       // Only report tracing statistics, if a "real" update to the tracing happened
       const stats = _.some(
-        action.items,
+        dispatchedAction.items,
         (ua) => ua.name !== "updateSkeletonTracing" && ua.name !== "updateVolumeTracing",
       )
-        ? getStats(state.tracing, action.saveQueueType, action.tracingId)
+        ? getStats(state.tracing, dispatchedAction.saveQueueType, dispatchedAction.tracingId)
         : null;
       const { activeUser } = state;
       if (activeUser == null) {
@@ -153,12 +156,16 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
 
       const updateActionChunks = _.chunk(
         items,
-        MAXIMUM_ACTION_COUNT_PER_BATCH[action.saveQueueType],
+        MAXIMUM_ACTION_COUNT_PER_BATCH[dispatchedAction.saveQueueType],
       );
 
       const transactionGroupCount = updateActionChunks.length;
       const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
-      const oldQueue = selectQueue(state, action.saveQueueType, action.tracingId);
+      const oldQueue = selectQueue(
+        state,
+        dispatchedAction.saveQueueType,
+        dispatchedAction.tracingId,
+      );
       const newQueue = oldQueue.concat(
         updateActionChunks.map((actions, transactionGroupIndex) => ({
           // Placeholder, the version number will be updated before sending to the server
@@ -168,16 +175,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
           transactionGroupIndex,
           timestamp: Date.now(),
           authorId: activeUser.id,
-          actions: actions.map(
-            (innerAction) =>
-              ({
-                ...innerAction,
-                value: {
-                  ...innerAction.value,
-                  actionTracingId: action.tracingId,
-                },
-              }) as UpdateActionWithTracingId,
-          ),
+          actions: addTracingIdToActions(actions, dispatchedAction.tracingId),
           stats,
           // Redux Action Log context for debugging purposes.
           info: actionLogInfo,
@@ -189,7 +187,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       // caught by the following check. If the bug appears again, we can investigate with more
       // details thanks to airbrake.
       if (
-        action.saveQueueType === "skeleton" &&
+        dispatchedAction.saveQueueType === "skeleton" &&
         oldQueue.length > 0 &&
         newQueue.length > 0 &&
         newQueue.at(-1)?.actions.some((action) => NOT_IDEMPOTENT_ACTIONS.includes(action.name)) &&
@@ -205,7 +203,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         );
       }
 
-      const newQueueObj = updateTracingDict(action, state.save.queue, newQueue);
+      const newQueueObj = updateTracingDict(dispatchedAction, state.save.queue, newQueue);
       return update(state, {
         save: {
           queue: {
@@ -312,6 +310,22 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     default:
       return state;
   }
+}
+
+export function addTracingIdToActions(
+  actions: UpdateAction[],
+  tracingId: string,
+): UpdateActionWithTracingId[] {
+  return actions.map(
+    (innerAction) =>
+      ({
+        ...innerAction,
+        value: {
+          ...innerAction.value,
+          actionTracingId: tracingId,
+        },
+      }) as UpdateActionWithTracingId,
+  );
 }
 
 export default SaveReducer;

@@ -6,6 +6,7 @@ import type { SaveState } from "oxalis/store";
 import type { APIUser } from "types/api_flow_types";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import type { EmptyObject } from "types/globals";
+
 const TIMESTAMP = 1494695001688;
 const DateMock = {
   now: () => TIMESTAMP,
@@ -19,6 +20,7 @@ const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const SaveReducer = mockRequire.reRequire("oxalis/model/reducers/save_reducer").default;
 const { createEdge } = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 
+const tracingId = "1234567890";
 const initialState: { save: SaveState; activeUser: APIUser; tracing: EmptyObject } = {
   activeUser: dummyUser,
   save: {
@@ -46,14 +48,18 @@ const initialState: { save: SaveState; activeUser: APIUser; tracing: EmptyObject
 };
 test("Save should add update actions to the queue", (t) => {
   const items = [createEdge(0, 1, 2), createEdge(0, 2, 3)];
-  const saveQueue = createSaveQueueFromUpdateActions([items], TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions([items], TIMESTAMP, tracingId);
   const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton");
   const newState = SaveReducer(initialState, pushAction);
   t.deepEqual(newState.save.queue.skeleton, saveQueue);
 });
 test("Save should add more update actions to the queue", (t) => {
   const getItems = (treeId: number) => [createEdge(treeId, 1, 2), createEdge(treeId, 2, 3)];
-  const saveQueue = createSaveQueueFromUpdateActions([getItems(0), getItems(1)], TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions(
+    [getItems(0), getItems(1)],
+    TIMESTAMP,
+    tracingId,
+  );
   const testState = SaveReducer(
     initialState,
     SaveActions.pushSaveQueueTransaction(getItems(0), "skeleton"),
@@ -65,9 +71,7 @@ test("Save should add more update actions to the queue", (t) => {
   t.deepEqual(newState.save.queue.skeleton, saveQueue);
 });
 test("Save should add zero update actions to the queue", (t) => {
-  // @ts-expect-error ts-migrate(7034) FIXME: Variable 'items' implicitly has type 'any[]' in so... Remove this comment to see the full error message
-  const items = [];
-  // @ts-expect-error ts-migrate(7005) FIXME: Variable 'items' implicitly has an 'any[]' type.
+  const items = [] as const;
   const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton");
   const newState = SaveReducer(initialState, pushAction);
   t.deepEqual(newState.save.queue.skeleton, []);
@@ -75,7 +79,7 @@ test("Save should add zero update actions to the queue", (t) => {
 test("Save should remove one update actions from the queue", (t) => {
   const firstItem = [createEdge(0, 1, 2)];
   const secondItem = [createEdge(1, 2, 3)];
-  const saveQueue = createSaveQueueFromUpdateActions([secondItem], TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions([secondItem], TIMESTAMP, tracingId);
   const firstPushAction = SaveActions.pushSaveQueueTransaction(firstItem, "skeleton");
   const secondPushAction = SaveActions.pushSaveQueueTransaction(secondItem, "skeleton");
   const popAction = SaveActions.shiftSaveQueueAction(1, "skeleton");
@@ -86,7 +90,7 @@ test("Save should remove one update actions from the queue", (t) => {
 });
 test("Save should remove zero update actions from the queue", (t) => {
   const items = [createEdge(0, 1, 2), createEdge(1, 2, 3)];
-  const saveQueue = createSaveQueueFromUpdateActions([items], TIMESTAMP);
+  const saveQueue = createSaveQueueFromUpdateActions([items], TIMESTAMP, tracingId);
   const pushAction = SaveActions.pushSaveQueueTransaction(items, "skeleton");
   const popAction = SaveActions.shiftSaveQueueAction(0, "skeleton");
   let newState = SaveReducer(initialState, pushAction);

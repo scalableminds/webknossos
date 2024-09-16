@@ -188,8 +188,9 @@ const descriptionFns: Record<ServerUpdateAction["name"], (...args: any) => Descr
     description: `Merged the trees with id ${action.value.sourceId} and ${action.value.targetId}.`,
     icon: <EditOutlined />,
   }),
-  updateTracing: (): Description => updateTracingDescription,
-};
+  updateSkeletonTracing: (): Description => updateTracingDescription,
+  updateVolumeTracing: (): Description => updateTracingDescription,
+} as const;
 
 function getDescriptionForSpecificBatch(
   actions: Array<ServerUpdateAction>,
@@ -200,8 +201,8 @@ function getDescriptionForSpecificBatch(
   if (firstAction.name !== type) {
     throw new Error("Type constraint violated");
   }
-
-  return descriptionFns[type](firstAction, actions.length);
+  const fn = descriptionFns[type];
+  return fn(firstAction, actions.length);
 }
 
 // An update action batch can consist of more than one update action as a single user action

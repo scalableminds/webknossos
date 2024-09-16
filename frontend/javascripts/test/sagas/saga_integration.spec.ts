@@ -67,6 +67,7 @@ test.serial(
         ],
       ],
       TIMESTAMP,
+      "tracingId",
       getStats(state.tracing, "skeleton", "irrelevant_in_skeleton_case") || undefined,
     );
     // Reset the info field which is just for debugging purposes

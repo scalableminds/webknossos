@@ -778,7 +778,6 @@ export type ServerSkeletonTracingTree = {
   isVisible?: boolean;
   type?: TreeType;
   edgesAreVisible?: boolean;
-  // todop: check whether this is really not-optional
   metadata: MetadataEntry[];
 };
 export type MetadataEntry = {

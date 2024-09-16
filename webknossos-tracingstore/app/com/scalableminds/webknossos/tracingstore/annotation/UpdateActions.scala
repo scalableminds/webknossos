@@ -198,6 +198,8 @@ object UpdateAction {
       case s: UpdateSegmentGroupsVolumeAction =>
         Json.obj("name" -> "updateSegmentGroups", "value" -> Json.toJson(s)(UpdateSegmentGroupsVolumeAction.jsonFormat))
       case s: CompactVolumeUpdateAction => Json.toJson(s)(CompactVolumeUpdateAction.compactVolumeUpdateActionFormat)
+      case s: UpdateMappingNameVolumeAction =>
+        Json.obj("name" -> "updateMappingName", "value" -> Json.toJson(s)(UpdateMappingNameVolumeAction.jsonFormat))
 
       // Editable Mapping
       case s: SplitAgglomerateUpdateAction =>

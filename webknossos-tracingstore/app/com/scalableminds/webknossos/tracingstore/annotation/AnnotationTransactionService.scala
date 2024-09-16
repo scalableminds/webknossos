@@ -181,12 +181,11 @@ class AnnotationTransactionService @Inject()(
       }
     } yield newVersion
 
-  def handleUpdateGroup(annotationId: String, updateActionGroup: UpdateActionGroup, userToken: Option[String])(
+  private def handleUpdateGroup(annotationId: String, updateActionGroup: UpdateActionGroup, userToken: Option[String])(
       implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- tracingDataStore.annotationUpdates.put(annotationId,
-                                                  updateActionGroup.version,
-                                                  preprocessActionsForStorage(updateActionGroup))
+      updateActionsJson <- Fox.successful(Json.toJson(preprocessActionsForStorage(updateActionGroup)))
+      _ <- tracingDataStore.annotationUpdates.put(annotationId, updateActionGroup.version, updateActionsJson)
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
       _ <- Fox.runIf(bucketMutatingActions.nonEmpty)(
         volumeTracingService
@@ -207,7 +206,7 @@ class AnnotationTransactionService @Inject()(
       case first :: rest => first.addInfo(updateActionGroup.info) :: rest
     }
     actionsWithInfo.map {
-      case a: UpdateBucketVolumeAction => a.transformToCompact // TODO or not?
+      case a: UpdateBucketVolumeAction => a.withoutBase64Data
       case a                           => a
     }
   }

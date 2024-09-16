@@ -18,7 +18,7 @@ import {
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import Date from "libs/date";
 import * as Utils from "libs/utils";
-import { UpdateActionWithTracingId } from "../sagas/update_actions";
+import type { UpdateActionWithTracingId } from "../sagas/update_actions";
 
 // These update actions are not idempotent. Having them
 // twice in the save queue causes a corruption of the current annotation.
@@ -140,7 +140,10 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         return state;
       }
       // Only report tracing statistics, if a "real" update to the tracing happened
-      const stats = _.some(action.items, (ua) => ua.name !== "updateTracing")
+      const stats = _.some(
+        action.items,
+        (ua) => ua.name !== "updateSkeletonTracing" && ua.name !== "updateVolumeTracing",
+      )
         ? getStats(state.tracing, action.saveQueueType, action.tracingId)
         : null;
       const { activeUser } = state;

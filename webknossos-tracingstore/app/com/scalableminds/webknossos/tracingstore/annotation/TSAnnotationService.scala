@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ApplyableVolumeUpdateAction,
+  BucketMutatingVolumeUpdateAction,
   VolumeTracingService,
   VolumeUpdateAction
 }
@@ -85,9 +86,11 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
           annotationWithTracings.applyVolumeAction(a)
         case a: EditableMappingUpdateAction =>
           annotationWithTracings.applyEditableMappingAction(a)
+        case _: BucketMutatingVolumeUpdateAction =>
+          Fox.successful(annotationWithTracings) // No-op, as bucket-mutating actions are performed eagerly, so not here.
         // TODO make Mapping Editable
         // Note: UpdateBucketVolumeActions are not handled here, but instead eagerly on saving.
-        case _ => Fox.failure("Received unsupported AnnotationUpdateAction action")
+        case _ => Fox.failure(s"Received unsupported AnnotationUpdateAction action ${Json.toJson(updateAction)}")
       }
     } yield updated
 

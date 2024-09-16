@@ -21,7 +21,9 @@ export function createSaveQueueFromUpdateActions(
   }));
 }
 export function withoutUpdateTracing(items: Array<UpdateAction>): Array<UpdateAction> {
-  return items.filter((item) => item.name !== "updateTracing");
+  return items.filter(
+    (item) => item.name !== "updateSkeletonTracing" && item.name !== "updateVolumeTracing",
+  );
 }
 export function withoutUpdateTree(items: Array<UpdateAction>): Array<UpdateAction> {
   return items.filter((item) => item.name !== "updateTree");

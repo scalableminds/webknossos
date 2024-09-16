@@ -420,7 +420,7 @@ export function removeFallbackLayer() {
 }
 export function updateTdCamera() {
   return {
-    name: "updateTdCameraSkeleton",
+    name: "updateTdCamera",
     value: {},
   } as const;
 }

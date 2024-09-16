@@ -45,6 +45,7 @@ import play.api.libs.json.{JsObject, JsValue, Json}
 
 import java.io._
 import java.nio.file.Paths
+import java.util.Base64
 import java.util.zip.Deflater
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -175,7 +176,8 @@ class VolumeTracingService @Inject()(
                                       action.additionalCoordinates)
       _ <- bool2Fox(!bucketPosition.hasNegativeComponent) ?~> s"Received a bucket at negative position ($bucketPosition), must be positive"
       dataLayer = volumeTracingLayer(tracingId, volumeTracing)
-      _ <- saveBucket(dataLayer, bucketPosition, action.data, updateGroupVersion) ?~> "failed to save bucket"
+      actionBucketData <- action.base64Data.map(Base64.getDecoder.decode).toFox
+      _ <- saveBucket(dataLayer, bucketPosition, actionBucketData, updateGroupVersion) ?~> "failed to save bucket"
       mappingName <- baseMappingName(volumeTracing)
       _ <- Fox.runIfOptionTrue(volumeTracing.hasSegmentIndex) {
         for {
@@ -183,7 +185,7 @@ class VolumeTracingService @Inject()(
           _ <- updateSegmentIndex(
             segmentIndexBuffer,
             bucketPosition,
-            action.data,
+            actionBucketData,
             previousBucketBytes,
             volumeTracing.elementClass,
             mappingName,

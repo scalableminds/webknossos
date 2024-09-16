@@ -96,7 +96,7 @@ test("SaveSaga should send update actions", (t) => {
     saga.next({
       forcePush: SaveActions.saveNowAction(),
     }),
-    put(setSaveBusyAction(true, TRACING_TYPE, tracingId)),
+    put(setSaveBusyAction(true)),
   );
 
   saga.next(); // advance to next select state
@@ -104,7 +104,7 @@ test("SaveSaga should send update actions", (t) => {
   expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer, TRACING_TYPE, tracingId));
   saga.next(saveQueue.length); // select state
 
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE, tracingId)));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false)));
 
   // Test that loop repeats
   saga.next(); // select state
@@ -229,7 +229,7 @@ test("SaveSaga should send update actions right away and try to reach a state wh
 
   saga.next(1); // advance to select state
 
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE, tracingId)));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false)));
 });
 test("SaveSaga should not try to reach state with all actions being saved when saving is triggered by a timeout", (t) => {
   const updateActions = [[UpdateActions.createEdge(1, 0, 1)], [UpdateActions.createEdge(1, 1, 2)]];
@@ -248,7 +248,7 @@ test("SaveSaga should not try to reach state with all actions being saved when s
 
   saga.next(saveQueue); // call sendRequestToServer
 
-  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false, TRACING_TYPE, tracingId)));
+  expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false)));
 });
 test("SaveSaga should remove the correct update actions", (t) => {
   const saveQueue = createSaveQueueFromUpdateActions(
@@ -272,11 +272,7 @@ test("SaveSaga should remove the correct update actions", (t) => {
     saga.next(),
     put(SaveActions.setVersionNumberAction(3, TRACING_TYPE, tracingId)),
   );
-  expectValueDeepEqual(
-    t,
-    saga.next(),
-    put(SaveActions.setLastSaveTimestampAction(TRACING_TYPE, tracingId)),
-  );
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
   expectValueDeepEqual(
     t,
     saga.next(),
@@ -306,11 +302,7 @@ test("SaveSaga should set the correct version numbers", (t) => {
     saga.next(),
     put(SaveActions.setVersionNumberAction(LAST_VERSION + 3, TRACING_TYPE, tracingId)),
   );
-  expectValueDeepEqual(
-    t,
-    saga.next(),
-    put(SaveActions.setLastSaveTimestampAction(TRACING_TYPE, tracingId)),
-  );
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
   expectValueDeepEqual(
     t,
     saga.next(),
@@ -341,11 +333,7 @@ test("SaveSaga should set the correct version numbers if the save queue was comp
     saga.next(),
     put(SaveActions.setVersionNumberAction(LAST_VERSION + 1, TRACING_TYPE, tracingId)),
   );
-  expectValueDeepEqual(
-    t,
-    saga.next(),
-    put(SaveActions.setLastSaveTimestampAction(TRACING_TYPE, tracingId)),
-  );
+  expectValueDeepEqual(t, saga.next(), put(SaveActions.setLastSaveTimestampAction()));
   expectValueDeepEqual(
     t,
     saga.next(),

@@ -180,16 +180,8 @@ const defaultState: OxalisState = {
   },
   save: {
     queue: [],
-    isBusyInfo: {
-      skeleton: false,
-      volumes: {},
-      mappings: {},
-    },
-    lastSaveTimestamp: {
-      skeleton: 0,
-      volumes: {},
-      mappings: {},
-    },
+    isBusy: false,
+    lastSaveTimestamp: 0,
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,

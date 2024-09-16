@@ -57,10 +57,10 @@ import { call, delay, fork, put, race, take, takeEvery } from "typed-redux-saga"
 
 const ONE_YEAR_MS = 365 * 24 * 3600 * 1000;
 
-export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: string): Saga<void> {
+export function* pushSaveQueueAsync(): Saga<void> {
   yield* call(ensureWkReady);
 
-  yield* put(setLastSaveTimestampAction(saveQueueType, tracingId));
+  yield* put(setLastSaveTimestampAction());
   let loopCounter = 0;
 
   while (true) {
@@ -85,7 +85,7 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
-    yield* put(setSaveBusyAction(true, saveQueueType, tracingId));
+    yield* put(setSaveBusyAction(true));
 
     // Send (parts) of the save queue to the server.
     // There are two main cases:
@@ -119,7 +119,7 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
       }
     }
 
-    yield* put(setSaveBusyAction(false, saveQueueType, tracingId));
+    yield* put(setSaveBusyAction(false));
   }
 }
 export function sendRequestWithToken(
@@ -209,18 +209,16 @@ export function* sendRequestToServer(
       }
 
       yield* put(setVersionNumberAction(version + versionIncrement, saveQueueType, tracingId));
-      yield* put(setLastSaveTimestampAction(saveQueueType, tracingId));
+      yield* put(setLastSaveTimestampAction());
       yield* put(shiftSaveQueueAction(saveQueue.length, saveQueueType, tracingId));
 
-      if (saveQueueType === "volume") {
-        try {
-          yield* call(markBucketsAsNotDirty, compactedSaveQueue, tracingId);
-        } catch (error) {
-          // If markBucketsAsNotDirty fails some reason, wk cannot recover from this error.
-          console.warn("Error when marking buckets as clean. No retry possible. Error:", error);
-          exceptionDuringMarkBucketsAsNotDirty = true;
-          throw error;
-        }
+      try {
+        yield* call(markBucketsAsNotDirty, compactedSaveQueue);
+      } catch (error) {
+        // If markBucketsAsNotDirty fails some reason, wk cannot recover from this error.
+        console.warn("Error when marking buckets as clean. No retry possible. Error:", error);
+        exceptionDuringMarkBucketsAsNotDirty = true;
+        throw error;
       }
 
       yield* call(toggleErrorHighlighting, false);
@@ -285,33 +283,37 @@ export function* sendRequestToServer(
   }
 }
 
-function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>, tracingId: string) {
-  const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
-  const segmentationResolutionInfo = yield* call(getResolutionInfo, segmentationLayer.resolutions);
+function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {
+  for (const saveEntry of saveQueue) {
+    for (const updateAction of saveEntry.actions) {
+      if (updateAction.name === "updateBucket") {
+        // The ID must belong to a segmentation layer because we are handling
+        // an updateBucket action.
+        const { actionTracingId: tracingId } = updateAction.value;
+        const segmentationLayer = Model.getSegmentationTracingLayer(tracingId);
+        const segmentationResolutionInfo = yield* call(
+          getResolutionInfo,
+          segmentationLayer.resolutions,
+        );
 
-  if (segmentationLayer != null) {
-    for (const saveEntry of saveQueue) {
-      for (const updateAction of saveEntry.actions) {
-        if (updateAction.name === "updateBucket") {
-          const { position, mag, additionalCoordinates } = updateAction.value;
-          const resolutionIndex = segmentationResolutionInfo.getIndexByResolution(mag);
-          const zoomedBucketAddress = globalPositionToBucketPosition(
-            position,
-            segmentationResolutionInfo.getDenseResolutions(),
-            resolutionIndex,
-            additionalCoordinates,
-          );
-          const bucket = segmentationLayer.cube.getOrCreateBucket(zoomedBucketAddress);
+        const { position, mag, additionalCoordinates } = updateAction.value;
+        const resolutionIndex = segmentationResolutionInfo.getIndexByResolution(mag);
+        const zoomedBucketAddress = globalPositionToBucketPosition(
+          position,
+          segmentationResolutionInfo.getDenseResolutions(),
+          resolutionIndex,
+          additionalCoordinates,
+        );
+        const bucket = segmentationLayer.cube.getOrCreateBucket(zoomedBucketAddress);
 
-          if (bucket.type === "null") {
-            continue;
-          }
+        if (bucket.type === "null") {
+          continue;
+        }
 
-          bucket.dirtyCount--;
+        bucket.dirtyCount--;
 
-          if (bucket.dirtyCount === 0) {
-            bucket.markAsPushed();
-          }
+        if (bucket.dirtyCount === 0) {
+          bucket.markAsPushed();
         }
       }
     }
@@ -379,19 +381,11 @@ export function performDiffTracing(
 }
 
 export function* saveTracingAsync(): Saga<void> {
+  yield* fork(pushSaveQueueAsync);
   yield* takeEvery("INITIALIZE_SKELETONTRACING", setupSavingForTracingType);
   yield* takeEvery("INITIALIZE_VOLUMETRACING", setupSavingForTracingType);
-  yield* takeEvery("INITIALIZE_EDITABLE_MAPPING", setupSavingForEditableMapping);
 }
 
-export function* setupSavingForEditableMapping(
-  initializeAction: InitializeEditableMappingAction,
-): Saga<void> {
-  // No diffing needs to be done for editable mappings as the saga pushes update actions
-  // to the respective save queues, itself
-  const volumeTracingId = initializeAction.mapping.tracingId;
-  yield* fork(pushSaveQueueAsync, "mapping", volumeTracingId);
-}
 export function* setupSavingForTracingType(
   initializeAction: InitializeSkeletonTracingAction | InitializeVolumeTracingAction,
 ): Saga<void> {
@@ -403,7 +397,6 @@ export function* setupSavingForTracingType(
   const saveQueueType =
     initializeAction.type === "INITIALIZE_SKELETONTRACING" ? "skeleton" : "volume";
   const tracingId = initializeAction.tracing.id;
-  yield* fork(pushSaveQueueAsync, saveQueueType, tracingId);
   let prevTracing = (yield* select((state) => selectTracing(state, saveQueueType, tracingId))) as
     | VolumeTracing
     | SkeletonTracing;

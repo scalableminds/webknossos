@@ -24,17 +24,9 @@ const tracingId = "1234567890";
 const initialState: { save: SaveState; activeUser: APIUser; tracing: EmptyObject } = {
   activeUser: dummyUser,
   save: {
-    isBusyInfo: {
-      skeleton: false,
-      volumes: {},
-      mappings: {},
-    },
+    isBusy: false,
     queue: [],
-    lastSaveTimestamp: {
-      skeleton: 0,
-      volumes: {},
-      mappings: {},
-    },
+    lastSaveTimestamp: 0,
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,

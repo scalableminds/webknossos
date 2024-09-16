@@ -2,8 +2,7 @@ import { connect } from "react-redux";
 import React from "react";
 import _ from "lodash";
 import Store, { type SaveState } from "oxalis/store";
-import type { OxalisState, IsBusyInfo } from "oxalis/store";
-import { isBusy } from "oxalis/model/accessors/save_accessor";
+import type { OxalisState } from "oxalis/store";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { Model } from "oxalis/singletons";
 import window from "libs/window";
@@ -25,7 +24,7 @@ type OwnProps = {
 };
 type StateProps = {
   progressFraction: number | null | undefined;
-  isBusyInfo: IsBusyInfo;
+  isBusy: boolean;
 };
 type Props = OwnProps & StateProps;
 type State = {
@@ -101,7 +100,7 @@ class SaveButton extends React.PureComponent<Props, State> {
   getSaveButtonIcon() {
     if (this.state.isStateSaved) {
       return <CheckOutlined />;
-    } else if (isBusy(this.props.isBusyInfo)) {
+    } else if (this.props.isBusy) {
       return <LoadingOutlined />;
     } else {
       return <HourglassOutlined />;
@@ -109,7 +108,7 @@ class SaveButton extends React.PureComponent<Props, State> {
   }
 
   shouldShowProgress(): boolean {
-    return isBusy(this.props.isBusyInfo) && this.props.progressFraction != null;
+    return this.props.isBusy && this.props.progressFraction != null;
   }
 
   render() {
@@ -190,9 +189,9 @@ function getOldestUnsavedTimestamp(saveQueue: SaveState["queue"]): number | null
 }
 
 function mapStateToProps(state: OxalisState): StateProps {
-  const { progressInfo, isBusyInfo } = state.save;
+  const { progressInfo, isBusy } = state.save;
   return {
-    isBusyInfo,
+    isBusy,
     // For a low action count, the progress info would show only for a very short amount of time.
     // Therefore, the progressFraction is set to null, if the count is low.
     progressFraction:

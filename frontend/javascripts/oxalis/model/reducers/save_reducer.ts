@@ -81,32 +81,6 @@ function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
   return state;
 }
 
-function updateLastSaveTimestamp(state: OxalisState, action: SetLastSaveTimestampAction) {
-  if (action.saveQueueType === "skeleton") {
-    return updateKey2(state, "save", "lastSaveTimestamp", {
-      skeleton: action.timestamp,
-    });
-  } else if (action.saveQueueType === "volume") {
-    const newVolumesDict = {
-      ...state.save.lastSaveTimestamp.volumes,
-      [action.tracingId]: action.timestamp,
-    };
-    return updateKey2(state, "save", "lastSaveTimestamp", {
-      volumes: newVolumesDict,
-    });
-  } else if (action.saveQueueType === "mapping") {
-    const newMappingsDict = {
-      ...state.save.lastSaveTimestamp.mappings,
-      [action.tracingId]: action.timestamp,
-    };
-    return updateKey2(state, "save", "lastSaveTimestamp", {
-      mappings: newMappingsDict,
-    });
-  }
-
-  return state;
-}
-
 function SaveReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
     case "PUSH_SAVE_QUEUE_TRANSACTION": {
@@ -243,18 +217,17 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
     }
 
     case "SET_SAVE_BUSY": {
-      const newIsBusyInfo = updateTracingDict(action, state.save.isBusyInfo, action.isBusy);
       return update(state, {
         save: {
-          isBusyInfo: {
-            $set: newIsBusyInfo,
+          isBusy: {
+            $set: action.isBusy,
           },
         },
       });
     }
 
     case "SET_LAST_SAVE_TIMESTAMP": {
-      return updateLastSaveTimestamp(state, action);
+      return updateKey2(state, "save", "lastSaveTimestamp", action.timestamp);
     }
 
     case "SET_VERSION_NUMBER": {

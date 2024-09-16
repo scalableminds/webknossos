@@ -450,19 +450,10 @@ export type ProgressInfo = {
   readonly processedActionCount: number;
   readonly totalActionCount: number;
 };
-export type IsBusyInfo = {
-  readonly skeleton: boolean;
-  readonly volumes: Record<string, boolean>;
-  readonly mappings: Record<string, boolean>;
-};
 export type SaveState = {
-  readonly isBusyInfo: IsBusyInfo;
+  readonly isBusy: boolean;
   readonly queue: Array<SaveQueueEntry>;
-  readonly lastSaveTimestamp: {
-    readonly skeleton: number;
-    readonly volumes: Record<string, number>;
-    readonly mappings: Record<string, number>;
-  };
+  readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
 };
 export type Flycam = {

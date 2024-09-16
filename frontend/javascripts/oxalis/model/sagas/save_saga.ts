@@ -42,7 +42,6 @@ import {
 } from "oxalis/model/sagas/save_saga_constants";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { updateTdCamera } from "oxalis/model/sagas/update_actions";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import { ensureWkReady } from "oxalis/model/sagas/wk_ready_saga";
 import { Model } from "oxalis/singletons";
@@ -67,7 +66,7 @@ export function* pushSaveQueueAsync(): Saga<void> {
     loopCounter++;
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE_TRANSACTION action
-    // could have been triggered during the call to sendRequestToServer
+    // could have been triggered during the call to sendSaveRequestToServer
     saveQueue = yield* select((state) => state.save.queue);
 
     if (saveQueue.length === 0) {
@@ -113,7 +112,7 @@ export function* pushSaveQueueAsync(): Saga<void> {
       saveQueue = yield* select((state) => state.save.queue);
 
       if (saveQueue.length > 0) {
-        savedItemCount += yield* call(sendRequestToServer);
+        savedItemCount += yield* call(sendSaveRequestToServer);
       } else {
         break;
       }
@@ -158,7 +157,7 @@ function getRetryWaitTime(retryCount: number) {
 // at any time, because the browser page is reloaded after the message is shown, anyway.
 let didShowFailedSimultaneousTracingError = false;
 
-export function* sendRequestToServer(): Saga<number> {
+export function* sendSaveRequestToServer(): Saga<number> {
   /*
    * Saves a reasonably-sized part of the save queue (that corresponds to the
    * tracingId) to the server (plus retry-mechanism).

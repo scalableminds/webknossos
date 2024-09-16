@@ -23,7 +23,7 @@ const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
 const {
   pushSaveQueueAsync,
-  sendRequestToServer,
+  sendSaveRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
   sendRequestWithToken,
@@ -101,7 +101,11 @@ test("SaveSaga should send update actions", (t) => {
 
   saga.next(); // advance to next select state
 
-  expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer, TRACING_TYPE, tracingId));
+  expectValueDeepEqual(
+    t,
+    saga.next(saveQueue),
+    call(sendSaveRequestToServer, TRACING_TYPE, tracingId),
+  );
   saga.next(saveQueue.length); // select state
 
   expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false)));
@@ -116,7 +120,7 @@ test("SaveSaga should send request to server", (t) => {
     TIMESTAMP,
     tracingId,
   );
-  const saga = sendRequestToServer(TRACING_TYPE, tracingId);
+  const saga = sendSaveRequestToServer(TRACING_TYPE, tracingId);
   saga.next();
   saga.next(saveQueue);
   saga.next({
@@ -152,7 +156,7 @@ test("SaveSaga should retry update actions", (t) => {
       compress: false,
     },
   );
-  const saga = sendRequestToServer(TRACING_TYPE, tracingId);
+  const saga = sendSaveRequestToServer(TRACING_TYPE, tracingId);
   saga.next();
   saga.next(saveQueue);
   saga.next({
@@ -175,7 +179,7 @@ test("SaveSaga should escalate on permanent client error update actions", (t) =>
     TIMESTAMP,
     tracingId,
   );
-  const saga = sendRequestToServer(TRACING_TYPE, tracingId);
+  const saga = sendSaveRequestToServer(TRACING_TYPE, tracingId);
   saga.next();
   saga.next(saveQueue);
   saga.next({
@@ -225,7 +229,7 @@ test("SaveSaga should send update actions right away and try to reach a state wh
 
   saga.next(); // select state
 
-  saga.next(saveQueue); // call sendRequestToServer
+  saga.next(saveQueue); // call sendSaveRequestToServer
 
   saga.next(1); // advance to select state
 
@@ -246,7 +250,7 @@ test("SaveSaga should not try to reach state with all actions being saved when s
     timeout: "a placeholder",
   }); // put setSaveBusyAction
 
-  saga.next(saveQueue); // call sendRequestToServer
+  saga.next(saveQueue); // call sendSaveRequestToServer
 
   expectValueDeepEqual(t, saga.next([]), put(setSaveBusyAction(false)));
 });
@@ -259,7 +263,7 @@ test("SaveSaga should remove the correct update actions", (t) => {
     TIMESTAMP,
     tracingId,
   );
-  const saga = sendRequestToServer(TRACING_TYPE, tracingId);
+  const saga = sendSaveRequestToServer(TRACING_TYPE, tracingId);
   saga.next();
   saga.next(saveQueue);
   saga.next({
@@ -289,7 +293,7 @@ test("SaveSaga should set the correct version numbers", (t) => {
     TIMESTAMP,
     tracingId,
   );
-  const saga = sendRequestToServer(TRACING_TYPE, tracingId);
+  const saga = sendSaveRequestToServer(TRACING_TYPE, tracingId);
   saga.next();
   saga.next(saveQueue);
   saga.next({
@@ -319,7 +323,7 @@ test("SaveSaga should set the correct version numbers if the save queue was comp
     TIMESTAMP,
     tracingId,
   );
-  const saga = sendRequestToServer(TRACING_TYPE, tracingId);
+  const saga = sendSaveRequestToServer(TRACING_TYPE, tracingId);
   saga.next();
   saga.next(saveQueue);
   saga.next({

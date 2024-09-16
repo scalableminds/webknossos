@@ -178,7 +178,7 @@ export default function BoundingBoxTab() {
 
   const onOpenContextMenu = (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
-    event.stopPropagation();
+    event.stopPropagation(); // Prevent that the bounding box gets activated when the context menu is opened.
 
     const [x, y] = getContextMenuPositionFromEvent(event, CONTEXT_MENU_CLASS);
     showContextMenuAt(x, y, menu);
@@ -242,6 +242,7 @@ export default function BoundingBoxTab() {
                 // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
                 onRow={(bb) => ({
                   onClick: () => {
+                    hideContextMenu();
                     handleGoToBoundingBox(bb.id);
                     dispatch(setActiveUserBoundingBoxId(bb.id));
                   },

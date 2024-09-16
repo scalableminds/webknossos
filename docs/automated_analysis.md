@@ -1,6 +1,6 @@
 # Automated Analysis
 
-While WEBKNOSSOS is great for manual annotation, some datasets are either too big to do by hand or you need results quicker. WEBKNOSSOS contains early access to automated analysis using machine learning classifiers for dataset segmentations. The WEBKNOSSOS developer team has many years of experience with training AI models for large-scale data analysis outside of WEBKNOSSOS. We aim to bring some of this know-how directly into WEBKNOSSOS itself.
+While WEBKNOSSOS is great for manual annotation, some datasets are either too big to do by hand or you need results quicker. WEBKNOSSOS contains early access to automated analysis, including machine learning classifiers for dataset segmentations. The WEBKNOSSOS developer team has many years of experience with training AI models for large-scale data analysis outside of WEBKNOSSOS. We aim to bring some of this know-how directly into WEBKNOSSOS itself.
 
 The automated analysis features are designed to provide a general solution to a wide range of (EM) datasets. Since datasets differ in staining protocols, imaging modalities, imaging resolution & fidelity, your results may vary. [Please contact us](mailto:hello@webknossos.org) for customized, fine-tuned solutions for your dataset. 
 
@@ -24,6 +24,14 @@ The finished analysis will be available as a new dataset from your dashboard. Yo
 
 ![Starting a new neuron segmentation.](images/neuron_segmentation_start.jpeg)
 ![Monitor the segmentation progress from the Jobs page.](images/nuclei_segmentation_job.jpeg)
+
+## Alignment (Image Registration)
+For single-tile image stacks, an alignment is directly possible from within WEBKNOSSOS.
+Simply upload the dataset, open it and select the "Alignment" tab in the AI Analysis dialog.
+
+You can even annotate landmarks with the skeleton tool and use that to let WEBKNOSSOS align the dataset. Often these landmarks are not necessary, but for particularly hard to align sections, they can be quite useful. When manual landmarks are used, they don't need to cover the entire dataset.
+
+For multi-tile image stacks, please refer to our [Alignment services](https://webknossos.org/services/alignment).
 
 ## Custom Analysis
 At the moment, WEBKNOSSOS can not be used to train custom classifiers. This might be something that we add in the future if there is enough interest in this.

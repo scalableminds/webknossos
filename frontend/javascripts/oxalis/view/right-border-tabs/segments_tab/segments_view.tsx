@@ -1049,11 +1049,11 @@ class SegmentsView extends React.Component<Props, State> {
           Reload from Server
         </ReloadOutlined>
       </FastTooltip>
-      <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
-        <FastTooltip title="Add a precomputed mesh file">
+      <FastTooltip title="Add a precomputed mesh file">
+        <Popover content={this.getPreComputeMeshesPopover} trigger="click" placement="bottom">
           <PlusOutlined className="icon-margin-right" />
-        </FastTooltip>
-      </Popover>
+        </Popover>
+      </FastTooltip>
       {this.state.activeMeshJobId != null ? (
         <FastTooltip title='A mesh file is currently being computed. See "Processing Jobs" for more information.'>
           <LoadingOutlined className="icon-margin-right" />

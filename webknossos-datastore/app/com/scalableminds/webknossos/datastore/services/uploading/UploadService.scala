@@ -144,6 +144,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   def reserveUpload(reserveUploadInformation: ReserveUploadInformation): Fox[Unit] =
     for {
+      _ <- dataSourceService.assertDataDirWritable(reserveUploadInformation.organization)
       _ <- runningUploadMetadataStore.insert(redisKeyForFileCount(reserveUploadInformation.uploadId),
                                              String.valueOf(reserveUploadInformation.totalFileCount))
       _ <- runningUploadMetadataStore.insert(

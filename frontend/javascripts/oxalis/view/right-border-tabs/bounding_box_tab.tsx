@@ -178,6 +178,7 @@ export default function BoundingBoxTab() {
 
   const onOpenContextMenu = (menu: MenuProps, event: React.MouseEvent<HTMLDivElement>) => {
     event.preventDefault();
+    event.stopPropagation();
 
     const [x, y] = getContextMenuPositionFromEvent(event, CONTEXT_MENU_CLASS);
     showContextMenuAt(x, y, menu);
@@ -197,7 +198,6 @@ export default function BoundingBoxTab() {
   const hideContextMenu = useCallback(() => {
     setContextMenuPosition(null);
     setMenu(null);
-    console.log("hide");
   }, []);
 
   return (

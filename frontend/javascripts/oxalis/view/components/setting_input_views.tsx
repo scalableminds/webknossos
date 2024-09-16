@@ -586,7 +586,10 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
     };
 
     return (
-      <div>
+      <div
+        onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+        onClick={this.props.onHideContextMenu}
+      >
         <Row
           style={{
             marginTop: 10,
@@ -627,7 +630,10 @@ class UserBoundingBoxInput extends React.PureComponent<UserBoundingBoxInputProps
             </FastTooltip>
           </Col>
           <Col span={2}>
-            <div onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}>
+            <div
+              onContextMenu={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+              onClick={(evt) => onOpenContextMenu(getContextMenu(), evt)}
+            >
               <EllipsisOutlined style={marginLeftStyle} />
             </div>
           </Col>

@@ -1166,7 +1166,7 @@ export function sanitizeMetadata(metadata: MetadataEntry[]) {
     const needsCorrection =
       prop.stringListValue != null &&
       prop.stringListValue.length === 0 &&
-      (prop.stringValue != null || prop.numberValue != null);
+      (prop.stringValue != null || prop.numberValue != null || prop.boolValue != null);
     if (needsCorrection) {
       return {
         ...prop,

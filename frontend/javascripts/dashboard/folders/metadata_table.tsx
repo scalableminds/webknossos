@@ -98,6 +98,15 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
   );
 };
 
+export function getUsedTagsWithinMetadata(metadata: APIMetadataWithError[]) {
+  return _.uniq(
+    metadata.flatMap((entry) => (entry.type === APIMetadataEnum.STRING_ARRAY ? entry.value : [])),
+  ).map((tag) => ({ value: tag, label: tag })) as {
+    value: string;
+    label: string;
+  }[];
+}
+
 interface MetadataValueInputProps {
   record: APIMetadataWithError;
   index: number;
@@ -140,7 +149,6 @@ export const MetadataValueInput: React.FC<MetadataValueInputProps> = ({
           controls={false}
           placeholder="Enter a number"
           onChange={(newNum) => {
-            console.log("onChange was called with", newNum);
             return updateMetadataValue(index, newNum || 0, APIMetadataEnum.NUMBER);
           }}
           {...sharedProps}
@@ -460,15 +468,6 @@ export default function MetadataTable({
       </div>
     </div>
   );
-}
-
-export function getUsedTagsWithinMetadata(metadata: APIMetadataWithError[]) {
-  return _.uniq(
-    metadata.flatMap((entry) => (entry.type === APIMetadataEnum.STRING_ARRAY ? entry.value : [])),
-  ).map((tag) => ({ value: tag, label: tag })) as {
-    value: string;
-    label: string;
-  }[];
 }
 
 export function InnerMetadataTable({

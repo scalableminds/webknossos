@@ -20,7 +20,7 @@ export function InputWithUpdateOnBlur({
       if (event.key === "Enter") {
         onChange(localValue);
       } else if (event.key === "Escape") {
-        document.activeElement ? (document.activeElement as HTMLElement).blur() : null;
+        (document.activeElement as HTMLElement | null)?.blur();
       }
       if (props.onKeyDown) {
         return props.onKeyDown(event);

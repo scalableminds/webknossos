@@ -37,22 +37,21 @@ trait BucketMutatingVolumeUpdateAction extends VolumeUpdateAction
 case class UpdateBucketVolumeAction(position: Vec3Int,
                                     cubeSize: Int,
                                     mag: Vec3Int,
-                                    base64Data: String,
+                                    base64Data: Option[String],
                                     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
                                     actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[String] = None,
                                     info: Option[String] = None)
     extends BucketMutatingVolumeUpdateAction {
-  lazy val data: Array[Byte] = Base64.getDecoder.decode(base64Data)
 
   override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
   override def addAuthorId(authorId: Option[String]): VolumeUpdateAction =
     this.copy(actionAuthorId = authorId)
   override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
 
-  def transformToCompact: CompactVolumeUpdateAction =
-    CompactVolumeUpdateAction("updateBucket", Json.obj(), actionTracingId, actionTimestamp, actionAuthorId, info)
+  def withoutBase64Data: UpdateBucketVolumeAction =
+    this.copy(base64Data = None)
 }
 
 case class UpdateTracingVolumeAction(

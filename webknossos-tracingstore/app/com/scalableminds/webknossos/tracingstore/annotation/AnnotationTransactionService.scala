@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   UpdateBucketVolumeAction,
   VolumeTracingService
 }
+import com.typesafe.scalalogging.LazyLogging
 import play.api.http.Status.CONFLICT
 import play.api.libs.json.Json
 
@@ -22,7 +23,8 @@ class AnnotationTransactionService @Inject()(
     volumeTracingService: VolumeTracingService,
     tracingDataStore: TracingDataStore,
     annotationService: TSAnnotationService)
-    extends KeyValueStoreImplicits {
+    extends KeyValueStoreImplicits
+    with LazyLogging {
 
   private val transactionGroupExpiry: FiniteDuration = 24 hours
   private val handledGroupCacheExpiry: FiniteDuration = 24 hours
@@ -161,6 +163,9 @@ class AnnotationTransactionService @Inject()(
     for {
       _ <- annotationService.reportUpdates(annotationId, updateGroups, userToken)
       currentCommittedVersion: Fox[Long] = annotationService.currentMaterializableVersion(annotationId)
+      _ = logger.info(s"trying to commit ${updateGroups
+        .map(_.actions.length)
+        .sum} actions in ${updateGroups.length} groups (versions ${updateGroups.map(_.version).mkString(",")}")
       newVersion <- updateGroups.foldLeft(currentCommittedVersion) { (previousVersion, updateGroup) =>
         previousVersion.flatMap { prevVersion: Long =>
           if (prevVersion + 1 == updateGroup.version) {
@@ -176,12 +181,11 @@ class AnnotationTransactionService @Inject()(
       }
     } yield newVersion
 
-  def handleUpdateGroup(annotationId: String, updateActionGroup: UpdateActionGroup, userToken: Option[String])(
+  private def handleUpdateGroup(annotationId: String, updateActionGroup: UpdateActionGroup, userToken: Option[String])(
       implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- tracingDataStore.annotationUpdates.put(annotationId,
-                                                  updateActionGroup.version,
-                                                  preprocessActionsForStorage(updateActionGroup))
+      updateActionsJson <- Fox.successful(Json.toJson(preprocessActionsForStorage(updateActionGroup)))
+      _ <- tracingDataStore.annotationUpdates.put(annotationId, updateActionGroup.version, updateActionsJson)
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
       _ <- Fox.runIf(bucketMutatingActions.nonEmpty)(
         volumeTracingService
@@ -202,7 +206,7 @@ class AnnotationTransactionService @Inject()(
       case first :: rest => first.addInfo(updateActionGroup.info) :: rest
     }
     actionsWithInfo.map {
-      case a: UpdateBucketVolumeAction => a.transformToCompact // TODO or not?
+      case a: UpdateBucketVolumeAction => a.withoutBase64Data
       case a                           => a
     }
   }

@@ -371,9 +371,12 @@ export function performDiffTracing(
     );
   }
 
+  /*
+  TODO: restore this update action (decide how to handle it, does it belong to skeleton or volume or something else?)
   if (prevTdCamera !== tdCamera) {
     actions = actions.concat(updateTdCamera());
   }
+  */
 
   return actions;
 }

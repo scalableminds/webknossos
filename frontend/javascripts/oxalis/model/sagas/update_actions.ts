@@ -301,7 +301,7 @@ export function updateVolumeTracing(
   zoomLevel: number,
 ) {
   return {
-    name: "updateTracing",
+    name: "updateVolumeTracing",
     value: {
       activeSegmentId: tracing.activeCellId,
       editPosition: position,
@@ -420,7 +420,7 @@ export function removeFallbackLayer() {
 }
 export function updateTdCamera() {
   return {
-    name: "updateTdCameraSkeleton",
+    name: "updateTdCamera",
     value: {},
   } as const;
 }

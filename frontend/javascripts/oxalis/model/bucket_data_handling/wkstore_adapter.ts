@@ -110,7 +110,8 @@ export async function requestWithFallback(
       optLayerName || layerInfo.name
     }`;
 
-  const getTracingStoreUrl = () => `${tracingStoreHost}/tracings/volume/${layerInfo.name}`;
+  const getTracingStoreUrl = () =>
+    `${tracingStoreHost}/tracings/volume/${state.tracing.annotationId}/${layerInfo.name}`;
 
   const maybeVolumeTracing =
     "tracingId" in layerInfo && layerInfo.tracingId != null

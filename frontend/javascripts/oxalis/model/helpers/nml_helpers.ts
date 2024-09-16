@@ -600,16 +600,22 @@ function _parseStringArray(
   return indices.map((idx) => obj[`${prefix}-${idx}`]);
 }
 
-function _parseTimestamp(obj: Record<string, string>, key: string, defaultValue?: number): number {
-  const timestamp = _parseInt(obj, key, defaultValue != null ? { defaultValue } : undefined);
+function _parseTimestamp(
+  obj: Record<string, string>,
+  key: string,
+  options?: {
+    defaultValue: number | undefined;
+  },
+): number {
+  const timestamp = _parseInt(obj, key, options);
 
-  const isValid = new Date(timestamp).getTime() > 0;
+  const isValid = timestamp != null && new Date(timestamp).getTime() > 0;
 
   if (!isValid) {
-    if (defaultValue == null) {
+    if (options?.defaultValue == null) {
       throw new NmlParseError(`${messages["nml.invalid_timestamp"]} ${key}`);
     } else {
-      return defaultValue;
+      return options.defaultValue;
     }
   }
 
@@ -957,7 +963,7 @@ export function parseNml(nmlString: string): Promise<{
               viewport: _parseInt(attr, "inVp", { defaultValue: DEFAULT_VIEWPORT }),
               resolution: _parseInt(attr, "inMag", { defaultValue: DEFAULT_RESOLUTION }),
               radius: _parseFloat(attr, "radius", { defaultValue: Constants.DEFAULT_NODE_RADIUS }),
-              timestamp: _parseTimestamp(attr, "time", DEFAULT_TIMESTAMP),
+              timestamp: _parseTimestamp(attr, "time", { defaultValue: DEFAULT_TIMESTAMP }),
             };
             if (currentTree == null)
               throw new NmlParseError(`${messages["nml.node_outside_tree"]} ${currentNode.id}`);

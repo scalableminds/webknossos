@@ -10,7 +10,6 @@ import type {
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { getStats } from "oxalis/model/accessors/annotation_accessor";
 import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
-import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { updateKey2 } from "oxalis/model/helpers/deep_update";
 import {
   updateEditableMapping,
@@ -61,15 +60,7 @@ function updateTracingDict<V>(
 }
 
 export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
-  return (
-    queueObj.skeleton.length +
-    _.sum(
-      Utils.values(queueObj.volumes).map((volumeQueue: SaveQueueEntry[]) => volumeQueue.length),
-    ) +
-    _.sum(
-      Utils.values(queueObj.mappings).map((mappingQueue: SaveQueueEntry[]) => mappingQueue.length),
-    )
-  );
+  return queueObj.length;
 }
 
 function updateVersion(state: OxalisState, action: SetVersionNumberAction) {
@@ -118,22 +109,6 @@ function updateLastSaveTimestamp(state: OxalisState, action: SetLastSaveTimestam
 
 function SaveReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
-    case "INITIALIZE_VOLUMETRACING": {
-      // Set up empty save queue array for volume tracing
-      const newVolumesQueue = { ...state.save.queue.volumes, [action.tracing.id]: [] };
-      return updateKey2(state, "save", "queue", {
-        volumes: newVolumesQueue,
-      });
-    }
-
-    case "INITIALIZE_EDITABLE_MAPPING": {
-      // Set up empty save queue array for editable mapping
-      const newMappingsQueue = { ...state.save.queue.mappings, [action.mapping.tracingId]: [] };
-      return updateKey2(state, "save", "queue", {
-        mappings: newMappingsQueue,
-      });
-    }
-
     case "PUSH_SAVE_QUEUE_TRANSACTION": {
       // Use `dispatchedAction` to better distinguish this variable from
       // update actions.
@@ -161,11 +136,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
 
       const transactionGroupCount = updateActionChunks.length;
       const actionLogInfo = JSON.stringify(getActionLog().slice(-10));
-      const oldQueue = selectQueue(
-        state,
-        dispatchedAction.saveQueueType,
-        dispatchedAction.tracingId,
-      );
+      const oldQueue = state.save.queue;
       const newQueue = oldQueue.concat(
         updateActionChunks.map((actions, transactionGroupIndex) => ({
           // Placeholder, the version number will be updated before sending to the server
@@ -203,11 +174,10 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         );
       }
 
-      const newQueueObj = updateTracingDict(dispatchedAction, state.save.queue, newQueue);
       return update(state, {
         save: {
           queue: {
-            $set: newQueueObj,
+            $set: newQueue,
           },
           progressInfo: {
             totalActionCount: {
@@ -222,7 +192,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       const { count } = action;
 
       if (count > 0) {
-        const queue = selectQueue(state, action.saveQueueType, action.tracingId);
+        const queue = state.save.queue;
 
         const processedQueueActionCount = _.sumBy(
           queue.slice(0, count),
@@ -230,13 +200,12 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
         );
 
         const remainingQueue = queue.slice(count);
-        const newQueueObj = updateTracingDict(action, state.save.queue, remainingQueue);
-        const remainingQueueLength = getTotalSaveQueueLength(newQueueObj);
+        const remainingQueueLength = getTotalSaveQueueLength(remainingQueue);
         const resetCounter = remainingQueueLength === 0;
         return update(state, {
           save: {
             queue: {
-              $set: newQueueObj,
+              $set: remainingQueue,
             },
             progressInfo: {
               // Reset progress counters if the queue is empty. Otherwise,
@@ -259,11 +228,7 @@ function SaveReducer(state: OxalisState, action: Action): OxalisState {
       return update(state, {
         save: {
           queue: {
-            $set: {
-              skeleton: [],
-              volumes: _.mapValues(state.save.queue.volumes, () => []),
-              mappings: _.mapValues(state.save.queue.mappings, () => []),
-            },
+            $set: [],
           },
           progressInfo: {
             processedActionCount: {

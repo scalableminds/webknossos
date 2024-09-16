@@ -29,11 +29,7 @@ const initialState: { save: SaveState; activeUser: APIUser; tracing: EmptyObject
       volumes: {},
       mappings: {},
     },
-    queue: {
-      skeleton: [],
-      volumes: {},
-      mappings: {},
-    },
+    queue: [],
     lastSaveTimestamp: {
       skeleton: 0,
       volumes: {},

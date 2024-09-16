@@ -179,11 +179,7 @@ const defaultState: OxalisState = {
     annotationLayers: [],
   },
   save: {
-    queue: {
-      skeleton: [],
-      volumes: {},
-      mappings: {},
-    },
+    queue: [],
     isBusyInfo: {
       skeleton: false,
       volumes: {},

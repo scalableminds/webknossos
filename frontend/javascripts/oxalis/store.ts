@@ -457,11 +457,7 @@ export type IsBusyInfo = {
 };
 export type SaveState = {
   readonly isBusyInfo: IsBusyInfo;
-  readonly queue: {
-    readonly skeleton: Array<SaveQueueEntry>;
-    readonly volumes: Record<string, Array<SaveQueueEntry>>;
-    readonly mappings: Record<string, Array<SaveQueueEntry>>;
-  };
+  readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: {
     readonly skeleton: number;
     readonly volumes: Record<string, number>;

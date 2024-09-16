@@ -10,7 +10,6 @@ import _ from "lodash";
 import messages from "messages";
 import { ControlModeEnum } from "oxalis/constants";
 import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
-import { selectQueue } from "oxalis/model/accessors/save_accessor";
 import { selectTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
@@ -69,7 +68,7 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
     let saveQueue;
     // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE_TRANSACTION action
     // could have been triggered during the call to sendRequestToServer
-    saveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
+    saveQueue = yield* select((state) => state.save.queue);
 
     if (saveQueue.length === 0) {
       if (loopCounter % 100 === 0) {
@@ -108,10 +107,10 @@ export function* pushSaveQueueAsync(saveQueueType: SaveQueueType, tracingId: str
     //    user didn't use the save button which is usually accompanied by a small pause).
     const itemCountToSave = forcePush
       ? Number.POSITIVE_INFINITY
-      : yield* select((state) => selectQueue(state, saveQueueType, tracingId).length);
+      : yield* select((state) => state.save.queue.length);
     let savedItemCount = 0;
     while (savedItemCount < itemCountToSave) {
-      saveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
+      saveQueue = yield* select((state) => state.save.queue);
 
       if (saveQueue.length > 0) {
         savedItemCount += yield* call(sendRequestToServer, saveQueueType, tracingId);
@@ -172,7 +171,7 @@ export function* sendRequestToServer(
    * The saga returns the number of save queue items that were saved.
    */
 
-  const fullSaveQueue = yield* select((state) => selectQueue(state, saveQueueType, tracingId));
+  const fullSaveQueue = yield* select((state) => state.save.queue);
   const saveQueue = sliceAppropriateBatchCount(fullSaveQueue, saveQueueType);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
   const { version } = yield* select((state) => selectTracing(state, saveQueueType, tracingId));
@@ -531,9 +530,7 @@ function* watchForSaveConflicts() {
         // The latest version on the server is greater than the most-recently
         // stored version.
 
-        const saveQueue = yield* select((state) =>
-          selectQueue(state, tracing.type, tracing.tracingId),
-        );
+        const saveQueue = yield* select((state) => state.save.queue);
 
         let msg = "";
         if (!allowSave) {

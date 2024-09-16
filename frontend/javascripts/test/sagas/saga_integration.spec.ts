@@ -16,16 +16,18 @@ import { hasRootSagaCrashed } from "oxalis/model/sagas/root_saga";
 import { omit } from "lodash";
 import { tracing as TaskTracing } from "test/fixtures/tasktracing_server_objects";
 
-const {
-  createTreeMapFromTreeArray,
-  generateTreeName,
-} = require("oxalis/model/reducers/skeletontracing_reducer_helpers");
+const { createTreeMapFromTreeArray, generateTreeName } =
+  require("oxalis/model/reducers/skeletontracing_reducer_helpers") as typeof import("oxalis/model/reducers/skeletontracing_reducer_helpers");
 
 const { addTreesAndGroupsAction, deleteNodeAction } = mockRequire.reRequire(
   "oxalis/model/actions/skeletontracing_actions",
-);
-const { discardSaveQueuesAction } = mockRequire.reRequire("oxalis/model/actions/save_actions");
-const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
+) as typeof import("oxalis/model/actions/skeletontracing_actions");
+const { discardSaveQueuesAction } = mockRequire.reRequire(
+  "oxalis/model/actions/save_actions",
+) as typeof import("oxalis/model/actions/save_actions");
+const UpdateActions = mockRequire.reRequire(
+  "oxalis/model/sagas/update_actions",
+) as typeof import("oxalis/model/sagas/update_actions");
 
 test.beforeEach(async (t) => {
   // Setup oxalis, this will execute model.fetch(...) and initialize the store with the tracing, etc.
@@ -59,7 +61,7 @@ test.serial(
         [
           UpdateActions.updateTree(treeWithCorrectName),
           UpdateActions.updateSkeletonTracing(
-            Store.getState().tracing.skeleton,
+            enforceSkeletonTracing(Store.getState().tracing),
             [1, 2, 3],
             [],
             [0, 0, 0],

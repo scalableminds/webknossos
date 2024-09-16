@@ -26,7 +26,7 @@ export const setupRenderArea = (
 ) => {
   // In WebGLRenderer.setViewport() and WebGLRenderer.setScissor()
   // (x, y) is the coordinate of the lower left corner of the rectangular region.
-  const overallHeight = renderer.domElement.height;
+  const overallHeight = renderer.domElement.height / 2;
   renderer.setViewport(x, overallHeight - y - viewportHeight, viewportWidth, viewportHeight);
   renderer.setScissor(x, overallHeight - y - viewportHeight, viewportWidth, viewportHeight);
   renderer.setScissorTest(true);

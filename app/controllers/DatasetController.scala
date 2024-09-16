@@ -19,6 +19,7 @@ import models.folder.FolderService
 import models.organization.OrganizationDAO
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
+import net.liftweb.common.{Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -386,7 +387,16 @@ class DatasetController @Inject()(userService: UserService,
 
   def isValidNewName(organizationId: String, datasetName: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
-      Fox.successful(Ok(Json.obj("isValid" -> true)))
+      for {
+        organization <- organizationDAO.findOne(organizationId)
+        _ <- bool2Fox(organization._id == request.identity._organization) ~> FORBIDDEN
+        validName <- datasetService.assertValidDatasetName(datasetName).futureBox
+      } yield
+        validName match {
+          case Full(e)            => Ok(Json.obj("isValid" -> true))
+          case Failure(msg, _, _) => Ok(Json.obj("isValid" -> false, "errors" -> Messages(msg)))
+          case _                  => Ok(Json.obj("isValid" -> false, "errors" -> List("Unknown error")))
+        }
     }
 
   def getOrganizationForDataset(datasetNameAndId: String): Action[AnyContent] = sil.UserAwareAction.async {

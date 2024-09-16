@@ -11,6 +11,7 @@ import { type APIMetadata, APIMetadataEnum, type MetadataEntry } from "types/api
 import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
 import _ from "lodash";
 import { memo } from "react";
+import FastTooltip from "components/fast_tooltip";
 
 const getKeyInputIdForIndex = (index: number) => `metadata-key-input-id-${index}`;
 
@@ -78,7 +79,11 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntry[] }>({
     return (
       <div style={{ display: "flex" }}>
         <InputWithUpdateOnBlur
-          prefix={<TagsOutlined />}
+          prefix={
+            <FastTooltip title="This is a user-defined metadata property that consists of a key and a value.">
+              <TagsOutlined />
+            </FastTooltip>
+          }
           className="transparent-input"
           value={record.key}
           disabled={readOnly}

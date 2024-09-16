@@ -67,9 +67,11 @@ ensureUpToDateTests() {
 maybeWithC8() {
   if [[ -n "$CIRCLECI" ]]; then
     # Running in CircleCI, use c8 to gather code coverage.
+    echo "Running with c8 to gather code coverage..."
     c8 --silent --no-clean "$@"
   else
     # Not running in CircleCI, execute the command directly
+    echo "Running tests without gathering code coverage..."
     "$@"
   fi
 }

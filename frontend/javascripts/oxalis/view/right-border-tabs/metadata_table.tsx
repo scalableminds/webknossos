@@ -7,7 +7,11 @@ import {
   InnerMetadataTable,
   MetadataValueInput,
 } from "dashboard/folders/metadata_table";
-import { type APIMetadata, APIMetadataEnum, type MetadataEntryProto } from "types/api_flow_types";
+import {
+  type APIMetadataEntry,
+  APIMetadataEnum,
+  type MetadataEntryProto,
+} from "types/api_flow_types";
 import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
 import _ from "lodash";
 import { memo } from "react";
@@ -140,7 +144,7 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntryProto[] }>
     );
   };
 
-  const addNewEntryWithType = (type: APIMetadata["type"]) => {
+  const addNewEntryWithType = (type: APIMetadataEntry["type"]) => {
     const indexOfNewEntry = item.metadata.length;
     // Auto focus the key input of the new entry.
     setTimeout(() => document.getElementById(getKeyInputIdForIndex(indexOfNewEntry))?.focus(), 50);

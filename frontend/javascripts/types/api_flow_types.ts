@@ -177,12 +177,15 @@ export enum APIMetadataEnum {
   NUMBER = "number",
   STRING_ARRAY = "string[]",
 }
-export type APIMetadata = {
+
+// Note that this differs from MetadataEntryProto, because
+// it's stored in sql and not in protobuf.
+// The type is used for datasets and folders.
+export type APIMetadataEntry = {
   type: APIMetadataEnum;
   key: string;
   value: string | number | string[];
 };
-export type APIMetadataEntries = APIMetadata[];
 
 type MutableAPIDatasetBase = MutableAPIDatasetId & {
   isUnreported: boolean;
@@ -192,7 +195,7 @@ type MutableAPIDatasetBase = MutableAPIDatasetId & {
   created: number;
   dataStore: APIDataStore;
   description: string | null | undefined;
-  metadata: APIMetadataEntries | null | undefined;
+  metadata: APIMetadataEntry[] | null | undefined;
   isEditable: boolean;
   isPublic: boolean;
   displayName: string | null | undefined;
@@ -780,6 +783,10 @@ export type ServerSkeletonTracingTree = {
   edgesAreVisible?: boolean;
   metadata: MetadataEntryProto[];
 };
+
+// Note that this differs from APIMetadataEntry, because
+// it's internally stored as protobuf and not in sql.
+// The type is used for in-annotation entities (segments, trees etc.)
 export type MetadataEntryProto = {
   key: string;
   stringValue?: string;
@@ -1092,7 +1099,7 @@ export type FlatFolderTreeItem = {
   name: string;
   id: string;
   parent: string | null;
-  metadata: APIMetadataEntries;
+  metadata: APIMetadataEntry[];
   isEditable: boolean;
 };
 
@@ -1103,7 +1110,7 @@ export type FolderItem = {
   parent: string | null | undefined;
   children: FolderItem[];
   isEditable: boolean;
-  metadata: APIMetadataEntries;
+  metadata: APIMetadataEntry[];
   // Can be set so that the antd tree component can disable
   // individual folder items.
   disabled?: boolean;
@@ -1114,7 +1121,7 @@ export type Folder = {
   id: string;
   allowedTeams: APITeam[];
   allowedTeamsCumulative: APITeam[];
-  metadata: APIMetadataEntries;
+  metadata: APIMetadataEntry[];
   isEditable: boolean;
 };
 
@@ -1122,7 +1129,7 @@ export type FolderUpdater = {
   id: string;
   name: string;
   allowedTeams: string[];
-  metadata: APIMetadataEntries;
+  metadata: APIMetadataEntry[];
 };
 
 export enum CAMERA_POSITIONS {

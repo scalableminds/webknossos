@@ -31,13 +31,13 @@ import { useState } from "react";
 import {
   type APIDataset,
   type Folder,
-  type APIMetadata,
+  type APIMetadataEntry,
   APIMetadataEnum,
 } from "types/api_flow_types";
 
-export type APIMetadataWithError = APIMetadata & { error?: string | null };
+export type APIMetadataWithError = APIMetadataEntry & { error?: string | null };
 
-function getMetadataTypeLabel(type: APIMetadata["type"]) {
+function getMetadataTypeLabel(type: APIMetadataEntry["type"]) {
   switch (type) {
     case "string":
       return (
@@ -61,14 +61,14 @@ function getMetadataTypeLabel(type: APIMetadata["type"]) {
 }
 
 export function getTypeSelectDropdownMenu(
-  addNewEntryWithType: (type: APIMetadata["type"]) => void,
+  addNewEntryWithType: (type: APIMetadataEntry["type"]) => void,
 ): MenuProps {
   return {
     items: Object.values(APIMetadataEnum).map((type) => {
       return {
         key: type,
-        label: getMetadataTypeLabel(type as APIMetadata["type"]),
-        onClick: () => addNewEntryWithType(type as APIMetadata["type"]),
+        label: getMetadataTypeLabel(type as APIMetadataEntry["type"]),
+        onClick: () => addNewEntryWithType(type as APIMetadataEntry["type"]),
       };
     }),
   };
@@ -360,7 +360,7 @@ export default function MetadataTable({
     });
   };
 
-  const addNewEntryWithType = (type: APIMetadata["type"]) => {
+  const addNewEntryWithType = (type: APIMetadataEntry["type"]) => {
     setMetadata((prev) => {
       const indexOfNewEntry = prev.length;
       const newEntry: APIMetadataWithError = {

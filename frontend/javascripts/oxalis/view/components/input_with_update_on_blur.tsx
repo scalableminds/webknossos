@@ -37,7 +37,7 @@ export function InputWithUpdateOnBlur({
   const status = validationError != null ? "error" : undefined;
 
   return (
-    <FastTooltip title={validationError} placement="left" variant="error">
+    <FastTooltip title={validationError} placement="left" variant="warning">
       <Input
         value={localValue}
         onBlur={(event) => {

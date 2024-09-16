@@ -113,7 +113,7 @@ export function* pushSaveQueueAsync(): Saga<void> {
       saveQueue = yield* select((state) => state.save.queue);
 
       if (saveQueue.length > 0) {
-        savedItemCount += yield* call(sendRequestToServer, saveQueueType, tracingId);
+        savedItemCount += yield* call(sendRequestToServer);
       } else {
         break;
       }
@@ -131,17 +131,14 @@ export function sendRequestWithToken(
 
 // This function returns the first n batches of the provided array, so that the count of
 // all actions in these n batches does not exceed MAXIMUM_ACTION_COUNT_PER_SAVE
-function sliceAppropriateBatchCount(
-  batches: Array<SaveQueueEntry>,
-  saveQueueType: SaveQueueType,
-): Array<SaveQueueEntry> {
+function sliceAppropriateBatchCount(batches: Array<SaveQueueEntry>): Array<SaveQueueEntry> {
   const slicedBatches = [];
   let actionCount = 0;
 
   for (const batch of batches) {
     const newActionCount = actionCount + batch.actions.length;
 
-    if (newActionCount <= MAXIMUM_ACTION_COUNT_PER_SAVE[saveQueueType]) {
+    if (newActionCount <= MAXIMUM_ACTION_COUNT_PER_SAVE) {
       actionCount = newActionCount;
       slicedBatches.push(batch);
     } else {
@@ -161,10 +158,7 @@ function getRetryWaitTime(retryCount: number) {
 // at any time, because the browser page is reloaded after the message is shown, anyway.
 let didShowFailedSimultaneousTracingError = false;
 
-export function* sendRequestToServer(
-  saveQueueType: SaveQueueType,
-  tracingId: string,
-): Saga<number> {
+export function* sendRequestToServer(): Saga<number> {
   /*
    * Saves a reasonably-sized part of the save queue (that corresponds to the
    * tracingId) to the server (plus retry-mechanism).
@@ -172,9 +166,12 @@ export function* sendRequestToServer(
    */
 
   const fullSaveQueue = yield* select((state) => state.save.queue);
-  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue, saveQueueType);
+  const saveQueue = sliceAppropriateBatchCount(fullSaveQueue);
   let compactedSaveQueue = compactSaveQueue(saveQueue);
-  const { version } = yield* select((state) => selectTracing(state, saveQueueType, tracingId));
+  const tracings = yield* select((state) =>
+    _.compact([state.tracing.skeleton, ...state.tracing.volumes, ...state.tracing.mappings]),
+  );
+  const version = _.max(tracings.map((t) => t.version)) || 0;
   const annotationId = yield* select((state) => state.tracing.annotationId);
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
   let versionIncrement;
@@ -208,9 +205,13 @@ export function* sendRequestToServer(
         );
       }
 
-      yield* put(setVersionNumberAction(version + versionIncrement, saveQueueType, tracingId));
+      for (const tracing of tracings) {
+        yield* put(
+          setVersionNumberAction(version + versionIncrement, tracing.type, tracing.tracingId),
+        );
+      }
       yield* put(setLastSaveTimestampAction());
-      yield* put(shiftSaveQueueAction(saveQueue.length, saveQueueType, tracingId));
+      yield* put(shiftSaveQueueAction(saveQueue.length));
 
       try {
         yield* call(markBucketsAsNotDirty, compactedSaveQueue);

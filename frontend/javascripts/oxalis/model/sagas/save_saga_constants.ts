@@ -17,8 +17,10 @@ export const MAXIMUM_ACTION_COUNT_PER_BATCH = {
   mapping: Number.POSITIVE_INFINITY, // The back-end does not accept transactions for mappings.
 } as const;
 
-export const MAXIMUM_ACTION_COUNT_PER_SAVE = {
-  skeleton: 15000,
-  volume: 3000,
-  mapping: Number.POSITIVE_INFINITY, // The back-end does not accept transactions for mappings.
-} as const;
+// todop: should this be smarter?
+// export const MAXIMUM_ACTION_COUNT_PER_SAVE = {
+//   skeleton: 15000,
+//   volume: 3000,
+//   mapping: Number.POSITIVE_INFINITY, // The back-end does not accept transactions for mappings.
+// } as const;
+export const MAXIMUM_ACTION_COUNT_PER_SAVE = 3000;

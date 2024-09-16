@@ -1,12 +1,8 @@
 import _ from "lodash";
 import update from "immutability-helper";
 import type { Action } from "oxalis/model/actions/actions";
-import type { OxalisState, SaveState, SaveQueueEntry } from "oxalis/store";
-import type {
-  SetVersionNumberAction,
-  SetLastSaveTimestampAction,
-  SaveQueueType,
-} from "oxalis/model/actions/save_actions";
+import type { OxalisState, SaveState } from "oxalis/store";
+import type { SetVersionNumberAction } from "oxalis/model/actions/save_actions";
 import { getActionLog } from "oxalis/model/helpers/action_logger_middleware";
 import { getStats } from "oxalis/model/accessors/annotation_accessor";
 import { MAXIMUM_ACTION_COUNT_PER_BATCH } from "oxalis/model/sagas/save_saga_constants";
@@ -16,7 +12,6 @@ import {
   updateVolumeTracing,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import Date from "libs/date";
-import * as Utils from "libs/utils";
 import type { UpdateAction, UpdateActionWithTracingId } from "../sagas/update_actions";
 
 // These update actions are not idempotent. Having them
@@ -30,34 +25,6 @@ const NOT_IDEMPOTENT_ACTIONS = [
   "createNode",
   "deleteNode",
 ];
-
-type TracingDict<V> = {
-  skeleton: V;
-  volumes: Record<string, V>;
-  mappings: Record<string, V>;
-};
-
-function updateTracingDict<V>(
-  action: { saveQueueType: SaveQueueType; tracingId: string },
-  oldDict: TracingDict<V>,
-  newValue: V,
-): TracingDict<V> {
-  if (action.saveQueueType === "skeleton") {
-    return { ...oldDict, skeleton: newValue };
-  } else if (action.saveQueueType === "volume") {
-    return {
-      ...oldDict,
-      volumes: { ...oldDict.volumes, [action.tracingId]: newValue },
-    };
-  } else if (action.saveQueueType === "mapping") {
-    return {
-      ...oldDict,
-      mappings: { ...oldDict.mappings, [action.tracingId]: newValue },
-    };
-  }
-
-  return oldDict;
-}
 
 export function getTotalSaveQueueLength(queueObj: SaveState["queue"]) {
   return queueObj.length;

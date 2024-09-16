@@ -47,16 +47,10 @@ export const saveNowAction = () =>
     type: "SAVE_NOW",
   }) as const;
 
-export const shiftSaveQueueAction = (
-  count: number,
-  saveQueueType: SaveQueueType,
-  tracingId: string,
-) =>
+export const shiftSaveQueueAction = (count: number) =>
   ({
     type: "SHIFT_SAVE_QUEUE",
     count,
-    saveQueueType,
-    tracingId,
   }) as const;
 
 export const discardSaveQueuesAction = () =>

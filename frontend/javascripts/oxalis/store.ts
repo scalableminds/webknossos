@@ -636,7 +636,7 @@ const combinedReducers = reduceReducers(
   OrganizationReducer,
 );
 
-const store = createStore<OxalisState>(
+const store = createStore<OxalisState, Action, unknown, unknown>(
   enableBatching(combinedReducers),
   defaultState,
   applyMiddleware(actionLoggerMiddleware, overwriteActionMiddleware, sagaMiddleware as Middleware),

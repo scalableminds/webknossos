@@ -54,7 +54,9 @@ export function filterTeamMembersOf(team: APITeam, user: APIUser): boolean {
 export function renderUsersForTeam(
   team: APITeam,
   allUsers: APIUser[] | null,
-  renderAdditionalContent = (_teamMember: APIUser, _team: APITeam) => {},
+  renderAdditionalContent = (_teamMember: APIUser, _team: APITeam): React.ReactNode => {
+    return null;
+  },
 ) {
   if (allUsers === null) return;
   const teamMembers = allUsers.filter((user) => filterTeamMembersOf(team, user));

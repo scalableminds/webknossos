@@ -23,9 +23,10 @@ import * as Utils from "libs/utils";
 import type { OxalisState, UserBoundingBox } from "oxalis/store";
 import DownloadModalView from "../action-bar/download_modal_view";
 import { APIJobType } from "types/api_flow_types";
-import { AutoSizer } from "react-virtualized";
 import { ContextMenuContainer } from "./sidebar_context_menu";
 import { getContextMenuPositionFromEvent } from "../context_menu";
+import AutoSizer from "react-virtualized-auto-sizer";
+import { setActiveUserBoundingBoxId } from "oxalis/model/actions/ui_actions";
 
 const ADD_BBOX_BUTTON_HEIGHT = 32;
 const CONTEXT_MENU_CLASS = "bbox-list-context-menu-overlay";
@@ -137,7 +138,7 @@ export default function BoundingBoxTab() {
           isVisible={bb.isVisible}
           onBoundingChange={_.partial(handleBoundingBoxBoundingChange, bb.id)}
           onDelete={_.partial(deleteBoundingBox, bb.id)}
-          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => {}}
+          onExport={isExportEnabled ? _.partial(setSelectedBoundingBoxForExport, bb) : () => { }}
           onGoToBoundingBox={_.partial(handleGoToBoundingBox, bb.id)}
           onVisibilityChange={_.partial(setBoundingBoxVisibility, bb.id)}
           onNameChange={_.partial(setBoundingBoxName, bb.id)}
@@ -228,6 +229,12 @@ export default function BoundingBoxTab() {
                 virtual
                 scroll={{ y: height - (allowUpdate ? ADD_BBOX_BUTTON_HEIGHT : 10) }} // If the scroll height is exactly
                 // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
+                onRow={(bb) => ({
+                  onClick: () => {
+                    handleGoToBoundingBox(bb.id);
+                    dispatch(setActiveUserBoundingBoxId(bb.id));
+                  },
+                })}
               />
             </div>
           )}

@@ -22,6 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Updated React to version 18. Updated many peer dependencies inlcuding Redux, React-Router, antd, and FlexLayout. [#8048](https://github.com/scalableminds/webknossos/pull/8048)
 
 ### Fixed
+- Fixed that the precompute-meshfile button did not work in the segments tab. [#8077](https://github.com/scalableminds/webknossos/pull/8077)
 
 ### Removed
 

@@ -10,7 +10,7 @@ import type {
   NumberLike,
 } from "oxalis/store";
 import { convertUserBoundingBoxesFromFrontendToServer } from "oxalis/model/reducers/reducer_helpers";
-import type { AdditionalCoordinate, MetadataEntry } from "types/api_flow_types";
+import type { AdditionalCoordinate, MetadataEntryProto } from "types/api_flow_types";
 
 export type NodeWithTreeId = {
   treeId: number;
@@ -319,7 +319,7 @@ export function createSegmentVolumeAction(
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
-  metadata: MetadataEntry[],
+  metadata: MetadataEntryProto[],
   creationTime: number | null | undefined = Date.now(),
 ) {
   return {
@@ -343,7 +343,7 @@ export function updateSegmentVolumeAction(
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
-  metadata: Array<MetadataEntry>,
+  metadata: Array<MetadataEntryProto>,
   creationTime: number | null | undefined = Date.now(),
 ) {
   return {
@@ -504,7 +504,7 @@ export function mergeAgglomerate(
   } as const;
 }
 
-function enforceValidMetadata(metadata: MetadataEntry[]): MetadataEntry[] {
+function enforceValidMetadata(metadata: MetadataEntryProto[]): MetadataEntryProto[] {
   // We do not want to save metadata with duplicate keys. Validation errors
   // will warn the user in case this exists. However, we allow duplicate keys in the
   // redux store to avoid losing information while the user is editing something.

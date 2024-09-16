@@ -778,9 +778,9 @@ export type ServerSkeletonTracingTree = {
   isVisible?: boolean;
   type?: TreeType;
   edgesAreVisible?: boolean;
-  metadata: MetadataEntry[];
+  metadata: MetadataEntryProto[];
 };
-export type MetadataEntry = {
+export type MetadataEntryProto = {
   key: string;
   stringValue?: string;
   boolValue?: boolean;
@@ -798,7 +798,7 @@ type ServerSegment = {
   creationTime: number | null | undefined;
   color: ColorObject | null;
   groupId: number | null | undefined;
-  metadata: MetadataEntry[];
+  metadata: MetadataEntryProto[];
 };
 export type ServerTracingBase = {
   id: string;

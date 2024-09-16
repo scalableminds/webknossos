@@ -7,7 +7,7 @@ import {
   InnerMetadataTable,
   MetadataValueInput,
 } from "dashboard/folders/metadata_table";
-import { type APIMetadata, APIMetadataEnum, type MetadataEntry } from "types/api_flow_types";
+import { type APIMetadata, APIMetadataEnum, type MetadataEntryProto } from "types/api_flow_types";
 import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
 import _ from "lodash";
 import { memo } from "react";
@@ -15,19 +15,19 @@ import FastTooltip from "components/fast_tooltip";
 
 const getKeyInputIdForIndex = (index: number) => `metadata-key-input-id-${index}`;
 
-function _MetadataTableRows<ItemType extends { metadata: MetadataEntry[] }>({
+function _MetadataTableRows<ItemType extends { metadata: MetadataEntryProto[] }>({
   item,
   setMetadata,
   readOnly,
 }: {
   item: ItemType;
-  setMetadata: (item: ItemType, newProperties: MetadataEntry[]) => void;
+  setMetadata: (item: ItemType, newProperties: MetadataEntryProto[]) => void;
   readOnly: boolean;
 }) {
   const updateMetadataEntryByIndex = (
     item: ItemType,
     index: number,
-    newPropPartial: Partial<MetadataEntry>,
+    newPropPartial: Partial<MetadataEntryProto>,
   ) => {
     if (readOnly) {
       return;
@@ -49,7 +49,7 @@ function _MetadataTableRows<ItemType extends { metadata: MetadataEntry[] }>({
     setMetadata(item, newProps);
   };
 
-  const addMetadataEntry = (item: ItemType, newProp: MetadataEntry) => {
+  const addMetadataEntry = (item: ItemType, newProp: MetadataEntryProto) => {
     const newProps = item.metadata.concat([newProp]);
     setMetadata(item, newProps);
   };

@@ -26,7 +26,7 @@ import type {
   APIUserCompact,
   AdditionalCoordinate,
   AdditionalAxis,
-  MetadataEntry,
+  MetadataEntryProto,
 } from "types/api_flow_types";
 import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
 import type { Action } from "oxalis/model/actions/actions";
@@ -144,7 +144,7 @@ export type MutableTree = {
   nodes: MutableNodeMap;
   type: TreeType;
   edgesAreVisible: boolean;
-  metadata: MetadataEntry[];
+  metadata: MetadataEntryProto[];
 };
 // When changing Tree, remember to also update MutableTree
 export type Tree = {
@@ -160,7 +160,7 @@ export type Tree = {
   readonly nodes: NodeMap;
   readonly type: TreeType;
   readonly edgesAreVisible: boolean;
-  readonly metadata: MetadataEntry[];
+  readonly metadata: MetadataEntryProto[];
 };
 export type TreeGroupTypeFlat = {
   readonly name: string;
@@ -236,7 +236,7 @@ export type Segment = {
   readonly creationTime: number | null | undefined;
   readonly color: Vector3 | null;
   readonly groupId: number | null | undefined;
-  readonly metadata: MetadataEntry[];
+  readonly metadata: MetadataEntryProto[];
 };
 export type SegmentMap = DiffableMap<number, Segment>;
 

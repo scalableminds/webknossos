@@ -14,7 +14,7 @@ import Store from "oxalis/store";
 import RemoveTreeModal from "oxalis/view/remove_tree_modal";
 import type { Key } from "react";
 import { batchActions } from "redux-batched-actions";
-import type { ServerSkeletonTracing, MetadataEntry } from "types/api_flow_types";
+import type { ServerSkeletonTracing, MetadataEntryProto } from "types/api_flow_types";
 import type { AdditionalCoordinate } from "types/api_flow_types";
 
 export type InitializeSkeletonTracingAction = ReturnType<typeof initializeSkeletonTracingAction>;
@@ -427,7 +427,7 @@ export const setTreeNameAction = (
   }) as const;
 
 export const setTreeMetadataAction = (
-  metadata: MetadataEntry[],
+  metadata: MetadataEntryProto[],
   treeId?: number | null | undefined,
 ) =>
   ({

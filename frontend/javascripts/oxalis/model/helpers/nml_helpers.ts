@@ -1,7 +1,7 @@
 // @ts-expect-error ts-migrate(7016) FIXME: Could not find a declaration file for module 'saxo... Remove this comment to see the full error message
 import Saxophone from "saxophone";
 import _ from "lodash";
-import type { APIBuildInfo, MetadataEntry } from "types/api_flow_types";
+import type { APIBuildInfo, MetadataEntryProto } from "types/api_flow_types";
 import {
   getMaximumGroupId,
   getMaximumTreeId,
@@ -462,7 +462,7 @@ function serializeEdges(edges: EdgeCollection): Array<string> {
   );
 }
 
-function serializeMetadata(metadata: MetadataEntry[]): string[] {
+function serializeMetadata(metadata: MetadataEntryProto[]): string[] {
   return metadata.map((prop) => {
     const values: any = {};
     if (prop.stringValue != null) {
@@ -848,12 +848,12 @@ function parseBoundingBoxObject(attr: Record<any, any>): BoundingBoxObject {
   return boundingBoxObject;
 }
 
-function parseMetadataEntry(attr: Record<any, any>): MetadataEntry {
+function parseMetadataEntry(attr: Record<any, any>): MetadataEntryProto {
   const stringValue = _parseEntities(attr, "stringValue", { defaultValue: undefined });
   const boolValue = _parseBool(attr, "boolValue", { defaultValue: undefined });
   const numberValue = _parseFloat(attr, "numberValue", { defaultValue: undefined });
   const stringListValue = _parseStringArray(attr, "stringListValue", { defaultValue: undefined });
-  const prop: MetadataEntry = {
+  const prop: MetadataEntryProto = {
     key: _parseEntities(attr, "key"),
     stringValue,
     boolValue,
@@ -862,7 +862,7 @@ function parseMetadataEntry(attr: Record<any, any>): MetadataEntry {
   };
   const compactProp = Object.fromEntries(
     Object.entries(prop).filter(([_k, v]) => v !== undefined),
-  ) as MetadataEntry;
+  ) as MetadataEntryProto;
   if (Object.entries(compactProp).length !== 2) {
     throw new NmlParseError(
       `Could not parse user-defined property. Expected exactly one key and one value. Got: ${Object.keys(
@@ -988,7 +988,7 @@ export function parseNml(nmlString: string): Promise<{
             if (currentNode == null) {
               currentTree.metadata.push(parseMetadataEntry(attr));
             } else {
-              // TODO: Also support MetadataEntry in nodes. See #7483
+              // TODO: Also support MetadataEntryProto in nodes. See #7483
             }
             break;
           }

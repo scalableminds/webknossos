@@ -38,7 +38,7 @@ import {
 } from "./tree_hierarchy_renderers";
 import { ResizableSplitPane } from "./resizable_split_pane";
 import { MetadataEntryTableRows } from "./metadata_table";
-import type { MetadataEntry } from "types/api_flow_types";
+import type { MetadataEntryProto } from "types/api_flow_types";
 import { InputWithUpdateOnBlur } from "../components/input_with_update_on_blur";
 
 const onCheck: TreeProps<TreeNode>["onCheck"] = (_checkedKeysValue, info) => {
@@ -331,7 +331,7 @@ function TreeHierarchyView(props: Props) {
   );
 }
 
-const setMetadata = (tree: Tree, newProperties: MetadataEntry[]) => {
+const setMetadata = (tree: Tree, newProperties: MetadataEntryProto[]) => {
   Store.dispatch(setTreeMetadataAction(newProperties, tree.treeId));
 };
 

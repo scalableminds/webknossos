@@ -117,7 +117,7 @@ import type {
   APIMeshFile,
   APISegmentationLayer,
   APIUser,
-  MetadataEntry,
+  MetadataEntryProto,
 } from "types/api_flow_types";
 import { APIJobType, type AdditionalCoordinate } from "types/api_flow_types";
 import type { ValueOf } from "types/globals";
@@ -1977,7 +1977,7 @@ class SegmentsView extends React.Component<Props, State> {
     return null;
   }
 
-  setMetadata = (segment: Segment, newProperties: MetadataEntry[]) => {
+  setMetadata = (segment: Segment, newProperties: MetadataEntryProto[]) => {
     if (this.props.visibleSegmentationLayer == null) {
       return;
     }

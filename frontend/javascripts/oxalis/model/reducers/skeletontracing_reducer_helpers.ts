@@ -24,7 +24,7 @@ import type {
   ServerSkeletonTracingTree,
   ServerNode,
   ServerBranchPoint,
-  MetadataEntry,
+  MetadataEntryProto,
 } from "types/api_flow_types";
 import {
   getSkeletonTracing,
@@ -486,7 +486,7 @@ export function createTree(
   name?: string,
   type: TreeType = TreeTypeEnum.DEFAULT,
   edgesAreVisible: boolean = true,
-  metadata: MetadataEntry[] = [],
+  metadata: MetadataEntryProto[] = [],
 ): Maybe<Tree> {
   return getSkeletonTracing(state.tracing).chain((skeletonTracing) => {
     // Create a new tree id and name

@@ -47,7 +47,7 @@ import {
   GroupTypeEnum,
   getNodeKey,
 } from "oxalis/view/right-border-tabs/tree_hierarchy_view_helpers";
-import type { MetadataEntry } from "types/api_flow_types";
+import type { MetadataEntryProto } from "types/api_flow_types";
 
 function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState {
   switch (action.type) {
@@ -1155,7 +1155,7 @@ function SkeletonTracingReducer(state: OxalisState, action: Action): OxalisState
     .getOrElse(state);
 }
 
-export function sanitizeMetadata(metadata: MetadataEntry[]) {
+export function sanitizeMetadata(metadata: MetadataEntryProto[]) {
   // Workaround for stringList values that are [], even though they
   // should be null. This workaround is necessary because protobuf cannot
   // distinguish between an empty list and an not existent property.

@@ -10,12 +10,13 @@ import {
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { Dropdown, Modal, type MenuProps, Tree } from "antd";
 import Toast from "libs/toast";
-import type { DataNode, DirectoryTreeProps } from "antd/lib/tree";
+import type { AntTreeNodeSelectedEvent, DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import memoizeOne from "memoize-one";
 import classNames from "classnames";
 import type { FolderItem } from "types/api_flow_types";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
+import { AntTreeNodeBaseEvent } from "antd/es/tree/Tree";
 
 const { DirectoryTree } = Tree;
 
@@ -78,7 +79,7 @@ export function FolderTreeSidebar({
   });
 
   const onSelect: DirectoryTreeProps["onSelect"] = useCallback(
-    (keys, event) => {
+    (keys: React.Key[], { nativeEvent }: { nativeEvent: MouseEvent }) => {
       // Without the following check, the onSelect callback would also be called by antd
       // when the user clicks on a menu entry in the context menu (e.g., deleting a folder
       // would directly select it afterwards).
@@ -86,10 +87,12 @@ export function FolderTreeSidebar({
       // the ant-tree container. Therefore, we can use this property to filter out those
       // click events.
       // The classic preventDefault() didn't work as an alternative workaround.
-      const doesEventReferToTreeUi = event.nativeEvent.target.closest(".ant-tree") != null;
-      if (keys.length > 0 && doesEventReferToTreeUi) {
-        context.setActiveFolderId(keys[0] as string);
-        context.setSelectedDatasets([]);
+      if (nativeEvent.target && nativeEvent.target instanceof HTMLElement) {
+        const doesEventReferToTreeUi = nativeEvent.target.closest(".ant-tree") != null;
+        if (keys.length > 0 && doesEventReferToTreeUi) {
+          context.setActiveFolderId(keys[0] as string);
+          context.setSelectedDatasets([]);
+        }
       }
     },
     [context],

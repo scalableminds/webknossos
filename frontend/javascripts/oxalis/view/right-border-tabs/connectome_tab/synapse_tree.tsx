@@ -1,4 +1,4 @@
-import { AutoSizer } from "react-virtualized";
+import AutoSizer from "react-virtualized-auto-sizer";
 import { Dropdown, type MenuProps, Tag, Tree, type TreeProps } from "antd";
 import React from "react";
 import _ from "lodash";

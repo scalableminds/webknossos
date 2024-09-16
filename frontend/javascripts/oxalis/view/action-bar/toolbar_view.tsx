@@ -359,7 +359,7 @@ function VolumeInterpolationButton() {
   };
 
   const buttonsRender = useCallback(
-    ([leftButton, rightButton]) => [
+    ([leftButton, rightButton]: React.ReactNode[]) => [
       <FastTooltip title={tooltipTitle} key="leftButton">
         {React.cloneElement(leftButton as React.ReactElement<any, string>, {
           disabled: isDisabled,

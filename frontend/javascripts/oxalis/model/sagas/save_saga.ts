@@ -13,7 +13,6 @@ import { getResolutionInfo } from "oxalis/model/accessors/dataset_accessor";
 import { selectTracing } from "oxalis/model/accessors/tracing_accessor";
 import { getVolumeTracingById } from "oxalis/model/accessors/volumetracing_accessor";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import type { SaveQueueType } from "oxalis/model/actions/save_actions";
 import {
   pushSaveQueueTransaction,
   setLastSaveTimestampAction,
@@ -25,7 +24,6 @@ import type { InitializeSkeletonTracingAction } from "oxalis/model/actions/skele
 import { SkeletonTracingSaveRelevantActions } from "oxalis/model/actions/skeletontracing_actions";
 import { ViewModeSaveRelevantActions } from "oxalis/model/actions/view_mode_actions";
 import {
-  type InitializeEditableMappingAction,
   type InitializeVolumeTracingAction,
   VolumeTracingSaveRelevantActions,
 } from "oxalis/model/actions/volumetracing_actions";

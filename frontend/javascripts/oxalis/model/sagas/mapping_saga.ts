@@ -96,7 +96,9 @@ const takeLatestMappingChange = (
       );
       const mapping = getMappingInfo(activeMappingByLayer, layerName);
 
-      console.log("Changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
+      if (process.env.NODE_ENV === "production") {
+        console.log("Changed from", lastBucketRetrievalSource, "to", bucketRetrievalSource);
+      }
 
       if (lastWatcherTask) {
         console.log("Cancel old bucket watcher");

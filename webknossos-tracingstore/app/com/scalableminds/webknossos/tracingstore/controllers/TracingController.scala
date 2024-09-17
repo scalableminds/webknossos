@@ -103,15 +103,6 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
       }
     }
 
-  def newestVersion(token: Option[String], annotationId: String, tracingId: String): Action[AnyContent] = Action.async {
-    implicit request =>
-      log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), token) {
-          Fox.successful(JsonOk(Json.obj("version" -> 0L))) // TODO remove in favor of annotation-wide
-        }
-      }
-  }
-
   def mergedFromIds(token: Option[String], persist: Boolean): Action[List[Option[TracingSelector]]] =
     Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
       log() {

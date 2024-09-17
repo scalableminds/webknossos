@@ -27,8 +27,8 @@ import { TreeTypeEnum } from "oxalis/constants";
 import type { Action } from "oxalis/model/actions/actions";
 import type { ServerSkeletonTracing } from "types/api_flow_types";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { UpdateAction } from "oxalis/model/sagas/update_actions";
-import { TracingStats } from "oxalis/model/accessors/annotation_accessor";
+import type { UpdateAction } from "oxalis/model/sagas/update_actions";
+import type { TracingStats } from "oxalis/model/accessors/annotation_accessor";
 
 const TIMESTAMP = 1494347146379;
 const DateMock = {

@@ -927,8 +927,7 @@ export async function getTracingForAnnotationType(
 
 export function getUpdateActionLog(
   tracingStoreUrl: string,
-  tracingId: string,
-  versionedObjectType: SaveQueueType,
+  annotationId: string,
   oldestVersion?: number,
   newestVersion?: number,
 ): Promise<Array<APIUpdateActionBatch>> {
@@ -942,19 +941,18 @@ export function getUpdateActionLog(
       params.append("newestVersion", newestVersion.toString());
     }
     return Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${versionedObjectType}/${tracingId}/updateActionLog?${params}`,
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
     );
   });
 }
 
 export function getNewestVersionForTracing(
   tracingStoreUrl: string,
-  tracingId: string,
-  tracingType: SaveQueueType,
+  annotationId: string,
 ): Promise<number> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/${tracingType}/${tracingId}/newestVersion?token=${token}`,
+      `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
     ).then((obj) => obj.version),
   );
 }

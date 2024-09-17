@@ -148,8 +148,7 @@ const getGroupedAndChunkedVersions = _.memoize(
 async function getUpdateActionLogPage(
   props: Props,
   tracingStoreUrl: string,
-  tracingId: string,
-  versionedObjectType: SaveQueueType,
+  annotationId: string,
   newestVersion: number,
   // 0 is the "newest" page (i.e., the page in which the newest version is)
   relativePageNumber: number,
@@ -177,8 +176,7 @@ async function getUpdateActionLogPage(
 
   const updateActionLog = await getUpdateActionLog(
     tracingStoreUrl,
-    tracingId,
-    versionedObjectType,
+    annotationId,
     oldestVersionInPage,
     newestVersionInPage,
   );
@@ -203,9 +201,10 @@ async function getUpdateActionLogPage(
 function VersionList(props: Props) {
   const { tracing } = props;
   const tracingStoreUrl = useSelector((state: OxalisState) => state.tracing.tracingStore.url);
+  const annotationId = useSelector((state: OxalisState) => state.tracing.annotationId);
 
   const newestVersion = useFetch(
-    () => getNewestVersionForTracing(tracingStoreUrl, tracing.tracingId, props.versionedObjectType),
+    () => getNewestVersionForTracing(tracingStoreUrl, annotationId),
     null,
     [tracing],
   );
@@ -233,17 +232,10 @@ function InnerVersionList(props: Props & { newestVersion: number }) {
     if (pageParam == null) {
       pageParam = Math.floor((newestVersion - initialVersion) / ENTRIES_PER_PAGE);
     }
-    const { tracingId } = props.tracing;
     const { url: tracingStoreUrl } = Store.getState().tracing.tracingStore;
+    const annotationId = Store.getState().tracing.annotationId;
 
-    return getUpdateActionLogPage(
-      props,
-      tracingStoreUrl,
-      tracingId,
-      props.versionedObjectType,
-      newestVersion,
-      pageParam,
-    );
+    return getUpdateActionLogPage(props, tracingStoreUrl, annotationId, newestVersion, pageParam);
   }
 
   const queryKey = ["versions", props.tracing.tracingId];

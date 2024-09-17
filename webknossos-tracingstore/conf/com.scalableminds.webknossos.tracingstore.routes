@@ -3,20 +3,20 @@
 # ~~~~
 
 # Health endpoint
-GET         /health                                             @com.scalableminds.webknossos.tracingstore.controllers.Application.health
+GET         /health                                                           @com.scalableminds.webknossos.tracingstore.controllers.Application.health
 
-POST        /annotation/save                                    @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.save(token: Option[String], annotationId: String)
-GET         /annotation/:annotationId                           @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.get(token: Option[String], annotationId: String, version: Option[Long])
-POST        /annotation/:annotationId/update                    @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.update(token: Option[String], annotationId: String)
-POST        /annotation/:annotationId/updateActionLog           @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.updateActionLog(token: Option[String], annotationId: String, newestVersion: Option[Long], oldestVersion: Option[Long])
-GET         /annotation/:annotationId/updateActionStatistics    @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.updateActionStatistics(token: Option[String], annotationId: String)
+POST        /annotation/save                                                  @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.save(token: Option[String], annotationId: String)
+GET         /annotation/:annotationId                                         @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.get(token: Option[String], annotationId: String, version: Option[Long])
+POST        /annotation/:annotationId/update                                  @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.update(token: Option[String], annotationId: String)
+GET         /annotation/:annotationId/updateActionLog                         @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.updateActionLog(token: Option[String], annotationId: String, newestVersion: Option[Long], oldestVersion: Option[Long])
+GET         /annotation/:annotationId/updateActionStatistics                  @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.updateActionStatistics(token: Option[String], annotationId: String)
+GET         /annotation/:annotationId/newestVersion                           @com.scalableminds.webknossos.tracingstore.controllers.TSAnnotationController.newestVersion(token: Option[String], annotationId: String)
 
 # Volume tracings
 POST        /volume/save                                                      @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.save(token: Option[String])
 POST        /volume/:annotationId/:tracingId/initialData                      @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialData(token: Option[String], annotationId: String, tracingId: String, minResolution: Option[Int], maxResolution: Option[Int])
 POST        /volume/:annotationId/:tracingId/initialDataMultiple              @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.initialDataMultiple(token: Option[String], annotationId: String, tracingId: String)
 GET         /volume/:annotationId/:tracingId                                  @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.get(token: Option[String], annotationId: String, tracingId: String, version: Option[Long])
-GET         /volume/:annotationId/:tracingId/newestVersion                    @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.newestVersion(token: Option[String], annotationId: String, tracingId: String)
 GET         /volume/:annotationId/:tracingId/allDataZip                       @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.allDataZip(token: Option[String], annotationId: String, tracingId: String, volumeDataZipFormat: String, version: Option[Long], voxelSize: Option[String], voxelSizeUnit: Option[String])
 POST        /volume/:annotationId/:tracingId/data                             @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.data(token: Option[String], annotationId: String, tracingId: String)
 POST        /volume/:annotationId/:tracingId/duplicate                        @com.scalableminds.webknossos.tracingstore.controllers.VolumeTracingController.duplicate(token: Option[String], annotationId: String, tracingId: String, fromTask: Option[Boolean], minResolution: Option[Int], maxResolution: Option[Int], downsample: Option[Boolean], editPosition: Option[String], editRotation: Option[String], boundingBox: Option[String])
@@ -71,12 +71,8 @@ GET         /volume/zarr3_experimental/:annotationId/:tracingId/:mag/:coordinate
 # Skeleton tracings
 POST        /skeleton/save                                      @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.save(token: Option[String])
 POST        /skeleton/saveMultiple                              @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.saveMultiple(token: Option[String])
-
 POST        /skeleton/mergedFromContents                        @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.mergedFromContents(token: Option[String], persist: Boolean)
 POST        /skeleton/mergedFromIds                             @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.mergedFromIds(token: Option[String], persist: Boolean)
-
-GET         /skeleton/:annotationId/:tracingId                                @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.get(token: Option[String], annotationId: String, tracingId: String, version: Option[Long])
-GET         /skeleton/:annotationId/:tracingId/newestVersion                  @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.newestVersion(token: Option[String], annotationId: String, tracingId: String)
-POST        /skeleton/getMultiple                                             @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.getMultiple(token: Option[String])
-
-POST        /skeleton/:annotationId/:tracingId/duplicate                      @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.duplicate(token: Option[String], annotationId: String, tracingId: String, version: Option[Long], fromTask: Option[Boolean], editPosition: Option[String], editRotation: Option[String], boundingBox: Option[String])
+GET         /skeleton/:annotationId/:tracingId                  @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.get(token: Option[String], annotationId: String, tracingId: String, version: Option[Long])
+POST        /skeleton/getMultiple                               @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.getMultiple(token: Option[String])
+POST        /skeleton/:annotationId/:tracingId/duplicate        @com.scalableminds.webknossos.tracingstore.controllers.SkeletonTracingController.duplicate(token: Option[String], annotationId: String, tracingId: String, version: Option[Long], fromTask: Option[Boolean], editPosition: Option[String], editRotation: Option[String], boundingBox: Option[String])

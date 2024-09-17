@@ -488,20 +488,16 @@ function* watchForSaveConflicts() {
     const maybeSkeletonTracing = yield* select((state) => state.tracing.skeleton);
     const volumeTracings = yield* select((state) => state.tracing.volumes);
     const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+    const annotationId = yield* select((state) => state.tracing.annotationId);
 
     const tracings: Array<SkeletonTracing | VolumeTracing> = _.compact([
       ...volumeTracings,
       maybeSkeletonTracing,
     ]);
 
-    for (const tracing of tracings) {
-      const versionOnServer = yield* call(
-        getNewestVersionForTracing,
-        tracingStoreUrl,
-        tracing.tracingId,
-        tracing.type,
-      );
+    const versionOnServer = yield* call(getNewestVersionForTracing, tracingStoreUrl, annotationId);
 
+    for (const tracing of tracings) {
       // Read the tracing version again from the store, since the
       // old reference to tracing might be outdated now due to the
       // immutability.

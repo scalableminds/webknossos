@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.{
   UpdateActionGroup
 }
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
+import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
@@ -66,6 +67,18 @@ class TSAnnotationController @Inject()(
         } yield Ok(updateLog)
       }
     }
+  }
+
+  def newestVersion(token: Option[String], annotationId: String): Action[AnyContent] = Action.async {
+    implicit request =>
+      log() {
+        accessTokenService.validateAccess(UserAccessRequest.readAnnotation(annotationId),
+                                          urlOrHeaderToken(token, request)) {
+          for {
+            newestVersion <- annotationService.currentMaterializableVersion(annotationId)
+          } yield JsonOk(Json.obj("version" -> newestVersion))
+        }
+      }
   }
 
   def updateActionStatistics(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {

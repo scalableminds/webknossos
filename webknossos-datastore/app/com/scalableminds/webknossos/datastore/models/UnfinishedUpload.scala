@@ -1,11 +1,11 @@
 package com.scalableminds.webknossos.datastore.models
 
 import com.scalableminds.util.time.Instant
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.LegacyDataSourceId
 import play.api.libs.json.{Format, Json}
 
 case class UnfinishedUpload(uploadId: String,
-                            dataSourceId: DataSourceId,
+                            dataSourceId: LegacyDataSourceId,
                             folderId: String,
                             created: Instant,
                             filePaths: Option[List[String]],

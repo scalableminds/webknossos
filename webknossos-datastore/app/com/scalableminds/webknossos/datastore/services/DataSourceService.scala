@@ -209,7 +209,7 @@ class DataSourceService @Inject()(
   }
 
   def dataSourceFromDir(path: Path, organizationId: String): InboxDataSource = {
-    val id = DataSourceId(path.getFileName.toString, organizationId)
+    val id = LegacyDataSourceId(path.getFileName.toString, organizationId)
     val propertiesFile = path.resolve(propertiesFileName)
 
     if (new File(propertiesFile.toString).exists()) {

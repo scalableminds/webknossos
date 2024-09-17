@@ -4,13 +4,14 @@ import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.{DatasetIdWithPath, LegacyDataSourceId}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.ReserveUploadInformation
@@ -66,7 +67,7 @@ class DSRemoteWebknossosClient @Inject()(
   def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryString("key" -> dataStoreKey)
-      .put(dataSource)
+      .put(dataSource) // TODO:
 
   def getUnfinishedUploadsForUser(userTokenOpt: Option[String], organizationName: String): Fox[List[UnfinishedUpload]] =
     for {
@@ -78,7 +79,7 @@ class DSRemoteWebknossosClient @Inject()(
         .getWithJsonResponse[List[UnfinishedUpload]]
     } yield unfinishedUploads
 
-  def reportUpload(dataSourceId: DataSourceId,
+  def reportUpload(dataSourceId: LegacyDataSourceId,
                    datasetSizeBytes: Long,
                    needsConversion: Boolean,
                    viaAddRoute: Boolean,
@@ -109,7 +110,7 @@ class DSRemoteWebknossosClient @Inject()(
         .post(info)
     } yield ()
 
-  def deleteDataSource(id: DataSourceId): Fox[_] =
+  def deleteDataSource(id: LegacyDataSourceId): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset").addQueryString("key" -> dataStoreKey).post(id)
 
   def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
@@ -164,4 +165,12 @@ class DSRemoteWebknossosClient @Inject()(
           .silent
           .getWithJsonResponse[DataVaultCredential]
     )
+
+  def resolveDatasetNameToId(organizationId: String, datasetName: String): Fox[DatasetIdWithPath] =
+    for {
+      datasetIdWithPath <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/:$organizationId/:$datasetName/getDatasetId")
+        .addQueryString("key" -> dataStoreKey)
+        .silent
+        .getWithJsonResponse[DatasetIdWithPath]
+    } yield datasetIdWithPath
 }

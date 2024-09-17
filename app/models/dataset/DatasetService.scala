@@ -1,27 +1,21 @@
 package models.dataset
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{
-  UnusableDataSource,
-  InboxDataSourceLike => InboxDataSource
-}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataSourceId,
-  GenericDataSource,
-  DataLayerLike => DataLayer
-}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{GenericDataSource, LegacyDataSourceId, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
 import models.team._
 import models.user.{User, UserService}
-import net.liftweb.common.{Box, Full, Empty}
+import net.liftweb.common.{Box, Empty, Full}
 import play.api.libs.json.{JsObject, Json}
 import security.RandomIDGenerator
-import utils.{ObjectId, WkConf}
+import utils.WkConf
 
 import javax.inject.Inject
 import scala.concurrent.duration._
@@ -66,7 +60,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     datasetDAO.findOneByNameAndOrganization(name, organizationId)(GlobalAccessContext).reverse
 
   def createPreliminaryDataset(datasetName: String, organizationId: String, dataStore: DataStore): Fox[Dataset] = {
-    val unreportedDatasource = UnusableDataSource(DataSourceId(datasetName, organizationId), notYetUploadedStatus)
+    val unreportedDatasource = UnusableDataSource(LegacyDataSourceId(datasetName, organizationId), notYetUploadedStatus)
     createDataset(dataStore, organizationId, unreportedDatasource)
   }
 
@@ -241,17 +235,17 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def deactivateUnreportedDataSources(existingDatasetIds: List[ObjectId], dataStore: DataStore): Fox[Unit] =
     datasetDAO.deactivateUnreported(existingDatasetIds, dataStore.name, unreportedStatus, inactiveStatusList)
 
-  def getSharingToken(datasetNameAndId: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[String] = {
+  def getSharingToken(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] = {
 
-    def createAndSaveSharingToken(datasetNameAndId: String)(implicit ctx: DBAccessContext): Fox[String] =
+    def createAndSaveSharingToken(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
       for {
         tokenValue <- new RandomIDGenerator().generate
-        _ <- datasetDAO.updateSharingTokenByIdOrName(datasetNameAndId, organizationId, Some(tokenValue))
+        _ <- datasetDAO.updateSharingTokenById(datasetId, Some(tokenValue))
       } yield tokenValue
 
-    datasetDAO.getSharingTokenByIdOrName(datasetNameAndId, organizationId).flatMap {
+    datasetDAO.getSharingTokenById(datasetId).flatMap {
       case Some(oldToken) => Fox.successful(oldToken)
-      case None           => createAndSaveSharingToken(datasetNameAndId)
+      case None           => createAndSaveSharingToken(datasetId)
     }
   }
 
@@ -261,7 +255,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
       }
       dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
-      dataSourceId = DataSourceId(dataset.name, organization._id)
+      dataSourceId = LegacyDataSourceId(dataset.name, organization._id)
     } yield {
       if (dataset.isUsable)
         for {

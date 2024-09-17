@@ -21,7 +21,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import telemetry.SlackNotificationService
-import utils.ObjectId
+import com.scalableminds.util.requestparsing.ObjectId
 
 import scala.concurrent.ExecutionContext
 

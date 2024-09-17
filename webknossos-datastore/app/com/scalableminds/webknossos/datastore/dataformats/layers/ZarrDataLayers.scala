@@ -12,7 +12,7 @@ import ucar.ma2.{Array => MultiArray}
 trait ZarrLayer extends DataLayerWithMagLocators {
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                     dataSourceId: DataSourceId,
+                     dataSourceId: LegacyDataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
     new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 

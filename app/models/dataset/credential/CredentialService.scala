@@ -1,16 +1,10 @@
 package models.dataset.credential
 
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.storage.{
-  DataVaultCredential,
-  DataVaultService,
-  GoogleServiceAccountCredential,
-  HttpBasicAuthCredential,
-  S3AccessKeyCredential
-}
+import com.scalableminds.webknossos.datastore.storage.{DataVaultCredential, DataVaultService, GoogleServiceAccountCredential, HttpBasicAuthCredential, S3AccessKeyCredential}
 import net.liftweb.common.Box.tryo
 import play.api.libs.json.Json
-import utils.ObjectId
 
 import java.net.URI
 import javax.inject.Inject

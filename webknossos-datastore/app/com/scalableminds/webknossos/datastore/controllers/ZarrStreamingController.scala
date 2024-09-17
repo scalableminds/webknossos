@@ -55,7 +55,7 @@ class ZarrStreamingController @Inject()(
       datasetName: String,
       dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(LegacyDataSourceId(datasetName, organizationId)),
                                       urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
@@ -73,7 +73,7 @@ class ZarrStreamingController @Inject()(
       datasetName: String,
       dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(LegacyDataSourceId(datasetName, organizationId)),
                                       urlOrHeaderToken(token, request)) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
@@ -153,10 +153,10 @@ class ZarrStreamingController @Inject()(
       datasetName: String,
       zarrVersion: Int,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(LegacyDataSourceId(datasetName, organizationId)),
                                       urlOrHeaderToken(token, request)) {
       for {
-        dataSource <- dataSourceRepository.findUsable(DataSourceId(datasetName, organizationId)).toFox ~> NOT_FOUND
+        dataSource <- dataSourceRepository.findUsable(LegacyDataSourceId(datasetName, organizationId)).toFox ~> NOT_FOUND
         dataLayers = dataSource.dataLayers
         zarrLayers = dataLayers.map(convertLayerToZarrLayer(_, zarrVersion))
         zarrSource = GenericDataSource[DataLayer](dataSource.id, zarrLayers, dataSource.scale)
@@ -211,7 +211,7 @@ class ZarrStreamingController @Inject()(
         else urlOrHeaderToken(token, request)
         volumeAnnotationLayers = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
         dataSource <- dataSourceRepository
-          .findUsable(DataSourceId(annotationSource.datasetName, annotationSource.organizationId))
+          .findUsable(LegacyDataSourceId(annotationSource.datasetName, annotationSource.organizationId))
           .toFox ~> NOT_FOUND
         dataSourceLayers = dataSource.dataLayers
           .filter(dL => !volumeAnnotationLayers.exists(_.name == dL.name))
@@ -236,7 +236,7 @@ class ZarrStreamingController @Inject()(
       mag: String,
       coordinates: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(LegacyDataSourceId(datasetName, organizationId)),
                                       urlOrHeaderToken(token, request)) {
       rawZarrCube(organizationId, datasetName, dataLayerName, mag, coordinates)
     }
@@ -307,7 +307,7 @@ class ZarrStreamingController @Inject()(
                     dataLayerName: String,
                     mag: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(LegacyDataSourceId(datasetName, organizationId)),
                                       urlOrHeaderToken(token, request)) {
       zArray(organizationId, datasetName, dataLayerName, mag)
     }
@@ -329,7 +329,7 @@ class ZarrStreamingController @Inject()(
                             dataLayerName: String,
                             mag: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(LegacyDataSourceId(datasetName, organizationId)),
                                       urlOrHeaderToken(token, request)) {
       zarrJsonForMag(organizationId, datasetName, dataLayerName, mag)
     }
@@ -403,7 +403,7 @@ class ZarrStreamingController @Inject()(
                                         mag: String,
                                         zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(LegacyDataSourceId(datasetName, organizationId)),
                                         urlOrHeaderToken(token, request)) {
         dataLayerMagFolderContents(organizationId, datasetName, dataLayerName, mag, zarrVersion)
       }
@@ -467,7 +467,7 @@ class ZarrStreamingController @Inject()(
                                      datasetName: String,
                                      dataLayerName: String,
                                      zarrVersion: Int): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(LegacyDataSourceId(datasetName, organizationId)),
                                       urlOrHeaderToken(token, request)) {
       dataLayerFolderContents(organizationId, datasetName, dataLayerName, zarrVersion)
     }
@@ -528,10 +528,10 @@ class ZarrStreamingController @Inject()(
                                       datasetName: String,
                                       zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(LegacyDataSourceId(datasetName, organizationId)),
                                         urlOrHeaderToken(token, request)) {
         for {
-          dataSource <- dataSourceRepository.findUsable(DataSourceId(datasetName, organizationId)).toFox ?~> Messages(
+          dataSource <- dataSourceRepository.findUsable(LegacyDataSourceId(datasetName, organizationId)).toFox ?~> Messages(
             "dataSource.notFound") ~> NOT_FOUND
           layerNames = dataSource.dataLayers.map((dataLayer: DataLayer) => dataLayer.name)
           additionalVersionDependantFiles = if (zarrVersion == 2) List(NgffGroupHeader.FILENAME_DOT_ZGROUP)
@@ -552,7 +552,7 @@ class ZarrStreamingController @Inject()(
       for {
         annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request))
         dataSource <- dataSourceRepository
-          .findUsable(DataSourceId(annotationSource.datasetName, annotationSource.organizationId))
+          .findUsable(LegacyDataSourceId(annotationSource.datasetName, annotationSource.organizationId))
           .toFox ?~> Messages("dataSource.notFound") ~> NOT_FOUND
         annotationLayerNames = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume).map(_.name)
         dataSourceLayerNames = dataSource.dataLayers
@@ -577,7 +577,7 @@ class ZarrStreamingController @Inject()(
                     datasetName: String,
                     dataLayerName: String = ""): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(
-      UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
+      UserAccessRequest.readDataSources(LegacyDataSourceId(datasetName, organizationId)),
       urlOrHeaderToken(token, request)) {
       Ok(zGroupJson)
     }

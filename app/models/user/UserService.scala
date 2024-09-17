@@ -2,6 +2,7 @@ package models.user
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -237,14 +238,11 @@ class UserService @Inject()(conf: WkConf,
 
   def updateDatasetViewConfiguration(
       user: User,
-      datasetNameAndId: String,
-      organizationId: String,
+      datasetId: ObjectId,
       datasetConfiguration: DatasetViewConfiguration,
       layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organizationId)(GlobalAccessContext) ?~> Messages(
-        "dataset.notFound",
-        datasetNameAndId)
+      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId)
       layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
       _ <- Fox.serialCombined(layerMap.toList) {
         case (name, config) =>

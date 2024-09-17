@@ -4,6 +4,7 @@
 # Note: keep this in sync with the reported version numbers in the utils.ApiVersioning trait
 
 # version log:
+ # changed in v9: Datasets are now identified by their id, not their name.
  # changed in v8: Datasets' name was renamed to id and the displayName is now named name.
  # changed in v7: datasources now contain scale as object with keys factor and unit, e.g. {"factor": [11,11,5.5], "unit": "nm"}
  # changed in v6: isValidName always returns Ok, with a JSON object containing possible errors and key "isValid"
@@ -11,6 +12,16 @@
  # new in v4: project queried by id, not name (changed route parameters)
  # new in v3: annotation info and finish request now take timestamp
  # new in v2: annotation json contains visibility enum instead of booleans
+
+->       /v8/                                                                 webknossos.latest.Routes
+
+# v8: support changes to v9
+PATCH    ||     /datasets/:organizationId/:datasetNameAndId                                       controllers.DatasetController.update(organizationId: String, datasetNameAndId: String)
+GET      ||     /datasets/:organizationId/:datasetNameAndId/sharingToken                          controllers.DatasetController.getSharingToken(organizationId: String, datasetNameAndId: String)
+PATCH     ||    /datasets/:organizationId/:datasetNameAndId/teams                                 controllers.DatasetController.updateTeams(organizationId: String, datasetNameAndId: String)
+GET    ||       /datasets/:organizationId/:datasetNameAndId                                       controllers.DatasetController.read(organizationId: String, datasetNameAndId: String, sharingToken: Option[String])
+GET           /datasets/:datasetName/isValidNewName                                             controllers.DatasetController.isValidNewName(datasetName: String)
+
 
 ->       /v8/                                                                 webknossos.latest.Routes
 

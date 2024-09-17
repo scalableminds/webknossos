@@ -2,6 +2,7 @@ package models.dataset
 
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.requestparsing.{DatasetURIParser, ObjectId}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
@@ -15,7 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   Category,
   CoordinateTransformation,
   CoordinateTransformationType,
-  DataSourceId,
+  LegacyDataSourceId,
   ElementClass,
   ThinPlateSplineCorrespondences,
   DataLayerLike => DataLayer
@@ -32,7 +33,6 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
-import utils.ObjectId
 
 import scala.concurrent.ExecutionContext
 
@@ -81,7 +81,7 @@ case class DatasetCompactInfo(
     colorLayerNames: List[String],
     segmentationLayerNames: List[String],
 ) {
-  def dataSourceId = new DataSourceId(name, owningOrganization)
+  def dataSourceId = new LegacyDataSourceId(name, owningOrganization)
 }
 
 object DatasetCompactInfo {
@@ -90,7 +90,8 @@ object DatasetCompactInfo {
 
 class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDAO, organizationDAO: OrganizationDAO)(
     implicit ec: ExecutionContext)
-    extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient) {
+    extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient)
+    with DatasetURIParser {
   protected val collection = Datasets
 
   protected def idColumn(x: Datasets): Rep[String] = x._Id
@@ -401,39 +402,29 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     } yield r
 
   def findOneByIdOrNameAndOrganization(idAndName: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[Dataset] = {
+      implicit ctx: DBAccessContext): Fox[Dataset] =
     getDatasetIdOrNameFromURIPath(idAndName) match {
-      case (Some(validId), None) => findOneByIdAndOrganization(validId, organizationId)
+      case (Some(validId), None)     => findOneByIdAndOrganization(validId, organizationId)
       case (None, Some(datasetName)) => findOneByNameAndOrganization(datasetName, organizationId)
     }
-  }
-
-  private def getDatasetIdOrNameFromURIPath(datasetNameAndId: String): (Option[ObjectId], Option[String]) = {
-    val maybeIdStr = datasetNameAndId.split("-").lastOption
-    val maybeId = maybeIdStr.flatMap(ObjectId.fromStringSync)
-    maybeId match {
-      case Some(validId) => (Some(validId), None)
-      case None => (None, Some(datasetNameAndId))
-    }
-  }
 
   private def getWhereClauseForDatasetIdOrName(datasetIdOrName: String): SqlToken = {
     val (maybeId, maybeDatasetName) = getDatasetIdOrNameFromURIPath(datasetIdOrName)
     maybeId match {
       case Some(id) => q"_id = $id"
-      case None => q"name = $maybeDatasetName"
+      case None     => q"name = $maybeDatasetName"
     }
   }
 
-  // TODOM: Make private
   def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
                    FROM $existingCollectionName
-                   WHERE name = $name
+                   WHERE path = $name
                    AND _organization = $organizationId
-                   AND $accessQuery""".as[DatasetsRow])
+                   AND $accessQuery
+                   LIMIT 1""".as[DatasetsRow])
       parsed <- parseFirst(r, s"$organizationId/$name")
     } yield parsed
 
@@ -473,15 +464,15 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   /* Disambiguation method for legacy URLs and NMLs: if the user has access to multiple datasets of the same name, use the oldest.
    * This is reasonable, because the legacy URL/NML was likely created before this ambiguity became possible */
-  def getOrganizationIdForDataset(datasetNameAndId: String)(implicit ctx: DBAccessContext): Fox[String] =
+  def getOrganizationIdForDataset(datasetName: String)(implicit ctx: DBAccessContext): Fox[String] =
     for {
       accessQuery <- readAccessQuery
-      whereClause = getWhereClauseForDatasetIdOrName(datasetNameAndId)
       rList <- run(q"""SELECT _organization
                        FROM $existingCollectionName
-                       WHERE $whereClause
+                       WHERE name = $datasetName
                        AND $accessQuery
-                       ORDER BY created ASC""".as[String])
+                       ORDER BY created ASC
+                       LIMIT 1""".as[String])
       r <- rList.headOption.toFox
     } yield r
 
@@ -492,27 +483,23 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- rList.headOption.toFox
     } yield r
 
-  def getSharingTokenByIdOrName(datasetNameAndId: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Option[String]] =
+  def getSharingTokenById(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[Option[String]] =
     for {
       accessQuery <- readAccessQuery
-      whereClause = getWhereClauseForDatasetIdOrName(datasetNameAndId)
       rList <- run(q"""SELECT sharingToken
                        FROM webknossos.datasets_
-                       WHERE $whereClause
-                       AND _organization = $organizationId
+                       WHERE _id = $datasetId
                        AND $accessQuery""".as[Option[String]])
       r <- rList.headOption.toFox
     } yield r
 
-  def updateSharingTokenByIdOrName(datasetNameAndId: String, organizationId: String, sharingToken: Option[String])(
+  def updateSharingTokenById(datasetId: ObjectId, sharingToken: Option[String])(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      accessQuery <- readAccessQuery
-      whereClause = getWhereClauseForDatasetIdOrName(datasetNameAndId)
+      accessQuery <- readAccessQuery // TODO: Why is this readAccessQuery and not writeAccessQuery?
       _ <- run(q"""UPDATE webknossos.datasets
                    SET sharingToken = $sharingToken
-                   WHERE name = $whereClause
-                   AND _organization = $organizationId
+                   WHERE _id = $datasetId
                    AND $accessQuery""".asUpdate)
     } yield ()
 

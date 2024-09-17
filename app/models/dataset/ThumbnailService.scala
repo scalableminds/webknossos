@@ -15,7 +15,7 @@ import net.liftweb.common.Full
 import play.api.http.Status.NOT_FOUND
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.JsArray
-import utils.ObjectId
+import com.scalableminds.util.requestparsing.ObjectId
 import utils.sql.{SimpleSQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -36,8 +36,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
   private val MaxThumbnailHeight = 4000
 
   def getThumbnailWithCache(
-      organizationId: String,
-      datasetNameAndId: String,
+      parsedDatasetId: ObjectId,
       layerName: String,
       w: Option[Int],
       h: Option[Int],
@@ -45,37 +44,28 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
     val width = com.scalableminds.util.tools.Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
     val height = com.scalableminds.util.tools.Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
     for {
-      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organizationId)(GlobalAccessContext)
+      dataset <- datasetDAO.findOne(parsedDatasetId)(GlobalAccessContext)
       image <- thumbnailCachingService.getOrLoad(
         dataset._id,
         layerName,
         width,
         height,
         mappingName,
-        _ =>
-          getThumbnail(organizationId, datasetNameAndId, layerName, width, height, mappingName)(ec,
-                                                                                                GlobalAccessContext,
-                                                                                                mp)
+        _ => getThumbnail(dataset, layerName, width, height, mappingName)(ec, GlobalAccessContext, mp)
       )
     } yield image
   }
 
-  private def getThumbnail(organizationId: String,
-                           datasetNameAndId: String,
-                           layerName: String,
-                           width: Int,
-                           height: Int,
-                           mappingName: Option[String])(implicit ec: ExecutionContext,
-                                                        ctx: DBAccessContext,
-                                                        mp: MessagesProvider): Fox[Array[Byte]] =
+  private def getThumbnail(dataset: Dataset, layerName: String, width: Int, height: Int, mappingName: Option[String])(
+      implicit ec: ExecutionContext,
+      ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[Array[Byte]] =
     for {
-      dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organizationId)
       dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
       usableDataSource <- dataSource.toUsable.toFox ?~> "dataset.notImported"
       layer <- usableDataSource.dataLayers.find(_.name == layerName) ?~> Messages("dataLayer.notFound", layerName) ~> NOT_FOUND
-      viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty,
-                                                                                             datasetNameAndId,
-                                                                                             organizationId)(ctx)
+      viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)(
+        ctx)
       (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt) = selectParameters(viewConfiguration,
                                                                                      usableDataSource,
                                                                                      layerName,
@@ -83,8 +73,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
                                                                                      width,
                                                                                      height)
       client <- datasetService.clientFor(dataset)
-      image <- client.getDataLayerThumbnail(organizationId,
-                                            dataset,
+      image <- client.getDataLayerThumbnail(dataset,
                                             layerName,
                                             mag1BoundingBox,
                                             mag,

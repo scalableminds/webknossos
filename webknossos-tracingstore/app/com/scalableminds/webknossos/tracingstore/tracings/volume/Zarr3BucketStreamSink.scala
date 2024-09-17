@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.{
   AdditionalAxis,
   DataLayer,
-  DataSourceId,
+  LegacyDataSourceId,
   GenericDataSource
 }
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition, VoxelSize}
@@ -72,7 +72,7 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
       MagLocator(mag = vec3IntToProto(mag), axisOrder = Some(AxisOrder.cAdditionalxyz(rank)))
     }
     GenericDataSource(
-      id = DataSourceId("", ""),
+      id = LegacyDataSourceId("", ""),
       dataLayers = List(
         Zarr3SegmentationLayer(
           defaultLayerName,

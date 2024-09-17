@@ -4,14 +4,11 @@ import org.apache.pekko.util.Timeout
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.requestparsing.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType.AnnotationLayerType
-import com.scalableminds.webknossos.datastore.models.annotation.{
-  AnnotationLayer,
-  AnnotationLayerStatistics,
-  AnnotationLayerType
-}
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerStatistics, AnnotationLayerType}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ResolutionRestrictions
@@ -242,15 +239,13 @@ class AnnotationController @Inject()(
       } yield result
     }
 
-  def createExplorational(organizationId: String, datasetNameAndId: String): Action[List[AnnotationLayerParameters]] =
+  def createExplorational(datasetId: String): Action[List[AnnotationLayerParameters]] =
     sil.SecuredAction.async(validateJson[List[AnnotationLayerParameters]]) { implicit request =>
       for {
-        organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
-          "organization.notFound",
-          organizationId) ~> NOT_FOUND
-        dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organization._id) ?~> Messages(
+        parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(parsedDatasetId) ?~> Messages(
           "dataset.notFound",
-          datasetNameAndId) ~> NOT_FOUND
+          parsedDatasetId) ~> NOT_FOUND
         annotation <- annotationService.createExplorationalFor(
           request.identity,
           dataset._id,
@@ -262,19 +257,16 @@ class AnnotationController @Inject()(
       } yield JsonOk(json)
     }
 
-  def getSandbox(organization: String,
-                 datasetNameAndId: String,
+  def getSandbox(datasetId: String,
                  typ: String,
                  sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken) // users with dataset sharing token may also get a sandbox annotation
       for {
-        organization <- organizationDAO.findOne(organization)(GlobalAccessContext) ?~> Messages(
-          "organization.notFound",
-          organization) ~> NOT_FOUND
-        dataset <- datasetDAO.findOneByIdOrNameAndOrganization(datasetNameAndId, organization._id)(ctx) ?~> Messages(
+        parsedDatasetId <- ObjectId.fromString(datasetId) ?~> "Invalid dataset id" ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(parsedDatasetId)(ctx) ?~> Messages(
           "dataset.notFound",
-          datasetNameAndId) ~> NOT_FOUND
+          parsedDatasetId) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox
         _ <- bool2Fox(tracingType == TracingType.skeleton) ?~> "annotation.sandbox.skeletonOnly"
         annotation = Annotation(

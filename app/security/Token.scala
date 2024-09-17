@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import TokenType.TokenType
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.ObjectId
+import com.scalableminds.util.requestparsing.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject

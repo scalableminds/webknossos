@@ -5,7 +5,7 @@ import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, DatasetArray}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.LegacyDataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box.tryo
@@ -20,13 +20,13 @@ import ucar.ma2.{Array => MultiArray}
 
 object PrecomputedArray extends LazyLogging {
   def open(
-      magPath: VaultPath,
-      dataSourceId: DataSourceId,
-      layerName: String,
-      axisOrderOpt: Option[AxisOrder],
-      channelIndex: Option[Int],
-      additionalAxes: Option[Seq[AdditionalAxis]],
-      sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
+            magPath: VaultPath,
+            dataSourceId: LegacyDataSourceId,
+            layerName: String,
+            axisOrderOpt: Option[AxisOrder],
+            channelIndex: Option[Int],
+            additionalAxes: Option[Seq[AdditionalAxis]],
+            sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext): Fox[PrecomputedArray] =
     for {
       headerBytes <- (magPath.parent / PrecomputedHeader.FILENAME_INFO)
         .readBytes() ?~> s"Could not read header at ${PrecomputedHeader.FILENAME_INFO}"
@@ -49,7 +49,7 @@ object PrecomputedArray extends LazyLogging {
 }
 
 class PrecomputedArray(vaultPath: VaultPath,
-                       dataSourceId: DataSourceId,
+                       dataSourceId: LegacyDataSourceId,
                        layerName: String,
                        header: PrecomputedScaleHeader,
                        axisOrder: AxisOrder,

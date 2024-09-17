@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayer,
   DataLayerWithMagLocators,
-  DataSourceId,
+  LegacyDataSourceId,
   GenericDataSource
 }
 import com.scalableminds.webknossos.datastore.services.DSRemoteWebknossosClient
@@ -66,7 +66,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
       _ <- bool2Fox(layersWithVoxelSizes.nonEmpty) ?~> "Detected zero layers"
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, preferredVoxelSize)
       dataSource = GenericDataSource[DataLayer](
-        DataSourceId("", ""), // Frontend will prompt user for a good name
+        LegacyDataSourceId("", ""), // Frontend will prompt user for a good name
         layers,
         voxelSize
       )

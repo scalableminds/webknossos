@@ -120,7 +120,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     s"upload___${uploadId}___file___${fileName}___chunkCount"
   private def redisKeyForFileChunkSet(uploadId: String, fileName: String): String =
     s"upload___${uploadId}___file___${fileName}___chunkSet"
-  private def redisKeyForUploadId(datasourceId: DataSourceId): String =
+  private def redisKeyForUploadId(datasourceId: LegacyDataSourceId): String =
     s"upload___${Json.stringify(Json.toJson(datasourceId))}___datasourceId"
   private def redisKeyForFilePaths(uploadId: String): String =
     s"upload___${uploadId}___filePaths"
@@ -139,8 +139,8 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
   private def uploadDirectory(organizationId: String, uploadId: String): Path =
     dataBaseDir.resolve(organizationId).resolve(uploadingDir).resolve(uploadId)
 
-  def getDataSourceIdByUploadId(uploadId: String): Fox[DataSourceId] =
-    getObjectFromRedis[DataSourceId](redisKeyForDataSourceId(uploadId))
+  def getDataSourceIdByUploadId(uploadId: String): Fox[LegacyDataSourceId] =
+    getObjectFromRedis[LegacyDataSourceId](redisKeyForDataSourceId(uploadId))
 
   def reserveUpload(reserveUploadInformation: ReserveUploadInformation): Fox[Unit] =
     for {
@@ -149,10 +149,10 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
                                              String.valueOf(reserveUploadInformation.totalFileCount))
       _ <- runningUploadMetadataStore.insert(
         redisKeyForDataSourceId(reserveUploadInformation.uploadId),
-        Json.stringify(Json.toJson(DataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization)))
+        Json.stringify(Json.toJson(LegacyDataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization)))
       )
       _ <- runningUploadMetadataStore.insert(
-        redisKeyForUploadId(DataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization)),
+        redisKeyForUploadId(LegacyDataSourceId(reserveUploadInformation.name, reserveUploadInformation.organization)),
         reserveUploadInformation.uploadId
       )
       filePaths = Json.stringify(Json.toJson(reserveUploadInformation.filePaths.getOrElse(List.empty)))
@@ -269,7 +269,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       }
   }
 
-  def finishUpload(uploadInformation: UploadInformation, checkCompletion: Boolean = true): Fox[(DataSourceId, Long)] = {
+  def finishUpload(uploadInformation: UploadInformation, checkCompletion: Boolean = true): Fox[(LegacyDataSourceId, Long)] = {
     val uploadId = uploadInformation.uploadId
 
     for {
@@ -304,7 +304,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
 
   private def postProcessUploadedDataSource(datasetNeedsConversion: Boolean,
                                             unpackToDir: Path,
-                                            dataSourceId: DataSourceId,
+                                            dataSourceId: LegacyDataSourceId,
                                             layersToLink: Option[List[LinkedLayerIdentifier]]): Fox[Unit] =
     if (datasetNeedsConversion)
       Fox.successful(())
@@ -328,7 +328,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     }
 
   private def exploreLocalDatasource(path: Path,
-                                     dataSourceId: DataSourceId,
+                                     dataSourceId: LegacyDataSourceId,
                                      typ: UploadedDataSourceType.Value): Fox[Unit] =
     for {
       _ <- Fox.runIf(typ == UploadedDataSourceType.ZARR)(
@@ -338,7 +338,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield ()
 
   private def tryExploringMultipleLayers(path: Path,
-                                         dataSourceId: DataSourceId,
+                                         dataSourceId: LegacyDataSourceId,
                                          typ: UploadedDataSourceType.Value): Fox[Option[Path]] =
     for {
       layerDirs <- typ match {
@@ -363,7 +363,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
     } yield path
 
   private def cleanUpOnFailure[T](result: Box[T],
-                                  dataSourceId: DataSourceId,
+                                  dataSourceId: LegacyDataSourceId,
                                   datasetNeedsConversion: Boolean,
                                   label: String): Fox[Unit] =
     result match {
@@ -399,7 +399,7 @@ class UploadService @Inject()(dataSourceRepository: DataSourceRepository,
       _ <- bool2Fox(list.forall(identity))
     } yield ()
 
-  private def dataSourceDirFor(dataSourceId: DataSourceId, datasetNeedsConversion: Boolean): Path = {
+  private def dataSourceDirFor(dataSourceId: LegacyDataSourceId, datasetNeedsConversion: Boolean): Path = {
     val dataSourceDir =
       if (datasetNeedsConversion)
         dataBaseDir.resolve(dataSourceId.team).resolve(forConversionDir).resolve(dataSourceId.name)

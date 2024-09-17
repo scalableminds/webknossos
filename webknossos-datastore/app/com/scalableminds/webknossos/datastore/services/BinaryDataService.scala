@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.ExtendedTypes.ExtendedArraySeq
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.DatasetDeleter
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataSourceId}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, LegacyDataSourceId}
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
@@ -87,7 +87,7 @@ class BinaryDataService(val dataBaseDir: Path,
       val readInstruction =
         DataReadInstruction(dataBaseDir, request.dataSource, request.dataLayer, bucket, request.settings.version)
       // dataSource is null and unused for volume tracings. Insert dummy DataSourceId (also unused in that case)
-      val dataSourceId = if (request.dataSource != null) request.dataSource.id else DataSourceId("", "")
+      val dataSourceId = if (request.dataSource != null) request.dataSource.id else LegacyDataSourceId("", "")
       val bucketProvider =
         bucketProviderCache.getOrLoadAndPut((dataSourceId, request.dataLayer.bucketProviderCacheKey))(_ =>
           request.dataLayer.bucketProvider(remoteSourceDescriptorServiceOpt, dataSourceId, sharedChunkContentsCache))
@@ -175,14 +175,14 @@ class BinaryDataService(val dataBaseDir: Path,
   }
 
   def clearCache(organizationId: String, datasetName: String, layerName: Option[String]): (Int, Int, Int) = {
-    val dataSourceId = DataSourceId(datasetName, organizationId)
+    val dataSourceId = LegacyDataSourceId(datasetName, organizationId)
 
     def agglomerateFileMatchPredicate(agglomerateKey: AgglomerateFileKey) =
       agglomerateKey.datasetName == datasetName && agglomerateKey.organizationId == organizationId && layerName.forall(
         _ == agglomerateKey.layerName)
 
-    def bucketProviderPredicate(key: (DataSourceId, String)): Boolean =
-      key._1 == DataSourceId(datasetName, organizationId) && layerName.forall(_ == key._2)
+    def bucketProviderPredicate(key: (LegacyDataSourceId, String)): Boolean =
+      key._1 == LegacyDataSourceId(datasetName, organizationId) && layerName.forall(_ == key._2)
 
     val closedAgglomerateFileHandleCount =
       agglomerateServiceOpt.map(_.agglomerateFileCache.clear(agglomerateFileMatchPredicate)).getOrElse(0)

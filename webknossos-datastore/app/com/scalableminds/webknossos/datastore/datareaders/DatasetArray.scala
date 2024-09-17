@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.{bool2Fox, box2Fox, option2Fox}
 import com.scalableminds.webknossos.datastore.datavault.VaultPath
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.LegacyDataSourceId
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import net.liftweb.common.Box.tryo
@@ -17,7 +17,7 @@ import scala.collection.immutable.NumericRange
 import scala.concurrent.ExecutionContext
 
 class DatasetArray(vaultPath: VaultPath,
-                   dataSourceId: DataSourceId,
+                   dataSourceId: LegacyDataSourceId,
                    layerName: String,
                    header: DatasetHeader,
                    // axisOrder and additionalAxes match those from “outer” metadata, and can directly be used to compute chunk indices.

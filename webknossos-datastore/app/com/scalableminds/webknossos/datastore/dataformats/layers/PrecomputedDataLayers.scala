@@ -14,7 +14,7 @@ trait PrecomputedLayer extends DataLayerWithMagLocators {
   val dataFormat: DataFormat.Value = DataFormat.neuroglancerPrecomputed
 
   def bucketProvider(remoteSourceDescriptorServiceOpt: Option[RemoteSourceDescriptorService],
-                     dataSourceId: DataSourceId,
+                     dataSourceId: LegacyDataSourceId,
                      sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]) =
     new DatasetArrayBucketProvider(this, dataSourceId, remoteSourceDescriptorServiceOpt, sharedChunkContentsCache)
 

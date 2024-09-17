@@ -1614,11 +1614,12 @@ export function fetchMapping(
 
 export function makeMappingEditable(
   tracingStoreUrl: string,
+  annotationId: string,
   tracingId: string,
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
     Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/volume/${tracingId}/makeMappingEditable?token=${token}`,
+      `${tracingStoreUrl}/tracings/volume/${annotationId}/${tracingId}/makeMappingEditable?token=${token}`,
       {
         method: "POST",
       },
@@ -1628,10 +1629,11 @@ export function makeMappingEditable(
 
 export function getEditableMappingInfo(
   tracingStoreUrl: string,
+  annotationId: string,
   tracingId: string,
 ): Promise<ServerEditableMapping> {
   return doWithToken((token) =>
-    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${tracingId}/info?token=${token}`),
+    Request.receiveJSON(`${tracingStoreUrl}/tracings/mapping/${annotationId}/${tracingId}/info?token=${token}`),
   );
 }
 

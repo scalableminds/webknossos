@@ -39,6 +39,11 @@ case class AnnotationWithTracings(
       }
     } yield volumeTracing
 
+  def getEditableMappingInfo(tracingId: String): Box[EditableMappingInfo] =
+    for {
+      (info, _) <- editableMappingsByTracingId.get(tracingId)
+    } yield info
+
   def version: Long = annotation.version
 
   def addTracing(a: AddLayerAnnotationUpdateAction): AnnotationWithTracings =

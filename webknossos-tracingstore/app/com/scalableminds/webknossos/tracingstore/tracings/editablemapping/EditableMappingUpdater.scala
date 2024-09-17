@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
@@ -36,7 +37,7 @@ class EditableMappingUpdater(
     oldVersion: Long,
     newVersion: Long,
     remoteFallbackLayer: RemoteFallbackLayer,
-    userToken: Option[String],
+    tokenContext: TokenContext,
     remoteDatastoreClient: TSRemoteDatastoreClient,
     editableMappingService: EditableMappingService,
     tracingDataStore: TracingDataStore,
@@ -127,13 +128,11 @@ class EditableMappingUpdater(
       segmentId1 <- editableMappingService.findSegmentIdAtPositionIfNeeded(remoteFallbackLayer,
                                                                            update.segmentPosition1,
                                                                            update.segmentId1,
-                                                                           update.mag,
-                                                                           userToken)
+                                                                           update.mag)(tokenContext)
       segmentId2 <- editableMappingService.findSegmentIdAtPositionIfNeeded(remoteFallbackLayer,
                                                                            update.segmentPosition2,
                                                                            update.segmentId2,
-                                                                           update.mag,
-                                                                           userToken)
+                                                                           update.mag)(tokenContext)
       agglomerateId <- agglomerateIdForSplitAction(update, segmentId1)
       agglomerateGraph <- agglomerateGraphForIdWithFallback(editableMappingInfo, agglomerateId)
       _ = if (segmentId1 == 0)
@@ -196,7 +195,7 @@ class EditableMappingUpdater(
         case Some(agglomerateId) => Fox.successful(agglomerateId)
         case None =>
           editableMappingService
-            .getBaseSegmentToAgglomerate(baseMappingName, Set(segmentId), remoteFallbackLayer, userToken)
+            .getBaseSegmentToAgglomerate(baseMappingName, Set(segmentId), remoteFallbackLayer)(tokenContext)
             .flatMap(baseSegmentToAgglomerate => baseSegmentToAgglomerate.get(segmentId))
       }
     } yield agglomerateId
@@ -241,7 +240,7 @@ class EditableMappingUpdater(
                                                                   Some(oldVersion),
                                                                   agglomerateId,
                                                                   remoteFallbackLayer,
-                                                                  userToken)
+      )(tokenContext)
     }
   }
 
@@ -336,8 +335,7 @@ class EditableMappingUpdater(
   private def largestAgglomerateId(mapping: EditableMappingInfo): Fox[Long] =
     for {
       largestBaseAgglomerateId <- remoteDatastoreClient.getLargestAgglomerateId(remoteFallbackLayer,
-                                                                                mapping.baseMappingName,
-                                                                                userToken)
+                                                                                mapping.baseMappingName)(tokenContext)
     } yield math.max(mapping.largestAgglomerateId, largestBaseAgglomerateId)
 
   private def applyMergeAction(mapping: EditableMappingInfo, update: MergeAgglomerateUpdateAction)(
@@ -346,13 +344,11 @@ class EditableMappingUpdater(
       segmentId1 <- editableMappingService.findSegmentIdAtPositionIfNeeded(remoteFallbackLayer,
                                                                            update.segmentPosition1,
                                                                            update.segmentId1,
-                                                                           update.mag,
-                                                                           userToken)
+                                                                           update.mag)(tokenContext)
       segmentId2 <- editableMappingService.findSegmentIdAtPositionIfNeeded(remoteFallbackLayer,
                                                                            update.segmentPosition2,
                                                                            update.segmentId2,
-                                                                           update.mag,
-                                                                           userToken)
+                                                                           update.mag)(tokenContext)
       _ = if (segmentId1 == 0)
         logger.warn(
           s"Merge action for editable mapping $editableMappingId: Looking up segment id at position ${update.segmentPosition1} in mag ${update.mag} returned invalid value zero. Merging outside of dataset?")
@@ -420,8 +416,7 @@ class EditableMappingUpdater(
       _ <- bool2Fox(revertAction.sourceVersion <= oldVersion) ?~> "trying to revert editable mapping to a version not yet present in the database"
       oldInfo <- editableMappingService.getInfo(editableMappingId,
                                                 Some(revertAction.sourceVersion),
-                                                remoteFallbackLayer,
-                                                userToken)
+                                                remoteFallbackLayer)(tokenContext)
       _ = segmentToAgglomerateBuffer.clear()
       _ = agglomerateToGraphBuffer.clear()
       segmentToAgglomerateChunkNewestStream = new VersionedSegmentToAgglomerateChunkIterator(
@@ -453,8 +448,7 @@ class EditableMappingUpdater(
                 .getAgglomerateGraphForId(editableMappingId,
                                           agglomerateId,
                                           remoteFallbackLayer,
-                                          userToken,
-                                          Some(revertAction.sourceVersion))
+                                          Some(revertAction.sourceVersion))(tokenContext)
                 .futureBox
                 .map {
                   case Full(graphData) => agglomerateToGraphBuffer.put(graphKey, (graphData, false))

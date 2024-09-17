@@ -29,7 +29,7 @@ class TSAnnotationController @Inject()(
   def save(token: Option[String], annotationId: String): Action[AnnotationProto] =
     Action.async(validateProto[AnnotationProto]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           for {
             // TODO assert id does not already exist
             _ <- tracingDataStore.annotations.put(annotationId, 0L, request.body)
@@ -43,12 +43,9 @@ class TSAnnotationController @Inject()(
     Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccess(UserAccessRequest.writeAnnotation(annotationId),
-                                            urlOrHeaderToken(token, request)) {
+          accessTokenService.validateAccess(UserAccessRequest.writeAnnotation(annotationId)) {
             for {
-              _ <- annotationTransactionService.handleUpdateGroups(annotationId,
-                                                                   request.body,
-                                                                   urlOrHeaderToken(token, request))
+              _ <- annotationTransactionService.handleUpdateGroups(annotationId, request.body)
             } yield Ok
           }
         }
@@ -60,8 +57,7 @@ class TSAnnotationController @Inject()(
                       newestVersion: Option[Long] = None,
                       oldestVersion: Option[Long] = None): Action[AnyContent] = Action.async { implicit request =>
     log() {
-      accessTokenService.validateAccess(UserAccessRequest.readAnnotation(annotationId),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readAnnotation(annotationId)) {
         for {
           updateLog <- annotationService.updateActionLog(annotationId, newestVersion, oldestVersion)
         } yield Ok(updateLog)
@@ -72,8 +68,7 @@ class TSAnnotationController @Inject()(
   def newestVersion(token: Option[String], annotationId: String): Action[AnyContent] = Action.async {
     implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readAnnotation(annotationId),
-                                          urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccess(UserAccessRequest.readAnnotation(annotationId)) {
           for {
             newestVersion <- annotationService.currentMaterializableVersion(annotationId)
           } yield JsonOk(Json.obj("version" -> newestVersion))
@@ -84,7 +79,7 @@ class TSAnnotationController @Inject()(
   def updateActionStatistics(token: Option[String], tracingId: String): Action[AnyContent] = Action.async {
     implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
           for {
             statistics <- annotationService.updateActionStatistics(tracingId)
           } yield Ok(statistics)
@@ -96,10 +91,9 @@ class TSAnnotationController @Inject()(
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccess(UserAccessRequest.readAnnotation(annotationId),
-                                            urlOrHeaderToken(token, request)) {
+          accessTokenService.validateAccess(UserAccessRequest.readAnnotation(annotationId)) {
             for {
-              annotationProto <- annotationService.get(annotationId, version, urlOrHeaderToken(token, request))
+              annotationProto <- annotationService.get(annotationId, version)
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }
         }

@@ -216,22 +216,20 @@ trait VolumeTracingBucketHelper
     }
   }
 
-  private def loadFallbackBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
+  private def loadFallbackBucket(layer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
     val dataRequest: WebknossosDataRequest = WebknossosDataRequest(
       position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
       mag = bucket.mag,
-      cubeSize = dataLayer.lengthOfUnderlyingCubes(bucket.mag),
+      cubeSize = layer.lengthOfUnderlyingCubes(bucket.mag),
       fourBit = None,
-      applyAgglomerate = dataLayer.tracing.mappingName,
+      applyAgglomerate = layer.tracing.mappingName,
       version = None,
       additionalCoordinates = None
     )
     for {
-      remoteFallbackLayer <- dataLayer.volumeTracingService
-        .remoteFallbackLayerFromVolumeTracing(dataLayer.tracing, dataLayer.name)
-      (unmappedData, indices) <- dataLayer.volumeTracingService.getFallbackDataFromDatastore(remoteFallbackLayer,
-                                                                                             List(dataRequest),
-                                                                                             dataLayer.userToken)
+      remoteFallbackLayer <- layer.volumeTracingService.remoteFallbackLayerFromVolumeTracing(layer.tracing, layer.name)
+      (unmappedData, indices) <- layer.volumeTracingService
+        .getFallbackDataFromDatastore(remoteFallbackLayer, List(dataRequest))(ec, layer.tokenContext)
       unmappedDataOrEmpty <- if (indices.isEmpty) Fox.successful(unmappedData) else Fox.empty
     } yield unmappedDataOrEmpty
   }

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.rpc
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.mvc.MimeTypes
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -25,6 +26,9 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     request = request.addQueryStringParameters(parameters: _*)
     this
   }
+
+  def withTokenFromContext(implicit tc: TokenContext): RPCRequest =
+    addQueryStringOptional("token", tc.userTokenOpt)
 
   def addHttpHeaders(hdrs: (String, String)*): RPCRequest = {
     request = request.addHttpHeaders(hdrs: _*)

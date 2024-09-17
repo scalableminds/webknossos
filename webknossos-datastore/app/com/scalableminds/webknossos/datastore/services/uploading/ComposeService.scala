@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.layers.{
@@ -67,7 +68,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
   private def uploadDirectory(organizationId: String, name: String): Path =
     dataBaseDir.resolve(organizationId).resolve(name)
 
-  def composeDataset(composeRequest: ComposeRequest, userToken: Option[String]): Fox[DataSource] =
+  def composeDataset(composeRequest: ComposeRequest)(implicit tc: TokenContext): Fox[DataSource] =
     for {
       _ <- dataSourceService.assertDataDirWritable(composeRequest.organizationId)
       reserveUploadInfo = ReserveUploadInformation("",
@@ -78,7 +79,7 @@ class ComposeService @Inject()(dataSourceRepository: DataSourceRepository,
                                                    None,
                                                    List(),
                                                    Some(composeRequest.targetFolderId))
-      _ <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo, userToken) ?~> "Failed to reserve upload."
+      _ <- remoteWebknossosClient.reserveDataSourceUpload(reserveUploadInfo) ?~> "Failed to reserve upload."
       directory = uploadDirectory(composeRequest.organizationId, composeRequest.newDatasetName)
       _ = PathUtils.ensureDirectory(directory)
       dataSource <- createDatasource(composeRequest, composeRequest.organizationId)

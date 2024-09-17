@@ -53,8 +53,7 @@ class BinaryDataController @Inject()(
       datasetName: String,
       dataLayerName: String
   ): Action[List[WebknossosDataRequest]] = Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       logTime(slackNotificationService.noticeSlowRequest) {
         val t = Instant.now
         for {
@@ -96,8 +95,7 @@ class BinaryDataController @Inject()(
       halfByte: Boolean,
       mappingName: Option[String]
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetName,
@@ -121,8 +119,7 @@ class BinaryDataController @Inject()(
       datasetName: String,
       dataLayerName: String
   ): Action[RawCuboidRequest] = Action.async(validateJson[RawCuboidRequest]) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetName,
@@ -144,8 +141,7 @@ class BinaryDataController @Inject()(
                         y: Int,
                         z: Int,
                         cubeSize: Int): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetName,
@@ -179,8 +175,7 @@ class BinaryDataController @Inject()(
                     intensityMax: Option[Double],
                     color: Option[String],
                     invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetName,
@@ -227,8 +222,7 @@ class BinaryDataController @Inject()(
       dataLayerName: String,
       mappingName: String
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetName,
@@ -248,8 +242,7 @@ class BinaryDataController @Inject()(
                        datasetName: String,
                        dataLayerName: String): Action[WebknossosAdHocMeshRequest] =
     Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                     datasetName,
@@ -290,8 +283,7 @@ class BinaryDataController @Inject()(
                datasetName: String,
                dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                     datasetName,
@@ -309,8 +301,7 @@ class BinaryDataController @Inject()(
                 datasetName: String,
                 dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                     datasetName,

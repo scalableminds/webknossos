@@ -1,13 +1,9 @@
 package com.scalableminds.webknossos.tracingstore.tracings
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
-import com.scalableminds.webknossos.tracingstore.annotation.{
-  AnnotationWithTracings,
-  TSAnnotationService,
-  UpdateActionGroup
-}
+import com.scalableminds.webknossos.tracingstore.annotation.{TSAnnotationService, UpdateActionGroup}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import com.typesafe.scalalogging.LazyLogging
@@ -106,6 +102,7 @@ trait TracingService[T <: GeneratedMessage]
   def removeAllUncommittedFor(tracingId: String, transactionId: String): Fox[Unit] =
     uncommittedUpdatesStore.removeAllConditional(patternFor(tracingId, transactionId))
 
+  /* // TODO ? add this to migration?
   private def migrateTracing(tracingFox: Fox[T], tracingId: String): Fox[T] =
     tracingMigrationService.migrateTracing(tracingFox).flatMap {
       case (tracing, hasChanged) =>
@@ -114,6 +111,7 @@ trait TracingService[T <: GeneratedMessage]
         else
           Fox.successful(tracing)
     }
+   */
 
   def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] = Fox.successful(tracing)
 
@@ -121,18 +119,14 @@ trait TracingService[T <: GeneratedMessage]
            tracingId: String,
            version: Option[Long] = None,
            useCache: Boolean = true,
-           applyUpdates: Boolean = false,
-           userToken: Option[String]): Fox[T]
+           applyUpdates: Boolean = false)(implicit tc: TokenContext): Fox[T]
 
-  def findMultiple(selectors: List[Option[TracingSelector]],
-                   useCache: Boolean = true,
-                   applyUpdates: Boolean = false,
-                   userToken: Option[String]): Fox[List[Option[T]]] =
+  def findMultiple(selectors: List[Option[TracingSelector]], useCache: Boolean = true, applyUpdates: Boolean = false)(
+      implicit tc: TokenContext): Fox[List[Option[T]]] =
     Fox.combined {
       selectors.map {
         case Some(selector) =>
-          find("dummyAnnotationid", selector.tracingId, selector.version, useCache, applyUpdates, userToken = userToken)
-            .map(Some(_))
+          find("dummyAnnotationid", selector.tracingId, selector.version, useCache, applyUpdates).map(Some(_))
         case None => Fox.successful(None)
       }
     }
@@ -175,8 +169,7 @@ trait TracingService[T <: GeneratedMessage]
                       tracings: Seq[T],
                       newId: String,
                       newVersion: Long,
-                      toCache: Boolean,
-                      userToken: Option[String])(implicit mp: MessagesProvider): Fox[MergedVolumeStats]
+                      toCache: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats]
 
-  def mergeEditableMappings(tracingsWithIds: List[(T, String)], userToken: Option[String]): Fox[String]
+  def mergeEditableMappings(tracingsWithIds: List[(T, String)])(implicit tc: TokenContext): Fox[String]
 }

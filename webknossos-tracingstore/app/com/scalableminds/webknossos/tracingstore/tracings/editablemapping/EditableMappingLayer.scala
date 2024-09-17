@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.tools.Fox
@@ -37,8 +38,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
       (editableMappingInfo, editableMappingVersion) <- layer.editableMappingService.getInfoAndActualVersion(
         editableMappingId,
         requestedVersion = None,
-        remoteFallbackLayer = remoteFallbackLayer,
-        userToken = layer.token)
+        remoteFallbackLayer = remoteFallbackLayer)(layer.tokenContext)
       dataRequest: WebknossosDataRequest = WebknossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
@@ -48,18 +48,17 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer) extends BucketP
         version = None,
         additionalCoordinates = readInstruction.bucket.additionalCoordinates
       )
-      (unmappedData, indices) <- layer.editableMappingService.getFallbackDataFromDatastore(remoteFallbackLayer,
-                                                                                           List(dataRequest),
-                                                                                           layer.token)
+      (unmappedData, indices) <- layer.editableMappingService
+        .getFallbackDataFromDatastore(remoteFallbackLayer, List(dataRequest))(ec, layer.tokenContext)
       _ <- bool2Fox(indices.isEmpty)
       unmappedDataTyped <- layer.editableMappingService.bytesToUnsignedInt(unmappedData, layer.tracing.elementClass)
       segmentIds = layer.editableMappingService.collectSegmentIds(unmappedDataTyped)
-      relevantMapping <- layer.editableMappingService.generateCombinedMappingForSegmentIds(segmentIds,
-                                                                                           editableMappingInfo,
-                                                                                           editableMappingVersion,
-                                                                                           editableMappingId,
-                                                                                           remoteFallbackLayer,
-                                                                                           layer.token)
+      relevantMapping <- layer.editableMappingService.generateCombinedMappingForSegmentIds(
+        segmentIds,
+        editableMappingInfo,
+        editableMappingVersion,
+        editableMappingId,
+        remoteFallbackLayer)(layer.tokenContext)
       mappedData: Array[Byte] <- layer.editableMappingService.mapData(unmappedDataTyped,
                                                                       relevantMapping,
                                                                       layer.elementClass)
@@ -72,7 +71,7 @@ case class EditableMappingLayer(name: String,
                                 resolutions: List[Vec3Int],
                                 largestSegmentId: Option[Long],
                                 elementClass: ElementClass.Value,
-                                token: Option[String],
+                                tokenContext: TokenContext,
                                 tracing: VolumeTracing,
                                 tracingId: String,
                                 editableMappingService: EditableMappingService)
@@ -90,7 +89,7 @@ case class EditableMappingLayer(name: String,
                               sharedChunkContentsCache: Option[AlfuCache[String, MultiArray]]): BucketProvider =
     new EditableMappingBucketProvider(layer = this)
 
-  override def bucketProviderCacheKey: String = s"$name-token=$token"
+  override def bucketProviderCacheKey: String = s"$name-token=${tokenContext.userTokenOpt}"
 
   override def mappings: Option[Set[String]] = None
 

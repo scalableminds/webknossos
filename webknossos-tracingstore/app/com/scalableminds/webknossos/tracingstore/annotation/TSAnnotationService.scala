@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.Fox.option2Fox
@@ -20,7 +21,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.{
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   ApplyableVolumeUpdateAction,
   BucketMutatingVolumeUpdateAction,
-  VolumeTracingService,
   VolumeUpdateAction
 }
 import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
@@ -37,7 +37,7 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     extends KeyValueStoreImplicits
     with LazyLogging {
 
-  def reportUpdates(annotationId: String, updateGroups: List[UpdateActionGroup], userToken: Option[String]): Fox[Unit] =
+  def reportUpdates(annotationId: String, updateGroups: List[UpdateActionGroup])(implicit tc: TokenContext): Fox[Unit] =
     for {
       _ <- remoteWebknossosClient.reportTracingUpdates(
         TracingUpdatesReport(
@@ -46,7 +46,7 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
           statistics = updateGroups.flatMap(_.stats).lastOption, // TODO statistics per tracing/layer
           significantChangesCount = updateGroups.map(_.significantChangesCount).sum,
           viewChangesCount = updateGroups.map(_.viewChangesCount).sum,
-          userToken
+          tc.userTokenOpt
         ))
     } yield ()
 
@@ -115,17 +115,17 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     } yield Json.toJson(updateActionGroupsJs)
   }
 
-  def get(annotationId: String, version: Option[Long], userToken: Option[String])(
-      implicit ec: ExecutionContext): Fox[AnnotationProto] =
+  def get(annotationId: String, version: Option[Long])(implicit ec: ExecutionContext,
+                                                       tc: TokenContext): Fox[AnnotationProto] =
     for {
-      withTracings <- getWithTracings(annotationId, version, List.empty, List.empty, userToken)
+      withTracings <- getWithTracings(annotationId, version, List.empty, List.empty)
     } yield withTracings.annotation
 
   def getWithTracings(annotationId: String,
                       version: Option[Long],
                       requestedSkeletonTracingIds: List[String],
-                      requestedVolumeTracingIds: List[String],
-                      userToken: Option[String])(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+                      requestedVolumeTracingIds: List[String])(implicit ec: ExecutionContext,
+                                                               tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       annotationWithVersion <- tracingDataStore.annotations.get(annotationId, version)(fromProtoBytes[AnnotationProto]) ?~> "getAnnotation.failed"
       annotation = annotationWithVersion.value
@@ -133,17 +133,16 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
                                      annotationId,
                                      version,
                                      requestedSkeletonTracingIds,
-                                     requestedVolumeTracingIds,
-                                     userToken) ?~> "applyUpdates.failed"
+                                     requestedVolumeTracingIds) ?~> "applyUpdates.failed"
     } yield updated
 
-  private def applyPendingUpdates(
-      annotation: AnnotationProto,
-      annotationId: String,
-      targetVersionOpt: Option[Long],
-      requestedSkeletonTracingIds: List[String],
-      requestedVolumeTracingIds: List[String],
-      userToken: Option[String])(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] =
+  private def applyPendingUpdates(annotation: AnnotationProto,
+                                  annotationId: String,
+                                  targetVersionOpt: Option[Long],
+                                  requestedSkeletonTracingIds: List[String],
+                                  requestedVolumeTracingIds: List[String])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[AnnotationWithTracings] =
     for {
       targetVersion <- determineTargetVersion(annotation, annotationId, targetVersionOpt) ?~> "determineTargetVersion.failed"
       updates <- findPendingUpdates(annotationId, annotation.version, targetVersion) ?~> "findPendingUpdates.failed"
@@ -151,7 +150,7 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
                                                        updates,
                                                        requestedSkeletonTracingIds,
                                                        requestedVolumeTracingIds) ?~> "findTracingsForUpdates.failed"
-      updated <- applyUpdates(annotationWithTracings, annotationId, updates, targetVersion, userToken) ?~> "applyUpdates.inner.failed"
+      updated <- applyUpdates(annotationWithTracings, annotationId, updates, targetVersion) ?~> "applyUpdates.inner.failed"
     } yield updated
 
   private def findTracingsForUpdates(
@@ -189,11 +188,11 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
     } yield AnnotationWithTracings(annotation, skeletonTracingsMap ++ volumeTracingsMap, editableMappingsMap)
   }
 
-  private def applyUpdates(annotation: AnnotationWithTracings,
-                           annotationId: String,
-                           updates: List[UpdateAction],
-                           targetVersion: Long,
-                           userToken: Option[String])(implicit ec: ExecutionContext): Fox[AnnotationWithTracings] = {
+  private def applyUpdates(
+      annotation: AnnotationWithTracings,
+      annotationId: String,
+      updates: List[UpdateAction],
+      targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] = {
 
     def updateIter(annotationWithTracingsFox: Fox[AnnotationWithTracings],
                    remainingUpdates: List[UpdateAction]): Fox[AnnotationWithTracings] =

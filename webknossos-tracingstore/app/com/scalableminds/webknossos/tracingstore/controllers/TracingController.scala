@@ -4,7 +4,6 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.{boxFormat, optionFormat}
 import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
-import com.scalableminds.webknossos.tracingstore.annotation.UpdateActionGroup
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingSelector, TracingService}
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
@@ -15,7 +14,6 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 
 trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends Controller {
 
@@ -46,7 +44,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
   def save(token: Option[String]): Action[T] = Action.async(validateProto[T]) { implicit request =>
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           val tracing = request.body
           tracingService.save(tracing, None, 0).map { newId =>
             Ok(Json.toJson(newId))
@@ -59,7 +57,7 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
   def saveMultiple(token: Option[String]): Action[Ts] = Action.async(validateProto[Ts]) { implicit request =>
     log() {
       logTime(slackNotificationService.noticeSlowRequest) {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           val savedIds = Fox.sequence(request.body.map { tracingOpt: Option[T] =>
             tracingOpt match {
               case Some(tracing) => tracingService.save(tracing, None, 0).map(Some(_))
@@ -75,13 +73,9 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
   def get(token: Option[String], annotationId: String, tracingId: String, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId), urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccess(UserAccessRequest.readTracing(tracingId)) {
           for {
-            tracing <- tracingService.find(annotationId,
-                                           tracingId,
-                                           version,
-                                           applyUpdates = true,
-                                           userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+            tracing <- tracingService.find(annotationId, tracingId, version, applyUpdates = true) ?~> Messages(
               "tracing.notFound")
           } yield Ok(tracing.toByteArray).as(protobufMimeType)
         }
@@ -91,11 +85,9 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
   def getMultiple(token: Option[String]): Action[List[Option[TracingSelector]]] =
     Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           for {
-            tracings <- tracingService.findMultiple(request.body,
-                                                    applyUpdates = true,
-                                                    userToken = urlOrHeaderToken(token, request))
+            tracings <- tracingService.findMultiple(request.body, applyUpdates = true)
           } yield {
             Ok(tracings.toByteArray).as(protobufMimeType)
           }
@@ -106,11 +98,9 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
   def mergedFromIds(token: Option[String], persist: Boolean): Action[List[Option[TracingSelector]]] =
     Action.async(validateJson[List[Option[TracingSelector]]]) { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.webknossos, urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccess(UserAccessRequest.webknossos) {
           for {
-            tracingOpts <- tracingService.findMultiple(request.body,
-                                                       applyUpdates = true,
-                                                       userToken = urlOrHeaderToken(token, request)) ?~> Messages(
+            tracingOpts <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages(
               "tracing.notFound")
             tracingsWithIds = tracingOpts.zip(request.body).flatMap {
               case (Some(tracing), Some(selector)) => Some((tracing, selector.tracingId))
@@ -121,11 +111,8 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
                                                                 tracingsWithIds.map(_._1),
                                                                 newId,
                                                                 newVersion = 0L,
-                                                                toCache = !persist,
-                                                                token)
-            newEditableMappingIdBox <- tracingService
-              .mergeEditableMappings(tracingsWithIds, urlOrHeaderToken(token, request))
-              .futureBox
+                                                                toCache = !persist)
+            newEditableMappingIdBox <- tracingService.mergeEditableMappings(tracingsWithIds).futureBox
             newEditableMappingIdOpt <- newEditableMappingIdBox match {
               case Full(newEditableMappingId) => Fox.successful(Some(newEditableMappingId))
               case Empty                      => Fox.successful(None)

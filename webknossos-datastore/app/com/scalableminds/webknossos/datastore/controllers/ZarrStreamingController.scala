@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -55,8 +56,7 @@ class ZarrStreamingController @Inject()(
       datasetName: String,
       dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetName,
@@ -73,8 +73,7 @@ class ZarrStreamingController @Inject()(
       datasetName: String,
       dataLayerName: String = "",
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         (dataSource, dataLayer) <- dataSourceRepository.getDataSourceAndDataLayer(organizationId,
                                                                                   datasetName,
@@ -94,12 +93,11 @@ class ZarrStreamingController @Inject()(
                                       dataLayerName: String = ""): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
-        token,
         accessToken,
         dataLayerName,
-        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) => {
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) => {
           remoteTracingstoreClient
-            .getOmeNgffHeader(annotationLayer.tracingId, annotationSource.tracingStoreUrl, relevantToken)
+            .getOmeNgffHeader(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(relevantTokenContext)
             .map(ngffMetadata => Ok(Json.toJson(ngffMetadata)))
         },
         orElse = annotationSource =>
@@ -120,12 +118,12 @@ class ZarrStreamingController @Inject()(
                                         dataLayerName: String = ""): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
-        token,
         accessToken,
         dataLayerName,
-        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) => {
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) => {
           remoteTracingstoreClient
-            .getZarrJsonGroupHeaderWithNgff(annotationLayer.tracingId, annotationSource.tracingStoreUrl, relevantToken)
+            .getZarrJsonGroupHeaderWithNgff(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(
+              relevantTokenContext)
             .map(header => Ok(Json.toJson(header)))
         },
         orElse = annotationSource =>
@@ -153,8 +151,7 @@ class ZarrStreamingController @Inject()(
       datasetName: String,
       zarrVersion: Int,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         dataSource <- dataSourceRepository.findUsable(DataSourceId(datasetName, organizationId)).toFox ~> NOT_FOUND
         dataLayers = dataSource.dataLayers
@@ -206,9 +203,9 @@ class ZarrStreamingController @Inject()(
                                           zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
-        relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)
-        else urlOrHeaderToken(token, request)
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken) ~> NOT_FOUND
+        relevantTokenContext = if (annotationSource.accessViaPrivateLink) TokenContext(Some(accessToken))
+        else tokenContextForRequest
         volumeAnnotationLayers = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
         dataSource <- dataSourceRepository
           .findUsable(DataSourceId(annotationSource.datasetName, annotationSource.organizationId))
@@ -221,8 +218,7 @@ class ZarrStreamingController @Inject()(
             remoteTracingstoreClient.getVolumeLayerAsZarrLayer(l.tracingId,
                                                                Some(l.name),
                                                                annotationSource.tracingStoreUrl,
-                                                               relevantToken,
-                                                               zarrVersion))
+                                                               zarrVersion)(relevantTokenContext))
         allLayer = dataSourceLayers ++ annotationLayers
         zarrSource = GenericDataSource[DataLayer](dataSource.id, allLayer, dataSource.scale)
       } yield Ok(Json.toJson(zarrSource))
@@ -236,8 +232,7 @@ class ZarrStreamingController @Inject()(
       mag: String,
       coordinates: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       rawZarrCube(organizationId, datasetName, dataLayerName, mag, coordinates)
     }
   }
@@ -249,16 +244,12 @@ class ZarrStreamingController @Inject()(
                              coordinates: String): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
-        token,
         accessToken,
         dataLayerName,
-        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) =>
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getRawZarrCube(annotationLayer.tracingId,
-                            mag,
-                            coordinates,
-                            annotationSource.tracingStoreUrl,
-                            relevantToken)
+            .getRawZarrCube(annotationLayer.tracingId, mag, coordinates, annotationSource.tracingStoreUrl)(
+              relevantTokenContext)
             .map(Ok(_)),
         orElse = annotationSource =>
           rawZarrCube(annotationSource.organizationId, annotationSource.datasetName, dataLayerName, mag, coordinates)
@@ -307,8 +298,7 @@ class ZarrStreamingController @Inject()(
                     dataLayerName: String,
                     mag: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       zArray(organizationId, datasetName, dataLayerName, mag)
     }
   }
@@ -329,8 +319,7 @@ class ZarrStreamingController @Inject()(
                             dataLayerName: String,
                             mag: String,
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       zarrJsonForMag(organizationId, datasetName, dataLayerName, mag)
     }
   }
@@ -350,12 +339,11 @@ class ZarrStreamingController @Inject()(
                         dataLayerName: String,
                         mag: String): Action[AnyContent] = Action.async { implicit request =>
     ifIsAnnotationLayerOrElse(
-      token,
       accessToken,
       dataLayerName,
-      ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) =>
+      ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
         remoteTracingstoreClient
-          .getZArray(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, relevantToken)
+          .getZArray(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl)(relevantTokenContext)
           .map(z => Ok(Json.toJson(z))),
       orElse =
         annotationSource => zArray(annotationSource.organizationId, annotationSource.datasetName, dataLayerName, mag)
@@ -367,12 +355,11 @@ class ZarrStreamingController @Inject()(
                           dataLayerName: String,
                           mag: String): Action[AnyContent] = Action.async { implicit request =>
     ifIsAnnotationLayerOrElse(
-      token,
       accessToken,
       dataLayerName,
-      ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) =>
+      ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
         remoteTracingstoreClient
-          .getZarrJson(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl, relevantToken)
+          .getZarrJson(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl)(relevantTokenContext)
           .map(z => Ok(Json.toJson(z))),
       orElse = annotationSource =>
         zarrJsonForMag(annotationSource.organizationId, annotationSource.datasetName, dataLayerName, mag)
@@ -380,18 +367,17 @@ class ZarrStreamingController @Inject()(
   }
 
   private def ifIsAnnotationLayerOrElse(
-      token: Option[String],
       accessToken: String,
       dataLayerName: String,
-      ifIsAnnotationLayer: (AnnotationLayer, AnnotationSource, Option[String]) => Fox[Result],
+      ifIsAnnotationLayer: (AnnotationLayer, AnnotationSource, TokenContext) => Fox[Result],
       orElse: AnnotationSource => Fox[Result])(implicit request: Request[Any]): Fox[Result] =
     for {
-      annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request)) ~> NOT_FOUND
-      relevantToken = if (annotationSource.accessViaPrivateLink) Some(accessToken)
-      else urlOrHeaderToken(token, request)
+      annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken) ~> NOT_FOUND
+      relevantTokenContext = if (annotationSource.accessViaPrivateLink) TokenContext(Some(accessToken))
+      else tokenContextForRequest
       layer = annotationSource.getAnnotationLayer(dataLayerName)
       result <- layer match {
-        case Some(annotationLayer) => ifIsAnnotationLayer(annotationLayer, annotationSource, relevantToken)
+        case Some(annotationLayer) => ifIsAnnotationLayer(annotationLayer, annotationSource, relevantTokenContext)
         case None                  => orElse(annotationSource)
       }
     } yield result
@@ -403,8 +389,7 @@ class ZarrStreamingController @Inject()(
                                         mag: String,
                                         zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         dataLayerMagFolderContents(organizationId, datasetName, dataLayerName, mag, zarrVersion)
       }
     }
@@ -435,16 +420,14 @@ class ZarrStreamingController @Inject()(
                                             zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
-        token,
         accessToken,
         dataLayerName,
-        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) =>
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
             .getDataLayerMagFolderContents(annotationLayer.tracingId,
                                            mag,
                                            annotationSource.tracingStoreUrl,
-                                           relevantToken,
-                                           zarrVersion)
+                                           zarrVersion)(relevantTokenContext)
             .map(
               layers =>
                 Ok(
@@ -467,8 +450,7 @@ class ZarrStreamingController @Inject()(
                                      datasetName: String,
                                      dataLayerName: String,
                                      zarrVersion: Int): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       dataLayerFolderContents(organizationId, datasetName, dataLayerName, zarrVersion)
     }
   }
@@ -498,15 +480,12 @@ class ZarrStreamingController @Inject()(
                                          zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
-        token,
         accessToken,
         dataLayerName,
-        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) =>
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getDataLayerFolderContents(annotationLayer.tracingId,
-                                        annotationSource.tracingStoreUrl,
-                                        relevantToken,
-                                        zarrVersion)
+            .getDataLayerFolderContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl, zarrVersion)(
+              relevantTokenContext)
             .map(
               layers =>
                 Ok(
@@ -528,8 +507,7 @@ class ZarrStreamingController @Inject()(
                                       datasetName: String,
                                       zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           dataSource <- dataSourceRepository.findUsable(DataSourceId(datasetName, organizationId)).toFox ?~> Messages(
             "dataSource.notFound") ~> NOT_FOUND
@@ -550,7 +528,7 @@ class ZarrStreamingController @Inject()(
                                           zarrVersion: Int): Action[AnyContent] =
     Action.async { implicit request =>
       for {
-        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken, urlOrHeaderToken(token, request))
+        annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken)
         dataSource <- dataSourceRepository
           .findUsable(DataSourceId(annotationSource.datasetName, annotationSource.organizationId))
           .toFox ?~> Messages("dataSource.notFound") ~> NOT_FOUND
@@ -577,8 +555,7 @@ class ZarrStreamingController @Inject()(
                     datasetName: String,
                     dataLayerName: String = ""): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(
-      UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-      urlOrHeaderToken(token, request)) {
+      UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       Ok(zGroupJson)
     }
   }
@@ -588,12 +565,11 @@ class ZarrStreamingController @Inject()(
   def zGroupPrivateLink(token: Option[String], accessToken: String, dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
       ifIsAnnotationLayerOrElse(
-        token,
         accessToken,
         dataLayerName,
-        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantToken) =>
+        ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getZGroup(annotationLayer.tracingId, annotationSource.tracingStoreUrl, relevantToken)
+            .getZGroup(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(relevantTokenContext)
             .map(Ok(_)),
         orElse = _ => Fox.successful(Ok(zGroupJson))
       )

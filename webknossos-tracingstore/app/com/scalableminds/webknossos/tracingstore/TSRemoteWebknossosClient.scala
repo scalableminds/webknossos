@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -73,10 +74,10 @@ class TSRemoteWebknossosClient @Inject()(
           .getWithJsonResponse[DataSourceId]
     )
 
-  override def requestUserAccess(token: Option[String], accessRequest: UserAccessRequest): Fox[UserAccessAnswer] =
+  override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/validateUserAccess")
       .addQueryString("key" -> tracingStoreKey)
-      .addQueryStringOptional("token", token)
+      .withTokenFromContext
       .postJsonWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
 }
 

@@ -69,8 +69,7 @@ class DataSourceController @Inject()(
     Action.async { implicit request =>
       {
         accessTokenService.validateAccessForSyncBlock(
-          UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-          urlOrHeaderToken(token, request)) {
+          UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
           // Read directly from file, not from repository to ensure recent changes are seen
           val dataSource: InboxDataSource =
             dataSourceService.dataSourceFromDir(
@@ -82,7 +81,7 @@ class DataSourceController @Inject()(
     }
 
   def triggerInboxCheckBlocking(token: Option[String]): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
       for {
         _ <- dataSourceService.checkInbox(verbose = true)
       } yield Ok
@@ -91,12 +90,11 @@ class DataSourceController @Inject()(
 
   def reserveUpload(token: Option[String]): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organization),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organization)) {
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
-            (remoteWebknossosClient.reserveDataSourceUpload(request.body, urlOrHeaderToken(token, request)) ?~> "dataset.upload.validation.failed")
+            (remoteWebknossosClient.reserveDataSourceUpload(request.body) ?~> "dataset.upload.validation.failed")
               .flatMap(_ => uploadService.reserveUpload(request.body))
           } else Fox.successful(())
         } yield Ok
@@ -105,11 +103,9 @@ class DataSourceController @Inject()(
 
   def getUnfinishedUploads(token: Option[String], organizationName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationName)) {
         for {
-          unfinishedUploads <- remoteWebknossosClient.getUnfinishedUploadsForUser(urlOrHeaderToken(token, request),
-                                                                                  organizationName)
+          unfinishedUploads <- remoteWebknossosClient.getUnfinishedUploadsForUser(organizationName)
           unfinishedUploadsWithUploadIds <- uploadService.addUploadIdsToUnfinishedUploads(unfinishedUploads)
         } yield Ok(Json.toJson(unfinishedUploadsWithUploadIds))
       }
@@ -119,8 +115,7 @@ class DataSourceController @Inject()(
   // and it can be put in a webknossos folder where they have access
   def reserveManualUpload(token: Option[String]): Action[ReserveManualUploadInformation] =
     Action.async(validateJson[ReserveManualUploadInformation]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organization),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organization)) {
         for {
           _ <- remoteWebknossosClient.reserveDataSourceUpload(
             ReserveUploadInformation(
@@ -132,8 +127,7 @@ class DataSourceController @Inject()(
               None,
               request.body.initialTeamIds,
               request.body.folderId
-            ),
-            urlOrHeaderToken(token, request)
+            )
           ) ?~> "dataset.upload.validation.failed"
         } yield Ok
       }
@@ -172,8 +166,7 @@ class DataSourceController @Inject()(
               for {
                 dataSourceId <- uploadService.getDataSourceIdByUploadId(
                   uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
-                result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
-                                                            urlOrHeaderToken(token, request)) {
+                result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId)) {
                   for {
                     isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
                     _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
@@ -195,8 +188,7 @@ class DataSourceController @Inject()(
       for {
         dataSourceId <- uploadService.getDataSourceIdByUploadId(
           uploadService.extractDatasetUploadId(resumableIdentifier)) ?~> "dataset.upload.validation.failed"
-        result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
-                                                    urlOrHeaderToken(token, request)) {
+        result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId)) {
           for {
             isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier)
             _ <- bool2Fox(isKnownUpload) ?~> "dataset.upload.validation.failed"
@@ -212,16 +204,13 @@ class DataSourceController @Inject()(
         for {
           dataSourceId <- uploadService
             .getDataSourceIdByUploadId(request.body.uploadId) ?~> "dataset.upload.validation.failed"
-          result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId),
-                                                      urlOrHeaderToken(token, request)) {
+          result <- accessTokenService.validateAccess(UserAccessRequest.writeDataSource(dataSourceId)) {
             for {
               (dataSourceId, datasetSizeBytes) <- uploadService.finishUpload(request.body) ?~> "finishUpload.failed"
-              _ <- remoteWebknossosClient.reportUpload(
-                dataSourceId,
-                datasetSizeBytes,
-                request.body.needsConversion.getOrElse(false),
-                viaAddRoute = false,
-                userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
+              _ <- remoteWebknossosClient.reportUpload(dataSourceId,
+                                                       datasetSizeBytes,
+                                                       request.body.needsConversion.getOrElse(false),
+                                                       viaAddRoute = false) ?~> "reportUpload.failed"
             } yield Ok
           }
         } yield result
@@ -235,8 +224,7 @@ class DataSourceController @Inject()(
         case true  => uploadService.getDataSourceIdByUploadId(request.body.uploadId)
       }
       dataSourceIdFox.flatMap { dataSourceId =>
-        accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId),
-                                          urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId)) {
           for {
             _ <- remoteWebknossosClient.deleteDataSource(dataSourceId) ?~> "dataset.delete.webknossos.failed"
             _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
@@ -252,8 +240,7 @@ class DataSourceController @Inject()(
       dataLayerName: String
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessForSyncBlock(
-      UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-      urlOrHeaderToken(token, request)) {
+      UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       addNoCacheHeaderFallback(
         Ok(Json.toJson(dataSourceService.exploreMappings(organizationId, datasetName, dataLayerName))))
     }
@@ -265,8 +252,7 @@ class DataSourceController @Inject()(
       datasetName: String,
       dataLayerName: String
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
         agglomerateList = agglomerateService.exploreAgglomerates(organizationId, datasetName, dataLayerName)
@@ -282,8 +268,7 @@ class DataSourceController @Inject()(
       mappingName: String,
       agglomerateId: Long
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
         skeleton <- agglomerateService.generateSkeleton(organizationId,
@@ -303,8 +288,7 @@ class DataSourceController @Inject()(
       mappingName: String,
       agglomerateId: Long
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
         agglomerateGraph <- agglomerateService.generateAgglomerateGraph(
@@ -322,8 +306,7 @@ class DataSourceController @Inject()(
       mappingName: String,
       segmentId: Long
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
         position <- agglomerateService.positionForSegmentId(
@@ -340,8 +323,7 @@ class DataSourceController @Inject()(
       dataLayerName: String,
       mappingName: String
   ): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
         largestAgglomerateId: Long <- agglomerateService
@@ -365,8 +347,7 @@ class DataSourceController @Inject()(
       dataLayerName: String,
       mappingName: String
   ): Action[ListOfLong] = Action.async(validateProto[ListOfLong]) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
         agglomerateIds: Seq[Long] <- agglomerateService
@@ -391,8 +372,7 @@ class DataSourceController @Inject()(
       dataLayerName: String,
       mappingName: String
   ): Action[ListOfLong] = Action.async(validateProto[ListOfLong]) { implicit request =>
-    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                      urlOrHeaderToken(token, request)) {
+    accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
       for {
         agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
         agglomerateIds: Array[Long] <- agglomerateService
@@ -411,8 +391,7 @@ class DataSourceController @Inject()(
 
   def update(token: Option[String], organizationId: String, datasetName: String): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.writeDataSource(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.writeDataSource(DataSourceId(datasetName, organizationId))) {
         for {
           _ <- Fox.successful(())
           dataSource <- dataSourceRepository.find(DataSourceId(datasetName, organizationId)).toFox ?~> Messages(
@@ -428,7 +407,7 @@ class DataSourceController @Inject()(
           datasetName: String,
           folderId: Option[String]): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources, urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources) {
         for {
           _ <- bool2Fox(dataSourceRepository.find(DataSourceId(datasetName, organizationId)).isEmpty) ?~> Messages(
             "dataSource.alreadyPresent")
@@ -442,24 +421,21 @@ class DataSourceController @Inject()(
               layersToLink = None,
               initialTeams = List.empty,
               folderId = folderId,
-            ),
-            urlOrHeaderToken(token, request)
+            )
           ) ?~> "dataset.upload.validation.failed"
           _ <- dataSourceService.updateDataSource(request.body.copy(id = DataSourceId(datasetName, organizationId)),
                                                   expectExisting = false)
-          _ <- remoteWebknossosClient.reportUpload(
-            DataSourceId(datasetName, organizationId),
-            0L,
-            needsConversion = false,
-            viaAddRoute = true,
-            userToken = urlOrHeaderToken(token, request)) ?~> "reportUpload.failed"
+          _ <- remoteWebknossosClient.reportUpload(DataSourceId(datasetName, organizationId),
+                                                   0L,
+                                                   needsConversion = false,
+                                                   viaAddRoute = true) ?~> "reportUpload.failed"
         } yield Ok
       }
     }
 
   def createOrganizationDirectory(token: Option[String], organizationId: String): Action[AnyContent] = Action.async {
     implicit request =>
-      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources(organizationId), token) {
+      accessTokenService.validateAccessForSyncBlock(UserAccessRequest.administrateDataSources(organizationId)) {
         val newOrganizationDirectory = new File(f"${dataSourceService.dataBaseDir}/$organizationId")
         newOrganizationDirectory.mkdirs()
         if (newOrganizationDirectory.isDirectory)
@@ -474,8 +450,7 @@ class DataSourceController @Inject()(
                          datasetName: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
-        accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationId),
-                                          urlOrHeaderToken(token, request)) {
+        accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationId)) {
           for {
             before <- Fox.successful(System.currentTimeMillis())
             usedStorageInBytes: List[DirectoryStorageReport] <- storageUsageService.measureStorage(organizationId,
@@ -495,8 +470,7 @@ class DataSourceController @Inject()(
              datasetName: String,
              layerName: Option[String] = None): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationId),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(organizationId)) {
         val (closedAgglomerateFileHandleCount, clearedBucketProviderCount, removedChunksCount) =
           binaryDataServiceHolder.binaryDataService.clearCache(organizationId, datasetName, layerName)
         val reloadedDataSource = dataSourceService.dataSourceFromDir(
@@ -519,8 +493,7 @@ class DataSourceController @Inject()(
   def deleteOnDisk(token: Option[String], organizationId: String, datasetName: String): Action[AnyContent] =
     Action.async { implicit request =>
       val dataSourceId = DataSourceId(datasetName, organizationId)
-      accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.deleteDataSource(dataSourceId)) {
         for {
           _ <- binaryDataServiceHolder.binaryDataService.deleteOnDisk(
             organizationId,
@@ -533,15 +506,12 @@ class DataSourceController @Inject()(
 
   def compose(token: Option[String]): Action[ComposeRequest] =
     Action.async(validateJson[ComposeRequest]) { implicit request =>
-      val userToken = urlOrHeaderToken(token, request)
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organizationId), token) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organizationId)) {
         for {
-          _ <- Fox.serialCombined(request.body.layers.map(_.datasetId).toList)(
-            id =>
-              accessTokenService.assertUserAccess(
-                UserAccessRequest.readDataSources(DataSourceId(id.name, id.owningOrganization)),
-                userToken))
-          dataSource <- composeService.composeDataset(request.body, userToken)
+          _ <- Fox.serialCombined(request.body.layers.map(_.datasetId).toList)(id =>
+            accessTokenService.assertUserAccess(
+              UserAccessRequest.readDataSources(DataSourceId(id.name, id.owningOrganization))))
+          dataSource <- composeService.composeDataset(request.body)
           _ <- dataSourceRepository.updateDataSource(dataSource)
         } yield Ok
       }
@@ -552,8 +522,7 @@ class DataSourceController @Inject()(
                           datasetName: String,
                           dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         val connectomeFileNames =
           connectomeFileService.exploreConnectomeFiles(organizationId, datasetName, dataLayerName)
         for {
@@ -574,8 +543,7 @@ class DataSourceController @Inject()(
                                  datasetName: String,
                                  dataLayerName: String): Action[ByAgglomerateIdsRequest] =
     Action.async(validateJson[ByAgglomerateIdsRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           meshFilePath <- Fox.successful(
             connectomeFileService
@@ -591,8 +559,7 @@ class DataSourceController @Inject()(
                                     dataLayerName: String,
                                     direction: String): Action[BySynapseIdsRequest] =
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           meshFilePath <- Fox.successful(
             connectomeFileService
@@ -609,8 +576,7 @@ class DataSourceController @Inject()(
                           datasetName: String,
                           dataLayerName: String): Action[BySynapseIdsRequest] =
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           meshFilePath <- Fox.successful(
             connectomeFileService
@@ -625,8 +591,7 @@ class DataSourceController @Inject()(
                       datasetName: String,
                       dataLayerName: String): Action[BySynapseIdsRequest] =
     Action.async(validateJson[BySynapseIdsRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           meshFilePath <- Fox.successful(
             connectomeFileService
@@ -641,8 +606,7 @@ class DataSourceController @Inject()(
                             dataSetName: String,
                             dataLayerName: String): Action[AnyContent] =
     Action.async { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(dataSetName, organizationId))) {
         val segmentIndexFileOpt =
           segmentIndexFileService.getSegmentIndexFile(organizationId, dataSetName, dataLayerName).toOption
         Future.successful(Ok(Json.toJson(segmentIndexFileOpt.isDefined)))
@@ -659,8 +623,7 @@ class DataSourceController @Inject()(
                       dataLayerName: String,
                       segmentId: String): Action[GetSegmentIndexParameters] =
     Action.async(validateJson[GetSegmentIndexParameters]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
             organizationId,
@@ -670,8 +633,7 @@ class DataSourceController @Inject()(
             request.body.editableMappingTracingId,
             segmentId.toLong,
             mappingNameForMeshFile = None,
-            omitMissing = false,
-            urlOrHeaderToken(token, request)
+            omitMissing = false
           )
           fileMag <- segmentIndexFileService.readFileMag(organizationId, datasetName, dataLayerName)
           topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
@@ -698,8 +660,7 @@ class DataSourceController @Inject()(
                         datasetName: String,
                         dataLayerName: String): Action[GetMultipleSegmentIndexParameters] =
     Action.async(validateJson[GetMultipleSegmentIndexParameters]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           segmentIdsAndBucketPositions <- Fox.serialCombined(request.body.segmentIds) { segmentOrAgglomerateId =>
             for {
@@ -712,7 +673,6 @@ class DataSourceController @Inject()(
                 segmentOrAgglomerateId,
                 mappingNameForMeshFile = None,
                 omitMissing = true, // assume agglomerate ids not present in the mapping belong to user-brushed segments
-                urlOrHeaderToken(token, request)
               )
               fileMag <- segmentIndexFileService.readFileMag(organizationId, datasetName, dataLayerName)
               topLeftsNested: Seq[Array[Vec3Int]] <- Fox.serialCombined(segmentIds)(sId =>
@@ -732,8 +692,7 @@ class DataSourceController @Inject()(
                        datasetName: String,
                        dataLayerName: String): Action[SegmentStatisticsParameters] =
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           _ <- segmentIndexFileService.assertSegmentIndexFileExists(organizationId, datasetName, dataLayerName)
           volumes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
@@ -755,8 +714,7 @@ class DataSourceController @Inject()(
                             datasetName: String,
                             dataLayerName: String): Action[SegmentStatisticsParameters] =
     Action.async(validateJson[SegmentStatisticsParameters]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId)),
-                                        urlOrHeaderToken(token, request)) {
+      accessTokenService.validateAccess(UserAccessRequest.readDataSources(DataSourceId(datasetName, organizationId))) {
         for {
           _ <- segmentIndexFileService.assertSegmentIndexFileExists(organizationId, datasetName, dataLayerName)
           boxes <- Fox.serialCombined(request.body.segmentIds) { segmentId =>
@@ -774,7 +732,7 @@ class DataSourceController @Inject()(
   // Called directly by wk side
   def exploreRemoteDataset(token: Option[String]): Action[ExploreRemoteDatasetRequest] =
     Action.async(validateJson[ExploreRemoteDatasetRequest]) { implicit request =>
-      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organizationId), token) {
+      accessTokenService.validateAccess(UserAccessRequest.administrateDataSources(request.body.organizationId)) {
         val reportMutable = ListBuffer[String]()
         val hasLocalFilesystemRequest = request.body.layerParameters.exists(param =>
           new URI(param.remoteUri).getScheme == DataVaultService.schemeFile)

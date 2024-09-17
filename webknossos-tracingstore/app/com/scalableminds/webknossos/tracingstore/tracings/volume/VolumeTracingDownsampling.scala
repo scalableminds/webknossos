@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, UnsignedIntegerArray}
@@ -77,13 +78,13 @@ trait VolumeTracingDownsampling
 
   protected def volumeSegmentIndexClient: FossilDBClient
 
-  protected def downsampleWithLayer(annotationId: String,
-                                    tracingId: String,
-                                    oldTracingId: String,
-                                    tracing: VolumeTracing,
-                                    dataLayer: VolumeTracingLayer,
-                                    tracingService: VolumeTracingService,
-                                    userToken: Option[String])(implicit ec: ExecutionContext): Fox[List[Vec3Int]] = {
+  protected def downsampleWithLayer(
+      annotationId: String,
+      tracingId: String,
+      oldTracingId: String,
+      tracing: VolumeTracing,
+      dataLayer: VolumeTracingLayer,
+      tracingService: VolumeTracingService)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Vec3Int]] = {
     val bucketVolume = 32 * 32 * 32
     for {
       _ <- bool2Fox(tracing.version == 0L) ?~> "Tracing has already been edited."
@@ -106,15 +107,15 @@ trait VolumeTracingDownsampling
                              dataLayer)
         requiredMag
       }
-      fallbackLayer <- tracingService.getFallbackLayer(annotationId, oldTracingId, userToken) // remote wk does not know the new id yet
-      tracing <- tracingService.find(annotationId, tracingId, userToken = userToken) ?~> "tracing.notFound"
+      fallbackLayer <- tracingService.getFallbackLayer(annotationId, oldTracingId) // remote wk does not know the new id yet
+      tracing <- tracingService.find(annotationId, tracingId) ?~> "tracing.notFound"
       segmentIndexBuffer = new VolumeSegmentIndexBuffer(tracingId,
                                                         volumeSegmentIndexClient,
                                                         tracing.version,
                                                         tracingService.remoteDatastoreClient,
                                                         fallbackLayer,
                                                         dataLayer.additionalAxes,
-                                                        userToken)
+                                                        tc)
       _ <- Fox.serialCombined(updatedBucketsMutable.toList) { bucketPosition: BucketPosition =>
         for {
           _ <- saveBucket(dataLayer, bucketPosition, bucketDataMapMutable(bucketPosition), tracing.version)

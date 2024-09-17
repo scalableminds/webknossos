@@ -265,6 +265,7 @@ function* createEditableMapping(): Saga<string> {
    * name of the HDF5 mapping for which the editable mapping is about to be created.
    */
   const tracingStoreUrl = yield* select((state) => state.tracing.tracingStore.url);
+  const annotationId = yield* select((state) => state.tracing.annotationId);
   // Save before making the mapping editable to make sure the correct mapping is activated in the backend
   yield* call([Model, Model.ensureSavedState]);
   // Get volume tracing again to make sure the version is up to date
@@ -275,7 +276,7 @@ function* createEditableMapping(): Saga<string> {
 
   const volumeTracingId = upToDateVolumeTracing.tracingId;
   const layerName = volumeTracingId;
-  const serverEditableMapping = yield* call(makeMappingEditable, tracingStoreUrl, volumeTracingId);
+  const serverEditableMapping = yield* call(makeMappingEditable, tracingStoreUrl, annotationId, volumeTracingId);
   // The server increments the volume tracing's version by 1 when switching the mapping to an editable one
   yield* put(setVersionNumberAction(upToDateVolumeTracing.version + 1, "volume", volumeTracingId));
   yield* put(setMappingNameAction(layerName, serverEditableMapping.mappingName, "HDF5"));

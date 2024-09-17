@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.skeleton
 
 import com.google.inject.Inject
+import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
@@ -8,7 +9,7 @@ import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.TracingStoreRedisStore
-import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationWithTracings, TSAnnotationService}
+import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MergedVolumeStats
 import net.liftweb.common.{Box, Full}
@@ -44,13 +45,12 @@ class SkeletonTracingService @Inject()(
            tracingId: String,
            version: Option[Long] = None,
            useCache: Boolean = true,
-           applyUpdates: Boolean = false,
-           userToken: Option[String]): Fox[SkeletonTracing] =
+           applyUpdates: Boolean = false)(implicit tc: TokenContext): Fox[SkeletonTracing] =
     if (tracingId == TracingIds.dummyTracingId)
       Fox.successful(dummyTracing)
     else {
       for {
-        annotation <- annotationService.getWithTracings(annotationId, version, List(tracingId), List.empty, userToken) // TODO is applyUpdates still needed?
+        annotation <- annotationService.getWithTracings(annotationId, version, List(tracingId), List.empty) // TODO is applyUpdates still needed?
         tracing <- annotation.getSkeleton(tracingId)
       } yield tracing
     }
@@ -128,12 +128,11 @@ class SkeletonTracingService @Inject()(
                       tracings: Seq[SkeletonTracing],
                       newId: String,
                       newVersion: Long,
-                      toCache: Boolean,
-                      userToken: Option[String])(implicit mp: MessagesProvider): Fox[MergedVolumeStats] =
+                      toCache: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] =
     Fox.successful(MergedVolumeStats.empty())
 
   def dummyTracing: SkeletonTracing = SkeletonTracingDefaults.createInstance
 
-  def mergeEditableMappings(tracingsWithIds: List[(SkeletonTracing, String)], userToken: Option[String]): Fox[String] =
+  def mergeEditableMappings(tracingsWithIds: List[(SkeletonTracing, String)])(implicit tc: TokenContext): Fox[String] =
     Fox.empty
 }

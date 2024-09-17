@@ -177,12 +177,20 @@ export enum APIMetadataEnum {
   NUMBER = "number",
   STRING_ARRAY = "string[]",
 }
+// This type has to be defined redundantly to the above enum, unfortunately,
+// because the e2e tests assert that an object literal matches the type of
+// APIMetadataEntry. In that object literal, a string literal exists (e.g., "number").
+// TypeScript Enums don't typecheck against such literals by design (see
+// https://github.com/microsoft/TypeScript/issues/17690#issuecomment-337975541).
+// Therefore, we redundantly define the type of the enum here again and use that
+// in APIMetadataEntry.
+type APIMetadataType = "string" | "number" | "string[]";
 
 // Note that this differs from MetadataEntryProto, because
 // it's stored in sql and not in protobuf.
 // The type is used for datasets and folders.
 export type APIMetadataEntry = {
-  type: APIMetadataEnum;
+  type: APIMetadataType;
   key: string;
   value: string | number | string[];
 };

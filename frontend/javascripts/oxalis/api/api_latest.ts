@@ -91,6 +91,7 @@ import {
   getPosition,
   getActiveMagIndexForLayer,
   getRotation,
+  getCurrentResolution,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
   loadAdHocMeshAction,
@@ -656,11 +657,24 @@ class TracingApi {
     bbName: string,
     options?: { maximumSegmentCount?: number; maximumVolume?: number },
   ) => {
+    const state = Store.getState();
     const maximumVolume = options?.maximumVolume ?? Constants.REGISTER_SEGMENTS_BB_MAX_VOLUME_VX;
     const maximumSegmentCount =
       options?.maximumSegmentCount ?? Constants.REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT;
     const shape = Utils.computeShapeFromBoundingBox({ min, max });
-    const volume = Math.ceil(shape[0] * shape[1] * shape[2]);
+
+    const segmentationLayerName = api.data.getVisibleSegmentationLayerName();
+    if (segmentationLayerName == null) return;
+
+    const currentMag = getCurrentResolution(state, segmentationLayerName);
+    const magIndex = getActiveMagIndexForLayer(state, segmentationLayerName);
+    if (currentMag == null) return;
+
+    const volume =
+      Math.ceil(shape[0] / currentMag[0]) *
+      Math.ceil(shape[1] / currentMag[1]) *
+      Math.ceil(shape[2] / currentMag[2]);
+    console.log("volume: ", volume); // TODO_c
     if (volume > maximumVolume) {
       Toast.error(
         `The volume of the bounding box exceeds ${maximumVolume} Vx, please make it smaller.`,
@@ -672,19 +686,15 @@ class TracingApi {
       );
     }
 
-    const segmentationLayerName = api.data.getSegmentationLayerNames()[0];
-    const layer = getLayerByName(Store.getState().dataset, segmentationLayerName);
-
-    const resolutionInfo = getResolutionInfo(layer.resolutions);
-    const finestResolution = resolutionInfo.getFinestResolution();
-    // By default, getDataForBoundingBox uses the finest existing magnification.
-    // We use that as strides to traverse the data array properly.
-    const [dx, dy, dz] = finestResolution;
-
-    const data = await api.data.getDataForBoundingBox(segmentationLayerName, {
-      min,
-      max,
-    });
+    const data = await api.data.getDataForBoundingBox(
+      segmentationLayerName,
+      {
+        min,
+        max,
+      },
+      magIndex,
+    );
+    const [dx, dy, dz] = currentMag;
 
     const segmentIdToPosition = new Map();
     let idx = 0;
@@ -701,6 +711,7 @@ class TracingApi {
     }
 
     const segmentIdCount = Array.from(segmentIdToPosition.entries()).length;
+    console.log("segment count: ", segmentIdCount); // TODO_c
     const halfMaxNoSegments = maximumSegmentCount / 2;
     if (segmentIdCount > maximumSegmentCount) {
       Toast.error(

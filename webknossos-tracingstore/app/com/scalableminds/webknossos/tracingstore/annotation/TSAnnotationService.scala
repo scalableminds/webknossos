@@ -9,6 +9,7 @@ import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappin
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
+  EditableMappingService,
   EditableMappingUpdateAction,
   EditableMappingUpdater
 }
@@ -150,8 +151,28 @@ class TSAnnotationService @Inject()(remoteWebknossosClient: TSRemoteWebknossosCl
                                                        updates,
                                                        requestedSkeletonTracingIds,
                                                        requestedVolumeTracingIds) ?~> "findTracingsForUpdates.failed"
-      updated <- applyUpdates(annotationWithTracings, annotationId, updates, targetVersion) ?~> "applyUpdates.inner.failed"
+      annotationWithTracingsAndMappings <- findEditableMappingsForUpdates(annotationWithTracings, updates)
+      updated <- applyUpdates(annotationWithTracingsAndMappings, annotationId, updates, targetVersion) ?~> "applyUpdates.inner.failed"
     } yield updated
+
+  private def findEditableMappingsForUpdates( // TODO integrate with findTracings?
+                                             annotationWithTracings: AnnotationWithTracings,
+                                             updates: List[UpdateAction])(implicit ec: ExecutionContext) = {
+    val editableMappingIds = annotationWithTracings.volumesIdsThatHaveEditableMapping
+    // TODO intersect with editable mapping updates?
+    for {
+      editableMappingInfos <- Fox.serialCombined(editableMappingIds) { editableMappingId =>
+        tracingDataStore.editableMappingsInfo.get(editableMappingId, version = Some(annotationWithTracings.version))(
+          fromProtoBytes[EditableMappingInfo])
+      }
+    } yield
+      annotationWithTracings.copy(
+        editableMappingsByTracingId = editableMappingInfos
+          .map(keyValuePair => (keyValuePair.key, (keyValuePair.value, editableMappingUpdaterFor(keyValuePair.value))))
+          .toMap)
+  }
+
+  def editableMappingUpdaterFor(editableMappingInfo: EditableMappingInfo): EditableMappingUpdater = ??? // TODO
 
   private def findTracingsForUpdates(
       annotation: AnnotationProto,

@@ -517,6 +517,7 @@ class VolumeTracingService @Inject()(
 
   def duplicate(annotationId: String,
                 tracingId: String,
+                newTracingId: String,
                 sourceTracing: VolumeTracing,
                 fromTask: Boolean,
                 datasetBoundingBox: Option[BoundingBox],
@@ -535,13 +536,15 @@ class VolumeTracingService @Inject()(
         editPosition = editPosition.map(vec3IntToProto).getOrElse(tracingWithResolutionRestrictions.editPosition),
         editRotation = editRotation.map(vec3DoubleToProto).getOrElse(tracingWithResolutionRestrictions.editRotation),
         boundingBox = boundingBoxOptToProto(boundingBox).getOrElse(tracingWithResolutionRestrictions.boundingBox),
-        mappingName = mappingName.orElse(tracingWithResolutionRestrictions.mappingName),
+        mappingName = mappingName.orElse(
+          if (sourceTracing.getHasEditableMapping) Some(newTracingId)
+          else tracingWithResolutionRestrictions.mappingName),
         version = 0,
         // Adding segment index on duplication if the volume tracing allows it. This will be used in duplicateData
         hasSegmentIndex = Some(hasSegmentIndex)
       )
       _ <- bool2Fox(newTracing.resolutions.nonEmpty) ?~> "resolutionRestrictions.tooTight"
-      newId <- save(newTracing, None, newTracing.version)
+      newId <- save(newTracing, Some(newTracingId), newTracing.version)
       _ <- duplicateData(annotationId, tracingId, sourceTracing, newId, newTracing)
     } yield (newId, newTracing)
   }
@@ -991,7 +994,8 @@ class VolumeTracingService @Inject()(
 
   def dummyTracing: VolumeTracing = ???
 
-  def mergeEditableMappings(tracingsWithIds: List[(VolumeTracing, String)])(implicit tc: TokenContext): Fox[String] =
+  def mergeEditableMappings(newTracingId: String, tracingsWithIds: List[(VolumeTracing, String)])(
+      implicit tc: TokenContext): Fox[String] =
     if (tracingsWithIds.forall(tracingWithId => tracingWithId._1.getHasEditableMapping)) {
       for {
         remoteFallbackLayers <- Fox.serialCombined(tracingsWithIds)(tracingWithId =>
@@ -1000,7 +1004,7 @@ class VolumeTracingService @Inject()(
         _ <- bool2Fox(remoteFallbackLayers.forall(_ == remoteFallbackLayer)) ?~> "Cannot merge editable mappings based on different dataset layers"
         editableMappingIds <- Fox.serialCombined(tracingsWithIds)(tracingWithId => tracingWithId._1.mappingName)
         _ <- bool2Fox(editableMappingIds.length == tracingsWithIds.length) ?~> "Not all volume tracings have editable mappings"
-        newEditableMappingId <- editableMappingService.merge(editableMappingIds, remoteFallbackLayer)
+        newEditableMappingId <- editableMappingService.merge(newTracingId, editableMappingIds, remoteFallbackLayer)
       } yield newEditableMappingId
     } else if (tracingsWithIds.forall(tracingWithId => !tracingWithId._1.getHasEditableMapping)) {
       Fox.empty

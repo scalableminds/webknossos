@@ -106,13 +106,13 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
               case (Some(tracing), Some(selector)) => Some((tracing, selector.tracingId))
               case _                               => None
             }
-            newId = tracingService.generateTracingId
+            newTracingId = tracingService.generateTracingId
             mergedVolumeStats <- tracingService.mergeVolumeData(request.body.flatten,
                                                                 tracingsWithIds.map(_._1),
-                                                                newId,
+                                                                newTracingId,
                                                                 newVersion = 0L,
                                                                 toCache = !persist)
-            newEditableMappingIdBox <- tracingService.mergeEditableMappings(tracingsWithIds).futureBox
+            newEditableMappingIdBox <- tracingService.mergeEditableMappings(newTracingId, tracingsWithIds).futureBox
             newEditableMappingIdOpt <- newEditableMappingIdBox match {
               case Full(newEditableMappingId) => Fox.successful(Some(newEditableMappingId))
               case Empty                      => Fox.successful(None)
@@ -120,8 +120,8 @@ trait TracingController[T <: GeneratedMessage, Ts <: GeneratedMessage] extends C
             }
             mergedTracing <- Fox.box2Fox(
               tracingService.merge(tracingsWithIds.map(_._1), mergedVolumeStats, newEditableMappingIdOpt))
-            _ <- tracingService.save(mergedTracing, Some(newId), version = 0, toCache = !persist)
-          } yield Ok(Json.toJson(newId))
+            _ <- tracingService.save(mergedTracing, Some(newTracingId), version = 0, toCache = !persist)
+          } yield Ok(Json.toJson(newTracingId))
         }
       }
     }

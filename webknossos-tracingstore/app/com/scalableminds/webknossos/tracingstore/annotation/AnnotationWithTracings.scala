@@ -39,6 +39,12 @@ case class AnnotationWithTracings(
       }
     } yield volumeTracing
 
+  def volumesIdsThatHaveEditableMapping: List[String] =
+    tracingsById.view.flatMap {
+      case (id, Right(vt: VolumeTracing)) if vt.getHasEditableMapping => Some(id)
+      case _                                                          => None
+    }.toList
+
   def getEditableMappingInfo(tracingId: String): Box[EditableMappingInfo] =
     for {
       (info, _) <- editableMappingsByTracingId.get(tracingId)

@@ -171,5 +171,6 @@ trait TracingService[T <: GeneratedMessage]
                       newVersion: Long,
                       toCache: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats]
 
-  def mergeEditableMappings(tracingsWithIds: List[(T, String)])(implicit tc: TokenContext): Fox[String]
+  def mergeEditableMappings(newTracingId: String, tracingsWithIds: List[(T, String)])(
+      implicit tc: TokenContext): Fox[String]
 }

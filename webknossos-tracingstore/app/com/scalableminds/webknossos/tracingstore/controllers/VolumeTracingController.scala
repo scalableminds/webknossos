@@ -221,11 +221,13 @@ class VolumeTracingController @Inject()(
             boundingBoxParsed <- Fox.runOptional(boundingBox)(BoundingBox.fromLiteral)
             remoteFallbackLayerOpt <- Fox.runIf(tracing.getHasEditableMapping)(
               tracingService.remoteFallbackLayerFromVolumeTracing(tracing, tracingId))
-            newEditableMappingId <- Fox.runIf(tracing.getHasEditableMapping)(
-              editableMappingService.duplicate(tracing.mappingName, version = None, remoteFallbackLayerOpt))
+            newTracingId = tracingService.generateTracingId
+            _ <- Fox.runIf(tracing.getHasEditableMapping)(editableMappingService
+              .duplicate(tracing.mappingName, newTracingId, version = None, remoteFallbackLayerOpt))
             (newId, newTracing) <- tracingService.duplicate(
               annotationId,
               tracingId,
+              newTracingId,
               tracing,
               fromTask.getOrElse(false),
               datasetBoundingBox,
@@ -233,7 +235,7 @@ class VolumeTracingController @Inject()(
               editPositionParsed,
               editRotationParsed,
               boundingBoxParsed,
-              newEditableMappingId
+              mappingName = None
             )
             _ <- Fox.runIfOptionTrue(downsample)(tracingService.downsample(annotationId, newId, tracingId, newTracing))
           } yield Ok(Json.toJson(newId))
@@ -377,9 +379,8 @@ class VolumeTracingController @Inject()(
             tracingMappingName <- tracing.mappingName ?~> "annotation.noMappingSet"
             _ <- assertMappingIsNotLocked(tracing)
             _ <- bool2Fox(tracingService.volumeBucketsAreEmpty(tracingId)) ?~> "annotation.volumeBucketsNotEmpty"
-            (editableMappingId, editableMappingInfo) <- editableMappingService.create(
-              baseMappingName = tracingMappingName)
-            volumeUpdate = UpdateMappingNameVolumeAction(Some(editableMappingId),
+            editableMappingInfo <- editableMappingService.create(tracingId, baseMappingName = tracingMappingName)
+            volumeUpdate = UpdateMappingNameVolumeAction(Some(tracingId),
                                                          isEditable = Some(true),
                                                          isLocked = Some(true),
                                                          actionTracingId = tracingId,
@@ -399,7 +400,6 @@ class VolumeTracingController @Inject()(
                                     0))
               )
             infoJson <- editableMappingService.infoJson(tracingId = tracingId,
-                                                        editableMappingId = editableMappingId,
                                                         editableMappingInfo = editableMappingInfo,
                                                         version = Some(0L))
           } yield Ok(infoJson)
@@ -480,7 +480,6 @@ class VolumeTracingController @Inject()(
             mappingName <- tracing.mappingName.toFox
             editableMappingInfo <- editableMappingService.getInfoNEW(annotationId, tracingId, version)
             infoJson <- editableMappingService.infoJson(tracingId = tracingId,
-                                                        editableMappingId = mappingName,
                                                         editableMappingInfo = editableMappingInfo,
                                                         version = version)
           } yield Ok(infoJson)

@@ -121,15 +121,12 @@ class EditableMappingService @Inject()(
   private lazy val agglomerateToGraphCache: AlfuCache[(String, Long, Long), AgglomerateGraph] =
     AlfuCache(maxCapacity = 50)
 
-  def infoJson(tracingId: String,
-               editableMappingInfo: EditableMappingInfo,
-               editableMappingId: String,
-               version: Option[Long]): Fox[JsObject] =
+  def infoJson(tracingId: String, editableMappingInfo: EditableMappingInfo, version: Option[Long]): Fox[JsObject] =
     for {
-      version <- getClosestMaterializableVersionOrZero(editableMappingId, version)
+      version <- getClosestMaterializableVersionOrZero(tracingId, version)
     } yield
       Json.obj(
-        "mappingName" -> editableMappingId,
+        "mappingName" -> tracingId, // TODO remove?
         "version" -> version,
         "tracingId" -> tracingId,
         "baseMappingName" -> editableMappingInfo.baseMappingName,
@@ -137,36 +134,39 @@ class EditableMappingService @Inject()(
         "createdTimestamp" -> editableMappingInfo.createdTimestamp
       )
 
-  def create(baseMappingName: String): Fox[(String, EditableMappingInfo)] = {
-    val newId = generateId
+  def create(tracingId: String, baseMappingName: String): Fox[EditableMappingInfo] = {
     val newEditableMappingInfo = EditableMappingInfo(
       baseMappingName = baseMappingName,
       createdTimestamp = Instant.now.epochMillis,
       largestAgglomerateId = 0L
     )
     for {
-      _ <- tracingDataStore.editableMappingsInfo.put(newId, 0L, toProtoBytes(newEditableMappingInfo))
-    } yield (newId, newEditableMappingInfo)
+      _ <- tracingDataStore.editableMappingsInfo.put(tracingId, 0L, toProtoBytes(newEditableMappingInfo))
+    } yield newEditableMappingInfo
   }
 
   def duplicate(editableMappingIdOpt: Option[String],
+                newTracingId: String,
                 version: Option[Long],
-                remoteFallbackLayerBox: Box[RemoteFallbackLayer])(implicit tc: TokenContext): Fox[String] =
+                remoteFallbackLayerBox: Box[RemoteFallbackLayer])(implicit tc: TokenContext): Fox[Unit] =
     for {
       editableMappingId <- editableMappingIdOpt ?~> "duplicate on editable mapping without id"
       remoteFallbackLayer <- remoteFallbackLayerBox ?~> "duplicate on editable mapping without remote fallback layer"
       editableMappingInfoAndVersion <- getInfoAndActualVersion(editableMappingId, version, remoteFallbackLayer)
-      newIdAndInfoV0 <- create(editableMappingInfoAndVersion._1.baseMappingName)
-      newId = newIdAndInfoV0._1
+      newIdAndInfoV0 <- create(newTracingId, editableMappingInfoAndVersion._1.baseMappingName)
       newVersion = editableMappingInfoAndVersion._2
-      _ <- tracingDataStore.editableMappingsInfo.put(newId, newVersion, toProtoBytes(editableMappingInfoAndVersion._1))
-      _ <- duplicateSegmentToAgglomerate(editableMappingId, newId, newVersion)
-      _ <- duplicateAgglomerateToGraph(editableMappingId, newId, newVersion)
+      _ <- tracingDataStore.editableMappingsInfo.put(newTracingId,
+                                                     newVersion,
+                                                     toProtoBytes(editableMappingInfoAndVersion._1))
+      _ <- duplicateSegmentToAgglomerate(editableMappingId, newTracingId, newVersion)
+      _ <- duplicateAgglomerateToGraph(editableMappingId, newTracingId, newVersion)
       updateActionsWithVersions <- getUpdateActionsWithVersions(editableMappingId, editableMappingInfoAndVersion._2, 0L)
       _ <- Fox.serialCombined(updateActionsWithVersions) { updateActionsWithVersion: (Long, List[UpdateAction]) =>
-        tracingDataStore.editableMappingUpdates.put(newId, updateActionsWithVersion._1, updateActionsWithVersion._2)
+        tracingDataStore.editableMappingUpdates.put(newTracingId,
+                                                    updateActionsWithVersion._1,
+                                                    updateActionsWithVersion._2)
       }
-    } yield newId
+    } yield ()
 
   private def duplicateSegmentToAgglomerate(editableMappingId: String, newId: String, newVersion: Long): Fox[Unit] = {
     val iterator =
@@ -689,29 +689,28 @@ class EditableMappingService @Inject()(
     neighborNodes
   }
 
-  def merge(editableMappingIds: List[String], remoteFallbackLayer: RemoteFallbackLayer)(
+  def merge(newTracingId: String, tracingIds: List[String], remoteFallbackLayer: RemoteFallbackLayer)(
       implicit tc: TokenContext): Fox[String] =
     for {
-      firstMappingId <- editableMappingIds.headOption.toFox
+      firstMappingId <- tracingIds.headOption.toFox
       before = Instant.now
-      newMappingId <- duplicate(Some(firstMappingId), version = None, Some(remoteFallbackLayer))
-      _ <- Fox.serialCombined(editableMappingIds.tail)(editableMappingId =>
-        mergeInto(newMappingId, editableMappingId, remoteFallbackLayer))
-      _ = logger.info(s"Merging ${editableMappingIds.length} editable mappings took ${Instant.since(before)}")
-    } yield newMappingId
+      _ <- duplicate(Some(firstMappingId), newTracingId, version = None, Some(remoteFallbackLayer))
+      _ <- Fox.serialCombined(tracingIds.tail)(editableMappingId =>
+        mergeInto(newTracingId, editableMappingId, remoteFallbackLayer))
+      _ = logger.info(s"Merging ${tracingIds.length} editable mappings took ${Instant.since(before)}")
+    } yield newTracingId
 
   // read as: merge source into target (mutate target)
-  private def mergeInto(targetEditableMappingId: String,
-                        sourceEditableMappingId: String,
-                        remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[Unit] =
+  private def mergeInto(targetTracingId: String, sourceTracingId: String, remoteFallbackLayer: RemoteFallbackLayer)(
+      implicit tc: TokenContext): Fox[Unit] =
     for {
-      targetNewestVersion <- getClosestMaterializableVersionOrZero(targetEditableMappingId, None)
-      sourceNewestMaterializedWithVersion <- getInfoAndActualVersion(sourceEditableMappingId, None, remoteFallbackLayer)
+      targetNewestVersion <- getClosestMaterializableVersionOrZero(targetTracingId, None)
+      sourceNewestMaterializedWithVersion <- getInfoAndActualVersion(sourceTracingId, None, remoteFallbackLayer)
       sourceNewestVersion = sourceNewestMaterializedWithVersion._2
-      updateActionsWithVersions <- getUpdateActionsWithVersions(sourceEditableMappingId, sourceNewestVersion, 0L)
+      updateActionsWithVersions <- getUpdateActionsWithVersions(sourceTracingId, sourceNewestVersion, 0L)
       updateActionsToApply = updateActionsWithVersions.map(_._2).reverse.flatten
       updater = new EditableMappingUpdater(
-        targetEditableMappingId,
+        targetTracingId,
         sourceNewestMaterializedWithVersion._1.baseMappingName,
         targetNewestVersion,
         targetNewestVersion + sourceNewestVersion,
@@ -724,7 +723,7 @@ class EditableMappingService @Inject()(
       )
       _ <- updater.applyUpdatesAndSave(sourceNewestMaterializedWithVersion._1, updateActionsToApply)
       _ <- Fox.serialCombined(updateActionsWithVersions) { updateActionsWithVersion =>
-        tracingDataStore.editableMappingUpdates.put(targetEditableMappingId,
+        tracingDataStore.editableMappingUpdates.put(targetTracingId,
                                                     updateActionsWithVersion._1 + targetNewestVersion,
                                                     updateActionsWithVersion._2)
       }

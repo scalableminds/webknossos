@@ -24,6 +24,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 ### Fixed
 - The JS API v2 has been removed as it was deprecated by v3 in 2018. Please upgrade to v3 in case your scripts still use v2. [#8076](https://github.com/scalableminds/webknossos/pull/8076)
 - Fixed that the precompute-meshfile button did not work in the segments tab. [#8077](https://github.com/scalableminds/webknossos/pull/8077)
+- Removed the superfluous `_type` field when writing zarr3 codec jsons.
 
 ### Removed
 
